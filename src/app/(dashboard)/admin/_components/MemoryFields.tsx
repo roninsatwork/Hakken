@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ModalFormField, modalTextareaClassName } from "@/src/ui/components/screens/ModalForm";
 
 /**
@@ -14,22 +15,23 @@ export type MemoryApplyMode = "ALWAYS" | "WHEN_RELEVANT";
 
 export const MEMORY_APPLY_MODE_OPTIONS: Array<{
   value: MemoryApplyMode;
-  label: string;
-  hint: string;
+  labelKey: string;
+  hintKey: string;
 }> = [
   {
     value: "ALWAYS",
-    label: "Always",
-    hint: "Added to every answer. Use for tone and for things the AI must never get wrong.",
+    labelKey: "always",
+    hintKey: "alwaysHint",
   },
   {
     value: "WHEN_RELEVANT",
-    label: "When relevant",
-    hint: "Looked up when the conversation touches on it. Use for facts and details.",
+    labelKey: "whenRelevant",
+    hintKey: "whenRelevantHint",
   },
 ];
 
 export function MemoryApplyModeBadge({ applyMode }: { applyMode: MemoryApplyMode }) {
+  const t = useTranslations("admin.memoryFields");
   const isAlways = applyMode === "ALWAYS";
   return (
     <span
@@ -39,7 +41,7 @@ export function MemoryApplyModeBadge({ applyMode }: { applyMode: MemoryApplyMode
           : "border-border-dim bg-foreground/5 text-secondary"
       }`}
     >
-      {isAlways ? "Always" : "When relevant"}
+      {isAlways ? t("always") : t("whenRelevant")}
     </span>
   );
 }
@@ -52,8 +54,9 @@ type MemoryApplyModeChoiceProps = {
 };
 
 export function MemoryApplyModeChoice({ value, onChange, alwaysRemaining }: MemoryApplyModeChoiceProps) {
+  const t = useTranslations("admin.memoryFields");
   return (
-    <ModalFormField label="When should the AI use this?">
+    <ModalFormField label={t("applyModeQuestion")}>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {MEMORY_APPLY_MODE_OPTIONS.map((option) => {
           const isSelected = value === option.value;
@@ -65,6 +68,7 @@ export function MemoryApplyModeChoice({ value, onChange, alwaysRemaining }: Memo
             && alwaysRemaining <= 0;
 
           return (
+            // Stays raw: a selected-state option card (border swaps with selection) — matches no variant.
             <button
               key={option.value}
               type="button"
@@ -76,9 +80,9 @@ export function MemoryApplyModeChoice({ value, onChange, alwaysRemaining }: Memo
                   : "border-border-dim hover:border-border-dim/80 hover:bg-foreground/[0.02]"
               }`}
             >
-              <span className="text-[13px] font-semibold text-foreground">{option.label}</span>
+              <span className="text-[13px] font-semibold text-foreground">{t(option.labelKey)}</span>
               <span className="text-[11px] leading-relaxed text-secondary">
-                {isFull ? "No Always slots left. Change one of the others first." : option.hint}
+                {isFull ? t("alwaysFull") : t(option.hintKey)}
               </span>
             </button>
           );
@@ -94,14 +98,15 @@ type MemoryContentFieldProps = {
 };
 
 export function MemoryContentField({ value, onChange }: MemoryContentFieldProps) {
+  const t = useTranslations("admin.memoryFields");
   return (
-    <ModalFormField label="What the AI should know">
+    <ModalFormField label={t("contentLabel")}>
       <textarea
         required
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={`${modalTextareaClassName} min-h-[180px]`}
-        placeholder="We do not give delivery dates over chat. Ask the customer to email orders@ instead."
+        placeholder={t("contentPlaceholder")}
       />
     </ModalFormField>
   );

@@ -48,6 +48,9 @@ export function nextIntl() {
       number: (value: number) => String(value),
       relativeTime: () => "",
     }),
+    // renderWithProviders wraps every screen in the provider, so the mocked
+    // module has to export it too — as a pass-through.
+    NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   };
 }
 

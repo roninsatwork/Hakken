@@ -1,5 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { Activity } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 import { AICostLeaderboards } from "./AICostLeaderboards";

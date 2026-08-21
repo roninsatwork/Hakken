@@ -4,9 +4,10 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ClipboardCheck, Eye, Loader2, PlayCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { formatDateTime } from "@/src/lib/dates";
 import {
-  getSmokeEvalModeLabel,
+  getSmokeEvalModeKey,
   getSmokeEvalTone,
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
@@ -35,6 +36,8 @@ export function EvalHealthPanel({
   action: AdminActionRunner;
   onInspectRun: (runId: Id<"agentRuns">) => void;
 }) {
+  const t = useTranslations("admin.agents.details.runs.evalHealth");
+  const tLabels = useTranslations("admin.agents.labels");
   const { showToast } = useToast();
   const runEvalSuite = useMutation(api.agentEvalFixtures.runEvalSuite);
   const evalFixtures = useQuery(api.agentEvalFixtures.getRecentForAgent, { agentId });
@@ -44,12 +47,12 @@ export function EvalHealthPanel({
   const handleRunEvalSuite = async () => {
     const outcome = await action.run(() => runEvalSuite({ agentId }), {
       key: EVAL_SUITE_KEY,
-      fallbackMessage: "The eval suite could not be run.",
+      fallbackMessage: t("suiteFailed"),
     });
     if (!outcome.ok) return;
     const { total, passed, failed, active } = outcome.data;
     showToast(
-      `Ran ${total} contract eval${total === 1 ? "" : "s"}: ${passed} passed, ${failed} failed, ${active} still active.`,
+      t("suiteResult", { total, passed, failed, active }),
       failed > 0 ? "info" : "success",
     );
   };
@@ -60,10 +63,10 @@ export function EvalHealthPanel({
         <div className="min-w-0">
           <h3 className="text-[14px] font-semibold text-foreground tracking-tight flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-brand" />
-            Eval health
+            {t("title")}
           </h3>
           <p className="text-[12px] text-secondary mt-1">
-            Smoke eval coverage, recent pass/fail results, and fixture contract failures.
+            {t("description")}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
@@ -74,15 +77,15 @@ export function EvalHealthPanel({
             className="disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-9"
           >
             {action.isBusy(EVAL_SUITE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
-            Run suite
+            {t("runSuite")}
           </Button>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-6 gap-y-2 min-w-0 lg:min-w-[540px]">
             {[
-              { label: "Fixtures", value: evalFixtures ? activeEvalFixtureCount.toLocaleString() : "..." },
-              { label: "Smoke evals", value: smokeEvalHistory ? smokeEvalHistory.totals.total.toLocaleString() : "..." },
-              { label: "Passed", value: smokeEvalHistory ? smokeEvalHistory.totals.passed.toLocaleString() : "..." },
-              { label: "Failed", value: smokeEvalHistory ? smokeEvalHistory.totals.failed.toLocaleString() : "..." },
-              { label: "Model graded", value: smokeEvalHistory ? smokeEvalHistory.totals.modelGraded.toLocaleString() : "..." },
+              { label: t("stats.fixtures"), value: evalFixtures ? activeEvalFixtureCount.toLocaleString() : "..." },
+              { label: t("stats.smokeEvals"), value: smokeEvalHistory ? smokeEvalHistory.totals.total.toLocaleString() : "..." },
+              { label: t("stats.passed"), value: smokeEvalHistory ? smokeEvalHistory.totals.passed.toLocaleString() : "..." },
+              { label: t("stats.failed"), value: smokeEvalHistory ? smokeEvalHistory.totals.failed.toLocaleString() : "..." },
+              { label: t("stats.modelGraded"), value: smokeEvalHistory ? smokeEvalHistory.totals.modelGraded.toLocaleString() : "..." },
             ].map((stat) => (
               <div key={stat.label} className="min-w-0">
                 <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>
@@ -99,7 +102,7 @@ export function EvalHealthPanel({
         </div>
       ) : smokeEvalHistory.entries.length === 0 ? (
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
-          No smoke evals have been recorded for this agent yet.
+          {t("empty")}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
@@ -112,7 +115,7 @@ export function EvalHealthPanel({
                       {entry.status.replace("_", " ")}
                     </span>
                     <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                      {getSmokeEvalModeLabel(entry.gradingMode)}
+                      {tLabels(getSmokeEvalModeKey(entry.gradingMode))}
                     </span>
                   </div>
                   <p className="text-[13px] text-foreground mt-2 leading-relaxed line-clamp-2">
@@ -126,8 +129,8 @@ export function EvalHealthPanel({
 
               <div className="flex flex-wrap gap-2 text-[11px] font-mono text-muted">
                 {entry.fixture && <span>{entry.fixture.type.toLowerCase().replaceAll("_", " ")}</span>}
-                {entry.modelId && <span>model: {entry.modelId}</span>}
-                {entry.agentVersionId && <span>version: {entry.agentVersionId}</span>}
+                {entry.modelId && <span>{t("model", { model: entry.modelId })}</span>}
+                {entry.agentVersionId && <span>{t("version", { version: entry.agentVersionId })}</span>}
               </div>
 
               {(entry.finalOutput || entry.error) && (
@@ -140,7 +143,7 @@ export function EvalHealthPanel({
                 <div className="flex flex-wrap gap-2">
                   {entry.missingToolMappings.map((mapping) => (
                     <span key={mapping} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-destructive/20 bg-destructive/10 text-destructive">
-                      missing {mapping}
+                      {t("missing", { mapping })}
                     </span>
                   ))}
                 </div>
@@ -150,7 +153,7 @@ export function EvalHealthPanel({
                 <div className="flex flex-wrap gap-2">
                   {entry.expectedBlockedActionSummaries.map((summary) => (
                     <span key={summary} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-warning/20 bg-warning/10 text-warning">
-                      blocked {summary}
+                      {t("blocked", { summary })}
                     </span>
                   ))}
                 </div>
@@ -163,7 +166,7 @@ export function EvalHealthPanel({
                   className="text-[11px] flex items-center gap-2"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  Inspect run
+                  {t("inspectRun")}
                 </Button>
               </div>
             </div>

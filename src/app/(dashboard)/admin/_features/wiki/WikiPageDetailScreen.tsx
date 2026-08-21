@@ -12,8 +12,10 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
 import { WikiProse } from "./WikiProse";
+import { Button } from "@/src/ui/atoms/Button";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiLocalGraph } from "./WikiLocalGraph";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * One page of the wiki, READ FIRST (Anthony's ruling, 2026-08-17: "an
@@ -33,6 +35,7 @@ export function WikiPageDetailScreen({
   basePath: string;
 }) {
   const t = useTranslations("aiPages.detail");
+  const { platformName } = useSystemSettings();
   const tKinds = useTranslations("aiPages.kinds");
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
@@ -159,14 +162,14 @@ export function WikiPageDetailScreen({
             <Pencil className="w-3.5 h-3.5" />
             {isEditing ? t("read.reading") : t("read.edit")}
           </WriteButton>
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => setOpenFold((current) => (current === "history" ? "none" : "history"))}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] border border-border-dim text-secondary hover:text-foreground text-[13px] font-medium transition-colors"
+            className="flex items-center gap-1.5"
           >
             <History className="w-3.5 h-3.5" />
             {t("read.history")}
-          </button>
+          </Button>
           {detail.kind === "SOURCE" && (
             <WriteButton
               onClick={() =>
@@ -253,7 +256,7 @@ export function WikiPageDetailScreen({
             <Pin className="w-4 h-4 text-brand shrink-0 mt-0.5" />
             <span>
               {correction.text}
-              <span className="block text-[11.5px] text-muted mt-0.5">{t("pinned.hintShort")}</span>
+              <span className="block text-[11.5px] text-muted mt-0.5">{t("pinned.hintShort", { platformName })}</span>
             </span>
           </span>
           <WriteButton
@@ -271,11 +274,11 @@ export function WikiPageDetailScreen({
       {/* The document itself — or the editor, when asked for. */}
       {isEditing ? (
         <section className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
-          <p className="text-[12px] text-secondary">{t("body.hint")}</p>
+          <p className="text-[12px] text-secondary">{t("body.hint", { platformName })}</p>
           {/* The sentence above already says what this box is, so the label is
               kept for anyone listening rather than said twice. */}
           <TextAreaField
-            label={t("body.hint")}
+            label={t("body.hint", { platformName })}
             labelHidden
             value={draft ?? ""}
             onChange={(event) => setDraft(event.target.value)}
@@ -295,6 +298,7 @@ export function WikiPageDetailScreen({
             >
               {isSaving ? t("body.saving") : t("body.save")}
             </WriteButton>
+            {/* Raw: an inline text link, not a button shape — no kit variant is a bare link. */}
             <button
               type="button"
               onClick={() => {
@@ -380,6 +384,7 @@ export function WikiPageDetailScreen({
       {/* The quiet strip: receipts, history, pinning — there when
           governing, out of the way when reading. */}
       <div className="flex flex-wrap gap-3 pt-2 border-t border-border-dim text-[12.5px] text-muted">
+        {/* Raw (all three fold toggles): open state swaps their colours; no kit variant is stateful. */}
         <button
           type="button"
           onClick={() => setOpenFold((current) => (current === "sources" ? "none" : "sources"))}
@@ -476,7 +481,7 @@ export function WikiPageDetailScreen({
             <Pin className="w-4 h-4 text-brand" />
             {t("pinned.title")}
           </h2>
-          <p className="text-[12px] text-secondary">{t("pinned.hint")}</p>
+          <p className="text-[12px] text-secondary">{t("pinned.hint", { platformName })}</p>
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <Field
@@ -484,7 +489,7 @@ export function WikiPageDetailScreen({
                 labelHidden
                 value={newPin}
                 onChange={(event) => setNewPin(event.target.value)}
-                placeholder={t("pinned.placeholder")}
+                placeholder={t("pinned.placeholder", { platformName })}
               />
             </div>
             <WriteButton

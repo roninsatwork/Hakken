@@ -583,7 +583,26 @@
     "salesDataImport": "Import Data",
     "salesDataTables": "Spreadsheet Imports",
     "salesDataCustomers": "Customers",
-    "salesDataOpportunityReport": "Opportunity Report"
+    "salesDataOpportunityReport": "Opportunity Report",
+    "plans": "Plans",
+    "skillCenter": "Skill Center",
+    "widget": "Widget",
+    "askPlatform": "Ask {platformName}",
+    "tasks": "Tasks",
+    "calls": "Calls",
+    "reception": "Reception",
+    "reports": "Reports",
+    "information": "Information",
+    "salesReport": "Sales Report",
+    "logs": "Logs",
+    "postureStudio": "Posture Studio",
+    "studioLibrary": "Studio Library",
+    "replayAlignment": "Replay Alignment",
+    "organization": "Organization",
+    "teamMembers": "Team Members",
+    "arcade": "Arcade",
+    "roninsRun": "Ronin's Run",
+    "badgeWaiting": "{count} waiting"
   },
   "properties": {
     "search": {
@@ -644,6 +663,82 @@
         "90d": "90 Days",
         "ytd": "Year to Date",
         "custom": "Custom Range"
+      },
+      "dashboard": {
+        "header": {
+          "title": "Admin Dashboard",
+          "description": "How the business is doing, and which client needs you today."
+        },
+        "headline": {
+          "loading": "Counting clients, seats and activity.",
+          "noClients": "No clients yet.",
+          "allHealthy": "All {count} clients are healthy.",
+          "healthyOf": "{healthy} of {total} clients healthy",
+          "needAttention": "{count} need attention",
+          "nobodyAdded": "{count} with nobody added"
+        },
+        "cards": {
+          "revenueTitle": "Projected monthly revenue",
+          "spendNoPlans": "AI spend {spend} · no plans priced yet",
+          "spendPercent": "AI spend {spend} · {percent}% of it",
+          "seatsTitle": "Seats in use",
+          "seatsOf": "of {total}",
+          "seatsUsed": "{utilisation}% used in the last {days} days",
+          "attentionTitle": "Clients needing attention",
+          "attentionSub": "someone there has stopped using {platformName}"
+        },
+        "charts": {
+          "activityTitle": "Activity",
+          "activityDescription": "Questions people asked against everything the AI did, per day. Last {days} days.",
+          "spendTitle": "AI spend",
+          "spendDescription": "What the models cost, per day. Last {days} days.",
+          "spentTooltip": "{amount} spent",
+          "signInsTitle": "How often people sign in",
+          "signInsDescription": "Each bar is every client seat, banded by how many times they signed in that day. Last {days} days, people who run the platform excluded.",
+          "plansTitle": "Plans",
+          "plansDescription": "How many client workspaces are on each plan.",
+          "managePlans": "Manage plans",
+          "signInTooltipRow": "{count, plural, one {# person} other {# people}} · {band}"
+        },
+        "bands": {
+          "didNotSignIn": "Did not sign in",
+          "oneSession": "1 session",
+          "twoSessions": "2 sessions",
+          "threeSessions": "3 sessions",
+          "fourSessions": "4 sessions",
+          "fivePlusSessions": "5+ sessions"
+        },
+        "series": {
+          "questions": "Questions people asked",
+          "aiCalls": "All AI calls, including automation"
+        },
+        "state": {
+          "healthy": "Healthy",
+          "needsAttention": "Needs attention",
+          "unused": "Nobody added"
+        },
+        "clients": {
+          "title": "Clients",
+          "empty": "No clients yet",
+          "showing": "{count, plural, one {# client} other {# clients}}",
+          "columnClient": "Client",
+          "columnState": "State",
+          "columnActive": "Active this week",
+          "columnQuiet": "Gone quiet",
+          "columnRevenue": "Revenue",
+          "noPlan": "No plan",
+          "activeOf": "{active} of {people}",
+          "open": "Open"
+        },
+        "todo": {
+          "title": "Worth doing",
+          "invitesTitle": "{count, plural, one {# invitation} other {# invitations}} nobody has accepted",
+          "invitesSub": "They cannot use {platformName} until they do.",
+          "invitesCta": "Open invitations",
+          "noPlanTitle": "{count, plural, one {# client is} other {# clients are}} on no plan",
+          "noPlanSub": "They are being served and not billed.",
+          "noPlanCta": "Open companies"
+        }
       }
     },
     "authDiagnostics": {
@@ -840,7 +935,337 @@
       "dashboardSubtitle": "A summary of this company, at a glance.",
       "dashboardEmpty": "Nothing here yet",
       "dashboardEmptyHint": "This is where this company's summary will go.",
-      "aiUsage": "AI Usage"
+      "aiUsage": "AI Usage",
+      "models": {
+        "headerTitle": "Company AI Model Defaults",
+        "headerDescription": "Which model this company uses for each kind of work.",
+        "intro": "Every row follows the platform default unless this company is given its own model. An agent or a workflow can still override any of these. Prices are per million tokens.",
+        "noPriceSet": "No price set",
+        "costInOut": "{input} in · {output} out",
+        "updateFailed": "Failed to update the {useCase} model: {message}",
+        "empty": "No jobs to configure yet",
+        "showing": "{count, plural, one {# job} other {# jobs}}",
+        "columnJob": "Job",
+        "columnPlatformDefault": "Platform default",
+        "columnCompany": "This company",
+        "columnPrice": "Price",
+        "notSet": "Not set",
+        "followPlatform": "Follow the platform default",
+        "strandedOption": "{name} — {reason}",
+        "reasonOff": "is switched off",
+        "reasonCannot": "cannot do this job",
+        "strandedWarning": "This model {reason}, so the work falls back to the platform default. Choose another, or follow the platform default.",
+        "selectAria": "{useCase} model for this company"
+      },
+      "dashboard": {
+        "lastSeen": {
+          "never": "Never",
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "daysAgo": "{days} days ago"
+        },
+        "header": {
+          "title": "Dashboard",
+          "description": "Who is using {platformName} here, how often, and who has gone quiet."
+        },
+        "headline": {
+          "loading": "Counting what this company's people have been doing.",
+          "nobody": "Nobody has been added to this company yet.",
+          "noneActive": "None of the {total} people here have used {platformName} in the last {days} days.",
+          "active": "{active} of {total} people used {platformName} in the last {days} days",
+          "andQuiet": ", and {quiet} did not"
+        },
+        "cards": {
+          "questionsAsked": "Questions asked",
+          "byPeople": "by {count, plural, one {# person} other {# people}}",
+          "signIns": "Sign-ins",
+          "acrossDays": "across {count, plural, one {# day} other {# days}}",
+          "goneQuiet": "Gone quiet",
+          "nothingRecorded": "nothing recorded in {days} days"
+        },
+        "charts": {
+          "signInsTitle": "How often people sign in",
+          "signInsDescription": "Each bar is everyone here, banded by how many times they signed in that day. Last {days} days, people who run the platform excluded.",
+          "askingTitle": "What they are asking",
+          "askingDescription": "Questions put to {platformName} each day, over the last {days} days.",
+          "questionsTooltip": "{count, plural, one {# question} other {# questions}} asked"
+        },
+        "people": {
+          "title": "People",
+          "empty": "Nobody here yet",
+          "invite": "Invite someone",
+          "showing": "{count, plural, one {# person} other {# people}}",
+          "columnPerson": "Person",
+          "admin": "Admin",
+          "columnLastSeen": "Last seen",
+          "columnSignIns": "Sign-ins",
+          "columnQuestions": "Questions",
+          "columnAgentRuns": "Agents run"
+        },
+        "invites": {
+          "title": "{count, plural, one {# person has} other {# people have}} been invited and not arrived",
+          "sub": "They cannot use {platformName} until they accept.",
+          "cta": "Open invitations"
+        },
+        "notCovered": {
+          "title": "What this does not cover",
+          "item1": "People who run the platform are left out, so their activity is never counted as this company's.",
+          "item2": "Visitors using the public chat widget are anonymous and cannot be tied to a person here.",
+          "item3": "Sign-ins are recorded once an hour per device, so this counts sessions rather than page loads."
+        }
+      },
+      "layout": {
+        "loadingWorkspace": "Loading workspace...",
+        "notFound": "Workspace not found",
+        "workspaceTitle": "{name} Workspace",
+        "defaultDescription": "Manage workspace settings.",
+        "impersonate": "Impersonate Workspace",
+        "backToCompanies": "Back to Companies",
+        "tabs": {
+          "dashboard": "Dashboard",
+          "overview": "Overview",
+          "directory": "Directory",
+          "invites": "Invites",
+          "ai": "AI",
+          "aiUsage": "AI Usage",
+          "value": "Value",
+          "wiki": "Wiki",
+          "unanswered": "Unanswered",
+          "diary": "Diary",
+          "skills": "Skills",
+          "prompt": "Prompt",
+          "aiRules": "AI Rules",
+          "aiModels": "AI Models",
+          "evals": "Evals",
+          "chatLogs": "Chat Logs",
+          "calls": "Calls",
+          "mailbox": "Mailbox",
+          "widget": "Widget",
+          "appearance": "Appearance",
+          "welcomeScreen": "Welcome Screen",
+          "conversationStarters": "Conversation Starters",
+          "greeting": "Greeting",
+          "integration": "Integration",
+          "features": "Features"
+        }
+      },
+      "profile": {
+        "saveSuccess": "Profile successfully updated.",
+        "saveFailed": "Failed to save profile",
+        "nameLabel": "Company name",
+        "namePlaceholder": "For example: ACME Inc",
+        "descriptionLabel": "One-line description",
+        "descriptionPlaceholder": "For example: Manage workspace settings.",
+        "aboutLabel": "About this company",
+        "aboutHint": "Your team can see this. It gives the assistant background to work from.",
+        "aboutPlaceholder": "What the company does, who it serves, how it is organised — anything worth the assistant knowing.",
+        "planOverride": "Subscription Plan Override",
+        "superAdminOnly": "Super Admin Only",
+        "noPlanOption": "No Plan (Unlimited / System Default)",
+        "planOption": "{name} ({limit} msgs) - £{price}/mo",
+        "planOptionUnlimited": "{name} (Unlimited) - £{price}/mo",
+        "saveProfile": "Save Profile",
+        "billingTitle": "Subscription & Billing",
+        "billingSubtitle": "Manage your organization's subscription tier and monitor structural capacity limits.",
+        "currentPlan": "Current Plan Assignment",
+        "loading": "Loading...",
+        "usage": "Usage: {used} / {limit}",
+        "unlimited": "Unlimited",
+        "availableTiers": "Available Tier Upgrades",
+        "active": "Active",
+        "pricePerMonth": "£{price}/mo",
+        "unlimitedActions": "Unlimited actions",
+        "actions": "{count} actions",
+        "askUs": "Need more messages or a bigger knowledge allowance? <b>Ask us</b> and we will move this workspace to a plan that fits."
+      },
+      "aiOverview": {
+        "headerTitle": "Company AI",
+        "headerDescription": "What this company has set up of its own, and whether any of it needs attention.",
+        "ready": "Ready",
+        "needsAttention": "Needs attention",
+        "nothingNeedsAttention": "· nothing needs attention",
+        "areasCount": "· {count} of {total} areas",
+        "intro": "A company does not have to set any of this up — anything left alone uses the platform's setup, which is normal and does not hold up a launch. Only something set here that does not work needs attention.",
+        "fixFirst": "Fix these first",
+        "empty": "Nothing to report yet",
+        "showing": "{count, plural, one {# area} other {# areas}}",
+        "columnArea": "Area",
+        "columnSummary": "What this company has",
+        "columnState": "State",
+        "stateNeedsAttention": "Needs attention",
+        "stateSetHere": "Set for this company",
+        "stateNotConfigured": "Not configured"
+      },
+      "prompt": {
+        "title": "Company Prompt",
+        "subtitle": "Custom instructions and rules that apply to all AI agents in {name}.",
+        "thisWorkspace": "this workspace",
+        "revert": "Revert",
+        "savePrompt": "Save Prompt",
+        "savedTitle": "Prompt Saved",
+        "savedMessage": "The company prompt was successfully updated.",
+        "saveFailedTitle": "Save Failed",
+        "saveFailedFallback": "Failed to save changes.",
+        "sectionTitle": "Company Instructions",
+        "unsaved": "Unsaved",
+        "synced": "Synced",
+        "instructionsLabel": "INSTRUCTIONS",
+        "connecting": "Connecting...",
+        "placeholder": "Initialize the company-specific operating boundaries here... E.g., The primary focus of this workspace is..."
+      },
+      "rules": {
+        "title": "AI Rules",
+        "subtitle": "Set rules for how the AI responds to users.",
+        "createRule": "Create Rule",
+        "searchPlaceholder": "Search triggers or instructions...",
+        "empty": "No Rules Yet",
+        "columnPriority": "Priority",
+        "columnRule": "Rule Name / Trigger",
+        "columnStatus": "Status",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleteTitle": "Delete Rule",
+        "deleteBody": "This rule will be removed from the workspace rule set.",
+        "deleteWarning": "This action cannot be undone.",
+        "cancel": "Cancel",
+        "deleteConfirm": "Delete Rule"
+      },
+      "chatEvalNew": {
+        "title": "Create Eval From Chat",
+        "description": "Convert selected chat evidence into a regression eval on a full screen with the evidence kept visible.",
+        "evidenceTitle": "Selected chat evidence",
+        "promptEvidence": "Prompt evidence",
+        "noUserMessage": "No user message found.",
+        "observedAnswer": "Observed answer",
+        "noAssistantMessage": "No assistant message selected.",
+        "surfaceWidget": "widget",
+        "surfaceCompanyChat": "company chat",
+        "nameLabel": "Name",
+        "namePlaceholder": "Regression name",
+        "whereLabel": "Where does this apply?",
+        "whereInternal": "Internal chat",
+        "whereInternalHint": "Staff asking your AI questions",
+        "whereWidget": "Customer widget",
+        "whereWidgetHint": "The public widget on your site",
+        "promptLabel": "What would someone ask?",
+        "promptPlaceholder": "Question or task to replay as an eval.",
+        "expectedLabel": "What does a good answer look like?",
+        "expectedPlaceholder": "What a passing answer must do.",
+        "bannedLabel": "Words it must never say",
+        "bannedHint": "Optional. Press Enter after each one.",
+        "bannedPlaceholder": "enterprise is free",
+        "removePhrase": "Remove {phrase}",
+        "blockerTitle": "This must pass before the AI goes live",
+        "blockerHint": "Leave ticked for anything that would embarrass you in front of a customer.",
+        "creating": "Creating...",
+        "create": "Create eval",
+        "createFailed": "Eval case could not be created.",
+        "defaultNameFromTitle": "{title} regression",
+        "defaultName": "Chat evidence regression",
+        "defaultExpectedWithAnswer": "Preserve the useful parts of the observed answer, stay grounded in approved company context, and avoid unsupported claims.",
+        "defaultExpected": "Answer should be grounded in approved company context and avoid unsupported claims."
+      },
+      "chatMemoryNew": {
+        "title": "Suggest a memory",
+        "description": "Turn something said in this conversation into a memory, for review on the Memory screen.",
+        "evidenceTitle": "Selected chat evidence",
+        "noContent": "No selected message content.",
+        "message": "message",
+        "surfaceWidget": "widget",
+        "surfaceCompanyChat": "company chat",
+        "titleLabel": "Title",
+        "optional": "Optional",
+        "titlePlaceholder": "No delivery dates over chat",
+        "whyLabel": "Why?",
+        "whyHint": "Optional review note",
+        "whyPlaceholder": "Why should this become durable memory?",
+        "saving": "Saving...",
+        "suggest": "Suggest memory",
+        "createFailed": "Memory candidate could not be created.",
+        "defaultTitle": "{title} memory",
+        "defaultReason": "Suggested from chat thread {threadId}."
+      },
+      "knowledgeDoc": {
+        "back": "Back to knowledge",
+        "notFound": "This document could not be inspected.",
+        "retryFailed": "Failed to retry ingestion.",
+        "sampledChunks": "{count} sampled chunks",
+        "retryIngestion": "Retry ingestion",
+        "ingestionFailed": "Ingestion failed",
+        "embeddingConfigIssue": "This is an AI model configuration issue. Set the company embedding default to a Google Vertex model that supports the embedding use case, then retry ingestion.",
+        "openAiModels": "Open AI Models",
+        "storedEmbedding": "Stored embedding",
+        "noStoredModel": "No stored model",
+        "noProviderModel": "No provider model",
+        "dimensions": "{count} dimensions",
+        "noDimensionsStored": "No embedding dimensions stored",
+        "activeEmbedding": "Active embedding",
+        "noActiveModel": "No active model",
+        "noDimensionsResolved": "No embedding dimensions resolved",
+        "timeline": "Timeline",
+        "created": "created: {date}",
+        "queued": "queued: {date}",
+        "started": "started: {date}",
+        "fresh": "fresh: {date}",
+        "driftDetected": "Embedding model drift detected",
+        "driftStored": "Stored: {model} ({dims} dims)",
+        "driftActive": "Active: {model} ({dims} dims)",
+        "unknown": "unknown",
+        "historyTitle": "Ingestion history",
+        "noEvents": "No recent document events were found.",
+        "chunksTitle": "Stored chunks",
+        "chunksShown": "{count} shown",
+        "noChunks": "No chunks are stored for this document yet.",
+        "chunkNumber": "Chunk {number}",
+        "chars": "{count} chars"
+      },
+      "skills": {
+        "title": "Company Skills",
+        "subtitle": "Skills from the Skill Center that this company's own AI uses. Two at most — each one is added to every message it answers.",
+        "addFromCenter": "Add from Skill Center",
+        "toggleFailed": "The switch could not be changed.",
+        "archiveFailed": "The skill could not be archived.",
+        "importFailed": "The skills could not be added.",
+        "searchPlaceholder": "Search skills by name",
+        "clearSearch": "Clear search",
+        "noMatch": "No skills match that search",
+        "emptyList": "No skills yet — add one from the Skill Center",
+        "emptyShort": "No skills yet",
+        "showing": "Showing {start}-{end} of {total} skills",
+        "columnSkill": "Skill",
+        "noDescription": "No description.",
+        "columnSurfaces": "Where it answers",
+        "answersInChat": "Answers in company chat",
+        "answersOnWidget": "Answers on the widget",
+        "columnAdded": "Added",
+        "removeAria": "Remove {name}",
+        "addModalTitle": "Add skills",
+        "searchSkills": "Search skills",
+        "noMatchModal": "No skills match that search.",
+        "allAdded": "Every skill in the Skill Center has already been added.",
+        "showMore": "Show more skills",
+        "cancel": "Cancel",
+        "addCount": "Add {count} skills",
+        "addOne": "Add skill",
+        "removeModalTitle": "Remove skill",
+        "removeBody": "Remove <b>{name}</b> from this company? Its agents stop using it. The skill stays in the Skill Center, so you can add it back.",
+        "removeConfirm": "Remove skill"
+      },
+      "providerUsage": {
+        "title": "Provider Usage",
+        "subtitle": "Tenant spend by provider",
+        "noData": "No Provider Data",
+        "unknownProvider": "Unknown / Legacy",
+        "calls": "{count} calls"
+      },
+      "knowledge": {
+        "title": "AI Knowledge",
+        "subtitle": "Connect different data sources for the agent knowledgebase",
+        "emptyDescription": "Upload PDF, Word or Markdown files — or drop a whole OKF folder — so the AI can securely learn about this company.",
+        "deleteDescription": "Are you sure you want to remove <b>{title}</b> from this workspace's memory?"
+      }
     },
     "workflows": {
       "title": "Workflows",
@@ -913,7 +1338,15 @@
           "agent": "Agent Unit",
           "inputs": "Inputs",
           "outputs": "Outputs",
-          "noSchema": "No I/O schemas defined"
+          "noSchema": "No I/O schemas defined",
+          "unnamed": "Unnamed Node",
+          "module": "{type} Module",
+          "configuration": "Configuration",
+          "unconfiguredDatabase": "Unconfigured Database Node",
+          "schemaBound": "Data schema bound",
+          "skills": "Skills",
+          "avatarAlt": "Avatar",
+          "notAvailable": "N/A"
         },
         "editor": {
           "configureAgent": "Configure Agent Unit",
@@ -956,7 +1389,43 @@
           "promote": "Promote to Global Fleet",
           "promoteConfirm": "Are you sure you want to promote this agent to the global fleet? It will become accessible across all workflows.",
           "promoteSuccess": "Agent promoted to global fleet successfully.",
-          "save": "Sync Changes"
+          "save": "Sync Changes",
+          "tabs": {
+            "aiConfiguration": "AI Configuration",
+            "advancedEngine": "Advanced Engine"
+          },
+          "variables": {
+            "inputLabel": "Expected Variables in Input",
+            "inputPlaceholder": "e.g. textEmail, topic, userPreferences",
+            "inputHint": "Comma separated variables {platformName} will pass to the AI.",
+            "outputLabel": "Variables in AI Output",
+            "outputPlaceholder": "e.g. summary, sentiment, nextSteps",
+            "outputHint": "Comma separated variables matching the agent output format. {platformName} strictly enforces this output."
+          },
+          "effort": {
+            "low": "LOW",
+            "medium": "MEDIUM",
+            "high": "HIGH"
+          },
+          "skills": {
+            "label": "Central skills",
+            "selectedCount": "{count} selected from active library skills.",
+            "empty": "No active central skills are available yet.",
+            "risk": "{level} risk",
+            "noDescription": "No description provided.",
+            "bindHint": "Saving binds selected skills to this agent with current version snapshots. Tool permissions are still controlled separately."
+          },
+          "mapping": {
+            "standardTab": "🪄 Standard Configurator",
+            "developerTab": "⚡️ Developer Mapping",
+            "autoTitle": "AI Mapping Auto-Configuration",
+            "autoDescription": "Describe what upstream data should be passed to this Agent, or what specific operation it should be performing with prior payload variables. We will analyze the graph context and construct the dynamic injection templates.",
+            "autoPlaceholder": "e.g. Map the contents of the previous Scrape Action into the Agent's evaluation payload.",
+            "autoConfigure": "Auto-Configure Mapping Requirements",
+            "jsonLabel": "JSON Structured Input Mapping (Phase 2)",
+            "jsonHint": "Use <syntax></syntax> to bind variables mathematically. If mapped, this JSON overrides raw templates. It aligns nicely to match the <strong>Input Schema</strong> defined in the Agent Engine tab.",
+            "templateLabel": "Raw String Prompt Template"
+          }
         },
         "addModal": {
           "title": "Add Intelligence Unit",
@@ -977,7 +1446,186 @@
           "initSandboxFailed": "Failed to initialize sandbox agent.",
           "saveAgentFailed": "Failed to synchronize agent configuration.",
           "promoteFailed": "Failed to promote agent to global fleet.",
-          "dispatchFailed": "Failed to dispatch manual execution."
+          "dispatchFailed": "Failed to dispatch manual execution.",
+          "autoConfigureFailed": "AI Configuration failed. Please try again or construct the payload manually."
+        },
+        "analyzing": "Analyzing Graph Context...",
+        "library": {
+          "title": "Node Library",
+          "description": "Drag and drop nodes onto the canvas to orchestrate your workflow.",
+          "nodes": {
+            "trigger": "Trigger Event",
+            "agent": "AI Agent",
+            "action": "API Action",
+            "logic": "Logic Router",
+            "merge": "Merge / Sync",
+            "iterator": "Iterator (Loop)",
+            "code": "Code Transform",
+            "database": "Database Action",
+            "wait": "Wait / Delay",
+            "approval": "Human Approval",
+            "email": "Send Email"
+          }
+        },
+        "drawer": {
+          "closeAria": "Close configuration",
+          "standardTab": "🪄 Standard",
+          "developerTab": "⚡️ Developer",
+          "nodeLabel": "Node Label",
+          "nodeLabelPlaceholder": "e.g. Scrape Google",
+          "saveConfiguration": "Save Configuration",
+          "trigger": {
+            "type": "Trigger Type",
+            "manual": "Manual",
+            "schedule": "Schedule",
+            "webhook": "Webhook",
+            "webhookEndpoint": "Webhook Endpoint",
+            "webhookHint": "Send a POST request to this endpoint to fire the workflow. The JSON body will be passed as the initial workflow payload.",
+            "runFrequency": "Run Frequency",
+            "modes": {
+              "interval": "Custom Interval",
+              "daily": "Daily",
+              "weekly": "Weekly",
+              "monthly": "Monthly"
+            },
+            "every": "Every",
+            "units": {
+              "minutes": "Minutes",
+              "hours": "Hours",
+              "days": "Days"
+            },
+            "dayOfWeek": "Day of Week",
+            "days": {
+              "monday": "Monday",
+              "tuesday": "Tuesday",
+              "wednesday": "Wednesday",
+              "thursday": "Thursday",
+              "friday": "Friday",
+              "saturday": "Saturday",
+              "sunday": "Sunday"
+            },
+            "dayOfMonth": "Day of Month",
+            "timeUtc": "Time (UTC)"
+          },
+          "action": {
+            "method": "HTTP Method",
+            "url": "Target Endpoint URL",
+            "urlHint": "Supports <syntax></syntax> payload injection.",
+            "headers": "Request Headers",
+            "addHeader": "+ Add Header",
+            "headerKeyPlaceholder": "Key (e.g. Authorization)",
+            "headerValuePlaceholder": "Value (e.g. Bearer 123)",
+            "noHeaders": "No external headers configured.",
+            "body": "Request Payload (Body)",
+            "forwardData": "+ Forward Data From...",
+            "bodyHint": "To pass the full output of a previous node securely, use the dropdown above to inject the raw variable syntax (e.g. <syntax></syntax>)."
+          },
+          "code": {
+            "label": "V8 JavaScript Sandbox",
+            "hint": "A secure V8 sandbox execution layer. Manipulate, map, filter, or restructure complex arrays dynamically before passing them to integrations. You <strong>MUST</strong> use a standard <code>return</code> statement."
+          },
+          "db": {
+            "operation": "Database Operation",
+            "table": "Target Table",
+            "selectTable": "-- Select Target Table --",
+            "docId": "Target Document ID",
+            "docIdOptional": "Target Document ID (Optional)",
+            "docIdOptionalPlaceholder": "Optional direct document ID",
+            "indexedQuery": "Indexed Query",
+            "selectIndex": "-- Select Index --",
+            "tenantPlaceholder": "Blank uses workflow tenant",
+            "limit": "Limit",
+            "order": "Order",
+            "newestFirst": "Newest first",
+            "oldestFirst": "Oldest first"
+          },
+          "dbIndexes": {
+            "name": "Name",
+            "plan": "Plan",
+            "company": "Company",
+            "rightmoveId": "Rightmove ID",
+            "runId": "Run ID",
+            "user": "User",
+            "widget": "Widget",
+            "thread": "Thread",
+            "companyRole": "Company + Role",
+            "agent": "Agent",
+            "document": "Document",
+            "status": "Status",
+            "agentCompany": "Agent + Company",
+            "active": "Active",
+            "created": "Created",
+            "email": "Email"
+          },
+          "logic": {
+            "conditions": "Routing Conditions",
+            "addRule": "+ Add Rule",
+            "testVariable": "Test Variable",
+            "injectUpstream": "+ Inject Upstream Variable Reference...",
+            "condition": "Condition",
+            "operators": {
+              "equals": "Equals (==)",
+              "notEquals": "Not Equals (!=)",
+              "contains": "Contains",
+              "greaterThan": "Greater Than (>)",
+              "lessThan": "Less Than (<)",
+              "isEmpty": "Is Empty / Null",
+              "notEmpty": "Is Not Empty / Configured"
+            },
+            "comparisonValue": "Comparison Value",
+            "comparisonPlaceholder": "Fixed text, number or '{{'nodes...'}}'",
+            "executeNext": "Execute Next Block",
+            "noRules": "No conditional routing rules defined. Traversal will always use the Fallback branch.",
+            "fallback": "Fallback Route (Default)",
+            "fallbackHint": "If no rules match, execution safely follows the path to this Fallback node."
+          },
+          "iterator": {
+            "info": "The Iterator Node runs a Structural Fan-Out. For every item identified inside the parsed Array target, {platformName} will natively branch off and spawn simultaneous parallel executions for all downstream elements connected to this node physically!",
+            "target": "Target Array Collection"
+          },
+          "merge": {
+            "info": "<strong>Structural Fusion:</strong> The Merge Node halts downstream execution until its configured rules are met. Once fired, it dynamically bundles all physical upstream edge payloads into a singular dictionary array.",
+            "mapHint": "Map this block dynamically down-graph using: <syntax></syntax>",
+            "behavior": "Merge Wait Behavior",
+            "waitAll": "Wait for ALL mapped upstream branches to finish",
+            "waitAny": "Wait for ANY path to arrive (Drop late branches)"
+          },
+          "wait": {
+            "info": "<strong>Artificial Governor:</strong> The Wait Node pauses traversal recursively using native Convex background scheduling, successfully preventing burst rate-limits towards external APIs or concurrent DB mutations.",
+            "delay": "Delay Execution",
+            "seconds": "Seconds",
+            "hint": "Accepts static positive integers or dynamically resolved payload variables natively."
+          },
+          "approval": {
+            "info": "<strong>Human-in-the-Loop:</strong> Pauses the workflow until a super admin approves it on the Workflow Runs screen, securing critical operations like automated emails, deletions, and mass outreach. Nothing after this node happens until then, and an unanswered approval expires on the platform window.",
+            "notice": "Approval Task Notice",
+            "noticePlaceholder": "e.g. Please review generated email payload copy.",
+            "previewTarget": "Validation Value (Preview Target)",
+            "mapUpstream": "+ Map Upstream Result for live Preview...",
+            "previewHint": "Render this specific upstream value onto the Approval log card."
+          },
+          "email": {
+            "info": "<strong>Resend SMTP Node:</strong> Dispatches programmatic emails dynamically. Supports standard comma-separated sequences, HTML styling, and real-time mapping variables.",
+            "from": "Sender Address (From)",
+            "fromPlaceholder": "e.g. Acme Automations <hello@example.com>",
+            "fromHint": "Leave strictly blank to use global default dispatch address.",
+            "to": "Recipient Address (To)",
+            "toHint": "Accepts comma-separated strings or injected array variables natively.",
+            "subject": "Subject Line",
+            "body": "Message Body (HTML / Raw)",
+            "injectContent": "+ Inject Upstream Content Variable..."
+          },
+          "auto": {
+            "title": "AI Auto-Configuration",
+            "description": "Describe what you want this node to do in plain English. {platformName} will dynamically configure the payload requirements by mapping upstream variables from the graph automatically.",
+            "placeholder": "e.g. Save the summary from the previous AI Agent and inject it into the Marketing database.",
+            "button": "Auto-Configure Mapping"
+          },
+          "devMapping": {
+            "jsonLabel": "JSON Data Mapping (Phase 2)",
+            "jsonHint": "Use <syntax></syntax> to bind variables mathematically. If mapped, this JSON overrides raw input.",
+            "templateLabel": "Raw String Template"
+          }
         }
       },
       "executions": {
@@ -1223,6 +1871,130 @@
           }
         },
         "submit": "Add tool"
+      },
+      "shelf": {
+        "headerTitle": "Tools",
+        "headerDescription": "What your agents can reach, and what each one is allowed to do.",
+        "buildTool": "Build a tool",
+        "addFailed": "That could not be added. Try again.",
+        "removeFailed": "That could not be removed. Try again.",
+        "searchPlaceholder": "Search tools by name...",
+        "roles": {
+          "superAdmin": "System admins",
+          "admins": "Admins",
+          "anyone": "Anyone"
+        },
+        "effects": {
+          "read": "Reads only",
+          "write": "Writes",
+          "destructive": "Deletes",
+          "external": "Reaches outside"
+        },
+        "groups": {
+          "email": "Email",
+          "emailBlurb": "Reading and replying in a connected mailbox.",
+          "phone": "Phone",
+          "phoneBlurb": "The number {platformName} answers.",
+          "knowledge": "Knowledge",
+          "knowledgeBlurb": "Reading documents and pages.",
+          "companyRecords": "Company records",
+          "companyRecordsBlurb": "Reading and updating the company's own details.",
+          "work": "Work",
+          "workBlurb": "Jobs an agent can carry out for a person.",
+          "otherSystems": "Other systems",
+          "otherSystemsBlurb": "Calling an API you point it at.",
+          "builtByYou": "Built by you",
+          "builtByYouBlurb": "Tools written here rather than connected."
+        },
+        "states": {
+          "notAdded": "Not added yet",
+          "needsAttention": "Needs attention",
+          "switchedOff": "Switched off",
+          "needsSetup": "Needs setting up",
+          "working": "Working"
+        },
+        "settings": "Settings",
+        "adding": "Adding...",
+        "add": "Add",
+        "loading": "Loading...",
+        "noMatch": "No tools match that search.",
+        "emptyGroup": "Nothing here yet. Add a connection above, or build your own tool.",
+        "off": "Off",
+        "removeIt": "Remove it?",
+        "keep": "Keep",
+        "remove": "Remove",
+        "removeAria": "Remove {name}",
+        "showMore": "Show more"
+      },
+      "edit": {
+        "back": "Back to tools",
+        "title": "Edit tool",
+        "subtitle": "Change what this tool does and how the assistant uses it.",
+        "idTag": "ID: {id}...",
+        "sectionName": "Name",
+        "sectionDoes": "What it does",
+        "sectionRuns": "What it runs",
+        "sectionWho": "Who is allowed to use it",
+        "sectionRules": "Rules for running it",
+        "sectionInOut": "What goes in and out",
+        "roleAdmin": "Admin",
+        "roleSystemAdmin": "System admin",
+        "sideEffectLabel": "What it can do",
+        "sideEffectRead": "Read",
+        "sideEffectWrite": "Write",
+        "sideEffectDestructive": "Destructive",
+        "sideEffectExternal": "External",
+        "beforeRuns": "Before it runs",
+        "requireApproval": "Require approval",
+        "active": "Active",
+        "inputLabel": "What it needs (JSON)",
+        "outputLabel": "What it gives back (JSON)",
+        "outputPlaceholder": "Optional: '{\"type\":\"object\",\"properties\":{}}'",
+        "save": "Save changes"
+      },
+      "connector": {
+        "loading": "Loading...",
+        "notFound": "This tool could not be found.",
+        "back": "Back to Tools",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved",
+        "settingsTitle": "Settings",
+        "takingCalls": "Taking calls",
+        "availableToAgents": "Available to agents",
+        "voiceOn": "The phone line answers. Switch off and every caller hears a polite refusal instead.",
+        "voiceOff": "Switched off. Every caller hears a polite refusal until this is switched back on.",
+        "agentsOn": "Agents can be given this tool.",
+        "agentsOff": "Switched off. No agent can use this, whatever it has been given.",
+        "whoCanUse": "Who can use it",
+        "everyCompany": "Every company",
+        "oneCompany": "One company only",
+        "company": "Company",
+        "chooseCompany": "Choose a company",
+        "accountRefHint": "The account this connector is bound to. Calls, messages or requests arriving for it are routed to this workspace.",
+        "keysLabel": "Keys it needs",
+        "keysHint": "This tool needs {refs} set on the server. Name them here so {platformName} knows where to look — the values themselves never live in this screen.",
+        "stillMissing": "Still missing: {refs}",
+        "whatItCanDo": "What it can do",
+        "nothingToSwitch": "This tool has nothing to switch on.",
+        "connectedAccount": "Connected account",
+        "connectedAs": "Connected as <b>{account}</b>",
+        "since": "Since {date}",
+        "disconnecting": "Disconnecting...",
+        "disconnect": "Disconnect",
+        "disconnectNote": "Disconnecting revokes the key at the provider — the account itself is untouched.",
+        "connectionFailed": "The connection failed. Connect again.",
+        "notConnectedExplain": "Not connected. Connecting opens the provider's own approval screen for the dedicated account — the platform holds a scoped, revocable key and never sees a password.",
+        "openingGoogle": "Opening Google...",
+        "connectMailbox": "Connect mailbox",
+        "doesItWork": "Does it work",
+        "working": "Working.",
+        "lastChecked": "Last checked {date}",
+        "notCheckedYet": "Not checked yet.",
+        "checking": "Checking...",
+        "checkNow": "Check now",
+        "toolsCreated": "Tools this created",
+        "off": "Off"
       }
     },
     "agents": {
@@ -1400,7 +2172,9 @@
             "seedButton": "Generate Sample Data",
             "loadMore": "Load More",
             "searchPlaceholder": "Search by what it did or which model"
-          }
+          },
+          "inputTokens": "Input Tokens",
+          "outputTokens": "Output Tokens"
         },
         "settings": {
           "loading": "Loading...",
@@ -1596,6 +2370,10 @@
                 "new": "For example: Tell them our office is in London and offer to book a visit.",
                 "edit": "For example: Tell them our office is in London and offer to book a visit."
               }
+            },
+            "name": {
+              "label": "What to call this rule",
+              "placeholder": "For example: Office address"
             }
           }
         },
@@ -1626,6 +2404,12 @@
             "dropTitle": "Drag and drop your file here",
             "dropSubtitle": "Supports .pdf, .docx, and .txt files",
             "browseButton": "Browse Files"
+          },
+          "agent": {
+            "headerTitle": "Agent knowledge",
+            "headerDescription": "Inspect and manage the tenant-scoped knowledge available to this agent.",
+            "emptyDescription": "Upload documents, Markdown or an OKF folder, text, or website pages so this agent can retrieve approved tenant-scoped reference material.",
+            "deleteDescription": "Are you sure you want to remove {title} from this agent's knowledge?"
           }
         },
         "logs": {
@@ -1661,6 +2445,59 @@
             "tabs": {
               "payload": "EXECUTION PAYLOAD",
               "config": "PROMPT & RUNTIME CONFIGURATION"
+            },
+            "notFound": "Trace not found or deleted.",
+            "copyTitle": "Copy to clipboard"
+          },
+          "raw": {
+            "title": "Raw logs",
+            "description": "Word for word, what this agent was sent and what came back. Grouped by the job it belonged to.",
+            "filters": {
+              "everything": "Everything",
+              "thinking": "Thinking",
+              "tools": "Tools",
+              "problems": "Problems"
+            },
+            "searchPlaceholder": "Search everything this agent said or was told",
+            "clearSearch": "Clear search",
+            "failureFocus": "Showing only the times this same thing went wrong.",
+            "showEverything": "Show everything again",
+            "footer": {
+              "previous": "Previous",
+              "next": "Next",
+              "empty": "No jobs to show",
+              "page": "Page {current} of {total}",
+              "showing": "Showing jobs {start} to {end} of {total}"
+            },
+            "truncated": "This agent has said more than one screen can hold, so this covers its most recent activity rather than everything it has ever done.",
+            "empty": {
+              "searchTitle": "Nothing matched that search",
+              "searchBody": "Try a different word, or clear the search.",
+              "problemsTitle": "Nothing has gone wrong",
+              "problemsBody": "No failures were recorded for this agent.",
+              "kindTitle": "Nothing of that kind yet",
+              "kindBody": "Try showing everything instead.",
+              "allTitle": "This agent has not said anything yet",
+              "allBody": "When it runs, everything it is sent and everything it replies will appear here."
+            },
+            "noJob": "No job",
+            "outsideJob": "Work done outside a job",
+            "entries": "{formatted} {count, plural, one {entry} other {entries}}",
+            "openJob": "Open this job",
+            "whatWeSent": "What we sent",
+            "whatCameBack": "What came back",
+            "repeats": "This has happened {count} times recently.",
+            "seeOthers": "See the other {count}",
+            "outcome": {
+              "worked": "worked",
+              "failed": "failed",
+              "notRecorded": "outcome not recorded"
+            },
+            "category": {
+              "thinking": "Thinking",
+              "tool": "Tool",
+              "problem": "Problem",
+              "other": "Other"
             }
           }
         },
@@ -1704,6 +2541,715 @@
           },
           "loading": "Loading...",
           "notFound": "Agent not found."
+        },
+        "runs": {
+          "page": {
+            "title": "Activity",
+            "description": "Every job this agent has run, what each one cost, and what you can do about it.",
+            "everything": "Everything",
+            "replayFailed": "The run could not be replayed.",
+            "replaySameVersion": "Replay {runId} queued against the source run's version snapshot.",
+            "replayCurrent": "Replay {runId} queued against the current active configuration.",
+            "reflectSuccess": "Reflection generated: the run trace now has a category, evidence and next steps.",
+            "reflectFailed": "The reflection could not be generated.",
+            "fixtureSuccess": "Saved as a regression fixture for future improvement checks.",
+            "fixtureFailed": "The eval fixture could not be created."
+          },
+          "evalHealth": {
+            "suiteFailed": "The eval suite could not be run.",
+            "suiteResult": "Ran {total, plural, one {1 contract eval} other {# contract evals}}: {passed} passed, {failed} failed, {active} still active.",
+            "title": "Eval health",
+            "description": "Smoke eval coverage, recent pass/fail results, and fixture contract failures.",
+            "runSuite": "Run suite",
+            "stats": {
+              "fixtures": "Fixtures",
+              "smokeEvals": "Smoke evals",
+              "passed": "Passed",
+              "failed": "Failed",
+              "modelGraded": "Model graded"
+            },
+            "empty": "No smoke evals have been recorded for this agent yet.",
+            "model": "model: {model}",
+            "version": "version: {version}",
+            "missing": "missing {mapping}",
+            "blocked": "blocked {summary}",
+            "inspectRun": "Inspect run"
+          },
+          "feedback": {
+            "title": "Run feedback",
+            "labels": {
+              "goodAnswer": "Good answer",
+              "incorrect": "Incorrect",
+              "missedContext": "Missed context",
+              "wrongTool": "Wrong tool",
+              "badArgs": "Bad args",
+              "unsafe": "Unsafe",
+              "tooExpensive": "Too expensive",
+              "tooSlow": "Too slow",
+              "approvalPolicy": "Approval policy",
+              "makeEval": "Make eval"
+            },
+            "saveSuccess": "Feedback saved. It now feeds learning analytics and improvement workflows.",
+            "saveFailed": "The feedback could not be saved.",
+            "positive": "Positive",
+            "neutral": "Neutral",
+            "negative": "Negative",
+            "labelsHeading": "Labels",
+            "commentHeading": "Comment",
+            "commentPlaceholder": "What should this run teach the agent improvement loop?",
+            "cancel": "Cancel",
+            "save": "Save feedback"
+          },
+          "table": {
+            "cancelSuccess": "Run cancelled. Pending approvals and tool calls were cancelled and audited.",
+            "cancelFailed": "The run could not be cancelled.",
+            "memoryFailed": "The candidate memory could not be generated.",
+            "memoryCreated": "Created {count, plural, one {1 candidate memory item} other {# candidate memory items}} for review.",
+            "memoryNone": "No new safe candidate memory could be generated from this run.",
+            "candidateApproved": "Candidate stored as governed agent memory.",
+            "candidateRejected": "Candidate rejected. It will not be used as agent memory.",
+            "candidateFailed": "The candidate memory could not be reviewed.",
+            "suggestionFailed": "The suggestion could not be generated.",
+            "suggestionsCreated": "Created {count, plural, one {1 config suggestion} other {# config suggestions}} for review.",
+            "suggestionsNone": "No new config suggestion could be generated from this run.",
+            "suggestionApplied": "Suggestion applied. A new agent version snapshot was recorded.",
+            "suggestionRejected": "Suggestion rejected. No configuration was changed.",
+            "suggestionReviewFailed": "The suggestion could not be reviewed.",
+            "emptyAll": "This agent has not run any jobs yet",
+            "emptyFiltered": "No jobs match that filter",
+            "footerEmpty": "No jobs to show",
+            "footerShowing": "Showing {count, plural, one {1 job} other {# jobs}} · page {page}",
+            "columns": {
+              "outcome": "Outcome",
+              "objective": "What it was asked to do",
+              "when": "When",
+              "cost": "Took / cost"
+            },
+            "markers": {
+              "rated": "you rated this {rating}",
+              "reflected": "looked back on",
+              "usedAsCheck": "used as a check",
+              "memory": "something to remember",
+              "suggestion": "has a suggested change"
+            },
+            "rehearsal": "Rehearsal",
+            "open": "Open",
+            "menuAria": "More things you can do with this job",
+            "menu": {
+              "rememberYes": "Let it remember this",
+              "rememberNo": "Do not remember this",
+              "acceptSuggestion": "Accept the suggested change",
+              "dismissSuggestion": "Dismiss the suggested change",
+              "rate": "Tell us how this went",
+              "remember": "Work out what to remember",
+              "makeCheck": "Turn this into a check",
+              "suggest": "Suggest a change to this agent",
+              "reflect": "Ask what it would do differently",
+              "replay": "Run this again",
+              "cancel": "Stop this job"
+            }
+          },
+          "detail": {
+            "title": "Job detail",
+            "notFound": "This job could not be found, or it belongs to a workspace you cannot see.",
+            "rehearsalNote": "Rehearsal — writes recorded, not performed",
+            "seeTime": "See where the time went",
+            "runId": "run: {id}",
+            "version": "version: {id}",
+            "model": "model: {id}",
+            "error": "Error",
+            "finalOutput": "Final output",
+            "whatYouCanDo": "What you can do with this job",
+            "covered": "This run is covered by {count, plural, one {1 active eval fixture} other {# active eval fixtures}}.",
+            "turnIntoCheck": "Turn this job into a check, so this exact case is tested from now on.",
+            "canBecomeCheck": "A job can become a check once it has finished.",
+            "runAgainNow": "Run again now",
+            "runAgainAsWas": "Run again as it was",
+            "askChange": "Ask what it would change",
+            "updateEval": "Update eval",
+            "createEval": "Create eval",
+            "otherTimes": "Other times this job was run",
+            "otherTimesHint": "How this job went the other times it was run.",
+            "replayOf": "Replay of",
+            "originalStatus": "original {status}",
+            "replayStatus": "replay {status}",
+            "deltas": {
+              "latency": "Latency",
+              "cost": "Cost",
+              "tokens": "Tokens",
+              "steps": "Steps",
+              "output": "Output",
+              "changed": "changed",
+              "same": "same"
+            },
+            "timelineDiff": "Timeline diff",
+            "step": "step {index}",
+            "kindWord": "kind",
+            "statusWord": "status",
+            "outputWord": "output",
+            "errorWord": "error",
+            "original": "Original",
+            "replay": "Replay",
+            "noOriginalStep": "No matching original step.",
+            "noReplayStep": "No matching replay step.",
+            "recentReplays": "Recent replays",
+            "statSteps": "Steps",
+            "statTools": "Tools used",
+            "statApprovals": "Waiting on people",
+            "stepByStep": "What it did, step by step",
+            "didNotGetFar": "This job did not get far enough to record what it was doing.",
+            "whatWeSent": "What we sent",
+            "whatWentWrong": "What went wrong",
+            "whatCameBack": "What came back",
+            "tokens": "{count} tokens",
+            "costLabel": "cost {amount}",
+            "toolBadge": "tool {mapping}: {status}",
+            "approvalBadge": "approval {status}",
+            "toolCalls": "Tool calls",
+            "confirmationRequired": "confirmation required",
+            "args": "{mode} args",
+            "rawArguments": "Raw arguments",
+            "redactedArguments": "Redacted arguments",
+            "rawRestricted": "raw restricted",
+            "approvals": "Approvals",
+            "decisionLabel": "decision:"
+          }
+        },
+        "skills": {
+          "addFailed": "The skills could not be added.",
+          "detachSuccess": "Skill detached from this agent.",
+          "detachFailed": "Skill update failed.",
+          "loading": "Loading skills",
+          "title": "Agent skills",
+          "description": "Skills from the Skill Center that this agent uses. Two at most — each one is added to every message the agent sends.",
+          "skillCenter": "Skill Center",
+          "addFromCenter": "Add from Skill Center",
+          "emptyLabel": "No skills yet — add one from the Skill Center",
+          "footerEmpty": "No skills yet",
+          "columns": {
+            "skill": "Skill",
+            "added": "Added"
+          },
+          "noDescription": "No description.",
+          "removeAria": "Remove {name}",
+          "pickerTitle": "Add skills",
+          "searchPlaceholder": "Search skills",
+          "clearSearch": "Clear search",
+          "noMatches": "No skills match that search.",
+          "allAttached": "Every skill in the Skill Center is already attached to this agent.",
+          "showMore": "Show more skills",
+          "cancel": "Cancel",
+          "addCount": "{count, plural, one {Add skill} other {Add # skills}}",
+          "removeTitle": "Remove skill",
+          "removeBody": "Remove {name} from this agent? Historical versions and run evidence remain available.",
+          "removeConfirm": "Remove skill"
+        },
+        "evals": {
+          "status": {
+            "notRunYet": "Not run yet",
+            "setupOnly": "Setup only",
+            "passing": "Passing",
+            "failing": "Failing",
+            "running": "Running…"
+          },
+          "title": "Evals",
+          "description": "An eval is a task, and a description of a good result. Running one gives the task to this agent for real, then has a second AI mark what it did.",
+          "saveFailed": "The eval could not be saved.",
+          "savedEdit": "Eval saved. Its earlier results no longer count, so run it again.",
+          "savedNew": "Eval created. Run it to see how the agent does.",
+          "runFailed": "The eval could not be run.",
+          "runManyFailed": "The evals could not be run.",
+          "runningCount": "Running {count, plural, one {1 check} other {# checks}}. Results appear here as each one finishes.",
+          "setupFailed": "The setup eval could not be run.",
+          "setupChecked": "Setup checked. This confirms the agent is wired up correctly — it does not test its answers.",
+          "removeFailed": "The eval could not be removed.",
+          "headline": {
+            "loading": "Loading…",
+            "none": "No evals yet.",
+            "passing": "{passing} of {total, plural, one {1 eval} other {# evals}} passing.",
+            "unproven": "{count} not proven yet."
+          },
+          "runEvals": "Run evals",
+          "setupTitle": "Confirms the agent is wired up. Does not test its answers.",
+          "evalSetup": "Eval setup",
+          "newEval": "New eval",
+          "gateBlocked": "{passed} of {total} must-pass evals are passing. This agent cannot go live until all of them do.",
+          "gateNone": "No eval has to pass before this agent goes live. Mark at least one as must-pass.",
+          "searchPlaceholder": "Search evals by what they ask",
+          "emptyLabel": "No evals yet — add one to catch this agent getting it wrong",
+          "footerEmpty": "No evals",
+          "columns": {
+            "eval": "Eval",
+            "status": "Status",
+            "mustPass": "Must pass",
+            "lastRun": "Last run"
+          },
+          "yes": "Yes",
+          "no": "No",
+          "run": "Run",
+          "editAria": "Edit {name}",
+          "removeAria": "Remove {name}",
+          "form": {
+            "editTitle": "Edit eval",
+            "newTitle": "New eval",
+            "objectiveLabel": "What should the agent be asked to do?",
+            "objectivePlaceholder": "Find this month's overdue invoices and summarise who owes what.",
+            "rubricLabel": "What does a good result look like?",
+            "rubricHint": "Plain English. This is what the marking AI reads.",
+            "rubricPlaceholder": "Lists each overdue invoice with the customer and the amount. Never invents a figure it did not look up.",
+            "mustPassLabel": "This must pass before the agent goes live",
+            "mustPassHint": "Nothing stops an agent going live unless at least one eval says so.",
+            "advanced": "Advanced",
+            "sampleLabel": "Give it the task more than once",
+            "sampleHint": "An eval that passes two times in three is an eval that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade.",
+            "once": "Once",
+            "three": "3 times — all must pass",
+            "five": "5 times — all must pass",
+            "toolsLabel": "Tools it should use",
+            "toolsHint": "Optional, comma separated. Leave empty unless you are testing that a particular tool gets used.",
+            "toolsPlaceholder": "knowledge.search, crm.lookup",
+            "cancel": "Cancel",
+            "saveCheck": "Save check",
+            "createCheck": "Create check"
+          },
+          "removeModal": {
+            "title": "Remove check",
+            "body": "This stops the check counting towards going live. Its past results stay in the audit record.",
+            "cancel": "Cancel",
+            "confirm": "Remove"
+          },
+          "detail": {
+            "back": "Back to checks",
+            "rehearseFailed": "The rehearsal could not be started.",
+            "runCheckFailed": "The check could not be run.",
+            "rehearse": "Rehearse",
+            "runThisCheck": "Run this check",
+            "lastRun": "Last run {date}",
+            "mustPassBadge": "Must pass before going live",
+            "goodResult": "What a good result must do",
+            "whatAgentDid": "What the agent did",
+            "neverRun": "This check has never been run. Press <highlight>Run this check</highlight> to give the agent the task.",
+            "noOutput": "The agent produced no readable output.",
+            "setupNote": "This was a setup check. It confirms the agent is wired up correctly and asks it nothing, so it is not evidence the agent works.",
+            "answeredBy": "Answered by {model}",
+            "modelNotRecorded": "Model not recorded",
+            "tokensInOut": "· {input} in / {output} out",
+            "askedUpTo": "· asked up to {count} times",
+            "cost": "· cost {cost}",
+            "whatWentWrong": "What went wrong",
+            "missingTool": "This agent does not have the tool {tool} available.",
+            "earlierRuns": "Earlier runs"
+          }
+        },
+        "memory": {
+          "trackRecord": {
+            "noHistory": "No history yet",
+            "review": "Review",
+            "helping": "Helping",
+            "summary": "{success} helped · {trouble} in failed runs"
+          },
+          "sourceRun": {
+            "openRun": "Open run detail"
+          },
+          "sourceSkill": {
+            "attribution": "Skill attribution",
+            "pinnedVersion": "pinned version",
+            "version": "v{number}"
+          },
+          "patch": {
+            "proposedChange": "Proposed change",
+            "before": "Before: {value}",
+            "moreHidden": "{count} more changes hidden.",
+            "unpreviewable": "Unpreviewable value"
+          },
+          "reviewedBy": "Reviewed by {name}",
+          "saveFailed": "The memory could not be saved.",
+          "removeFailed": "The memory could not be removed.",
+          "restored": "Memory restored.",
+          "restoreFailed": "The memory could not be restored.",
+          "candidateApproved": "Added to this agent's memory.",
+          "approveFailed": "The suggestion could not be approved.",
+          "turnDownFailed": "The suggestion could not be turned down.",
+          "suggestionApplied": "Change applied.",
+          "suggestionRejected": "Suggestion turned down.",
+          "suggestionReviewFailed": "The suggestion could not be reviewed.",
+          "evalCreated": "Eval created from the source run.",
+          "evalCreateFailed": "The eval could not be created.",
+          "dismissed": "Dismissed.",
+          "dismissFailed": "The reflection could not be dismissed.",
+          "title": "Agent memory",
+          "description": "What this agent knows. Up to {max} can apply to every message — the rest are looked up when the conversation calls for them.",
+          "addMemory": "Add memory",
+          "searchPlaceholder": "Search memories",
+          "filters": {
+            "inUse": "In use",
+            "removed": "Removed"
+          },
+          "empty": {
+            "removed": "Nothing has been removed",
+            "none": "No memories yet — add what the agent should know"
+          },
+          "footer": {
+            "showing": "Showing {start}-{end} of {total} loaded",
+            "emptyRemoved": "Nothing has been removed",
+            "emptyNone": "No memories yet"
+          },
+          "columns": {
+            "content": "What the agent knows",
+            "applies": "Applies",
+            "trackRecord": "Track record",
+            "added": "Added"
+          },
+          "savedByAi": "Saved by the AI",
+          "rowActions": {
+            "restore": "Put this memory back",
+            "edit": "Edit memory",
+            "remove": "Remove memory"
+          },
+          "suggestions": {
+            "title": "Suggestions",
+            "description": "Raised from this agent’s runs. Nothing here takes effect until it is approved.",
+            "nothingWaiting": "Nothing waiting for review.",
+            "memoryTag": "Memory",
+            "approve": "Approve",
+            "turnDown": "Turn down",
+            "apply": "Apply",
+            "createEval": "Create eval",
+            "dismiss": "Dismiss",
+            "evalPrefix": "Eval: {fixture}"
+          },
+          "editor": {
+            "editTitle": "Edit memory",
+            "addTitle": "Add memory",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "save": "Save memory"
+          },
+          "removeModal": {
+            "title": "Remove memory",
+            "body": "The agent stops using this straight away. It stays under “Removed” and can be put back.",
+            "cancel": "Cancel",
+            "confirm": "Remove"
+          },
+          "rejectModal": {
+            "title": "Turn down suggestion",
+            "whyLabel": "Why?",
+            "optional": "Optional",
+            "placeholder": "Why should the agent not remember this?",
+            "cancel": "Cancel",
+            "confirm": "Turn down"
+          }
+        },
+        "observability": {
+          "dashboard": {
+            "title": "How this agent is doing",
+            "description": "Everything it has done recently, and whether anything needs your attention.",
+            "ranges": {
+              "day": "24 hours",
+              "week": "7 days",
+              "month": "30 days"
+            },
+            "truncated": "This agent has run more jobs than one screen can measure, so the figures above cover its most recent activity rather than the whole period.",
+            "emptyTitle": "This agent has not run yet",
+            "emptyBody": "Once it runs — on a schedule, from a conversation, or because you started it — everything it does will be recorded here.",
+            "vitals": {
+              "jobsRun": "Jobs run",
+              "thanBefore": "than the period before",
+              "finishedCleanly": "Finished cleanly",
+              "nothingToCompare": "nothing to compare yet",
+              "usuallyTakes": "Usually takes",
+              "underASecond": "under a second",
+              "noFinishedJobs": "no finished jobs to measure yet",
+              "acrossJobs": "across {formatted} {count, plural, one {job} other {jobs}} so far",
+              "slowTail": "but 1 in 20 takes over {duration}",
+              "sameTime": "every job takes about the same",
+              "costsPerJob": "Costs per job",
+              "overPeriod": "{amount} over this period",
+              "waiting": "Waiting on a person",
+              "cannotFinish": "these cannot finish until someone decides",
+              "nothingHeld": "nothing is held up"
+            },
+            "chart": {
+              "title": "What it has been doing",
+              "hint": "Jobs per day. The orange line marks a change to this agent's setup.",
+              "finished": "Finished",
+              "failed": "Failed",
+              "settingsChanged": "Settings changed",
+              "tooltip": "{formatted} {count, plural, one {job} other {jobs}}",
+              "tooltipFailed": ", {count} failed"
+            },
+            "failures": {
+              "title": "What is going wrong",
+              "hint": "The same failure grouped together, worst first.",
+              "none": "Nothing has failed. Every job in this period finished.",
+              "started": "Started {first} · last happened {last}",
+              "seeJob": "See a job this happened to",
+              "jobs": "{formatted} {count, plural, one {job} other {jobs}}"
+            },
+            "tools": {
+              "title": "The tools it relies on",
+              "hint": "When an agent misbehaves, a tool is usually the reason.",
+              "empty": "No tools used yet. This agent has answered without reaching for anything.",
+              "columns": {
+                "tool": "Tool",
+                "used": "Used",
+                "worked": "Worked",
+                "usually": "Usually"
+              },
+              "notConnected": "{count} of these went to a tool that is not connected"
+            },
+            "latest": {
+              "title": "Latest jobs",
+              "hint": "Open any one to see exactly what it did, step by step.",
+              "seeAll": "See all activity",
+              "none": "No jobs recorded yet.",
+              "underASecond": "under a second",
+              "showMore": "Show more"
+            },
+            "research": {
+              "aria": "The research job",
+              "lastJob": "The last research job",
+              "progress": "{done} done · {remaining} to go",
+              "failedSuffix": "· {failed} could not be done",
+              "spentOfMax": "${spent} of ${max}",
+              "runs": "{count, plural, one {# run} other {# runs}}",
+              "customers": "{count} customers",
+              "chains": "{count} chains",
+              "prospects": "{count} prospects found",
+              "rightNow": "Right now: ",
+              "lookingThrough": "looking through the {label} group for sites",
+              "researching": "researching {label}",
+              "latestRecorded": "Latest recorded",
+              "couldNotDo": "What it could not do",
+              "exception": "{name} — {reason}"
+            }
+          },
+          "run": {
+            "rightmove": {
+              "title": "Gather Rightmove properties",
+              "detailWithLimit": "Rightmove search · up to {count} properties",
+              "detail": "Rightmove search"
+            },
+            "actionFailed": "That did not work.",
+            "notFoundTitle": "This job could not be found",
+            "notFoundBody": "It may have been removed, or it belongs to a workspace you cannot see.",
+            "backToOverview": "Back to the overview",
+            "stillRunning": "· still running",
+            "took": "· took {duration}",
+            "cost": "· cost {amount}",
+            "handedOver": "· worked its stint, then handed the queue to the next run",
+            "didNotFinish": "· it did not finish",
+            "waitingApproval": "· waiting for someone to approve it",
+            "finishedCleanly": "· finished cleanly",
+            "replayDone": "Started again. The new job will appear in Activity.",
+            "runAgain": "Run it again",
+            "rate": "Rate this job",
+            "checkDone": "Saved as a check. This case will be tested from now on.",
+            "updateCheck": "Update the check",
+            "turnIntoCheck": "Turn into a check",
+            "ratingQuestion": "Did this job do what you wanted?",
+            "ratedGood": "Thanks — recorded as a good one.",
+            "itDid": "It did",
+            "ratedBad": "Thanks — recorded as one that went wrong.",
+            "itDidNot": "It did not",
+            "whyStopped": "Why it stopped",
+            "timeTitle": "Where the time went",
+            "timeHint": "Each step of the job, drawn against the time it took.",
+            "noSteps": "No steps were recorded",
+            "noStepsHint": "This job did not get far enough to record what it was doing.",
+            "record": {
+              "title": "What it recorded",
+              "hint": "Built from the rows this run wrote, not from what the agent says it did.",
+              "nothing": "This run recorded nothing",
+              "nothingHint": "If the account below says it did, that claim has nothing behind it."
+            },
+            "account": {
+              "title": "The agent's own account of its work",
+              "unchecked": "written by the agent, unchecked"
+            },
+            "repeat": {
+              "timesRun": "This job has been run {count} times",
+              "allWorked": "The other {count, plural, one {one} other {#}} finished cleanly.",
+              "noneWorked": "{count, plural, one {The other one did not finish either.} other {The other # did not finish either.}}",
+              "someWorked": "{worked} of the other {count} finished cleanly.",
+              "seeSource": "See the one it repeated",
+              "seeAnother": "See another"
+            },
+            "exchange": {
+              "title": "What was actually said",
+              "hint": "Word for word, what this agent was sent and what came back. Open any line to see it in full.",
+              "nothingRecorded": "Nothing was recorded for this job",
+              "nothingHint": "Jobs that ran before the exchange was linked to them show nothing here.",
+              "whatWeSent": "What we sent",
+              "whatCameBack": "What came back"
+            },
+            "outcome": {
+              "worked": "Worked",
+              "failed": "Failed",
+              "notRecorded": "Not recorded"
+            }
+          }
+        },
+        "manualRun": {
+          "started": "It has started. The new job is at the top of this list.",
+          "couldNotStart": "It could not start",
+          "startFallback": "Something stopped this agent from running.",
+          "stopped": "Agent stopped. It will show as cancelled in Activity.",
+          "couldNotStop": "It could not stop",
+          "stopFallback": "Something stopped this agent from being cancelled."
+        },
+        "stopModal": {
+          "title": "Stop this agent?",
+          "body": "This will cancel the running job and any pending approvals or tool calls. It cannot be undone.",
+          "keep": "Keep running",
+          "stop": "Stop Agent"
+        },
+        "headerStop": "Stop Agent",
+        "headerRun": "Run Agent",
+        "avatarAlt": "Avatar"
+      },
+      "skillCenter": {
+        "nameRequired": "Give the skill a name.",
+        "fileRequired": "Choose a SKILL.md file.",
+        "addFailed": "The skill could not be added.",
+        "added": "Added {name}.",
+        "saveFailed": "The skill could not be saved.",
+        "savedReplaced": "Saved {name} and replaced its file.",
+        "saved": "Saved {name}.",
+        "deleteFailed": "The skill could not be deleted.",
+        "deletedDetached": "Deleted {name}. It was removed from {count, plural, one {1 agent} other {# agents}}.",
+        "deleted": "Deleted {name}.",
+        "title": "Skill Center",
+        "description": "Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here.",
+        "addNew": "Add new skill",
+        "analytics": {
+          "title": "How your skills are being used",
+          "description": "Which agents have picked up your skills, and which of those need attention.",
+          "loading": "Loading analytics",
+          "counted": "Counted {date}",
+          "countedPartial": "Counted {date} · first {count} skills",
+          "notCounted": "Not counted yet"
+        },
+        "stats": {
+          "skills": "Skills",
+          "inUse": "In use by agents",
+          "outOfDate": "Out of date",
+          "tested": "Tested",
+          "untested": "Untested"
+        },
+        "searchPlaceholder": "Search skills by name",
+        "clearSearch": "Clear search",
+        "emptyLabel": "No skills yet — upload a SKILL.md file to add your first one",
+        "footerEmpty": "No skills yet",
+        "showingMatching": "Showing {start}-{end} of {total} matching",
+        "showingSkills": "Showing {start}-{end} of {total} skills",
+        "columns": {
+          "skill": "Skill",
+          "file": "File",
+          "uploaded": "Uploaded"
+        },
+        "editAria": "Edit {name}",
+        "deleteAria": "Delete {name}",
+        "editTitle": "Edit skill",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "What this skill is for, in your own words.",
+        "replaceFile": "Replace the file",
+        "currently": "Currently {filename}. Leave empty to keep it.",
+        "noFile": "No file behind this skill yet.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "deleteTitle": "Delete skill",
+        "deleteBody": "Delete {name}? This removes the file and takes the skill away from any agent using it. It cannot be undone.",
+        "deleteConfirm": "Delete skill",
+        "addTitle": "Add new skill",
+        "newNamePlaceholder": "What you want to call this skill",
+        "fileLabel": "Skill file",
+        "fileHint": "A SKILL.md file. Its contents become the instructions the agent follows.",
+        "addSkill": "Add skill"
+      },
+      "wikiStaff": "Wiki staff",
+      "labels": {
+        "runStatus": {
+          "done": "Done",
+          "handedOver": "Handed over",
+          "failed": "Failed",
+          "stopped": "Stopped",
+          "running": "Running",
+          "queued": "Queued",
+          "needsYou": "Needs you",
+          "unknown": "{status}"
+        },
+        "trigger": {
+          "chat": "From a conversation",
+          "manual": "Started by hand",
+          "schedule": "Scheduled",
+          "webhook": "Triggered by another system",
+          "workflow": "Part of a workflow",
+          "event": "Triggered by an event",
+          "unknown": "{trigger}"
+        },
+        "interaction": {
+          "usedTool": "Used {tool}",
+          "waitingTool": "Waiting to use {tool}",
+          "synthesis": "Worked out what to say",
+          "error": "Something went wrong",
+          "workflowExecution": "Ran as part of a workflow",
+          "batchStart": "Started building a report",
+          "batchSuccess": "Finished building a report",
+          "swarm": "Worked as one of a group",
+          "systemInstruction": "Read its instructions",
+          "unknown": "{type}"
+        },
+        "relative": {
+          "justNow": "just now",
+          "minutesAgo": "{count, plural, one {1 minute ago} other {# minutes ago}}",
+          "hoursAgo": "{count, plural, one {1 hour ago} other {# hours ago}}",
+          "yesterday": "yesterday",
+          "daysAgo": "{count} days ago"
+        },
+        "change": {
+          "noChange": "no change",
+          "nothingToCompare": "nothing to compare yet",
+          "aboutSame": "about the same",
+          "moreCount": "{percent}% more",
+          "fewerCount": "{percent}% fewer",
+          "ptsHigher": "{points} pts higher",
+          "ptsLower": "{points} pts lower"
+        },
+        "log": {
+          "nothingRecorded": "Nothing was recorded"
+        },
+        "notAvailable": "not available",
+        "evalMode": {
+          "modelGraded": "Model graded",
+          "contract": "Contract"
+        },
+        "step": {
+          "readRequest": "Read the request",
+          "decidedPlan": "Decided what to do",
+          "changedPlan": "Changed its plan",
+          "thought": "Thought about it",
+          "usedToolWithSubject": "Used {tool} · {subject}",
+          "usedTool": "Used {tool}",
+          "usedSomeTool": "Used a tool",
+          "readToolResult": "Read what {tool} sent back",
+          "readResult": "Read the result",
+          "waitedApproval": "Waited for someone to approve",
+          "wroteAnswer": "Wrote the answer",
+          "unknown": "{kind}"
+        },
+        "stepStatus": {
+          "worked": "Worked",
+          "failed": "Failed",
+          "running": "Running",
+          "notStarted": "Not started",
+          "skipped": "Skipped",
+          "unknown": "{status}"
+        },
+        "waterfall": {
+          "summary": "{share}% of this job was spent on one step: {step}.",
+          "summaryFailed": "{share}% of this job was spent on a step that then failed: {step}."
         }
       }
     },
@@ -2007,6 +3553,178 @@
         "selfImprovement": "Self-Improvement",
         "approvals": "Agent Approval Window",
         "purgeHistory": "Purge History"
+      },
+      "selfImprovement": {
+        "title": "Self-Improvement",
+        "subtitle": "How the AI learns from what happens. Every switch takes effect platform-wide as soon as it is saved.",
+        "autoReflection": "Learn from failed runs",
+        "autoReflectionSub": "When an agent run fails, the platform writes up why and queues anything worth remembering for review. Off: write-ups only happen when an admin asks on the run screen.",
+        "outcomeWeightedRanking": "Prefer memories with a good track record",
+        "outcomeWeightedRankingSub": "Approved memories that keep helping rank higher; ones present in failed runs rank lower. Nothing is ever hidden or removed by this. Off: newest-first ordering.",
+        "endUserFeedback": "Feedback buttons in chat",
+        "endUserFeedbackSub": "Users can mark an answer Helpful or Not right, and that feeds the suggestion queue. Off: the buttons disappear and nothing is collected.",
+        "retrievalPriors": "Knowledge search learns from rated answers",
+        "retrievalPriorsSub": "Documents that keep producing well-rated answers get a small ranking boost, within a hard cap. Off: pure text relevance.",
+        "autonomyExplainer": "The switch below is different from the ones above. With it on, what the AI learns is saved to its memory straight away — nothing waits for approval. Every self-saved memory is labelled “Saved by the AI” on the Memory screens, is written to the audit trail, and can be removed at any time. Off: suggestions queue for a person to approve, as before.",
+        "autonomousMemory": "Autonomous memory",
+        "autonomousMemorySub": "The AI saves what it learns immediately, on its own. Off: every new memory waits for approval.",
+        "on": "on",
+        "off": "off",
+        "saveFailed": "Could not save the learning switches.",
+        "save": "Save switches",
+        "saving": "Saving...",
+        "saved": "Saved"
+      },
+      "approvals": {
+        "title": "Agent Approval Window",
+        "subtitle": "How long a paused agent run waits for a decision before it stops.",
+        "explainer": "A run that needs approval waits until someone answers. After this long it stops, nothing it was waiting to do is done, and the conversation says so. It is never approved automatically. An individual agent can be set to give up sooner on its own settings screen.",
+        "hoursLabel": "Give up after (hours)",
+        "hoursHint": "Default {default} · at least {min} · at most {max}",
+        "loading": "Loading...",
+        "saveFailed": "Could not save the approval window.",
+        "save": "Save window",
+        "saving": "Saving...",
+        "saved": "Saved"
+      },
+      "apiKeys": {
+        "headerTitle": "API Keys",
+        "headerDescription": "Let another system start your agents and check on runs. A key belongs to one company, and you can turn it off at any time.",
+        "scopes": {
+          "agentRun": "Start an agent",
+          "agentRunSub": "Ask an agent to do something.",
+          "runRead": "Check on a run",
+          "runReadSub": "See whether a run finished, and what it did.",
+          "workflowRun": "Start a workflow",
+          "workflowRunSub": "Kick off a workflow from outside {platformName}.",
+          "webhookDeliver": "Webhook delivery (no longer used)"
+        },
+        "errorNoCompany": "Choose which company this key is for.",
+        "errorNoName": "Give the key a name, so you know what it is later.",
+        "errorNoScopes": "Choose at least one thing the key is allowed to do.",
+        "createFailed": "That key could not be created. Try again.",
+        "revokeFailed": "That key could not be turned off. Try again.",
+        "newKey": "New key",
+        "companyLabel": "Which company is it for?",
+        "chooseCompany": "Choose a company",
+        "nameLabel": "What is it for?",
+        "namePlaceholder": "Website contact form",
+        "rateLabel": "Requests a minute",
+        "expiryLabel": "Stops working on",
+        "scopesLabel": "What is it allowed to do?",
+        "createKey": "Create key",
+        "copyNow": "Copy this now. It is the only time it will be shown — {platformName} keeps only enough to recognise it, never the key itself.",
+        "copied": "Copied",
+        "copy": "Copy",
+        "keysYouHave": "Keys you have",
+        "emptyKeys": "No keys yet",
+        "emptyHint": "Create one above to let another system start your agents.",
+        "columnKey": "Key",
+        "columnCompany": "Company",
+        "columnScopes": "Allowed to",
+        "columnLimits": "Limits",
+        "columnStatus": "Status",
+        "perMinute": "{count} a minute",
+        "stopsOn": "Stops {date}",
+        "neverStops": "Never stops",
+        "working": "Working",
+        "turnedOff": "Turned off",
+        "turnOffAria": "Turn off {name}",
+        "revokeTitle": "Turn off this key",
+        "revokeBody": "Anything using <b>{name}</b> stops working straight away. This cannot be undone — you would need to create a new key.",
+        "reasonLabel": "Why? (optional)",
+        "reasonPlaceholder": "No longer needed",
+        "keepIt": "Keep it",
+        "turnItOff": "Turn it off"
+      },
+      "analytics": {
+        "title": "Global Analytics Engine",
+        "subtitle": "Integrate Google Tag Manager (GTM) or Google Analytics (GA4) system-wide.",
+        "revert": "Revert",
+        "commit": "Commit Configuration",
+        "savedTitle": "Tracking Integrated",
+        "savedMessage": "The structural analytics script identifier was successfully deployed to the platform core.",
+        "saveFailedTitle": "Transmission Failure",
+        "saveFailedFallback": "Failed to transmit changes to the persistent Edge store.",
+        "healthTitle": "Analytics Data Health",
+        "healthSub": "Snapshot coverage, dimension drift, and live ingestion over the last 7 days.",
+        "checking": "Checking",
+        "healthy": "Healthy",
+        "signals": "{count} signals",
+        "snapshots": "Snapshots",
+        "snapshotsSummary": "{missing} missing global dates, {duplicates} duplicate groups.",
+        "snapshotsLoading": "Loading snapshot coverage.",
+        "dimensions": "Dimensions",
+        "dimensionsSummary": "{missing} missing, {mismatched} mismatched, {missingThreads} missing threads.",
+        "dimensionsLoading": "Loading recent message checks.",
+        "liveToday": "Live Today",
+        "liveTodaySummary": "{count} agent transactions on {date}.",
+        "liveTodayLoading": "Loading today's live ingestion.",
+        "window": "Window",
+        "windowSummary": "{from} through {to}.",
+        "windowLoading": "Loading checked date range.",
+        "attentionNeeded": "Operator attention needed",
+        "missingDates": "Missing snapshot dates: {dates}.",
+        "duplicateGroups": "Duplicate snapshot groups: {groups}.",
+        "dimensionExamples": "Message dimension examples: {examples}.",
+        "none": "none",
+        "nextAction": "Next action: run the documented Convex health/backfill commands before removing legacy analytics fallbacks.",
+        "containerTitle": "Tracking Container Code",
+        "unsaved": "Unsaved",
+        "synced": "Synced",
+        "connecting": "Connecting...",
+        "trackingIdLabel": "Universal Tracking ID",
+        "trackingIdPlaceholder": "e.g. GTM-XXXXXXX or G-XXXXXXX",
+        "trackingIdHelp": "Specify the Google Tag Manager (GTM-XXXXX) ID, or Google Analytics Universal (G-XXXXX/AW-XXXXX) ID. The system safely mounts this ID using the Next.js official third-party router logic so it avoids execution-blocking delays and guarantees platform stability. Leave blank and click commit to remove analytics completely."
+      },
+      "scripts": {
+        "title": "Maintenance",
+        "subtitle": "Run approved operational scripts from a controlled, audited surface.",
+        "allowlistedTitle": "Allowlisted scripts only",
+        "allowlistedBody": "This page never runs arbitrary commands. Each script is permission-checked, confirmation-gated, and recorded in audit logs.",
+        "searchPlaceholder": "Search scripts by name, category, risk, or description...",
+        "noMatch": "No maintenance scripts match your search",
+        "footerEmpty": "No scripts found",
+        "showing": "Showing {start}-{end} of {total}",
+        "columnName": "Name",
+        "columnCategory": "Category",
+        "columnRisk": "Risk",
+        "columnStatus": "Status",
+        "columnLastRun": "Last run",
+        "columnLastRunBy": "Last run by",
+        "columnOpen": "Open",
+        "openAria": "Open {name}",
+        "never": "Never",
+        "nobody": "None",
+        "notRun": "Not run",
+        "statusSuccess": "SUCCESS",
+        "statusFailed": "FAILED",
+        "statusRunning": "RUNNING",
+        "riskLow": "LOW",
+        "riskMedium": "MEDIUM",
+        "riskHigh": "HIGH",
+        "riskBadge": "{level} risk",
+        "back": "Back to maintenance",
+        "notFoundTitle": "Maintenance script not found",
+        "notFoundBody": "This script is not in the approved maintenance registry.",
+        "runScript": "Run script",
+        "runCompleted": "Maintenance script completed.",
+        "runFailed": "Maintenance script failed.",
+        "runNotStarted": "Maintenance script could not be started.",
+        "whatThisDoes": "What this does",
+        "whenToRun": "When to run it",
+        "whatItChanges": "What it changes",
+        "safetyNotes": "Safety notes",
+        "repeatability": "Repeatability",
+        "expectedDuration": "Expected duration",
+        "recentRuns": "Recent runs",
+        "noRuns": "No runs recorded yet.",
+        "runRecorded": "Run recorded.",
+        "superAdmin": "Super Admin",
+        "runModalTitle": "Run {name}",
+        "beforeYouRun": "Before you run",
+        "beforeYouRunBody": "This action is audited and should only be run when the notes on this page match the issue you are fixing.",
+        "cancel": "Cancel"
       }
     },
     "auditLogs": {
@@ -2536,9 +4254,6 @@
             "label": "Workspace",
             "noCompany": "No workspace"
           },
-          "subject": {
-            "label": "Subject line"
-          },
           "headline": {
             "label": "Headline"
           },
@@ -2551,7 +4266,6 @@
         },
         "actions": {
           "saveTemplate": "Save as template",
-          "saving": "Saving...",
           "synchronized": "Saved",
           "sendInvitation": "Send invitation",
           "sending": "Sending..."
@@ -2564,7 +4278,7 @@
           "headlineEmpty": "Your headline appears here",
           "bodyEmpty": "Your message appears here",
           "ctaEmpty": "Your button text",
-          "footer": "Sent by Sonae"
+          "footer": "Sent by {platformName}"
         }
       }
     },
@@ -2602,6 +4316,198 @@
         "never": "Never",
         "unnamed": "Unnamed",
         "noCompany": "—"
+      }
+    },
+    "invites": {
+      "companyTitle": "Workspace Invitations",
+      "companyDescription": "Configure premium onboarding emails and dispatch secure access tokens directly to new team members.",
+      "globalTitle": "System Admin Invitations",
+      "globalDescription": "Dispatch secure access tokens directly to new system administrators.",
+      "step1": "Target Recipient",
+      "emailLabel": "Their email address",
+      "emailPlaceholder": "colleague@company.com",
+      "step2": "Email Payload Configuration",
+      "saveTemplate": "Save Default Template",
+      "saving": "Saving...",
+      "saved": "Synchronized",
+      "subjectLabel": "Subject line",
+      "headlineLabel": "Heading inside the email",
+      "bodyLabel": "What the email says",
+      "ctaLabel": "Wording on the button",
+      "previewHeadlineEmpty": "Headline Input Empty",
+      "previewBodyEmpty": "No paragraph content configured currently.",
+      "previewCtaEmpty": "Validating",
+      "previewFooter": "{platformName} - to be prepared",
+      "sending": "Sending Invitation...",
+      "send": "Send Invitation",
+      "sendSuccess": "Success! Resend API accepted the payload.",
+      "sendError": "Email delivery rejected by Resend API. Check your domain limits.",
+      "roleQuestion": "What they will be",
+      "standardUser": "Standard User",
+      "companyAdmin": "Company Admin",
+      "systemSuperAdmin": "System Super Admin"
+    },
+    "ruleSafety": {
+      "reviewRule": "Review this rule before saving.",
+      "reviewPrompt": "Review this prompt before saving.",
+      "hiddenInstructions": "This rule appears to disclose hidden prompts, policies, schemas, or private configuration.",
+      "permissionBypass": "This rule appears to weaken safety rules, tenant restrictions, permissions, or authorization.",
+      "crossTenantAccess": "This rule appears to permit access to another tenant's private data."
+    },
+    "evidence": {
+      "companyMemoryUsed": "Company memory used"
+    },
+    "skillPicker": {
+      "risk": "{level} risk",
+      "noDescription": "No description provided."
+    },
+    "memoryFields": {
+      "applyModeQuestion": "When should the AI use this?",
+      "always": "Always",
+      "alwaysHint": "Added to every answer. Use for tone and for things the AI must never get wrong.",
+      "whenRelevant": "When relevant",
+      "whenRelevantHint": "Looked up when the conversation touches on it. Use for facts and details.",
+      "alwaysFull": "No Always slots left. Change one of the others first.",
+      "contentLabel": "What the AI should know",
+      "contentPlaceholder": "We do not give delivery dates over chat. Ask the customer to email orders@ instead."
+    },
+    "superAdmins": {
+      "columnAdmin": "System Administrator",
+      "pendingInvitation": "Pending Invitation",
+      "columnJoined": "Joined Date",
+      "pendingRole": "PENDING {role}",
+      "columnActions": "Actions",
+      "awaitingLogin": "Awaiting Login",
+      "revokeInvitation": "Revoke invitation",
+      "editAdmin": "Edit administrator",
+      "deleteAdmin": "Delete administrator",
+      "unauthorized": "Unauthorized area.",
+      "title": "System Administrators",
+      "subtitle": "Manage all system Super Admin accounts with complete systemic control.",
+      "inviteUser": "Invite User",
+      "searchPlaceholder": "Search users by name or email...",
+      "empty": "No users or pending invitations found matching your search.",
+      "footerEmpty": "No administrators",
+      "editTitle": "Edit User",
+      "inviteTitle": "Invite User",
+      "editSubtitle": "Update this user's details and roles.",
+      "inviteSubtitle": "Invite a new user to the platform.",
+      "nameLabel": "Full Name",
+      "namePlaceholder": "e.g. Aman",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "aman@example.com",
+      "roleLabel": "System Role",
+      "systemSuperAdmin": "System Super Admin",
+      "avatarLabel": "Avatar URL (Optional)",
+      "avatarHint": "Leave blank to auto-generate from name.",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "updateUser": "Update User",
+      "sendInvite": "Send Invite",
+      "opFailed": "Operation failed.",
+      "deleteFailed": "Failed to delete user.",
+      "revokeFailed": "Failed to revoke invite.",
+      "deleteTitle": "Delete User",
+      "deleting": "Deleting...",
+      "deleteBody": "Are you sure you want to delete <b>{name}</b>? This action cannot be undone.",
+      "revokeTitle": "Revoke Access",
+      "revoking": "Revoking...",
+      "revokeBody": "Are you sure you want to revoke the active invitation for <b>{email}</b>? This will permanently disable their sign-on link and delete their invitation record.",
+      "profile": {
+        "notFound": "User Not Found",
+        "returnToDirectory": "Return to Directory",
+        "title": "User Profile",
+        "subtitle": "Viewing system attributes and protocol identities.",
+        "backToDirectory": "Back to Directory",
+        "fullName": "Full Name",
+        "unnamedUser": "Unnamed User",
+        "email": "Communications (Email)",
+        "verified": "VERIFIED",
+        "noEmail": "No Email",
+        "systemRole": "System Role",
+        "profilePhoto": "Profile Photo",
+        "currentAvatar": "Current Avatar",
+        "avatarSource": "Rendered from authentication provider.",
+        "tabLogins": "Security & Logins",
+        "tabCosts": "AI Costs",
+        "loginActivity": "Recent Login Activity",
+        "loginActivitySub": "Track devices and geographic locations accessing this account.",
+        "searchLogins": "Search devices or locations...",
+        "clearSearch": "Clear search",
+        "noLogins": "No login records found for this user.",
+        "columnDevice": "Device",
+        "columnLocation": "Location & IP",
+        "columnStatus": "Status",
+        "columnTimestamp": "Timestamp",
+        "grossCost": "Gross AI Cost",
+        "totalTokens": "Total Tokens Executed",
+        "usageLog": "AI Usage Log",
+        "usageLogSub": "Track AI execution instances specific to this user.",
+        "searchConversations": "Search conversations...",
+        "noConversations": "No AI conversations logged for this user.",
+        "noConversationsMatch": "No conversations match your search.",
+        "columnConversation": "Conversation",
+        "columnDateStarted": "Date Started",
+        "columnMessages": "Messages",
+        "columnTokens": "Tokens Used",
+        "columnCost": "Cost ($)"
+      }
+    },
+    "health": {
+      "headerTitle": "Health",
+      "headerDescription": "Whether anything needs your attention, and how your agents have been running.",
+      "statusHealthy": "Nothing needs attention",
+      "statusAttention": "{count, plural, one {# thing needs attention} other {# things need attention}}",
+      "checkedAt": "· checked {date}",
+      "fixFirst": "Fix these first",
+      "inLastDays": "{count} in the last 7 days",
+      "lastDaysTitle": "The last 7 days",
+      "countingRuns": "Counting recent runs.",
+      "noRuns": "No agent has run in the last 7 days.",
+      "runsSummary": "{runs, plural, one {# run} other {# runs}}, {failed} failed, {spend} spent, {duration} on average.",
+      "searchPlaceholder": "Search by what ran or which agent",
+      "emptyRuns": "Nothing has run yet",
+      "columnWhat": "What ran",
+      "columnAgent": "Agent",
+      "columnResult": "Result",
+      "columnTook": "Took",
+      "columnCost": "Cost",
+      "columnWhen": "When",
+      "attention": {
+        "agentFailures": "Agent runs that failed",
+        "staleAgentRuns": "Runs that started and never finished",
+        "pendingApprovals": "Approvals waiting on a person",
+        "failedToolCalls": "Tool calls that failed",
+        "providerFailures": "Repeated failures from a model provider",
+        "highCostAgents": "Agents costing more than expected",
+        "agentCostBudgets": "Agents close to their spend limit",
+        "tenantMessageBudgets": "Companies close to their message limit",
+        "overdueSchedules": "Schedules that should have run by now",
+        "schedulesMissingNextRun": "Schedules with nothing planned next",
+        "failedScheduledExecutions": "Scheduled runs that failed",
+        "staleRunningScheduledExecutions": "Scheduled runs that never finished",
+        "failedAgentTransactions": "Agent charges that failed",
+        "connections": "Connections that stopped answering",
+        "scheduledJobs": "Scheduled jobs failing or late"
+      },
+      "actions": {
+        "openRuns": "Open the runs",
+        "openApprovals": "Open approvals",
+        "openTools": "Open tools",
+        "openModels": "Open models",
+        "openAgents": "Open agents",
+        "openCompanies": "Open companies",
+        "openSchedules": "Open schedules",
+        "openWorkflowRuns": "Open workflow runs",
+        "openConnections": "Open connections"
+      },
+      "results": {
+        "worked": "Worked",
+        "failed": "Failed",
+        "stopped": "Stopped",
+        "running": "Running",
+        "queued": "Queued",
+        "waitingApproval": "Waiting for approval"
       }
     }
   },
@@ -2747,7 +4653,9 @@
         "filing": "Raising…",
         "filed": "Task raised — it's on the Tasks screen",
         "failed": "That could not be raised. Please try again."
-      }
+      },
+      "attachedPhoto": "Attached photo",
+      "stillWriting": "Still writing"
     },
     "costs": {
       "title": "AI Running Costs",
@@ -2770,7 +4678,27 @@
         "month": "Monthly Cost"
       },
       "chart": {
-        "tooltipLabel": "Total Cost"
+        "tooltipLabel": "Total Cost",
+        "titleUsd": "{label} (USD)"
+      },
+      "distribution": {
+        "modelTitle": "Model Invocations",
+        "modelSub": "Cost drivers by LLM",
+        "providerTitle": "Provider Distribution",
+        "providerSub": "Cost drivers by provider",
+        "tokenTitle": "Token Flux",
+        "tokenSub": "Input vs Output Volume",
+        "noData": "No Data",
+        "calls": "{count} Calls",
+        "inputSeries": "Input (Context)",
+        "outputSeries": "Output (Gen)",
+        "unknownProvider": "Unknown / Legacy"
+      },
+      "leaderboards": {
+        "topAgents": "Top Agents By Compute",
+        "autonomousProcess": "Autonomous Process",
+        "messages": "Messages",
+        "cost": "Cost"
       }
     },
     "chatLogs": {
@@ -2865,6 +4793,37 @@
         "warning": "Deleted rules cannot be recovered.",
         "abort": "Cancel",
         "confirm": "Delete Rule"
+      },
+      "form": {
+        "back": "Back to rules",
+        "title": "Edit rule",
+        "subtitle": "Change what the assistant does when someone says something.",
+        "idTag": "ID: {id}...",
+        "sectionName": "Name",
+        "nameLabel": "What to call this rule",
+        "namePlaceholder": "For example: Office address",
+        "sectionTrigger": "When to use it",
+        "triggerLabel": "Words or phrases that set it off",
+        "triggerPlaceholder": "For example: where are you based, what is your address",
+        "sectionPriority": "How important it is",
+        "priority": {
+          "LOW": "LOW",
+          "NORMAL": "NORMAL",
+          "HIGH": "HIGH",
+          "CRITICAL": "CRITICAL"
+        },
+        "sectionInstruction": "What the assistant should do",
+        "instructionLabel": "The instruction, in your own words",
+        "instructionPlaceholder": "For example: Tell them our office is in London and offer to book a visit.",
+        "save": "Save changes",
+        "newTitle": "Add a rule",
+        "newSubtitle": "Tell the assistant what to do when someone says something in particular.",
+        "create": "Create rule"
+      },
+      "table": {
+        "priority": "Priority",
+        "rule": "Rule Name / Trigger",
+        "status": "Status"
       }
     },
     "models": {
@@ -2889,6 +4848,155 @@
         "makeDefault": "Set as Default",
         "enable": "Initialize",
         "disable": "Deactivate"
+      },
+      "shared": {
+        "providerStatus": {
+          "off": "Off",
+          "connected": "Connected",
+          "notConnected": "Not connected",
+          "degraded": "Connected, with problems",
+          "notChecked": "Not checked yet"
+        },
+        "never": "Never",
+        "legacyProvider": "Legacy",
+        "useCases": {
+          "chat": "Ordinary conversations with people.",
+          "fastChat": "Short replies where speed matters more than depth.",
+          "reasoning": "Harder problems worth spending more time and money on.",
+          "agent": "Agents working through a task on their own.",
+          "workflow": "Steps inside an automated workflow.",
+          "report": "Written summaries and reports.",
+          "router": "Deciding which model or skill should handle a request. Runs on every message, so a cheap model here saves the most.",
+          "title": "Naming a conversation from its first message. Trivial work — the cheapest model is the right one.",
+          "transcription": "Turning speech into text.",
+          "speech": "Turning text into a spoken voice. Only Google text-to-speech models can do this.",
+          "realtime": "Live spoken conversation — you talk, it answers straight away and can be interrupted.",
+          "embedding": "Turning documents into something searchable. Only embedding models can do this.",
+          "vision": "Reading images and screenshots.",
+          "toolCalling": "Deciding which tool to use and with what arguments."
+        }
+      },
+      "catalogue": {
+        "headerTitle": "Model Catalogue",
+        "headerDescription": "Which models this platform has, and which of them are switched on.",
+        "updateFailed": "Failed to update model status.",
+        "searchPlaceholder": "Search models by name",
+        "clearSearch": "Clear search",
+        "providerFilterAria": "Provider filter",
+        "allProviders": "All providers",
+        "filterActive": "Active",
+        "filterInactive": "Inactive",
+        "openProviders": "Open providers",
+        "footerEmpty": "No models found",
+        "showingMatching": "Showing {start}-{end} of {total} matching",
+        "showingModels": "Showing {start}-{end} of {total} models",
+        "columnName": "Model name",
+        "columnProvider": "Provider",
+        "columnPricing": "Pricing",
+        "columnDefault": "Default",
+        "columnActive": "Active",
+        "pricingAdded": "Added",
+        "pricingMissing": "Missing",
+        "handlesTitle": "Handles {jobs}",
+        "yes": "Yes",
+        "no": "No",
+        "ariaActivate": "Activate {name}",
+        "ariaDeactivate": "Deactivate {name}",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "providers": {
+        "headerTitle": "AI Providers",
+        "headerDescription": "Where the models come from, and whether this platform can reach them.",
+        "empty": "No providers configured",
+        "showing": "{count, plural, one {# provider} other {# providers}}",
+        "columnProvider": "Provider",
+        "columnModels": "Models",
+        "columnStatus": "Status",
+        "columnLastSynced": "Last synced",
+        "modelsOn": "· {count} on",
+        "noneYet": "None yet",
+        "sync": "Sync",
+        "test": "Test",
+        "ariaEnable": "Enable {name}",
+        "ariaDisable": "Disable {name}",
+        "syncFailed": "Failed to sync {provider} models: {message}",
+        "connectionFailed": "{provider} connection failed: {message}",
+        "testFailed": "Failed to test {provider} provider: {message}",
+        "updateFailed": "Failed to update {provider} provider: {message}",
+        "switchOffTitle": "Switch off {provider}",
+        "checkingUsage": "Checking what this provider is handling",
+        "disableSafe": "Nothing is currently set to use this provider, so switching it off will not stop any work. Its models disappear from every picker until you switch it back on.",
+        "disableWorking": "This provider is currently doing work. Switching it off <b>stops that work</b> until another model is chosen for each job.",
+        "platformJobs": "Platform jobs: {jobs}.",
+        "alsoChosen": "Also chosen by {count, plural, one {# company} other {# companies}}.",
+        "maybeMore": "There may be more — this counted the first {limit} settings only.",
+        "cancel": "Cancel",
+        "switchItOff": "Switch it off"
+      },
+      "defaults": {
+        "headerTitle": "Model Defaults",
+        "headerDescription": "Which model handles each kind of work, unless something more specific says otherwise.",
+        "intro": "The model {platformName} reaches for when nothing more specific has been chosen. A company, an agent or a workflow can override any of these. Prices are per million tokens.",
+        "noPriceSet": "No price set",
+        "costInOut": "{input} in · {output} out",
+        "empty": "No jobs to configure yet",
+        "showing": "{count, plural, one {# job} other {# jobs}}",
+        "columnJob": "Job",
+        "columnModel": "Model",
+        "columnPrice": "Price",
+        "noPlatformDefault": "No platform default",
+        "cannotDoJob": "{name} — cannot do this job",
+        "strandedWarning": "This model cannot do this job, so the work falls through to whatever is set below it. Choose another, or clear it.",
+        "notSet": "Not set",
+        "everyJobTitle": "Use one model for every job",
+        "everyJobSub": "Sets every row above that the model can handle. It will replace those choices.",
+        "chooseModel": "Choose a model",
+        "apply": "Apply",
+        "modalTakeOver": "<b>{model}</b> will take over {can} of the {total} jobs above, replacing what is set for each:",
+        "jobsList": "{jobs}.",
+        "cannotDoList": "It cannot do {jobs}, so {count, plural, one {that row is left as it is} other {those rows are left as they are}}.",
+        "cancel": "Cancel",
+        "applyToEveryJob": "Apply to every job",
+        "applyFailed": "Failed to apply that model to every job: {message}",
+        "updateFailed": "Failed to update {useCase} default: {message}"
+      },
+      "detail": {
+        "back": "Back to the model catalogue",
+        "notFound": "Model not found.",
+        "active": "Active",
+        "inactive": "Inactive",
+        "save": "Save",
+        "saveFailed": "Failed to save this model.",
+        "makeDefaultFailed": "Failed to make this the default model.",
+        "handles": "This model currently handles <b>{jobs}</b>. ",
+        "notHandling": "This model is not handling any job by default. ",
+        "changeWhich": "Change which model handles what",
+        "makeDefaultButton": "Make this the default model",
+        "nameTitle": "What it is called",
+        "nameSub": "The short name people see in chat and in model pickers.",
+        "costTitle": "What it costs",
+        "costSub": "Dollars per million tokens, as the provider publishes them. Without a price we cannot measure what this model spends, so agents using it are kept to a smaller budget.",
+        "priceIn": "Price in",
+        "priceInHint": "What you are charged for the text sent to the model.",
+        "priceOut": "Price out",
+        "priceOutHint": "What you are charged for the text it writes back.",
+        "morePrices": "More prices",
+        "fewerPrices": "Fewer prices",
+        "priceInLong": "Price in, very long conversations",
+        "priceInLongHint": "Used instead of Price in once a conversation passes 200,000 tokens.",
+        "priceInCached": "Price in, repeated text",
+        "priceInCachedHint": "The discounted rate when the provider has already seen this text. Falls back to Price in when left empty.",
+        "priceInCachedLong": "Price in, repeated text in very long conversations",
+        "suppliedBy": "Supplied by {provider} · known internally as <code>{id}</code> · last synced {date}",
+        "never": "never",
+        "modalTitle": "Make this the default model",
+        "modalWillHandle": "<b>{model}</b> will handle every job, replacing whatever is set for each of them:",
+        "modalJobs": "{jobs}.",
+        "modalEmbedding": "Turning documents into something searchable needs an embedding model, so check this one can do that job before making it the default for all of them. Companies, agents and workflows can still override any of this.",
+        "modalAlsoEnable": " This will also switch the model on.",
+        "cancel": "Cancel",
+        "makeItDefault": "Make it the default"
       }
     },
     "knowledge": {
@@ -2915,7 +5023,433 @@
       "errors": {
         "unsupported": "Unsupported file format. Please use PDF, DOCX or TXT.",
         "uploadFailed": "Upload failed. Please try again."
+      },
+      "manager": {
+        "uploadStatus": {
+          "waiting": "Waiting",
+          "uploading": "Uploading",
+          "queued": "Sent for processing",
+          "failed": "Failed"
+        },
+        "errors": {
+          "bundleOnly": "Those are all bundle index and log files, which hold links rather than facts. Nothing to upload.",
+          "overCap": "That is more than {max} files. The first {max} are being uploaded — add the rest in a second batch.",
+          "unsupported": "Unsupported file type. Please upload a PDF, DOCX, MD, TXT, or CSV file.",
+          "uploadFailed": "Failed to upload file.",
+          "processingNotStarted": "Files uploaded, but processing did not start. Use Retry on the list below.",
+          "mapFailed": "Failed to map website. Check API keys and network.",
+          "queueFailed": "Failed to queue URLs.",
+          "refreshFailed": "Failed to refresh {root}: {message}",
+          "unknown": "Unknown error",
+          "bulkDeleteFailed": "Failed to delete website root.",
+          "retryFailed": "Failed to retry ingestion.",
+          "repairFailed": "Failed to repair flagged documents.",
+          "deleteFailed": "Failed to delete document."
+        },
+        "progress": {
+          "uploadingBatch": "Uploading {current} of {total}...",
+          "uploadingSingle": "Securely Uploading Document...",
+          "summaryUploading": "{sent} of {total} uploaded",
+          "summaryFailed": "{sent} of {total} uploaded, {failed} failed",
+          "summarySent": "{count, plural, one {1 file} other {# files}} sent for processing"
+        },
+        "stats": {
+          "documents": "Documents",
+          "ready": "Ready",
+          "ingesting": "Ingesting",
+          "failed": "Failed",
+          "drift": "Drift",
+          "chunks": "Chunks"
+        },
+        "coverage": {
+          "title": "Agent topic coverage",
+          "description": "Compares the agent profile against sampled ready knowledge before release review.",
+          "label": "Coverage",
+          "summary": "{covered}/{total} topics covered across {count, plural, one {1 ready document} other {# ready documents}}. {recommendation}"
+        },
+        "retrieval": {
+          "title": "Retrieval test",
+          "searchLabel": "Search the stored text",
+          "test": "Test",
+          "checking": "Checking stored chunks...",
+          "readyDocs": "{count} ready docs",
+          "chunksChecked": "{count} chunks checked",
+          "matches": "{count} matches",
+          "noMatches": "No stored chunks matched this phrase.",
+          "score": "score {score} * {dimensions} dimensions"
+        },
+        "flagged": {
+          "title": "Knowledge quality items need review",
+          "repairAll": "Repair all flagged",
+          "chunks": "{count} chunks",
+          "fresh": "fresh {date}",
+          "unknownModel": "unknown model",
+          "inspect": "Inspect",
+          "repair": "Repair"
+        },
+        "tabs": {
+          "website": "Website",
+          "file": "File",
+          "text": "Text"
+        },
+        "text": {
+          "heading": "Text",
+          "titleLabel": "Title",
+          "titlePlaceholder": "What this document is called",
+          "textLabel": "Text",
+          "textPlaceholder": "Paste or type the text here",
+          "addText": "Add text"
+        },
+        "website": {
+          "heading": "Website URL",
+          "urlLabel": "Website URL",
+          "urlPlaceholder": "Paste a website address and press Enter",
+          "found": "Found {count} pages to scrape",
+          "queueAll": "Queue All for Training",
+          "trained": "Trained",
+          "trainedHint": "Website pages are grouped by domain. Search filters the pages stored for this website source.",
+          "emptyTitle": "No Website Pages Trained",
+          "emptyDescription": "Add a website URL above to map pages and queue them for knowledge training.",
+          "progress": "{ready} ready / {total} stored ({pct}%)",
+          "refreshTitle": "Bulk Refresh (Re-scrape & find new)",
+          "deleteDomainTitle": "Delete Complete Domain",
+          "pages": "{count} pages",
+          "searchPlaceholder": "Search stored pages",
+          "matching": "{count, plural, one {# matching stored page} other {# matching stored pages}}",
+          "list": "List of trained pages",
+          "noSearchMatches": "No stored pages match this search.",
+          "pending": "Pending",
+          "processing": "Processing",
+          "failed": "Failed"
+        },
+        "file": {
+          "upload": "Upload Document",
+          "emptyTitle": "No Documents Uploaded",
+          "ratedHelpful": "{count} rated helpful",
+          "ratedNotRight": "{count} rated not right",
+          "ingesting": "Ingesting",
+          "ready": "Ready",
+          "failed": "Failed"
+        },
+        "actions": {
+          "retryIngestion": "Retry ingestion",
+          "deleteDocument": "Delete Document",
+          "inspectChunks": "Inspect chunks"
+        },
+        "footer": {
+          "empty": "No knowledge documents loaded",
+          "showing": "Showing {start}-{end} of {total} documents"
+        },
+        "uploadModal": {
+          "title": "Upload Knowledge Documents",
+          "dropTitle": "Drag & Drop Files or a Folder",
+          "dropHint": "Supports .PDF, .DOCX, .MD, .TXT, and .CSV. Drop a whole folder to load an OKF bundle — up to {max} files at a time.",
+          "browse": "Browse Files",
+          "chooseFolder": "Choose Folder",
+          "retryFailed": "Retry {count} failed",
+          "failedEntry": "Failed — {message}",
+          "failedEntryFallback": "upload did not complete",
+          "skippedBundle": "{count, plural, one {# bundle index or log file was} other {# bundle index and log files were}} skipped — they hold links and history rather than facts.",
+          "background": "Uploaded files are processed in the background. Close this window whenever you like — progress shows in the document list."
+        },
+        "deleteModal": {
+          "title": "Delete Document",
+          "cancel": "Cancel",
+          "confirm": "Delete Document"
+        },
+        "inspectModal": {
+          "title": "Inspect Knowledge Document",
+          "couldNotInspect": "This document could not be inspected.",
+          "sampledChunks": "{count} sampled chunks",
+          "queued": "queued: {date}",
+          "started": "started: {date}",
+          "fresh": "fresh: {date}",
+          "model": "model: {model}",
+          "dimensions": "{count} dimensions",
+          "retryIngestion": "Retry ingestion",
+          "driftTitle": "Embedding model drift detected",
+          "stored": "Stored: {model} ({dims} dims)",
+          "active": "Active: {model} ({dims} dims)",
+          "unknown": "unknown",
+          "reembed": "Re-embed with active model",
+          "historyTitle": "Ingestion history",
+          "noEvents": "No recent document events were found.",
+          "noChunks": "No chunks are stored for this document yet.",
+          "chunk": "Chunk {number}",
+          "chars": "{count} chars"
+        },
+        "websiteDeleteModal": {
+          "title": "Delete Website Data",
+          "body": "Are you sure you want to completely remove {root} and all of its trained sub-pages from {platformName}'s memory? This will delete the vectors instantly.",
+          "cancel": "Cancel",
+          "confirm": "Delete Everything"
+        }
       }
+    },
+    "widget": {
+      "screen": {
+        "companyTitle": "Widget Deployer",
+        "companyDescription": "Configure the intelligent embeddable front-end specific to this company.",
+        "globalTitle": "Global Widget Setup",
+        "globalDescription": "Configure the system-wide embeddable chat widget operated by the global AI protocol. Customizations apply instantly across all permitted integrations.",
+        "publish": "Publish Configuration",
+        "save": "Save Configuration",
+        "errors": {
+          "saveCompany": "Failed to save widget settings.",
+          "saveGlobal": "Failed to save global widget settings.",
+          "logoUpload": "Failed to upload logo.",
+          "clipboard": "Clipboard access was blocked. Select and copy the snippet manually."
+        },
+        "emptyGlobal": {
+          "title": "No Global Protocol Connected",
+          "description": "Create a secure embeddable widget to allow external users to interact with the global knowledge base and intercept logic.",
+          "action": "Initialize Master Widget"
+        }
+      },
+      "emptyState": {
+        "title": "Unconfigured Integrations",
+        "description": "Establish a secure embeddable widget to let your clients chat directly with your company intelligence.",
+        "action": "Initialize Master Widget"
+      },
+      "welcome": {
+        "title": "Welcome Screen",
+        "description": "Add and customize input fields that will be shown at the first widget screen.",
+        "chooseFields": "Choose the input fields to start a chat",
+        "nameInput": "Name input",
+        "emailInput": "Email input"
+      },
+      "greeting": {
+        "title": "Greeting",
+        "description": "Customize greeting message that will pop up automatically to the user.",
+        "defaultGreeting": "Default greeting",
+        "shownAutomatically": "Shown automatically to visitors.",
+        "turnedOff": "Turned off — visitors see nothing.",
+        "on": "On",
+        "off": "Off",
+        "messageLabel": "Greeting message",
+        "messagePlaceholder": "Type a greeting message..."
+      },
+      "starters": {
+        "title": "Conversation Starters",
+        "description": "Create up to 4 quick replies that appear before the chat begins. Tailor suggestions based on user language to encourage engagement right from the start. Enabling conversation starters will disable the Greetings feature.",
+        "addLabel": "Add a quick reply",
+        "inputPlaceholder": "Enter a conversation starter",
+        "count": "{count}/4",
+        "addButton": "Add Conversation Starter",
+        "empty": "No conversation starters added yet."
+      },
+      "integration": {
+        "title": "Integration",
+        "description": "Connect your secure agent connection pipeline into external domains.",
+        "domainsLabel": "Websites allowed to show it",
+        "domainsHint": "Separate several with commas. The chat window will not open anywhere else.",
+        "domainsPlaceholder": "https://example.com, https://app.example.com",
+        "snippetLabel": "The code to paste into your website",
+        "copy": "Copy to clipboard",
+        "copied": "Copied!",
+        "kiosk": {
+          "title": "Receptionist screen",
+          "description": "A full-screen version for a tablet at a desk or a stand: visitors tap once and talk.",
+          "onHint": "Save, then open the screen on the device.",
+          "offHint": "Switch it on and save to get the screen's address.",
+          "open": "Open the receptionist screen",
+          "lastSeen": "Screen last seen {date} · {count} conversations so far",
+          "notSeen": "The screen has not checked in yet."
+        },
+        "sandboxHint": "Test your Widget configuration safely inside the {platformName} Sandbox Environment.",
+        "sandboxButton": "Test Widget Sandbox"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "How the chat window looks to your visitors.",
+        "nameLabel": "Name people see",
+        "namePlaceholder": "For example: Sales Assistant",
+        "colourLabel": "Main colour",
+        "colourPickerLabel": "Pick the main colour",
+        "logoLabel": "Logo",
+        "logoAlt": "Widget Logo",
+        "uploading": "Uploading...",
+        "customLogoSet": "Custom Logo Set",
+        "clickToUpload": "Click to upload an image",
+        "logoHint": "PNG, JPG, SVG up to 2MB. Recommended 256x256.",
+        "placeholderLabel": "Greyed-out text in the message box",
+        "placeholderPlaceholder": "Write a reply...",
+        "sounds": "Enable sound notifications",
+        "popupPreview": "Show pop-up message preview"
+      },
+      "preview": {
+        "nameFallback": "Website Bot",
+        "logoAlt": "logo",
+        "beforeWeBegin": "Before we begin...",
+        "fullName": "Full Name",
+        "emailAddress": "Email Address",
+        "startChat": "Start Chat"
+      }
+    },
+    "evals": {
+      "list": {
+        "title": "Evals",
+        "companyDescription": "An eval is a question, and a description of a good answer. Running one asks this company's AI the question, then has a second AI mark the answer.",
+        "globalDescription": "An eval is a question, and a description of a good answer. Running one asks the global AI the question, then has a second AI mark the answer.",
+        "status": {
+          "passing": "Passing",
+          "failing": "Failing",
+          "notRun": "Not run",
+          "notTested": "Not tested"
+        },
+        "filters": {
+          "all": "All",
+          "passing": "Passing",
+          "failing": "Failing",
+          "notRun": "Not run"
+        },
+        "headline": {
+          "loading": "Loading…",
+          "lead": "{passed} of {total, plural, one {1 eval} other {# evals}} passing.",
+          "failing": "{count} failing",
+          "notTested": "{count} not tested yet"
+        },
+        "notices": {
+          "startersFailed": "The starter evals could not be added.",
+          "startersAdded": "Added {count} starter evals. Press Run evals to see how your AI does.",
+          "deleteFailed": "The eval could not be deleted.",
+          "runFailed": "The eval could not be run.",
+          "batchFailed": "The evals could not be started.",
+          "nothingToRun": "Nothing needed running.",
+          "batchStarted": "Running {count, plural, one {1 eval} other {# evals}}. Results appear here as each one finishes."
+        },
+        "runEvals": "Run evals",
+        "newEval": "New eval",
+        "proposed": {
+          "headline": "{count, plural, one {1 drafted eval from a real question} other {# drafted evals from real questions}}",
+          "description": "The Examiner drafted these from questions people actually asked. A draft runs nothing and gates nothing until you approve it; a rejected one never returns.",
+          "prompt": "“{prompt}”",
+          "approve": "Approve",
+          "reject": "Reject"
+        },
+        "searchPlaceholder": "Search evals...",
+        "empty": {
+          "label": "No evals yet",
+          "hint": "A eval catches your AI saying something wrong before a customer sees it.",
+          "addStarters": "Add 3 starter evals",
+          "writeOwn": "Write my own",
+          "table": "No evals"
+        },
+        "columns": {
+          "eval": "Eval",
+          "status": "Status",
+          "mustPass": "Must pass",
+          "lastRun": "Last run"
+        },
+        "yes": "Yes",
+        "no": "No",
+        "run": "Run",
+        "deleteRow": "Delete {name}",
+        "batchModal": {
+          "title": "Run evals",
+          "bodyCompany": "This asks the company AI {count, plural, one {1 question} other {# questions}}, then has a second AI mark each answer — {calls} AI calls in total, which cost money.",
+          "bodyGlobal": "This asks the global AI {count, plural, one {1 question} other {# questions}}, then has a second AI mark each answer — {calls} AI calls in total, which cost money.",
+          "stay": "Results appear on this page as each one finishes. You can leave the page.",
+          "capped": "Only the first {cap} evals will run this time. Run again afterwards to cover the rest.",
+          "cancel": "Cancel"
+        },
+        "deleteModal": {
+          "title": "Delete eval",
+          "body": "This deletes {name} and its results for good. There is no undo.",
+          "cancel": "Cancel",
+          "confirm": "Delete eval"
+        }
+      },
+      "detail": {
+        "description": "What this eval asks, and what the AI said the last time it was asked.",
+        "status": {
+          "passing": "Passing",
+          "failing": "Failing",
+          "notRunYet": "Not run yet",
+          "notTested": "Not tested"
+        },
+        "lastRun": "Last run {date}",
+        "mustPassBadge": "Must pass before going live",
+        "edit": "Edit",
+        "runFailed": "The eval could not be run.",
+        "runThis": "Run this eval",
+        "question": "The question",
+        "goodAnswer": "What a good answer must do",
+        "answered": "What your AI answered",
+        "neverRun": "This eval has never been run. Press <highlight>Run this eval</highlight> to ask your AI.",
+        "evidence": "Used {documents, plural, one {1 document} other {# documents}}, {memories, plural, one {1 memory} other {# memories}} and {skills, plural, one {1 skill} other {# skills}}",
+        "answeredBy": "· answered by {model}",
+        "askedTimes": "· asked {count} times",
+        "cost": "· cost {cost}",
+        "marked": "How it was marked",
+        "earlierRuns": "Earlier runs"
+      },
+      "form": {
+        "where": {
+          "internalChat": "Internal chat",
+          "internalChatHint": "Staff asking your AI questions",
+          "widget": "Customer widget",
+          "widgetHint": "The public widget on your site"
+        },
+        "saveFailed": "The eval could not be saved.",
+        "createFailed": "The eval could not be created.",
+        "editTitle": "Edit check",
+        "newTitle": "New eval",
+        "editDescription": "Changing the question or what a good answer must do retires this eval's earlier results, so run it again afterwards.",
+        "newDescription": "A question, and what a good answer looks like. Running it asks the AI and has a second AI mark the reply.",
+        "nameLabel": "Name this eval",
+        "namePlaceholder": "Doesn't invent pricing",
+        "promptLabel": "What would someone ask?",
+        "promptPlaceholder": "How much does your enterprise plan cost?",
+        "goodAnswerLabel": "What does a good answer look like?",
+        "goodAnswerHint": "Plain English. This is what the marking AI reads.",
+        "goodAnswerPlaceholder": "Should say pricing isn't published and offer to put them in touch with sales. Must never quote a figure.",
+        "bannedLabel": "Words it must never say",
+        "bannedHint": "Optional. Press Enter after each one.",
+        "bannedPlaceholder": "enterprise is free",
+        "removePhrase": "Remove {phrase}",
+        "whereLabel": "Where does this apply?",
+        "mustPassLabel": "This must pass before the AI goes live",
+        "mustPassHint": "Leave ticked for anything that would embarrass you in front of a customer.",
+        "advanced": "Advanced",
+        "sampleLabel": "Ask this more than once",
+        "sampleHint": "Optional. A eval that passes two times in three is an eval that fails one conversation in three. Each extra ask costs another two AI calls.",
+        "askOnce": "Ask once",
+        "askThree": "Ask 3 times — all must pass",
+        "askFive": "Ask 5 times — all must pass",
+        "skillsLabel": "The answer must use these skills",
+        "skillsHint": "{count} selected. Leave empty unless you are testing that a particular skill gets used.",
+        "skillsEmpty": "No skills are available to this company yet. Add one from the Skill Center first.",
+        "saving": "Saving…",
+        "saveCheck": "Save check",
+        "creating": "Creating…",
+        "createEval": "Create eval"
+      }
+    },
+    "workspaceNav": {
+      "ariaLabel": "Artificial intelligence sections",
+      "instructions": "Instructions",
+      "rules": "Rules",
+      "systemPrompt": "System Prompt",
+      "wiki": "Wiki",
+      "voice": "Voice",
+      "unanswered": "Unanswered",
+      "diary": "Diary",
+      "evals": "Evals",
+      "providers": "Providers",
+      "modelCatalogue": "Model Catalogue",
+      "defaults": "Defaults",
+      "appearance": "Appearance",
+      "welcomeScreen": "Welcome Screen",
+      "conversationStarters": "Conversation Starters",
+      "greeting": "Greeting",
+      "integration": "Integration",
+      "runningCosts": "Running Costs",
+      "value": "Value",
+      "chatLogs": "Chat Logs",
+      "skillCenter": "Skill Center",
+      "widget": "Widget",
+      "models": "Models"
     }
   },
   "user": {
@@ -3369,8 +5903,8 @@
   },
   "aiVoice": {
     "title": "Voice",
-    "subtitle": "The voice Sonae speaks with — on Ask Sonae, the phone, and the reception screen.",
-    "hint": "This is the voice customers hear whenever Sonae speaks. Press Listen to hear a voice. Press \"Use this voice\" to switch to it — the change applies to new conversations straight away.",
+    "subtitle": "The voice {platformName} speaks with — on Ask {platformName}, the phone, and the reception screen.",
+    "hint": "This is the voice customers hear whenever {platformName} speaks. Press Listen to hear a voice. Press \"Use this voice\" to switch to it — the change applies to new conversations straight away.",
     "columns": {
       "voice": "Voice",
       "sound": "How it sounds",
@@ -3382,7 +5916,7 @@
     "current": "In use",
     "success": {
       "title": "Voice saved",
-      "message": "New spoken conversations will use this voice everywhere Sonae speaks."
+      "message": "New spoken conversations will use this voice everywhere {platformName} speaks."
     },
     "errors": {
       "saveTitle": "The voice was not saved",
@@ -3398,12 +5932,12 @@
   },
   "aiPages": {
     "title": "Wiki",
-    "subtitle": "What Sonae remembers - customers, products, policies and recurring issues - written and kept up to date by Sonae itself.",
-    "hint": "After every phone call or email with a known customer, Sonae rewrites their page - and when a conversation teaches something about a product, a policy or a recurring issue, that topic's page learns too, and the pages link up. Open a page to read it, change it, or pin a fact Sonae must always respect.",
+    "subtitle": "What {platformName} remembers - customers, products, policies and recurring issues - written and kept up to date by {platformName} itself.",
+    "hint": "After every phone call or email with a known customer, {platformName} rewrites their page - and when a conversation teaches something about a product, a policy or a recurring issue, that topic's page learns too, and the pages link up. Open a page to read it, change it, or pin a fact {platformName} must always respect.",
     "searchPlaceholder": "Search customers or page text...",
     "columns": {
       "customer": "Page",
-      "remembers": "What Sonae remembers",
+      "remembers": "What {platformName} remembers",
       "lastChange": "Last change",
       "rewrites": "Rewrites",
       "sources": "Sources",
@@ -3411,7 +5945,7 @@
       "usedSort": "Sort by most used"
     },
     "empty": "No pages yet",
-    "emptyState": "No pages yet. When Sonae speaks with a known customer on the phone or by email, their page appears here.",
+    "emptyState": "No pages yet. When {platformName} speaks with a known customer on the phone or by email, their page appears here.",
     "emptySearch": "Nothing matches that search.",
     "sources": {
       "phone": "Phone call",
@@ -3441,16 +5975,16 @@
       },
       "pinned": {
         "title": "Pinned by staff",
-        "hint": "Facts pinned here are permanent. Sonae reads them with every page but can never change or remove them - only a person can.",
+        "hint": "Facts pinned here are permanent. {platformName} reads them with every page but can never change or remove them - only a person can.",
         "none": "Nothing pinned yet.",
-        "placeholder": "Write a fact Sonae must always respect...",
+        "placeholder": "Write a fact {platformName} must always respect...",
         "add": "Pin it",
         "remove": "Remove this pinned fact",
-        "hintShort": "Pinned fact — Sonae always respects this and can never rewrite it"
+        "hintShort": "Pinned fact — {platformName} always respects this and can never rewrite it"
       },
       "body": {
         "title": "The page",
-        "hint": "Written and kept current by Sonae. You can edit it directly - your edit is recorded in the history like any other change.",
+        "hint": "Written and kept current by {platformName}. You can edit it directly - your edit is recorded in the history like any other change.",
         "save": "Save the page",
         "saving": "Saving...",
         "discard": "Discard changes"
@@ -3503,7 +6037,7 @@
       "title": "The Map",
       "subtitle": "Every page as a dot, every link as a line - the company's knowledge, growing after each conversation.",
       "back": "All pages",
-      "empty": "No pages to draw yet. When Sonae speaks with known customers, the map grows on its own.",
+      "empty": "No pages to draw yet. When {platformName} speaks with known customers, the map grows on its own.",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "zoomReset": "Reset the view"
@@ -3515,14 +6049,14 @@
         "text": "Text",
         "vault": "Vault"
       },
-      "websitePlaceholder": "Paste a website address and press Read it - Sonae will read it and write the pages",
+      "websitePlaceholder": "Paste a website address and press Read it - {platformName} will read it and write the pages",
       "textTitlePlaceholder": "What is this about? (a short title)",
       "textBodyPlaceholder": "Paste or write the knowledge here...",
       "readIt": "Read it",
       "feedback": {
-        "website": "Found {count} pages. Sonae is reading them - the wiki below fills in as it goes.",
-        "text": "Sonae is reading it - the wiki below updates when it has.",
-        "files": "{count, plural, =1 {File uploaded. Sonae is reading it.} other {# files uploaded. Sonae is reading them.}}",
+        "website": "Found {count} pages. {platformName} is reading them - the wiki below fills in as it goes.",
+        "text": "{platformName} is reading it - the wiki below updates when it has.",
+        "files": "{count, plural, =1 {File uploaded. {platformName} is reading it.} other {# files uploaded. {platformName} is reading them.}}",
         "vault": "{count, plural, =1 {1 page} other {# pages}} from the vault are being read.",
         "vaultSkipped": "{count, plural, =1 {1 page} other {# pages}} from the vault are being read; {skipped} non-markdown files skipped."
       },
@@ -3537,7 +6071,7 @@
       "vaultHint": "Drop an Obsidian vault here - a zip of the folder, or a handful of .md files. Every markdown page goes through the normal import: the wiki reads it, links and all. Anything that isn't markdown is skipped and counted."
     },
     "progress": {
-      "title": "Sonae is reading",
+      "title": "{platformName} is reading",
       "count": "{done} of {total} documents",
       "written": "{count, plural, =1 {1 page written} other {# pages written}}",
       "improved": "{count, plural, =1 {1 page improved} other {# pages improved}}",
@@ -3734,7 +6268,7 @@
   },
   "connections": {
     "title": "Connections",
-    "subtitle": "Everything Sonae depends on, and whether it is answering right now.",
+    "subtitle": "Everything {platformName} depends on, and whether it is answering right now.",
     "hint": "These are live checks, not settings checks: the inbox is asked for its inbox, each AI provider for its model list, the phone line about its account. A connection that stops answering shows here within the hour.",
     "loading": "Checking...",
     "allWell": "Everything is answering.",
@@ -3784,12 +6318,12 @@
   "aiMailbox": {
     "title": "Mailbox",
     "subtitle": "Every email this company's AI has seen, and what it did with each.",
-    "hint": "Sonae keeps the sender, the subject and its decision - never the body of the mail. To read a full conversation, open it in the connected inbox itself.",
+    "hint": "{platformName} keeps the sender, the subject and its decision - never the body of the mail. To read a full conversation, open it in the connected inbox itself.",
     "searchPlaceholder": "Search by sender or subject...",
     "columns": {
       "from": "From",
       "subject": "Subject",
-      "decision": "What Sonae did",
+      "decision": "What {platformName} did",
       "when": "When"
     },
     "decision": {
@@ -3876,5 +6410,56 @@
       "cancel": "Cancel"
     },
     "honesty": "Every number is a count of real recorded events. The hours line is an estimate built from the visible assumption above - change it to match how long these would really take your team."
+  },
+  "ui": {
+    "table": {
+      "noEntries": "No entries found",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {totalPages}",
+      "showingRange": "Showing {start}-{end} of {total}",
+      "showingPage": "Showing {count} · page {page}",
+      "showingCount": "Showing {count}",
+      "loadMore": "Load more",
+      "loading": "Loading...",
+      "actionsColumn": "Actions"
+    },
+    "detailTabs": {
+      "itemSelected": "{label} selected"
+    },
+    "cursorPagination": {
+      "previousPage": "Previous page",
+      "nextPage": "Next page"
+    },
+    "modal": {
+      "close": "Close"
+    },
+    "jsonSchemaBuilder": {
+      "addField": "Add a field",
+      "empty": "No fields yet, so the agent answers in plain English.",
+      "fieldNamePlaceholder": "field_name",
+      "descriptionPlaceholder": "What should go in this field?",
+      "typeString": "String",
+      "typeNumber": "Number",
+      "typeBoolean": "Boolean",
+      "always": "Always"
+    },
+    "timeframeDropdown": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "7d": "Last 7 Days",
+      "14d": "Last 14 Days",
+      "30d": "Last 30 Days",
+      "60d": "Last 60 Days",
+      "90d": "Last 90 Days",
+      "180d": "Last 180 Days",
+      "365d": "Last 365 Days",
+      "customRange": "Custom Range",
+      "selectRange": "Select Range",
+      "presets": "Presets",
+      "startDate": "Start Date",
+      "endDateOptional": "End Date (Optional)",
+      "applyRange": "Apply Range"
+    }
   }
 }

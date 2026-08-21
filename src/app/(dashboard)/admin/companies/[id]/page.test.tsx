@@ -1,8 +1,16 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import CompanyDashboardPage from "./page";
+
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
 
@@ -92,10 +100,10 @@ describe("CompanyDashboardPage", () => {
    * What was here reported tokens, quota and provider spend under the heading
    * "Dashboard" — a billing view promising an account view.
    */
-  it("answers who is using Sonae in a sentence, before any number", () => {
+  it("answers who is using the platform in a sentence, before any number", () => {
     render(<CompanyDashboardPage />);
 
-    expect(screen.getByText("2 of 3 people used Sonae in the last 30 days, and 1 did not.")).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 people used Acme Copilot in the last 30 days, and 1 did not.")).toBeInTheDocument();
     expect(screen.queryByText(/Tokens Used/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Provider Usage/i)).not.toBeInTheDocument();
   });
@@ -178,7 +186,7 @@ describe("CompanyDashboardPage", () => {
     render(<CompanyDashboardPage />);
 
     expect(screen.getByText("What they are asking")).toBeInTheDocument();
-    expect(screen.getByText(/Questions put to Sonae each day/)).toBeInTheDocument();
+    expect(screen.getByText(/Questions put to Acme Copilot each day/)).toBeInTheDocument();
   });
 
 });

@@ -137,6 +137,7 @@ export default function AgentApprovalsPage() {
 
               return (
                 <>
+                  {/* Stays raw: an unstyled expand/collapse text block — matches no variant. */}
                   <button
                     type="button"
                     onClick={() => setExpandedId(isExpanded ? null : approvalId)}

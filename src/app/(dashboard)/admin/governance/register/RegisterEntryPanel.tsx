@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { AiSystemEntry, AiSystemRisk } from "@/convex/governanceRegisterService";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Select } from "@/src/ui/components/screens/Select";
 
@@ -171,6 +172,7 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
                 const selected = (risk || entry.risk) === option;
 
                 return (
+                  // Stays raw: an aria-pressed rating chip whose border swaps with selection — matches no variant.
                   <button
                     key={option}
                     type="button"
@@ -202,15 +204,15 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
             <p className="text-[11px] text-muted">{t("recorded")}</p>
 
             {canWrite ? (
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 onClick={handleSave}
                 disabled={!dirty || isSaving}
-                className="flex items-center gap-2 rounded-[10px] bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="flex items-center gap-2 px-4 py-2 text-[13px] shadow-none disabled:opacity-40"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {t("save")}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>

@@ -1,8 +1,29 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { render as renderBase, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
+import messages from "../../../../messages/en.json";
 import AdminDashboardPage from "./page";
+
+// The screen resolves its copy through the catalogue, so it renders inside
+// the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
+
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
 

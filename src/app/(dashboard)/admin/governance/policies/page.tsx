@@ -14,6 +14,7 @@ import {
   type PolicyPriority,
   type PolicyScope,
 } from "@/convex/governancePolicyService";
+import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -112,8 +113,8 @@ export default function GovernancePoliciesPage() {
             </Select>
 
             {filtering ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() =>
                   narrow(() => {
                     setSearch("");
@@ -121,10 +122,10 @@ export default function GovernancePoliciesPage() {
                     setScope("ALL");
                   })
                 }
-                className="h-[38px] rounded-[10px] px-3 text-[13px] text-secondary transition-colors hover:text-foreground"
+                className="h-[38px] rounded-[10px] px-3 py-0 font-normal hover:bg-transparent"
               >
                 {t("filters.clear")}
-              </button>
+              </Button>
             ) : null}
           </>
         }

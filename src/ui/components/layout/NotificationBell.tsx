@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/atoms/Button";
 import { formatDateTime } from "@/src/lib/dates";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -86,14 +87,14 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="icon"
         ref={buttonRef}
-        type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={count > 0 ? t("waiting", { count: countLabel }) : t("open")}
-        className="relative w-9 h-9 flex items-center justify-center rounded-full text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors"
+        className="relative w-9 h-9 p-0 flex items-center justify-center"
       >
         <Bell className="w-[18px] h-[18px]" />
         {/* Absent at zero on purpose. */}
@@ -102,7 +103,7 @@ export function NotificationBell() {
             {countLabel}
           </span>
         )}
-      </button>
+      </Button>
 
       <AnimatePresence>
         {isOpen && (
@@ -121,6 +122,8 @@ export function NotificationBell() {
                 {t("title")}
               </span>
               {count > 0 && (
+                // Raw on purpose: an inline text link — no Button variant is a
+                // bare text action.
                 <button
                   type="button"
                   onClick={() => markAllRead({})}
@@ -174,6 +177,8 @@ export function NotificationBell() {
                           {body}
                         </Link>
                       ) : (
+                        // Raw on purpose: a full-width menu row, the button
+                        // twin of the Link above it.
                         <button
                           type="button"
                           role="menuitem"
@@ -190,6 +195,7 @@ export function NotificationBell() {
             )}
 
             {status === "CanLoadMore" && (
+              // Raw on purpose: an inline text link, as above.
               <button
                 type="button"
                 onClick={() => loadMore(NOTIFICATION_PAGE_SIZE)}

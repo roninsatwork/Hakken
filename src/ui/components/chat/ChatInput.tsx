@@ -21,6 +21,7 @@ import {
 import type { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
@@ -311,6 +312,8 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   <div key={i} className="flex items-center gap-2 bg-foreground/5 dark:bg-white/10 px-3 py-1.5 rounded-full relative group">
                     <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-[13px] font-medium text-foreground max-w-[120px] truncate">{file.name}</span>
+                    {/* Raw on purpose: a 16px chip remover — far smaller than
+                        any Button variant's hit target. */}
                     <button
                       type="button"
                       onClick={() => removePendingFile(i)}
@@ -370,6 +373,8 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   }
                 }}
               />
+              {/* Raw on purpose: the send control morphs between submit and
+                  stop, and its whole recipe swaps with that state. */}
               <button
                 type={isSubmitting ? "button" : "submit"}
                 disabled={!content.trim() && !isSubmitting}
@@ -385,6 +390,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* The composer chips below stay raw on purpose: h-7 borderless
+                  or state-tinted recipes of the chat front end, not the admin
+                  kit's variants. */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -426,7 +434,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
               <div className="ml-auto flex items-center gap-2">
                 {/* Database Model Selector */}
                 <div className="relative" ref={modelRef}>
-                  <button 
+                  {/* Raw on purpose (and the menu rows below): open-state pills
+                      and listbox rows, not standalone button recipes. */}
+                  <button
                     type="button"
                     onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
                     disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
@@ -552,12 +562,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             Click the `microphone` icon located in your browser&apos;s top URL search bar and select &quot;Allow&quot;.
           </div>
           <div className="w-full flex justify-end mt-2">
-            <button 
-              onClick={() => setPermissionError(false)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
-            >
+            <Button variant="destructive" onClick={() => setPermissionError(false)}>
               Close Alert
-            </button>
+            </Button>
           </div>
         </div>
       </SonaeModal>
@@ -582,12 +589,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             Tip: Convert documents to pure text formats (CSV or standard PDF) for stable execution.
           </div>
           <div className="w-full flex justify-end mt-2">
-            <button 
-              onClick={() => setUploadError(null)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
-            >
+            <Button variant="destructive" onClick={() => setUploadError(null)}>
               Clear Alert
-            </button>
+            </Button>
           </div>
         </div>
       </SonaeModal>

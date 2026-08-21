@@ -131,6 +131,7 @@ export default function AgentRulesPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
+            {/* Raw: bordered rounded-full cancel with a foreground/5 hover — neither ghost nor quiet matches its pixels. */}
             <button
               onClick={() => setDeleteId(null)}
               className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim"

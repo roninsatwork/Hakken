@@ -49,7 +49,12 @@ vi.mock("framer-motion", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => (key === "you" ? "You asked" : key),
+  useTranslations: () => (key: string) => {
+    if (key === "you") return "You asked";
+    if (key === "stillWriting") return "Still writing";
+    if (key === "attachedPhoto") return "Attached photo";
+    return key;
+  },
 }));
 
 vi.mock("@/src/context/SystemSettingsContext", () => ({

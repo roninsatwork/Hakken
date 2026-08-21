@@ -1,5 +1,17 @@
 import React from "react";
-import { fireEvent, renderWithProviders as render, screen, waitFor } from "@/src/test/renderWithProviders";
+import { NextIntlClientProvider } from "next-intl";
+import { fireEvent, renderWithProviders as renderBase, screen, waitFor } from "@/src/test/renderWithProviders";
+import messages from "../../../../../../../../../messages/en.json";
+
+// The eval form resolves its copy through the catalogue, so the page renders
+// inside the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -8,6 +20,9 @@ import NewCompanyEvalPage from "./page";
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
   usePaginatedQuery: vi.fn(),
+  // The shared form also serves editing, so it declares the case query; in
+  // create mode it is skipped, and undefined is exactly what a skip returns.
+  useQuery: vi.fn(),
 }));
 
 const push = vi.fn();

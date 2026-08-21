@@ -10,9 +10,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
 import { ArrowLeft, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { Button } from "@/src/ui/atoms/Button";
 import { formatDateTime } from "@/src/lib/dates";
 import { SaveAction } from "@/src/ui/components/screens/SaveControls";
 import { Field } from "@/src/ui/components/screens/Field";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useTranslations } from "next-intl";
 
 type ConnectorDraft = {
   configuredSecretRefs: string;
@@ -40,6 +43,7 @@ function SettingSwitch({ label, description, checked, onChange }: {
         <span className="text-[13px] font-medium text-foreground">{label}</span>
         <p className="text-[12px] leading-relaxed text-muted">{description}</p>
       </div>
+      {/* Stays raw: an on/off switch drawn as its own control — matches no variant. */}
       <button
         type="button"
         role="switch"
@@ -76,6 +80,8 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
  * and one plain answer to "does it work".
  */
 export default function ConnectorSetupPage() {
+  const t = useTranslations("admin.aiTools.connector");
+  const { platformName } = useSystemSettings();
   const { showErrorToast } = useToast();
   const params = useParams();
   const id = params.id as Id<"toolConnectors">;
@@ -100,10 +106,10 @@ export default function ConnectorSetupPage() {
   const oauthCallbackError = searchParams.get("oauthError");
 
   if (details === undefined) {
-    return <div className="p-8 text-secondary">Loading...</div>;
+    return <div className="p-8 text-secondary">{t("loading")}</div>;
   }
   if (!details?.connector) {
-    return <div className="p-8 text-secondary">This tool could not be found.</div>;
+    return <div className="p-8 text-secondary">{t("notFound")}</div>;
   }
 
   const { connector, definition } = details;
@@ -214,7 +220,7 @@ export default function ConnectorSetupPage() {
           className="flex w-max items-center gap-2 text-[12px] text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Tools
+          {t("back")}
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -223,9 +229,9 @@ export default function ConnectorSetupPage() {
           </div>
           <SaveAction
             isSaving={isSaving}
-            label="Save"
-            savingLabel="Saving..."
-            successLabel="Saved"
+            label={t("save")}
+            savingLabel={t("saving")}
+            successLabel={t("saved")}
             showSuccess={saveSuccess}
             onClick={handleSave}
           />
@@ -234,25 +240,21 @@ export default function ConnectorSetupPage() {
 
       <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
-          <Card title="Settings">
+          <Card title={t("settingsTitle")}>
             <div className="divide-y divide-border-dim/40">
               <SettingSwitch
-                label={definition?.category === "VOICE" ? "Taking calls" : "Available to agents"}
+                label={definition?.category === "VOICE" ? t("takingCalls") : t("availableToAgents")}
                 description={definition?.category === "VOICE"
-                  ? (form.isActive
-                    ? "The phone line answers. Switch off and every caller hears a polite refusal instead."
-                    : "Switched off. Every caller hears a polite refusal until this is switched back on.")
-                  : (form.isActive
-                    ? "Agents can be given this tool."
-                    : "Switched off. No agent can use this, whatever it has been given.")}
+                  ? (form.isActive ? t("voiceOn") : t("voiceOff"))
+                  : (form.isActive ? t("agentsOn") : t("agentsOff"))}
                 checked={form.isActive}
                 onChange={(next) => updateDraft({ isActive: next })}
               />
               {details.canManageTenantScope && (
                 <div className="flex flex-col gap-2 py-4">
-                  <span className="text-[13px] font-medium text-foreground">Who can use it</span>
+                  <span className="text-[13px] font-medium text-foreground">{t("whoCanUse")}</span>
                   <select
-                    aria-label="Who can use it"
+                    aria-label={t("whoCanUse")}
                     value={form.tenantAvailability}
                     onChange={(event) => updateDraft({
                       tenantAvailability: event.target.value as "GLOBAL" | "TENANT_RESTRICTED",
@@ -260,17 +262,17 @@ export default function ConnectorSetupPage() {
                     })}
                     className="h-[46px] w-full max-w-sm cursor-pointer rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
                   >
-                    <option value="GLOBAL">Every company</option>
-                    <option value="TENANT_RESTRICTED">One company only</option>
+                    <option value="GLOBAL">{t("everyCompany")}</option>
+                    <option value="TENANT_RESTRICTED">{t("oneCompany")}</option>
                   </select>
                   {form.tenantAvailability === "TENANT_RESTRICTED" && (
                     <select
-                      aria-label="Company"
+                      aria-label={t("company")}
                       value={form.companyId}
                       onChange={(event) => updateDraft({ companyId: event.target.value })}
                       className="h-[46px] w-full max-w-sm cursor-pointer rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
                     >
-                      <option value="">Choose a company</option>
+                      <option value="">{t("chooseCompany")}</option>
                       {companyOptions.map((company: { _id: string; name: string }) => (
                         <option key={company._id} value={company._id}>{company.name}</option>
                       ))}
@@ -283,7 +285,7 @@ export default function ConnectorSetupPage() {
                   <Field
                     id="connector-account-ref"
                     label={accountRefLabel}
-                    hint="The account this connector is bound to. Calls, messages or requests arriving for it are routed to this workspace."
+                    hint={t("accountRefHint")}
                     value={form.authAccountRef}
                     onChange={(event) => updateDraft({ authAccountRef: event.target.value })}
                     placeholder="+44..."
@@ -298,8 +300,8 @@ export default function ConnectorSetupPage() {
                 <div className="flex flex-col gap-2 py-4">
                   <Field
                     id="connector-secrets"
-                    label="Keys it needs"
-                    hint={`This tool needs ${requiredSecretRefs.join(" and ")} set on the server. Name them here so Sonae knows where to look — the values themselves never live in this screen.`}
+                    label={t("keysLabel")}
+                    hint={t("keysHint", { refs: requiredSecretRefs.join(" and "), platformName })}
                     value={form.configuredSecretRefs}
                     onChange={(event) => updateDraft({ configuredSecretRefs: event.target.value })}
                     placeholder={requiredSecretRefs.join(", ")}
@@ -307,7 +309,7 @@ export default function ConnectorSetupPage() {
                   />
                   {missingRefs.length > 0 && (
                     <p className="text-[12px] leading-relaxed text-amber-400">
-                      Still missing: {missingRefs.join(", ")}
+                      {t("stillMissing", { refs: missingRefs.join(", ") })}
                     </p>
                   )}
                 </div>
@@ -315,9 +317,9 @@ export default function ConnectorSetupPage() {
             </div>
           </Card>
 
-          <Card title="What it can do">
+          <Card title={t("whatItCanDo")}>
             {toolDefinitions.length === 0 ? (
-              <p className="text-[13px] text-secondary">This tool has nothing to switch on.</p>
+              <p className="text-[13px] text-secondary">{t("nothingToSwitch")}</p>
             ) : (
               <div className="divide-y divide-border-dim/40">
                 {toolDefinitions.map((tool) => (
@@ -338,60 +340,63 @@ export default function ConnectorSetupPage() {
           {/* The consent connection: the account this tool acts as. Only for
               OAuth connectors — everything else authenticates with keys. */}
           {isOAuthConnector && (
-            <Card title="Connected account">
+            <Card title={t("connectedAccount")}>
               {connectionStatus === "CONNECTED" ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#10b981]" />
                     <div className="min-w-0">
                       <p className="text-[13px] leading-relaxed text-foreground">
-                        Connected as <span className="font-medium">{connector.authAccountRef}</span>
+                        {t.rich("connectedAs", {
+                          account: connector.authAccountRef ?? "",
+                          b: (chunks) => <span className="font-medium">{chunks}</span>,
+                        })}
                       </p>
                       {connector.oauthConnectedAt ? (
                         <p className="mt-1 text-[12px] text-muted">
-                          Since {formatDateTime(connector.oauthConnectedAt)}
+                          {t("since", { date: formatDateTime(connector.oauthConnectedAt) })}
                         </p>
                       ) : null}
                     </div>
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="quiet"
                     onClick={handleDisconnect}
                     disabled={isDisconnecting}
-                    className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+                    className="inline-flex h-9 w-max items-center gap-2 px-4 text-[13px] text-foreground bg-transparent hover:bg-foreground/5"
                   >
                     {isDisconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                    {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                  </button>
+                    {isDisconnecting ? t("disconnecting") : t("disconnect")}
+                  </Button>
                   <p className="text-[12px] leading-relaxed text-muted">
-                    Disconnecting revokes the key at the provider — the account itself is untouched.
+                    {t("disconnectNote")}
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   <p className="text-[13px] leading-relaxed text-secondary">
                     {connectionStatus === "ERROR"
-                      ? connector.lastTestMessage ?? "The connection failed. Connect again."
-                      : "Not connected. Connecting opens the provider's own approval screen for the dedicated account — the platform holds a scoped, revocable key and never sees a password."}
+                      ? connector.lastTestMessage ?? t("connectionFailed")
+                      : t("notConnectedExplain")}
                   </p>
                   {oauthCallbackError ? (
                     <p className="text-[12px] leading-relaxed text-amber-400" role="alert">{oauthCallbackError}</p>
                   ) : null}
-                  <button
-                    type="button"
+                  <Button
+                    variant="brand"
                     onClick={handleConnect}
                     disabled={isConnecting}
-                    className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] disabled:opacity-50"
                   >
                     {isConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                    {isConnecting ? "Opening Google..." : "Connect mailbox"}
-                  </button>
+                    {isConnecting ? t("openingGoogle") : t("connectMailbox")}
+                  </Button>
                 </div>
               )}
             </Card>
           )}
 
-          <Card title="Does it work">
+          <Card title={t("doesItWork")}>
             {latestCheck ? (
               <div className="flex items-start gap-3">
                 {latestCheck.status === "SUCCESS"
@@ -399,40 +404,40 @@ export default function ConnectorSetupPage() {
                   : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />}
                 <div className="min-w-0">
                   <p className="text-[13px] leading-relaxed text-foreground">
-                    {latestCheck.status === "SUCCESS" ? "Working." : latestCheck.message}
+                    {latestCheck.status === "SUCCESS" ? t("working") : latestCheck.message}
                   </p>
                   <p className="mt-1 text-[12px] text-muted">
-                    Last checked {formatDateTime(latestCheck.testedAt)}
+                    {t("lastChecked", { date: formatDateTime(latestCheck.testedAt) })}
                   </p>
                 </div>
               </div>
             ) : (
               <p className="text-[13px] leading-relaxed text-secondary">
-                Not checked yet.
+                {t("notCheckedYet")}
               </p>
             )}
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={handleCheck}
               disabled={isChecking}
-              className="mt-1 inline-flex h-9 w-max items-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+              className="mt-1 inline-flex h-9 w-max items-center gap-2 px-4 text-[13px] text-foreground bg-transparent hover:bg-foreground/5"
             >
               {isChecking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {isChecking ? "Checking..." : "Check now"}
-            </button>
+              {isChecking ? t("checking") : t("checkNow")}
+            </Button>
           </Card>
 
           {/* Only when there is something to show. Two of the three panels here
               used to be permanent, and normally read "No … yet". */}
           {tools.length > 0 && (
-            <Card title="Tools this created">
+            <Card title={t("toolsCreated")}>
               <ul className="flex flex-col gap-2">
                 {tools.map((tool: { _id: string; name: string; isActive?: boolean }) => (
                   <li key={tool._id} className="flex items-center justify-between gap-3 text-[13px]">
                     <Link href={`/admin/ai/tools/${tool._id}`} className="text-foreground transition-colors hover:text-brand">
                       {tool.name}
                     </Link>
-                    {tool.isActive === false ? <span className="text-[12px] text-muted">Off</span> : null}
+                    {tool.isActive === false ? <span className="text-[12px] text-muted">{t("off")}</span> : null}
                   </li>
                 ))}
               </ul>

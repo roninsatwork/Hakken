@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Check, Loader2, MessageSquare, MinusCircle, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -23,17 +24,17 @@ export type FeedbackDraft = {
   comment: string;
 };
 
-const feedbackLabels: Array<{ label: FeedbackLabel; text: string }> = [
-  { label: "GOOD_ANSWER", text: "Good answer" },
-  { label: "INCORRECT", text: "Incorrect" },
-  { label: "MISSED_CONTEXT", text: "Missed context" },
-  { label: "WRONG_TOOL", text: "Wrong tool" },
-  { label: "BAD_TOOL_ARGS", text: "Bad args" },
-  { label: "UNSAFE_SUGGESTION", text: "Unsafe" },
-  { label: "TOO_EXPENSIVE", text: "Too expensive" },
-  { label: "TOO_SLOW", text: "Too slow" },
-  { label: "NEEDS_APPROVAL_POLICY_CHANGE", text: "Approval policy" },
-  { label: "SHOULD_BECOME_EVAL", text: "Make eval" },
+const feedbackLabels: Array<{ label: FeedbackLabel; textKey: string }> = [
+  { label: "GOOD_ANSWER", textKey: "labels.goodAnswer" },
+  { label: "INCORRECT", textKey: "labels.incorrect" },
+  { label: "MISSED_CONTEXT", textKey: "labels.missedContext" },
+  { label: "WRONG_TOOL", textKey: "labels.wrongTool" },
+  { label: "BAD_TOOL_ARGS", textKey: "labels.badArgs" },
+  { label: "UNSAFE_SUGGESTION", textKey: "labels.unsafe" },
+  { label: "TOO_EXPENSIVE", textKey: "labels.tooExpensive" },
+  { label: "TOO_SLOW", textKey: "labels.tooSlow" },
+  { label: "NEEDS_APPROVAL_POLICY_CHANGE", textKey: "labels.approvalPolicy" },
+  { label: "SHOULD_BECOME_EVAL", textKey: "labels.makeEval" },
 ];
 
 /**
@@ -55,6 +56,7 @@ export function FeedbackModal({
   onClose: () => void;
   action: AdminActionRunner;
 }) {
+  const t = useTranslations("admin.agents.details.runs.feedback");
   const upsertFeedback = useMutation(api.agentRunFeedback.upsertForRun);
 
   const handleSubmit = async () => {
@@ -68,8 +70,8 @@ export function FeedbackModal({
       }),
       {
         key: draft.runId,
-        successMessage: "Feedback saved. It now feeds learning analytics and improvement workflows.",
-        fallbackMessage: "The feedback could not be saved.",
+        successMessage: t("saveSuccess"),
+        fallbackMessage: t("saveFailed"),
       },
     );
     // The draft stays open on failure so the comment is not lost.
@@ -80,7 +82,7 @@ export function FeedbackModal({
     <SonaeModal
       isOpen={!!draft}
       onClose={() => !action.isBusy() && onClose()}
-      title="Run feedback"
+      title={t("title")}
       size="lg"
     >
       {draft && (
@@ -91,9 +93,9 @@ export function FeedbackModal({
 
           <div className="grid grid-cols-3 gap-2">
             {([
-              { rating: "POSITIVE" as const, label: "Positive", icon: ThumbsUp },
-              { rating: "NEUTRAL" as const, label: "Neutral", icon: MinusCircle },
-              { rating: "NEGATIVE" as const, label: "Negative", icon: ThumbsDown },
+              { rating: "POSITIVE" as const, label: t("positive"), icon: ThumbsUp },
+              { rating: "NEUTRAL" as const, label: t("neutral"), icon: MinusCircle },
+              { rating: "NEGATIVE" as const, label: t("negative"), icon: ThumbsDown },
             ]).map(({ rating, label, icon: Icon }) => (
               <button
                 key={rating}
@@ -112,7 +114,7 @@ export function FeedbackModal({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-widest font-mono text-muted">Labels</span>
+            <span className="text-[12px] uppercase tracking-widest font-mono text-muted">{t("labelsHeading")}</span>
             <div className="flex flex-wrap gap-2">
               {feedbackLabels.map((option) => {
                 const selected = draft.labels.includes(option.label);
@@ -133,7 +135,7 @@ export function FeedbackModal({
                     }`}
                   >
                     {selected && <Check className="w-3.5 h-3.5" />}
-                    {option.text}
+                    {t(option.textKey)}
                   </button>
                 );
               })}
@@ -141,19 +143,19 @@ export function FeedbackModal({
           </div>
 
           <label className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-widest font-mono text-muted">Comment</span>
+            <span className="text-[12px] uppercase tracking-widest font-mono text-muted">{t("commentHeading")}</span>
             <textarea
               value={draft.comment}
               onChange={(event) => onDraftChange({ ...draft, comment: event.target.value })}
               rows={4}
               className="w-full rounded-[8px] bg-black/20 border border-border-dim px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/50 resize-none"
-              placeholder="What should this run teach the agent improvement loop?"
+              placeholder={t("commentPlaceholder")}
             />
           </label>
 
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={onClose} disabled={action.isBusy()}>
-              Cancel
+              {t("cancel")}
             </Button>
             <WriteButton
               type="button"
@@ -162,7 +164,7 @@ export function FeedbackModal({
               className="px-5 py-2.5 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
             >
               {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
-              Save feedback
+              {t("save")}
             </WriteButton>
           </div>
         </div>

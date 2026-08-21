@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAction, useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, ClipboardCheck, Loader2, Pencil, Play, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { Button } from "@/src/ui/atoms/Button";
 
 type CompanyEvalRun = Doc<"companyEvalRuns">;
 
@@ -33,11 +35,14 @@ type RunResult = {
  * History matters for the same reason: a regression reads as "passed for three
  * weeks, started failing on Tuesday", which a single red badge cannot say.
  */
-function describeResult(status: CompanyEvalRun["status"] | undefined) {
-  if (status === "PASSED") return { label: "Passing", tone: "text-emerald-400" };
-  if (status === "FAILED") return { label: "Failing", tone: "text-red-400" };
-  if (status === undefined) return { label: "Not run yet", tone: "text-muted" };
-  return { label: "Not tested", tone: "text-amber-400" };
+function describeResult(
+  status: CompanyEvalRun["status"] | undefined,
+  t: (key: string) => string
+) {
+  if (status === "PASSED") return { label: t("status.passing"), tone: "text-emerald-400" };
+  if (status === "FAILED") return { label: t("status.failing"), tone: "text-red-400" };
+  if (status === undefined) return { label: t("status.notRunYet"), tone: "text-muted" };
+  return { label: t("status.notTested"), tone: "text-amber-400" };
 }
 
 function parseResults(run: CompanyEvalRun | undefined): RunResult[] {
@@ -107,6 +112,7 @@ export function EvalCaseDetailScreen({
   companyId?: Id<"companies">;
   evalCaseId: Id<"companyEvalCases">;
 }) {
+  const t = useTranslations("ai.evals.detail");
   const searchParams = useSearchParams();
   const evalsHref = companyId ? `/admin/companies/${companyId}/ai/evals` : "/admin/ai/evals";
   const backHref = companyId
@@ -121,7 +127,7 @@ export function EvalCaseDetailScreen({
   const latestRun = runs?.[0];
   const results = parseResults(latestRun);
   const evidence = parseEvidenceCounts(latestRun);
-  const result = describeResult(latestRun?.status);
+  const result = describeResult(latestRun?.status, t);
   const runCost = formatRunCost(latestRun);
   const sampleCount = parseSampleCount(latestRun);
 
@@ -138,7 +144,7 @@ export function EvalCaseDetailScreen({
       <CompanyAiFormPageHeader
         backHref={backHref}
         title={evalCase.name}
-        description="What this eval asks, and what the AI said the last time it was asked."
+        description={t("description")}
         icon={<ClipboardCheck className="h-6 w-6 text-brand" />}
       />
 
@@ -146,10 +152,10 @@ export function EvalCaseDetailScreen({
         <div className="flex flex-wrap items-baseline gap-3">
           <span className={`text-[18px] font-semibold ${result.tone}`}>{result.label}</span>
           {latestRun && (
-            <span className="text-[12px] text-secondary">Last run {formatDateTime(latestRun.completedAt)}</span>
+            <span className="text-[12px] text-secondary">{t("lastRun", { date: formatDateTime(latestRun.completedAt) })}</span>
           )}
           {evalCase.severity === "BLOCKER" && (
-            <span className="text-[12px] text-secondary">Must pass before going live</span>
+            <span className="text-[12px] text-secondary">{t("mustPassBadge")}</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -158,27 +164,27 @@ export function EvalCaseDetailScreen({
           className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
         >
           <Pencil className="h-4 w-4" />
-          Edit
+          {t("edit")}
         </Link>
-        <button
-          type="button"
-          onClick={() => action.run(() => runCheck({ evalCaseId }), { fallbackMessage: "The eval could not be run." })}
+        <Button
+          variant="brand"
+          onClick={() => action.run(() => runCheck({ evalCaseId }), { fallbackMessage: t("runFailed") })}
           disabled={action.isBusy()}
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] font-semibold disabled:opacity-50"
         >
           {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Run this eval
-        </button>
+          {t("runThis")}
+        </Button>
         </div>
       </div>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">The question</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("question")}</h2>
           <p className="mt-2 text-[14px] leading-relaxed text-foreground">{evalCase.prompt}</p>
         </div>
         <div className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">What a good answer must do</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("goodAnswer")}</h2>
           <p className="mt-2 text-[14px] leading-relaxed text-foreground">{evalCase.expectedBehavior}</p>
         </div>
       </section>
@@ -186,29 +192,31 @@ export function EvalCaseDetailScreen({
       {/* The answer in full. This was a two-line clamp inside an expander, which is
           the one thing an admin needs to read when an eval fails. */}
       <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-        <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">What your AI answered</h2>
+        <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("answered")}</h2>
         {runs === undefined ? (
           <Loader2 className="mt-3 h-4 w-4 animate-spin text-brand" />
         ) : !latestRun ? (
           <p className="mt-2 text-[13px] text-muted">
-            This eval has never been run. Press <span className="text-foreground">Run this eval</span> to ask your AI.
+            {t.rich("neverRun", {
+              highlight: (chunks) => <span className="text-foreground">{chunks}</span>,
+            })}
           </p>
         ) : (
           <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-foreground">{latestRun.answer}</p>
         )}
         {latestRun && (
           <p className="mt-4 text-[12px] text-secondary">
-            Used {evidence.documents} document{evidence.documents === 1 ? "" : "s"}, {evidence.memories} memor{evidence.memories === 1 ? "y" : "ies"} and {evidence.skills} skill{evidence.skills === 1 ? "" : "s"}
-            {latestRun.resolvedModelId ? ` · answered by ${latestRun.resolvedModelId}` : ""}
-            {sampleCount > 1 ? ` · asked ${sampleCount} times` : ""}
-            {runCost ? ` · cost ${runCost}` : ""}
+            {t("evidence", { documents: evidence.documents, memories: evidence.memories, skills: evidence.skills })}
+            {latestRun.resolvedModelId ? ` ${t("answeredBy", { model: latestRun.resolvedModelId })}` : ""}
+            {sampleCount > 1 ? ` ${t("askedTimes", { count: sampleCount })}` : ""}
+            {runCost ? ` ${t("cost", { cost: runCost })}` : ""}
           </p>
         )}
       </section>
 
       {results.length > 0 && (
         <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">How it was marked</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("marked")}</h2>
           <div className="mt-3 flex flex-col gap-3">
             {results.map((entry, index) => (
               <div key={`${entry.label}-${index}`} className="flex items-start gap-3">
@@ -228,10 +236,10 @@ export function EvalCaseDetailScreen({
       {/* History, so a regression reads as a change rather than as one red badge. */}
       {runs !== undefined && runs.length > 1 && (
         <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">Earlier runs</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("earlierRuns")}</h2>
           <div className="mt-3 flex flex-col gap-2">
             {runs.slice(1).map((run) => {
-              const earlier = describeResult(run.status);
+              const earlier = describeResult(run.status, t);
               return (
                 <div key={run._id} className="flex items-center justify-between gap-4 border-b border-border-dim/40 pb-2 last:border-0 last:pb-0">
                   <span className={`text-[13px] font-semibold ${earlier.tone}`}>{earlier.label}</span>

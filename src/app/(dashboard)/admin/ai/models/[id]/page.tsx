@@ -7,7 +7,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, ChevronDown, Loader2, Save } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
+import { Button } from "@/src/ui/atoms/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -18,9 +20,9 @@ import {
   getProviderDisplayName,
 } from "../_components/modelAdminUtils";
 
-function formatDate(value?: number) {
-  if (!value) return "never";
-  return new Intl.DateTimeFormat("en-GB", {
+function formatDate(value: number | undefined, locale: string, neverLabel: string) {
+  if (!value) return neverLabel;
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -65,6 +67,9 @@ function PriceField({
 }
 
 export default function ModelPricingPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations("ai.models.detail");
+  const tShared = useTranslations("ai.models.shared");
+  const locale = useLocale();
   const router = useRouter();
   const resolvedParams = use(params);
   const modelId = resolvedParams.id as Id<"aiModels">;
@@ -118,7 +123,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
       router.push("/admin/ai/models/catalogue");
     } catch (e) {
       console.error(e);
-      setSaveError("Failed to save this model.");
+      setSaveError(t("saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -129,7 +134,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   }
 
   if (model === null) {
-    return <div className="py-24 text-center">Model not found.</div>;
+    return <div className="py-24 text-center">{t("notFound")}</div>;
   }
 
   const providers = Array.isArray(providersResult) ? providersResult : [];
@@ -155,7 +160,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
       setIsDefaultConfirmOpen(false);
     } catch (e) {
       console.error(e);
-      setSaveError("Failed to make this the default model.");
+      setSaveError(t("makeDefaultFailed"));
     } finally {
       setIsMakingDefault(false);
     }
@@ -165,13 +170,14 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
     <div className="flex flex-col gap-5 w-full h-full pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim pb-5">
         <div className="flex items-center gap-4">
-          <button
+          <Button
+            variant="icon"
             onClick={() => router.push("/admin/ai/models/catalogue")}
-            aria-label="Back to the model catalogue"
-            className="w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-full border border-border-dim bg-sidebar/40 hover:bg-foreground/5 transition-all"
+            aria-label={t("back")}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center p-0 border border-border-dim bg-sidebar/40"
           >
             <ArrowLeft className="w-4 h-4 text-secondary" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
               {model.friendlyName || model.displayName || model.modelId}
@@ -180,7 +186,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
               <span className="font-mono text-secondary">{model.providerModelId || model.modelId}</span>
               <span className="text-muted">·</span>
               <span className={cn("font-medium", model.isEnabled ? "text-[#10b981]" : "text-muted")}>
-                {model.isEnabled ? "Active" : "Inactive"}
+                {model.isEnabled ? t("active") : t("inactive")}
               </span>
             </div>
           </div>
@@ -191,7 +197,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           className="h-10 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save
+          {t("save")}
         </WriteButton>
       </div>
       <SaveError>{saveError}</SaveError>
@@ -202,14 +208,16 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         <p className="text-[13px] text-secondary">
           {defaultJobs.length > 0 ? (
             <>
-              This model currently handles{" "}
-              <span className="text-foreground font-medium">{defaultJobs.map(formatModelTag).join(", ")}</span>.{" "}
+              {t.rich("handles", {
+                jobs: defaultJobs.map(formatModelTag).join(", "),
+                b: (chunks) => <span className="text-foreground font-medium">{chunks}</span>,
+              })}
             </>
           ) : (
-            <>This model is not handling any job by default. </>
+            <>{t("notHandling")}</>
           )}
           <Link href="/admin/ai/models/defaults" className="text-brand hover:underline">
-            Change which model handles what
+            {t("changeWhich")}
           </Link>
           .
         </p>
@@ -219,19 +227,19 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
             onClick={() => setIsDefaultConfirmOpen(true)}
             className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground"
           >
-            Make this the default model
+            {t("makeDefaultButton")}
           </WriteButton>
         )}
       </div>
 
       <section className="border border-border-dim rounded-[8px] bg-card px-5 py-5">
-        <h2 className="text-[14px] font-semibold text-foreground">What it is called</h2>
+        <h2 className="text-[14px] font-semibold text-foreground">{t("nameTitle")}</h2>
         <p className="text-[12px] text-secondary mt-1 mb-4">
-          The short name people see in chat and in model pickers.
+          {t("nameSub")}
         </p>
         {/* The heading above already names this box. */}
         <Field
-          label="What it is called"
+          label={t("nameTitle")}
           labelHidden
           value={friendlyName}
           onChange={(e) => setFriendlyName(e.target.value)}
@@ -241,54 +249,54 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
       </section>
 
       <section className="border border-border-dim rounded-[8px] bg-card px-5 py-5">
-        <h2 className="text-[14px] font-semibold text-foreground">What it costs</h2>
+        <h2 className="text-[14px] font-semibold text-foreground">{t("costTitle")}</h2>
         <p className="text-[12px] text-secondary mt-1 mb-4">
-          Dollars per million tokens, as the provider publishes them. Without a price we cannot measure
-          what this model spends, so agents using it are kept to a smaller budget.
+          {t("costSub")}
         </p>
 
         {/* The two anyone actually types. The other four are real and rarely
             touched, so they fold away rather than competing for attention. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
           <PriceField
-            label="Price in"
+            label={t("priceIn")}
             value={standardBelow}
             onChange={setStandardBelow}
-            hint="What you are charged for the text sent to the model."
+            hint={t("priceInHint")}
           />
           <PriceField
-            label="Price out"
+            label={t("priceOut")}
             value={outputResponse}
             onChange={setOutputResponse}
-            hint="What you are charged for the text it writes back."
+            hint={t("priceOutHint")}
           />
         </div>
 
+        {/* Stays raw: an inline padding-free text disclosure — matches no variant. */}
         <button
           type="button"
           onClick={() => setShowMorePrices((open) => !open)}
           className="mt-5 flex items-center gap-1.5 text-[12px] font-medium text-secondary hover:text-foreground transition-colors"
         >
           <ChevronDown className={cn("w-4 h-4 transition-transform", showMorePrices && "rotate-180")} />
-          {showMorePrices ? "Fewer prices" : "More prices"}
+          {showMorePrices ? t("fewerPrices") : t("morePrices")}
         </button>
 
         {showMorePrices && (
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl border-t border-border-dim pt-4">
             <PriceField
-              label="Price in, very long conversations"
+              label={t("priceInLong")}
               value={standardAbove}
               onChange={setStandardAbove}
-              hint="Used instead of Price in once a conversation passes 200,000 tokens."
+              hint={t("priceInLongHint")}
             />
             <PriceField
-              label="Price in, repeated text"
+              label={t("priceInCached")}
               value={cachedBelow}
               onChange={setCachedBelow}
-              hint="The discounted rate when the provider has already seen this text. Falls back to Price in when left empty."
+              hint={t("priceInCachedHint")}
             />
             <PriceField
-              label="Price in, repeated text in very long conversations"
+              label={t("priceInCachedLong")}
               value={cachedAbove}
               onChange={setCachedAbove}
             />
@@ -300,49 +308,51 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           recorded" on every model, three were constants that never varied, and
           the whole panel restated things already on this page. */}
       <p className="text-[12px] text-muted">
-        Supplied by {getProviderDisplayName(model.providerKey, providerNameByKey)} · known internally as{" "}
-        <span className="font-mono">{model.modelId}</span> · last synced {formatDate(model.lastSyncedAt)}
+        {t.rich("suppliedBy", {
+          provider: getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider"),
+          id: model.modelId,
+          date: formatDate(model.lastSyncedAt, locale, t("never")),
+          code: (chunks) => <span className="font-mono">{chunks}</span>,
+        })}
       </p>
 
       <SonaeModal
         isOpen={isDefaultConfirmOpen}
         onClose={() => setIsDefaultConfirmOpen(false)}
-        title="Make this the default model"
+        title={t("modalTitle")}
         size="sm"
       >
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
-            <span className="font-semibold text-foreground">
-              {model.friendlyName || model.displayName || model.modelId}
-            </span>{" "}
-            will handle every job, replacing whatever is set for each of them:
+            {t.rich("modalWillHandle", {
+              model: model.friendlyName || model.displayName || model.modelId,
+              b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+            })}
           </p>
           <p className="text-[12px] leading-relaxed text-muted">
-            {allJobs.map(formatModelTag).join(", ")}.
+            {t("modalJobs", { jobs: allJobs.map(formatModelTag).join(", ") })}
           </p>
           <p className="text-[12px] leading-relaxed text-secondary">
-            Turning documents into something searchable needs an embedding model, so check this one
-            can do that job before making it the default for all of them. Companies, agents and
-            workflows can still override any of this.
-            {!model.isEnabled && " This will also switch the model on."}
+            {t("modalEmbedding")}
+            {!model.isEnabled && t("modalAlsoEnable")}
           </p>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => setIsDefaultConfirmOpen(false)}
-              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
+              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
             >
-              Cancel
-            </button>
-            <button
-              type="button"
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="brand"
               onClick={makeDefault}
               disabled={isMakingDefault}
-              className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              className="h-10 rounded-[8px] disabled:opacity-50 flex items-center gap-2"
             >
               {isMakingDefault && <Loader2 className="w-4 h-4 animate-spin" />}
-              Make it the default
-            </button>
+              {t("makeItDefault")}
+            </Button>
           </div>
         </div>
       </SonaeModal>

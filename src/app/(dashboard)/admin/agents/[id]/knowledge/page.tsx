@@ -1,11 +1,13 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Library } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { KnowledgeManager } from "@/src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager";
 
 export default function AgentKnowledgePage() {
+  const t = useTranslations("admin.agents.details.knowledge.agent");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -17,20 +19,18 @@ export default function AgentKnowledgePage() {
           <div>
             <h2 className="text-[18px] font-semibold text-foreground tracking-tight flex items-center gap-2">
               <Library className="w-5 h-5 text-brand" />
-              Agent knowledge
+              {t("headerTitle")}
             </h2>
             <p className="text-[13px] text-secondary mt-1">
-              Inspect and manage the tenant-scoped knowledge available to this agent.
+              {t("headerDescription")}
             </p>
           </div>
         </div>
       )}
-      emptyDocumentDescription="Upload documents, Markdown or an OKF folder, text, or website pages so this agent can retrieve approved tenant-scoped reference material."
-      deleteDocumentDescription={(title) => (
-        <>
-          Are you sure you want to remove <strong>{title}</strong> from this agent&apos;s knowledge?
-        </>
-      )}
+      emptyDocumentDescription={t("emptyDescription")}
+      deleteDocumentDescription={(title) => t.rich("deleteDescription", {
+        title: () => <strong>{title}</strong>,
+      })}
     />
   );
 }

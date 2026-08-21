@@ -20,6 +20,8 @@
  * waterfall is for.
  */
 
+import type { LabelRef } from "./observabilityFormat";
+
 /** Below this a bar is invisible, so a fast step would look like it never ran. */
 const MIN_VISIBLE_PERCENT = 0.6;
 
@@ -51,7 +53,8 @@ export type WaterfallTone = "thinking" | "tool" | "waiting" | "failed";
 
 export type WaterfallRow = {
   id: string;
-  label: string;
+  /** The catalogue key for the row's label, relative to `admin.agents.labels`. */
+  label: LabelRef;
   offsetPercent: number;
   widthPercent: number;
   durationMs: number;
@@ -88,21 +91,22 @@ export function describeStepKind(
   input?: string,
   toolName?: string,
   toolSubject?: string,
-): string {
+): LabelRef {
   const tool = toolName?.trim();
   const subject = toolSubject?.trim();
   switch (kind) {
-    case "OBSERVE": return "Read the request";
-    case "PLAN": return "Decided what to do";
-    case "REPLAN": return "Changed its plan";
-    case "MODEL": return "Thought about it";
+    case "OBSERVE": return { key: "step.readRequest" };
+    case "PLAN": return { key: "step.decidedPlan" };
+    case "REPLAN": return { key: "step.changedPlan" };
+    case "MODEL": return { key: "step.thought" };
     case "TOOL_CALL":
-      if (tool && subject) return `Used ${tool} · ${subject}`;
-      return tool ? `Used ${tool}` : "Used a tool";
-    case "TOOL_RESULT": return tool ? `Read what ${tool} sent back` : "Read the result";
-    case "APPROVAL_REQUEST": return "Waited for someone to approve";
-    case "FINAL": return "Wrote the answer";
-    default: return kind;
+      if (tool && subject) return { key: "step.usedToolWithSubject", params: { tool, subject } };
+      return tool ? { key: "step.usedTool", params: { tool } } : { key: "step.usedSomeTool" };
+    case "TOOL_RESULT":
+      return tool ? { key: "step.readToolResult", params: { tool } } : { key: "step.readResult" };
+    case "APPROVAL_REQUEST": return { key: "step.waitedApproval" };
+    case "FINAL": return { key: "step.wroteAnswer" };
+    default: return { key: "step.unknown", params: { kind } };
   }
 }
 
@@ -160,14 +164,14 @@ export function describeToolCallSubject(argumentsPreview?: string): string | und
 }
 
 /** How a step ended, in words rather than the runtime's own states. */
-export function describeStepStatus(status: string): string {
+export function describeStepStatus(status: string): LabelRef {
   switch (status) {
-    case "SUCCESS": return "Worked";
-    case "FAILED": return "Failed";
-    case "RUNNING": return "Running";
-    case "PENDING": return "Not started";
-    case "SKIPPED": return "Skipped";
-    default: return status;
+    case "SUCCESS": return { key: "stepStatus.worked" };
+    case "FAILED": return { key: "stepStatus.failed" };
+    case "RUNNING": return { key: "stepStatus.running" };
+    case "PENDING": return { key: "stepStatus.notStarted" };
+    case "SKIPPED": return { key: "stepStatus.skipped" };
+    default: return { key: "stepStatus.unknown", params: { status } };
   }
 }
 
@@ -225,10 +229,21 @@ export function buildWaterfall(
   });
 }
 
+export type WaterfallSummary = {
+  /** `waterfall.summary` or `waterfall.summaryFailed`, relative to `admin.agents.labels`. */
+  key: string;
+  share: number;
+  /** The dominant step's own label, for the screen to translate and interpolate. */
+  step: LabelRef;
+};
+
 /**
  * The one-line reading of the chart, or nothing when there is no story to tell.
+ *
+ * The screen composes the sentence: it translates `step`, lowercases it, and
+ * passes it with `share` into the summary message.
  */
-export function summariseWaterfall(rows: ReadonlyArray<WaterfallRow>): string | undefined {
+export function summariseWaterfall(rows: ReadonlyArray<WaterfallRow>): WaterfallSummary | undefined {
   const dominant = rows.find((row) => row.isLongest);
   if (!dominant) return undefined;
 
@@ -237,7 +252,9 @@ export function summariseWaterfall(rows: ReadonlyArray<WaterfallRow>): string | 
   );
   if (!Number.isFinite(share)) return undefined;
 
-  return dominant.failed
-    ? `${share}% of this job was spent on a step that then failed: ${dominant.label.toLowerCase()}.`
-    : `${share}% of this job was spent on one step: ${dominant.label.toLowerCase()}.`;
+  return {
+    key: dominant.failed ? "waterfall.summaryFailed" : "waterfall.summary",
+    share,
+    step: dominant.label,
+  };
 }

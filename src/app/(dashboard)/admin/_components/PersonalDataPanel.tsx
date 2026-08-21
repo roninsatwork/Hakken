@@ -6,6 +6,7 @@ import { Download, Loader2, Trash2, UserSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/src/ui/atoms/Button";
 import { getErrorMessage } from "@/src/lib/errors";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -98,11 +99,11 @@ export function PersonalDataPanel() {
           />
         </div>
 
-        <button
-          type="button"
+        <Button
+          variant="quiet"
           onClick={handleRead}
           disabled={busy !== "none" || !email.trim()}
-          className="flex items-center gap-2 rounded-[10px] border border-border-dim px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-[10px] px-4 py-2 text-[13px] text-foreground bg-transparent hover:bg-foreground/5"
         >
           {busy === "reading" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -110,9 +111,10 @@ export function PersonalDataPanel() {
             <UserSearch className="h-4 w-4" aria-hidden="true" />
           )}
           {t("read")}
-        </button>
+        </Button>
 
         {canErase ? (
+          // Stays raw: a solid rose fill with white text — no variant is a filled red.
           <button
             type="button"
             onClick={() => setConfirming(true)}
@@ -137,6 +139,7 @@ export function PersonalDataPanel() {
               </li>
             ))}
           </ul>
+          {/* Stays raw: an underlined text link drawn as a button — matches no variant. */}
           <button
             type="button"
             onClick={() => {

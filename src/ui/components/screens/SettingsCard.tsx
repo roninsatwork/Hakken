@@ -65,6 +65,8 @@ export function SegmentedChoice<T extends string>({ label, value, options, onCha
       className="grid h-[46px] grid-cols-3 gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1"
     >
       {options.map((option) => (
+        // Raw on purpose: a segment of a radio group, not a standalone button —
+        // no Button variant is a selected/unselected segment.
         <button
           key={option.value}
           type="button"
@@ -111,6 +113,8 @@ export function SettingSwitch({ label, description, checked, onChange, children 
           <span className="text-[13px] font-medium text-foreground">{label}</span>
           <p className="text-[12px] leading-relaxed text-muted">{description}</p>
         </div>
+        {/* Raw on purpose: a toggle switch drawn by its inner spans — not a
+            button recipe at all. */}
         <button
           type="button"
           role="switch"

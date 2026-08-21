@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import { Activity, BrainCircuit, Database, Settings } from "lucide-react";
 import { DetailTabs } from "./DetailTabs";

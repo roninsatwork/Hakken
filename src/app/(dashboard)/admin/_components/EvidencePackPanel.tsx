@@ -6,6 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/src/ui/atoms/Button";
 import { Select } from "@/src/ui/components/screens/Select";
 import { getErrorMessage } from "@/src/lib/errors";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -111,11 +112,11 @@ export function EvidencePackPanel() {
           write anywhere and must still be able to take this. The export records
           that it happened, but the person exporting changes nothing.
         */}
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={handleProduce}
           disabled={isProducing}
-          className="flex items-center gap-2 rounded-[10px] bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 text-[13px] shadow-none"
         >
           {isProducing ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -123,7 +124,7 @@ export function EvidencePackPanel() {
             <Download className="h-4 w-4" aria-hidden="true" />
           )}
           {isProducing ? t("producing") : t("produce")}
-        </button>
+        </Button>
       </div>
 
       <SaveError>{error}</SaveError>

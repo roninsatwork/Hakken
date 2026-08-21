@@ -26,6 +26,12 @@ import { cn } from "@/src/ui/lib/utils";
  *   action that should still catch the eye.
  * - `destructive` — the red-tinted confirm used before deleting something.
  * - `icon` — a round hit-target around a single icon.
+ * - `brand` — the solid brand-filled call-to-action (white text on brand),
+ *   frozen 2026-08-21 from the ~18 sites the admin button migration found
+ *   drawing it by hand; sizes drift per site and merge via className.
+ * - `outline` — the bordered chip with no fill and no hover fill, only a
+ *   text-colour lift; frozen 2026-08-21 from the recurring bordered-cancel
+ *   family the same migration surfaced.
  *
  * Two rules the element itself gets wrong are fixed here and not optional:
  * the type defaults to `"button"`, never the silent form-submit a bare
@@ -46,7 +52,9 @@ export type ButtonVariant =
   | "ghost"
   | "accent"
   | "destructive"
-  | "icon";
+  | "icon"
+  | "brand"
+  | "outline";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
@@ -70,6 +78,12 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
     "px-6 py-2.5 rounded-full border border-red-500/20 bg-red-500/10 text-red-500 " +
     "text-[13px] font-bold tracking-widest uppercase hover:bg-red-500/20 transition-colors",
   icon: "p-2 rounded-full text-secondary hover:text-foreground hover:bg-foreground/5 transition-all",
+  brand:
+    "px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium " +
+    "hover:opacity-90 transition-opacity disabled:opacity-40",
+  outline:
+    "px-4 py-2 rounded-[10px] border border-border-dim text-secondary " +
+    "hover:text-foreground text-[13px] font-medium transition-colors",
 };
 
 /** Keyboard focus is visible on every variant; a pointer click shows nothing new. */

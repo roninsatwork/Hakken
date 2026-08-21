@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /**
  * Page-at-a-time pagination against a Convex cursor.
@@ -106,18 +107,23 @@ export function CursorPaginationFooter({
   onNext: () => void;
   labels: { page: (page: number) => string; showing: (count: number) => string };
 }) {
+  const t = useTranslations("ui.cursorPagination");
+
   return (
     <div className="flex items-center justify-between gap-4 px-6 py-3 border-t border-border-dim">
       <span className="text-[12px] text-secondary">
         {isLoading ? "" : `${labels.page(pageIndex + 1)} · ${labels.showing(rowsOnPage)}`}
       </span>
       <div className="flex items-center gap-2">
+        {/* Both raw on purpose: this footer is the legacy odd-one-out kept for
+            the client-facing callers (see the docstring above) — its icon-only
+            bordered chevrons match no Button variant. */}
         <button
           type="button"
           onClick={onPrevious}
           disabled={pageIndex === 0 || isLoading}
           className="p-1.5 rounded-[8px] border border-border-dim text-secondary disabled:opacity-40 hover:text-foreground transition-colors"
-          aria-label="Previous page"
+          aria-label={t("previousPage")}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -126,7 +132,7 @@ export function CursorPaginationFooter({
           onClick={onNext}
           disabled={isDone || isLoading}
           className="p-1.5 rounded-[8px] border border-border-dim text-secondary disabled:opacity-40 hover:text-foreground transition-colors"
-          aria-label="Next page"
+          aria-label={t("nextPage")}
         >
           <ChevronRight className="w-4 h-4" />
         </button>

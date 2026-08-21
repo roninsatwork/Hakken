@@ -74,5 +74,7 @@ export function WriteButton({
 
   if (!canWriteHere) return null;
 
+  // Raw on purpose: a style-free drop-in for `<button>` — every caller brings
+  // its own recipe, so no single Button variant can stand here.
   return <button {...buttonProps}>{children}</button>;
 }

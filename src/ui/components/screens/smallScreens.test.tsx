@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import { BookOpen, Database, Settings } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";

@@ -28,6 +28,8 @@ import {
 export default function AIModelCataloguePage() {
   const router = useRouter();
   const t = useTranslations("ai.models");
+  const tc = useTranslations("ai.models.catalogue");
+  const tShared = useTranslations("ai.models.shared");
   const toggleModelEnforcement = useMutation(api.aiModels.toggleModelEnforcement);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,7 +112,7 @@ export default function AIModelCataloguePage() {
       await toggleModelEnforcement({ modelId, isEnabled: !currentState });
     } catch (error) {
       console.error(error);
-      setModelError("Failed to update model status.");
+      setModelError(tc("updateFailed"));
     }
   };
 
@@ -119,8 +121,8 @@ export default function AIModelCataloguePage() {
       <PageHeader
         divider
         icon={<List className="w-6 h-6 text-brand" />}
-        title="Model Catalogue"
-        description="Which models this platform has, and which of them are switched on."
+        title={tc("headerTitle")}
+        description={tc("headerDescription")}
       />
       <AiWorkspaceNav />
       <SaveError>{modelError}</SaveError>
@@ -134,18 +136,18 @@ export default function AIModelCataloguePage() {
           <TableSearchInput
             value={searchTerm}
             onChange={handleSearchChange}
-            placeholder="Search models by name"
-            clearLabel="Clear search"
+            placeholder={tc("searchPlaceholder")}
+            clearLabel={tc("clearSearch")}
           />
         </div>
 
         <select
-          aria-label="Provider filter"
+          aria-label={tc("providerFilterAria")}
           value={providerFilter}
           onChange={(event) => handleProviderFilterChange(event.target.value)}
           className="h-10 shrink-0 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-[200px]"
         >
-          <option value="all">All providers</option>
+          <option value="all">{tc("allProviders")}</option>
           {providers.map((provider) => (
             <option key={provider._id} value={provider.providerKey}>{provider.displayName}</option>
           ))}
@@ -153,9 +155,10 @@ export default function AIModelCataloguePage() {
 
         <div className="grid shrink-0 grid-cols-2 gap-1 rounded-[8px] border border-border-dim bg-card p-1 sm:w-[220px]">
           {[
-            { value: "active" as const, label: "Active" },
-            { value: "inactive" as const, label: "Inactive" },
+            { value: "active" as const, labelKey: "filterActive" },
+            { value: "inactive" as const, labelKey: "filterInactive" },
           ].map((option) => (
+            // Stays raw: a segmented-control half whose fill swaps with selection — matches no variant.
             <button
               key={option.value}
               type="button"
@@ -167,7 +170,7 @@ export default function AIModelCataloguePage() {
                   : "text-muted hover:bg-foreground/5 hover:text-secondary"
               )}
             >
-              {option.label}
+              {tc(option.labelKey)}
             </button>
           ))}
         </div>
@@ -187,7 +190,7 @@ export default function AIModelCataloguePage() {
               className="mt-2 h-9 px-5 rounded-full bg-foreground text-background font-medium text-[13px] inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />
-              Open providers
+              {tc("openProviders")}
             </Link>
           ),
         }}
@@ -200,15 +203,15 @@ export default function AIModelCataloguePage() {
           isLoading: paginationStatus === "LoadingMore",
           onPageChange: goToPage,
           labels: {
-            empty: "No models found",
+            empty: tc("footerEmpty"),
             // While more pages exist than have been fetched, the total is a
             // floor, not a count — the "+" keeps the pager from claiming a
             // finished number it does not have.
             showing: (start, end, total) => {
               const shownTotal = !totalIsKnown && hasMore ? `${total}+` : `${total}`;
               return isFiltered
-                ? `Showing ${start}-${end} of ${shownTotal} matching`
-                : `Showing ${start}-${end} of ${shownTotal} models`;
+                ? tc("showingMatching", { start, end, total: shownTotal })
+                : tc("showingModels", { start, end, total: shownTotal });
             },
           },
         }}
@@ -218,7 +221,7 @@ export default function AIModelCataloguePage() {
         columns={[
           {
             key: "name",
-            header: "Model name",
+            header: tc("columnName"),
             className: "w-[38%]",
             /* The name, and the id underneath so a developer can still match it
                to the provider's docs. Price belongs on the model's own page,
@@ -236,31 +239,31 @@ export default function AIModelCataloguePage() {
           },
           {
             key: "provider",
-            header: "Provider",
+            header: tc("columnProvider"),
             className: "w-[20%]",
             cell: (model) => (
               <span className="text-[12px] text-secondary">
-                {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                {getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider")}
               </span>
             ),
           },
           {
             key: "pricing",
-            header: "Pricing",
+            header: tc("columnPricing"),
             className: "w-[14%]",
             /* One word. Missing is worth colouring because it has a consequence:
                without a price the runtime cannot measure spend, so agents on
                this model are held to a smaller budget. */
             cell: (model) =>
               isModelCostMeasurable(model) ? (
-                <span className="text-[12px] text-secondary">Added</span>
+                <span className="text-[12px] text-secondary">{tc("pricingAdded")}</span>
               ) : (
-                <span className="text-[12px] text-[#f59e0b]">Missing</span>
+                <span className="text-[12px] text-[#f59e0b]">{tc("pricingMissing")}</span>
               ),
           },
           {
             key: "default",
-            header: "Default",
+            header: tc("columnDefault"),
             className: "w-[14%]",
             /* Yes or no, and nothing else. Naming the ten jobs here made one row
                three times taller than the rest. The answer comes from the jobs a
@@ -270,28 +273,29 @@ export default function AIModelCataloguePage() {
               const defaultJobs = defaultJobsByModelId.get(model.modelId) ?? [];
               return defaultJobs.length > 0 ? (
                 <span
-                  title={`Handles ${defaultJobs.map(formatModelTag).join(", ")}`}
+                  title={tc("handlesTitle", { jobs: defaultJobs.map(formatModelTag).join(", ") })}
                   className="inline-flex rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand"
                 >
-                  Yes
+                  {tc("yes")}
                 </span>
               ) : (
-                <span className="text-[12px] text-muted">No</span>
+                <span className="text-[12px] text-muted">{tc("no")}</span>
               );
             },
           },
           {
             key: "active",
-            header: "Active",
+            header: tc("columnActive"),
             className: "w-[14%]",
             /* The column is the control. An Active column beside a separate
                Deactivate button would print the same fact twice. */
             cell: (model) => (
+              // Stays raw: an on/off switch drawn as its own control — matches no variant.
               <button
                 type="button"
                 role="switch"
                 aria-checked={model.isEnabled}
-                aria-label={`${model.isEnabled ? "Deactivate" : "Activate"} ${model.friendlyName || model.displayName}`}
+                aria-label={model.isEnabled ? tc("ariaDeactivate", { name: model.friendlyName || model.displayName }) : tc("ariaActivate", { name: model.friendlyName || model.displayName })}
                 onClick={(event) => {
                   event.stopPropagation();
                   toggleStatus(model._id, model.isEnabled);
@@ -312,7 +316,7 @@ export default function AIModelCataloguePage() {
                   />
                 </span>
                 <span className="text-[12px] text-secondary group-hover/switch:text-foreground transition-colors">
-                  {model.isEnabled ? "Active" : "Inactive"}
+                  {model.isEnabled ? tc("active") : tc("inactive")}
                 </span>
               </button>
             ),

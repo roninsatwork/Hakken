@@ -15,6 +15,7 @@ import {
   Play
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
@@ -192,6 +193,7 @@ export default function SchedulesPage() {
       key: "status",
       header: t('table.status'),
       cell: (schedule) => (
+        // Stays raw: a labelled toggle glyph whose colour is the state — matches no variant.
         <button
           onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
           className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
@@ -303,13 +305,13 @@ export default function SchedulesPage() {
           <p>{messageModal?.body}</p>
         </div>
         <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={() => setMessageModal(null)}
-            className="px-8 py-3 rounded-[10px] bg-foreground text-background transition-all text-sm font-bold tracking-widest uppercase hover:opacity-90"
+            className="px-8 py-3 font-bold tracking-widest uppercase shadow-none"
           >
             {t('modals.error.dismiss')}
-          </button>
+          </Button>
         </div>
       </SonaeModal>
     </div>

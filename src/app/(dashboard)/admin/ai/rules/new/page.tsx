@@ -7,11 +7,21 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
+// Catalogue keys for the four priority tiers, relative to `ai.rules.form`.
+const PRIORITY_LABEL_KEYS = {
+  LOW: "priority.LOW",
+  NORMAL: "priority.NORMAL",
+  HIGH: "priority.HIGH",
+  CRITICAL: "priority.CRITICAL",
+} as const;
+
 export default function NewRulePage() {
+  const t = useTranslations("ai.rules.form");
   const router = useRouter();
   const createRule = useMutation(api.aiRules.createRule);
 
@@ -63,14 +73,14 @@ export default function NewRulePage() {
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to rules</span>
+          <span>{t("back")}</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <BrainCircuit className="w-6 h-6 text-brand" />
-          Add a rule
+          {t("newTitle")}
         </h1>
         <p className="text-[13px] text-secondary tracking-wide">
-          Tell the assistant what to do when someone says something in particular.
+          {t("newSubtitle")}
         </p>
       </header>
 
@@ -82,16 +92,16 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionName")}</span>
            </div>
 
            <div className="ml-1">
              <Field
-               label="What to call this rule"
+               label={t("nameLabel")}
                autoFocus
                value={name}
                onChange={(e) => setName(e.target.value)}
-               placeholder="For example: Office address"
+               placeholder={t("namePlaceholder")}
              />
            </div>
         </section>
@@ -100,15 +110,15 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">2</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">When to use it</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionTrigger")}</span>
            </div>
 
            <div className="ml-1">
              <Field
-               label="Words or phrases that set it off"
+               label={t("triggerLabel")}
                value={trigger}
                onChange={(e) => setTrigger(e.target.value)}
-               placeholder="For example: where are you based, what is your address"
+               placeholder={t("triggerPlaceholder")}
              />
            </div>
         </section>
@@ -117,18 +127,19 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">3</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">How important it is</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionPriority")}</span>
            </div>
            
            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
               {(["LOW", "NORMAL", "HIGH", "CRITICAL"] as const).map(p => (
+                // Stays raw: a selected-state priority card with per-priority colours — matches no variant.
                 <button
                   key={p}
                   type="button"
                   onClick={() => setPriority(p)}
                   className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === priority ? selectedClasses[p] : `border-border-dim bg-transparent text-secondary ${priorityClasses[p]}`}`}
                 >
-                  <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{p}</span>
+                  <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{t(PRIORITY_LABEL_KEYS[p])}</span>
                 </button>
               ))}
            </div>
@@ -138,15 +149,15 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3 flex-1">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">What the assistant should do</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionInstruction")}</span>
            </div>
 
            <div className="ml-1">
              <TextAreaField
-               label="The instruction, in your own words"
+               label={t("instructionLabel")}
                value={instruction}
                onChange={(e) => setInstruction(e.target.value)}
-               placeholder="For example: Tell them our office is in London and offer to book a visit."
+               placeholder={t("instructionPlaceholder")}
                className="min-h-[300px] resize-y"
                spellCheck={false}
              />
@@ -163,7 +174,7 @@ export default function NewRulePage() {
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-            <span>Create rule</span>
+            <span>{t("create")}</span>
           </WriteButton>
         </div>
       </form>

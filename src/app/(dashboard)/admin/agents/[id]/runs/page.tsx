@@ -5,8 +5,9 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Timer } from "lucide-react";
-import { describeRunStatus } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
+import { describeRunStatus, type LabelRef } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import type { ReplayMode } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useToast } from "@/src/context/ToastContext";
@@ -29,6 +30,10 @@ const statusFilters: StatusFilter[] = ["ALL", "PENDING_APPROVAL", "FAILED", "SUC
  * status rules live in `../_lib/runStatusRules.ts`, where they are tested.
  */
 export default function AgentRunsPage() {
+  const t = useTranslations("admin.agents.details.runs.page");
+  const tLabels = useTranslations("admin.agents.labels");
+  // The pure rules return catalogue keys, not words; this says them.
+  const label = (ref: LabelRef) => tLabels(ref.key, ref.params);
   const params = useParams();
   const searchParams = useSearchParams();
   const agentId = params.id as Id<"agents">;
@@ -60,13 +65,13 @@ export default function AgentRunsPage() {
   const handleReplay = async (runId: Id<"agentRuns">, mode: ReplayMode = "CURRENT_ACTIVE") => {
     const outcome = await action.run(() => replayRun({ runId, mode }), {
       key: runId,
-      fallbackMessage: "The run could not be replayed.",
+      fallbackMessage: t("replayFailed"),
     });
     if (outcome.ok) {
       showToast(
         mode === "SAME_VERSION"
-          ? `Replay ${outcome.data.runId} queued against the source run's version snapshot.`
-          : `Replay ${outcome.data.runId} queued against the current active configuration.`,
+          ? t("replaySameVersion", { runId: outcome.data.runId })
+          : t("replayCurrent", { runId: outcome.data.runId }),
         "success",
       );
     }
@@ -75,16 +80,16 @@ export default function AgentRunsPage() {
   const handleReflect = async (runId: Id<"agentRuns">) => {
     await action.run(() => createReflection({ runId }), {
       key: runId,
-      successMessage: "Reflection generated: the run trace now has a category, evidence and next steps.",
-      fallbackMessage: "The reflection could not be generated.",
+      successMessage: t("reflectSuccess"),
+      fallbackMessage: t("reflectFailed"),
     });
   };
 
   const handleCreateEvalFixture = async (runId: Id<"agentRuns">) => {
     await action.run(() => createEvalFixture({ runId }), {
       key: runId,
-      successMessage: "Saved as a regression fixture for future improvement checks.",
-      fallbackMessage: "The eval fixture could not be created.",
+      successMessage: t("fixtureSuccess"),
+      fallbackMessage: t("fixtureFailed"),
     });
   };
 
@@ -106,10 +111,10 @@ export default function AgentRunsPage() {
           <div>
             <h2 className="text-[18px] font-semibold text-foreground tracking-tight flex items-center gap-2">
               <Timer className="w-5 h-5 text-brand" />
-              Activity
+              {t("title")}
             </h2>
             <p className="text-[13px] text-secondary mt-1">
-              Every job this agent has run, what each one cost, and what you can do about it.
+              {t("description")}
             </p>
           </div>
           {/* The same segmented control the Overview and Raw logs screens use.
@@ -117,6 +122,7 @@ export default function AgentRunsPage() {
               segmented control reads as one choice with seven settings. */}
           <div className="flex flex-wrap gap-1 bg-white/[0.02] border border-border-dim rounded-[10px] p-1 self-start">
             {statusFilters.map((filter) => (
+              /* Raw: segmented filter — the active option swaps its colours; no kit variant is stateful. */
               <button
                 key={filter}
                 type="button"
@@ -127,7 +133,7 @@ export default function AgentRunsPage() {
                     : "text-secondary hover:text-foreground"
                 }`}
               >
-                {filter === "ALL" ? "Everything" : describeRunStatus(filter)}
+                {filter === "ALL" ? t("everything") : label(describeRunStatus(filter))}
               </button>
             ))}
           </div>

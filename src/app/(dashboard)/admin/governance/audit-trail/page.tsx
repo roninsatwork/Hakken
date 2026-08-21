@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -268,8 +269,8 @@ export default function AuditTrailPage() {
           ) : null}
 
           {search || actionType || actorId || companyId || days !== 30 ? (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() =>
                 narrow(() => {
                   setSearch("");
@@ -279,21 +280,21 @@ export default function AuditTrailPage() {
                   setDays(30);
                 })
               }
-              className="h-[38px] rounded-[10px] px-3 text-[13px] text-secondary transition-colors hover:text-foreground"
+              className="h-[38px] rounded-[10px] px-3 py-0 font-normal hover:bg-transparent"
             >
               {t("filters.clear")}
-            </button>
+            </Button>
           ) : null}
 
-          <button
-            type="button"
+          <Button
+            variant="quiet"
             onClick={handleExport}
             disabled={exporting}
-            className="flex h-[38px] items-center gap-2 rounded-[10px] border border-border-dim px-3 text-[13px] text-secondary transition-colors hover:text-foreground disabled:opacity-50"
+            className="flex h-[38px] items-center gap-2 rounded-[10px] px-3 py-0 text-[13px] font-normal bg-transparent hover:bg-transparent"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             {exporting ? t("export.working") : t("export.action")}
-          </button>
+          </Button>
         </div>
       </div>
 

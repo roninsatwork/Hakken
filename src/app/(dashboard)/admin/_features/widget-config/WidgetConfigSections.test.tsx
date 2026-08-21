@@ -10,6 +10,17 @@ import { WidgetPanel } from "./WidgetPanel";
 import { WidgetPreviewPanel } from "./WidgetPreviewPanel";
 import { WidgetWelcomeSection } from "./WidgetWelcomeSection";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
+}));
+
+
 vi.mock("next/image", () => ({
   default: ({ unoptimized, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => {
     void unoptimized;
@@ -54,13 +65,13 @@ describe("widget configuration sections", () => {
     const onInitialize = vi.fn();
     const { rerender } = render(<WidgetEmptyState isSaving={false} onInitialize={onInitialize} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Initialize Master Widget/i }));
+    fireEvent.click(screen.getByRole("button", { name: "ai.widget.emptyState.action" }));
 
     expect(onInitialize).toHaveBeenCalledTimes(1);
 
     rerender(<WidgetEmptyState isSaving onInitialize={onInitialize} />);
 
-    expect(screen.getByRole("button", { name: /Initialize Master Widget/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "ai.widget.emptyState.action" })).toBeDisabled();
   });
 
   it("toggles welcome screen requirements", () => {
@@ -76,8 +87,8 @@ describe("widget configuration sections", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText("Name input"));
-    fireEvent.click(screen.getByLabelText("Email input"));
+    fireEvent.click(screen.getByLabelText("ai.widget.welcome.nameInput"));
+    fireEvent.click(screen.getByLabelText("ai.widget.welcome.emailInput"));
 
     expect(setRequireName).toHaveBeenCalledWith(true);
     expect(setRequireEmail).toHaveBeenCalledWith(false);
@@ -95,7 +106,7 @@ describe("widget configuration sections", () => {
       />
     );
 
-    expect(screen.getByPlaceholderText("Type a greeting message...")).toBeDisabled();
+    expect(screen.getByPlaceholderText("ai.widget.greeting.messagePlaceholder")).toBeDisabled();
 
     fireEvent.click(screen.getByRole("checkbox"));
 
@@ -110,7 +121,7 @@ describe("widget configuration sections", () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Type a greeting message..."), {
+    fireEvent.change(screen.getByPlaceholderText("ai.widget.greeting.messagePlaceholder"), {
       target: { value: "Welcome back" },
     });
 
@@ -132,8 +143,8 @@ describe("widget configuration sections", () => {
       />
     );
 
-    expect(screen.getByText("No conversation starters added yet.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Add Conversation Starter/i })).toBeDisabled();
+    expect(screen.getByText("ai.widget.starters.empty")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ai.widget.starters.addButton" })).toBeDisabled();
 
     rerender(
       <WidgetConversationStartersSection
@@ -145,11 +156,11 @@ describe("widget configuration sections", () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Enter a conversation starter"), {
+    fireEvent.change(screen.getByPlaceholderText("ai.widget.starters.inputPlaceholder"), {
       target: { value: "Ask about availability" },
     });
-    fireEvent.keyDown(screen.getByPlaceholderText("Enter a conversation starter"), { key: "Enter" });
-    fireEvent.click(screen.getByRole("button", { name: /Add Conversation Starter/i }));
+    fireEvent.keyDown(screen.getByPlaceholderText("ai.widget.starters.inputPlaceholder"), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "ai.widget.starters.addButton" }));
     fireEvent.click(screen.getAllByRole("button")[1]);
 
     expect(setStarterInput).toHaveBeenCalledWith("Ask about availability");
@@ -175,13 +186,13 @@ describe("widget configuration sections", () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("https://example.com, https://app.example.com"), {
+    fireEvent.change(screen.getByPlaceholderText("ai.widget.integration.domainsPlaceholder"), {
       target: { value: "https://app.example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Copy to clipboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "ai.widget.integration.copy" }));
 
     expect(screen.getByText("<script src='widget.js'></script>")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Test Widget Sandbox/i })).toHaveAttribute("href", "/sandbox/widget123");
+    expect(screen.getByRole("link", { name: "ai.widget.integration.sandboxButton" })).toHaveAttribute("href", "/sandbox/widget123");
     expect(setAllowedDomains).toHaveBeenCalledWith("https://app.example.com");
     expect(onCopy).toHaveBeenCalledTimes(1);
   });
@@ -203,8 +214,8 @@ describe("widget configuration sections", () => {
     );
 
     // Off: no kiosk link exists to wander onto.
-    expect(screen.queryByRole("link", { name: /receptionist screen/i })).toBeNull();
-    fireEvent.click(screen.getByRole("switch", { name: "Receptionist screen" }));
+    expect(screen.queryByRole("link", { name: /kiosk\.open/ })).toBeNull();
+    fireEvent.click(screen.getByRole("switch", { name: "ai.widget.integration.kiosk.title" }));
     expect(setKioskEnabled).toHaveBeenCalledWith(true);
 
     rerender(
@@ -222,11 +233,11 @@ describe("widget configuration sections", () => {
       />
     );
 
-    expect(screen.getByRole("link", { name: /Open the receptionist screen/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "ai.widget.integration.kiosk.open" })).toHaveAttribute(
       "href",
       "/kiosk/widget123"
     );
-    expect(screen.getByText(/4 conversations so far/)).toBeInTheDocument();
+    expect(screen.getByText(/kiosk\.lastSeen/)).toBeInTheDocument();
   });
 
   it("edits appearance fields, toggles options, uploads and removes custom logos", () => {
@@ -265,8 +276,8 @@ describe("widget configuration sections", () => {
     fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
       target: { files: [new File(["logo"], "logo.png", { type: "image/png" })] },
     });
-    fireEvent.click(screen.getByLabelText("Enable sound notifications"));
-    fireEvent.click(screen.getByLabelText("Show pop-up message preview"));
+    fireEvent.click(screen.getByLabelText("ai.widget.appearance.sounds"));
+    fireEvent.click(screen.getByLabelText("ai.widget.appearance.popupPreview"));
 
     expect(setName).toHaveBeenCalledWith("Support Assistant");
     expect(setThemePlaceholder).toHaveBeenCalledWith("How can I help?");
@@ -279,7 +290,7 @@ describe("widget configuration sections", () => {
 
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByAltText("Widget Logo")).toBeInTheDocument();
+    expect(screen.getByAltText("ai.widget.appearance.logoAlt")).toBeInTheDocument();
     expect(setThemeLogoUrl).toHaveBeenCalledWith("");
   });
 
@@ -312,9 +323,9 @@ describe("widget configuration sections", () => {
     rerender(<WidgetPreviewPanel {...baseProps} isSimulatorOpen requireEmail requireName />);
 
     expect(screen.getByText("Sales Assistant")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Full Name")).toBeDisabled();
-    expect(screen.getByPlaceholderText("Email Address")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Start Chat" })).toBeDisabled();
+    expect(screen.getByPlaceholderText("ai.widget.preview.fullName")).toBeDisabled();
+    expect(screen.getByPlaceholderText("ai.widget.preview.emailAddress")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "ai.widget.preview.startChat" })).toBeDisabled();
 
     fireEvent.click(container.querySelector("svg.cursor-pointer") as SVGElement);
 
@@ -322,7 +333,7 @@ describe("widget configuration sections", () => {
 
     rerender(<WidgetPreviewPanel {...baseProps} enableGreeting={false} isSimulatorOpen name="" themeLogoUrl="" />);
 
-    expect(screen.getByText("Website Bot")).toBeInTheDocument();
+    expect(screen.getByText("ai.widget.preview.nameFallback")).toBeInTheDocument();
     expect(screen.getByText("Book a demo")).toBeInTheDocument();
     expect(screen.getByText("Talk to sales")).toBeInTheDocument();
     expect(screen.getByText("Ask me anything")).toBeInTheDocument();

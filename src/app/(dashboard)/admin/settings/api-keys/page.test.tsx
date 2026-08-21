@@ -6,6 +6,13 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import ApiKeysPage from "./page";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
   usePaginatedQuery: vi.fn(),

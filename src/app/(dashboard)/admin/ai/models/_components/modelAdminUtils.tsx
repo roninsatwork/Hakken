@@ -113,11 +113,12 @@ export function getProviderHealthMessage(settings?: string) {
  * third. That second meaning is gone; this is the first.
  */
 export function describeProviderStatus(isEnabled: boolean, status?: string) {
-  if (!isEnabled) return "Off";
-  if (status === "healthy") return "Connected";
-  if (status === "error") return "Not connected";
-  if (status === "degraded") return "Connected, with problems";
-  return "Not checked yet";
+  // Catalogue keys, relative to `ai.models.shared` — the screen says the words.
+  if (!isEnabled) return "providerStatus.off";
+  if (status === "healthy") return "providerStatus.connected";
+  if (status === "error") return "providerStatus.notConnected";
+  if (status === "degraded") return "providerStatus.degraded";
+  return "providerStatus.notChecked";
 }
 
 export function describeProviderStatusTone(isEnabled: boolean, status?: string) {
@@ -128,9 +129,10 @@ export function describeProviderStatusTone(isEnabled: boolean, status?: string) 
   return "text-muted";
 }
 
-export function formatProviderDate(value?: number) {
-  if (!value) return "Never";
-  return new Intl.DateTimeFormat("en-GB", {
+/** Returns `undefined` when there is no date — the screen says "Never" in the reader's language. */
+export function formatProviderDate(value?: number, locale = "en-GB") {
+  if (!value) return undefined;
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -142,11 +144,16 @@ export function modelSupportsUseCase(model: { supportedUseCases?: string[] }, us
   return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
 }
 
+/**
+ * Returns `undefined` for a record with no provider — the screen says "Legacy"
+ * in the reader's language (`ai.models.shared.legacyProvider`). Provider names
+ * themselves are brands and stay as configured.
+ */
 export function getProviderDisplayName(
   providerKey: string | undefined,
   providerNameByKey: Map<string, string> = new Map()
 ) {
-  if (!providerKey) return "Legacy";
+  if (!providerKey) return undefined;
   if (providerKey === "google") return providerNameByKey.get(providerKey) || "Google Vertex AI";
   return providerNameByKey.get(providerKey) || providerKey;
 }
@@ -220,23 +227,27 @@ export function formatTokenCost(costPerMillionTokens: number | undefined) {
  * model and a clever one is a real decision, and it cannot be made by someone
  * who does not know what the job is.
  */
-export const MODEL_USE_CASE_DESCRIPTIONS: Record<string, string> = {
-  chat: "Ordinary conversations with people.",
-  "fast-chat": "Short replies where speed matters more than depth.",
-  reasoning: "Harder problems worth spending more time and money on.",
-  agent: "Agents working through a task on their own.",
-  workflow: "Steps inside an automated workflow.",
-  report: "Written summaries and reports.",
-  router: "Deciding which model or skill should handle a request. Runs on every message, so a cheap model here saves the most.",
-  title: "Naming a conversation from its first message. Trivial work — the cheapest model is the right one.",
-  transcription: "Turning speech into text.",
-  speech: "Turning text into a spoken voice. Only Google text-to-speech models can do this.",
-  realtime: "Live spoken conversation — you talk, it answers straight away and can be interrupted.",
-  embedding: "Turning documents into something searchable. Only embedding models can do this.",
-  vision: "Reading images and screenshots.",
-  "tool-calling": "Deciding which tool to use and with what arguments.",
+export const MODEL_USE_CASE_DESCRIPTION_KEYS: Record<string, string> = {
+  chat: "useCases.chat",
+  "fast-chat": "useCases.fastChat",
+  reasoning: "useCases.reasoning",
+  agent: "useCases.agent",
+  workflow: "useCases.workflow",
+  report: "useCases.report",
+  router: "useCases.router",
+  title: "useCases.title",
+  transcription: "useCases.transcription",
+  speech: "useCases.speech",
+  realtime: "useCases.realtime",
+  embedding: "useCases.embedding",
+  vision: "useCases.vision",
+  "tool-calling": "useCases.toolCalling",
 };
 
+/**
+ * The catalogue key for a job's one-sentence description, relative to
+ * `ai.models.shared`, or `undefined` for a job this map has never met.
+ */
 export function describeModelUseCase(useCase: string) {
-  return MODEL_USE_CASE_DESCRIPTIONS[useCase] ?? "";
+  return MODEL_USE_CASE_DESCRIPTION_KEYS[useCase];
 }

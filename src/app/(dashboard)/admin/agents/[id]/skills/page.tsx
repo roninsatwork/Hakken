@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -16,6 +17,7 @@ import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;
@@ -54,6 +56,7 @@ type BindingRow = {
 
 
 export default function AgentSkillsPage() {
+  const t = useTranslations("admin.agents.details.skills");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
   const bindings = useQuery(api.agentSkills.getForAgent, { agentId });
@@ -114,7 +117,7 @@ export default function AgentSkillsPage() {
         }
         return selectedSkillIds.length;
       },
-      { fallbackMessage: "The skills could not be added." },
+      { fallbackMessage: t("addFailed") },
     );
     if (!outcome.ok) return;
     setSelectedSkillIds([]);
@@ -128,8 +131,8 @@ export default function AgentSkillsPage() {
     if (!removeTarget) return;
     const outcome = await action.run(() => unbindSkill({ bindingId: removeTarget.binding._id }), {
       key: removeTarget.binding._id,
-      successMessage: "Skill detached from this agent.",
-      fallbackMessage: "Skill update failed.",
+      successMessage: t("detachSuccess"),
+      fallbackMessage: t("detachFailed"),
     });
     if (!outcome.ok) return;
     setRemoveTarget(null);
@@ -139,7 +142,7 @@ export default function AgentSkillsPage() {
     return (
       <div className="p-8 text-secondary flex items-center gap-2">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading skills
+        {t("loading")}
       </div>
     );
   }
@@ -151,11 +154,10 @@ export default function AgentSkillsPage() {
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight text-foreground flex items-center gap-2">
             <BrainCircuit className="w-6 h-6 text-brand" />
-            Agent skills
+            {t("title")}
           </h1>
           <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            Skills from the Skill Center that this agent uses. Two at most — each one is added to
-            every message the agent sends.
+            {t("description")}
           </p>
         </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -164,21 +166,21 @@ export default function AgentSkillsPage() {
               className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-3 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Skill Center
+              {t("skillCenter")}
             </Link>
-            <button
-              type="button"
+            <Button
+              variant="brand"
               disabled={bindings.length >= MAX_SKILLS_PER_AGENT}
               onClick={() => {
                 setIsPickerOpen(true);
                 setSelectedSkillIds([]);
                 setSkillSearchTerm("");
               }}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] text-[12px] font-semibold"
             >
               <Library className="h-3.5 w-3.5" />
-              Add from Skill Center
-            </button>
+              {t("addFromCenter")}
+            </Button>
           </div>
         </div>
 
@@ -191,7 +193,7 @@ export default function AgentSkillsPage() {
         minWidthClassName="min-w-[640px]"
         empty={{
           icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
-          label: "No skills yet — add one from the Skill Center",
+          label: t("emptyLabel"),
         }}
         /* This list is not paged on the server — it arrives whole — so it wore
            the load-more footer with its button permanently disabled, purely to
@@ -204,24 +206,24 @@ export default function AgentSkillsPage() {
           pageSize: TABLE_PAGE_SIZE,
           isLoading: false,
           onPageChange: pagedBindings.goToPage,
-          labels: { empty: "No skills yet" },
+          labels: { empty: t("footerEmpty") },
         }}
         columns={[
           {
             key: "skill",
-            header: "Skill",
+            header: t("columns.skill"),
             cell: (row) => (
               <>
                 <div className="text-[13px] font-semibold text-foreground">{row.skill.name}</div>
                 <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
-                  {row.skill.description || "No description."}
+                  {row.skill.description || t("noDescription")}
                 </div>
               </>
             ),
           },
           {
             key: "added",
-            header: "Added",
+            header: t("columns.added"),
             className: "w-[190px]",
             cell: (row) => (
               <span className="text-[12px] text-secondary">{formatDateTime(row.binding.assignedAt)}</span>
@@ -235,7 +237,7 @@ export default function AgentSkillsPage() {
             cell: (row) => (
               <WriteButton
                 type="button"
-                aria-label={`Remove ${row.skill.name}`}
+                aria-label={t("removeAria", { name: row.skill.name })}
                 onClick={() => setRemoveTarget(row)}
                 className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
               >
@@ -246,7 +248,7 @@ export default function AgentSkillsPage() {
         ]}
       />
 
-      <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title="Add skills" size="lg">
+      <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title={t("pickerTitle")} size="lg">
         {/* The same tick-list the company screen uses. It replaced a two-pane
             browser that made the reader pick one skill, read a preview of its
             instructions, attach it, and start again for the next. */}
@@ -255,8 +257,8 @@ export default function AgentSkillsPage() {
             <TableSearchInput
               value={skillSearchTerm}
               onChange={setSkillSearchTerm}
-              placeholder="Search skills"
-              clearLabel="Clear search"
+              placeholder={t("searchPlaceholder")}
+              clearLabel={t("clearSearch")}
             />
           </div>
 
@@ -265,8 +267,8 @@ export default function AgentSkillsPage() {
           ) : pickerSkills.length === 0 ? (
             <p className="px-1 py-8 text-center text-[13px] text-muted">
               {skillSearchTerm.trim()
-                ? "No skills match that search."
-                : "Every skill in the Skill Center is already attached to this agent."}
+                ? t("noMatches")
+                : t("allAttached")}
             </p>
           ) : (
             <div className="max-h-[380px] divide-y divide-border-dim overflow-y-auto rounded-[8px] border border-border-dim bg-background/50">
@@ -281,57 +283,58 @@ export default function AgentSkillsPage() {
                   <span className="min-w-0">
                     <span className="block text-[13px] font-semibold text-foreground">{skill.name}</span>
                     <span className="block text-[12px] text-secondary line-clamp-1">
-                      {skill.description || "No description."}
+                      {skill.description || t("noDescription")}
                     </span>
                   </span>
                 </label>
               ))}
               {canLoadMoreSkills && (
+                /* Raw: full-width list footer with a foreground/3 hover — a strip of the list, not a button shape. */
                 <button
                   type="button"
                   onClick={() => loadMoreSkills(PICKER_PAGE_SIZE)}
                   disabled={isLoadingMoreSkills}
                   className="w-full px-4 py-3 text-[12px] font-semibold text-secondary hover:bg-foreground/[0.03] hover:text-foreground disabled:opacity-50"
                 >
-                  Show more skills
+                  {t("showMore")}
                 </button>
               )}
             </div>
           )}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setIsPickerOpen(false)} className="h-10 rounded-[8px] border border-border-dim px-4 text-[13px] text-secondary hover:text-foreground">
-              Cancel
-            </button>
-            <button
-              type="button"
+            <Button variant="outline" onClick={() => setIsPickerOpen(false)} className="h-10 rounded-[8px]">
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="brand"
               onClick={attachSelected}
               disabled={selectedSkillIds.length === 0 || action.isBusy()}
-              className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              className="flex h-10 items-center gap-2 rounded-[8px] font-semibold disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {selectedSkillIds.length > 1 ? `Add ${selectedSkillIds.length} skills` : "Add skill"}
-            </button>
+              {t("addCount", { count: selectedSkillIds.length })}
+            </Button>
           </div>
         </div>
       </SonaeModal>
 
-      <SonaeModal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title="Remove skill" size="sm">
+      <SonaeModal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t("removeTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2 text-[13px] text-secondary">
           <p>
-            Remove {removeTarget?.skill.name} from this agent? Historical versions and run evidence remain available.
+            {t("removeBody", { name: removeTarget?.skill.name ?? "" })}
           </p>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setRemoveTarget(null)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] hover:text-foreground">
-              Cancel
-            </button>
+            <Button variant="outline" onClick={() => setRemoveTarget(null)} className="h-9 rounded-[8px] text-[12px]">
+              {t("cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={confirmRemove}
               disabled={!!removeTarget && action.isBusy(removeTarget.binding._id)}
               className="h-9 px-4 rounded-[8px] bg-red-500 text-white text-[12px] font-medium disabled:opacity-50"
             >
-              Remove skill
+              {t("removeConfirm")}
             </WriteButton>
           </div>
         </div>

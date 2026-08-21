@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   CursorFooter,
@@ -179,6 +180,7 @@ export function DataTable<Row>({
   className = "",
   cardHeader,
 }: DataTableProps<Row>) {
+  const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
   const hasControls = Boolean(search || filters);
 
@@ -214,7 +216,7 @@ export function DataTable<Row>({
                 className={column.className}
               >
                 {visibleHeader(column) ?? (
-                  <span className="sr-only">{column.hiddenHeader ?? "Actions"}</span>
+                  <span className="sr-only">{column.hiddenHeader ?? t("actionsColumn")}</span>
                 )}
               </TableHeaderCell>
             ))}

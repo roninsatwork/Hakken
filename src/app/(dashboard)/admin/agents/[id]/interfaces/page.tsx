@@ -179,6 +179,7 @@ export default function AgentInterfacesPage() {
               cell: (tool) => {
                 const isBound = agentTools.some((bound) => bound._id === tool._id);
                 return (
+                  // Raw: a toggle switch, not a button recipe.
                   <button
                     type="button"
                     role="switch"

@@ -237,6 +237,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
                 </Link>
               </>
             )}
+            {/* Raw: one-off copy chip — its foreground/5 fill and 12px radius match no variant's colours. */}
             <button
               type="button"
               onClick={handleCopyChat}
@@ -294,6 +295,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
                 // A thin accent bar marks the open conversation instead of a
                 // filled block — the same mark Ask Sonae uses, and it reads at
                 // a glance down a column of similar titles.
+                /* Raw: a whole list row is the hit target — a layout, not a button recipe. */
                 <button
                   key={thread._id}
                   type="button"

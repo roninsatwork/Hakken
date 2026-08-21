@@ -11,6 +11,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * The map, Obsidian-grade (Anthony's steer, 2026-08-15): the shape comes
@@ -180,6 +181,7 @@ export function WikiMapScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiPages");
+  const { platformName } = useSystemSettings();
   const router = useRouter();
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
@@ -320,6 +322,7 @@ export function WikiMapScreen({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Raw (all three zoom controls): square bordered icon chips — no kit variant is a bordered square. */}
           <button
             type="button"
             onClick={() => zoomBy(1 / 1.3)}
@@ -353,7 +356,7 @@ export function WikiMapScreen({
       {rows !== undefined && layout.nodes.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-24 text-secondary rounded-[16px] border border-border-dim bg-card/40">
           <Network className="w-6 h-6" />
-          <p className="text-[13px] max-w-md text-center">{t("map.empty")}</p>
+          <p className="text-[13px] max-w-md text-center">{t("map.empty", { platformName })}</p>
         </div>
       ) : (
         <div className="rounded-[16px] border border-border-dim bg-card/40 overflow-hidden">

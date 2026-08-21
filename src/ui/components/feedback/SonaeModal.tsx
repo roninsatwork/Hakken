@@ -4,6 +4,7 @@ import React, { useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -43,6 +44,7 @@ export default function SonaeModal({
   className,
   size = 'md'
 }: SonaeModalProps) {
+  const t = useTranslations("ui.modal");
   const mounted = useMounted();
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
@@ -160,10 +162,12 @@ export default function SonaeModal({
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
             </div>
 
-            {/* Close Button - Floating Tactical Circle */}
+            {/* Close Button - Floating Tactical Circle. Raw on purpose: a
+                bordered glass circle that grows on hover — not the flat
+                `icon` recipe. */}
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("close")}
               // z-20, or the z-10 header strip sits over this corner and
               // swallows every click meant for the X (Anthony, 2026-08-17:
               // "none of the modals close on the X").

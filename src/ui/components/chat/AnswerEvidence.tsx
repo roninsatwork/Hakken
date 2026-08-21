@@ -26,6 +26,8 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Raw on purpose: an inline disclosure link — no Button variant is a
+          bare text toggle. */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

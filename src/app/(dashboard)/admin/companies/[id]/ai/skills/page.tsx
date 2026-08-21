@@ -16,10 +16,12 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { Button } from "@/src/ui/atoms/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { useTranslations } from "next-intl";
 
 type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: boolean } };
 type GlobalSkill = Doc<"agentSkills">;
@@ -34,6 +36,7 @@ type SkillStatus = CompanySkill["status"];
 
 
 export default function CompanyAiSkillsPage() {
+  const t = useTranslations("admin.companyDetails.skills");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const importGlobalSkill = useMutation(api.companySkills.importGlobalSkill);
@@ -97,7 +100,7 @@ export default function CompanyAiSkillsPage() {
   ) => {
     await action.run(() => setBinding({ skillId: skill._id, surfaceType, isEnabled }), {
       key: `${skill._id}:${surfaceType}`,
-      fallbackMessage: "The switch could not be changed.",
+      fallbackMessage: t("toggleFailed"),
     });
   };
 
@@ -106,7 +109,7 @@ export default function CompanyAiSkillsPage() {
     // The archive modal has nowhere to show a failure, so this one keeps its
     // toast — before, a rejection left the modal open and said nothing.
     const outcome = await action.run(() => archiveSkill({ skillId: archiveTarget._id }), {
-      fallbackMessage: "The skill could not be archived.",
+      fallbackMessage: t("archiveFailed"),
     });
     if (!outcome.ok) return;
     setArchiveTarget(null);
@@ -123,7 +126,7 @@ export default function CompanyAiSkillsPage() {
         }
         return selectedGlobalSkillIds.length;
       },
-      { fallbackMessage: "The skills could not be added.", suppressErrorToast: true },
+      { fallbackMessage: t("importFailed"), suppressErrorToast: true },
     );
     if (!outcome.ok) return;
     setIsImportOpen(false);
@@ -138,16 +141,15 @@ export default function CompanyAiSkillsPage() {
           <div>
             <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
               <BrainCircuit className="h-6 w-6 text-brand" />
-              Company Skills
+              {t("title")}
             </h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Skills from the Skill Center that this company&rsquo;s own AI uses. Two at most — each one
-              is added to every message it answers.
+              {t("subtitle")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <Button
+              variant="brand"
               disabled={skills.results.length >= MAX_SKILLS_PER_COMPANY}
               onClick={() => {
                 setIsImportOpen(true);
@@ -155,11 +157,11 @@ export default function CompanyAiSkillsPage() {
                 setGlobalSkillSearchTerm("");
                 setSelectedGlobalSkillIds([]);
               }}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] font-semibold"
             >
               <Library className="h-4 w-4" />
-              Add from Skill Center
-            </button>
+              {t("addFromCenter")}
+            </Button>
           </div>
         </div>
 
@@ -173,8 +175,8 @@ export default function CompanyAiSkillsPage() {
             setCompanySearchTerm(next);
             setPage(1);
           }}
-          placeholder="Search skills by name"
-          clearLabel="Clear search"
+          placeholder={t("searchPlaceholder")}
+          clearLabel={t("clearSearch")}
         />
       </div>
 
@@ -185,8 +187,8 @@ export default function CompanyAiSkillsPage() {
         empty={{
           icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
           label: companySearchTerm.trim()
-            ? "No skills match that search"
-            : "No skills yet — add one from the Skill Center",
+            ? t("noMatch")
+            : t("emptyList"),
         }}
         footer={{
           mode: "paged",
@@ -197,38 +199,38 @@ export default function CompanyAiSkillsPage() {
           isLoading: skills.status === "LoadingMore" || skills.status === "LoadingFirstPage",
           onPageChange: goToPage,
           labels: {
-            empty: "No skills yet",
-            showing: (start, end, total) => `Showing ${start}-${end} of ${total} skills`,
+            empty: t("emptyShort"),
+            showing: (start, end, total) => t("showing", { start, end, total }),
           },
         }}
         columns={[
           {
             key: "skill",
-            header: "Skill",
+            header: t("columnSkill"),
             cell: (skill) => (
               <>
                 <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
                 <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
-                  {skill.description || "No description."}
+                  {skill.description || t("noDescription")}
                 </div>
               </>
             ),
           },
           {
             key: "surfaces",
-            header: "Where it answers",
+            header: t("columnSurfaces"),
             className: "w-[220px]",
             /* The switch the runtime reads: off here means the skill does not
                reach that surface's answers at all. */
             cell: (skill) => (
               <div className="flex flex-col gap-1.5">
                 <SurfaceToggle
-                  label="Answers in company chat"
+                  label={t("answersInChat")}
                   isEnabled={skill.surfaces.chat}
                   onToggle={() => void handleToggleSurface(skill, "COMPANY_CHAT", !skill.surfaces.chat)}
                 />
                 <SurfaceToggle
-                  label="Answers on the widget"
+                  label={t("answersOnWidget")}
                   isEnabled={skill.surfaces.widget}
                   onToggle={() => void handleToggleSurface(skill, "WIDGET", !skill.surfaces.widget)}
                 />
@@ -237,7 +239,7 @@ export default function CompanyAiSkillsPage() {
           },
           {
             key: "added",
-            header: "Added",
+            header: t("columnAdded"),
             className: "w-[190px]",
             cell: (skill) => (
               <span className="text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</span>
@@ -251,7 +253,7 @@ export default function CompanyAiSkillsPage() {
             cell: (skill) => (
               <WriteButton
                 type="button"
-                aria-label={`Remove ${skill.name}`}
+                aria-label={t("removeAria", { name: skill.name })}
                 onClick={() => setArchiveTarget(skill)}
                 className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
               >
@@ -262,7 +264,7 @@ export default function CompanyAiSkillsPage() {
         ]}
       />
 
-      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Add skills" size="lg">
+      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title={t("addModalTitle")} size="lg">
         {/* Tick what you want and add it. The previous version made the reader
             select one skill, read a preview of its instructions, confirm, and
             start again for the next one. */}
@@ -272,8 +274,8 @@ export default function CompanyAiSkillsPage() {
             <TableSearchInput
               value={globalSkillSearchTerm}
               onChange={setGlobalSkillSearchTerm}
-              placeholder="Search skills"
-              clearLabel="Clear search"
+              placeholder={t("searchSkills")}
+              clearLabel={t("clearSearch")}
             />
           </div>
 
@@ -282,8 +284,8 @@ export default function CompanyAiSkillsPage() {
           ) : importable.results.length === 0 ? (
             <p className="px-1 py-8 text-center text-[13px] text-muted">
               {globalSkillSearchTerm.trim()
-                ? "No skills match that search."
-                : "Every skill in the Skill Center has already been added."}
+                ? t("noMatchModal")
+                : t("allAdded")}
             </p>
           ) : (
             <div className="max-h-[380px] divide-y divide-border-dim overflow-y-auto rounded-[8px] border border-border-dim bg-background/50">
@@ -301,31 +303,31 @@ export default function CompanyAiSkillsPage() {
                   <span className="min-w-0">
                     <span className="block text-[13px] font-semibold text-foreground">{skill.name}</span>
                     <span className="block text-[12px] text-secondary line-clamp-1">
-                      {skill.description || "No description."}
+                      {skill.description || t("noDescription")}
                     </span>
                   </span>
                 </label>
               ))}
               {importable.status === "CanLoadMore" && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => importable.loadMore(TABLE_PAGE_SIZE)}
-                  className="w-full px-4 py-3 text-[12px] font-semibold text-secondary hover:bg-foreground/[0.03] hover:text-foreground"
+                  className="w-full rounded-none px-4 py-3 text-[12px] font-semibold hover:bg-foreground/[0.03]"
                 >
-                  Show more skills
-                </button>
+                  {t("showMore")}
+                </Button>
               )}
             </div>
           )}
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => setIsImportOpen(false)}
-              className="h-10 rounded-[8px] border border-border-dim px-4 text-[13px] text-secondary hover:text-foreground"
+              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
             >
-              Cancel
-            </button>
+              {t("cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={handleImportGlobalSkill}
@@ -334,27 +336,29 @@ export default function CompanyAiSkillsPage() {
             >
               {action.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
               {selectedGlobalSkillIds.length > 1
-                ? `Add ${selectedGlobalSkillIds.length} skills`
-                : "Add skill"}
+                ? t("addCount", { count: selectedGlobalSkillIds.length })
+                : t("addOne")}
             </WriteButton>
           </div>
         </div>
       </SonaeModal>
 
 
-      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title="Remove skill" size="sm">
+      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModalTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
-            Remove <span className="font-semibold text-foreground">{archiveTarget?.name}</span> from this company?
-            Its agents stop using it. The skill stays in the Skill Center, so you can add it back.
+            {t.rich("removeBody", {
+              name: archiveTarget?.name ?? "",
+              b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+            })}
           </p>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setArchiveTarget(null)} disabled={action.isBusy()} className="h-10 rounded-[8px] border border-border-dim px-4 text-[13px] text-secondary hover:text-foreground disabled:opacity-50">
-              Cancel
-            </button>
+            <Button variant="quiet" onClick={() => setArchiveTarget(null)} disabled={action.isBusy()} className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent">
+              {t("cancel")}
+            </Button>
             <WriteButton type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="flex h-10 items-center gap-2 rounded-[8px] bg-red-500 px-4 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50">
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Remove skill
+              {t("removeConfirm")}
             </WriteButton>
           </div>
         </div>

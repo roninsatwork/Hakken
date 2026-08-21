@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { Bot, Loader2, RefreshCw } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/src/ui/atoms/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -24,6 +26,9 @@ import {
 } from "../_components/modelAdminUtils";
 
 export default function AIModelProvidersPage() {
+  const t = useTranslations("ai.models.providers");
+  const tShared = useTranslations("ai.models.shared");
+  const locale = useLocale();
   const providersResult = useQuery(api.aiModels.getProviders);
   const syncGoogleModels = useAction(api.aiModelsActions.syncGoogleModels);
   const syncOpenAIModels = useAction(api.aiModelsActions.syncOpenAIModels);
@@ -52,7 +57,7 @@ export default function AIModelProvidersPage() {
   );
 
   const getProviderDisplayName = (providerKey?: string) => {
-    if (!providerKey) return "Legacy";
+    if (!providerKey) return tShared("legacyProvider");
     if (providerKey === "google") return providers.find((provider) => provider.providerKey === providerKey)?.displayName || "Google Vertex AI";
     return providers.find((provider) => provider.providerKey === providerKey)?.displayName || providerKey;
   };
@@ -80,7 +85,7 @@ export default function AIModelProvidersPage() {
       await syncActionsByProvider[providerKey]();
     } catch (err) {
       console.error(err);
-      setProviderError(`Failed to sync ${providerKey} models: ${getErrorMessage(err, String(err))}`);
+      setProviderError(t("syncFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
     } finally {
       setSyncingProvider(null);
     }
@@ -92,11 +97,11 @@ export default function AIModelProvidersPage() {
     try {
       const result = await testProviderConnection({ providerKey });
       if (!result.ok) {
-        setProviderError(`${getProviderDisplayName(providerKey)} connection failed: ${result.message}`);
+        setProviderError(t("connectionFailed", { provider: getProviderDisplayName(providerKey), message: result.message }));
       }
     } catch (err) {
       console.error(err);
-      setProviderError(`Failed to test ${providerKey} provider: ${getErrorMessage(err, String(err))}`);
+      setProviderError(t("testFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
     } finally {
       setTestingProvider(null);
     }
@@ -117,7 +122,7 @@ export default function AIModelProvidersPage() {
       await setProviderEnabled({ providerKey, isEnabled: true });
     } catch (err) {
       console.error(err);
-      setProviderError(`Failed to update ${providerKey} provider: ${getErrorMessage(err, String(err))}`);
+      setProviderError(t("updateFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
     }
   };
 
@@ -130,7 +135,7 @@ export default function AIModelProvidersPage() {
       setDisableTarget(null);
     } catch (err) {
       console.error(err);
-      setProviderError(`Failed to update ${disableTarget} provider: ${getErrorMessage(err, String(err))}`);
+      setProviderError(t("updateFailed", { provider: disableTarget, message: getErrorMessage(err, String(err)) }));
     } finally {
       setIsDisabling(false);
     }
@@ -141,8 +146,8 @@ export default function AIModelProvidersPage() {
       <PageHeader
         divider
         icon={<Bot className="w-6 h-6 text-brand" />}
-        title="AI Providers"
-        description="Where the models come from, and whether this platform can reach them."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
       />
       <AiWorkspaceNav />
       <SaveError>{providerError}</SaveError>
@@ -155,7 +160,7 @@ export default function AIModelProvidersPage() {
         rows={providersResult === undefined ? undefined : providers}
         rowKey={(provider) => provider.providerKey}
         minWidthClassName="min-w-[820px]"
-        empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: "No providers configured" }}
+        empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",
           page: 1,
@@ -165,14 +170,14 @@ export default function AIModelProvidersPage() {
           isLoading: providersResult === undefined,
           onPageChange: () => {},
           labels: {
-            empty: "No providers configured",
-            showing: (_start, _end, total) => `${total} provider${total === 1 ? "" : "s"}`,
+            empty: t("empty"),
+            showing: (_start, _end, total) => t("showing", { count: total }),
           },
         }}
         columns={[
           {
             key: "provider",
-            header: "Provider",
+            header: t("columnProvider"),
             className: "w-[34%]",
             /* The name, and nothing under it. The raw provider key and
                `authMode` used to sit here; the last sync message replaced them
@@ -190,7 +195,7 @@ export default function AIModelProvidersPage() {
           },
           {
             key: "models",
-            header: "Models",
+            header: t("columnModels"),
             className: "w-[16%]",
             /* The question this screen exists to answer, and it was not on it:
                how many models this provider gives you, and how many are on. */
@@ -200,10 +205,10 @@ export default function AIModelProvidersPage() {
                 <span className="text-[12px] text-secondary">
                   {counts ? (
                     <>
-                      {counts.total} <span className="text-muted">· {counts.enabled} on</span>
+                      {counts.total} <span className="text-muted">{t("modelsOn", { count: counts.enabled })}</span>
                     </>
                   ) : (
-                    <span className="text-muted">None yet</span>
+                    <span className="text-muted">{t("noneYet")}</span>
                   )}
                 </span>
               );
@@ -211,20 +216,20 @@ export default function AIModelProvidersPage() {
           },
           {
             key: "status",
-            header: "Status",
+            header: t("columnStatus"),
             className: "w-[16%]",
             cell: (provider) => (
               <span className={`text-[12px] ${describeProviderStatusTone(provider.isEnabled, provider.status)}`}>
-                {describeProviderStatus(provider.isEnabled, provider.status)}
+                {tShared(describeProviderStatus(provider.isEnabled, provider.status))}
               </span>
             ),
           },
           {
             key: "lastSynced",
-            header: "Last synced",
+            header: t("columnLastSynced"),
             className: "w-[16%]",
             cell: (provider) => (
-              <span className="text-[12px] text-secondary">{formatProviderDate(provider.lastSyncedAt)}</span>
+              <span className="text-[12px] text-secondary">{formatProviderDate(provider.lastSyncedAt, locale) ?? tShared("never")}</span>
             ),
           },
           {
@@ -245,24 +250,24 @@ export default function AIModelProvidersPage() {
                     className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
                   >
                     {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    Sync
+                    {t("sync")}
                   </WriteButton>
-                  <button
-                    type="button"
+                  <Button
+                    variant="quiet"
                     onClick={() => testProvider(provider.providerKey)}
                     disabled={isTesting}
-                    className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
+                    className="flex h-8 items-center gap-1.5 rounded-[6px] px-3 bg-transparent hover:bg-transparent disabled:opacity-40"
                   >
                     {isTesting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Test
-                  </button>
+                    {t("test")}
+                  </Button>
                   {/* The switch is the control, not a badge beside a button
                       saying the same thing. */}
                   <WriteButton
                     type="button"
                     role="switch"
                     aria-checked={provider.isEnabled}
-                    aria-label={`${provider.isEnabled ? "Disable" : "Enable"} ${provider.displayName}`}
+                    aria-label={provider.isEnabled ? t("ariaDisable", { name: provider.displayName }) : t("ariaEnable", { name: provider.displayName })}
                     onClick={() => toggleProvider(provider.providerKey, provider.isEnabled)}
                     className="ml-1"
                   >
@@ -290,7 +295,7 @@ export default function AIModelProvidersPage() {
       <SonaeModal
         isOpen={disableTarget !== null}
         onClose={() => setDisableTarget(null)}
-        title={`Switch off ${getProviderDisplayName(disableTarget ?? undefined)}`}
+        title={t("switchOffTitle", { provider: getProviderDisplayName(disableTarget ?? undefined) })}
         size="sm"
       >
         <div className="flex flex-col gap-5 px-1 pb-2">
@@ -301,12 +306,11 @@ export default function AIModelProvidersPage() {
           {!disableUsage || !Array.isArray(disableUsage.globalUseCases) ? (
             <div className="flex items-center gap-2 text-[13px] text-secondary">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Checking what this provider is handling
+              {t("checkingUsage")}
             </div>
           ) : disableUsage.globalUseCases.length === 0 && !disableUsage.companyCount ? (
             <p className="text-[13px] leading-relaxed text-secondary">
-              Nothing is currently set to use this provider, so switching it off will not stop any
-              work. Its models disappear from every picker until you switch it back on.
+              {t("disableSafe")}
             </p>
           ) : (
             <>
@@ -315,36 +319,35 @@ export default function AIModelProvidersPage() {
                   and meaningless. Now it does what it says, this has to be
                   said out loud. */}
               <p className="text-[13px] leading-relaxed text-secondary">
-                This provider is currently doing work. Switching it off{" "}
-                <span className="font-semibold text-foreground">stops that work</span> until another
-                model is chosen for each job.
+                {t.rich("disableWorking", {
+                  b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+                })}
               </p>
               {disableUsage.globalUseCases.length > 0 && (
                 <p className="text-[12px] leading-relaxed text-muted">
-                  Platform jobs: {disableUsage.globalUseCases.map(formatModelTag).join(", ")}.
+                  {t("platformJobs", { jobs: disableUsage.globalUseCases.map(formatModelTag).join(", ") })}
                 </p>
               )}
               {disableUsage.companyCount > 0 && (
                 <p className="text-[12px] leading-relaxed text-muted">
-                  Also chosen by {disableUsage.companyCount}{" "}
-                  {disableUsage.companyCount === 1 ? "company" : "companies"}.
+                  {t("alsoChosen", { count: disableUsage.companyCount })}
                 </p>
               )}
               {disableUsage.isPartial && (
                 <p className="text-[12px] leading-relaxed text-muted">
-                  There may be more — this counted the first {200} settings only.
+                  {t("maybeMore", { limit: 200 })}
                 </p>
               )}
             </>
           )}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => setDisableTarget(null)}
-              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
+              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
             >
-              Cancel
-            </button>
+              {t("cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={confirmDisable}
@@ -352,7 +355,7 @@ export default function AIModelProvidersPage() {
               className="h-10 px-4 rounded-[8px] bg-red-500 text-white text-[13px] font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
             >
               {isDisabling && <Loader2 className="h-4 w-4 animate-spin" />}
-              Switch it off
+              {t("switchItOff")}
             </WriteButton>
           </div>
         </div>

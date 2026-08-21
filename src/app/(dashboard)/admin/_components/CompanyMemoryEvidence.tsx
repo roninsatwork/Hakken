@@ -1,6 +1,7 @@
 "use client";
 
 import { BrainCircuit } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type CompanyMemoryEvidenceRow = {
   memoryId: string;
@@ -35,6 +36,7 @@ function formatPercent(value?: number) {
 }
 
 export function CompanyMemoryEvidence({ evidenceJson }: CompanyMemoryEvidenceProps) {
+  const t = useTranslations("admin.evidence");
   const memories = parseEvidence(evidenceJson);
   if (memories.length === 0) return null;
 
@@ -42,7 +44,7 @@ export function CompanyMemoryEvidence({ evidenceJson }: CompanyMemoryEvidencePro
     <div className="mt-2 rounded-[12px] border border-blue-500/20 bg-blue-500/10 px-3 py-2">
       <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-blue-200">
         <BrainCircuit className="h-3.5 w-3.5" />
-        Company memory used
+        {t("companyMemoryUsed")}
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         {memories.slice(0, 5).map((memory) => {

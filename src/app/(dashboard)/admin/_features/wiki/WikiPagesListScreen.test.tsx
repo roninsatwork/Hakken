@@ -5,6 +5,13 @@ import { usePaginatedQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { WikiPagesListScreen } from "./WikiPagesListScreen";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 /**
  * Pins the wiki pages list — the busiest table in the product — before it moves
  * onto the shared list part. Rendered in its platform shape.
@@ -19,6 +26,9 @@ vi.mock("convex/react", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
 }));
 

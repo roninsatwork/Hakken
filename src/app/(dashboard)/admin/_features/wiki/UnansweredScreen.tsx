@@ -105,6 +105,7 @@ export function UnansweredScreen({
           {!companyId && (
             <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
               {scopeOptions.map((option) => (
+                /* Raw: segmented filter — the active option swaps its colours; no kit variant is stateful. */
                 <button
                   key={option.value}
                   type="button"

@@ -5,6 +5,7 @@ import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useMutation, useAction, useQuery } from "convex/react";
+import { useTranslations } from "next-intl";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -50,6 +51,7 @@ import {
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type KnowledgeScope =
   | { type: "global" }
@@ -73,11 +75,11 @@ type UploadQueueEntry = {
   error?: string;
 };
 
-const UPLOAD_STATUS_LABELS: Record<UploadQueueEntry["status"], string> = {
-  waiting: "Waiting",
-  uploading: "Uploading",
-  queued: "Sent for processing",
-  failed: "Failed",
+const UPLOAD_STATUS_KEYS: Record<UploadQueueEntry["status"], string> = {
+  waiting: "uploadStatus.waiting",
+  uploading: "uploadStatus.uploading",
+  queued: "uploadStatus.queued",
+  failed: "uploadStatus.failed",
 };
 
 function buildScopeArgs(scope: KnowledgeScope) {
@@ -96,6 +98,8 @@ export function KnowledgeManager({
   deleteDocumentDescription,
   getInspectDocumentHref,
 }: KnowledgeManagerProps) {
+  const t = useTranslations("ai.knowledge.manager");
+  const { platformName } = useSystemSettings();
   const scopeArgs = buildScopeArgs(scope);
   const paged = useServerPagedTable(api.knowledge.getPaginatedDocuments, scopeArgs, TABLE_PAGE_SIZE);
   const documents = paged.rows;
@@ -205,18 +209,14 @@ export function KnowledgeManager({
 
     if (uploadable.length === 0) {
       setUploadQueue([]);
-      setFileError("Those are all bundle index and log files, which hold links rather than facts. Nothing to upload.");
+      setFileError(t("errors.bundleOnly"));
       return;
     }
 
     const overCap = uploadable.length > MAX_BULK_UPLOAD_FILES;
     const capped = overCap ? uploadable.slice(0, MAX_BULK_UPLOAD_FILES) : uploadable;
 
-    setFileError(
-      overCap
-        ? `That is more than ${MAX_BULK_UPLOAD_FILES} files. The first ${MAX_BULK_UPLOAD_FILES} are being uploaded — add the rest in a second batch.`
-        : "",
-    );
+    setFileError(overCap ? t("errors.overCap", { max: MAX_BULK_UPLOAD_FILES }) : "");
 
     const accepted: { collected: CollectedFile; key: string }[] = [];
     const initialQueue: UploadQueueEntry[] = [];
@@ -239,7 +239,7 @@ export function KnowledgeManager({
     setUploadQueue(initialQueue);
 
     if (accepted.length === 0) {
-      setFileError(initialQueue[0]?.error || "Unsupported file type. Please upload a PDF, DOCX, MD, TXT, or CSV file.");
+      setFileError(initialQueue[0]?.error || t("errors.unsupported"));
       return;
     }
 
@@ -253,7 +253,7 @@ export function KnowledgeManager({
         return true;
       } catch (err: unknown) {
         console.error(err);
-        updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, "Failed to upload file.") });
+        updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, t("errors.uploadFailed")) });
         return false;
       }
     });
@@ -265,7 +265,7 @@ export function KnowledgeManager({
         await startKnowledgeFileQueue({});
       } catch (err: unknown) {
         console.error(err);
-        setFileError(getErrorMessage(err, "Files uploaded, but processing did not start. Use Retry on the list below."));
+        setFileError(getErrorMessage(err, t("errors.processingNotStarted")));
       }
     }
 
@@ -294,14 +294,14 @@ export function KnowledgeManager({
   const settledUploadCount = failedUploadCount + sentUploadCount;
 
   const uploadProgressLabel = uploadQueue.length > 1
-    ? `Uploading ${Math.min(settledUploadCount + 1, uploadQueue.length)} of ${uploadQueue.length}...`
-    : "Securely Uploading Document...";
+    ? t("progress.uploadingBatch", { current: Math.min(settledUploadCount + 1, uploadQueue.length), total: uploadQueue.length })
+    : t("progress.uploadingSingle");
 
   const uploadSummary = isUploading
-    ? `${sentUploadCount} of ${uploadQueue.length} uploaded`
+    ? t("progress.summaryUploading", { sent: sentUploadCount, total: uploadQueue.length })
     : failedUploadCount > 0
-      ? `${sentUploadCount} of ${uploadQueue.length} uploaded, ${failedUploadCount} failed`
-      : `${uploadQueue.length} ${uploadQueue.length === 1 ? "file" : "files"} sent for processing`;
+      ? t("progress.summaryFailed", { sent: sentUploadCount, total: uploadQueue.length, failed: failedUploadCount })
+      : t("progress.summarySent", { count: uploadQueue.length });
 
   const handleDrag = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
@@ -362,7 +362,7 @@ export function KnowledgeManager({
       setMappedUrls(links);
     } catch (err: unknown) {
       console.error("Map error", err);
-      setWebsiteError(getErrorMessage(err, "Failed to map website. Check API keys and network."));
+      setWebsiteError(getErrorMessage(err, t("errors.mapFailed")));
     } finally {
       setIsMapping(false);
     }
@@ -378,7 +378,7 @@ export function KnowledgeManager({
       setWebsiteUrl("");
     } catch (err: unknown) {
       console.error(err);
-      setWebsiteError("Failed to queue URLs.");
+      setWebsiteError(t("errors.queueFailed"));
     } finally {
       setIsQueueing(false);
     }
@@ -392,7 +392,7 @@ export function KnowledgeManager({
       await queueWebsiteUrls({ ...scopeArgs, urls: links, forceRefresh: true });
     } catch (err: unknown) {
       console.error("Refresh error", err);
-      setWebsiteError(`Failed to refresh ${root}: ${getErrorMessage(err, "Unknown error")}`);
+      setWebsiteError(t("errors.refreshFailed", { root, message: getErrorMessage(err, t("errors.unknown")) }));
     } finally {
       setRefreshingRoots((prev) => ({ ...prev, [root]: false }));
     }
@@ -406,7 +406,7 @@ export function KnowledgeManager({
       setRootToDelete(null);
     } catch (err: unknown) {
       console.error(err);
-      setWebsiteError("Failed to delete website root.");
+      setWebsiteError(t("errors.bulkDeleteFailed"));
     } finally {
       setIsDeletingBulk(false);
     }
@@ -424,7 +424,7 @@ export function KnowledgeManager({
       await retryDocumentIngestion({ documentId });
     } catch (err: unknown) {
       console.error(err);
-      setQualityActionError(getErrorMessage(err, "Failed to retry ingestion."));
+      setQualityActionError(getErrorMessage(err, t("errors.retryFailed")));
     } finally {
       setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: false }));
     }
@@ -438,7 +438,7 @@ export function KnowledgeManager({
       await repairFlaggedDocuments(scopeArgs);
     } catch (err: unknown) {
       console.error(err);
-      setQualityActionError(getErrorMessage(err, "Failed to repair flagged documents."));
+      setQualityActionError(getErrorMessage(err, t("errors.repairFailed")));
     } finally {
       setIsBulkRepairing(false);
     }
@@ -453,7 +453,7 @@ export function KnowledgeManager({
       setDocumentToDelete(null);
     } catch (err: unknown) {
       console.error(err);
-      setDocumentDeleteError(getErrorMessage(err, "Failed to delete document."));
+      setDocumentDeleteError(getErrorMessage(err, t("errors.deleteFailed")));
     } finally {
       setIsDeletingDocument(false);
     }
@@ -484,13 +484,14 @@ export function KnowledgeManager({
 
     if (href) {
       return (
-        <Link href={href} className={className} title="Inspect chunks">
+        <Link href={href} className={className} title={t("actions.inspectChunks")}>
           {content}
         </Link>
       );
     }
 
     return (
+      // Raw: the caller hands in the whole className — a passthrough, not a recipe of its own.
       <button
         type="button"
         onClick={() => {
@@ -498,7 +499,7 @@ export function KnowledgeManager({
         }}
         disabled={!document}
         className={className}
-        title="Inspect chunks"
+        title={t("actions.inspectChunks")}
       >
         {content}
       </button>
@@ -512,12 +513,12 @@ export function KnowledgeManager({
 
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           {[
-            { label: "Documents", value: qualitySummary ? qualitySummary.totals.documents.toLocaleString() : "...", tone: "text-foreground" },
-            { label: "Ready", value: qualitySummary ? qualitySummary.totals.ready.toLocaleString() : "...", tone: "text-success" },
-            { label: "Ingesting", value: qualitySummary ? (qualitySummary.totals.pending + qualitySummary.totals.processing).toLocaleString() : "...", tone: "text-warning" },
-            { label: "Failed", value: qualitySummary ? qualitySummary.totals.failed.toLocaleString() : "...", tone: "text-destructive" },
-            { label: "Drift", value: qualitySummary ? qualitySummary.totals.embeddingDrift.toLocaleString() : "...", tone: "text-warning" },
-            { label: "Chunks", value: qualitySummary ? qualitySummary.totals.sampledChunks.toLocaleString() : "...", tone: "text-secondary" },
+            { label: t("stats.documents"), value: qualitySummary ? qualitySummary.totals.documents.toLocaleString() : "...", tone: "text-foreground" },
+            { label: t("stats.ready"), value: qualitySummary ? qualitySummary.totals.ready.toLocaleString() : "...", tone: "text-success" },
+            { label: t("stats.ingesting"), value: qualitySummary ? (qualitySummary.totals.pending + qualitySummary.totals.processing).toLocaleString() : "...", tone: "text-warning" },
+            { label: t("stats.failed"), value: qualitySummary ? qualitySummary.totals.failed.toLocaleString() : "...", tone: "text-destructive" },
+            { label: t("stats.drift"), value: qualitySummary ? qualitySummary.totals.embeddingDrift.toLocaleString() : "...", tone: "text-warning" },
+            { label: t("stats.chunks"), value: qualitySummary ? qualitySummary.totals.sampledChunks.toLocaleString() : "...", tone: "text-secondary" },
           ].map((item) => (
             <div key={item.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-3">
               <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{item.label}</div>
@@ -532,14 +533,14 @@ export function KnowledgeManager({
               <div>
                 <div className="flex items-center gap-2 text-foreground">
                   <Database className="w-4 h-4 text-brand" />
-                  <h3 className="text-[13px] font-semibold">Agent topic coverage</h3>
+                  <h3 className="text-[13px] font-semibold">{t("coverage.title")}</h3>
                 </div>
                 <p className="text-[12px] text-secondary mt-1">
-                  Compares the agent profile against sampled ready knowledge before release review.
+                  {t("coverage.description")}
                 </p>
               </div>
               <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 text-right min-w-[120px]">
-                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Coverage</div>
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{t("coverage.label")}</div>
                 <div className="text-[20px] font-semibold text-foreground">{formatCoveragePercent(qualitySummary.topicCoverage.score)}</div>
               </div>
             </div>
@@ -556,7 +557,12 @@ export function KnowledgeManager({
               ))}
             </div>
             <div className="text-[12px] text-secondary">
-              {qualitySummary.topicCoverage.coveredCount}/{qualitySummary.topicCoverage.totalCount} topics covered across {qualitySummary.topicCoverage.readyDocumentCount} ready document{qualitySummary.topicCoverage.readyDocumentCount === 1 ? "" : "s"}. {qualitySummary.topicCoverage.recommendation}
+              {t("coverage.summary", {
+                covered: qualitySummary.topicCoverage.coveredCount,
+                total: qualitySummary.topicCoverage.totalCount,
+                count: qualitySummary.topicCoverage.readyDocumentCount,
+                recommendation: qualitySummary.topicCoverage.recommendation,
+              })}
             </div>
           </div>
         ) : null}
@@ -565,17 +571,17 @@ export function KnowledgeManager({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <TestTube2 className="w-4 h-4 text-brand" />
-              <h3 className="text-[13px] font-semibold text-foreground">Retrieval test</h3>
+              <h3 className="text-[13px] font-semibold text-foreground">{t("retrieval.title")}</h3>
             </div>
             <form onSubmit={handleRunRetrievalTest} className="flex flex-col sm:flex-row gap-2 lg:min-w-[460px]">
               {/* The heading beside it already says what this box is for, so the
                   name is kept for a screen reader and not repeated on screen. */}
               <Field
-                label="Search the stored text"
+                label={t("retrieval.searchLabel")}
                 type="text"
                 value={retrievalQuery}
                 onChange={(event) => setRetrievalQuery(event.target.value)}
-                placeholder="Search the stored text"
+                placeholder={t("retrieval.searchLabel")}
                 labelHidden
                 wrapperClassName="flex-1"
                 className="h-9 bg-background px-3 text-[13px] focus:border-brand"
@@ -586,7 +592,7 @@ export function KnowledgeManager({
                 className="h-9 px-4 rounded-[8px] bg-foreground text-background font-medium text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50"
               >
                 <Search className="w-3.5 h-3.5" />
-                Test
+                {t("retrieval.test")}
               </WriteButton>
             </form>
           </div>
@@ -601,20 +607,20 @@ export function KnowledgeManager({
           {submittedRetrievalQuery.trim() && retrievalTest === undefined && (
             <div className="py-4 flex items-center gap-2 text-[13px] text-secondary">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Checking stored chunks...
+              {t("retrieval.checking")}
             </div>
           )}
 
           {retrievalTest && (
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-widest font-mono text-muted">
-                <span>{retrievalTest.inspectedDocuments} ready docs</span>
-                <span>{retrievalTest.inspectedChunks} chunks checked</span>
-                <span>{retrievalTest.matches.length} matches</span>
+                <span>{t("retrieval.readyDocs", { count: retrievalTest.inspectedDocuments })}</span>
+                <span>{t("retrieval.chunksChecked", { count: retrievalTest.inspectedChunks })}</span>
+                <span>{t("retrieval.matches", { count: retrievalTest.matches.length })}</span>
               </div>
               {retrievalTest.matches.length === 0 ? (
                 <div className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] text-secondary">
-                  No stored chunks matched this phrase.
+                  {t("retrieval.noMatches")}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -624,7 +630,7 @@ export function KnowledgeManager({
                         <div className="min-w-0">
                           <div className="text-[13px] font-semibold text-foreground truncate">{match.title}</div>
                           <div className="text-[10px] uppercase tracking-widest font-mono text-muted mt-1">
-                            score {match.score} * {match.embeddingDimensions} dimensions
+                            {t("retrieval.score", { score: match.score, dimensions: match.embeddingDimensions })}
                           </div>
                         </div>
                         {renderInspectAction(
@@ -660,8 +666,9 @@ export function KnowledgeManager({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 text-warning">
                 <AlertTriangle className="w-4 h-4" />
-                <span className="text-[13px] font-semibold">Knowledge quality items need review</span>
+                <span className="text-[13px] font-semibold">{t("flagged.title")}</span>
               </div>
+              {/* Raw: warning-toned repair chip — the kit has no warning variant. */}
               <button
                 type="button"
                 onClick={handleRepairFlaggedDocuments}
@@ -669,7 +676,7 @@ export function KnowledgeManager({
                 className="h-8 px-3 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
               >
                 {isBulkRepairing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
-                Repair all flagged
+                {t("flagged.repairAll")}
               </button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -680,12 +687,12 @@ export function KnowledgeManager({
                     <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted mt-1">
                       <span>{item.flag.toLowerCase().replaceAll("_", " ")}</span>
                       <span>{item.status}</span>
-                      <span>{item.chunkCount} chunks</span>
-                      {item.lastIngestedAt && <span>fresh {formatDate(item.lastIngestedAt)}</span>}
+                      <span>{t("flagged.chunks", { count: item.chunkCount })}</span>
+                      {item.lastIngestedAt && <span>{t("flagged.fresh", { date: formatDate(item.lastIngestedAt) })}</span>}
                     </div>
                     {item.embeddingDrift && (
                       <div className="text-[11px] text-warning mt-1 truncate">
-                        {item.embeddingDrift.storedModelId || "unknown model"} {"->"} {item.embeddingDrift.activeModelId}
+                        {item.embeddingDrift.storedModelId || t("flagged.unknownModel")} {"->"} {item.embeddingDrift.activeModelId}
                       </div>
                     )}
                     {item.lastIngestionError && (
@@ -698,7 +705,7 @@ export function KnowledgeManager({
                     item.documentId,
                     documents.find((entry) => entry._id === item.documentId),
                     "px-3 py-1.5 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
-                    "Inspect",
+                    t("flagged.inspect"),
                   )}
                   <WriteButton
                     type="button"
@@ -707,7 +714,7 @@ export function KnowledgeManager({
                     className="px-3 py-1.5 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-50"
                   >
                     {repairingDocumentIds[item.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
-                    Repair
+                    {t("flagged.repair")}
                   </WriteButton>
                 </div>
               ))}
@@ -716,34 +723,41 @@ export function KnowledgeManager({
         )}
 
         <div className="flex items-center bg-background border border-border-dim rounded-[10px] w-fit p-1">
-          {(["Website", "File", "Text"] as const).map((tab) => (
+          {(
+            [
+              { tab: "Website", label: t("tabs.website") },
+              { tab: "File", label: t("tabs.file") },
+              { tab: "Text", label: t("tabs.text") },
+            ] as const
+          ).map(({ tab, label }) => (
+            /* Raw: segmented tab — the active option swaps its colours; no kit variant is stateful. */
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-8 py-2 text-[13px] font-medium rounded-md transition-colors ${activeTab === tab ? "bg-brand text-white shadow-sm" : "text-secondary hover:text-foreground"}`}
             >
-              {tab}
+              {label}
             </button>
           ))}
         </div>
 
         {activeTab === "Text" && (
           <div className="bg-sidebar/30 border border-border-dim rounded-[16px] p-6">
-            <h3 className="text-sm font-bold mb-4">Text</h3>
+            <h3 className="text-sm font-bold mb-4">{t("text.heading")}</h3>
             <div className="flex flex-col gap-4">
               <Field
-                label="Title"
+                label={t("text.titleLabel")}
                 type="text"
                 value={textTitle}
                 onChange={(event) => setTextTitle(event.target.value)}
-                placeholder="What this document is called"
+                placeholder={t("text.titlePlaceholder")}
                 className="h-auto bg-background px-4 py-3 focus:border-brand"
               />
               <TextAreaField
-                label="Text"
+                label={t("text.textLabel")}
                 value={textContent}
                 onChange={(event) => setTextContent(event.target.value)}
-                placeholder="Paste or type the text here"
+                placeholder={t("text.textPlaceholder")}
                 rows={6}
                 className="resize-y bg-background focus:border-brand"
               />
@@ -754,7 +768,7 @@ export function KnowledgeManager({
                   className="h-10 px-6 rounded-[8px] bg-secondary text-background font-medium text-[13px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSavingText ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Add text
+                  {t("text.addText")}
                 </WriteButton>
               </div>
             </div>
@@ -764,7 +778,7 @@ export function KnowledgeManager({
         {activeTab === "Website" && (
           <div className="flex flex-col gap-6">
             <div className="bg-sidebar/30 border border-border-dim rounded-[16px] p-6">
-              <h3 className="text-sm font-bold mb-4">Website URL</h3>
+              <h3 className="text-sm font-bold mb-4">{t("website.heading")}</h3>
               {websiteError && (
                 <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -777,12 +791,12 @@ export function KnowledgeManager({
                   and the state icon still centres on it. */}
               <div className="relative">
                 <Field
-                  label="Website URL"
+                  label={t("website.urlLabel")}
                   type="text"
                   value={websiteUrl}
                   onChange={(event) => setWebsiteUrl(event.target.value)}
                   onKeyDown={handleMapUrl}
-                  placeholder="Paste a website address and press Enter"
+                  placeholder={t("website.urlPlaceholder")}
                   disabled={isMapping || isQueueing}
                   labelHidden
                   className="h-auto bg-background px-4 py-3 pr-10 focus:border-success"
@@ -797,15 +811,16 @@ export function KnowledgeManager({
               {mappedUrls.length > 0 && (
                 <div className="mt-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between text-[13px] text-secondary">
-                    <span>Found {mappedUrls.length} pages to scrape</span>
-                    <button
+                    <span>{t("website.found", { count: mappedUrls.length })}</span>
+                    <Button
+                      variant="brand"
                       onClick={handleQueueMappedUrls}
                       disabled={isQueueing}
-                      className="bg-brand text-white px-4 py-1.5 rounded-md font-medium hover:bg-brand/90 transition flex items-center gap-2"
+                      className="py-1.5 rounded-md flex items-center gap-2"
                     >
                       {isQueueing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                      Queue All for Training
-                    </button>
+                      {t("website.queueAll")}
+                    </Button>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto border border-border-dim rounded-[8px] bg-background text-[12px]">
                     {mappedUrls.map((url) => (
@@ -820,9 +835,9 @@ export function KnowledgeManager({
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <h3 className="text-[11px] font-bold tracking-widest text-secondary uppercase">Trained</h3>
+                <h3 className="text-[11px] font-bold tracking-widest text-secondary uppercase">{t("website.trained")}</h3>
                 <p className="text-[12px] text-muted">
-                  Website pages are grouped by domain. Search filters the pages stored for this website source.
+                  {t("website.trainedHint")}
                 </p>
               </div>
 
@@ -835,9 +850,9 @@ export function KnowledgeManager({
               {!isLoadingWebsiteDocuments && Object.keys(websiteGroups).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
                   <Globe className="w-9 h-9 text-brand mb-4 opacity-80" />
-                  <h3 className="text-sm font-medium text-foreground mb-1">No Website Pages Trained</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-1">{t("website.emptyTitle")}</h3>
                   <p className="text-[13px] text-secondary max-w-sm">
-                    Add a website URL above to map pages and queue them for knowledge training.
+                    {t("website.emptyDescription")}
                   </p>
                 </div>
               )}
@@ -869,28 +884,30 @@ export function KnowledgeManager({
                             <div className="w-24 h-1.5 bg-border-dim rounded-full overflow-hidden">
                               <div className="h-full bg-brand transition-all duration-500 ease-in-out" style={{ width: `${progressPct}%` }} />
                             </div>
-                            <span className="font-mono tracking-wide">{readyDocs} ready / {totalDocs} stored ({progressPct}%)</span>
+                            <span className="font-mono tracking-wide">{t("website.progress", { ready: readyDocs, total: totalDocs, pct: progressPct })}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
+                        {/* Raw: square icon chip with a brand hover — the icon variant's round shape and grey hover match no pixel of it. */}
                         <button
                           onClick={() => handleRefreshRoot(root)}
                           disabled={isRefreshing}
-                          title="Bulk Refresh (Re-scrape & find new)"
+                          title={t("website.refreshTitle")}
                           className="p-1.5 rounded-lg text-secondary hover:text-brand hover:bg-brand/10 transition-colors disabled:opacity-50"
                         >
                           <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
                         </button>
                         <WriteButton
                           onClick={() => setRootToDelete(root)}
-                          title="Delete Complete Domain"
+                          title={t("website.deleteDomainTitle")}
                           className="p-1.5 rounded-lg text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </WriteButton>
+                        {/* Raw: borderless brand-tinted expander — accent's border and hover shade match no pixel of it. */}
                         <button onClick={() => toggleGroup(root)} className="ml-2 flex items-center gap-1 bg-brand/10 text-brand px-3 py-1 rounded-md text-[13px] font-medium hover:bg-brand/20 transition-colors">
-                          {totalDocs} pages {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {t("website.pages", { count: totalDocs })} {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -905,17 +922,17 @@ export function KnowledgeManager({
                                 [root]: next,
                               }))
                             }
-                            placeholder="Search stored pages"
+                            placeholder={t("website.searchPlaceholder")}
                           />
                         </div>
                         <div className="p-2 text-[12px] font-medium text-secondary">
                           {normalizedSearchTerm
-                            ? `${visibleDocs.length} matching stored page${visibleDocs.length === 1 ? "" : "s"}`
-                            : "List of trained pages"}
+                            ? t("website.matching", { count: visibleDocs.length })
+                            : t("website.list")}
                         </div>
                         {visibleDocs.length === 0 && (
                           <div className="px-4 py-8 text-[13px] text-secondary border-t border-border-dim/20">
-                            No stored pages match this search.
+                            {t("website.noSearchMatches")}
                           </div>
                         )}
                         {visibleDocs.map((document) => (
@@ -924,9 +941,9 @@ export function KnowledgeManager({
                               {document.sourceUrl}
                             </a>
                             <div className="flex items-center gap-3">
-                              {document.status === "pending" && <StatusPill tone="warning" className="rounded-sm border-0 uppercase font-bold">Pending</StatusPill>}
-                              {document.status === "processing" && <StatusPill tone="warning" icon={<Loader2 className="w-3 h-3 animate-spin" />} className="rounded-sm border-0 uppercase font-bold">Processing</StatusPill>}
-                              {document.status === "failed" && <StatusPill tone="danger" icon={<AlertTriangle className="w-3 h-3" />} className="rounded-sm border-0 uppercase font-bold">Failed</StatusPill>}
+                              {document.status === "pending" && <StatusPill tone="warning" className="rounded-sm border-0 uppercase font-bold">{t("website.pending")}</StatusPill>}
+                              {document.status === "processing" && <StatusPill tone="warning" icon={<Loader2 className="w-3 h-3 animate-spin" />} className="rounded-sm border-0 uppercase font-bold">{t("website.processing")}</StatusPill>}
+                              {document.status === "failed" && <StatusPill tone="danger" icon={<AlertTriangle className="w-3 h-3" />} className="rounded-sm border-0 uppercase font-bold">{t("website.failed")}</StatusPill>}
                               {renderInspectAction(
                                 document._id,
                                 document,
@@ -937,7 +954,7 @@ export function KnowledgeManager({
                                   onClick={() => handleRetryDocument(document._id)}
                                   disabled={repairingDocumentIds[document._id]}
                                   className="text-secondary hover:text-warning transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
-                                  title="Retry ingestion"
+                                  title={t("actions.retryIngestion")}
                                 >
                                   {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
                                 </WriteButton>
@@ -945,7 +962,7 @@ export function KnowledgeManager({
                               <WriteButton
                                 onClick={() => setDocumentToDelete(document)}
                                 className="text-secondary hover:text-destructive transition-colors opacity-50 group-hover:opacity-100"
-                                title="Delete Document"
+                                title={t("actions.deleteDocument")}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </WriteButton>
@@ -964,12 +981,13 @@ export function KnowledgeManager({
         {activeTab === "File" && (
           <div className="flex flex-col gap-4">
             <div className="flex justify-end">
+              {/* Raw: the dark CTA drawn with the opacity hover and no glow — primary would change its hover and add a shadow. */}
               <button
                 onClick={() => setIsModalOpen(true)}
                 className="h-9 px-4 rounded-[10px] bg-foreground text-background font-medium text-[13px] flex items-center gap-2 hover:opacity-90 transition-all"
               >
                 <Upload className="w-3.5 h-3.5" />
-                Upload Document
+                {t("file.upload")}
               </button>
             </div>
 
@@ -978,7 +996,7 @@ export function KnowledgeManager({
             ) : documentFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
                 <FileText className="w-10 h-10 text-brand mb-4 opacity-80" />
-                <h3 className="text-sm font-medium text-foreground mb-1">No Documents Uploaded</h3>
+                <h3 className="text-sm font-medium text-foreground mb-1">{t("file.emptyTitle")}</h3>
                 <p className="text-[13px] text-secondary max-w-sm">
                   {emptyDocumentDescription}
                 </p>
@@ -1003,9 +1021,9 @@ export function KnowledgeManager({
                           if (!evidence) return null;
                           return (
                             <div className="flex items-center gap-2 text-[11px]">
-                              <span className="text-info">{evidence.positiveEvidence} rated helpful</span>
+                              <span className="text-info">{t("file.ratedHelpful", { count: evidence.positiveEvidence })}</span>
                               <span className="text-muted">·</span>
-                              <span className="text-warning">{evidence.negativeEvidence} rated not right</span>
+                              <span className="text-warning">{t("file.ratedNotRight", { count: evidence.negativeEvidence })}</span>
                             </div>
                           );
                         })()}
@@ -1015,17 +1033,17 @@ export function KnowledgeManager({
                     <div className="flex items-center gap-4">
                       {document.status === "processing" && (
                         <StatusPill tone="warning" size="md" icon={<Loader2 className="w-3.5 h-3.5 animate-spin" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
-                          Ingesting
+                          {t("file.ingesting")}
                         </StatusPill>
                       )}
                       {document.status === "ready" && (
                         <StatusPill tone="success" size="md" icon={<CheckCircle2 className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
-                          Ready
+                          {t("file.ready")}
                         </StatusPill>
                       )}
                       {document.status === "failed" && (
                         <StatusPill tone="danger" size="md" icon={<AlertTriangle className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
-                          Failed
+                          {t("file.failed")}
                         </StatusPill>
                       )}
 
@@ -1040,7 +1058,7 @@ export function KnowledgeManager({
                           onClick={() => handleRetryDocument(document._id)}
                           disabled={repairingDocumentIds[document._id]}
                           className="p-2 rounded-lg border border-transparent text-secondary hover:text-warning hover:bg-warning/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                          title="Retry ingestion"
+                          title={t("actions.retryIngestion")}
                         >
                           {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
                         </WriteButton>
@@ -1049,7 +1067,7 @@ export function KnowledgeManager({
                       <WriteButton
                         onClick={() => setDocumentToDelete(document)}
                         className="p-2 rounded-lg border border-transparent text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete Document"
+                        title={t("actions.deleteDocument")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </WriteButton>
@@ -1069,12 +1087,12 @@ export function KnowledgeManager({
           isLoading={paged.isBusy}
           onPageChange={paged.goToPage}
           labels={{
-            empty: "No knowledge documents loaded",
+            empty: t("footer.empty"),
             // The true total is counted separately and is worth keeping: the
             // footer's own count is only what has been fetched so far.
             showing: (start, end, loaded) => qualitySummary
-              ? `Showing ${start}-${end} of ${qualitySummary.totals.documents.toLocaleString()} documents`
-              : `Showing ${start}-${end} of ${loaded} documents`,
+              ? t("footer.showing", { start, end, total: qualitySummary.totals.documents.toLocaleString() })
+              : t("footer.showing", { start, end, total: loaded }),
           }}
         />
       </div>
@@ -1089,7 +1107,7 @@ export function KnowledgeManager({
             setSkippedBundleFileCount(0);
           }
         }}
-        title="Upload Knowledge Documents"
+        title={t("uploadModal.title")}
         size="md"
       >
         <div className="flex flex-col gap-6 w-full pt-4">
@@ -1137,9 +1155,9 @@ export function KnowledgeManager({
             ) : (
               <div className="flex flex-col flex-1 items-center justify-center pointer-events-none">
                 <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${dragActive ? "text-brand scale-110" : "text-secondary"}`} />
-                <p className="text-[14px] font-bold text-foreground mb-1">Drag &amp; Drop Files or a Folder</p>
+                <p className="text-[14px] font-bold text-foreground mb-1">{t("uploadModal.dropTitle")}</p>
                 <p className="text-[13px] text-muted text-center max-w-[280px] leading-relaxed mb-6">
-                  Supports .PDF, .DOCX, .MD, .TXT, and .CSV. Drop a whole folder to load an OKF bundle — up to {MAX_BULK_UPLOAD_FILES} files at a time.
+                  {t("uploadModal.dropHint", { max: MAX_BULK_UPLOAD_FILES })}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <Button
@@ -1147,13 +1165,14 @@ export function KnowledgeManager({
                     onClick={(event) => { event.preventDefault(); inputRef.current?.click(); }}
                     className="px-6 py-2.5 pointer-events-auto shadow-[0_0_20px_rgba(255,255,255,0.05)]"
                   >
-                    Browse Files
+                    {t("uploadModal.browse")}
                   </Button>
+                  {/* Raw: outline twin of the pill — bordered, unfilled; the kit has no outline pill variant. */}
                   <button
                     onClick={(event) => { event.preventDefault(); folderInputRef.current?.click(); }}
                     className="px-6 py-2.5 rounded-full border border-white/15 text-foreground font-bold tracking-wide text-[13px] hover:bg-white/5 transition-all pointer-events-auto"
                   >
-                    Choose Folder
+                    {t("uploadModal.chooseFolder")}
                   </button>
                 </div>
               </div>
@@ -1167,11 +1186,12 @@ export function KnowledgeManager({
                   {uploadSummary}
                 </p>
                 {!isUploading && failedUploadCount > 0 && (
+                  /* Raw: outline pill chip — bordered, unfilled; the kit has no outline pill variant. */
                   <button
                     onClick={handleRetryFailedUploads}
                     className="px-3 py-1.5 rounded-full border border-white/15 text-[12px] font-semibold hover:bg-white/5 transition-colors"
                   >
-                    Retry {failedUploadCount} failed
+                    {t("uploadModal.retryFailed", { count: failedUploadCount })}
                   </button>
                 )}
               </div>
@@ -1194,8 +1214,8 @@ export function KnowledgeManager({
                       <p className="text-[13px] text-foreground truncate" title={entry.title}>{entry.title}</p>
                       <p className={`text-[12px] ${entry.status === "failed" ? "text-destructive" : "text-secondary"}`}>
                         {entry.status === "failed"
-                          ? `Failed — ${entry.error || "upload did not complete"}`
-                          : UPLOAD_STATUS_LABELS[entry.status]}
+                          ? t("uploadModal.failedEntry", { message: entry.error || t("uploadModal.failedEntryFallback") })
+                          : t(UPLOAD_STATUS_KEYS[entry.status])}
                       </p>
                     </div>
                   </div>
@@ -1204,12 +1224,12 @@ export function KnowledgeManager({
 
               {skippedBundleFileCount > 0 && (
                 <p className="text-[12px] text-secondary">
-                  {skippedBundleFileCount} bundle {skippedBundleFileCount === 1 ? "index or log file was" : "index and log files were"} skipped — they hold links and history rather than facts.
+                  {t("uploadModal.skippedBundle", { count: skippedBundleFileCount })}
                 </p>
               )}
 
               <p className="text-[12px] text-muted">
-                Uploaded files are processed in the background. Close this window whenever you like — progress shows in the document list.
+                {t("uploadModal.background")}
               </p>
             </div>
           )}
@@ -1224,7 +1244,7 @@ export function KnowledgeManager({
             setDocumentDeleteError("");
           }
         }}
-        title="Delete Document"
+        title={t("deleteModal.title")}
         size="sm"
       >
         <div className="flex flex-col gap-6 w-full pt-4">
@@ -1238,12 +1258,13 @@ export function KnowledgeManager({
             </div>
           )}
           <div className="flex justify-end gap-3">
+            {/* Raw: cancel in the inherited foreground colour — ghost's grey text would visibly dim it. */}
             <button
               onClick={() => setDocumentToDelete(null)}
               disabled={isDeletingDocument}
               className="px-4 py-2 rounded-md hover:bg-white/5 transition-colors text-[13px] font-medium disabled:opacity-50"
             >
-              Cancel
+              {t("deleteModal.cancel")}
             </button>
             <WriteButton
               onClick={handleConfirmDocumentDelete}
@@ -1251,7 +1272,7 @@ export function KnowledgeManager({
               className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90 disabled:opacity-50"
             >
               {isDeletingDocument && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Delete Document
+              {t("deleteModal.confirm")}
             </WriteButton>
           </div>
         </div>
@@ -1260,7 +1281,7 @@ export function KnowledgeManager({
       <SonaeModal
         isOpen={!!documentToInspect}
         onClose={() => setDocumentToInspect(null)}
-        title="Inspect Knowledge Document"
+        title={t("inspectModal.title")}
         size="lg"
       >
         <div className="flex flex-col gap-5 w-full pt-4">
@@ -1270,7 +1291,7 @@ export function KnowledgeManager({
             </div>
           ) : documentInspection === null ? (
             <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
-              This document could not be inspected.
+              {t("inspectModal.couldNotInspect")}
             </div>
           ) : (
             <>
@@ -1283,7 +1304,7 @@ export function KnowledgeManager({
                     {documentInspection.document.format}
                   </span>
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
-                    {documentInspection.chunkCount} sampled chunks
+                    {t("inspectModal.sampledChunks", { count: documentInspection.chunkCount })}
                   </span>
                 </div>
                 <h3 className="text-[15px] font-semibold text-foreground">{documentInspection.document.title}</h3>
@@ -1294,11 +1315,11 @@ export function KnowledgeManager({
                 )}
                 <div className="flex flex-wrap gap-3 text-[11px] text-muted font-mono">
                   <span>{formatDate(documentInspection.document.createdAt)}</span>
-                  {documentInspection.document.lastQueuedAt && <span>queued: {formatDate(documentInspection.document.lastQueuedAt)}</span>}
-                  {documentInspection.document.lastIngestionStartedAt && <span>started: {formatDate(documentInspection.document.lastIngestionStartedAt)}</span>}
-                  {documentInspection.document.lastIngestedAt && <span>fresh: {formatDate(documentInspection.document.lastIngestedAt)}</span>}
-                  {documentInspection.document.embeddingModelId && <span>model: {documentInspection.document.embeddingModelId}</span>}
-                  {documentInspection.document.embeddingDimensions && <span>{documentInspection.document.embeddingDimensions} dimensions</span>}
+                  {documentInspection.document.lastQueuedAt && <span>{t("inspectModal.queued", { date: formatDate(documentInspection.document.lastQueuedAt) })}</span>}
+                  {documentInspection.document.lastIngestionStartedAt && <span>{t("inspectModal.started", { date: formatDate(documentInspection.document.lastIngestionStartedAt) })}</span>}
+                  {documentInspection.document.lastIngestedAt && <span>{t("inspectModal.fresh", { date: formatDate(documentInspection.document.lastIngestedAt) })}</span>}
+                  {documentInspection.document.embeddingModelId && <span>{t("inspectModal.model", { model: documentInspection.document.embeddingModelId })}</span>}
+                  {documentInspection.document.embeddingDimensions && <span>{t("inspectModal.dimensions", { count: documentInspection.document.embeddingDimensions })}</span>}
                 </div>
                 {documentInspection.document.lastIngestionError && (
                   <div className="rounded-[8px] border border-destructive/20 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
@@ -1314,7 +1335,7 @@ export function KnowledgeManager({
                       className="h-8 px-3 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[12px] font-semibold flex items-center gap-2 disabled:opacity-50"
                     >
                       {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
-                      Retry ingestion
+                      {t("inspectModal.retryIngestion")}
                     </WriteButton>
                   </div>
                 )}
@@ -1329,11 +1350,11 @@ export function KnowledgeManager({
                 <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex flex-col gap-2 text-warning">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
-                    <span className="text-[13px] font-semibold">Embedding model drift detected</span>
+                    <span className="text-[13px] font-semibold">{t("inspectModal.driftTitle")}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-warning/80">
-                    <div>Stored: {documentInspection.embeddingDrift.storedModelId || "unknown"} ({documentInspection.embeddingDrift.storedDimensions || "?"} dims)</div>
-                    <div>Active: {documentInspection.embeddingDrift.activeModelId} ({documentInspection.embeddingDrift.activeDimensions || "?"} dims)</div>
+                    <div>{t("inspectModal.stored", { model: documentInspection.embeddingDrift.storedModelId || t("inspectModal.unknown"), dims: documentInspection.embeddingDrift.storedDimensions || "?" })}</div>
+                    <div>{t("inspectModal.active", { model: documentInspection.embeddingDrift.activeModelId, dims: documentInspection.embeddingDrift.activeDimensions || "?" })}</div>
                   </div>
                   <WriteButton
                     type="button"
@@ -1342,7 +1363,7 @@ export function KnowledgeManager({
                     className="h-8 px-3 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center gap-2 w-fit disabled:opacity-50"
                   >
                     {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
-                    Re-embed with active model
+                    {t("inspectModal.reembed")}
                   </WriteButton>
                 </div>
               )}
@@ -1350,10 +1371,10 @@ export function KnowledgeManager({
               <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-secondary">
                   <History className="w-4 h-4" />
-                  <span className="text-[13px] font-semibold text-foreground">Ingestion history</span>
+                  <span className="text-[13px] font-semibold text-foreground">{t("inspectModal.historyTitle")}</span>
                 </div>
                 {documentInspection.history.length === 0 ? (
-                  <div className="text-[13px] text-secondary">No recent document events were found.</div>
+                  <div className="text-[13px] text-secondary">{t("inspectModal.noEvents")}</div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {documentInspection.history.map((event) => (
@@ -1371,16 +1392,16 @@ export function KnowledgeManager({
 
               {documentInspection.chunks.length === 0 ? (
                 <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
-                  No chunks are stored for this document yet.
+                  {t("inspectModal.noChunks")}
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {documentInspection.chunks.map((chunk) => (
                     <div key={chunk.chunkId} className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
-                        <span>Chunk {chunk.index + 1}</span>
-                        <span>{chunk.characterCount} chars</span>
-                        <span>{chunk.embeddingDimensions} dimensions</span>
+                        <span>{t("inspectModal.chunk", { number: chunk.index + 1 })}</span>
+                        <span>{t("inspectModal.chars", { count: chunk.characterCount })}</span>
+                        <span>{t("inspectModal.dimensions", { count: chunk.embeddingDimensions })}</span>
                       </div>
                       <pre className="text-[12px] text-secondary whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-auto">
                         {chunk.preview}
@@ -1397,21 +1418,24 @@ export function KnowledgeManager({
       <SonaeModal
         isOpen={!!rootToDelete}
         onClose={() => !isDeletingBulk && setRootToDelete(null)}
-        title="Delete Website Data"
+        title={t("websiteDeleteModal.title")}
         size="sm"
       >
         <div className="flex flex-col gap-6 w-full pt-4">
           <p className="text-[14px] text-secondary">
-            Are you sure you want to completely remove <strong>{rootToDelete}</strong> and all of its trained sub-pages from Sonae&apos;s memory?
-            This will delete the vectors instantly.
+            {t.rich("websiteDeleteModal.body", {
+              root: () => <strong>{rootToDelete}</strong>,
+              platformName,
+            })}
           </p>
           <div className="flex justify-end gap-3">
+            {/* Raw: cancel in the inherited foreground colour — ghost's grey text would visibly dim it. */}
             <button
               onClick={() => setRootToDelete(null)}
               disabled={isDeletingBulk}
               className="px-4 py-2 rounded-md hover:bg-white/5 transition-colors text-[13px] font-medium"
             >
-              Cancel
+              {t("websiteDeleteModal.cancel")}
             </button>
             <WriteButton
               onClick={handleConfirmBulkDelete}
@@ -1419,7 +1443,7 @@ export function KnowledgeManager({
               className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90"
             >
               {isDeletingBulk && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Delete Everything
+              {t("websiteDeleteModal.confirm")}
             </WriteButton>
           </div>
         </div>

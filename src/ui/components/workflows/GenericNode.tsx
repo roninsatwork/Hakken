@@ -1,9 +1,11 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Zap, Webhook, ArrowRightLeft, Settings2, Mail, Database } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { WorkflowCanvasNodeData, WorkflowNodeType } from './types';
 
 export function GenericNode({ data, type }: { data: WorkflowCanvasNodeData; type: WorkflowNodeType }) {
+  const t = useTranslations('admin.workflows.designer.node');
   let Icon = Settings2;
   let color = 'text-foreground';
   let border = 'border-border-dim';
@@ -33,10 +35,10 @@ export function GenericNode({ data, type }: { data: WorkflowCanvasNodeData; type
         </div>
         <div className="flex flex-col">
             <span className="font-bold text-[14px] text-foreground tracking-wide leading-tight">
-                {data.label || 'Unnamed Node'}
+                {data.label || t('unnamed')}
             </span>
             <span className="text-[11px] uppercase tracking-widest text-muted mt-0.5">
-                {type.replace('Node', '')} Module
+                {t('module', { type: type.replace('Node', '') })}
             </span>
         </div>
       </div>
@@ -46,14 +48,14 @@ export function GenericNode({ data, type }: { data: WorkflowCanvasNodeData; type
              data._dbConfig?.tableName ? (
                <div className="flex flex-col gap-3">
                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">Configuration</span>
+                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">{t('configuration')}</span>
                     <div className="flex items-center gap-1.5 flex-wrap">
                        <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] text-foreground font-mono">{data._dbConfig.operation || 'INSERT'}</span>
-                       <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] text-foreground font-mono">{data._dbConfig.tableName || 'N/A'}</span>
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] text-foreground font-mono">{data._dbConfig.tableName || t('notAvailable')}</span>
                     </div>
                  </div>
                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">Outputs</span>
+                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">{t('outputs')}</span>
                     <div className="flex flex-wrap gap-1">
                        <span className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">result</span>
                        <span className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">operation</span>
@@ -62,12 +64,12 @@ export function GenericNode({ data, type }: { data: WorkflowCanvasNodeData; type
                  </div>
                </div>
              ) : (
-                 <span className="text-[12px] text-secondary italic text-center w-full mt-2">Unconfigured Database Node</span>
+                 <span className="text-[12px] text-secondary italic text-center w-full mt-2">{t('unconfiguredDatabase')}</span>
              )
          ) : (
              <div className="flex w-full h-full items-center justify-center">
                  <span className="text-[12px] text-secondary italic">
-                     {data._inputMapping ? "Data schema bound" : "No I/O schemas defined"}
+                     {data._inputMapping ? t('schemaBound') : t('noSchema')}
                  </span>
              </div>
          )}

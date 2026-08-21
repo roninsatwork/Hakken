@@ -1,5 +1,19 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { fireEvent, render as renderBase, screen, waitFor, within } from "@testing-library/react";
+import messages from "../../../../../../../messages/en.json";
+
+// The screen resolves its copy through the catalogue, so it renders inside
+// the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";

@@ -7,6 +7,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
@@ -40,6 +41,8 @@ function createToolDraft(tool: Doc<"aiTools">): ToolDraft {
 }
 
 export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiTools"> }> }) {
+  const t = useTranslations("admin.aiTools.edit");
+  const tFields = useTranslations("admin.aiTools.new.fields");
   const router = useRouter();
   const unwrappedParams = use(params);
   const toolId = unwrappedParams.id;
@@ -114,14 +117,14 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to tools</span>
+          <span>{t("back")}</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <Wrench className="w-6 h-6 text-brand" />
-          Edit tool
+          {t("title")}
         </h1>
         <p className="text-[13px] text-secondary tracking-wide">
-          Change what this tool does and how the assistant uses it.
+          {t("subtitle")}
         </p>
       </header>
 
@@ -133,23 +136,23 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">1</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionName")}</span>
              </div>
              
              {/* Read-Only Identity Tag */}
              <div className="px-3 py-1 rounded-full border border-border-dim bg-foreground/5 text-muted text-[10px] uppercase font-mono tracking-widest flex items-center gap-2">
-               <span>ID: {toolId.slice(0, 8)}...</span>
+               <span>{t("idTag", { id: toolId.slice(0, 8) })}</span>
                <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
              </div>
            </div>
            
            <div className="ml-1">
              <Field
-               label="Name the assistant will use"
-               hint="Lower case, words joined by underscores, no spaces. The box tidies it as you type."
+               label={tFields("name.label")}
+               hint={tFields("name.help")}
                value={form.name}
                onChange={(e) => updateDraft({ name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
-               placeholder="For example: check_stock"
+               placeholder={tFields("name.placeholder")}
              />
            </div>
         </section>
@@ -157,15 +160,15 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">2</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">What it does</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionDoes")}</span>
            </div>
 
            <div className="ml-1">
              <TextAreaField
-               label="What it does, and when to use it"
+               label={tFields("description.label")}
                value={form.description}
                onChange={(e) => updateDraft({ description: e.target.value })}
-               placeholder="For example: Looks up how many of an item are left in stock."
+               placeholder={tFields("description.placeholder")}
                className="min-h-[150px] resize-y"
                spellCheck={false}
              />
@@ -175,15 +178,15 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">3</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">What it runs</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionRuns")}</span>
            </div>
 
            <div className="ml-1">
              <Field
-               label="Which piece of code it runs"
+               label={tFields("handler.label")}
                value={form.handlerMapping}
                onChange={(e) => updateDraft({ handlerMapping: e.target.value })}
-               placeholder="For example: api.stock.check"
+               placeholder={tFields("handler.placeholder")}
                className="font-mono"
              />
            </div>
@@ -192,7 +195,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-rose-500/20">4</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Who is allowed to use it</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionWho")}</span>
            </div>
            
            <div className="grid grid-cols-2 gap-3 ml-1">
@@ -203,7 +206,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
 	                  onClick={() => updateDraft({ requiredRole: p })}
 	                  className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === form.requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
                 >
-                  <span className="text-[13px] font-bold tracking-wide">{p === "ADMIN" ? "Admin" : "System admin"}</span>
+                  <span className="text-[13px] font-bold tracking-wide">{p === "ADMIN" ? t("roleAdmin") : t("roleSystemAdmin")}</span>
                 </WriteButton>
               ))}
            </div>
@@ -212,34 +215,34 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-cyan-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-cyan-500/20">5</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Rules for running it</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionRules")}</span>
            </div>
 
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-1">
              <div className="flex flex-col gap-2">
-               <label htmlFor="tool-side-effect" className="mt-1 text-[12px] font-medium text-secondary">What it can do</label>
+               <label htmlFor="tool-side-effect" className="mt-1 text-[12px] font-medium text-secondary">{t("sideEffectLabel")}</label>
                <select
                  id="tool-side-effect"
                  value={form.sideEffectLevel}
                  onChange={(e) => updateDraft({ sideEffectLevel: e.target.value as ToolSideEffectLevel })}
                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
                >
-                 <option value="READ">Read</option>
-                 <option value="WRITE">Write</option>
-                 <option value="DESTRUCTIVE">Destructive</option>
-                 <option value="EXTERNAL">External</option>
+                 <option value="READ">{t("sideEffectRead")}</option>
+                 <option value="WRITE">{t("sideEffectWrite")}</option>
+                 <option value="DESTRUCTIVE">{t("sideEffectDestructive")}</option>
+                 <option value="EXTERNAL">{t("sideEffectExternal")}</option>
                </select>
              </div>
 
              <div className="flex flex-col gap-3">
-               <span className="mt-1 text-[12px] font-medium text-secondary">Before it runs</span>
+               <span className="mt-1 text-[12px] font-medium text-secondary">{t("beforeRuns")}</span>
                <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
                  <input
                    type="checkbox"
                    checked={form.confirmationRequired}
                    onChange={(e) => updateDraft({ confirmationRequired: e.target.checked })}
                  />
-                 Require approval
+                 {t("requireApproval")}
                </label>
                <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
                  <input
@@ -247,7 +250,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
                    checked={form.isActive}
                    onChange={(e) => updateDraft({ isActive: e.target.checked })}
                  />
-                 Active
+                 {t("active")}
                </label>
              </div>
            </div>
@@ -256,12 +259,12 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-sky-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-sky-500/20">6</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">What goes in and out</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionInOut")}</span>
            </div>
 
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-1">
              <TextAreaField
-               label="What it needs (JSON)"
+               label={t("inputLabel")}
                value={form.inputSchema}
                onChange={(e) => updateDraft({ inputSchema: e.target.value })}
                placeholder='{"type":"object","properties":{}}'
@@ -269,10 +272,10 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
                spellCheck={false}
              />
              <TextAreaField
-               label="What it gives back (JSON)"
+               label={t("outputLabel")}
                value={form.outputSchema}
                onChange={(e) => updateDraft({ outputSchema: e.target.value })}
-               placeholder='Optional: {"type":"object","properties":{}}'
+               placeholder={t("outputPlaceholder")}
                className="min-h-[180px] resize-y font-mono text-[12px]"
                spellCheck={false}
              />
@@ -287,7 +290,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Save changes</span>
+            <span>{t("save")}</span>
           </WriteButton>
         </div>
       </form>

@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { TextAreaField } from "@/src/ui/components/screens/Field";
 import { WidgetPanel } from "./WidgetPanel";
 
@@ -14,10 +16,11 @@ export function WidgetGreetingSection({
   setThemeGreeting,
   themeGreeting,
 }: WidgetGreetingSectionProps) {
+  const t = useTranslations("ai.widget.greeting");
   return (
     <WidgetPanel
-      title="Greeting"
-      description="Customize greeting message that will pop up automatically to the user."
+      title={t("title")}
+      description={t("description")}
     >
       {/*
         A setting, not a list.
@@ -30,14 +33,14 @@ export function WidgetGreetingSection({
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[14px] font-medium text-foreground">Default greeting</span>
+            <span className="text-[14px] font-medium text-foreground">{t("defaultGreeting")}</span>
             <span className="text-[12px] text-secondary">
-              {enableGreeting ? "Shown automatically to visitors." : "Turned off — visitors see nothing."}
+              {enableGreeting ? t("shownAutomatically") : t("turnedOff")}
             </span>
           </div>
 
           <label className="flex cursor-pointer items-center gap-2 transition-opacity">
-            <span className="text-[12px] text-secondary">{enableGreeting ? "On" : "Off"}</span>
+            <span className="text-[12px] text-secondary">{enableGreeting ? t("on") : t("off")}</span>
             <div
               className={`flex h-5 w-10 items-center rounded-full p-0.5 transition-colors ${
                 enableGreeting ? "bg-brand" : "bg-border-dim"
@@ -59,12 +62,12 @@ export function WidgetGreetingSection({
         </div>
 
         <TextAreaField
-          label="Greeting message"
+          label={t("messageLabel")}
           rows={2}
           value={themeGreeting}
           onChange={(event) => setThemeGreeting(event.target.value)}
           disabled={!enableGreeting}
-          placeholder="Type a greeting message..."
+          placeholder={t("messagePlaceholder")}
           className="resize-none disabled:opacity-50"
         />
       </div>

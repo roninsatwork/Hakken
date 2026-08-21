@@ -16,6 +16,17 @@ const MINUTE_MS = 60 * SECOND_MS;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
+/**
+ * A reference to a message in the catalogue rather than the English itself.
+ *
+ * These helpers run outside React, so they cannot translate. They return the
+ * key (relative to `admin.agents.labels`) plus any parameters, and the screen
+ * that renders the label resolves it with `useTranslations("admin.agents.labels")`.
+ * This keeps one mapping from platform vocabulary to reader vocabulary while
+ * letting the words live in the catalogue with everything else.
+ */
+export type LabelRef = { key: string; params?: Record<string, string | number> };
+
 export function formatCount(value: number): string {
   return Math.round(value).toLocaleString("en-GB");
 }
@@ -59,7 +70,7 @@ export function formatPercent(rate: number | undefined): string {
 }
 
 export type Change = {
-  label: string;
+  label: LabelRef;
   direction: "up" | "down" | "flat" | "unknown";
 };
 
@@ -72,16 +83,16 @@ export type Change = {
 export function formatCountChange(current: number, previous: number): Change {
   if (previous === 0) {
     return current === 0
-      ? { label: "no change", direction: "flat" }
-      : { label: "nothing to compare yet", direction: "unknown" };
+      ? { label: { key: "change.noChange" }, direction: "flat" }
+      : { label: { key: "change.nothingToCompare" }, direction: "unknown" };
   }
 
   const ratio = (current - previous) / previous;
   const percent = Math.round(Math.abs(ratio) * 100);
-  if (percent === 0) return { label: "about the same", direction: "flat" };
+  if (percent === 0) return { label: { key: "change.aboutSame" }, direction: "flat" };
 
   return {
-    label: `${percent}% ${ratio > 0 ? "more" : "fewer"}`,
+    label: { key: ratio > 0 ? "change.moreCount" : "change.fewerCount", params: { percent } },
     direction: ratio > 0 ? "up" : "down",
   };
 }
@@ -98,36 +109,36 @@ export function formatRateChange(current: number, previous: number, options?: { 
   const points = (current - previous) * 100;
   const rounded = Math.round(Math.abs(points) * 10) / 10;
 
-  if (rounded === 0) return { label: "about the same", direction: "flat" };
+  if (rounded === 0) return { label: { key: "change.aboutSame" }, direction: "flat" };
 
   const improved = points > 0 === higherIsBetter;
   return {
-    label: `${rounded} pts ${points > 0 ? "higher" : "lower"}`,
+    label: { key: points > 0 ? "change.ptsHigher" : "change.ptsLower", params: { points: rounded } },
     direction: improved ? "up" : "down",
   };
 }
 
 /** How long ago something happened, in the roundest true unit. */
-export function formatRelativeTime(timestamp: number, now: number): string {
+export function formatRelativeTime(timestamp: number, now: number): LabelRef {
   const elapsed = now - timestamp;
-  if (elapsed < 0) return "just now";
-  if (elapsed < MINUTE_MS) return "just now";
+  if (elapsed < 0) return { key: "relative.justNow" };
+  if (elapsed < MINUTE_MS) return { key: "relative.justNow" };
   if (elapsed < HOUR_MS) {
     const minutes = Math.floor(elapsed / MINUTE_MS);
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    return { key: "relative.minutesAgo", params: { count: minutes } };
   }
   if (elapsed < DAY_MS) {
     const hours = Math.floor(elapsed / HOUR_MS);
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    return { key: "relative.hoursAgo", params: { count: hours } };
   }
   const days = Math.floor(elapsed / DAY_MS);
-  if (days === 1) return "yesterday";
-  return `${days} days ago`;
+  if (days === 1) return { key: "relative.yesterday" };
+  return { key: "relative.daysAgo", params: { count: days } };
 }
 
-/** The short weekday for a chart column. */
-export function formatDayLabel(dayStartMs: number): string {
-  return new Date(dayStartMs).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+/** The short weekday for a chart column, in the reader's language. */
+export function formatDayLabel(dayStartMs: number, locale = "en-GB"): string {
+  return new Date(dayStartMs).toLocaleDateString(locale, { weekday: "short", timeZone: "UTC" });
 }
 
 /**
@@ -137,31 +148,31 @@ export function formatDayLabel(dayStartMs: number): string {
  * to somebody who has not been told what an approval gate is, and it is the one
  * status that requires the reader to go and do something.
  */
-export function describeRunStatus(status: string, continued = false): string {
+export function describeRunStatus(status: string, continued = false): LabelRef {
   switch (status) {
-    case "SUCCESS": return "Done";
+    case "SUCCESS": return { key: "runStatus.done" };
     // A run that worked to its per-run ceiling and whose queue the next run
     // picked up is the system pacing itself, not a fault. Only a run nothing
     // continued reads as failed.
-    case "FAILED": return continued ? "Handed over" : "Failed";
-    case "CANCELLED": return "Stopped";
-    case "RUNNING": return "Running";
-    case "QUEUED": return "Queued";
-    case "PENDING_APPROVAL": return "Needs you";
-    default: return status;
+    case "FAILED": return { key: continued ? "runStatus.handedOver" : "runStatus.failed" };
+    case "CANCELLED": return { key: "runStatus.stopped" };
+    case "RUNNING": return { key: "runStatus.running" };
+    case "QUEUED": return { key: "runStatus.queued" };
+    case "PENDING_APPROVAL": return { key: "runStatus.needsYou" };
+    default: return { key: "runStatus.unknown", params: { status } };
   }
 }
 
 /** The trigger, said as a person would say it. */
-export function describeTrigger(trigger: string): string {
+export function describeTrigger(trigger: string): LabelRef {
   switch (trigger) {
-    case "CHAT": return "From a conversation";
-    case "MANUAL": return "Started by hand";
-    case "SCHEDULE": return "Scheduled";
-    case "WEBHOOK": return "Triggered by another system";
-    case "WORKFLOW": return "Part of a workflow";
-    case "EVENT": return "Triggered by an event";
-    default: return trigger;
+    case "CHAT": return { key: "trigger.chat" };
+    case "MANUAL": return { key: "trigger.manual" };
+    case "SCHEDULE": return { key: "trigger.schedule" };
+    case "WEBHOOK": return { key: "trigger.webhook" };
+    case "WORKFLOW": return { key: "trigger.workflow" };
+    case "EVENT": return { key: "trigger.event" };
+    default: return { key: "trigger.unknown", params: { trigger } };
   }
 }
 
@@ -178,24 +189,24 @@ function humaniseToolName(raw: string): string {
  * whoever is reading a stack trace, not for the person asking why their agent
  * stopped working.
  */
-export function describeInteractionType(interactionType: string): string {
+export function describeInteractionType(interactionType: string): LabelRef {
   const raw = interactionType.trim();
 
   const dispatch = /^TOOL DISPATCH:\s*(.+)$/i.exec(raw);
-  if (dispatch) return `Used ${humaniseToolName(dispatch[1])}`;
+  if (dispatch) return { key: "interaction.usedTool", params: { tool: humaniseToolName(dispatch[1]) } };
 
   const awaiting = /^TOOL AWAITING APPROVAL:\s*(.+)$/i.exec(raw);
-  if (awaiting) return `Waiting to use ${humaniseToolName(awaiting[1])}`;
+  if (awaiting) return { key: "interaction.waitingTool", params: { tool: humaniseToolName(awaiting[1]) } };
 
   switch (raw.toUpperCase()) {
-    case "LLM SYNTHESIS": return "Worked out what to say";
-    case "ERROR": return "Something went wrong";
-    case "WORKFLOW_EXECUTION": return "Ran as part of a workflow";
-    case "BATCH_GENERATION_START": return "Started building a report";
-    case "BATCH_GENERATION_SUCCESS": return "Finished building a report";
-    case "SWARM MICRO-EXECUTION": return "Worked as one of a group";
-    case "SYSTEM INSTRUCTION": return "Read its instructions";
-    default: return raw;
+    case "LLM SYNTHESIS": return { key: "interaction.synthesis" };
+    case "ERROR": return { key: "interaction.error" };
+    case "WORKFLOW_EXECUTION": return { key: "interaction.workflowExecution" };
+    case "BATCH_GENERATION_START": return { key: "interaction.batchStart" };
+    case "BATCH_GENERATION_SUCCESS": return { key: "interaction.batchSuccess" };
+    case "SWARM MICRO-EXECUTION": return { key: "interaction.swarm" };
+    case "SYSTEM INSTRUCTION": return { key: "interaction.systemInstruction" };
+    default: return { key: "interaction.unknown", params: { type: raw } };
   }
 }
 
@@ -247,13 +258,17 @@ function previewFromJson(raw: string): string | undefined {
  * Without this the raw log listed what kind of thing each entry was but never
  * what it was about, so every property search on the page read identically and
  * the only way to find the one that mattered was to open all of them.
+ *
+ * Returns `undefined` when there is nothing to preview; the screen says
+ * "Nothing was recorded" in the reader's language. Content is data, not copy —
+ * it is never routed through the catalogue.
  */
-export function summariseLogContent(content: string | undefined): string {
+export function summariseLogContent(content: string | undefined): string | undefined {
   const raw = (content ?? "").trim();
-  if (!raw) return "Nothing was recorded";
+  if (!raw) return undefined;
 
   const collapsed = (previewFromJson(raw) ?? raw).replace(/\s+/g, " ").trim();
-  if (!collapsed) return "Nothing was recorded";
+  if (!collapsed) return undefined;
 
   return collapsed.length > PREVIEW_MAX_CHARS
     ? `${collapsed.slice(0, PREVIEW_MAX_CHARS - 1).trimEnd()}…`

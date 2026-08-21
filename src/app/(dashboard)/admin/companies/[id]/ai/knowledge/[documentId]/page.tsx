@@ -15,6 +15,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
@@ -37,6 +38,7 @@ function isEmbeddingUseCaseError(message: string | undefined) {
 }
 
 export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledgeDocumentPageProps) {
+  const t = useTranslations("admin.companyDetails.knowledgeDoc");
   const { id: companyId, documentId } = use(params);
   const inspection = useQuery(api.knowledge.inspectDocument, { documentId });
   const retryDocumentIngestion = useMutation(api.knowledge.retryDocumentIngestion);
@@ -50,7 +52,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
     try {
       await retryDocumentIngestion({ documentId });
     } catch (error: unknown) {
-      setRetryError(getErrorMessage(error, "Failed to retry ingestion."));
+      setRetryError(getErrorMessage(error, t("retryFailed")));
     } finally {
       setIsRetrying(false);
     }
@@ -72,10 +74,10 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
       <div className="flex flex-col gap-4 w-full pb-10">
         <Link href={backHref} className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors w-max">
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to knowledge</span>
+          <span>{t("back")}</span>
         </Link>
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
-          This document could not be inspected.
+          {t("notFound")}
         </div>
       </div>
     );
@@ -89,7 +91,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
       <header className="flex flex-col gap-3">
         <Link href={backHref} className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors w-max">
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to knowledge</span>
+          <span>{t("back")}</span>
         </Link>
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
           <div className="min-w-0">
@@ -105,7 +107,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
                 {document.format}
               </span>
               <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
-                {inspection.chunkCount} sampled chunks
+                {t("sampledChunks", { count: inspection.chunkCount })}
               </span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -126,7 +128,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
             className="h-9 px-4 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[13px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
           >
             {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-            Retry ingestion
+            {t("retryIngestion")}
           </WriteButton>
         </div>
       </header>
@@ -141,16 +143,16 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
         <section className="rounded-[8px] border border-destructive/25 bg-destructive/10 px-4 py-4 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="w-4 h-4" />
-            <h2 className="text-[14px] font-semibold">Ingestion failed</h2>
+            <h2 className="text-[14px] font-semibold">{t("ingestionFailed")}</h2>
           </div>
           <pre className="text-[12px] text-destructive whitespace-pre-wrap break-words leading-relaxed">
             {document.lastIngestionError}
           </pre>
           {hasEmbeddingConfigError && (
             <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-3 py-3 text-[13px] text-warning leading-relaxed">
-              This is an AI model configuration issue. Set the company embedding default to a Google Vertex model that supports the embedding use case, then retry ingestion.
+              {t("embeddingConfigIssue")}
               <Link href={modelsHref} className="ml-2 font-semibold text-warning hover:underline">
-                Open AI Models
+                {t("openAiModels")}
               </Link>
             </div>
           )}
@@ -159,24 +161,24 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-3">
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
-          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Stored embedding</div>
-          <div className="text-[13px] text-foreground font-semibold">{document.embeddingModelId || "No stored model"}</div>
-          <div className="text-[11px] text-secondary font-mono break-all">{document.embeddingProviderModelId || "No provider model"}</div>
-          <div className="text-[11px] text-muted">{document.embeddingDimensions ? `${document.embeddingDimensions} dimensions` : "No embedding dimensions stored"}</div>
+          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{t("storedEmbedding")}</div>
+          <div className="text-[13px] text-foreground font-semibold">{document.embeddingModelId || t("noStoredModel")}</div>
+          <div className="text-[11px] text-secondary font-mono break-all">{document.embeddingProviderModelId || t("noProviderModel")}</div>
+          <div className="text-[11px] text-muted">{document.embeddingDimensions ? t("dimensions", { count: document.embeddingDimensions }) : t("noDimensionsStored")}</div>
         </div>
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
-          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Active embedding</div>
-          <div className="text-[13px] text-foreground font-semibold">{inspection.activeEmbeddingModel?.modelId || "No active model"}</div>
-          <div className="text-[11px] text-secondary font-mono break-all">{inspection.activeEmbeddingModel?.providerModelId || "No provider model"}</div>
-          <div className="text-[11px] text-muted">{inspection.activeEmbeddingModel?.embeddingDimensions ? `${inspection.activeEmbeddingModel.embeddingDimensions} dimensions` : "No embedding dimensions resolved"}</div>
+          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{t("activeEmbedding")}</div>
+          <div className="text-[13px] text-foreground font-semibold">{inspection.activeEmbeddingModel?.modelId || t("noActiveModel")}</div>
+          <div className="text-[11px] text-secondary font-mono break-all">{inspection.activeEmbeddingModel?.providerModelId || t("noProviderModel")}</div>
+          <div className="text-[11px] text-muted">{inspection.activeEmbeddingModel?.embeddingDimensions ? t("dimensions", { count: inspection.activeEmbeddingModel.embeddingDimensions }) : t("noDimensionsResolved")}</div>
         </div>
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
-          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Timeline</div>
+          <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{t("timeline")}</div>
           <div className="flex flex-col gap-1 text-[11px] text-secondary font-mono">
-            <span>created: {formatDate(document.createdAt)}</span>
-            {document.lastQueuedAt && <span>queued: {formatDate(document.lastQueuedAt)}</span>}
-            {document.lastIngestionStartedAt && <span>started: {formatDate(document.lastIngestionStartedAt)}</span>}
-            {document.lastIngestedAt && <span>fresh: {formatDate(document.lastIngestedAt)}</span>}
+            <span>{t("created", { date: formatDate(document.createdAt) })}</span>
+            {document.lastQueuedAt && <span>{t("queued", { date: formatDate(document.lastQueuedAt) })}</span>}
+            {document.lastIngestionStartedAt && <span>{t("started", { date: formatDate(document.lastIngestionStartedAt) })}</span>}
+            {document.lastIngestedAt && <span>{t("fresh", { date: formatDate(document.lastIngestedAt) })}</span>}
           </div>
         </div>
       </section>
@@ -190,11 +192,11 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
         <section className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-4 flex flex-col gap-3 text-warning">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            <h2 className="text-[14px] font-semibold">Embedding model drift detected</h2>
+            <h2 className="text-[14px] font-semibold">{t("driftDetected")}</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[11px] font-mono text-warning/80">
-            <div>Stored: {inspection.embeddingDrift.storedModelId || "unknown"} ({inspection.embeddingDrift.storedDimensions || "?"} dims)</div>
-            <div>Active: {inspection.embeddingDrift.activeModelId} ({inspection.embeddingDrift.activeDimensions || "?"} dims)</div>
+            <div>{t("driftStored", { model: inspection.embeddingDrift.storedModelId || t("unknown"), dims: inspection.embeddingDrift.storedDimensions || "?" })}</div>
+            <div>{t("driftActive", { model: inspection.embeddingDrift.activeModelId, dims: inspection.embeddingDrift.activeDimensions || "?" })}</div>
           </div>
         </section>
       )}
@@ -202,10 +204,10 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
       <section className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-4 flex flex-col gap-3">
         <div className="flex items-center gap-2 text-secondary">
           <History className="w-4 h-4" />
-          <h2 className="text-[14px] font-semibold text-foreground">Ingestion history</h2>
+          <h2 className="text-[14px] font-semibold text-foreground">{t("historyTitle")}</h2>
         </div>
         {inspection.history.length === 0 ? (
-          <div className="text-[13px] text-secondary">No recent document events were found.</div>
+          <div className="text-[13px] text-secondary">{t("noEvents")}</div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
             {inspection.history.map((event) => (
@@ -226,21 +228,21 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[14px] font-semibold text-foreground">Stored chunks</h2>
-          <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{inspection.chunks.length} shown</span>
+          <h2 className="text-[14px] font-semibold text-foreground">{t("chunksTitle")}</h2>
+          <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("chunksShown", { count: inspection.chunks.length })}</span>
         </div>
         {inspection.chunks.length === 0 ? (
           <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
-            No chunks are stored for this document yet.
+            {t("noChunks")}
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {inspection.chunks.map((chunk) => (
               <div key={chunk.chunkId} className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
-                  <span>Chunk {chunk.index + 1}</span>
-                  <span>{chunk.characterCount} chars</span>
-                  <span>{chunk.embeddingDimensions} dimensions</span>
+                  <span>{t("chunkNumber", { number: chunk.index + 1 })}</span>
+                  <span>{t("chars", { count: chunk.characterCount })}</span>
+                  <span>{t("dimensions", { count: chunk.embeddingDimensions })}</span>
                 </div>
                 <pre className="text-[12px] text-secondary whitespace-pre-wrap break-words leading-relaxed max-h-52 overflow-auto">
                   {chunk.preview}

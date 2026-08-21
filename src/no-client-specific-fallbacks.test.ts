@@ -63,8 +63,7 @@ const ALLOWED_FILES = new Set(["convex/seedUsers.ts"]);
  * - localDemoSeed.ts / memoryMigration.ts: operator-run seed and one-time
  *   migration, not on any request path.
  *
- * Scope is convex/ (the backend builders); src/ still resolves branding via
- * `useSystemSettings` and its residual literals are a follow-up phase.
+ * Scope is convex/ (the backend builders).
  */
 const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
   "convex/emailLayoutService.ts": 2,
@@ -75,6 +74,18 @@ const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
   "convex/webhookDeliveryActions.ts": 1,
   "convex/webhookSignatureService.ts": 2,
 };
+
+/**
+ * The same rule for the admin screens and the shared components they use —
+ * the "follow-up phase" the convex/ scan's original docstring promised,
+ * executed 2026-08-21 (admin-clone-readiness plan, phase 3). Every
+ * user-visible builder-name string in these roots now resolves through
+ * `useSystemSettings().platformName`; entries here are the reviewed
+ * survivors, shrink-only, same contract as the backend map. The public site
+ * and user front end are deliberately outside this scan for now.
+ */
+const ADMIN_SCAN_ROOTS = ["src/app/(dashboard)/admin", "src/ui"];
+const ALLOWED_ADMIN_BUILDER_STRING_COUNTS: Record<string, number> = {};
 
 /**
  * The text of every string literal in a TS/JS source, comments and regex
@@ -254,6 +265,56 @@ describe("no client-specific fallbacks", () => {
       [
         "The platform name is configurable (systemSettings.platformName); a hardcoded builder name",
         "in a backend string ships the wrong identity to every deployment made from this repo.",
+        "",
+        ...failures,
+      ].join("\n"),
+    ).toEqual([]);
+  });
+
+  test("builder names appear in admin-screen strings only at the reviewed sites", () => {
+    const failures: string[] = [];
+
+    for (const root of ADMIN_SCAN_ROOTS) {
+      for (const filePath of walk(path.join(repoRoot, root))) {
+        const relativePath = toRepoRelative(filePath);
+        if (/\.test\.(ts|tsx)$/.test(relativePath)) continue;
+        if (![".ts", ".tsx"].includes(path.extname(relativePath))) continue;
+
+        const strings = extractStringLiteralText(fs.readFileSync(filePath, "utf8"));
+        let count = 0;
+        for (const literal of strings) {
+          // Module specifiers are string literals too, and the internal
+          // component names (SonaeModal etc.) live in import paths. A path
+          // is not user-visible copy; the components' own rendered text is
+          // still scanned like any other literal.
+          if (literal.startsWith("@/") || literal.startsWith("./") || literal.startsWith("../")) continue;
+          for (const name of BUILDER_STRINGS) {
+            count += literal.split(name).length - 1;
+          }
+        }
+
+        const allowed = ALLOWED_ADMIN_BUILDER_STRING_COUNTS[relativePath] ?? 0;
+        if (count > allowed) {
+          failures.push(
+            `${relativePath} has ${count} builder-name string(s), allowance is ${allowed}. ` +
+              `Admin screens resolve the platform name via useSystemSettings().platformName, ` +
+              `never a hardcoded builder name.`,
+          );
+        } else if (count < allowed) {
+          failures.push(
+            `${relativePath} has ${count} builder-name string(s) but the allowance says ${allowed}. ` +
+              `Shrink-only: lower this file's entry in ALLOWED_ADMIN_BUILDER_STRING_COUNTS.`,
+          );
+        }
+      }
+    }
+
+    expect(
+      failures,
+      [
+        "A clone renames itself by setting platformName in admin settings; a hardcoded",
+        "builder name in an admin-screen string undoes that for every product cloned",
+        "from this repo.",
         "",
         ...failures,
       ].join("\n"),

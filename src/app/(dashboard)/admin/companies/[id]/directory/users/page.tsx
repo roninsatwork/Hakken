@@ -16,6 +16,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import Link from "next/link";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
@@ -208,13 +209,14 @@ export default function CompanyUsersPage() {
 
           <div className="flex items-center gap-2">
             {isSuperAdmin && (
-              <button
+              <Button
+                variant="quiet"
                 onClick={() => { setSubmitError(""); setIsAssignModalOpen(true); }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-sidebar border border-border-dim hover:bg-foreground/5 text-foreground font-medium transition-all shadow-sm"
+                className="flex items-center gap-2 rounded-[10px] text-[13px] bg-sidebar text-foreground hover:bg-foreground/5 shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 <span>{t("addSystemAdmin")}</span>
-              </button>
+              </Button>
             )}
             <Link
               href={`/admin/companies/${companyId}/directory/invites`}
@@ -429,13 +431,13 @@ export default function CompanyUsersPage() {
           )}
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
+            <Button
+              variant="ghost"
               onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+              className="rounded-[10px] text-sm hover:bg-foreground/5"
             >
               Cancel
-            </button>
+            </Button>
             <WriteButton
 
               type="submit"
@@ -514,13 +516,13 @@ export default function CompanyUsersPage() {
           </div>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setIsAssignModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+              className="rounded-[10px] text-sm hover:bg-foreground/5"
             >
               Cancel
-            </button>
+            </Button>
             <WriteButton
               type="submit"
               disabled={isSubmitting || !selectedAdminId}

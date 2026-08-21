@@ -52,10 +52,10 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   if (pathname.startsWith("/admin/ai/knowledge") || pathname.startsWith("/admin/ai/global-knowledge")) {
     return [t("ai"), t("globalKnowledge")];
   }
-  if (pathname.startsWith("/admin/ai/skills")) return [t("ai"), "Skill Center"];
+  if (pathname.startsWith("/admin/ai/skills")) return [t("ai"), t("skillCenter")];
   if (pathname.startsWith("/admin/ai/models")) return [t("ai"), t("models")];
-  if (pathname.startsWith("/admin/ai/tools")) return [t("ai"), "Tools"];
-  if (pathname.startsWith("/admin/ai/widget")) return [t("ai"), "Widget"];
+  if (pathname.startsWith("/admin/ai/tools")) return [t("ai"), t("tools")];
+  if (pathname.startsWith("/admin/ai/widget")) return [t("ai"), t("widget")];
   if (pathname.startsWith("/admin/ai")) return [t("ai"), t("manageAi")];
   if (pathname.startsWith("/admin/companies")) return [t("companies")];
   if (pathname.startsWith("/admin/agents")) return [t("agents")];
@@ -73,19 +73,19 @@ export function getAssistantThreadIdFromPath(pathname: string) {
   return match ? match[1] : null;
 }
 
-function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformName: string, dashboardLabel: string) {
-  if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
-  if (pathname.startsWith("/app/tasks")) return ["Tasks"];
-  if (pathname.startsWith("/app/calls")) return ["Calls"];
+function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: string, dashboardLabel: string) {
+  if (pathname.startsWith("/app/assistant")) return [askLabel];
+  if (pathname.startsWith("/app/tasks")) return [t("tasks")];
+  if (pathname.startsWith("/app/calls")) return [t("calls")];
   if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
   if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
-  if (pathname.startsWith("/app/properties/logs")) return [t("properties"), "Logs"];
+  if (pathname.startsWith("/app/properties/logs")) return [t("properties"), t("logs")];
   if (pathname.startsWith("/app/properties")) return [t("properties")];
-  if (pathname.startsWith("/app/reports")) return ["Reports"];
-  if (pathname.startsWith("/app/settings/team")) return ["Organization", "Team Members"];
-  if (pathname.startsWith("/app/settings")) return ["Organization"];
-  if (pathname.startsWith("/app/arcade/ronins-run")) return ["Arcade", "Ronin's Run"];
-  if (pathname.startsWith("/demos")) return ["Posture Studio"];
+  if (pathname.startsWith("/app/reports")) return [t("reports")];
+  if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
+  if (pathname.startsWith("/app/settings")) return [t("organization")];
+  if (pathname.startsWith("/app/arcade/ronins-run")) return [t("arcade"), t("roninsRun")];
+  if (pathname.startsWith("/demos")) return [t("postureStudio")];
   return [dashboardLabel];
 }
 
@@ -111,11 +111,12 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const recordLogin = useMutation(api.users.recordLogin);
   const recordLogout = useMutation(api.users.recordLogout);
   const profileRef = useRef<HTMLDivElement>(null);
+  const askLabel = sidebarT("askPlatform", { platformName: settings.platformName });
   const headerSegments = isAdmin
     ? getAdminHeaderSegments(pathname, sidebarT)
     : openThread?.title
-      ? [`Ask ${settings.platformName}`, openThread.title]
-      : getAppHeaderSegments(pathname, sidebarT, settings.platformName, tc("dashboard"));
+      ? [askLabel, openThread.title]
+      : getAppHeaderSegments(pathname, sidebarT, askLabel, tc("dashboard"));
   const HeaderIcon = isAdmin && pathname.startsWith("/admin/ai")
     ? Bot
     : pathname.startsWith("/admin/companies") || pathname.startsWith("/app/properties")
@@ -223,6 +224,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
         <NotificationBell />
 
         <div className="relative" ref={profileRef}>
+          {/* Raw on purpose: an avatar-and-name compound trigger, not one of
+              the kit's button recipes. */}
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-4 p-1 rounded-full hover:bg-foreground/5 transition-colors group"
@@ -289,6 +292,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
 
                   <div className="h-px bg-border-dim my-1 mx-2" />
 
+                  {/* Raw on purpose: a menu row matching the Links above it —
+                      not a standalone button recipe. */}
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-[#f43f5e] hover:bg-[#f43f5e]/10 transition-all text-left font-medium"

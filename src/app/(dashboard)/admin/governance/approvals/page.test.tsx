@@ -21,6 +21,13 @@ vi.mock("next-intl", () => ({
     if (key === "count.pending") return `${values?.count}${values?.suffix} waiting`;
     if (key === "confirm.body") return `The agent asked to run ${values?.tool}.`;
     if (key === "footer.showing") return `Showing ${values?.count}`;
+    // The shared table footer's own defaults (ui.table), which this screen
+    // leans on rather than supplying labels of its own.
+    if (key === "showingRange") return `Showing ${values?.start}-${values?.end} of ${values?.total}`;
+    if (key === "pageOf") return `Page ${values?.page} of ${values?.totalPages}`;
+    if (key === "previous") return "Previous";
+    if (key === "next") return "Next";
+    if (key === "noEntries") return "No entries found";
     return key;
   },
 }));

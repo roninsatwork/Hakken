@@ -43,6 +43,8 @@ export default function ChartExportWrapper({ children, exportName, className = "
   return (
     <div ref={chartRef} className={`group relative ${className}`}>
       {children}
+      {/* Raw on purpose: a theme-conditional glass chip revealed by hovering
+          the chart — nothing like the kit's `icon` recipe. */}
       <button
         onClick={(e) => {
           e.preventDefault();

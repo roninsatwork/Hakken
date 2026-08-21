@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
 
@@ -25,6 +26,7 @@ export function CompanySkillCheckboxPicker({
   onToggleSkill,
   onLoadMore,
 }: CompanySkillCheckboxPickerProps) {
+  const t = useTranslations("admin.skillPicker");
   return (
     <div className="overflow-hidden rounded-[8px] border border-border-dim bg-background/50">
       {status === "LoadingFirstPage" ? (
@@ -56,9 +58,9 @@ export function CompanySkillCheckboxPicker({
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="text-[13px] font-semibold text-foreground">{skill.name}</span>
                     <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{skill.category}</span>
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{skill.riskLevel.toLowerCase()} risk</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{t("risk", { level: skill.riskLevel.toLowerCase() })}</span>
                   </span>
-                  <span className="mt-1 block line-clamp-2 text-[12px] text-secondary">{skill.description || "No description provided."}</span>
+                  <span className="mt-1 block line-clamp-2 text-[12px] text-secondary">{skill.description || t("noDescription")}</span>
                 </span>
               </label>
             );

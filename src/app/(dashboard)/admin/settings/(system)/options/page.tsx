@@ -26,6 +26,7 @@ export default function DeveloperDiagnosticsPage() {
           repeated both, word for word, wrapped in a third box. One row, said
           once, with the switch labelled so it reads as on or off. */}
       <SettingBlock title={t("options.routingMatrix")} sub={t("options.routingMatrixSub")}>
+        {/* Stays raw: a full-width aria-pressed toggle card — matches no variant. */}
         <button
           type="button"
           aria-pressed={formData.diagnosticRoutingEnabled ?? false}

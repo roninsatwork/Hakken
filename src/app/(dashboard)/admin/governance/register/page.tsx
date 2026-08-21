@@ -14,6 +14,7 @@ import {
   type RegisterSort,
 } from "@/convex/governanceRegisterService";
 import { RegisterEntryPanel } from "./RegisterEntryPanel";
+import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -121,6 +122,7 @@ export default function AiRegisterPage() {
   /** A heading that reorders the list, with the one in force saying so. */
   // Returns the button alone: DataTable owns the header cell around it.
   const SortableHeader = ({ label, by }: { label: string; by: RegisterSort }) => (
+    // Stays raw: a bare sort-header text control inheriting the header cell's type — matches no variant.
     <button
         type="button"
         onClick={() => narrow(() => setSort(sort === by ? "ATTENTION" : by))}
@@ -164,6 +166,7 @@ export default function AiRegisterPage() {
               const flagged = option.needsAttention && (option.count ?? 0) > 0;
 
               return (
+                // Stays raw: an aria-pressed summary chip with selection and attention colours — matches no variant.
                 <button
                   key={option.key}
                   type="button"
@@ -200,8 +203,8 @@ export default function AiRegisterPage() {
             </Select>
 
             {filtering ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() =>
                   narrow(() => {
                     setSearch("");
@@ -209,10 +212,10 @@ export default function AiRegisterPage() {
                     setKind("ALL");
                   })
                 }
-                className="h-[34px] rounded-[10px] px-3 text-[13px] text-secondary transition-colors hover:text-foreground"
+                className="h-[34px] rounded-[10px] px-3 py-0 font-normal hover:bg-transparent"
               >
                 {t("filters.clear")}
-              </button>
+              </Button>
             ) : null}
           </>
         }

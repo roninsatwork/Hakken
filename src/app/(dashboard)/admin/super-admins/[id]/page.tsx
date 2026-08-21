@@ -14,8 +14,10 @@ import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { describeDevice } from "@/src/lib/devices";
+import { useTranslations } from "next-intl";
 
 export default function UserProfilePage() {
+  const t = useTranslations("admin.superAdmins.profile");
   const params = useParams();
   const userId = params.id as Id<"users">;
 
@@ -49,9 +51,9 @@ export default function UserProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <ShieldAlert className="w-12 h-12 text-red-500/50" />
-        <h2 className="text-xl font-medium text-foreground">User Not Found</h2>
+        <h2 className="text-xl font-medium text-foreground">{t("notFound")}</h2>
         <Link href="/admin/users" className="text-sm text-secondary hover:text-foreground">
-          &larr; Return to Directory
+          &larr; {t("returnToDirectory")}
         </Link>
       </div>
     );
@@ -65,9 +67,9 @@ export default function UserProfilePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <User className="w-6 h-6 text-brand" />
-            User Profile
+            {t("title")}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Viewing system attributes and protocol identities.</p>
+          <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -76,7 +78,7 @@ export default function UserProfilePage() {
             className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Directory
+            {t("backToDirectory")}
           </Link>
         </div>
       </header>
@@ -86,24 +88,24 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-8 w-full">
           
           <div className="flex flex-col gap-1.5 w-full">
-            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">Full Name</label>
+            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("fullName")}</label>
             <div className="text-[15px] font-medium text-foreground flex items-center">
-              {user.name || 'Unnamed User'}
+              {user.name || t("unnamedUser")}
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5 w-full">
             <label className="text-[11px] font-medium text-secondary uppercase tracking-widest flex items-center justify-between">
-              <span>Communications (Email)</span>
-              <span className="text-[9px] bg-foreground/10 px-2 py-0.5 rounded-sm text-foreground/70 tracking-normal">VERIFIED</span>
+              <span>{t("email")}</span>
+              <span className="text-[9px] bg-foreground/10 px-2 py-0.5 rounded-sm text-foreground/70 tracking-normal">{t("verified")}</span>
             </label>
             <div className="text-[15px] text-foreground flex items-center">
-              {user.email || 'No Email'}
+              {user.email || t("noEmail")}
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5 w-full">
-            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">System Role</label>
+            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("systemRole")}</label>
             <div className="flex items-center gap-2 text-foreground">
               {user.role === 'ADMIN' ? <ShieldCheck className="w-4 h-4 text-brand" /> : <User className="w-4 h-4 text-foreground/70" />}
               <span className="text-[13px] font-mono font-medium tracking-wide">{user.role || 'USER'}</span>
@@ -111,7 +113,7 @@ export default function UserProfilePage() {
           </div>
 
           <div className="flex flex-col gap-1.5 w-full">
-            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">Profile Photo</label>
+            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("profilePhoto")}</label>
             <div className="flex items-center gap-4 w-full h-full">
               {user.image ? (
                 <Image
@@ -128,8 +130,8 @@ export default function UserProfilePage() {
                 </div>
               )}
               <div className="flex flex-col items-start gap-1">
-                <span className="text-[13px] font-medium text-foreground">Current Avatar</span>
-                <p className="text-[11px] text-secondary">Rendered from authentication provider.</p>
+                <span className="text-[13px] font-medium text-foreground">{t("currentAvatar")}</span>
+                <p className="text-[11px] text-secondary">{t("avatarSource")}</p>
               </div>
             </div>
           </div>
@@ -139,18 +141,19 @@ export default function UserProfilePage() {
 
       {/* Advanced Details tabs */}
       <div className="w-full flex gap-6 border-b border-border-dim/50 pb-3 mt-6 relative z-10">
-        <button 
+        {/* This pair stays raw: underline tabs that turn brand when active — matches no variant. */}
+        <button
           onClick={() => setActiveTab("logins")}
           className={`text-[13px] font-medium transition-colors relative ${activeTab === "logins" ? "text-brand" : "text-secondary hover:text-foreground"}`}
         >
-          Security & Logins
+          {t("tabLogins")}
           {activeTab === "logins" && <div className="absolute -bottom-[14px] left-0 right-0 h-0.5 bg-brand" />}
         </button>
         <button 
           onClick={() => setActiveTab("costs")}
           className={`text-[13px] font-medium transition-colors relative ${activeTab === "costs" ? "text-brand" : "text-secondary hover:text-foreground"}`}
         >
-          AI Costs
+          {t("tabCosts")}
           {activeTab === "costs" && <div className="absolute -bottom-[14px] left-0 right-0 h-0.5 bg-brand" />}
         </button>
       </div>
@@ -161,16 +164,16 @@ export default function UserProfilePage() {
           <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-[15px] font-medium text-foreground tracking-wide">Recent Login Activity</h3>
-              <p className="text-[12px] text-secondary mt-0.5">Track devices and geographic locations accessing this account.</p>
+              <h3 className="text-[15px] font-medium text-foreground tracking-wide">{t("loginActivity")}</h3>
+              <p className="text-[12px] text-secondary mt-0.5">{t("loginActivitySub")}</p>
             </div>
             
             <div className="w-full sm:w-[260px] flex">
               <TableSearchInput
                 value={searchTerm}
                 onChange={setSearchTerm}
-                placeholder="Search devices or locations..."
-                clearLabel="Clear search"
+                placeholder={t("searchLogins")}
+                clearLabel={t("clearSearch")}
               />
             </div>
           </div>
@@ -182,7 +185,7 @@ export default function UserProfilePage() {
             headerVariant="strip"
             empty={{
               icon: <MonitorSmartphone className="w-8 h-8 text-muted/30" />,
-              label: "No login records found for this user.",
+              label: t("noLogins"),
             }}
             footer={{
               mode: "paged",
@@ -192,12 +195,12 @@ export default function UserProfilePage() {
               pageSize: pagedLogins.pageSize,
               isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
               onPageChange: pagedLogins.goToPage,
-              labels: { empty: "No login records found for this user." },
+              labels: { empty: t("noLogins") },
             }}
             columns={[
               {
                 key: "device",
-                header: "Device",
+                header: t("columnDevice"),
                 cell: (login) => (
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-foreground/5 border border-border-dim flex items-center justify-center">
@@ -216,7 +219,7 @@ export default function UserProfilePage() {
               },
               {
                 key: "location",
-                header: "Location & IP",
+                header: t("columnLocation"),
                 cell: (login) => (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-secondary" />
@@ -229,7 +232,7 @@ export default function UserProfilePage() {
               },
               {
                 key: "status",
-                header: "Status",
+                header: t("columnStatus"),
                 cell: (login) => (
                   <div className="flex items-center gap-1.5">
                     {/* Blue for a sign-in that worked, amber for one that did
@@ -245,7 +248,7 @@ export default function UserProfilePage() {
               },
               {
                 key: "timestamp",
-                header: "Timestamp",
+                header: t("columnTimestamp"),
                 align: "right",
                 cell: (login) => (
                   <span className="text-[12px] text-secondary tracking-wide">
@@ -270,6 +273,7 @@ export default function UserProfilePage() {
 }
 
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
+  const t = useTranslations("admin.superAdmins.profile");
   const [searchTerm, setSearchTerm] = useState("");
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });
@@ -302,11 +306,11 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
     <div className="flex flex-col gap-6 mt-4 w-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
-          <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">Gross AI Cost</span>
+          <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("grossCost")}</span>
           <span className="text-2xl font-medium text-foreground">${costs.totalCostGBP.toFixed(4)}</span>
         </div>
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
-          <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">Total Tokens Executed</span>
+          <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("totalTokens")}</span>
           <span className="text-2xl font-medium text-foreground">{costs.totalTokens.toLocaleString()}</span>
         </div>
       </div>
@@ -320,16 +324,16 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         cardHeader={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
             <div>
-              <h3 className="text-[14px] font-medium text-foreground tracking-wide">AI Usage Log</h3>
-              <p className="text-[12px] text-secondary mt-0.5">Track AI execution instances specific to this user.</p>
+              <h3 className="text-[14px] font-medium text-foreground tracking-wide">{t("usageLog")}</h3>
+              <p className="text-[12px] text-secondary mt-0.5">{t("usageLogSub")}</p>
             </div>
 
             <div className="w-full sm:w-[260px] flex">
               <TableSearchInput
                 value={searchTerm}
                 onChange={setSearchTerm}
-                placeholder="Search conversations..."
-                clearLabel="Clear search"
+                placeholder={t("searchConversations")}
+                clearLabel={t("clearSearch")}
               />
             </div>
           </div>
@@ -337,8 +341,8 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         empty={{
           icon: <MessageSquare className="w-8 h-8 text-muted/30" />,
           label: costThreads.length === 0
-            ? "No AI conversations logged for this user."
-            : "No conversations match your search.",
+            ? t("noConversations")
+            : t("noConversationsMatch"),
         }}
         footer={{
           mode: "paged",
@@ -352,14 +356,14 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         columns={[
           {
             key: "conversation",
-            header: "Conversation",
+            header: t("columnConversation"),
             cell: (thread) => (
               <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
             ),
           },
           {
             key: "date",
-            header: "Date Started",
+            header: t("columnDateStarted"),
             cell: (thread) => (
               <span className="text-[13px] text-secondary">
                 {formatDate(thread.createdAt, { options: { month: 'short', day: 'numeric', year: 'numeric' } })}
@@ -368,19 +372,19 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
           },
           {
             key: "messages",
-            header: "Messages",
+            header: t("columnMessages"),
             cell: (thread) => <span className="text-[13px] text-secondary">{thread.messageCount}</span>,
           },
           {
             key: "tokens",
-            header: "Tokens Used",
+            header: t("columnTokens"),
             cell: (thread) => (
               <span className="text-[13px] text-secondary">{thread.threadTokens.toLocaleString()}</span>
             ),
           },
           {
             key: "cost",
-            header: "Cost ($)",
+            header: t("columnCost"),
             align: "right",
             cell: (thread) => (
               <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>

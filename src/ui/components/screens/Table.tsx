@@ -3,6 +3,8 @@
 import { createContext, useContext } from "react";
 import type { KeyboardEventHandler, ReactNode, Ref } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/src/ui/atoms/Button";
 import { useCanWriteHere } from "./AccessLevel";
 
 type AdminSearchBarProps = {
@@ -296,24 +298,19 @@ export function RowIconButton({
 
   if (!canWriteHere && !navigates) return null;
 
-  const toneClass =
-    tone === "danger"
-      ? "hover:bg-red-500/10 text-secondary hover:text-red-500"
-      : "hover:bg-foreground/5 text-secondary hover:text-foreground";
-
   return (
-    <button
-      type="button"
+    <Button
+      variant="icon"
       onClick={(event) => {
         event.stopPropagation();
         onClick();
       }}
-      className={`p-2 rounded-full transition-colors ${toneClass}`}
+      className={tone === "danger" ? "hover:bg-red-500/10 hover:text-red-500" : undefined}
       title={label}
       aria-label={label}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -367,12 +364,14 @@ function FooterCount({
   showing: () => string;
   empty?: string;
 }) {
+  const t = useTranslations("ui.table");
+
   return (
     <div className="text-[12px] font-medium text-secondary">
       {isLoading ? null : hasRows ? (
         <span>{showing()}</span>
       ) : (
-        <span>{empty ?? "No entries found"}</span>
+        <span>{empty ?? t("noEntries")}</span>
       )}
     </div>
   );
@@ -389,6 +388,8 @@ function FooterStepButton({
   children: ReactNode;
 }) {
   return (
+    // Raw on purpose: pagination chrome — borderless until hovered, dims to 30%
+    // when it cannot page. No Button variant is this recipe.
     <button
       type="button"
       onClick={onClick}
@@ -425,6 +426,7 @@ export function PaginationFooter({
   onPageChange,
   labels,
 }: AdminPaginationFooterProps) {
+  const t = useTranslations("ui.table");
   const safeTotalPages = Math.max(totalPages, 1);
   const safePage = Math.min(Math.max(page, 1), safeTotalPages);
   const start = (safePage - 1) * pageSize + 1;
@@ -435,7 +437,7 @@ export function PaginationFooter({
       <FooterCount
         isLoading={isLoading}
         hasRows={totalCount > 0}
-        showing={() => labels?.showing?.(start, end, totalCount) ?? `Showing ${start}-${end} of ${totalCount}`}
+        showing={() => labels?.showing?.(start, end, totalCount) ?? t("showingRange", { start, end, total: totalCount })}
         empty={labels?.empty}
       />
 
@@ -445,18 +447,18 @@ export function PaginationFooter({
           disabled={safePage === 1 || isLoading}
         >
           <ChevronLeft className="w-4 h-4" />
-          {labels?.previous ?? "Previous"}
+          {labels?.previous ?? t("previous")}
         </FooterStepButton>
 
         <div className="flex items-center justify-center min-w-[100px] text-[12px] font-medium tracking-wide">
-          {labels?.page?.(safePage, safeTotalPages) ?? `Page ${safePage} of ${safeTotalPages}`}
+          {labels?.page?.(safePage, safeTotalPages) ?? t("pageOf", { page: safePage, totalPages: safeTotalPages })}
         </div>
 
         <FooterStepButton
           onClick={() => onPageChange(Math.min(safeTotalPages, safePage + 1))}
           disabled={safePage >= safeTotalPages || isLoading}
         >
-          {labels?.next ?? "Next"}
+          {labels?.next ?? t("next")}
           <ChevronRight className="w-4 h-4" />
         </FooterStepButton>
       </div>
@@ -505,23 +507,25 @@ export function CursorFooter({
   onStep,
   labels,
 }: AdminCursorFooterProps) {
+  const t = useTranslations("ui.table");
+
   return (
     <FooterBar>
       <FooterCount
         isLoading={isLoading}
         hasRows={visibleCount > 0}
-        showing={() => labels?.showing?.(visibleCount, page) ?? `Showing ${visibleCount} · page ${page}`}
+        showing={() => labels?.showing?.(visibleCount, page) ?? t("showingPage", { count: visibleCount, page })}
         empty={labels?.empty}
       />
 
       <div className="flex items-center gap-3">
         <FooterStepButton onClick={() => onStep("back")} disabled={!canGoBack || isLoading}>
           <ChevronLeft className="w-4 h-4" />
-          {labels?.previous ?? "Previous"}
+          {labels?.previous ?? t("previous")}
         </FooterStepButton>
 
         <FooterStepButton onClick={() => onStep("forward")} disabled={!canGoForward || isLoading}>
-          {labels?.next ?? "Next"}
+          {labels?.next ?? t("next")}
           <ChevronRight className="w-4 h-4" />
         </FooterStepButton>
       </div>
@@ -551,6 +555,8 @@ export function LoadMoreFooter({
   labels,
   variant = "bar",
 }: AdminLoadMoreFooterProps) {
+  const t = useTranslations("ui.table");
+
   // A quiet footer sits directly under the column it counts, with no bar of its
   // own, so an empty one would simply repeat the column's own empty state two
   // lines below it. The barred footer keeps saying it: there, the strip is
@@ -564,11 +570,13 @@ export function LoadMoreFooter({
       <FooterCount
         isLoading={isLoading}
         hasRows={visibleCount > 0}
-        showing={() => labels?.showing?.(visibleCount) ?? `Showing ${visibleCount}`}
+        showing={() => labels?.showing?.(visibleCount) ?? t("showingCount", { count: visibleCount })}
         empty={labels?.empty}
       />
 
       {canLoadMore && (
+        // Raw on purpose: two footer-only recipes chosen by the table variant
+        // (a bare text link, a bordered chip) — neither is a Button variant.
         <button
           type="button"
           onClick={onLoadMore}
@@ -580,7 +588,7 @@ export function LoadMoreFooter({
           }
         >
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isLoading ? labels?.loading ?? "Loading..." : labels?.loadMore ?? "Load more"}
+          {isLoading ? labels?.loading ?? t("loading") : labels?.loadMore ?? t("loadMore")}
         </button>
       )}
     </FooterBar>

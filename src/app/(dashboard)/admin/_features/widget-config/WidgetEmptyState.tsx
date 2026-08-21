@@ -1,4 +1,7 @@
 import { AppWindow, Loader2, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+import { Button } from "@/src/ui/atoms/Button";
 
 type WidgetEmptyStateProps = {
   actionLabel?: string;
@@ -9,12 +12,16 @@ type WidgetEmptyStateProps = {
 };
 
 export function WidgetEmptyState({
-  actionLabel = "Initialize Master Widget",
-  description = "Establish a secure embeddable widget to let your clients chat directly with your company intelligence.",
+  actionLabel,
+  description,
   isSaving,
   onInitialize,
-  title = "Unconfigured Integrations",
+  title,
 }: WidgetEmptyStateProps) {
+  const t = useTranslations("ai.widget.emptyState");
+  actionLabel ??= t("action");
+  description ??= t("description");
+  title ??= t("title");
   return (
     <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
       <AppWindow className="w-10 h-10 text-brand mb-4 opacity-80" />
@@ -22,14 +29,15 @@ export function WidgetEmptyState({
       <p className="text-[13px] text-secondary max-w-sm mb-6">
         {description}
       </p>
-      <button
+      <Button
+        variant="pill"
         onClick={onInitialize}
         disabled={isSaving}
-        className="flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
+        className="px-6 font-medium shadow-[0_0_20px_rgba(255,255,255,0.05)]"
       >
         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
         <span>{actionLabel}</span>
-      </button>
+      </Button>
     </div>
   );
 }

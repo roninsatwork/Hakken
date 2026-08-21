@@ -15,6 +15,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useToast } from "@/src/context/ToastContext";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
@@ -55,11 +56,11 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       // new job appears — top row, marked Running. Overview looks identical
       // the instant a job starts, so pressing the button read as doing nothing.
       router.push(`/admin/agents/${agentId}/runs`);
-      showToast("It has started. The new job is at the top of this list.", "success");
+      showToast(t("manualRun.started"), "success");
     } catch (e: unknown) {
       setModalState({
-        title: "It could not start",
-        message: getErrorMessage(e, "Something stopped this agent from running.")
+        title: t("manualRun.couldNotStart"),
+        message: getErrorMessage(e, t("manualRun.startFallback"))
       });
     } finally {
       setIsManualRunning(false);
@@ -72,11 +73,11 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     try {
       await cancelRun({ runId: stopRunId, reason: "Cancelled from the agent header" });
       setStopRunId(null);
-      showToast("Agent stopped. It will show as cancelled in Activity.", "success");
+      showToast(t("manualRun.stopped"), "success");
     } catch (e: unknown) {
       setModalState({
-        title: "It could not stop",
-        message: getErrorMessage(e, "Something stopped this agent from being cancelled.")
+        title: t("manualRun.couldNotStop"),
+        message: getErrorMessage(e, t("manualRun.stopFallback"))
       });
     } finally {
       setIsStoppingAgent(false);
@@ -152,7 +153,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
         agent.avatar ? (
           <Image
             src={agent.avatar}
-            alt="Avatar"
+            alt={t("avatarAlt")}
             width={40}
             height={40}
             unoptimized
@@ -170,6 +171,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       rootHref={`/admin/agents/${agentId}`}
       actions={
         <>
+            {/* Raw: run/stop swaps solid brand for rose with its state — no kit variant is stateful. */}
             <button
               onClick={() => {
                 if (hasActiveRun) {
@@ -194,7 +196,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
               ) : (
                 <Play className="w-3.5 h-3.5 fill-current" />
               )}
-              {hasActiveRun ? "Stop Agent" : "Run Agent"}
+              {hasActiveRun ? t("headerStop") : t("headerRun")}
             </button>
             <Link
               href="/admin/agents"
@@ -211,28 +213,29 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       <SonaeModal
         isOpen={stopRunId !== null}
         onClose={() => (isStoppingAgent ? undefined : setStopRunId(null))}
-        title="Stop this agent?"
+        title={t("stopModal.title")}
         size="sm"
       >
         <div className="pt-2 pb-4 px-1 flex flex-col gap-4">
           <p className="text-[13px] text-secondary">
-            This will cancel the running job and any pending approvals or tool calls. It cannot be undone.
+            {t("stopModal.body")}
           </p>
           <div className="flex justify-end gap-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setStopRunId(null)}
               disabled={isStoppingAgent}
-              className="px-4 py-2.5 rounded-[10px] border border-border-dim text-secondary font-medium text-[13px] hover:text-foreground transition-all disabled:opacity-50"
+              className="py-2.5 disabled:opacity-50"
             >
-              Keep running
-            </button>
+              {t("stopModal.keep")}
+            </Button>
             <WriteButton
               onClick={() => void handleConfirmStop()}
               disabled={isStoppingAgent}
               className="px-5 py-2.5 rounded-[10px] bg-rose-600 text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isStoppingAgent ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
-              Stop Agent
+              {t("stopModal.stop")}
             </WriteButton>
           </div>
         </div>
@@ -247,12 +250,13 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
         <div className="pt-2 pb-4 px-1 text-[14px] text-secondary flex flex-col gap-6">
            <p>{modalState?.message}</p>
            <div className="flex justify-end">
-             <button
+             <Button
+               variant="brand"
                onClick={() => setModalState(null)}
-               className="px-5 py-2.5 rounded-[10px] bg-brand text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm"
+               className="px-5 shadow-sm"
              >
                 Acknowledge
-             </button>
+             </Button>
           </div>
         </div>
       </SonaeModal>

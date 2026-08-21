@@ -102,6 +102,9 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
 
   return (
     <div className="mt-2 flex flex-col gap-2">
+      {/* Every chip in this component stays raw on purpose: tiny stateful
+          pills whose colours are the feedback state (sky/amber/muted) — no
+          Button variant is a toggled chip. */}
       <div className="flex items-center gap-2">
         <button
           type="button"

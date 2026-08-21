@@ -16,6 +16,7 @@ import {
   Loader2
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import Link from "next/link";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { useTranslations } from "next-intl";
 
 type SuperAdminFormData = {
   name: string;
@@ -47,11 +49,13 @@ function buildDirectoryColumns(actions: {
   onEdit: (user: Doc<"users">) => void;
   onDelete: (user: Doc<"users">) => void;
   onRevoke: (invite: Doc<"invitations">) => void;
+  t: (key: string, values?: Record<string, string | number>) => string;
 }): DataTableColumn<DirectoryRow>[] {
+  const { t } = actions;
   return [
     {
       key: "administrator",
-      header: "System Administrator",
+      header: t("columnAdmin"),
       cell: (row) =>
         row.kind === "invite" ? (
           <div className="flex items-center gap-3">
@@ -60,7 +64,7 @@ function buildDirectoryColumns(actions: {
             </div>
             <div>
               <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                Pending Invitation
+                {t("pendingInvitation")}
               </span>
               <span className="text-[12px] text-secondary">{row.invite.email}</span>
             </div>
@@ -89,12 +93,12 @@ function buildDirectoryColumns(actions: {
     },
     {
       key: "joined",
-      header: "Joined Date",
+      header: t("columnJoined"),
       cell: (row) =>
         row.kind === "invite" ? (
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
             <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-              PENDING {row.invite.role}
+              {t("pendingRole", { role: row.invite.role })}
             </span>
           </div>
         ) : (
@@ -112,16 +116,16 @@ function buildDirectoryColumns(actions: {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("columnActions"),
       align: "right",
       cell: (row) =>
         row.kind === "invite" ? (
           <RowActions>
             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
-              Awaiting Login
+              {t("awaitingLogin")}
             </span>
             <RowIconButton
-              label="Revoke invitation"
+              label={t("revokeInvitation")}
               tone="danger"
               onClick={() => actions.onRevoke(row.invite)}
             >
@@ -130,11 +134,11 @@ function buildDirectoryColumns(actions: {
           </RowActions>
         ) : (
           <RowActions>
-            <RowIconButton label="Edit administrator" onClick={() => actions.onEdit(row.user)}>
+            <RowIconButton label={t("editAdmin")} onClick={() => actions.onEdit(row.user)}>
               <Edit2 className="w-4 h-4" />
             </RowIconButton>
             <RowIconButton
-              label="Delete administrator"
+              label={t("deleteAdmin")}
               tone="danger"
               onClick={() => actions.onDelete(row.user)}
             >
@@ -148,6 +152,7 @@ function buildDirectoryColumns(actions: {
 
 
 export default function ManageSuperAdminsPage() {
+  const t = useTranslations("admin.superAdmins");
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
@@ -213,7 +218,7 @@ export default function ManageSuperAdminsPage() {
   }
 
   if (!isSuperAdmin) {
-    return <div className="p-8 text-secondary">Unauthorized area.</div>;
+    return <div className="p-8 text-secondary">{t("unauthorized")}</div>;
   }
 
   const handleOpenEdit = (user: Doc<"users">) => {
@@ -231,7 +236,7 @@ export default function ManageSuperAdminsPage() {
       await updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined });
       setIsAddModalOpen(false);
     } catch (err: unknown) {
-      setSubmitError(getErrorMessage(err, "Operation failed."));
+      setSubmitError(getErrorMessage(err, t("opFailed")));
     } finally {
       setIsSubmitting(false);
     }
@@ -244,7 +249,7 @@ export default function ManageSuperAdminsPage() {
         await deleteUser({ id: deletingUser._id });
         setDeletingUser(null);
       } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, "Failed to delete user."));
+        setSubmitError(getErrorMessage(err, t("deleteFailed")));
       } finally {
         setIsSubmitting(false);
       }
@@ -258,7 +263,7 @@ export default function ManageSuperAdminsPage() {
         await revokeInvite({ id: deletingInvite._id });
         setDeletingInvite(null);
       } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, "Failed to revoke invite."));
+        setSubmitError(getErrorMessage(err, t("revokeFailed")));
       } finally {
         setIsSubmitting(false);
       }
@@ -272,9 +277,9 @@ export default function ManageSuperAdminsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Users className="w-6 h-6 text-brand" />
-            System Administrators
+            {t("title")}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage all system Super Admin accounts with complete systemic control.</p>
+          <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
         </div>
         
         <Link 
@@ -282,18 +287,18 @@ export default function ManageSuperAdminsPage() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
-          <span>Invite User</span>
+          <span>{t("inviteUser")}</span>
         </Link>
       </div>
 
       <DataTable<DirectoryRow>
         rows={isLoadingFirstPage ? undefined : paged.pageRows}
         rowKey={(row) => (row.kind === "invite" ? `inv-${row.invite._id}` : `user-${row.user._id}`)}
-        columns={buildDirectoryColumns({ onEdit: handleOpenEdit, onDelete: setDeletingUser, onRevoke: setDeletingInvite })}
+        columns={buildDirectoryColumns({ onEdit: handleOpenEdit, onDelete: setDeletingUser, onRevoke: setDeletingInvite, t })}
         search={{
           value: searchTerm,
           onChange: handleSearch,
-          placeholder: "Search users by name or email...",
+          placeholder: t("searchPlaceholder"),
         }}
         onRowClick={(row) => {
           if (row.kind === "user") router.push(`/admin/users/${row.user._id}`);
@@ -304,7 +309,7 @@ export default function ManageSuperAdminsPage() {
         }
         empty={{
           icon: <Users className="w-8 h-8 text-muted/30" />,
-          label: "No users or pending invitations found matching your search.",
+          label: t("empty"),
         }}
         footer={{
           mode: "paged",
@@ -316,7 +321,7 @@ export default function ManageSuperAdminsPage() {
           onPageChange: paged.goToPage,
           // Short, because the empty row above already says it in full — the
           // reference screens keep the footer to a count, not a sentence.
-          labels: { empty: "No administrators" },
+          labels: { empty: t("footerEmpty") },
         }}
       />
 
@@ -325,67 +330,67 @@ export default function ManageSuperAdminsPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? "Edit User" : "Invite User"}
+        title={editingUser ? t("editTitle") : t("inviteTitle")}
       >
         <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
+           <p className="text-secondary text-[15px]">{editingUser ? t("editSubtitle") : t("inviteSubtitle")}</p>
            {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <ModalField
-            label="Full Name"
+            label={t("nameLabel")}
             type="text"
             required
             value={formData.name}
             onChange={e => setFormData({...formData, name: e.target.value})}
-            placeholder="e.g. Aman"
+            placeholder={t("namePlaceholder")}
           />
 
           <ModalField
-            label="Email Address"
+            label={t("emailLabel")}
             type="email"
             required
             value={formData.email}
             onChange={e => setFormData({...formData, email: e.target.value})}
-            placeholder="aman@example.com"
+            placeholder={t("emailPlaceholder")}
           />
 
-          <ModalFormField label="System Role" htmlFor="super-admin-role">
+          <ModalFormField label={t("roleLabel")} htmlFor="super-admin-role">
             <select
               id="super-admin-role"
               value={formData.role}
               disabled
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground outline-none text-sm appearance-none opacity-50 cursor-not-allowed"
             >
-              <option value="SUPER_ADMIN">System Super Admin</option>
+              <option value="SUPER_ADMIN">{t("systemSuperAdmin")}</option>
             </select>
           </ModalFormField>
 
           <ModalField
-            label="Avatar URL (Optional)"
+            label={t("avatarLabel")}
             type="url"
             value={formData.image}
             onChange={e => setFormData({...formData, image: e.target.value})}
             placeholder="https://example.com/avatar.jpg"
           >
-            <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
+            <p className="text-[11px] text-muted">{t("avatarHint")}</p>
           </ModalField>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
+            <Button
+              variant="ghost"
               onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+              className="rounded-[10px] text-sm hover:bg-foreground/5"
             >
-              Cancel
-            </button>
+              {t("cancel")}
+            </Button>
             <WriteButton
 
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
-              {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
+              {isSubmitting ? t("saving") : (editingUser ? t("updateUser") : t("sendInvite"))}
             </WriteButton>
           </div>
         </form>
@@ -397,15 +402,18 @@ export default function ManageSuperAdminsPage() {
           setDeletingUser(null);
           setSubmitError("");
         }}
-        title="Delete User"
-        cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? "Deleting..." : "Delete User"}
+        title={t("deleteTitle")}
+        cancelLabel={t("cancel")}
+        confirmLabel={isSubmitting ? t("deleting") : t("deleteTitle")}
         isSubmitting={isSubmitting}
         onConfirm={confirmDelete}
         error={submitError}
       >
         <p>
-          Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
+          {t.rich("deleteBody", {
+            name: deletingUser?.name ?? "",
+            b: (chunks) => <strong className="text-foreground font-semibold">{chunks}</strong>,
+          })}
         </p>
       </ConfirmationModal>
 
@@ -415,15 +423,18 @@ export default function ManageSuperAdminsPage() {
           setDeletingInvite(null);
           setSubmitError("");
         }}
-        title="Revoke Access"
-        cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? "Revoking..." : "Revoke Access"}
+        title={t("revokeTitle")}
+        cancelLabel={t("cancel")}
+        confirmLabel={isSubmitting ? t("revoking") : t("revokeTitle")}
         isSubmitting={isSubmitting}
         onConfirm={confirmRevoke}
         error={submitError}
       >
         <p>
-          Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
+          {t.rich("revokeBody", {
+            email: deletingInvite?.email ?? "",
+            b: (chunks) => <strong className="text-foreground font-semibold">{chunks}</strong>,
+          })}
         </p>
       </ConfirmationModal>
     </div>

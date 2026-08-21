@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Button } from "@/src/ui/atoms/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
@@ -61,15 +62,17 @@ export function ConfirmationModal({
       </div>
 
       <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={handleClose}
-          className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+          className="rounded-[10px] text-sm hover:bg-foreground/5"
           disabled={isSubmitting}
         >
           {cancelLabel}
-        </button>
+        </Button>
         {canWriteHere ? (
+          // Raw on purpose: a solid red fill with a white face — the
+          // `destructive` variant is the tinted chip, and no variant is this.
           <button
             type="button"
             onClick={onConfirm}

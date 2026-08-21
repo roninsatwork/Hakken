@@ -64,15 +64,21 @@ describe("formatPercent", () => {
 });
 
 describe("formatCountChange", () => {
-  it("says how much more or less, in plain words", () => {
-    expect(formatCountChange(112, 100)).toEqual({ label: "12% more", direction: "up" });
-    expect(formatCountChange(88, 100)).toEqual({ label: "12% fewer", direction: "down" });
+  it("says how much more or less, as a catalogue key with the percentage", () => {
+    expect(formatCountChange(112, 100)).toEqual({
+      label: { key: "change.moreCount", params: { percent: 12 } },
+      direction: "up",
+    });
+    expect(formatCountChange(88, 100)).toEqual({
+      label: { key: "change.fewerCount", params: { percent: 12 } },
+      direction: "down",
+    });
   });
 
   it("refuses to invent a change when there was nothing before it", () => {
     // A first week of traffic is not an infinite improvement.
-    expect(formatCountChange(50, 0)).toEqual({ label: "nothing to compare yet", direction: "unknown" });
-    expect(formatCountChange(0, 0)).toEqual({ label: "no change", direction: "flat" });
+    expect(formatCountChange(50, 0)).toEqual({ label: { key: "change.nothingToCompare" }, direction: "unknown" });
+    expect(formatCountChange(0, 0)).toEqual({ label: { key: "change.noChange" }, direction: "flat" });
   });
 
   it("calls a negligible change what it is", () => {
@@ -82,13 +88,19 @@ describe("formatCountChange", () => {
 
 describe("formatRateChange", () => {
   it("reports a rate change in points, not as a percentage of a percentage", () => {
-    expect(formatRateChange(0.964, 0.976)).toEqual({ label: "1.2 pts lower", direction: "down" });
-    expect(formatRateChange(0.976, 0.964)).toEqual({ label: "1.2 pts higher", direction: "up" });
+    expect(formatRateChange(0.964, 0.976)).toEqual({
+      label: { key: "change.ptsLower", params: { points: 1.2 } },
+      direction: "down",
+    });
+    expect(formatRateChange(0.976, 0.964)).toEqual({
+      label: { key: "change.ptsHigher", params: { points: 1.2 } },
+      direction: "up",
+    });
   });
 
   it("knows that for some measures lower is the improvement", () => {
     const change = formatRateChange(0.02, 0.05, { higherIsBetter: false });
-    expect(change.label).toBe("3 pts lower");
+    expect(change.label).toEqual({ key: "change.ptsLower", params: { points: 3 } });
     expect(change.direction).toBe("up");
   });
 
@@ -101,16 +113,16 @@ describe("formatRelativeTime", () => {
   const now = Date.UTC(2026, 6, 29, 12, 0, 0);
 
   it("uses the roundest true unit", () => {
-    expect(formatRelativeTime(now - 30_000, now)).toBe("just now");
-    expect(formatRelativeTime(now - 60_000, now)).toBe("1 minute ago");
-    expect(formatRelativeTime(now - 600_000, now)).toBe("10 minutes ago");
-    expect(formatRelativeTime(now - 3 * 3_600_000, now)).toBe("3 hours ago");
-    expect(formatRelativeTime(now - 24 * 3_600_000, now)).toBe("yesterday");
-    expect(formatRelativeTime(now - 48 * 3_600_000, now)).toBe("2 days ago");
+    expect(formatRelativeTime(now - 30_000, now)).toEqual({ key: "relative.justNow" });
+    expect(formatRelativeTime(now - 60_000, now)).toEqual({ key: "relative.minutesAgo", params: { count: 1 } });
+    expect(formatRelativeTime(now - 600_000, now)).toEqual({ key: "relative.minutesAgo", params: { count: 10 } });
+    expect(formatRelativeTime(now - 3 * 3_600_000, now)).toEqual({ key: "relative.hoursAgo", params: { count: 3 } });
+    expect(formatRelativeTime(now - 24 * 3_600_000, now)).toEqual({ key: "relative.yesterday" });
+    expect(formatRelativeTime(now - 48 * 3_600_000, now)).toEqual({ key: "relative.daysAgo", params: { count: 2 } });
   });
 
   it("does not read the future as a negative age", () => {
-    expect(formatRelativeTime(now + 5_000, now)).toBe("just now");
+    expect(formatRelativeTime(now + 5_000, now)).toEqual({ key: "relative.justNow" });
   });
 });
 
@@ -119,39 +131,63 @@ describe("formatDayLabel", () => {
     expect(formatDayLabel(Date.UTC(2026, 6, 29))).toBe("Wed");
     expect(formatDayLabel(Date.UTC(2026, 6, 26))).toBe("Sun");
   });
+
+  it("names the day in the reader's language", () => {
+    expect(formatDayLabel(Date.UTC(2026, 6, 29), "it")).toBe("mer");
+  });
 });
 
 describe("plain-language labels", () => {
-  it("says what a status means rather than naming the internal state", () => {
-    expect(describeRunStatus("PENDING_APPROVAL")).toBe("Needs you");
-    expect(describeRunStatus("SUCCESS")).toBe("Done");
-    expect(describeRunStatus("CANCELLED")).toBe("Stopped");
+  it("maps a status to its catalogue key rather than the internal state", () => {
+    expect(describeRunStatus("PENDING_APPROVAL")).toEqual({ key: "runStatus.needsYou" });
+    expect(describeRunStatus("SUCCESS")).toEqual({ key: "runStatus.done" });
+    expect(describeRunStatus("CANCELLED")).toEqual({ key: "runStatus.stopped" });
+  });
+
+  it("reads a continued failure as a handover, not a death", () => {
+    expect(describeRunStatus("FAILED", true)).toEqual({ key: "runStatus.handedOver" });
+    expect(describeRunStatus("FAILED")).toEqual({ key: "runStatus.failed" });
   });
 
   it("passes an unrecognised status through rather than hiding it", () => {
-    expect(describeRunStatus("SOMETHING_NEW")).toBe("SOMETHING_NEW");
+    expect(describeRunStatus("SOMETHING_NEW")).toEqual({
+      key: "runStatus.unknown",
+      params: { status: "SOMETHING_NEW" },
+    });
   });
 
-  it("says how a job was started in ordinary words", () => {
-    expect(describeTrigger("SCHEDULE")).toBe("Scheduled");
-    expect(describeTrigger("MANUAL")).toBe("Started by hand");
-    expect(describeTrigger("WEBHOOK")).toBe("Triggered by another system");
+  it("maps how a job was started to its catalogue key", () => {
+    expect(describeTrigger("SCHEDULE")).toEqual({ key: "trigger.schedule" });
+    expect(describeTrigger("MANUAL")).toEqual({ key: "trigger.manual" });
+    expect(describeTrigger("WEBHOOK")).toEqual({ key: "trigger.webhook" });
   });
 
-  it("says what a raw log entry was instead of printing the runtime's own label", () => {
-    expect(describeInteractionType("LLM SYNTHESIS")).toBe("Worked out what to say");
-    expect(describeInteractionType("ERROR")).toBe("Something went wrong");
-    expect(describeInteractionType("BATCH_GENERATION_START")).toBe("Started building a report");
+  it("maps a raw log entry's type to its catalogue key", () => {
+    expect(describeInteractionType("LLM SYNTHESIS")).toEqual({ key: "interaction.synthesis" });
+    expect(describeInteractionType("ERROR")).toEqual({ key: "interaction.error" });
+    expect(describeInteractionType("BATCH_GENERATION_START")).toEqual({ key: "interaction.batchStart" });
   });
 
   it("names the tool in a dispatch entry, without the underscores", () => {
-    expect(describeInteractionType("TOOL DISPATCH: property_search")).toBe("Used property search");
-    expect(describeInteractionType("TOOL DISPATCH: rightmove.search")).toBe("Used rightmove search");
-    expect(describeInteractionType("TOOL AWAITING APPROVAL: send_email")).toBe("Waiting to use send email");
+    expect(describeInteractionType("TOOL DISPATCH: property_search")).toEqual({
+      key: "interaction.usedTool",
+      params: { tool: "property search" },
+    });
+    expect(describeInteractionType("TOOL DISPATCH: rightmove.search")).toEqual({
+      key: "interaction.usedTool",
+      params: { tool: "rightmove search" },
+    });
+    expect(describeInteractionType("TOOL AWAITING APPROVAL: send_email")).toEqual({
+      key: "interaction.waitingTool",
+      params: { tool: "send email" },
+    });
   });
 
   it("passes an entry it does not recognise through rather than hiding it", () => {
-    expect(describeInteractionType("MCP PROXY: get_inbox")).toBe("MCP PROXY: get_inbox");
+    expect(describeInteractionType("MCP PROXY: get_inbox")).toEqual({
+      key: "interaction.unknown",
+      params: { type: "MCP PROXY: get_inbox" },
+    });
   });
 
   it("falls back to the handler when a tool is no longer in the catalogue", () => {
@@ -182,16 +218,16 @@ describe("summariseLogContent", () => {
     expect(summariseLogContent('{"area":"Bristol"')).toBe('{"area":"Bristol"');
   });
 
-  it("says so when there was nothing recorded, rather than showing a blank row", () => {
-    expect(summariseLogContent("")).toBe("Nothing was recorded");
-    expect(summariseLogContent(undefined)).toBe("Nothing was recorded");
+  it("returns nothing when there was nothing recorded, so the screen can say so in the reader's language", () => {
+    expect(summariseLogContent("")).toBeUndefined();
+    expect(summariseLogContent(undefined)).toBeUndefined();
     expect(summariseLogContent("{}")).toBe("{}");
   });
 
   it("truncates a long entry so one row cannot push the others off the screen", () => {
     const summary = summariseLogContent("x".repeat(400));
     expect(summary).toHaveLength(120);
-    expect(summary.endsWith("…")).toBe(true);
+    expect(summary?.endsWith("…")).toBe(true);
   });
 });
 

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { AppWindow, MessageSquare, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type WidgetPreviewPanelProps = {
   activeColor: string;
@@ -46,6 +47,7 @@ export function WidgetPreviewPanel({
   themeLogoUrl,
   themePlaceholder,
 }: WidgetPreviewPanelProps) {
+  const t = useTranslations("ai.widget.preview");
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 self-start lg:sticky lg:top-6">
       {/*
@@ -80,7 +82,7 @@ export function WidgetPreviewPanel({
                     logoPreviewUrl ? (
                       <Image
                         src={logoPreviewUrl}
-                        alt="logo"
+                        alt={t("logoAlt")}
                         width={32}
                         height={32}
                         unoptimized
@@ -93,7 +95,7 @@ export function WidgetPreviewPanel({
                     <AppWindow className="w-4 h-4 text-white" />
                   )}
                 </div>
-                <span className="font-semibold tracking-wide text-[15px]">{name || "Website Bot"}</span>
+                <span className="font-semibold tracking-wide text-[15px]">{name || t("nameFallback")}</span>
               </div>
               <X
                 onClick={() => setIsSimulatorOpen(false)}
@@ -104,13 +106,13 @@ export function WidgetPreviewPanel({
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#f9fafb] relative">
               {requireName || requireEmail ? (
                 <div className="flex flex-col gap-4 my-auto p-2">
-                  <h3 className="font-semibold text-gray-800 text-[14px]">Before we begin...</h3>
+                  <h3 className="font-semibold text-gray-800 text-[14px]">{t("beforeWeBegin")}</h3>
                   <div className="flex flex-col gap-3">
                     {requireName && (
                       <input
                         type="text"
                         disabled
-                        placeholder="Full Name"
+                        placeholder={t("fullName")}
                         className="w-full bg-white border border-gray-200 rounded-[8px] px-3 py-2.5 text-[13px] opacity-70"
                       />
                     )}
@@ -118,16 +120,17 @@ export function WidgetPreviewPanel({
                       <input
                         type="email"
                         disabled
-                        placeholder="Email Address"
+                        placeholder={t("emailAddress")}
                         className="w-full bg-white border border-gray-200 rounded-[8px] px-3 py-2.5 text-[13px] opacity-70"
                       />
                     )}
+                    {/* Raw: a mock button inside the widget preview, painted in the customer's colour — not admin chrome. */}
                     <button
                       disabled
                       style={{ backgroundColor: activeColor }}
                       className="w-full py-2.5 rounded-[8px] text-white font-medium text-[13px] mt-2 opacity-80"
                     >
-                      Start Chat
+                      {t("startChat")}
                     </button>
                   </div>
                 </div>
@@ -142,7 +145,7 @@ export function WidgetPreviewPanel({
                         {logoPreviewUrl ? (
                           <Image
                             src={logoPreviewUrl}
-                            alt="logo"
+                            alt={t("logoAlt")}
                             width={24}
                             height={24}
                             unoptimized
@@ -187,6 +190,7 @@ export function WidgetPreviewPanel({
             </div>
           </div>
 
+          {/* Raw: the simulated widget launcher, painted in the customer's colour — not admin chrome. */}
           <button
             onClick={() => setIsSimulatorOpen(!isSimulatorOpen)}
             className="w-[60px] h-[60px] rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.2)] flex items-center justify-center transition-transform hover:scale-105 relative z-10 shrink-0 mt-2"

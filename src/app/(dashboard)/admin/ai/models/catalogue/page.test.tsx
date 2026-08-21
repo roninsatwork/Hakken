@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import AIModelCataloguePage from "./page";
@@ -9,17 +10,6 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
   })),
-}));
-
-vi.mock("next-intl", () => ({
-  useTranslations: vi.fn(() => (key: string) => {
-    const translations: Record<string, string> = {
-      title: "AI Models",
-      subtitle: "Manage model availability.",
-      "empty.title": "No models found",
-    };
-    return translations[key] || key;
-  }),
 }));
 
 vi.mock("@/src/hooks/useDebounce", () => ({

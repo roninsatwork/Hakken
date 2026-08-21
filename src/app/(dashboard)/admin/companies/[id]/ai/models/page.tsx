@@ -19,6 +19,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 type DefaultModelSummary = {
@@ -44,6 +45,8 @@ type ModelDefaultRow = {
 };
 
 export default function CompanyModelDefaultsPage() {
+  const t = useTranslations("admin.companyDetails.models");
+  const tShared = useTranslations("ai.models.shared");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
 
@@ -89,12 +92,12 @@ export default function CompanyModelDefaultsPage() {
   /** The price of whichever model this row will actually use, so the trade-off is visible. */
   const describeCost = (modelId: string) => {
     const model = (modelsData ?? []).find((entry) => entry.modelId === modelId);
-    if (!model) return "No price set";
+    if (!model) return t("noPriceSet");
     const input = formatTokenCost(model.standardInputCostBelow200k);
     const output = formatTokenCost(model.outputResponseCost);
-    if (input === "—" && output === "—") return "No price set";
+    if (input === "—" && output === "—") return t("noPriceSet");
     // The unit is said once, above the table, rather than nine times down one edge.
-    return `${input} in · ${output} out`;
+    return t("costInOut", { input, output });
   };
 
   const handleChange = async (useCase: string, nextModelId: string) => {
@@ -109,7 +112,7 @@ export default function CompanyModelDefaultsPage() {
     } catch (error) {
       console.error(error);
       setSaveError(
-        `Failed to update the ${formatModelTag(useCase)} model: ${getErrorMessage(error, String(error))}`
+        t("updateFailed", { useCase: formatModelTag(useCase), message: getErrorMessage(error, String(error)) })
       );
     } finally {
       setSavingUseCase(null);
@@ -120,15 +123,14 @@ export default function CompanyModelDefaultsPage() {
     <div className="flex w-full flex-col gap-6 pb-10">
       <PageHeader
         icon={<Cpu className="h-6 w-6 text-brand" />}
-        title="Company AI Model Defaults"
-        description="Which model this company uses for each kind of work."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
       />
 
       <SaveError>{saveError}</SaveError>
 
       <p className="text-[13px] text-secondary">
-        Every row follows the platform default unless this company is given its own model. An agent
-        or a workflow can still override any of these. Prices are per million tokens.
+        {t("intro")}
       </p>
 
       {/* The standard admin table, as the platform Defaults screen and the Model
@@ -138,7 +140,7 @@ export default function CompanyModelDefaultsPage() {
         rows={isLoading ? undefined : rows}
         rowKey={(row) => row.useCase}
         minWidthClassName="min-w-[920px]"
-        empty={{ icon: <Cpu className="h-8 w-8 text-muted/30" />, label: "No jobs to configure yet" }}
+        empty={{ icon: <Cpu className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",
           page: 1,
@@ -148,14 +150,14 @@ export default function CompanyModelDefaultsPage() {
           isLoading,
           onPageChange: () => {},
           labels: {
-            empty: "No jobs to configure yet",
-            showing: (_start, _end, total) => `${total} job${total === 1 ? "" : "s"}`,
+            empty: t("empty"),
+            showing: (_start, _end, total) => t("showing", { count: total }),
           },
         }}
         columns={[
           {
             key: "job",
-            header: "Job",
+            header: t("columnJob"),
             className: "w-[32%]",
             cell: (row) => (
               <>
@@ -165,9 +167,11 @@ export default function CompanyModelDefaultsPage() {
                 {/* What the job is, in a sentence. The rows used to read
                     "Router", "Title", "Transcription" with nothing to say what
                     any of them were. */}
-                <div className="mt-0.5 text-[12px] leading-relaxed text-secondary">
-                  {describeModelUseCase(row.useCase)}
-                </div>
+                {describeModelUseCase(row.useCase) && (
+                  <div className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+                    {tShared(describeModelUseCase(row.useCase)!)}
+                  </div>
+                )}
                 {describeUseCaseProviderLimit(row.useCase) && (
                   <div className="mt-1 text-[11px] leading-relaxed text-muted">
                     {describeUseCaseProviderLimit(row.useCase)}
@@ -178,7 +182,7 @@ export default function CompanyModelDefaultsPage() {
           },
           {
             key: "platformDefault",
-            header: "Platform default",
+            header: t("columnPlatformDefault"),
             className: "w-[22%]",
             cell: (row) =>
               row.globalDefault ? (
@@ -187,16 +191,16 @@ export default function CompanyModelDefaultsPage() {
                     {describeModel(row.globalDefault.modelId, row.globalDefault.model)}
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted">
-                    {getProviderDisplayName(row.globalDefault.providerKey, providerNameByKey)}
+                    {getProviderDisplayName(row.globalDefault.providerKey, providerNameByKey) ?? tShared("legacyProvider")}
                   </div>
                 </>
               ) : (
-                <span className="text-[13px] text-[#f59e0b]">Not set</span>
+                <span className="text-[13px] text-[#f59e0b]">{t("notSet")}</span>
               ),
           },
           {
             key: "companyChoice",
-            header: "This company",
+            header: t("columnCompany"),
             className: "w-[30%]",
             cell: (row) => {
               // Same rule as the platform Defaults screen: a company can only
@@ -227,15 +231,15 @@ export default function CompanyModelDefaultsPage() {
               // do the work, and telling someone the wrong one sends them to the
               // wrong screen to fix it.
               const strandedReason = row.companyDefault?.model?.isEnabled === false
-                ? "is switched off"
-                : "cannot do this job";
+                ? t("reasonOff")
+                : t("reasonCannot");
 
               return (
                 <>
                   <select
                     value={selectedModelId}
                     disabled={isSaving}
-                    aria-label={`${formatModelTag(row.useCase)} model for this company`}
+                    aria-label={t("selectAria", { useCase: formatModelTag(row.useCase) })}
                     onChange={(event) => handleChange(row.useCase, event.target.value)}
                     className={cn(
                       "h-9 w-full min-w-0 rounded-[8px] border bg-card px-3 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
@@ -244,22 +248,21 @@ export default function CompanyModelDefaultsPage() {
                   >
                     {/* Also the way to clear an override. There used to be a
                         second control beside this one doing the same thing. */}
-                    <option value="">Follow the platform default</option>
+                    <option value="">{t("followPlatform")}</option>
                     {strandedModel && (
                       <option value={strandedModel.modelId}>
-                        {formatModelDisplayName(strandedModel)} — {strandedReason}
+                        {t("strandedOption", { name: formatModelDisplayName(strandedModel), reason: strandedReason })}
                       </option>
                     )}
                     {candidates.map((model) => (
                       <option key={model.modelId} value={model.modelId}>
-                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider")}
                       </option>
                     ))}
                   </select>
                   {isStranded && (
                     <div className="mt-1 text-[11px] leading-relaxed text-[#f59e0b]">
-                      This model {strandedReason}, so the work falls back to the platform
-                      default. Choose another, or follow the platform default.
+                      {t("strandedWarning", { reason: strandedReason })}
                     </div>
                   )}
                 </>
@@ -268,7 +271,7 @@ export default function CompanyModelDefaultsPage() {
           },
           {
             key: "price",
-            header: "Price",
+            header: t("columnPrice"),
             align: "right",
             className: "w-[16%]",
             cell: (row) => {
@@ -294,7 +297,7 @@ export default function CompanyModelDefaultsPage() {
                 // Only the exception is worth saying. A pill reading "Inherited"
                 // on every row cost attention and carried no information the
                 // dropdown beside it did not already give.
-                <span className="text-[12px] text-[#f59e0b]">Not set</span>
+                <span className="text-[12px] text-[#f59e0b]">{t("notSet")}</span>
               );
             },
           },

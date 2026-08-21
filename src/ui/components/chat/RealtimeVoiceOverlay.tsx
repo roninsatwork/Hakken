@@ -42,9 +42,9 @@ export function RealtimeVoiceOverlay({
 }) {
   const t = useTranslations("ai.assistant.voice");
   const settings = useSystemSettings();
-  const createSession = useAction(api.ai.createRealtimeVoiceSession);
+  const createSession = useAction(api.aiVoiceSession.createRealtimeVoiceSession);
   const recordVoiceTurn = useMutation(api.chat.recordVoiceTurn);
-  const searchKnowledge = useAction(api.ai.searchKnowledgeForVoice);
+  const searchKnowledge = useAction(api.aiVoiceSession.searchKnowledgeForVoice);
 
   const [sessionState, setSessionState] = useState<VoiceSessionState>("idle");
   const [connecting, setConnecting] = useState(false);
@@ -523,6 +523,8 @@ export function RealtimeVoiceOverlay({
         <p className="text-sm text-secondary">
           {t("disclosure", { platformName: settings.platformName })}
         </p>
+        {/* Raw on purpose: this overlay's own quiet chip (rounded-md, text-sm,
+            hover token) — close to `quiet` but every size token differs. */}
         <button
           type="button"
           onClick={close}
@@ -535,6 +537,8 @@ export function RealtimeVoiceOverlay({
       <div className="flex flex-col items-center gap-8">
         <SpeakingCharacter state={sessionState} level={level} />
         {sessionState === "idle" ? (
+          // Raw on purpose: the overlay's hero start control — an outlined
+          // pill sized like nothing in the kit.
           <button
             type="button"
             onClick={() => void start()}

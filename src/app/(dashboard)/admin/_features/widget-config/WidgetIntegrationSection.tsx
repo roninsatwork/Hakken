@@ -1,4 +1,7 @@
 import { AppWindow, MonitorSpeaker } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/src/ui/atoms/Button";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { formatDateTime } from "@/src/lib/dates";
 import { WidgetPanel } from "./WidgetPanel";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -28,37 +31,40 @@ export function WidgetIntegrationSection({
   kioskLastSeenAt,
   kioskSessionCount,
 }: WidgetIntegrationSectionProps) {
+  const { platformName } = useSystemSettings();
+  const t = useTranslations("ai.widget.integration");
   return (
     <WidgetPanel
-      title="Integration"
-      description="Connect your secure agent connection pipeline into external domains."
+      title={t("title")}
+      description={t("description")}
     >
       <div className="flex flex-col gap-3">
         <Field
-          label="Websites allowed to show it"
-          hint="Separate several with commas. The chat window will not open anywhere else."
+          label={t("domainsLabel")}
+          hint={t("domainsHint")}
           value={allowedDomains}
           onChange={(event) => setAllowedDomains(event.target.value)}
-          placeholder="https://example.com, https://app.example.com"
+          placeholder={t("domainsPlaceholder")}
           className="font-mono"
         />
       </div>
 
       <div className="mt-4">
         <span className="mb-3 block mt-1 text-[12px] font-medium text-secondary">
-          The code to paste into your website
+          {t("snippetLabel")}
         </span>
         <div className="bg-background border border-border-dim rounded-[12px] overflow-hidden flex flex-col relative group">
           <pre className="p-5 text-[13px] text-muted overflow-x-auto font-mono leading-relaxed select-all">
             {codeSnippet}
           </pre>
           <div className="border-t border-border-dim bg-foreground/5 py-4 px-5">
-            <button
+            <Button
+              variant="brand"
               onClick={onCopy}
-              className="px-6 py-2 rounded-[8px] bg-brand text-white font-medium hover:bg-brand/90 transition-colors flex items-center justify-center min-w-[160px]"
+              className="px-6 py-2 rounded-[8px] flex items-center justify-center min-w-[160px]"
             >
-              {copied ? "Copied!" : "Copy to clipboard"}
-            </button>
+              {copied ? t("copied") : t("copy")}
+            </Button>
           </div>
         </div>
       </div>
@@ -68,19 +74,17 @@ export function WidgetIntegrationSection({
       <div className="mt-4 pt-6 border-t border-border-dim border-dashed">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-[13px] font-semibold text-secondary">Receptionist screen</span>
+            <span className="text-[13px] font-semibold text-secondary">{t("kiosk.title")}</span>
             <p className="text-[13px] text-secondary leading-relaxed">
-              A full-screen version for a tablet at a desk or a stand: visitors tap once and talk.
-              {kioskEnabled
-                ? " Save, then open the screen on the device."
-                : " Switch it on and save to get the screen's address."}
+              {t("kiosk.description")} {kioskEnabled ? t("kiosk.onHint") : t("kiosk.offHint")}
             </p>
           </div>
+          {/* Raw: a toggle switch, not a button recipe. */}
           <button
             type="button"
             role="switch"
             aria-checked={kioskEnabled}
-            aria-label="Receptionist screen"
+            aria-label={t("kiosk.title")}
             onClick={() => setKioskEnabled(!kioskEnabled)}
             className="mt-0.5 shrink-0"
           >
@@ -102,12 +106,12 @@ export function WidgetIntegrationSection({
               className="flex items-center justify-center gap-2 w-full max-w-sm py-3 rounded-full border border-border-dim text-foreground font-bold text-[13px] hover:bg-foreground/5 transition-colors"
             >
               <MonitorSpeaker className="w-4 h-4" />
-              Open the receptionist screen
+              {t("kiosk.open")}
             </a>
             <p className="text-[12px] text-muted">
               {kioskLastSeenAt
-                ? `Screen last seen ${formatDateTime(kioskLastSeenAt)} · ${kioskSessionCount ?? 0} conversations so far`
-                : "The screen has not checked in yet."}
+                ? t("kiosk.lastSeen", { date: formatDateTime(kioskLastSeenAt), count: kioskSessionCount ?? 0 })
+                : t("kiosk.notSeen")}
             </p>
           </div>
         )}
@@ -115,7 +119,7 @@ export function WidgetIntegrationSection({
 
       <div className="mt-4 pt-6 border-t border-border-dim border-dashed">
         <p className="text-[13px] text-secondary mb-4 leading-relaxed">
-          Test your Widget configuration safely inside the Sonae Sandbox Environment.
+          {t("sandboxHint", { platformName })}
         </p>
         <a
           href={`/sandbox/${widgetId}`}
@@ -124,7 +128,7 @@ export function WidgetIntegrationSection({
           className="flex items-center justify-center gap-2 w-full max-w-sm py-3 rounded-full bg-foreground text-background font-bold text-[13px] shadow-lg hover:scale-[1.02] transition-transform"
         >
           <AppWindow className="w-4 h-4" />
-          Test Widget Sandbox
+          {t("sandboxButton")}
         </a>
       </div>
     </WidgetPanel>

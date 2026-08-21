@@ -169,9 +169,11 @@ describe("summariseWaterfall", () => {
       { runStartedAt: RUN_START, runCompletedAt: RUN_START + 31_400, now: RUN_START + 31_400 }
     );
 
-    expect(summariseWaterfall(rows)).toBe(
-      "97% of this job was spent on a step that then failed: used property search."
-    );
+    expect(summariseWaterfall(rows)).toEqual({
+      key: "waterfall.summaryFailed",
+      share: 97,
+      step: { key: "step.usedTool", params: { tool: "property search" } },
+    });
   });
 
   it("stays quiet when there is no story to tell", () => {
@@ -189,31 +191,34 @@ describe("summariseWaterfall", () => {
 });
 
 describe("describeStepStatus", () => {
-  it("says how a step ended without naming the runtime's own state", () => {
-    expect(describeStepStatus("SUCCESS")).toBe("Worked");
-    expect(describeStepStatus("PENDING")).toBe("Not started");
-    expect(describeStepStatus("SKIPPED")).toBe("Skipped");
+  it("maps how a step ended to its catalogue key rather than the runtime's own state", () => {
+    expect(describeStepStatus("SUCCESS")).toEqual({ key: "stepStatus.worked" });
+    expect(describeStepStatus("PENDING")).toEqual({ key: "stepStatus.notStarted" });
+    expect(describeStepStatus("SKIPPED")).toEqual({ key: "stepStatus.skipped" });
   });
 
   it("passes an unrecognised status through rather than hiding it", () => {
-    expect(describeStepStatus("SOMETHING_NEW")).toBe("SOMETHING_NEW");
+    expect(describeStepStatus("SOMETHING_NEW")).toEqual({
+      key: "stepStatus.unknown",
+      params: { status: "SOMETHING_NEW" },
+    });
   });
 });
 
 describe("describeStepKind", () => {
-  it("says what a step was in ordinary words", () => {
-    expect(describeStepKind("OBSERVE")).toBe("Read the request");
-    expect(describeStepKind("PLAN")).toBe("Decided what to do");
-    expect(describeStepKind("APPROVAL_REQUEST")).toBe("Waited for someone to approve");
-    expect(describeStepKind("FINAL")).toBe("Wrote the answer");
+  it("maps what a step was to its catalogue key", () => {
+    expect(describeStepKind("OBSERVE")).toEqual({ key: "step.readRequest" });
+    expect(describeStepKind("PLAN")).toEqual({ key: "step.decidedPlan" });
+    expect(describeStepKind("APPROVAL_REQUEST")).toEqual({ key: "step.waitedApproval" });
+    expect(describeStepKind("FINAL")).toEqual({ key: "step.wroteAnswer" });
   });
 
   it("names the tool when it knows it", () => {
-    expect(describeStepKind("TOOL_CALL", undefined, "Apify")).toBe("Used Apify");
-    expect(describeStepKind("TOOL_RESULT", undefined, "Apify")).toBe("Read what Apify sent back");
-    expect(describeStepKind("TOOL_CALL")).toBe("Used a tool");
-    expect(describeStepKind("TOOL_CALL", undefined, "   ")).toBe("Used a tool");
-    expect(describeStepKind("TOOL_RESULT")).toBe("Read the result");
+    expect(describeStepKind("TOOL_CALL", undefined, "Apify")).toEqual({ key: "step.usedTool", params: { tool: "Apify" } });
+    expect(describeStepKind("TOOL_RESULT", undefined, "Apify")).toEqual({ key: "step.readToolResult", params: { tool: "Apify" } });
+    expect(describeStepKind("TOOL_CALL")).toEqual({ key: "step.usedSomeTool" });
+    expect(describeStepKind("TOOL_CALL", undefined, "   ")).toEqual({ key: "step.usedSomeTool" });
+    expect(describeStepKind("TOOL_RESULT")).toEqual({ key: "step.readResult" });
   });
 
   it("never labels a step with the arguments it was called with", () => {
@@ -222,8 +227,8 @@ describe("describeStepKind", () => {
     // learned nothing about which tool had run.
     const argumentsJson = '{"job":"jKpgGfgRfzrGgEM","settings":"{}"}';
 
-    expect(describeStepKind("TOOL_CALL", argumentsJson)).toBe("Used a tool");
-    expect(describeStepKind("TOOL_CALL", argumentsJson, "Apify")).toBe("Used Apify");
+    expect(describeStepKind("TOOL_CALL", argumentsJson)).toEqual({ key: "step.usedSomeTool" });
+    expect(describeStepKind("TOOL_CALL", argumentsJson, "Apify")).toEqual({ key: "step.usedTool", params: { tool: "Apify" } });
   });
 });
 
@@ -239,6 +244,9 @@ describe("humaniseToolName", () => {
   });
 
   it("passes an unrecognised kind through rather than hiding it", () => {
-    expect(describeStepKind("SOMETHING_NEW")).toBe("SOMETHING_NEW");
+    expect(describeStepKind("SOMETHING_NEW")).toEqual({
+      key: "step.unknown",
+      params: { kind: "SOMETHING_NEW" },
+    });
   });
 });

@@ -75,6 +75,13 @@ vi.mock("next-intl", () => ({
       "table.workspace": "Workspace",
       title: "Users",
     };
+    // The shared table footer's own defaults (ui.table), which this screen
+    // leans on rather than supplying labels of its own.
+    if (key === "pageOf") return `Page ${values?.page} of ${values?.totalPages}`;
+    if (key === "showingRange") return `Showing ${values?.start}-${values?.end} of ${values?.total}`;
+    if (key === "previous") return "Previous";
+    if (key === "next") return "Next";
+    if (key === "noEntries") return "No entries found";
     return labels[key] ?? key;
   },
 }));

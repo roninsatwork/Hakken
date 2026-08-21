@@ -1,5 +1,19 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { fireEvent, render as renderBase, screen, waitFor } from "@testing-library/react";
+import messages from "../../../../../../messages/en.json";
+
+// The widget screens resolve their copy through the catalogue, so the page
+// renders inside the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -8,6 +22,12 @@ import GlobalWidgetPage from "./page";
 
 vi.mock("../_components/AiWorkspaceNav", () => ({
   AiWorkspaceNav: () => <nav aria-label="AI workspace">AI workspace nav</nav>,
+}));
+
+// The shared widget screen reads the configured platform name for the
+// default bot name, so copy is branded per deployment.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -125,7 +145,9 @@ describe("GlobalWidgetPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Initialize Master Widget" }));
 
     await waitFor(() => {
-      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ isGlobal: true, widgetId: undefined, name: "Sonae Intercept Bot" }));
+      // The default bot name carries the configured platform name (mocked
+      // above), never the hardcoded shipped default.
+      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ isGlobal: true, widgetId: undefined, name: "Acme Copilot Intercept Bot" }));
     });
     expect(saveWidget.mock.calls.at(-1)?.[0]).not.toHaveProperty("companyId");
 

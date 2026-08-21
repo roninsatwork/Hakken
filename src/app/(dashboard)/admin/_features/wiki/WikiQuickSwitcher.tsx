@@ -67,6 +67,7 @@ export function WikiQuickSwitcher({
 
   return (
     <div className={`fixed inset-0 ${LAYER.OVERLAY} flex items-start justify-center pt-[18vh] px-6`}>
+      {/* Raw: the click-away backdrop — an overlay, not a button recipe. */}
       <button
         type="button"
         aria-label={t("close")}
@@ -108,6 +109,7 @@ export function WikiQuickSwitcher({
             ) : (
               hits.map((hit, index) => (
                 <li key={hit.pageId}>
+                  {/* Raw: a whole list row is the hit target — a layout, not a button recipe. */}
                   <button
                     type="button"
                     onClick={() => open(hit.pageId)}

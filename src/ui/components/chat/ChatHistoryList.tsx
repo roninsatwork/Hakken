@@ -11,12 +11,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
 import { formatThreadStamp, groupThreadsByDay } from "@/src/lib/threadGrouping";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /** One sidebar page. Small enough to load instantly, big enough to scroll. */
 export const THREAD_PAGE_SIZE = 25;
 
 export default function ChatHistoryList() {
   const t = useTranslations("ai.assistant.history");
+  const { platformName } = useSystemSettings();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Pages from the database, and the search asks the database too — the
@@ -119,7 +121,7 @@ export default function ChatHistoryList() {
           </span>
         ) : threads.length === 0 ? (
           <span className="text-[13px] text-muted font-light mt-4 block text-center leading-relaxed px-4">
-            No previous conversations. Start exploring Sonae.
+            No previous conversations. Start exploring {platformName}.
           </span>
         ) : (
           <AnimatePresence>
@@ -163,9 +165,11 @@ export default function ChatHistoryList() {
                         }}
                         className="flex-1 bg-transparent border-none text-[13px] text-foreground p-0 focus:ring-0 outline-none placeholder:text-muted focus:outline-none w-full"
                       />
-                      <button 
-                        onClick={() => handleRenameSubmit(thread._id)} 
-                        disabled={isRenaming} 
+                      {/* Raw on purpose: a 24px brand-filled square — no
+                          Button variant wears the brand as a background. */}
+                      <button
+                        onClick={() => handleRenameSubmit(thread._id)}
+                        disabled={isRenaming}
                         className="w-6 h-6 rounded bg-brand flex items-center justify-center text-white active:scale-95 transition-all shadow-sm"
                       >
                         {isRenaming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-[14px] h-[14px]" />}
@@ -193,7 +197,9 @@ export default function ChatHistoryList() {
                         </span>
                       </Link>
 
-                      {/* Floating Action Buttons */}
+                      {/* Floating Action Buttons — both raw on purpose:
+                          hover-revealed glass chips with backdrop blur and
+                          scale effects, nothing the kit freezes. */}
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                         <button 
                           onClick={(e) => {
@@ -230,6 +236,8 @@ export default function ChatHistoryList() {
 
         {/* Older conversations, a page at a time */}
         {threadsStatus === "CanLoadMore" && (
+          // Raw on purpose: an inline text link — no Button variant is a bare
+          // text action.
           <button
             type="button"
             onClick={() => loadMore(THREAD_PAGE_SIZE)}
@@ -275,7 +283,10 @@ export default function ChatHistoryList() {
                 </div>
 
                 <div className="flex items-center justify-center gap-3 z-10 relative mt-4 w-full">
-                  <button 
+                  {/* Both raw on purpose: this dialog's own full-width
+                      rounded-[16px] pair — the kit's `ghost`/`destructive`
+                      recipes are different shapes and shades. */}
+                  <button
                     onClick={() => setThreadToDelete(null)}
                     disabled={isDeleting}
                     className="flex-1 py-3.5 rounded-[16px] bg-white/5 hover:bg-white/10 text-[14px] font-medium text-foreground transition-all"

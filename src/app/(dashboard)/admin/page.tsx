@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AlertTriangle, ArrowRight, CircleCheck, LayoutDashboard, MailPlus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -23,6 +24,7 @@ import {
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type ClientState = "HEALTHY" | "NEEDS_ATTENTION" | "UNUSED";
 
@@ -66,24 +68,24 @@ type PlatformOverview = {
  * did not sign in — without whom one active person looks like full adoption.
  */
 const SIGN_IN_BANDS = [
-  { key: "didNotSignIn", label: "Did not sign in", fill: "#4d4d52" },
-  { key: "oneSession", label: "1 session", fill: "#256abf" },
-  { key: "twoSessions", label: "2 sessions", fill: "#3987e5" },
-  { key: "threeSessions", label: "3 sessions", fill: "#6da7ec" },
-  { key: "fourSessions", label: "4 sessions", fill: "#9ec5f4" },
-  { key: "fivePlusSessions", label: "5+ sessions", fill: "#cde2fb" },
+  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: "#4d4d52" },
+  { key: "oneSession", labelKey: "bands.oneSession", fill: "#256abf" },
+  { key: "twoSessions", labelKey: "bands.twoSessions", fill: "#3987e5" },
+  { key: "threeSessions", labelKey: "bands.threeSessions", fill: "#6da7ec" },
+  { key: "fourSessions", labelKey: "bands.fourSessions", fill: "#9ec5f4" },
+  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: "#cde2fb" },
 ] as const;
 
 /** Two unrelated series, so two categorical slots rather than one ramp. */
 const ACTIVITY_SERIES = [
-  { key: "questions", label: "Questions people asked", stroke: "#3987e5" },
-  { key: "aiCalls", label: "All AI calls, including automation", stroke: "#8a8a90" },
+  { key: "questions", labelKey: "series.questions", stroke: "#3987e5" },
+  { key: "aiCalls", labelKey: "series.aiCalls", stroke: "#8a8a90" },
 ] as const;
 
-const STATE_LABELS: Record<ClientState, string> = {
-  HEALTHY: "Healthy",
-  NEEDS_ATTENTION: "Needs attention",
-  UNUSED: "Nobody added",
+const STATE_LABEL_KEYS: Record<ClientState, string> = {
+  HEALTHY: "state.healthy",
+  NEEDS_ATTENTION: "state.needsAttention",
+  UNUSED: "state.unused",
 };
 
 const STATE_CLASSES: Record<ClientState, string> = {
@@ -94,9 +96,9 @@ const STATE_CLASSES: Record<ClientState, string> = {
 
 const AXIS_TICK = { fontSize: 11, fill: "var(--color-muted)" } as const;
 
-function formatDay(day: string) {
+function formatDay(day: string, locale = "en-GB") {
   return new Date(`${day}T00:00:00Z`)
-    .toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    .toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 /**
@@ -167,16 +169,18 @@ function SignInTooltip({ active, payload, label }: {
   payload?: Array<{ dataKey?: string | number; value?: number }>;
   label?: string;
 }) {
+  const t = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   const rows = SIGN_IN_BANDS
     .map((band) => ({ band, value: payload.find((entry) => entry.dataKey === band.key)?.value ?? 0 }))
     .filter((row) => row.value > 0);
   return (
-    <TooltipShell title={label ? formatDay(label) : ""}>
+    <TooltipShell title={label ? formatDay(label, locale) : ""}>
       {rows.map((row) => (
         <div key={row.band.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: row.band.fill }} />
-          {row.value} {row.value === 1 ? "person" : "people"} · {row.band.label.toLowerCase()}
+          {t("charts.signInTooltipRow", { count: row.value, band: t(row.band.labelKey).toLowerCase() })}
         </div>
       ))}
     </TooltipShell>
@@ -188,13 +192,15 @@ function ActivityTooltip({ active, payload, label }: {
   payload?: Array<{ dataKey?: string | number; value?: number }>;
   label?: string;
 }) {
+  const t = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
-    <TooltipShell title={label ? formatDay(label) : ""}>
+    <TooltipShell title={label ? formatDay(label, locale) : ""}>
       {ACTIVITY_SERIES.map((series) => (
         <div key={series.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: series.stroke }} />
-          {payload.find((entry) => entry.dataKey === series.key)?.value ?? 0} · {series.label.toLowerCase()}
+          {payload.find((entry) => entry.dataKey === series.key)?.value ?? 0} · {t(series.labelKey).toLowerCase()}
         </div>
       ))}
     </TooltipShell>
@@ -206,10 +212,12 @@ function SpendTooltip({ active, payload, label }: {
   payload?: Array<{ value?: number }>;
   label?: string;
 }) {
+  const t = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
-    <TooltipShell title={label ? formatDay(label) : ""}>
-      <div className="mt-1 text-[12px] text-secondary">{formatSpend(payload[0]?.value ?? 0)} spent</div>
+    <TooltipShell title={label ? formatDay(label, locale) : ""}>
+      <div className="mt-1 text-[12px] text-secondary">{t("charts.spentTooltip", { amount: formatSpend(payload[0]?.value ?? 0) })}</div>
     </TooltipShell>
   );
 }
@@ -224,6 +232,10 @@ function SpendTooltip({ active, payload, label }: {
  * it read nought companies while companies plainly existed.
  */
 export default function AdminDashboardPage() {
+  const t = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
+  const formatDayTick = (day: string) => formatDay(day, locale);
+  const { platformName } = useSystemSettings();
   const overview = useQuery(api.platformOverview.getPlatformOverview, {}) as PlatformOverview | undefined;
 
   const clients = overview?.clients;
@@ -232,23 +244,23 @@ export default function AdminDashboardPage() {
   const allWell = clients !== undefined && clients.needsAttention === 0 && clients.unused === 0;
 
   const headline = !overview
-    ? "Counting clients, seats and activity."
+    ? t("headline.loading")
     : clients!.total === 0
-      ? "No clients yet."
+      ? t("headline.noClients")
       : allWell
-        ? `All ${clients!.total} clients are healthy.`
+        ? t("headline.allHealthy", { count: clients!.total })
         : [
-          `${clients!.healthy} of ${clients!.total} clients healthy`,
-          clients!.needsAttention > 0 ? `${clients!.needsAttention} need attention` : null,
-          clients!.unused > 0 ? `${clients!.unused} with nobody added` : null,
+          t("headline.healthyOf", { healthy: clients!.healthy, total: clients!.total }),
+          clients!.needsAttention > 0 ? t("headline.needAttention", { count: clients!.needsAttention }) : null,
+          clients!.unused > 0 ? t("headline.nobodyAdded", { count: clients!.unused }) : null,
         ].filter(Boolean).join(" · ") + ".";
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<LayoutDashboard className="h-6 w-6 text-brand" />}
-        title="Admin Dashboard"
-        description="How the business is doing, and which client needs you today."
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       {overview ? (
@@ -272,34 +284,34 @@ export default function AdminDashboardPage() {
           {/* Revenue against what it costs to serve. A bare revenue figure hides
               the margin, which is the number that decides whether this works. */}
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Projected monthly revenue</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.revenueTitle")}</div>
             <div className="mt-1 text-[28px] font-semibold text-foreground">
               {formatRevenue(overview.money.projectedMrrGBP)}
             </div>
             <div className="mt-1 text-[12px] text-muted">
               {overview.money.spendAsPercentOfRevenue === null
-                ? `AI spend ${formatSpend(overview.money.aiSpendGBP)} · no plans priced yet`
-                : `AI spend ${formatSpend(overview.money.aiSpendGBP)} · ${overview.money.spendAsPercentOfRevenue}% of it`}
+                ? t("cards.spendNoPlans", { spend: formatSpend(overview.money.aiSpendGBP) })
+                : t("cards.spendPercent", { spend: formatSpend(overview.money.aiSpendGBP), percent: overview.money.spendAsPercentOfRevenue })}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Seats in use</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.seatsTitle")}</div>
             <div className="mt-1 text-[28px] font-semibold text-foreground">
-              {overview.seats.active} <span className="text-[16px] font-normal text-muted">of {overview.seats.total}</span>
+              {overview.seats.active} <span className="text-[16px] font-normal text-muted">{t("cards.seatsOf", { total: overview.seats.total })}</span>
             </div>
             <div className="mt-1 text-[12px] text-muted">
-              {overview.seats.utilisation}% used in the last {overview.windowDays} days
+              {t("cards.seatsUsed", { utilisation: overview.seats.utilisation, days: overview.windowDays })}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Clients needing attention</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.attentionTitle")}</div>
             <div className={cn(
               "mt-1 text-[28px] font-semibold",
               clients!.needsAttention > 0 ? "text-[#f59e0b]" : "text-foreground",
             )}>
               {clients!.needsAttention}
             </div>
-            <div className="mt-1 text-[12px] text-muted">someone there has stopped using Sonae</div>
+            <div className="mt-1 text-[12px] text-muted">{t("cards.attentionSub", { platformName })}</div>
           </div>
         </div>
       ) : null}
@@ -307,14 +319,14 @@ export default function AdminDashboardPage() {
       {overview ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <ChartCard
-            title="Activity"
-            description={`Questions people asked against everything the AI did, per day. Last ${overview.windowDays} days.`}
+            title={t("charts.activityTitle")}
+            description={t("charts.activityDescription", { days: overview.windowDays })}
           >
             <div className="w-full">
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
                   <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={formatDay} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                  <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                   <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                   <Tooltip content={<ActivityTooltip />} />
                   {ACTIVITY_SERIES.map((series) => (
@@ -332,12 +344,12 @@ export default function AdminDashboardPage() {
               </ResponsiveContainer>
             </div>
             {/* The gap between the lines is automation running unasked. */}
-            <ChartLegend items={ACTIVITY_SERIES.map((series) => ({ label: series.label, fill: series.stroke }))} />
+            <ChartLegend items={ACTIVITY_SERIES.map((series) => ({ label: t(series.labelKey), fill: series.stroke }))} />
           </ChartCard>
 
           <ChartCard
-            title="AI spend"
-            description={`What the models cost, per day. Last ${overview.windowDays} days.`}
+            title={t("charts.spendTitle")}
+            description={t("charts.spendDescription", { days: overview.windowDays })}
           >
             <div className="w-full">
               <ResponsiveContainer width="100%" height={220}>
@@ -349,7 +361,7 @@ export default function AdminDashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={formatDay} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                  <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                   <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `$${value.toFixed(2)}`} />
                   <Tooltip content={<SpendTooltip />} />
                   {/* One series, so the title names it and no legend is needed. */}
@@ -370,14 +382,14 @@ export default function AdminDashboardPage() {
 
       {overview ? (
         <ChartCard
-          title="How often people sign in"
-          description={`Each bar is every client seat, banded by how many times they signed in that day. Last ${overview.windowDays} days, people who run the platform excluded.`}
+          title={t("charts.signInsTitle")}
+          description={t("charts.signInsDescription", { days: overview.windowDays })}
         >
           <div className="w-full">
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={overview.signInBands} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
                 <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="day" tickFormatter={formatDay} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<SignInTooltip />} />
                 {SIGN_IN_BANDS.map((band, index) => (
@@ -395,17 +407,17 @@ export default function AdminDashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <ChartLegend items={SIGN_IN_BANDS} />
+          <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: t(band.labelKey), fill: band.fill }))} />
         </ChartCard>
       ) : null}
 
       {overview && overview.planDistribution.length > 0 ? (
         <ChartCard
-          title="Plans"
-          description="How many client workspaces are on each plan."
+          title={t("charts.plansTitle")}
+          description={t("charts.plansDescription")}
           action={
             <Link href="/admin/settings/plans" className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-brand hover:underline">
-              Manage plans
+              {t("charts.managePlans")}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           }
@@ -431,13 +443,13 @@ export default function AdminDashboardPage() {
       ) : null}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-semibold text-foreground">Clients</h2>
+        <h2 className="text-[15px] font-semibold text-foreground">{t("clients.title")}</h2>
 
         <DataTable
           rows={overview === undefined ? undefined : portfolio}
           rowKey={(client) => client.companyId}
           minWidthClassName="min-w-[900px]"
-          empty={{ icon: <LayoutDashboard className="h-8 w-8 text-muted/30" />, label: "No clients yet" }}
+          empty={{ icon: <LayoutDashboard className="h-8 w-8 text-muted/30" />, label: t("clients.empty") }}
           footer={{
             mode: "paged",
             page: 1,
@@ -447,47 +459,47 @@ export default function AdminDashboardPage() {
             isLoading: overview === undefined,
             onPageChange: () => {},
             labels: {
-              empty: "No clients yet",
-              showing: (_start, _end, total) => `${total} client${total === 1 ? "" : "s"}`,
+              empty: t("clients.empty"),
+              showing: (_start, _end, total) => t("clients.showing", { count: total }),
             },
           }}
           columns={[
             {
               key: "client",
-              header: "Client",
+              header: t("clients.columnClient"),
               cell: (client) => (
                 <>
                   <div className="text-[13px] font-medium text-foreground">{client.name}</div>
-                  <div className="text-[12px] text-muted">{client.planName ?? "No plan"}</div>
+                  <div className="text-[12px] text-muted">{client.planName ?? t("clients.noPlan")}</div>
                 </>
               ),
             },
             {
               key: "state",
-              header: "State",
+              header: t("clients.columnState"),
               cell: (client) => (
                 <span className={cn("text-[13px]", STATE_CLASSES[client.state])}>
-                  {STATE_LABELS[client.state]}
+                  {t(STATE_LABEL_KEYS[client.state])}
                 </span>
               ),
             },
             {
               key: "active",
-              header: "Active this week",
+              header: t("clients.columnActive"),
               cell: (client) => (
                 <span className="text-[13px] text-secondary">
-                  {client.activeRecently} of {client.people}
+                  {t("clients.activeOf", { active: client.activeRecently, people: client.people })}
                 </span>
               ),
             },
             {
               key: "quiet",
-              header: "Gone quiet",
+              header: t("clients.columnQuiet"),
               cell: (client) => <span className="text-[13px] text-secondary">{client.quiet}</span>,
             },
             {
               key: "revenue",
-              header: "Revenue",
+              header: t("clients.columnRevenue"),
               cell: (client) => (
                 <span className="text-[13px] text-secondary">{formatRevenue(client.mrrGBP)}</span>
               ),
@@ -501,7 +513,7 @@ export default function AdminDashboardPage() {
                   href={`/admin/companies/${client.companyId}`}
                   className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
                 >
-                  Open
+                  {t("clients.open")}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ),
@@ -514,7 +526,7 @@ export default function AdminDashboardPage() {
           fault this whole pass has been removing. */}
       {overview && needsAction > 0 ? (
         <div className="flex flex-col gap-2">
-          <h2 className="text-[13px] font-semibold text-foreground">Worth doing</h2>
+          <h2 className="text-[13px] font-semibold text-foreground">{t("todo.title")}</h2>
           {overview.todo.pendingInvitations > 0 ? (
             <Link
               href="/admin/users/invite"
@@ -523,12 +535,12 @@ export default function AdminDashboardPage() {
               <MailPlus className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-semibold text-foreground">
-                  {overview.todo.pendingInvitations} {overview.todo.pendingInvitations === 1 ? "invitation" : "invitations"} nobody has accepted
+                  {t("todo.invitesTitle", { count: overview.todo.pendingInvitations })}
                 </div>
-                <div className="mt-0.5 text-[13px] text-secondary">They cannot use Sonae until they do.</div>
+                <div className="mt-0.5 text-[13px] text-secondary">{t("todo.invitesSub", { platformName })}</div>
               </div>
               <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] text-brand">
-                Open invitations
+                {t("todo.invitesCta")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </span>
             </Link>
@@ -541,12 +553,12 @@ export default function AdminDashboardPage() {
               <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-semibold text-foreground">
-                  {overview.todo.companiesWithNoPlan} {overview.todo.companiesWithNoPlan === 1 ? "client is" : "clients are"} on no plan
+                  {t("todo.noPlanTitle", { count: overview.todo.companiesWithNoPlan })}
                 </div>
-                <div className="mt-0.5 text-[13px] text-secondary">They are being served and not billed.</div>
+                <div className="mt-0.5 text-[13px] text-secondary">{t("todo.noPlanSub")}</div>
               </div>
               <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] text-brand">
-                Open companies
+                {t("todo.noPlanCta")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </span>
             </Link>

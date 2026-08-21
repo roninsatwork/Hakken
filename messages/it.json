@@ -583,7 +583,26 @@
     "salesDataImport": "Importa dati",
     "salesDataTables": "Importazioni da fogli di calcolo",
     "salesDataCustomers": "Clienti",
-    "salesDataOpportunityReport": "Report opportunità"
+    "salesDataOpportunityReport": "Report opportunità",
+    "plans": "Piani",
+    "skillCenter": "Skill Center",
+    "widget": "Widget",
+    "askPlatform": "Chiedi a {platformName}",
+    "tasks": "Attività",
+    "calls": "Chiamate",
+    "reception": "Reception",
+    "reports": "Report",
+    "information": "Informazioni",
+    "salesReport": "Report Vendite",
+    "logs": "Log",
+    "postureStudio": "Posture Studio",
+    "studioLibrary": "Libreria Studio",
+    "replayAlignment": "Allineamento Replay",
+    "organization": "Organizzazione",
+    "teamMembers": "Membri del Team",
+    "arcade": "Arcade",
+    "roninsRun": "Ronin's Run",
+    "badgeWaiting": "{count} in attesa"
   },
   "properties": {
     "search": {
@@ -644,6 +663,82 @@
         "90d": "90 Giorni",
         "ytd": "Dall'inizio dell'anno",
         "custom": "Intervallo Personalizzato"
+      },
+      "dashboard": {
+        "header": {
+          "title": "Pannello di amministrazione",
+          "description": "Come va l'attività, e quale cliente ha bisogno di te oggi."
+        },
+        "headline": {
+          "loading": "Conteggio di clienti, postazioni e attività.",
+          "noClients": "Ancora nessun cliente.",
+          "allHealthy": "Tutti i {count} clienti sono in salute.",
+          "healthyOf": "{healthy} clienti su {total} in salute",
+          "needAttention": "{count} richiedono attenzione",
+          "nobodyAdded": "{count} senza nessuno aggiunto"
+        },
+        "cards": {
+          "revenueTitle": "Ricavi mensili previsti",
+          "spendNoPlans": "Spesa AI {spend} · nessun piano ha ancora un prezzo",
+          "spendPercent": "Spesa AI {spend} · il {percent}% dei ricavi",
+          "seatsTitle": "Postazioni in uso",
+          "seatsOf": "su {total}",
+          "seatsUsed": "{utilisation}% in uso negli ultimi {days} giorni",
+          "attentionTitle": "Clienti che richiedono attenzione",
+          "attentionSub": "qualcuno lì ha smesso di usare {platformName}"
+        },
+        "charts": {
+          "activityTitle": "Attività",
+          "activityDescription": "Le domande delle persone a confronto con tutto ciò che ha fatto l'AI, per giorno. Ultimi {days} giorni.",
+          "spendTitle": "Spesa AI",
+          "spendDescription": "Quanto costano i modelli, per giorno. Ultimi {days} giorni.",
+          "spentTooltip": "{amount} spesi",
+          "signInsTitle": "Con che frequenza le persone accedono",
+          "signInsDescription": "Ogni barra è l'insieme delle postazioni dei clienti, suddivise per numero di accessi in quel giorno. Ultimi {days} giorni, escluse le persone che gestiscono la piattaforma.",
+          "plansTitle": "Piani",
+          "plansDescription": "Quanti spazi di lavoro dei clienti sono su ciascun piano.",
+          "managePlans": "Gestisci i piani",
+          "signInTooltipRow": "{count, plural, one {# persona} other {# persone}} · {band}"
+        },
+        "bands": {
+          "didNotSignIn": "Nessun accesso",
+          "oneSession": "1 sessione",
+          "twoSessions": "2 sessioni",
+          "threeSessions": "3 sessioni",
+          "fourSessions": "4 sessioni",
+          "fivePlusSessions": "5+ sessioni"
+        },
+        "series": {
+          "questions": "Domande fatte dalle persone",
+          "aiCalls": "Tutte le chiamate AI, automazione inclusa"
+        },
+        "state": {
+          "healthy": "In salute",
+          "needsAttention": "Richiede attenzione",
+          "unused": "Nessuno aggiunto"
+        },
+        "clients": {
+          "title": "Clienti",
+          "empty": "Ancora nessun cliente",
+          "showing": "{count, plural, one {# cliente} other {# clienti}}",
+          "columnClient": "Cliente",
+          "columnState": "Stato",
+          "columnActive": "Attivi questa settimana",
+          "columnQuiet": "Diventati silenziosi",
+          "columnRevenue": "Ricavi",
+          "noPlan": "Nessun piano",
+          "activeOf": "{active} su {people}",
+          "open": "Apri"
+        },
+        "todo": {
+          "title": "Da fare",
+          "invitesTitle": "{count, plural, one {# invito} other {# inviti}} che nessuno ha accettato",
+          "invitesSub": "Non possono usare {platformName} finché non lo fanno.",
+          "invitesCta": "Apri gli inviti",
+          "noPlanTitle": "{count, plural, one {# cliente è} other {# clienti sono}} senza piano",
+          "noPlanSub": "Vengono serviti senza essere fatturati.",
+          "noPlanCta": "Apri le aziende"
+        }
       }
     },
     "authDiagnostics": {
@@ -840,7 +935,337 @@
       "dashboardSubtitle": "Un riepilogo di questa azienda, a colpo d'occhio.",
       "dashboardEmpty": "Ancora niente qui",
       "dashboardEmptyHint": "Qui andrà il riepilogo di questa azienda.",
-      "aiUsage": "Utilizzo AI"
+      "aiUsage": "Utilizzo AI",
+      "models": {
+        "headerTitle": "Modelli AI predefiniti dell'azienda",
+        "headerDescription": "Quale modello usa questa azienda per ogni tipo di lavoro.",
+        "intro": "Ogni riga segue il predefinito di piattaforma a meno che questa azienda non abbia un proprio modello. Un agente o un flusso di lavoro possono comunque scavalcare ognuna di queste scelte. I prezzi sono per milione di token.",
+        "noPriceSet": "Nessun prezzo impostato",
+        "costInOut": "{input} in entrata · {output} in uscita",
+        "updateFailed": "Impossibile aggiornare il modello {useCase}: {message}",
+        "empty": "Ancora nessun compito da configurare",
+        "showing": "{count, plural, one {# compito} other {# compiti}}",
+        "columnJob": "Compito",
+        "columnPlatformDefault": "Predefinito di piattaforma",
+        "columnCompany": "Questa azienda",
+        "columnPrice": "Prezzo",
+        "notSet": "Non impostato",
+        "followPlatform": "Segui il predefinito di piattaforma",
+        "strandedOption": "{name} — {reason}",
+        "reasonOff": "è spento",
+        "reasonCannot": "non può fare questo compito",
+        "strandedWarning": "Questo modello {reason}, quindi il lavoro ricade sul predefinito di piattaforma. Scegline un altro, o segui il predefinito di piattaforma.",
+        "selectAria": "Modello {useCase} per questa azienda"
+      },
+      "dashboard": {
+        "lastSeen": {
+          "never": "Mai",
+          "today": "Oggi",
+          "yesterday": "Ieri",
+          "daysAgo": "{days} giorni fa"
+        },
+        "header": {
+          "title": "Pannello",
+          "description": "Chi sta usando {platformName} qui, con che frequenza, e chi è diventato silenzioso."
+        },
+        "headline": {
+          "loading": "Conteggio di cosa hanno fatto le persone di questa azienda.",
+          "nobody": "Nessuno è stato ancora aggiunto a questa azienda.",
+          "noneActive": "Nessuna delle {total} persone qui ha usato {platformName} negli ultimi {days} giorni.",
+          "active": "{active} persone su {total} hanno usato {platformName} negli ultimi {days} giorni",
+          "andQuiet": ", e {quiet} no"
+        },
+        "cards": {
+          "questionsAsked": "Domande fatte",
+          "byPeople": "da {count, plural, one {# persona} other {# persone}}",
+          "signIns": "Accessi",
+          "acrossDays": "in {count, plural, one {# giorno} other {# giorni}}",
+          "goneQuiet": "Diventati silenziosi",
+          "nothingRecorded": "niente registrato in {days} giorni"
+        },
+        "charts": {
+          "signInsTitle": "Con che frequenza le persone accedono",
+          "signInsDescription": "Ogni barra è tutto il personale qui, suddiviso per numero di accessi in quel giorno. Ultimi {days} giorni, escluse le persone che gestiscono la piattaforma.",
+          "askingTitle": "Cosa stanno chiedendo",
+          "askingDescription": "Domande poste a {platformName} ogni giorno, negli ultimi {days} giorni.",
+          "questionsTooltip": "{count, plural, one {# domanda fatta} other {# domande fatte}}"
+        },
+        "people": {
+          "title": "Persone",
+          "empty": "Ancora nessuno qui",
+          "invite": "Invita qualcuno",
+          "showing": "{count, plural, one {# persona} other {# persone}}",
+          "columnPerson": "Persona",
+          "admin": "Amministratore",
+          "columnLastSeen": "Ultimo accesso",
+          "columnSignIns": "Accessi",
+          "columnQuestions": "Domande",
+          "columnAgentRuns": "Agenti eseguiti"
+        },
+        "invites": {
+          "title": "{count, plural, one {# persona è stata invitata e non è arrivata} other {# persone sono state invitate e non sono arrivate}}",
+          "sub": "Non possono usare {platformName} finché non accettano.",
+          "cta": "Apri gli inviti"
+        },
+        "notCovered": {
+          "title": "Cosa non copre questo pannello",
+          "item1": "Le persone che gestiscono la piattaforma sono escluse, così la loro attività non viene mai contata come di questa azienda.",
+          "item2": "I visitatori che usano il widget di chat pubblico sono anonimi e non possono essere ricondotti a una persona qui.",
+          "item3": "Gli accessi vengono registrati una volta all'ora per dispositivo, quindi qui si contano le sessioni e non i caricamenti di pagina."
+        }
+      },
+      "layout": {
+        "loadingWorkspace": "Caricamento dello spazio di lavoro...",
+        "notFound": "Spazio di lavoro non trovato",
+        "workspaceTitle": "Spazio di lavoro {name}",
+        "defaultDescription": "Gestisci le impostazioni dello spazio di lavoro.",
+        "impersonate": "Impersona lo spazio di lavoro",
+        "backToCompanies": "Torna alle aziende",
+        "tabs": {
+          "dashboard": "Pannello",
+          "overview": "Panoramica",
+          "directory": "Rubrica",
+          "invites": "Inviti",
+          "ai": "AI",
+          "aiUsage": "Utilizzo AI",
+          "value": "Valore",
+          "wiki": "Wiki",
+          "unanswered": "Senza risposta",
+          "diary": "Diario",
+          "skills": "Competenze",
+          "prompt": "Prompt",
+          "aiRules": "Regole AI",
+          "aiModels": "Modelli AI",
+          "evals": "Valutazioni",
+          "chatLogs": "Registri chat",
+          "calls": "Chiamate",
+          "mailbox": "Casella di posta",
+          "widget": "Widget",
+          "appearance": "Aspetto",
+          "welcomeScreen": "Schermata di benvenuto",
+          "conversationStarters": "Spunti di conversazione",
+          "greeting": "Saluto",
+          "integration": "Integrazione",
+          "features": "Funzionalità"
+        }
+      },
+      "profile": {
+        "saveSuccess": "Profilo aggiornato con successo.",
+        "saveFailed": "Impossibile salvare il profilo",
+        "nameLabel": "Nome dell'azienda",
+        "namePlaceholder": "Per esempio: ACME Srl",
+        "descriptionLabel": "Descrizione in una riga",
+        "descriptionPlaceholder": "Per esempio: Gestisci le impostazioni dello spazio di lavoro.",
+        "aboutLabel": "Su questa azienda",
+        "aboutHint": "Il tuo team può vederlo. Dà all'assistente un contesto da cui partire.",
+        "aboutPlaceholder": "Cosa fa l'azienda, chi serve, come è organizzata — qualunque cosa valga la pena far sapere all'assistente.",
+        "planOverride": "Override del piano di abbonamento",
+        "superAdminOnly": "Solo super amministratori",
+        "noPlanOption": "Nessun piano (Illimitato / Predefinito di sistema)",
+        "planOption": "{name} ({limit} msg) - £{price}/mese",
+        "planOptionUnlimited": "{name} (Illimitato) - £{price}/mese",
+        "saveProfile": "Salva il profilo",
+        "billingTitle": "Abbonamento e fatturazione",
+        "billingSubtitle": "Gestisci il livello di abbonamento della tua organizzazione e monitora i limiti di capacità.",
+        "currentPlan": "Piano attualmente assegnato",
+        "loading": "Caricamento...",
+        "usage": "Utilizzo: {used} / {limit}",
+        "unlimited": "Illimitato",
+        "availableTiers": "Livelli superiori disponibili",
+        "active": "Attivo",
+        "pricePerMonth": "£{price}/mese",
+        "unlimitedActions": "Azioni illimitate",
+        "actions": "{count} azioni",
+        "askUs": "Servono più messaggi o più spazio per la conoscenza? <b>Chiedici</b> e sposteremo questo spazio di lavoro su un piano adatto."
+      },
+      "aiOverview": {
+        "headerTitle": "AI dell'azienda",
+        "headerDescription": "Cosa ha configurato questa azienda per conto suo, e se qualcosa richiede attenzione.",
+        "ready": "Pronto",
+        "needsAttention": "Richiede attenzione",
+        "nothingNeedsAttention": "· niente richiede attenzione",
+        "areasCount": "· {count} aree su {total}",
+        "intro": "Un'azienda non è obbligata a configurare nulla di tutto questo — ciò che viene lasciato stare usa la configurazione della piattaforma, il che è normale e non blocca un lancio. Solo qualcosa impostato qui che non funziona richiede attenzione.",
+        "fixFirst": "Sistema prima queste",
+        "empty": "Ancora niente da segnalare",
+        "showing": "{count, plural, one {# area} other {# aree}}",
+        "columnArea": "Area",
+        "columnSummary": "Cosa ha questa azienda",
+        "columnState": "Stato",
+        "stateNeedsAttention": "Richiede attenzione",
+        "stateSetHere": "Impostato per questa azienda",
+        "stateNotConfigured": "Non configurato"
+      },
+      "prompt": {
+        "title": "Prompt dell'azienda",
+        "subtitle": "Istruzioni e regole personalizzate che si applicano a tutti gli agenti AI in {name}.",
+        "thisWorkspace": "questo spazio di lavoro",
+        "revert": "Ripristina",
+        "savePrompt": "Salva il prompt",
+        "savedTitle": "Prompt salvato",
+        "savedMessage": "Il prompt dell'azienda è stato aggiornato con successo.",
+        "saveFailedTitle": "Salvataggio non riuscito",
+        "saveFailedFallback": "Impossibile salvare le modifiche.",
+        "sectionTitle": "Istruzioni dell'azienda",
+        "unsaved": "Non salvato",
+        "synced": "Sincronizzato",
+        "instructionsLabel": "ISTRUZIONI",
+        "connecting": "Connessione...",
+        "placeholder": "Definisci qui i confini operativi specifici dell'azienda... Per esempio: Il focus principale di questo spazio di lavoro è..."
+      },
+      "rules": {
+        "title": "Regole AI",
+        "subtitle": "Imposta le regole su come l'AI risponde agli utenti.",
+        "createRule": "Crea una regola",
+        "searchPlaceholder": "Cerca trigger o istruzioni...",
+        "empty": "Ancora nessuna regola",
+        "columnPriority": "Priorità",
+        "columnRule": "Nome regola / Trigger",
+        "columnStatus": "Stato",
+        "activate": "Attiva",
+        "deactivate": "Disattiva",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "deleteTitle": "Elimina la regola",
+        "deleteBody": "Questa regola sarà rimossa dall'insieme di regole dello spazio di lavoro.",
+        "deleteWarning": "Questa azione non può essere annullata.",
+        "cancel": "Annulla",
+        "deleteConfirm": "Elimina la regola"
+      },
+      "chatEvalNew": {
+        "title": "Crea una valutazione dalla chat",
+        "description": "Trasforma le prove selezionate dalla chat in una valutazione di regressione a schermo intero, con le prove sempre visibili.",
+        "evidenceTitle": "Prove selezionate dalla chat",
+        "promptEvidence": "Prova del prompt",
+        "noUserMessage": "Nessun messaggio dell'utente trovato.",
+        "observedAnswer": "Risposta osservata",
+        "noAssistantMessage": "Nessun messaggio dell'assistente selezionato.",
+        "surfaceWidget": "widget",
+        "surfaceCompanyChat": "chat aziendale",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Nome della regressione",
+        "whereLabel": "Dove si applica?",
+        "whereInternal": "Chat interna",
+        "whereInternalHint": "Il personale che fa domande alla tua AI",
+        "whereWidget": "Widget per i clienti",
+        "whereWidgetHint": "Il widget pubblico sul tuo sito",
+        "promptLabel": "Cosa chiederebbe qualcuno?",
+        "promptPlaceholder": "Domanda o compito da rieseguire come valutazione.",
+        "expectedLabel": "Com'è una buona risposta?",
+        "expectedPlaceholder": "Cosa deve fare una risposta per passare.",
+        "bannedLabel": "Parole che non deve mai dire",
+        "bannedHint": "Facoltativo. Premi Invio dopo ciascuna.",
+        "bannedPlaceholder": "enterprise è gratis",
+        "removePhrase": "Rimuovi {phrase}",
+        "blockerTitle": "Deve passare prima che l'AI vada in produzione",
+        "blockerHint": "Lascia spuntato per qualunque cosa ti metterebbe in imbarazzo davanti a un cliente.",
+        "creating": "Creazione...",
+        "create": "Crea la valutazione",
+        "createFailed": "Non è stato possibile creare il caso di valutazione.",
+        "defaultNameFromTitle": "Regressione {title}",
+        "defaultName": "Regressione da prove di chat",
+        "defaultExpectedWithAnswer": "Conserva le parti utili della risposta osservata, resta ancorato al contesto aziendale approvato ed evita affermazioni non supportate.",
+        "defaultExpected": "La risposta deve essere ancorata al contesto aziendale approvato ed evitare affermazioni non supportate."
+      },
+      "chatMemoryNew": {
+        "title": "Suggerisci una memoria",
+        "description": "Trasforma qualcosa detto in questa conversazione in una memoria, da rivedere nella schermata Memoria.",
+        "evidenceTitle": "Prove selezionate dalla chat",
+        "noContent": "Nessun contenuto del messaggio selezionato.",
+        "message": "messaggio",
+        "surfaceWidget": "widget",
+        "surfaceCompanyChat": "chat aziendale",
+        "titleLabel": "Titolo",
+        "optional": "Facoltativo",
+        "titlePlaceholder": "Nessuna data di consegna in chat",
+        "whyLabel": "Perché?",
+        "whyHint": "Nota di revisione facoltativa",
+        "whyPlaceholder": "Perché questo dovrebbe diventare una memoria duratura?",
+        "saving": "Salvataggio...",
+        "suggest": "Suggerisci la memoria",
+        "createFailed": "Non è stato possibile creare la memoria candidata.",
+        "defaultTitle": "Memoria {title}",
+        "defaultReason": "Suggerita dal thread di chat {threadId}."
+      },
+      "knowledgeDoc": {
+        "back": "Torna alla conoscenza",
+        "notFound": "Non è stato possibile ispezionare questo documento.",
+        "retryFailed": "Impossibile ritentare l'acquisizione.",
+        "sampledChunks": "{count} frammenti campionati",
+        "retryIngestion": "Ritenta l'acquisizione",
+        "ingestionFailed": "Acquisizione non riuscita",
+        "embeddingConfigIssue": "È un problema di configurazione del modello AI. Imposta il predefinito di embedding dell'azienda su un modello Google Vertex che supporti il caso d'uso embedding, poi ritenta l'acquisizione.",
+        "openAiModels": "Apri i modelli AI",
+        "storedEmbedding": "Embedding memorizzato",
+        "noStoredModel": "Nessun modello memorizzato",
+        "noProviderModel": "Nessun modello del provider",
+        "dimensions": "{count} dimensioni",
+        "noDimensionsStored": "Nessuna dimensione di embedding memorizzata",
+        "activeEmbedding": "Embedding attivo",
+        "noActiveModel": "Nessun modello attivo",
+        "noDimensionsResolved": "Nessuna dimensione di embedding risolta",
+        "timeline": "Cronologia",
+        "created": "creato: {date}",
+        "queued": "in coda: {date}",
+        "started": "avviato: {date}",
+        "fresh": "aggiornato: {date}",
+        "driftDetected": "Rilevata una deriva del modello di embedding",
+        "driftStored": "Memorizzato: {model} ({dims} dim.)",
+        "driftActive": "Attivo: {model} ({dims} dim.)",
+        "unknown": "sconosciuto",
+        "historyTitle": "Storico delle acquisizioni",
+        "noEvents": "Nessun evento recente trovato per il documento.",
+        "chunksTitle": "Frammenti memorizzati",
+        "chunksShown": "{count} mostrati",
+        "noChunks": "Nessun frammento è ancora memorizzato per questo documento.",
+        "chunkNumber": "Frammento {number}",
+        "chars": "{count} caratteri"
+      },
+      "skills": {
+        "title": "Competenze dell'azienda",
+        "subtitle": "Competenze dal Centro competenze che l'AI di questa azienda usa. Due al massimo — ciascuna viene aggiunta a ogni messaggio a cui risponde.",
+        "addFromCenter": "Aggiungi dal Centro competenze",
+        "toggleFailed": "Non è stato possibile cambiare l'interruttore.",
+        "archiveFailed": "Non è stato possibile archiviare la competenza.",
+        "importFailed": "Non è stato possibile aggiungere le competenze.",
+        "searchPlaceholder": "Cerca competenze per nome",
+        "clearSearch": "Cancella la ricerca",
+        "noMatch": "Nessuna competenza corrisponde alla ricerca",
+        "emptyList": "Ancora nessuna competenza — aggiungine una dal Centro competenze",
+        "emptyShort": "Ancora nessuna competenza",
+        "showing": "Mostrate {start}-{end} di {total} competenze",
+        "columnSkill": "Competenza",
+        "noDescription": "Nessuna descrizione.",
+        "columnSurfaces": "Dove risponde",
+        "answersInChat": "Risponde nella chat aziendale",
+        "answersOnWidget": "Risponde sul widget",
+        "columnAdded": "Aggiunta",
+        "removeAria": "Rimuovi {name}",
+        "addModalTitle": "Aggiungi competenze",
+        "searchSkills": "Cerca competenze",
+        "noMatchModal": "Nessuna competenza corrisponde alla ricerca.",
+        "allAdded": "Ogni competenza del Centro competenze è già stata aggiunta.",
+        "showMore": "Mostra altre competenze",
+        "cancel": "Annulla",
+        "addCount": "Aggiungi {count} competenze",
+        "addOne": "Aggiungi la competenza",
+        "removeModalTitle": "Rimuovi la competenza",
+        "removeBody": "Rimuovere <b>{name}</b> da questa azienda? I suoi agenti smettono di usarla. La competenza resta nel Centro competenze, quindi puoi aggiungerla di nuovo.",
+        "removeConfirm": "Rimuovi la competenza"
+      },
+      "providerUsage": {
+        "title": "Utilizzo per provider",
+        "subtitle": "Spesa del tenant per provider",
+        "noData": "Nessun dato sui provider",
+        "unknownProvider": "Sconosciuto / Legacy",
+        "calls": "{count} chiamate"
+      },
+      "knowledge": {
+        "title": "Conoscenza AI",
+        "subtitle": "Collega diverse fonti di dati per la base di conoscenza dell'agente",
+        "emptyDescription": "Carica file PDF, Word o Markdown — o trascina un'intera cartella OKF — così l'AI può imparare in modo sicuro su questa azienda.",
+        "deleteDescription": "Sei sicuro di voler rimuovere <b>{title}</b> dalla memoria di questo spazio di lavoro?"
+      }
     },
     "workflows": {
       "title": "Workflow Autonomi",
@@ -913,7 +1338,15 @@
           "agent": "Unità Agent",
           "inputs": "Input",
           "outputs": "Output",
-          "noSchema": "Nessuno schema I/O definito"
+          "noSchema": "Nessuno schema I/O definito",
+          "unnamed": "Nodo Senza Nome",
+          "module": "Modulo {type}",
+          "configuration": "Configurazione",
+          "unconfiguredDatabase": "Nodo Database Non Configurato",
+          "schemaBound": "Schema dati associato",
+          "skills": "Skill",
+          "avatarAlt": "Avatar",
+          "notAvailable": "N/D"
         },
         "editor": {
           "configureAgent": "Configura Unità Agent",
@@ -956,7 +1389,43 @@
           "promote": "Promuovi alla Flotta Globale",
           "promoteConfirm": "Sei sicuro di voler promuovere questo agent alla flotta globale? Diventerà accessibile in tutti i workflow.",
           "promoteSuccess": "Agent promosso alla flotta globale con successo.",
-          "save": "Sincronizza Modifiche"
+          "save": "Sincronizza Modifiche",
+          "tabs": {
+            "aiConfiguration": "Configurazione AI",
+            "advancedEngine": "Motore Avanzato"
+          },
+          "variables": {
+            "inputLabel": "Variabili Attese in Input",
+            "inputPlaceholder": "es. textEmail, topic, userPreferences",
+            "inputHint": "Variabili separate da virgola che {platformName} passerà all'AI.",
+            "outputLabel": "Variabili nell'Output AI",
+            "outputPlaceholder": "es. summary, sentiment, nextSteps",
+            "outputHint": "Variabili separate da virgola corrispondenti al formato di output dell'agent. {platformName} applica rigorosamente questo output."
+          },
+          "effort": {
+            "low": "BASSO",
+            "medium": "MEDIO",
+            "high": "ALTO"
+          },
+          "skills": {
+            "label": "Skill centrali",
+            "selectedCount": "{count} selezionate dalle skill attive della libreria.",
+            "empty": "Nessuna skill centrale attiva è ancora disponibile.",
+            "risk": "rischio {level}",
+            "noDescription": "Nessuna descrizione fornita.",
+            "bindHint": "Il salvataggio associa le skill selezionate a questo agent con gli snapshot delle versioni correnti. I permessi degli strumenti restano controllati separatamente."
+          },
+          "mapping": {
+            "standardTab": "🪄 Configuratore Standard",
+            "developerTab": "⚡️ Mappatura Developer",
+            "autoTitle": "Auto-Configurazione Mappatura AI",
+            "autoDescription": "Descrivi quali dati upstream devono essere passati a questo Agent, o quale operazione specifica deve eseguire con le variabili del payload precedente. Analizzeremo il contesto del grafo e costruiremo i template di iniezione dinamica.",
+            "autoPlaceholder": "es. Mappa il contenuto della precedente Scrape Action nel payload di valutazione dell'Agent.",
+            "autoConfigure": "Auto-Configura Requisiti di Mappatura",
+            "jsonLabel": "Mappatura Input Strutturata JSON (Fase 2)",
+            "jsonHint": "Usa <syntax></syntax> per associare le variabili matematicamente. Se mappato, questo JSON sovrascrive i template raw. Si allinea perfettamente con l''<strong>Input Schema</strong> definito nella scheda Agent Engine.",
+            "templateLabel": "Template Prompt Stringa Raw"
+          }
         },
         "addModal": {
           "title": "Aggiungi Unità di Intelligenza",
@@ -977,7 +1446,186 @@
           "initSandboxFailed": "Errore durante l'inizializzazione dell'agent sandbox.",
           "saveAgentFailed": "Impossibile sincronizzare la configurazione dell'agent.",
           "promoteFailed": "Impossibile promuovere l'agent alla flotta globale.",
-          "dispatchFailed": "Impossibile avviare l'esecuzione manuale."
+          "dispatchFailed": "Impossibile avviare l'esecuzione manuale.",
+          "autoConfigureFailed": "Configurazione AI non riuscita. Riprova o costruisci il payload manualmente."
+        },
+        "analyzing": "Analisi del Contesto del Grafo...",
+        "library": {
+          "title": "Libreria Nodi",
+          "description": "Trascina e rilascia i nodi sul canvas per orchestrare il tuo workflow.",
+          "nodes": {
+            "trigger": "Evento Trigger",
+            "agent": "Agent AI",
+            "action": "Azione API",
+            "logic": "Router Logico",
+            "merge": "Merge / Sincronizzazione",
+            "iterator": "Iteratore (Loop)",
+            "code": "Trasformazione Codice",
+            "database": "Azione Database",
+            "wait": "Attesa / Ritardo",
+            "approval": "Approvazione Umana",
+            "email": "Invia Email"
+          }
+        },
+        "drawer": {
+          "closeAria": "Chiudi configurazione",
+          "standardTab": "🪄 Standard",
+          "developerTab": "⚡️ Developer",
+          "nodeLabel": "Etichetta Nodo",
+          "nodeLabelPlaceholder": "es. Scrape Google",
+          "saveConfiguration": "Salva Configurazione",
+          "trigger": {
+            "type": "Tipo di Trigger",
+            "manual": "Manuale",
+            "schedule": "Pianificazione",
+            "webhook": "Webhook",
+            "webhookEndpoint": "Endpoint Webhook",
+            "webhookHint": "Invia una richiesta POST a questo endpoint per avviare il workflow. Il body JSON verrà passato come payload iniziale del workflow.",
+            "runFrequency": "Frequenza di Esecuzione",
+            "modes": {
+              "interval": "Intervallo Personalizzato",
+              "daily": "Giornaliero",
+              "weekly": "Settimanale",
+              "monthly": "Mensile"
+            },
+            "every": "Ogni",
+            "units": {
+              "minutes": "Minuti",
+              "hours": "Ore",
+              "days": "Giorni"
+            },
+            "dayOfWeek": "Giorno della Settimana",
+            "days": {
+              "monday": "Lunedì",
+              "tuesday": "Martedì",
+              "wednesday": "Mercoledì",
+              "thursday": "Giovedì",
+              "friday": "Venerdì",
+              "saturday": "Sabato",
+              "sunday": "Domenica"
+            },
+            "dayOfMonth": "Giorno del Mese",
+            "timeUtc": "Ora (UTC)"
+          },
+          "action": {
+            "method": "Metodo HTTP",
+            "url": "URL Endpoint di Destinazione",
+            "urlHint": "Supporta l'iniezione di payload <syntax></syntax>.",
+            "headers": "Header della Richiesta",
+            "addHeader": "+ Aggiungi Header",
+            "headerKeyPlaceholder": "Chiave (es. Authorization)",
+            "headerValuePlaceholder": "Valore (es. Bearer 123)",
+            "noHeaders": "Nessun header esterno configurato.",
+            "body": "Payload della Richiesta (Body)",
+            "forwardData": "+ Inoltra Dati Da...",
+            "bodyHint": "Per passare l'intero output di un nodo precedente in modo sicuro, usa il menu a tendina sopra per iniettare la sintassi raw della variabile (es. <syntax></syntax>)."
+          },
+          "code": {
+            "label": "Sandbox JavaScript V8",
+            "hint": "Un livello di esecuzione sandbox V8 sicuro. Manipola, mappa, filtra o ristruttura array complessi dinamicamente prima di passarli alle integrazioni. <strong>DEVI</strong> usare un'istruzione <code>return</code> standard."
+          },
+          "db": {
+            "operation": "Operazione Database",
+            "table": "Tabella di Destinazione",
+            "selectTable": "-- Seleziona Tabella di Destinazione --",
+            "docId": "ID Documento di Destinazione",
+            "docIdOptional": "ID Documento di Destinazione (Opzionale)",
+            "docIdOptionalPlaceholder": "ID documento diretto opzionale",
+            "indexedQuery": "Query Indicizzata",
+            "selectIndex": "-- Seleziona Indice --",
+            "tenantPlaceholder": "Vuoto usa il tenant del workflow",
+            "limit": "Limite",
+            "order": "Ordine",
+            "newestFirst": "Prima i più recenti",
+            "oldestFirst": "Prima i più vecchi"
+          },
+          "dbIndexes": {
+            "name": "Nome",
+            "plan": "Piano",
+            "company": "Azienda",
+            "rightmoveId": "Rightmove ID",
+            "runId": "Run ID",
+            "user": "Utente",
+            "widget": "Widget",
+            "thread": "Thread",
+            "companyRole": "Azienda + Ruolo",
+            "agent": "Agent",
+            "document": "Documento",
+            "status": "Stato",
+            "agentCompany": "Agent + Azienda",
+            "active": "Attivo",
+            "created": "Creato",
+            "email": "Email"
+          },
+          "logic": {
+            "conditions": "Condizioni di Routing",
+            "addRule": "+ Aggiungi Regola",
+            "testVariable": "Variabile di Test",
+            "injectUpstream": "+ Inietta Riferimento Variabile Upstream...",
+            "condition": "Condizione",
+            "operators": {
+              "equals": "Uguale (==)",
+              "notEquals": "Diverso (!=)",
+              "contains": "Contiene",
+              "greaterThan": "Maggiore Di (>)",
+              "lessThan": "Minore Di (<)",
+              "isEmpty": "È Vuoto / Null",
+              "notEmpty": "Non È Vuoto / Configurato"
+            },
+            "comparisonValue": "Valore di Confronto",
+            "comparisonPlaceholder": "Testo fisso, numero o '{{'nodes...'}}'",
+            "executeNext": "Esegui Blocco Successivo",
+            "noRules": "Nessuna regola di routing condizionale definita. L'attraversamento userà sempre il ramo di Fallback.",
+            "fallback": "Rotta di Fallback (Default)",
+            "fallbackHint": "Se nessuna regola corrisponde, l'esecuzione segue in sicurezza il percorso verso questo nodo di Fallback."
+          },
+          "iterator": {
+            "info": "L'Iterator Node esegue un Fan-Out Strutturale. Per ogni elemento identificato nel target Array analizzato, {platformName} si dirama nativamente e avvia esecuzioni parallele simultanee per tutti gli elementi downstream fisicamente collegati a questo nodo!",
+            "target": "Collezione Array di Destinazione"
+          },
+          "merge": {
+            "info": "<strong>Fusione Strutturale:</strong> Il Merge Node blocca l'esecuzione downstream finché le sue regole configurate non sono soddisfatte. Una volta attivato, raggruppa dinamicamente tutti i payload degli edge upstream fisici in un unico array dizionario.",
+            "mapHint": "Mappa questo blocco dinamicamente lungo il grafo usando: <syntax></syntax>",
+            "behavior": "Comportamento di Attesa del Merge",
+            "waitAll": "Attendi che TUTTI i rami upstream mappati finiscano",
+            "waitAny": "Attendi l'arrivo di QUALSIASI percorso (Scarta i rami in ritardo)"
+          },
+          "wait": {
+            "info": "<strong>Governatore Artificiale:</strong> Il Wait Node mette in pausa l'attraversamento ricorsivamente usando la pianificazione in background nativa di Convex, prevenendo con successo burst di rate-limit verso API esterne o mutazioni DB concorrenti.",
+            "delay": "Ritarda Esecuzione",
+            "seconds": "Secondi",
+            "hint": "Accetta interi positivi statici o variabili di payload risolte dinamicamente in modo nativo."
+          },
+          "approval": {
+            "info": "<strong>Human-in-the-Loop:</strong> Mette in pausa il workflow finché un super admin non lo approva nella schermata Workflow Runs, proteggendo operazioni critiche come email automatiche, eliminazioni e outreach di massa. Nulla dopo questo nodo accade fino ad allora, e un'approvazione senza risposta scade nella finestra della piattaforma.",
+            "notice": "Avviso Attività di Approvazione",
+            "noticePlaceholder": "es. Rivedi il testo del payload email generato.",
+            "previewTarget": "Valore di Validazione (Target Anteprima)",
+            "mapUpstream": "+ Mappa Risultato Upstream per Anteprima live...",
+            "previewHint": "Mostra questo specifico valore upstream sulla card di log dell'Approvazione."
+          },
+          "email": {
+            "info": "<strong>Nodo SMTP Resend:</strong> Invia email programmatiche dinamicamente. Supporta sequenze standard separate da virgola, stile HTML e variabili di mappatura in tempo reale.",
+            "from": "Indirizzo Mittente (From)",
+            "fromPlaceholder": "es. Acme Automations <hello@example.com>",
+            "fromHint": "Lascia rigorosamente vuoto per usare l'indirizzo di invio predefinito globale.",
+            "to": "Indirizzo Destinatario (To)",
+            "toHint": "Accetta stringhe separate da virgola o variabili array iniettate in modo nativo.",
+            "subject": "Oggetto",
+            "body": "Corpo del Messaggio (HTML / Raw)",
+            "injectContent": "+ Inietta Variabile di Contenuto Upstream..."
+          },
+          "auto": {
+            "title": "Auto-Configurazione AI",
+            "description": "Descrivi cosa vuoi che faccia questo nodo in linguaggio semplice. {platformName} configurerà dinamicamente i requisiti del payload mappando automaticamente le variabili upstream dal grafo.",
+            "placeholder": "es. Salva il riassunto dell'AI Agent precedente e inseriscilo nel database Marketing.",
+            "button": "Auto-Configura Mappatura"
+          },
+          "devMapping": {
+            "jsonLabel": "Mappatura Dati JSON (Fase 2)",
+            "jsonHint": "Usa <syntax></syntax> per associare le variabili matematicamente. Se mappato, questo JSON sovrascrive l'input raw.",
+            "templateLabel": "Template Stringa Raw"
+          }
         }
       },
       "executions": {
@@ -1223,6 +1871,130 @@
           }
         },
         "submit": "Add tool"
+      },
+      "shelf": {
+        "headerTitle": "Strumenti",
+        "headerDescription": "Cosa possono raggiungere i tuoi agenti, e cosa è permesso fare a ciascuno.",
+        "buildTool": "Costruisci uno strumento",
+        "addFailed": "Non è stato possibile aggiungerlo. Riprova.",
+        "removeFailed": "Non è stato possibile rimuoverlo. Riprova.",
+        "searchPlaceholder": "Cerca strumenti per nome...",
+        "roles": {
+          "superAdmin": "Amministratori di sistema",
+          "admins": "Amministratori",
+          "anyone": "Chiunque"
+        },
+        "effects": {
+          "read": "Solo lettura",
+          "write": "Scrive",
+          "destructive": "Elimina",
+          "external": "Raggiunge l'esterno"
+        },
+        "groups": {
+          "email": "Email",
+          "emailBlurb": "Leggere e rispondere in una casella di posta collegata.",
+          "phone": "Telefono",
+          "phoneBlurb": "Il numero a cui risponde {platformName}.",
+          "knowledge": "Conoscenza",
+          "knowledgeBlurb": "Leggere documenti e pagine.",
+          "companyRecords": "Dati aziendali",
+          "companyRecordsBlurb": "Leggere e aggiornare i dati dell'azienda stessa.",
+          "work": "Lavoro",
+          "workBlurb": "Compiti che un agente può svolgere per una persona.",
+          "otherSystems": "Altri sistemi",
+          "otherSystemsBlurb": "Chiamare un'API che gli indichi tu.",
+          "builtByYou": "Costruiti da te",
+          "builtByYouBlurb": "Strumenti scritti qui anziché collegati."
+        },
+        "states": {
+          "notAdded": "Non ancora aggiunto",
+          "needsAttention": "Richiede attenzione",
+          "switchedOff": "Spento",
+          "needsSetup": "Da configurare",
+          "working": "Funzionante"
+        },
+        "settings": "Impostazioni",
+        "adding": "Aggiunta in corso...",
+        "add": "Aggiungi",
+        "loading": "Caricamento...",
+        "noMatch": "Nessuno strumento corrisponde alla ricerca.",
+        "emptyGroup": "Ancora niente qui. Aggiungi una connessione qui sopra, o costruisci il tuo strumento.",
+        "off": "Spento",
+        "removeIt": "Rimuoverlo?",
+        "keep": "Mantieni",
+        "remove": "Rimuovi",
+        "removeAria": "Rimuovi {name}",
+        "showMore": "Mostra altri"
+      },
+      "edit": {
+        "back": "Torna agli strumenti",
+        "title": "Modifica strumento",
+        "subtitle": "Cambia cosa fa questo strumento e come lo usa l'assistente.",
+        "idTag": "ID: {id}...",
+        "sectionName": "Nome",
+        "sectionDoes": "Cosa fa",
+        "sectionRuns": "Cosa esegue",
+        "sectionWho": "Chi è autorizzato a usarlo",
+        "sectionRules": "Regole per l'esecuzione",
+        "sectionInOut": "Cosa entra e cosa esce",
+        "roleAdmin": "Amministratore",
+        "roleSystemAdmin": "Amministratore di sistema",
+        "sideEffectLabel": "Cosa può fare",
+        "sideEffectRead": "Lettura",
+        "sideEffectWrite": "Scrittura",
+        "sideEffectDestructive": "Distruttivo",
+        "sideEffectExternal": "Esterno",
+        "beforeRuns": "Prima che venga eseguito",
+        "requireApproval": "Richiedi approvazione",
+        "active": "Attivo",
+        "inputLabel": "Di cosa ha bisogno (JSON)",
+        "outputLabel": "Cosa restituisce (JSON)",
+        "outputPlaceholder": "Facoltativo: '{\"type\":\"object\",\"properties\":{}}'",
+        "save": "Salva le modifiche"
+      },
+      "connector": {
+        "loading": "Caricamento...",
+        "notFound": "Questo strumento non è stato trovato.",
+        "back": "Torna agli strumenti",
+        "save": "Salva",
+        "saving": "Salvataggio...",
+        "saved": "Salvato",
+        "settingsTitle": "Impostazioni",
+        "takingCalls": "Risponde alle chiamate",
+        "availableToAgents": "Disponibile per gli agenti",
+        "voiceOn": "La linea telefonica risponde. Spegnila e ogni chiamante sentirà invece un cortese rifiuto.",
+        "voiceOff": "Spento. Ogni chiamante sente un cortese rifiuto finché non viene riacceso.",
+        "agentsOn": "Questo strumento può essere assegnato agli agenti.",
+        "agentsOff": "Spento. Nessun agente può usarlo, qualunque cosa gli sia stata assegnata.",
+        "whoCanUse": "Chi può usarlo",
+        "everyCompany": "Tutte le aziende",
+        "oneCompany": "Una sola azienda",
+        "company": "Azienda",
+        "chooseCompany": "Scegli un'azienda",
+        "accountRefHint": "L'account a cui è legato questo connettore. Chiamate, messaggi o richieste in arrivo per esso vengono instradati a questo spazio di lavoro.",
+        "keysLabel": "Chiavi di cui ha bisogno",
+        "keysHint": "Questo strumento ha bisogno di {refs} impostati sul server. Nominali qui così {platformName} sa dove cercare — i valori stessi non vivono mai in questa schermata.",
+        "stillMissing": "Ancora mancanti: {refs}",
+        "whatItCanDo": "Cosa può fare",
+        "nothingToSwitch": "Questo strumento non ha nulla da attivare.",
+        "connectedAccount": "Account collegato",
+        "connectedAs": "Collegato come <b>{account}</b>",
+        "since": "Dal {date}",
+        "disconnecting": "Disconnessione...",
+        "disconnect": "Disconnetti",
+        "disconnectNote": "Disconnettere revoca la chiave presso il provider — l'account in sé resta intatto.",
+        "connectionFailed": "La connessione non è riuscita. Collegati di nuovo.",
+        "notConnectedExplain": "Non collegato. Il collegamento apre la schermata di approvazione del provider per l'account dedicato — la piattaforma detiene una chiave revocabile e ad ambito limitato e non vede mai una password.",
+        "openingGoogle": "Apertura di Google...",
+        "connectMailbox": "Collega la casella di posta",
+        "doesItWork": "Funziona",
+        "working": "Funziona.",
+        "lastChecked": "Ultimo controllo {date}",
+        "notCheckedYet": "Non ancora controllato.",
+        "checking": "Controllo in corso...",
+        "checkNow": "Controlla ora",
+        "toolsCreated": "Strumenti creati da questo",
+        "off": "Spento"
       }
     },
     "agents": {
@@ -1400,7 +2172,9 @@
             "seedButton": "Genera Dati di Esempio",
             "loadMore": "Carica Altri",
             "searchPlaceholder": "Cerca per attività o modello"
-          }
+          },
+          "inputTokens": "Token in ingresso",
+          "outputTokens": "Token in uscita"
         },
         "settings": {
           "loading": "Caricamento...",
@@ -1596,6 +2370,10 @@
                 "new": "For example: Tell them our office is in London and offer to book a visit.",
                 "edit": "For example: Tell them our office is in London and offer to book a visit."
               }
+            },
+            "name": {
+              "label": "Come chiamare questa regola",
+              "placeholder": "Per esempio: Indirizzo dell'ufficio"
             }
           }
         },
@@ -1626,6 +2404,12 @@
             "dropTitle": "Drag and drop your file here",
             "dropSubtitle": "Supports .pdf, .docx, and .txt files",
             "browseButton": "Browse Files"
+          },
+          "agent": {
+            "headerTitle": "Conoscenza dell'agente",
+            "headerDescription": "Ispeziona e gestisci la conoscenza a livello di tenant disponibile per questo agente.",
+            "emptyDescription": "Carica documenti, Markdown o una cartella OKF, testo, o pagine web perché questo agente possa recuperare materiale di riferimento approvato del tenant.",
+            "deleteDescription": "Vuoi davvero rimuovere {title} dalla conoscenza di questo agente?"
           }
         },
         "logs": {
@@ -1661,6 +2445,59 @@
             "tabs": {
               "payload": "EXECUTION PAYLOAD",
               "config": "PROMPT & RUNTIME CONFIGURATION"
+            },
+            "notFound": "Traccia non trovata o eliminata.",
+            "copyTitle": "Copia negli appunti"
+          },
+          "raw": {
+            "title": "Log grezzi",
+            "description": "Parola per parola, cosa è stato inviato a questo agente e cosa è tornato. Raggruppato per il lavoro a cui apparteneva.",
+            "filters": {
+              "everything": "Tutto",
+              "thinking": "Ragionamento",
+              "tools": "Strumenti",
+              "problems": "Problemi"
+            },
+            "searchPlaceholder": "Cerca in tutto ciò che questo agente ha detto o gli è stato detto",
+            "clearSearch": "Cancella ricerca",
+            "failureFocus": "Mostrate solo le volte in cui questa stessa cosa è andata storta.",
+            "showEverything": "Mostra di nuovo tutto",
+            "footer": {
+              "previous": "Precedente",
+              "next": "Successiva",
+              "empty": "Nessun lavoro da mostrare",
+              "page": "Pagina {current} di {total}",
+              "showing": "Mostrati i lavori da {start} a {end} di {total}"
+            },
+            "truncated": "Questo agente ha detto più di quanto uno schermo possa contenere, quindi qui c'è la sua attività più recente e non tutto ciò che ha mai fatto.",
+            "empty": {
+              "searchTitle": "Niente corrisponde a quella ricerca",
+              "searchBody": "Prova una parola diversa, o cancella la ricerca.",
+              "problemsTitle": "Niente è andato storto",
+              "problemsBody": "Nessun fallimento è stato registrato per questo agente.",
+              "kindTitle": "Ancora niente di quel tipo",
+              "kindBody": "Prova a mostrare tutto invece.",
+              "allTitle": "Questo agente non ha ancora detto nulla",
+              "allBody": "Quando verrà eseguito, tutto ciò che gli viene inviato e tutto ciò che risponde apparirà qui."
+            },
+            "noJob": "Nessun lavoro",
+            "outsideJob": "Lavoro svolto fuori da un lavoro",
+            "entries": "{formatted} {count, plural, one {voce} other {voci}}",
+            "openJob": "Apri questo lavoro",
+            "whatWeSent": "Cosa abbiamo inviato",
+            "whatCameBack": "Cosa è tornato",
+            "repeats": "È successo {count} volte di recente.",
+            "seeOthers": "Vedi le altre {count}",
+            "outcome": {
+              "worked": "riuscito",
+              "failed": "fallito",
+              "notRecorded": "esito non registrato"
+            },
+            "category": {
+              "thinking": "Ragionamento",
+              "tool": "Strumento",
+              "problem": "Problema",
+              "other": "Altro"
             }
           }
         },
@@ -1704,6 +2541,715 @@
           },
           "loading": "Caricamento...",
           "notFound": "Agente non trovato."
+        },
+        "runs": {
+          "page": {
+            "title": "Attività",
+            "description": "Ogni lavoro eseguito da questo agente, quanto è costato ciascuno, e cosa puoi farci.",
+            "everything": "Tutto",
+            "replayFailed": "Impossibile rieseguire il run.",
+            "replaySameVersion": "Riesecuzione {runId} accodata sullo snapshot di versione del run originale.",
+            "replayCurrent": "Riesecuzione {runId} accodata sulla configurazione attiva corrente.",
+            "reflectSuccess": "Riflessione generata: la traccia del run ora ha una categoria, prove e prossimi passi.",
+            "reflectFailed": "Impossibile generare la riflessione.",
+            "fixtureSuccess": "Salvato come fixture di regressione per i futuri controlli di miglioramento.",
+            "fixtureFailed": "Impossibile creare la fixture di valutazione."
+          },
+          "evalHealth": {
+            "suiteFailed": "Impossibile eseguire la suite di valutazioni.",
+            "suiteResult": "Eseguite {total, plural, one {1 valutazione di contratto} other {# valutazioni di contratto}}: {passed} superate, {failed} non superate, {active} ancora attive.",
+            "title": "Salute delle valutazioni",
+            "description": "Copertura degli smoke eval, esiti recenti, e fallimenti dei contratti fixture.",
+            "runSuite": "Esegui suite",
+            "stats": {
+              "fixtures": "Fixture",
+              "smokeEvals": "Smoke eval",
+              "passed": "Superate",
+              "failed": "Non superate",
+              "modelGraded": "Giudicate dal modello"
+            },
+            "empty": "Nessuno smoke eval è ancora stato registrato per questo agente.",
+            "model": "modello: {model}",
+            "version": "versione: {version}",
+            "missing": "manca {mapping}",
+            "blocked": "bloccato {summary}",
+            "inspectRun": "Ispeziona run"
+          },
+          "feedback": {
+            "title": "Feedback sul run",
+            "labels": {
+              "goodAnswer": "Buona risposta",
+              "incorrect": "Errata",
+              "missedContext": "Contesto perso",
+              "wrongTool": "Strumento sbagliato",
+              "badArgs": "Argomenti errati",
+              "unsafe": "Non sicura",
+              "tooExpensive": "Troppo costosa",
+              "tooSlow": "Troppo lenta",
+              "approvalPolicy": "Politica di approvazione",
+              "makeEval": "Crea valutazione"
+            },
+            "saveSuccess": "Feedback salvato. Ora alimenta le analisi di apprendimento e i flussi di miglioramento.",
+            "saveFailed": "Impossibile salvare il feedback.",
+            "positive": "Positivo",
+            "neutral": "Neutro",
+            "negative": "Negativo",
+            "labelsHeading": "Etichette",
+            "commentHeading": "Commento",
+            "commentPlaceholder": "Cosa dovrebbe insegnare questo run al ciclo di miglioramento dell'agente?",
+            "cancel": "Annulla",
+            "save": "Salva feedback"
+          },
+          "table": {
+            "cancelSuccess": "Run annullato. Le approvazioni e le chiamate agli strumenti in sospeso sono state annullate e registrate.",
+            "cancelFailed": "Impossibile annullare il run.",
+            "memoryFailed": "Impossibile generare la memoria candidata.",
+            "memoryCreated": "{count, plural, one {Creato 1 elemento di memoria candidata} other {Creati # elementi di memoria candidata}} da revisionare.",
+            "memoryNone": "Da questo run non è stato possibile generare nuova memoria candidata sicura.",
+            "candidateApproved": "Candidato salvato come memoria governata dell'agente.",
+            "candidateRejected": "Candidato rifiutato. Non sarà usato come memoria dell'agente.",
+            "candidateFailed": "Impossibile revisionare la memoria candidata.",
+            "suggestionFailed": "Impossibile generare il suggerimento.",
+            "suggestionsCreated": "{count, plural, one {Creato 1 suggerimento di configurazione} other {Creati # suggerimenti di configurazione}} da revisionare.",
+            "suggestionsNone": "Da questo run non è stato possibile generare nuovi suggerimenti di configurazione.",
+            "suggestionApplied": "Suggerimento applicato. È stato registrato un nuovo snapshot di versione dell'agente.",
+            "suggestionRejected": "Suggerimento rifiutato. Nessuna configurazione è stata cambiata.",
+            "suggestionReviewFailed": "Impossibile revisionare il suggerimento.",
+            "emptyAll": "Questo agente non ha ancora eseguito lavori",
+            "emptyFiltered": "Nessun lavoro corrisponde a quel filtro",
+            "footerEmpty": "Nessun lavoro da mostrare",
+            "footerShowing": "{count, plural, one {1 lavoro mostrato} other {# lavori mostrati}} · pagina {page}",
+            "columns": {
+              "outcome": "Esito",
+              "objective": "Cosa gli è stato chiesto",
+              "when": "Quando",
+              "cost": "Durata / costo"
+            },
+            "markers": {
+              "rated": "lo hai valutato {rating}",
+              "reflected": "rivisto",
+              "usedAsCheck": "usato come controllo",
+              "memory": "qualcosa da ricordare",
+              "suggestion": "ha una modifica suggerita"
+            },
+            "rehearsal": "Prova",
+            "open": "Apri",
+            "menuAria": "Altre cose che puoi fare con questo lavoro",
+            "menu": {
+              "rememberYes": "Lascia che lo ricordi",
+              "rememberNo": "Non ricordarlo",
+              "acceptSuggestion": "Accetta la modifica suggerita",
+              "dismissSuggestion": "Ignora la modifica suggerita",
+              "rate": "Dicci com'è andata",
+              "remember": "Capisci cosa ricordare",
+              "makeCheck": "Trasformalo in un controllo",
+              "suggest": "Suggerisci una modifica a questo agente",
+              "reflect": "Chiedi cosa farebbe di diverso",
+              "replay": "Eseguilo di nuovo",
+              "cancel": "Ferma questo lavoro"
+            }
+          },
+          "detail": {
+            "title": "Dettaglio del lavoro",
+            "notFound": "Questo lavoro non è stato trovato, oppure appartiene a uno spazio di lavoro che non puoi vedere.",
+            "rehearsalNote": "Prova — scritture registrate, non eseguite",
+            "seeTime": "Vedi dove è andato il tempo",
+            "runId": "run: {id}",
+            "version": "versione: {id}",
+            "model": "modello: {id}",
+            "error": "Errore",
+            "finalOutput": "Risultato finale",
+            "whatYouCanDo": "Cosa puoi fare con questo lavoro",
+            "covered": "Questo run è coperto da {count, plural, one {1 fixture di valutazione attiva} other {# fixture di valutazione attive}}.",
+            "turnIntoCheck": "Trasforma questo lavoro in un controllo, così questo caso esatto verrà testato d'ora in poi.",
+            "canBecomeCheck": "Un lavoro può diventare un controllo una volta terminato.",
+            "runAgainNow": "Esegui di nuovo ora",
+            "runAgainAsWas": "Esegui di nuovo com'era",
+            "askChange": "Chiedi cosa cambierebbe",
+            "updateEval": "Aggiorna valutazione",
+            "createEval": "Crea valutazione",
+            "otherTimes": "Le altre volte che questo lavoro è stato eseguito",
+            "otherTimesHint": "Com'è andato questo lavoro le altre volte che è stato eseguito.",
+            "replayOf": "Riesecuzione di",
+            "originalStatus": "originale {status}",
+            "replayStatus": "riesecuzione {status}",
+            "deltas": {
+              "latency": "Latenza",
+              "cost": "Costo",
+              "tokens": "Token",
+              "steps": "Passi",
+              "output": "Risultato",
+              "changed": "cambiato",
+              "same": "uguale"
+            },
+            "timelineDiff": "Differenze nella sequenza",
+            "step": "passo {index}",
+            "kindWord": "tipo",
+            "statusWord": "stato",
+            "outputWord": "risultato",
+            "errorWord": "errore",
+            "original": "Originale",
+            "replay": "Riesecuzione",
+            "noOriginalStep": "Nessun passo originale corrispondente.",
+            "noReplayStep": "Nessun passo di riesecuzione corrispondente.",
+            "recentReplays": "Riesecuzioni recenti",
+            "statSteps": "Passi",
+            "statTools": "Strumenti usati",
+            "statApprovals": "In attesa di persone",
+            "stepByStep": "Cosa ha fatto, passo per passo",
+            "didNotGetFar": "Questo lavoro non è arrivato abbastanza lontano da registrare cosa stava facendo.",
+            "whatWeSent": "Cosa abbiamo inviato",
+            "whatWentWrong": "Cosa è andato storto",
+            "whatCameBack": "Cosa è tornato",
+            "tokens": "{count} token",
+            "costLabel": "costo {amount}",
+            "toolBadge": "strumento {mapping}: {status}",
+            "approvalBadge": "approvazione {status}",
+            "toolCalls": "Chiamate agli strumenti",
+            "confirmationRequired": "conferma richiesta",
+            "args": "argomenti {mode}",
+            "rawArguments": "Argomenti grezzi",
+            "redactedArguments": "Argomenti oscurati",
+            "rawRestricted": "grezzi riservati",
+            "approvals": "Approvazioni",
+            "decisionLabel": "decisione:"
+          }
+        },
+        "skills": {
+          "addFailed": "Impossibile aggiungere le competenze.",
+          "detachSuccess": "Competenza scollegata da questo agente.",
+          "detachFailed": "Aggiornamento della competenza non riuscito.",
+          "loading": "Caricamento competenze",
+          "title": "Competenze dell'agente",
+          "description": "Le competenze del Centro Competenze che questo agente usa. Al massimo due — ognuna viene aggiunta a ogni messaggio che l'agente invia.",
+          "skillCenter": "Centro Competenze",
+          "addFromCenter": "Aggiungi dal Centro Competenze",
+          "emptyLabel": "Ancora nessuna competenza — aggiungine una dal Centro Competenze",
+          "footerEmpty": "Ancora nessuna competenza",
+          "columns": {
+            "skill": "Competenza",
+            "added": "Aggiunta"
+          },
+          "noDescription": "Nessuna descrizione.",
+          "removeAria": "Rimuovi {name}",
+          "pickerTitle": "Aggiungi competenze",
+          "searchPlaceholder": "Cerca competenze",
+          "clearSearch": "Cancella ricerca",
+          "noMatches": "Nessuna competenza corrisponde a quella ricerca.",
+          "allAttached": "Ogni competenza del Centro Competenze è già collegata a questo agente.",
+          "showMore": "Mostra altre competenze",
+          "cancel": "Annulla",
+          "addCount": "{count, plural, one {Aggiungi competenza} other {Aggiungi # competenze}}",
+          "removeTitle": "Rimuovi competenza",
+          "removeBody": "Rimuovere {name} da questo agente? Le versioni storiche e le prove delle esecuzioni restano disponibili.",
+          "removeConfirm": "Rimuovi competenza"
+        },
+        "evals": {
+          "status": {
+            "notRunYet": "Non ancora eseguita",
+            "setupOnly": "Solo configurazione",
+            "passing": "Superata",
+            "failing": "Non superata",
+            "running": "In esecuzione…"
+          },
+          "title": "Valutazioni",
+          "description": "Una valutazione è un compito, e la descrizione di un buon risultato. Eseguirla affida davvero il compito a questo agente, poi una seconda AI giudica cosa ha fatto.",
+          "saveFailed": "Impossibile salvare la valutazione.",
+          "savedEdit": "Valutazione salvata. I suoi risultati precedenti non contano più, quindi eseguila di nuovo.",
+          "savedNew": "Valutazione creata. Eseguila per vedere come se la cava l'agente.",
+          "runFailed": "Impossibile eseguire la valutazione.",
+          "runManyFailed": "Impossibile eseguire le valutazioni.",
+          "runningCount": "In esecuzione {count, plural, one {1 controllo} other {# controlli}}. I risultati compaiono qui man mano che ognuno finisce.",
+          "setupFailed": "Impossibile eseguire la valutazione di configurazione.",
+          "setupChecked": "Configurazione verificata. Questo conferma che l'agente è collegato correttamente — non testa le sue risposte.",
+          "removeFailed": "Impossibile rimuovere la valutazione.",
+          "headline": {
+            "loading": "Caricamento…",
+            "none": "Ancora nessuna valutazione.",
+            "passing": "{passing} su {total, plural, one {1 valutazione} other {# valutazioni}} superate.",
+            "unproven": "{count} non ancora dimostrate."
+          },
+          "runEvals": "Esegui valutazioni",
+          "setupTitle": "Conferma che l'agente è collegato. Non testa le sue risposte.",
+          "evalSetup": "Verifica configurazione",
+          "newEval": "Nuova valutazione",
+          "gateBlocked": "{passed} su {total} valutazioni obbligatorie superate. Questo agente non può andare in produzione finché non passano tutte.",
+          "gateNone": "Nessuna valutazione deve passare prima che questo agente vada in produzione. Segnane almeno una come obbligatoria.",
+          "searchPlaceholder": "Cerca valutazioni per cosa chiedono",
+          "emptyLabel": "Ancora nessuna valutazione — aggiungine una per cogliere questo agente in errore",
+          "footerEmpty": "Nessuna valutazione",
+          "columns": {
+            "eval": "Valutazione",
+            "status": "Stato",
+            "mustPass": "Deve passare",
+            "lastRun": "Ultima esecuzione"
+          },
+          "yes": "Sì",
+          "no": "No",
+          "run": "Esegui",
+          "editAria": "Modifica {name}",
+          "removeAria": "Rimuovi {name}",
+          "form": {
+            "editTitle": "Modifica valutazione",
+            "newTitle": "Nuova valutazione",
+            "objectiveLabel": "Cosa dovrebbe essere chiesto all'agente?",
+            "objectivePlaceholder": "Trova le fatture scadute di questo mese e riassumi chi deve cosa.",
+            "rubricLabel": "Come appare un buon risultato?",
+            "rubricHint": "In parole semplici. È ciò che legge l'AI che giudica.",
+            "rubricPlaceholder": "Elenca ogni fattura scaduta con il cliente e l'importo. Non inventa mai una cifra che non ha verificato.",
+            "mustPassLabel": "Deve passare prima che l'agente vada in produzione",
+            "mustPassHint": "Niente impedisce a un agente di andare in produzione a meno che almeno una valutazione non lo dica.",
+            "advanced": "Avanzate",
+            "sampleLabel": "Affidagli il compito più di una volta",
+            "sampleHint": "Una valutazione che passa due volte su tre è una valutazione che fallisce una conversazione su tre. Ogni tentativo in più è un intero turno dell'agente più un giudizio.",
+            "once": "Una volta",
+            "three": "3 volte — devono passare tutte",
+            "five": "5 volte — devono passare tutte",
+            "toolsLabel": "Strumenti che dovrebbe usare",
+            "toolsHint": "Facoltativo, separati da virgole. Lascia vuoto a meno che tu non stia verificando che un particolare strumento venga usato.",
+            "toolsPlaceholder": "knowledge.search, crm.lookup",
+            "cancel": "Annulla",
+            "saveCheck": "Salva controllo",
+            "createCheck": "Crea controllo"
+          },
+          "removeModal": {
+            "title": "Rimuovi controllo",
+            "body": "Questo fa sì che il controllo non conti più per la messa in produzione. I suoi risultati passati restano nel registro di audit.",
+            "cancel": "Annulla",
+            "confirm": "Rimuovi"
+          },
+          "detail": {
+            "back": "Torna ai controlli",
+            "rehearseFailed": "Impossibile avviare la prova.",
+            "runCheckFailed": "Impossibile eseguire il controllo.",
+            "rehearse": "Prova",
+            "runThisCheck": "Esegui questo controllo",
+            "lastRun": "Ultima esecuzione {date}",
+            "mustPassBadge": "Deve passare prima della messa in produzione",
+            "goodResult": "Cosa deve fare un buon risultato",
+            "whatAgentDid": "Cosa ha fatto l'agente",
+            "neverRun": "Questo controllo non è mai stato eseguito. Premi <highlight>Esegui questo controllo</highlight> per affidare il compito all'agente.",
+            "noOutput": "L'agente non ha prodotto alcun risultato leggibile.",
+            "setupNote": "Questo era un controllo di configurazione. Conferma che l'agente è collegato correttamente e non gli chiede nulla, quindi non è una prova che l'agente funzioni.",
+            "answeredBy": "Risposta di {model}",
+            "modelNotRecorded": "Modello non registrato",
+            "tokensInOut": "· {input} in ingresso / {output} in uscita",
+            "askedUpTo": "· chiesto fino a {count} volte",
+            "cost": "· costo {cost}",
+            "whatWentWrong": "Cosa è andato storto",
+            "missingTool": "Questo agente non ha lo strumento {tool} disponibile.",
+            "earlierRuns": "Esecuzioni precedenti"
+          }
+        },
+        "memory": {
+          "trackRecord": {
+            "noHistory": "Ancora nessuna cronologia",
+            "review": "Da rivedere",
+            "helping": "Sta aiutando",
+            "summary": "{success} aiutati · {trouble} in esecuzioni fallite"
+          },
+          "sourceRun": {
+            "openRun": "Apri il dettaglio del run"
+          },
+          "sourceSkill": {
+            "attribution": "Attribuzione della competenza",
+            "pinnedVersion": "versione fissata",
+            "version": "v{number}"
+          },
+          "patch": {
+            "proposedChange": "Modifica proposta",
+            "before": "Prima: {value}",
+            "moreHidden": "{count} altre modifiche nascoste.",
+            "unpreviewable": "Valore non visualizzabile"
+          },
+          "reviewedBy": "Revisionato da {name}",
+          "saveFailed": "Impossibile salvare la memoria.",
+          "removeFailed": "Impossibile rimuovere la memoria.",
+          "restored": "Memoria ripristinata.",
+          "restoreFailed": "Impossibile ripristinare la memoria.",
+          "candidateApproved": "Aggiunta alla memoria di questo agente.",
+          "approveFailed": "Impossibile approvare il suggerimento.",
+          "turnDownFailed": "Impossibile rifiutare il suggerimento.",
+          "suggestionApplied": "Modifica applicata.",
+          "suggestionRejected": "Suggerimento rifiutato.",
+          "suggestionReviewFailed": "Impossibile revisionare il suggerimento.",
+          "evalCreated": "Valutazione creata dal run di origine.",
+          "evalCreateFailed": "Impossibile creare la valutazione.",
+          "dismissed": "Ignorata.",
+          "dismissFailed": "Impossibile ignorare la riflessione.",
+          "title": "Memoria dell'agente",
+          "description": "Cosa sa questo agente. Fino a {max} possono applicarsi a ogni messaggio — le altre vengono richiamate quando la conversazione lo richiede.",
+          "addMemory": "Aggiungi memoria",
+          "searchPlaceholder": "Cerca memorie",
+          "filters": {
+            "inUse": "In uso",
+            "removed": "Rimosse"
+          },
+          "empty": {
+            "removed": "Niente è stato rimosso",
+            "none": "Ancora nessuna memoria — aggiungi ciò che l'agente dovrebbe sapere"
+          },
+          "footer": {
+            "showing": "Mostrate {start}-{end} di {total} caricate",
+            "emptyRemoved": "Niente è stato rimosso",
+            "emptyNone": "Ancora nessuna memoria"
+          },
+          "columns": {
+            "content": "Cosa sa l'agente",
+            "applies": "Si applica",
+            "trackRecord": "Storico",
+            "added": "Aggiunta"
+          },
+          "savedByAi": "Salvata dall'AI",
+          "rowActions": {
+            "restore": "Rimetti questa memoria",
+            "edit": "Modifica memoria",
+            "remove": "Rimuovi memoria"
+          },
+          "suggestions": {
+            "title": "Suggerimenti",
+            "description": "Sollevati dalle esecuzioni di questo agente. Niente qui ha effetto finché non viene approvato.",
+            "nothingWaiting": "Niente in attesa di revisione.",
+            "memoryTag": "Memoria",
+            "approve": "Approva",
+            "turnDown": "Rifiuta",
+            "apply": "Applica",
+            "createEval": "Crea valutazione",
+            "dismiss": "Ignora",
+            "evalPrefix": "Valutazione: {fixture}"
+          },
+          "editor": {
+            "editTitle": "Modifica memoria",
+            "addTitle": "Aggiungi memoria",
+            "cancel": "Annulla",
+            "saving": "Salvataggio...",
+            "save": "Salva memoria"
+          },
+          "removeModal": {
+            "title": "Rimuovi memoria",
+            "body": "L'agente smette subito di usarla. Resta sotto “Rimosse” e può essere rimessa.",
+            "cancel": "Annulla",
+            "confirm": "Rimuovi"
+          },
+          "rejectModal": {
+            "title": "Rifiuta suggerimento",
+            "whyLabel": "Perché?",
+            "optional": "Facoltativo",
+            "placeholder": "Perché l'agente non dovrebbe ricordare questo?",
+            "cancel": "Annulla",
+            "confirm": "Rifiuta"
+          }
+        },
+        "observability": {
+          "dashboard": {
+            "title": "Come sta andando questo agente",
+            "description": "Tutto ciò che ha fatto di recente, e se qualcosa richiede la tua attenzione.",
+            "ranges": {
+              "day": "24 ore",
+              "week": "7 giorni",
+              "month": "30 giorni"
+            },
+            "truncated": "Questo agente ha eseguito più lavori di quanti uno schermo possa misurare, quindi le cifre sopra coprono la sua attività più recente e non l'intero periodo.",
+            "emptyTitle": "Questo agente non è ancora stato eseguito",
+            "emptyBody": "Quando verrà eseguito — su pianificazione, da una conversazione, o perché lo hai avviato tu — tutto ciò che fa verrà registrato qui.",
+            "vitals": {
+              "jobsRun": "Lavori eseguiti",
+              "thanBefore": "rispetto al periodo precedente",
+              "finishedCleanly": "Finiti senza problemi",
+              "nothingToCompare": "ancora niente da confrontare",
+              "usuallyTakes": "Di solito impiega",
+              "underASecond": "meno di un secondo",
+              "noFinishedJobs": "ancora nessun lavoro finito da misurare",
+              "acrossJobs": "su {formatted} {count, plural, one {lavoro} other {lavori}} finora",
+              "slowTail": "ma 1 su 20 impiega più di {duration}",
+              "sameTime": "ogni lavoro impiega più o meno lo stesso tempo",
+              "costsPerJob": "Costo per lavoro",
+              "overPeriod": "{amount} in questo periodo",
+              "waiting": "In attesa di una persona",
+              "cannotFinish": "questi non possono finire finché qualcuno non decide",
+              "nothingHeld": "niente è bloccato"
+            },
+            "chart": {
+              "title": "Cosa ha fatto",
+              "hint": "Lavori al giorno. La linea arancione segna una modifica alla configurazione di questo agente.",
+              "finished": "Finiti",
+              "failed": "Falliti",
+              "settingsChanged": "Impostazioni cambiate",
+              "tooltip": "{formatted} {count, plural, one {lavoro} other {lavori}}",
+              "tooltipFailed": ", {count} falliti"
+            },
+            "failures": {
+              "title": "Cosa sta andando storto",
+              "hint": "Lo stesso fallimento raggruppato, il peggiore per primo.",
+              "none": "Niente è fallito. Ogni lavoro in questo periodo è finito.",
+              "started": "Iniziato {first} · successo l'ultima volta {last}",
+              "seeJob": "Vedi un lavoro a cui è successo",
+              "jobs": "{formatted} {count, plural, one {lavoro} other {lavori}}"
+            },
+            "tools": {
+              "title": "Gli strumenti su cui si affida",
+              "hint": "Quando un agente si comporta male, di solito la ragione è uno strumento.",
+              "empty": "Ancora nessuno strumento usato. Questo agente ha risposto senza ricorrere a nulla.",
+              "columns": {
+                "tool": "Strumento",
+                "used": "Usato",
+                "worked": "Riuscito",
+                "usually": "Di solito"
+              },
+              "notConnected": "{count} di queste sono andate a uno strumento non collegato"
+            },
+            "latest": {
+              "title": "Ultimi lavori",
+              "hint": "Aprine uno qualsiasi per vedere esattamente cosa ha fatto, passo per passo.",
+              "seeAll": "Vedi tutta l'attività",
+              "none": "Ancora nessun lavoro registrato.",
+              "underASecond": "meno di un secondo",
+              "showMore": "Mostra altri"
+            },
+            "research": {
+              "aria": "Il lavoro di ricerca",
+              "lastJob": "L'ultimo lavoro di ricerca",
+              "progress": "{done} fatti · {remaining} da fare",
+              "failedSuffix": "· {failed} non riusciti",
+              "spentOfMax": "${spent} di ${max}",
+              "runs": "{count, plural, one {# esecuzione} other {# esecuzioni}}",
+              "customers": "{count} clienti",
+              "chains": "{count} catene",
+              "prospects": "{count} potenziali clienti trovati",
+              "rightNow": "In questo momento: ",
+              "lookingThrough": "sta esaminando il gruppo {label} in cerca di sedi",
+              "researching": "sta facendo ricerche su {label}",
+              "latestRecorded": "Ultime registrazioni",
+              "couldNotDo": "Cosa non è riuscito a fare",
+              "exception": "{name} — {reason}"
+            }
+          },
+          "run": {
+            "rightmove": {
+              "title": "Raccogli immobili da Rightmove",
+              "detailWithLimit": "Ricerca Rightmove · fino a {count} immobili",
+              "detail": "Ricerca Rightmove"
+            },
+            "actionFailed": "Non ha funzionato.",
+            "notFoundTitle": "Questo lavoro non è stato trovato",
+            "notFoundBody": "Potrebbe essere stato rimosso, oppure appartiene a uno spazio di lavoro che non puoi vedere.",
+            "backToOverview": "Torna alla panoramica",
+            "stillRunning": "· ancora in esecuzione",
+            "took": "· ha impiegato {duration}",
+            "cost": "· costo {amount}",
+            "handedOver": "· ha fatto il suo turno, poi ha passato la coda all'esecuzione successiva",
+            "didNotFinish": "· non ha finito",
+            "waitingApproval": "· in attesa che qualcuno lo approvi",
+            "finishedCleanly": "· finito senza problemi",
+            "replayDone": "Avviato di nuovo. Il nuovo lavoro apparirà in Attività.",
+            "runAgain": "Eseguilo di nuovo",
+            "rate": "Valuta questo lavoro",
+            "checkDone": "Salvato come controllo. Questo caso verrà testato d'ora in poi.",
+            "updateCheck": "Aggiorna il controllo",
+            "turnIntoCheck": "Trasforma in un controllo",
+            "ratingQuestion": "Questo lavoro ha fatto ciò che volevi?",
+            "ratedGood": "Grazie — registrato come riuscito.",
+            "itDid": "Sì",
+            "ratedBad": "Grazie — registrato come andato storto.",
+            "itDidNot": "No",
+            "whyStopped": "Perché si è fermato",
+            "timeTitle": "Dove è andato il tempo",
+            "timeHint": "Ogni passo del lavoro, disegnato in base al tempo che ha impiegato.",
+            "noSteps": "Nessun passo è stato registrato",
+            "noStepsHint": "Questo lavoro non è arrivato abbastanza lontano da registrare cosa stava facendo.",
+            "record": {
+              "title": "Cosa ha registrato",
+              "hint": "Costruito dalle righe che questa esecuzione ha scritto, non da ciò che l'agente dice di aver fatto.",
+              "nothing": "Questa esecuzione non ha registrato nulla",
+              "nothingHint": "Se il resoconto qui sotto dice il contrario, quell'affermazione non ha nulla dietro."
+            },
+            "account": {
+              "title": "Il resoconto dell'agente sul proprio lavoro",
+              "unchecked": "scritto dall'agente, non verificato"
+            },
+            "repeat": {
+              "timesRun": "Questo lavoro è stato eseguito {count} volte",
+              "allWorked": "{count, plural, one {L'altra è finita senza problemi.} other {Le altre # sono finite senza problemi.}}",
+              "noneWorked": "{count, plural, one {Anche l'altra non è finita.} other {Anche le altre # non sono finite.}}",
+              "someWorked": "{worked} delle altre {count} sono finite senza problemi.",
+              "seeSource": "Vedi quello che ha ripetuto",
+              "seeAnother": "Vedine un altro"
+            },
+            "exchange": {
+              "title": "Cosa è stato detto davvero",
+              "hint": "Parola per parola, cosa è stato inviato a questo agente e cosa è tornato. Apri una riga per vederla per intero.",
+              "nothingRecorded": "Niente è stato registrato per questo lavoro",
+              "nothingHint": "I lavori eseguiti prima che lo scambio fosse collegato a loro non mostrano nulla qui.",
+              "whatWeSent": "Cosa abbiamo inviato",
+              "whatCameBack": "Cosa è tornato"
+            },
+            "outcome": {
+              "worked": "Riuscito",
+              "failed": "Fallito",
+              "notRecorded": "Non registrato"
+            }
+          }
+        },
+        "manualRun": {
+          "started": "È partito. Il nuovo lavoro è in cima a questo elenco.",
+          "couldNotStart": "Non è riuscito a partire",
+          "startFallback": "Qualcosa ha impedito a questo agente di partire.",
+          "stopped": "Agente fermato. Apparirà come annullato in Attività.",
+          "couldNotStop": "Non è riuscito a fermarsi",
+          "stopFallback": "Qualcosa ha impedito l'annullamento di questo agente."
+        },
+        "stopModal": {
+          "title": "Fermare questo agente?",
+          "body": "Questo annullerà il lavoro in corso e ogni approvazione o chiamata agli strumenti in sospeso. Non si può annullare.",
+          "keep": "Lascia in esecuzione",
+          "stop": "Ferma agente"
+        },
+        "headerStop": "Ferma agente",
+        "headerRun": "Esegui agente",
+        "avatarAlt": "Avatar"
+      },
+      "skillCenter": {
+        "nameRequired": "Dai un nome alla competenza.",
+        "fileRequired": "Scegli un file SKILL.md.",
+        "addFailed": "Impossibile aggiungere la competenza.",
+        "added": "Aggiunta {name}.",
+        "saveFailed": "Impossibile salvare la competenza.",
+        "savedReplaced": "Salvata {name} e sostituito il suo file.",
+        "saved": "Salvata {name}.",
+        "deleteFailed": "Impossibile eliminare la competenza.",
+        "deletedDetached": "Eliminata {name}. È stata rimossa da {count, plural, one {1 agente} other {# agenti}}.",
+        "deleted": "Eliminata {name}.",
+        "title": "Centro Competenze",
+        "description": "Istruzioni riutilizzabili che puoi collegare a qualsiasi agente. Carica un file SKILL.md e diventa disponibile qui.",
+        "addNew": "Aggiungi nuova competenza",
+        "analytics": {
+          "title": "Come vengono usate le tue competenze",
+          "description": "Quali agenti hanno adottato le tue competenze, e quali di questi richiedono attenzione.",
+          "loading": "Caricamento analisi",
+          "counted": "Contato {date}",
+          "countedPartial": "Contato {date} · prime {count} competenze",
+          "notCounted": "Non ancora contato"
+        },
+        "stats": {
+          "skills": "Competenze",
+          "inUse": "In uso dagli agenti",
+          "outOfDate": "Non aggiornate",
+          "tested": "Testate",
+          "untested": "Non testate"
+        },
+        "searchPlaceholder": "Cerca competenze per nome",
+        "clearSearch": "Cancella ricerca",
+        "emptyLabel": "Ancora nessuna competenza — carica un file SKILL.md per aggiungere la prima",
+        "footerEmpty": "Ancora nessuna competenza",
+        "showingMatching": "Mostrate {start}-{end} di {total} corrispondenti",
+        "showingSkills": "Mostrate {start}-{end} di {total} competenze",
+        "columns": {
+          "skill": "Competenza",
+          "file": "File",
+          "uploaded": "Caricata"
+        },
+        "editAria": "Modifica {name}",
+        "deleteAria": "Elimina {name}",
+        "editTitle": "Modifica competenza",
+        "nameLabel": "Nome",
+        "descriptionLabel": "Descrizione",
+        "descriptionPlaceholder": "A cosa serve questa competenza, con parole tue.",
+        "replaceFile": "Sostituisci il file",
+        "currently": "Attualmente {filename}. Lascia vuoto per mantenerlo.",
+        "noFile": "Nessun file dietro questa competenza al momento.",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "deleteTitle": "Elimina competenza",
+        "deleteBody": "Eliminare {name}? Questo rimuove il file e toglie la competenza a qualsiasi agente che la usa. Non si può annullare.",
+        "deleteConfirm": "Elimina competenza",
+        "addTitle": "Aggiungi nuova competenza",
+        "newNamePlaceholder": "Come vuoi chiamare questa competenza",
+        "fileLabel": "File della competenza",
+        "fileHint": "Un file SKILL.md. Il suo contenuto diventa le istruzioni che l'agente segue.",
+        "addSkill": "Aggiungi competenza"
+      },
+      "wikiStaff": "Staff del wiki",
+      "labels": {
+        "runStatus": {
+          "done": "Fatto",
+          "handedOver": "Consegnato",
+          "failed": "Non riuscito",
+          "stopped": "Fermato",
+          "running": "In esecuzione",
+          "queued": "In coda",
+          "needsYou": "Serve il tuo intervento",
+          "unknown": "{status}"
+        },
+        "trigger": {
+          "chat": "Da una conversazione",
+          "manual": "Avviato a mano",
+          "schedule": "Programmato",
+          "webhook": "Attivato da un altro sistema",
+          "workflow": "Parte di un flusso di lavoro",
+          "event": "Attivato da un evento",
+          "unknown": "{trigger}"
+        },
+        "interaction": {
+          "usedTool": "Ha usato {tool}",
+          "waitingTool": "In attesa di usare {tool}",
+          "synthesis": "Ha elaborato cosa dire",
+          "error": "Qualcosa è andato storto",
+          "workflowExecution": "Eseguito come parte di un flusso di lavoro",
+          "batchStart": "Ha iniziato a costruire un report",
+          "batchSuccess": "Ha finito di costruire un report",
+          "swarm": "Ha lavorato come parte di un gruppo",
+          "systemInstruction": "Ha letto le sue istruzioni",
+          "unknown": "{type}"
+        },
+        "relative": {
+          "justNow": "proprio ora",
+          "minutesAgo": "{count, plural, one {1 minuto fa} other {# minuti fa}}",
+          "hoursAgo": "{count, plural, one {1 ora fa} other {# ore fa}}",
+          "yesterday": "ieri",
+          "daysAgo": "{count} giorni fa"
+        },
+        "change": {
+          "noChange": "nessuna variazione",
+          "nothingToCompare": "niente con cui confrontare",
+          "aboutSame": "più o meno uguale",
+          "moreCount": "{percent}% in più",
+          "fewerCount": "{percent}% in meno",
+          "ptsHigher": "{points} punti in più",
+          "ptsLower": "{points} punti in meno"
+        },
+        "log": {
+          "nothingRecorded": "Non è stato registrato nulla"
+        },
+        "notAvailable": "non disponibile",
+        "evalMode": {
+          "modelGraded": "Valutato dal modello",
+          "contract": "Contratto"
+        },
+        "step": {
+          "readRequest": "Ha letto la richiesta",
+          "decidedPlan": "Ha deciso cosa fare",
+          "changedPlan": "Ha cambiato piano",
+          "thought": "Ci ha ragionato",
+          "usedToolWithSubject": "Ha usato {tool} · {subject}",
+          "usedTool": "Ha usato {tool}",
+          "usedSomeTool": "Ha usato uno strumento",
+          "readToolResult": "Ha letto la risposta di {tool}",
+          "readResult": "Ha letto il risultato",
+          "waitedApproval": "Ha aspettato l'approvazione di qualcuno",
+          "wroteAnswer": "Ha scritto la risposta",
+          "unknown": "{kind}"
+        },
+        "stepStatus": {
+          "worked": "Riuscito",
+          "failed": "Non riuscito",
+          "running": "In esecuzione",
+          "notStarted": "Non iniziato",
+          "skipped": "Saltato",
+          "unknown": "{status}"
+        },
+        "waterfall": {
+          "summary": "Il {share}% di questo lavoro è stato speso su un solo passaggio: {step}.",
+          "summaryFailed": "Il {share}% di questo lavoro è stato speso su un passaggio poi non riuscito: {step}."
         }
       }
     },
@@ -2007,6 +3553,178 @@
         "selfImprovement": "Auto-Miglioramento",
         "approvals": "Finestra di Approvazione Agente",
         "purgeHistory": "Cronologia Purge"
+      },
+      "selfImprovement": {
+        "title": "Auto-miglioramento",
+        "subtitle": "Come l'AI impara da ciò che succede. Ogni interruttore ha effetto su tutta la piattaforma appena salvato.",
+        "autoReflection": "Impara dalle esecuzioni non riuscite",
+        "autoReflectionSub": "Quando un'esecuzione di un agente fallisce, la piattaforma scrive un resoconto del perché e mette in coda per revisione qualunque cosa valga la pena ricordare. Spento: i resoconti si fanno solo quando un amministratore li richiede dalla schermata dell'esecuzione.",
+        "outcomeWeightedRanking": "Preferisci le memorie con un buon curriculum",
+        "outcomeWeightedRankingSub": "Le memorie approvate che continuano ad aiutare salgono in classifica; quelle presenti in esecuzioni non riuscite scendono. Niente viene mai nascosto o rimosso da questo. Spento: ordinamento dalla più recente.",
+        "endUserFeedback": "Pulsanti di feedback in chat",
+        "endUserFeedbackSub": "Gli utenti possono segnare una risposta come Utile o Non corretta, e questo alimenta la coda dei suggerimenti. Spento: i pulsanti spariscono e non viene raccolto nulla.",
+        "retrievalPriors": "La ricerca nella conoscenza impara dalle risposte valutate",
+        "retrievalPriorsSub": "I documenti che continuano a produrre risposte ben valutate ricevono una piccola spinta in classifica, entro un tetto rigido. Spento: pura rilevanza testuale.",
+        "autonomyExplainer": "L'interruttore qui sotto è diverso da quelli sopra. Con esso acceso, ciò che l'AI impara viene salvato subito nella sua memoria — niente aspetta un'approvazione. Ogni memoria auto-salvata è etichettata “Salvata dall'AI” nelle schermate Memoria, viene scritta nel registro di controllo e può essere rimossa in qualsiasi momento. Spento: i suggerimenti si mettono in coda perché una persona li approvi, come prima.",
+        "autonomousMemory": "Memoria autonoma",
+        "autonomousMemorySub": "L'AI salva subito ciò che impara, da sola. Spento: ogni nuova memoria aspetta l'approvazione.",
+        "on": "acceso",
+        "off": "spento",
+        "saveFailed": "Impossibile salvare gli interruttori di apprendimento.",
+        "save": "Salva gli interruttori",
+        "saving": "Salvataggio...",
+        "saved": "Salvato"
+      },
+      "approvals": {
+        "title": "Finestra di approvazione degli agenti",
+        "subtitle": "Quanto a lungo un'esecuzione di un agente in pausa aspetta una decisione prima di fermarsi.",
+        "explainer": "Un'esecuzione che ha bisogno di approvazione aspetta finché qualcuno non risponde. Dopo questo tempo si ferma, niente di ciò che stava aspettando di fare viene fatto, e la conversazione lo dice. Non viene mai approvata automaticamente. Un singolo agente può essere impostato per arrendersi prima dalla sua schermata di impostazioni.",
+        "hoursLabel": "Arrenditi dopo (ore)",
+        "hoursHint": "Predefinito {default} · minimo {min} · massimo {max}",
+        "loading": "Caricamento...",
+        "saveFailed": "Impossibile salvare la finestra di approvazione.",
+        "save": "Salva la finestra",
+        "saving": "Salvataggio...",
+        "saved": "Salvato"
+      },
+      "apiKeys": {
+        "headerTitle": "Chiavi API",
+        "headerDescription": "Permetti a un altro sistema di avviare i tuoi agenti e controllare le esecuzioni. Una chiave appartiene a una sola azienda, e puoi spegnerla in qualsiasi momento.",
+        "scopes": {
+          "agentRun": "Avviare un agente",
+          "agentRunSub": "Chiedere a un agente di fare qualcosa.",
+          "runRead": "Controllare un'esecuzione",
+          "runReadSub": "Vedere se un'esecuzione è terminata, e cosa ha fatto.",
+          "workflowRun": "Avviare un flusso di lavoro",
+          "workflowRunSub": "Avviare un flusso di lavoro dall'esterno di {platformName}.",
+          "webhookDeliver": "Consegna webhook (non più usata)"
+        },
+        "errorNoCompany": "Scegli per quale azienda è questa chiave.",
+        "errorNoName": "Dai un nome alla chiave, così saprai cos'è in seguito.",
+        "errorNoScopes": "Scegli almeno una cosa che la chiave può fare.",
+        "createFailed": "Non è stato possibile creare la chiave. Riprova.",
+        "revokeFailed": "Non è stato possibile spegnere la chiave. Riprova.",
+        "newKey": "Nuova chiave",
+        "companyLabel": "Per quale azienda è?",
+        "chooseCompany": "Scegli un'azienda",
+        "nameLabel": "A cosa serve?",
+        "namePlaceholder": "Modulo di contatto del sito",
+        "rateLabel": "Richieste al minuto",
+        "expiryLabel": "Smette di funzionare il",
+        "scopesLabel": "Cosa può fare?",
+        "createKey": "Crea la chiave",
+        "copyNow": "Copiala adesso. È l'unica volta che verrà mostrata — {platformName} conserva solo quanto basta per riconoscerla, mai la chiave stessa.",
+        "copied": "Copiata",
+        "copy": "Copia",
+        "keysYouHave": "Le tue chiavi",
+        "emptyKeys": "Ancora nessuna chiave",
+        "emptyHint": "Creane una qui sopra per permettere a un altro sistema di avviare i tuoi agenti.",
+        "columnKey": "Chiave",
+        "columnCompany": "Azienda",
+        "columnScopes": "Può",
+        "columnLimits": "Limiti",
+        "columnStatus": "Stato",
+        "perMinute": "{count} al minuto",
+        "stopsOn": "Si ferma {date}",
+        "neverStops": "Non si ferma mai",
+        "working": "Funzionante",
+        "turnedOff": "Spenta",
+        "turnOffAria": "Spegni {name}",
+        "revokeTitle": "Spegni questa chiave",
+        "revokeBody": "Qualunque cosa usi <b>{name}</b> smette subito di funzionare. Non si può annullare — dovresti creare una nuova chiave.",
+        "reasonLabel": "Perché? (facoltativo)",
+        "reasonPlaceholder": "Non più necessaria",
+        "keepIt": "Tienila",
+        "turnItOff": "Spegnila"
+      },
+      "analytics": {
+        "title": "Motore di analisi globale",
+        "subtitle": "Integra Google Tag Manager (GTM) o Google Analytics (GA4) su tutto il sistema.",
+        "revert": "Ripristina",
+        "commit": "Applica la configurazione",
+        "savedTitle": "Tracciamento integrato",
+        "savedMessage": "L'identificatore dello script di analisi è stato distribuito con successo al cuore della piattaforma.",
+        "saveFailedTitle": "Trasmissione non riuscita",
+        "saveFailedFallback": "Impossibile trasmettere le modifiche all'archivio Edge persistente.",
+        "healthTitle": "Salute dei dati di analisi",
+        "healthSub": "Copertura degli snapshot, deriva delle dimensioni e acquisizione dal vivo negli ultimi 7 giorni.",
+        "checking": "Controllo",
+        "healthy": "In salute",
+        "signals": "{count} segnali",
+        "snapshots": "Snapshot",
+        "snapshotsSummary": "{missing} date globali mancanti, {duplicates} gruppi duplicati.",
+        "snapshotsLoading": "Caricamento della copertura degli snapshot.",
+        "dimensions": "Dimensioni",
+        "dimensionsSummary": "{missing} mancanti, {mismatched} non corrispondenti, {missingThreads} thread mancanti.",
+        "dimensionsLoading": "Caricamento dei controlli recenti sui messaggi.",
+        "liveToday": "In diretta oggi",
+        "liveTodaySummary": "{count} transazioni di agenti il {date}.",
+        "liveTodayLoading": "Caricamento dell'acquisizione di oggi.",
+        "window": "Finestra",
+        "windowSummary": "Dal {from} al {to}.",
+        "windowLoading": "Caricamento dell'intervallo di date controllato.",
+        "attentionNeeded": "Serve l'attenzione dell'operatore",
+        "missingDates": "Date di snapshot mancanti: {dates}.",
+        "duplicateGroups": "Gruppi di snapshot duplicati: {groups}.",
+        "dimensionExamples": "Esempi di dimensioni dei messaggi: {examples}.",
+        "none": "nessuno",
+        "nextAction": "Prossima azione: esegui i comandi Convex documentati di salute/backfill prima di rimuovere i fallback di analisi legacy.",
+        "containerTitle": "Codice del contenitore di tracciamento",
+        "unsaved": "Non salvato",
+        "synced": "Sincronizzato",
+        "connecting": "Connessione...",
+        "trackingIdLabel": "ID di tracciamento universale",
+        "trackingIdPlaceholder": "es. GTM-XXXXXXX o G-XXXXXXX",
+        "trackingIdHelp": "Specifica l'ID di Google Tag Manager (GTM-XXXXX) o di Google Analytics Universal (G-XXXXX/AW-XXXXX). Il sistema monta questo ID in modo sicuro usando la logica ufficiale dei third-party di Next.js, così evita ritardi che bloccano l'esecuzione e garantisce la stabilità della piattaforma. Lascia vuoto e premi applica per rimuovere del tutto l'analisi."
+      },
+      "scripts": {
+        "title": "Manutenzione",
+        "subtitle": "Esegui script operativi approvati da una superficie controllata e verificata.",
+        "allowlistedTitle": "Solo script in lista consentita",
+        "allowlistedBody": "Questa pagina non esegue mai comandi arbitrari. Ogni script è controllato nei permessi, protetto da conferma e registrato nei log di controllo.",
+        "searchPlaceholder": "Cerca script per nome, categoria, rischio o descrizione...",
+        "noMatch": "Nessuno script di manutenzione corrisponde alla ricerca",
+        "footerEmpty": "Nessuno script trovato",
+        "showing": "Mostrati {start}-{end} di {total}",
+        "columnName": "Nome",
+        "columnCategory": "Categoria",
+        "columnRisk": "Rischio",
+        "columnStatus": "Stato",
+        "columnLastRun": "Ultima esecuzione",
+        "columnLastRunBy": "Eseguito l'ultima volta da",
+        "columnOpen": "Apri",
+        "openAria": "Apri {name}",
+        "never": "Mai",
+        "nobody": "Nessuno",
+        "notRun": "Mai eseguito",
+        "statusSuccess": "RIUSCITO",
+        "statusFailed": "FALLITO",
+        "statusRunning": "IN ESECUZIONE",
+        "riskLow": "BASSO",
+        "riskMedium": "MEDIO",
+        "riskHigh": "ALTO",
+        "riskBadge": "rischio {level}",
+        "back": "Torna alla manutenzione",
+        "notFoundTitle": "Script di manutenzione non trovato",
+        "notFoundBody": "Questo script non è nel registro di manutenzione approvato.",
+        "runScript": "Esegui lo script",
+        "runCompleted": "Script di manutenzione completato.",
+        "runFailed": "Script di manutenzione fallito.",
+        "runNotStarted": "Non è stato possibile avviare lo script di manutenzione.",
+        "whatThisDoes": "Cosa fa",
+        "whenToRun": "Quando eseguirlo",
+        "whatItChanges": "Cosa cambia",
+        "safetyNotes": "Note di sicurezza",
+        "repeatability": "Ripetibilità",
+        "expectedDuration": "Durata prevista",
+        "recentRuns": "Esecuzioni recenti",
+        "noRuns": "Nessuna esecuzione ancora registrata.",
+        "runRecorded": "Esecuzione registrata.",
+        "superAdmin": "Super amministratore",
+        "runModalTitle": "Esegui {name}",
+        "beforeYouRun": "Prima di eseguire",
+        "beforeYouRunBody": "Questa azione è verificata e va eseguita solo quando le note su questa pagina corrispondono al problema che stai risolvendo.",
+        "cancel": "Annulla"
       }
     },
     "auditLogs": {
@@ -2536,9 +4254,6 @@
             "label": "Area di lavoro",
             "noCompany": "Nessuna area di lavoro"
           },
-          "subject": {
-            "label": "Oggetto"
-          },
           "headline": {
             "label": "Titolo"
           },
@@ -2551,7 +4266,6 @@
         },
         "actions": {
           "saveTemplate": "Salva come modello",
-          "saving": "Salvataggio...",
           "synchronized": "Salvato",
           "sendInvitation": "Invia invito",
           "sending": "Invio..."
@@ -2564,7 +4278,7 @@
           "headlineEmpty": "Il tuo titolo appare qui",
           "bodyEmpty": "Il tuo messaggio appare qui",
           "ctaEmpty": "Testo del pulsante",
-          "footer": "Inviato da Sonae"
+          "footer": "Inviato da {platformName}"
         }
       }
     },
@@ -2602,6 +4316,198 @@
         "never": "Mai",
         "unnamed": "Senza nome",
         "noCompany": "—"
+      }
+    },
+    "invites": {
+      "companyTitle": "Inviti allo spazio di lavoro",
+      "companyDescription": "Configura email di onboarding curate e invia token di accesso sicuri direttamente ai nuovi membri del team.",
+      "globalTitle": "Inviti per amministratori di sistema",
+      "globalDescription": "Invia token di accesso sicuri direttamente ai nuovi amministratori di sistema.",
+      "step1": "Destinatario",
+      "emailLabel": "Il loro indirizzo email",
+      "emailPlaceholder": "collega@azienda.com",
+      "step2": "Configurazione dell'email",
+      "saveTemplate": "Salva modello predefinito",
+      "saving": "Salvataggio...",
+      "saved": "Sincronizzato",
+      "subjectLabel": "Oggetto",
+      "headlineLabel": "Intestazione dentro l'email",
+      "bodyLabel": "Cosa dice l'email",
+      "ctaLabel": "Testo sul pulsante",
+      "previewHeadlineEmpty": "Intestazione vuota",
+      "previewBodyEmpty": "Nessun contenuto di paragrafo configurato al momento.",
+      "previewCtaEmpty": "In verifica",
+      "previewFooter": "{platformName} - to be prepared",
+      "sending": "Invio dell'invito...",
+      "send": "Invia invito",
+      "sendSuccess": "Fatto! L'API Resend ha accettato il messaggio.",
+      "sendError": "Consegna email rifiutata dall'API Resend. Controlla i limiti del tuo dominio.",
+      "roleQuestion": "Cosa saranno",
+      "standardUser": "Utente standard",
+      "companyAdmin": "Amministratore aziendale",
+      "systemSuperAdmin": "Super amministratore di sistema"
+    },
+    "ruleSafety": {
+      "reviewRule": "Rivedi questa regola prima di salvare.",
+      "reviewPrompt": "Rivedi questo prompt prima di salvare.",
+      "hiddenInstructions": "Questa regola sembra rivelare prompt nascosti, policy, schemi o configurazioni private.",
+      "permissionBypass": "Questa regola sembra indebolire le regole di sicurezza, le restrizioni tra tenant, i permessi o le autorizzazioni.",
+      "crossTenantAccess": "Questa regola sembra permettere l'accesso ai dati privati di un altro tenant."
+    },
+    "evidence": {
+      "companyMemoryUsed": "Memoria aziendale usata"
+    },
+    "skillPicker": {
+      "risk": "rischio {level}",
+      "noDescription": "Nessuna descrizione fornita."
+    },
+    "memoryFields": {
+      "applyModeQuestion": "Quando dovrebbe usarlo l'AI?",
+      "always": "Sempre",
+      "alwaysHint": "Aggiunto a ogni risposta. Usalo per il tono e per le cose che l'AI non deve mai sbagliare.",
+      "whenRelevant": "Quando è pertinente",
+      "whenRelevantHint": "Consultato quando la conversazione lo tocca. Usalo per fatti e dettagli.",
+      "alwaysFull": "Nessuno slot Sempre disponibile. Prima cambia uno degli altri.",
+      "contentLabel": "Cosa dovrebbe sapere l'AI",
+      "contentPlaceholder": "Non diamo date di consegna in chat. Chiedi al cliente di scrivere a orders@."
+    },
+    "superAdmins": {
+      "columnAdmin": "Amministratore di sistema",
+      "pendingInvitation": "Invito in sospeso",
+      "columnJoined": "Data di ingresso",
+      "pendingRole": "IN SOSPESO {role}",
+      "columnActions": "Azioni",
+      "awaitingLogin": "In attesa di accesso",
+      "revokeInvitation": "Revoca l'invito",
+      "editAdmin": "Modifica l'amministratore",
+      "deleteAdmin": "Elimina l'amministratore",
+      "unauthorized": "Area non autorizzata.",
+      "title": "Amministratori di sistema",
+      "subtitle": "Gestisci tutti gli account Super Admin di sistema con pieno controllo sistemico.",
+      "inviteUser": "Invita un utente",
+      "searchPlaceholder": "Cerca utenti per nome o email...",
+      "empty": "Nessun utente o invito in sospeso corrisponde alla ricerca.",
+      "footerEmpty": "Nessun amministratore",
+      "editTitle": "Modifica utente",
+      "inviteTitle": "Invita un utente",
+      "editSubtitle": "Aggiorna i dettagli e i ruoli di questo utente.",
+      "inviteSubtitle": "Invita un nuovo utente sulla piattaforma.",
+      "nameLabel": "Nome completo",
+      "namePlaceholder": "es. Aman",
+      "emailLabel": "Indirizzo email",
+      "emailPlaceholder": "aman@example.com",
+      "roleLabel": "Ruolo di sistema",
+      "systemSuperAdmin": "Super amministratore di sistema",
+      "avatarLabel": "URL dell'avatar (facoltativo)",
+      "avatarHint": "Lascia vuoto per generarlo automaticamente dal nome.",
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "updateUser": "Aggiorna l'utente",
+      "sendInvite": "Invia l'invito",
+      "opFailed": "Operazione non riuscita.",
+      "deleteFailed": "Impossibile eliminare l'utente.",
+      "revokeFailed": "Impossibile revocare l'invito.",
+      "deleteTitle": "Elimina l'utente",
+      "deleting": "Eliminazione...",
+      "deleteBody": "Sei sicuro di voler eliminare <b>{name}</b>? Questa azione non può essere annullata.",
+      "revokeTitle": "Revoca l'accesso",
+      "revoking": "Revoca in corso...",
+      "revokeBody": "Sei sicuro di voler revocare l'invito attivo per <b>{email}</b>? Questo disabiliterà definitivamente il suo link di accesso ed eliminerà il record dell'invito.",
+      "profile": {
+        "notFound": "Utente non trovato",
+        "returnToDirectory": "Torna alla rubrica",
+        "title": "Profilo utente",
+        "subtitle": "Visualizzazione degli attributi di sistema e delle identità di protocollo.",
+        "backToDirectory": "Torna alla rubrica",
+        "fullName": "Nome completo",
+        "unnamedUser": "Utente senza nome",
+        "email": "Comunicazioni (Email)",
+        "verified": "VERIFICATA",
+        "noEmail": "Nessuna email",
+        "systemRole": "Ruolo di sistema",
+        "profilePhoto": "Foto del profilo",
+        "currentAvatar": "Avatar attuale",
+        "avatarSource": "Fornito dal provider di autenticazione.",
+        "tabLogins": "Sicurezza e accessi",
+        "tabCosts": "Costi AI",
+        "loginActivity": "Attività di accesso recente",
+        "loginActivitySub": "Monitora i dispositivi e le posizioni geografiche che accedono a questo account.",
+        "searchLogins": "Cerca dispositivi o posizioni...",
+        "clearSearch": "Cancella la ricerca",
+        "noLogins": "Nessun accesso registrato per questo utente.",
+        "columnDevice": "Dispositivo",
+        "columnLocation": "Posizione e IP",
+        "columnStatus": "Stato",
+        "columnTimestamp": "Data e ora",
+        "grossCost": "Costo AI lordo",
+        "totalTokens": "Token totali eseguiti",
+        "usageLog": "Registro utilizzo AI",
+        "usageLogSub": "Monitora le esecuzioni AI specifiche di questo utente.",
+        "searchConversations": "Cerca conversazioni...",
+        "noConversations": "Nessuna conversazione AI registrata per questo utente.",
+        "noConversationsMatch": "Nessuna conversazione corrisponde alla ricerca.",
+        "columnConversation": "Conversazione",
+        "columnDateStarted": "Data di inizio",
+        "columnMessages": "Messaggi",
+        "columnTokens": "Token usati",
+        "columnCost": "Costo ($)"
+      }
+    },
+    "health": {
+      "headerTitle": "Salute",
+      "headerDescription": "Se qualcosa richiede la tua attenzione, e come stanno girando i tuoi agenti.",
+      "statusHealthy": "Niente richiede attenzione",
+      "statusAttention": "{count, plural, one {# cosa richiede attenzione} other {# cose richiedono attenzione}}",
+      "checkedAt": "· controllato {date}",
+      "fixFirst": "Sistema prima queste",
+      "inLastDays": "{count} negli ultimi 7 giorni",
+      "lastDaysTitle": "Gli ultimi 7 giorni",
+      "countingRuns": "Conteggio delle esecuzioni recenti.",
+      "noRuns": "Nessun agente è stato eseguito negli ultimi 7 giorni.",
+      "runsSummary": "{runs, plural, one {# esecuzione} other {# esecuzioni}}, {failed} non riuscite, {spend} spesi, {duration} in media.",
+      "searchPlaceholder": "Cerca per cosa è stato eseguito o per agente",
+      "emptyRuns": "Non è ancora stato eseguito nulla",
+      "columnWhat": "Cosa è stato eseguito",
+      "columnAgent": "Agente",
+      "columnResult": "Risultato",
+      "columnTook": "Durata",
+      "columnCost": "Costo",
+      "columnWhen": "Quando",
+      "attention": {
+        "agentFailures": "Esecuzioni di agenti non riuscite",
+        "staleAgentRuns": "Esecuzioni avviate e mai terminate",
+        "pendingApprovals": "Approvazioni in attesa di una persona",
+        "failedToolCalls": "Chiamate a strumenti non riuscite",
+        "providerFailures": "Errori ripetuti da un provider di modelli",
+        "highCostAgents": "Agenti che costano più del previsto",
+        "agentCostBudgets": "Agenti vicini al loro limite di spesa",
+        "tenantMessageBudgets": "Aziende vicine al loro limite di messaggi",
+        "overdueSchedules": "Pianificazioni che avrebbero già dovuto girare",
+        "schedulesMissingNextRun": "Pianificazioni senza niente in programma",
+        "failedScheduledExecutions": "Esecuzioni pianificate non riuscite",
+        "staleRunningScheduledExecutions": "Esecuzioni pianificate mai terminate",
+        "failedAgentTransactions": "Addebiti di agenti non riusciti",
+        "connections": "Connessioni che hanno smesso di rispondere",
+        "scheduledJobs": "Lavori pianificati in errore o in ritardo"
+      },
+      "actions": {
+        "openRuns": "Apri le esecuzioni",
+        "openApprovals": "Apri le approvazioni",
+        "openTools": "Apri gli strumenti",
+        "openModels": "Apri i modelli",
+        "openAgents": "Apri gli agenti",
+        "openCompanies": "Apri le aziende",
+        "openSchedules": "Apri le pianificazioni",
+        "openWorkflowRuns": "Apri le esecuzioni dei flussi",
+        "openConnections": "Apri le connessioni"
+      },
+      "results": {
+        "worked": "Riuscito",
+        "failed": "Non riuscito",
+        "stopped": "Fermato",
+        "running": "In esecuzione",
+        "queued": "In coda",
+        "waitingApproval": "In attesa di approvazione"
       }
     }
   },
@@ -2747,7 +4653,9 @@
         "filing": "Creazione…",
         "filed": "Attività creata — la trovi nella schermata Attività",
         "failed": "Non è stato possibile crearla. Riprova."
-      }
+      },
+      "attachedPhoto": "Foto allegata",
+      "stillWriting": "Sta ancora scrivendo"
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",
@@ -2770,7 +4678,27 @@
         "month": "Monthly Cost"
       },
       "chart": {
-        "tooltipLabel": "Total Cost"
+        "tooltipLabel": "Total Cost",
+        "titleUsd": "{label} (USD)"
+      },
+      "distribution": {
+        "modelTitle": "Chiamate ai modelli",
+        "modelSub": "Voci di costo per LLM",
+        "providerTitle": "Distribuzione per provider",
+        "providerSub": "Voci di costo per provider",
+        "tokenTitle": "Flusso di token",
+        "tokenSub": "Volume input e output a confronto",
+        "noData": "Nessun dato",
+        "calls": "{count} chiamate",
+        "inputSeries": "Input (contesto)",
+        "outputSeries": "Output (generazione)",
+        "unknownProvider": "Sconosciuto / Legacy"
+      },
+      "leaderboards": {
+        "topAgents": "Agenti con più calcolo",
+        "autonomousProcess": "Processo autonomo",
+        "messages": "Messaggi",
+        "cost": "Costo"
       }
     },
     "chatLogs": {
@@ -2865,6 +4793,37 @@
         "warning": "Le regole epurate non possono essere recuperate dalla memoria.",
         "abort": "Annulla Epura",
         "confirm": "Epura Regola"
+      },
+      "form": {
+        "back": "Torna alle regole",
+        "title": "Modifica regola",
+        "subtitle": "Cambia cosa fa l'assistente quando qualcuno dice qualcosa.",
+        "idTag": "ID: {id}...",
+        "sectionName": "Nome",
+        "nameLabel": "Come chiamare questa regola",
+        "namePlaceholder": "Per esempio: Indirizzo dell'ufficio",
+        "sectionTrigger": "Quando usarla",
+        "triggerLabel": "Parole o frasi che la attivano",
+        "triggerPlaceholder": "Per esempio: dove siete, qual è il vostro indirizzo",
+        "sectionPriority": "Quanto è importante",
+        "priority": {
+          "LOW": "BASSA",
+          "NORMAL": "NORMALE",
+          "HIGH": "ALTA",
+          "CRITICAL": "CRITICA"
+        },
+        "sectionInstruction": "Cosa deve fare l'assistente",
+        "instructionLabel": "L'istruzione, con parole tue",
+        "instructionPlaceholder": "Per esempio: Digli che il nostro ufficio è a Londra e offri di prenotare una visita.",
+        "save": "Salva modifiche",
+        "newTitle": "Aggiungi una regola",
+        "newSubtitle": "Di' all'assistente cosa fare quando qualcuno dice qualcosa in particolare.",
+        "create": "Crea la regola"
+      },
+      "table": {
+        "priority": "Priorità",
+        "rule": "Nome regola / Trigger",
+        "status": "Stato"
       }
     },
     "models": {
@@ -2889,6 +4848,155 @@
         "makeDefault": "Imposta come Default",
         "enable": "Inizializza",
         "disable": "Disattiva"
+      },
+      "shared": {
+        "providerStatus": {
+          "off": "Spento",
+          "connected": "Connesso",
+          "notConnected": "Non connesso",
+          "degraded": "Connesso, con problemi",
+          "notChecked": "Non ancora verificato"
+        },
+        "never": "Mai",
+        "legacyProvider": "Legacy",
+        "useCases": {
+          "chat": "Conversazioni ordinarie con le persone.",
+          "fastChat": "Risposte brevi dove la velocità conta più della profondità.",
+          "reasoning": "Problemi più difficili su cui vale la pena spendere più tempo e denaro.",
+          "agent": "Agenti che portano avanti un compito da soli.",
+          "workflow": "Passaggi dentro un flusso di lavoro automatizzato.",
+          "report": "Riassunti scritti e report.",
+          "router": "Decidere quale modello o competenza deve gestire una richiesta. Gira su ogni messaggio, quindi un modello economico qui fa risparmiare di più.",
+          "title": "Dare un nome a una conversazione dal primo messaggio. Lavoro banale — il modello più economico è quello giusto.",
+          "transcription": "Trasformare il parlato in testo.",
+          "speech": "Trasformare il testo in voce. Solo i modelli text-to-speech di Google possono farlo.",
+          "realtime": "Conversazione parlata dal vivo — tu parli, risponde subito e può essere interrotto.",
+          "embedding": "Trasformare i documenti in qualcosa di ricercabile. Solo i modelli di embedding possono farlo.",
+          "vision": "Leggere immagini e screenshot.",
+          "toolCalling": "Decidere quale strumento usare e con quali argomenti."
+        }
+      },
+      "catalogue": {
+        "headerTitle": "Catalogo modelli",
+        "headerDescription": "Quali modelli ha questa piattaforma, e quali sono accesi.",
+        "updateFailed": "Impossibile aggiornare lo stato del modello.",
+        "searchPlaceholder": "Cerca modelli per nome",
+        "clearSearch": "Cancella la ricerca",
+        "providerFilterAria": "Filtro provider",
+        "allProviders": "Tutti i provider",
+        "filterActive": "Attivi",
+        "filterInactive": "Inattivi",
+        "openProviders": "Apri i provider",
+        "footerEmpty": "Nessun modello trovato",
+        "showingMatching": "Mostrati {start}-{end} di {total} corrispondenti",
+        "showingModels": "Mostrati {start}-{end} di {total} modelli",
+        "columnName": "Nome del modello",
+        "columnProvider": "Provider",
+        "columnPricing": "Prezzi",
+        "columnDefault": "Predefinito",
+        "columnActive": "Attivo",
+        "pricingAdded": "Inseriti",
+        "pricingMissing": "Mancanti",
+        "handlesTitle": "Gestisce {jobs}",
+        "yes": "Sì",
+        "no": "No",
+        "ariaActivate": "Attiva {name}",
+        "ariaDeactivate": "Disattiva {name}",
+        "active": "Attivo",
+        "inactive": "Inattivo"
+      },
+      "providers": {
+        "headerTitle": "Provider AI",
+        "headerDescription": "Da dove vengono i modelli, e se questa piattaforma riesce a raggiungerli.",
+        "empty": "Nessun provider configurato",
+        "showing": "{count, plural, one {# provider} other {# provider}}",
+        "columnProvider": "Provider",
+        "columnModels": "Modelli",
+        "columnStatus": "Stato",
+        "columnLastSynced": "Ultima sincronizzazione",
+        "modelsOn": "· {count} accesi",
+        "noneYet": "Ancora nessuno",
+        "sync": "Sincronizza",
+        "test": "Prova",
+        "ariaEnable": "Abilita {name}",
+        "ariaDisable": "Disabilita {name}",
+        "syncFailed": "Impossibile sincronizzare i modelli di {provider}: {message}",
+        "connectionFailed": "Connessione a {provider} non riuscita: {message}",
+        "testFailed": "Impossibile provare il provider {provider}: {message}",
+        "updateFailed": "Impossibile aggiornare il provider {provider}: {message}",
+        "switchOffTitle": "Spegni {provider}",
+        "checkingUsage": "Verifica di cosa sta gestendo questo provider",
+        "disableSafe": "Al momento niente è impostato per usare questo provider, quindi spegnerlo non fermerà alcun lavoro. I suoi modelli spariscono da ogni selettore finché non lo riaccendi.",
+        "disableWorking": "Questo provider sta lavorando in questo momento. Spegnerlo <b>ferma quel lavoro</b> finché non viene scelto un altro modello per ciascun compito.",
+        "platformJobs": "Compiti di piattaforma: {jobs}.",
+        "alsoChosen": "Scelto anche da {count, plural, one {# azienda} other {# aziende}}.",
+        "maybeMore": "Potrebbero essercene altri — sono state contate solo le prime {limit} impostazioni.",
+        "cancel": "Annulla",
+        "switchItOff": "Spegnilo"
+      },
+      "defaults": {
+        "headerTitle": "Modelli predefiniti",
+        "headerDescription": "Quale modello gestisce ogni tipo di lavoro, a meno che qualcosa di più specifico non dica altrimenti.",
+        "intro": "Il modello a cui {platformName} ricorre quando non è stato scelto niente di più specifico. Un'azienda, un agente o un flusso di lavoro possono scavalcare ognuna di queste scelte. I prezzi sono per milione di token.",
+        "noPriceSet": "Nessun prezzo impostato",
+        "costInOut": "{input} in entrata · {output} in uscita",
+        "empty": "Ancora nessun compito da configurare",
+        "showing": "{count, plural, one {# compito} other {# compiti}}",
+        "columnJob": "Compito",
+        "columnModel": "Modello",
+        "columnPrice": "Prezzo",
+        "noPlatformDefault": "Nessun predefinito di piattaforma",
+        "cannotDoJob": "{name} — non può fare questo compito",
+        "strandedWarning": "Questo modello non può fare questo compito, quindi il lavoro ricade su ciò che è impostato più in basso. Scegline un altro, o rimuovilo.",
+        "notSet": "Non impostato",
+        "everyJobTitle": "Usa un solo modello per ogni compito",
+        "everyJobSub": "Imposta ogni riga qui sopra che il modello può gestire. Sostituirà quelle scelte.",
+        "chooseModel": "Scegli un modello",
+        "apply": "Applica",
+        "modalTakeOver": "<b>{model}</b> prenderà in carico {can} dei {total} compiti qui sopra, sostituendo ciò che è impostato per ciascuno:",
+        "jobsList": "{jobs}.",
+        "cannotDoList": "Non può fare {jobs}, quindi {count, plural, one {quella riga resta com'è} other {quelle righe restano come sono}}.",
+        "cancel": "Annulla",
+        "applyToEveryJob": "Applica a ogni compito",
+        "applyFailed": "Impossibile applicare quel modello a ogni compito: {message}",
+        "updateFailed": "Impossibile aggiornare il predefinito {useCase}: {message}"
+      },
+      "detail": {
+        "back": "Torna al catalogo modelli",
+        "notFound": "Modello non trovato.",
+        "active": "Attivo",
+        "inactive": "Inattivo",
+        "save": "Salva",
+        "saveFailed": "Impossibile salvare questo modello.",
+        "makeDefaultFailed": "Impossibile rendere questo il modello predefinito.",
+        "handles": "Questo modello gestisce attualmente <b>{jobs}</b>. ",
+        "notHandling": "Questo modello non gestisce alcun compito in modo predefinito. ",
+        "changeWhich": "Cambia quale modello gestisce cosa",
+        "makeDefaultButton": "Rendi questo il modello predefinito",
+        "nameTitle": "Come si chiama",
+        "nameSub": "Il nome breve che le persone vedono in chat e nei selettori dei modelli.",
+        "costTitle": "Quanto costa",
+        "costSub": "Dollari per milione di token, come pubblicati dal provider. Senza un prezzo non possiamo misurare quanto spende questo modello, quindi gli agenti che lo usano sono tenuti a un budget più piccolo.",
+        "priceIn": "Prezzo in entrata",
+        "priceInHint": "Quanto ti viene addebitato per il testo inviato al modello.",
+        "priceOut": "Prezzo in uscita",
+        "priceOutHint": "Quanto ti viene addebitato per il testo che scrive in risposta.",
+        "morePrices": "Più prezzi",
+        "fewerPrices": "Meno prezzi",
+        "priceInLong": "Prezzo in entrata, conversazioni molto lunghe",
+        "priceInLongHint": "Usato al posto del Prezzo in entrata quando una conversazione supera 200.000 token.",
+        "priceInCached": "Prezzo in entrata, testo ripetuto",
+        "priceInCachedHint": "La tariffa scontata quando il provider ha già visto questo testo. Se lasciato vuoto, si usa il Prezzo in entrata.",
+        "priceInCachedLong": "Prezzo in entrata, testo ripetuto in conversazioni molto lunghe",
+        "suppliedBy": "Fornito da {provider} · noto internamente come <code>{id}</code> · ultima sincronizzazione {date}",
+        "never": "mai",
+        "modalTitle": "Rendi questo il modello predefinito",
+        "modalWillHandle": "<b>{model}</b> gestirà ogni compito, sostituendo ciò che è impostato per ciascuno di essi:",
+        "modalJobs": "{jobs}.",
+        "modalEmbedding": "Trasformare i documenti in qualcosa di ricercabile richiede un modello di embedding, quindi verifica che questo possa fare quel compito prima di renderlo predefinito per tutti. Aziende, agenti e flussi di lavoro possono comunque scavalcare tutto questo.",
+        "modalAlsoEnable": " Questo accenderà anche il modello.",
+        "cancel": "Annulla",
+        "makeItDefault": "Rendilo predefinito"
       }
     },
     "knowledge": {
@@ -2915,7 +5023,433 @@
       "errors": {
         "unsupported": "Formato file non supportato. Usa PDF, DOCX o TXT.",
         "uploadFailed": "Impossibile sincronizzare il documento con il vault."
+      },
+      "manager": {
+        "uploadStatus": {
+          "waiting": "In attesa",
+          "uploading": "Caricamento",
+          "queued": "Inviato per l'elaborazione",
+          "failed": "Non riuscito"
+        },
+        "errors": {
+          "bundleOnly": "Sono tutti file indice e di log del bundle, che contengono collegamenti e non fatti. Niente da caricare.",
+          "overCap": "Sono più di {max} file. I primi {max} sono in caricamento — aggiungi il resto in un secondo lotto.",
+          "unsupported": "Tipo di file non supportato. Carica un file PDF, DOCX, MD, TXT o CSV.",
+          "uploadFailed": "Caricamento del file non riuscito.",
+          "processingNotStarted": "File caricati, ma l'elaborazione non è partita. Usa Riprova nell'elenco qui sotto.",
+          "mapFailed": "Mappatura del sito web non riuscita. Controlla le chiavi API e la rete.",
+          "queueFailed": "Accodamento degli URL non riuscito.",
+          "refreshFailed": "Aggiornamento di {root} non riuscito: {message}",
+          "unknown": "Errore sconosciuto",
+          "bulkDeleteFailed": "Eliminazione del dominio del sito non riuscita.",
+          "retryFailed": "Nuovo tentativo di elaborazione non riuscito.",
+          "repairFailed": "Riparazione dei documenti segnalati non riuscita.",
+          "deleteFailed": "Eliminazione del documento non riuscita."
+        },
+        "progress": {
+          "uploadingBatch": "Caricamento {current} di {total}...",
+          "uploadingSingle": "Caricamento sicuro del documento...",
+          "summaryUploading": "{sent} di {total} caricati",
+          "summaryFailed": "{sent} di {total} caricati, {failed} non riusciti",
+          "summarySent": "{count, plural, one {1 file} other {# file}} inviati per l'elaborazione"
+        },
+        "stats": {
+          "documents": "Documenti",
+          "ready": "Pronti",
+          "ingesting": "In elaborazione",
+          "failed": "Non riusciti",
+          "drift": "Deriva",
+          "chunks": "Frammenti"
+        },
+        "coverage": {
+          "title": "Copertura degli argomenti dell'agente",
+          "description": "Confronta il profilo dell'agente con la conoscenza pronta campionata prima della revisione di rilascio.",
+          "label": "Copertura",
+          "summary": "{covered}/{total} argomenti coperti in {count, plural, one {1 documento pronto} other {# documenti pronti}}. {recommendation}"
+        },
+        "retrieval": {
+          "title": "Test di recupero",
+          "searchLabel": "Cerca nel testo memorizzato",
+          "test": "Prova",
+          "checking": "Controllo dei frammenti memorizzati...",
+          "readyDocs": "{count} documenti pronti",
+          "chunksChecked": "{count} frammenti controllati",
+          "matches": "{count} corrispondenze",
+          "noMatches": "Nessun frammento memorizzato corrisponde a questa frase.",
+          "score": "punteggio {score} * {dimensions} dimensioni"
+        },
+        "flagged": {
+          "title": "Elementi di qualità della conoscenza da rivedere",
+          "repairAll": "Ripara tutti i segnalati",
+          "chunks": "{count} frammenti",
+          "fresh": "aggiornato {date}",
+          "unknownModel": "modello sconosciuto",
+          "inspect": "Ispeziona",
+          "repair": "Ripara"
+        },
+        "tabs": {
+          "website": "Sito web",
+          "file": "File",
+          "text": "Testo"
+        },
+        "text": {
+          "heading": "Testo",
+          "titleLabel": "Titolo",
+          "titlePlaceholder": "Come si chiama questo documento",
+          "textLabel": "Testo",
+          "textPlaceholder": "Incolla o digita il testo qui",
+          "addText": "Aggiungi testo"
+        },
+        "website": {
+          "heading": "URL del sito web",
+          "urlLabel": "URL del sito web",
+          "urlPlaceholder": "Incolla l'indirizzo di un sito web e premi Invio",
+          "found": "Trovate {count} pagine da acquisire",
+          "queueAll": "Accoda tutto per l'addestramento",
+          "trained": "Addestrate",
+          "trainedHint": "Le pagine del sito sono raggruppate per dominio. La ricerca filtra le pagine memorizzate per questa fonte.",
+          "emptyTitle": "Nessuna pagina del sito addestrata",
+          "emptyDescription": "Aggiungi un URL qui sopra per mappare le pagine e accodarle all'addestramento della conoscenza.",
+          "progress": "{ready} pronte / {total} memorizzate ({pct}%)",
+          "refreshTitle": "Aggiornamento in blocco (ri-acquisisci e trova nuove)",
+          "deleteDomainTitle": "Elimina l'intero dominio",
+          "pages": "{count} pagine",
+          "searchPlaceholder": "Cerca le pagine memorizzate",
+          "matching": "{count, plural, one {# pagina memorizzata corrispondente} other {# pagine memorizzate corrispondenti}}",
+          "list": "Elenco delle pagine addestrate",
+          "noSearchMatches": "Nessuna pagina memorizzata corrisponde a questa ricerca.",
+          "pending": "In attesa",
+          "processing": "In elaborazione",
+          "failed": "Non riuscita"
+        },
+        "file": {
+          "upload": "Carica documento",
+          "emptyTitle": "Nessun documento caricato",
+          "ratedHelpful": "{count} valutate utili",
+          "ratedNotRight": "{count} valutate non corrette",
+          "ingesting": "In elaborazione",
+          "ready": "Pronto",
+          "failed": "Non riuscito"
+        },
+        "actions": {
+          "retryIngestion": "Riprova l'elaborazione",
+          "deleteDocument": "Elimina documento",
+          "inspectChunks": "Ispeziona i frammenti"
+        },
+        "footer": {
+          "empty": "Nessun documento di conoscenza caricato",
+          "showing": "Mostrati {start}-{end} di {total} documenti"
+        },
+        "uploadModal": {
+          "title": "Carica documenti di conoscenza",
+          "dropTitle": "Trascina qui file o una cartella",
+          "dropHint": "Supporta .PDF, .DOCX, .MD, .TXT e .CSV. Trascina un'intera cartella per caricare un bundle OKF — fino a {max} file alla volta.",
+          "browse": "Sfoglia file",
+          "chooseFolder": "Scegli cartella",
+          "retryFailed": "Riprova {count} non riusciti",
+          "failedEntry": "Non riuscito — {message}",
+          "failedEntryFallback": "il caricamento non è stato completato",
+          "skippedBundle": "{count, plural, one {# file indice o di log del bundle è stato} other {# file indice e di log del bundle sono stati}} saltati — contengono collegamenti e cronologia, non fatti.",
+          "background": "I file caricati vengono elaborati in background. Chiudi questa finestra quando vuoi — l'avanzamento è visibile nell'elenco dei documenti."
+        },
+        "deleteModal": {
+          "title": "Elimina documento",
+          "cancel": "Annulla",
+          "confirm": "Elimina documento"
+        },
+        "inspectModal": {
+          "title": "Ispeziona documento di conoscenza",
+          "couldNotInspect": "Questo documento non può essere ispezionato.",
+          "sampledChunks": "{count} frammenti campionati",
+          "queued": "accodato: {date}",
+          "started": "avviato: {date}",
+          "fresh": "aggiornato: {date}",
+          "model": "modello: {model}",
+          "dimensions": "{count} dimensioni",
+          "retryIngestion": "Riprova l'elaborazione",
+          "driftTitle": "Rilevata deriva del modello di embedding",
+          "stored": "Memorizzato: {model} ({dims} dim.)",
+          "active": "Attivo: {model} ({dims} dim.)",
+          "unknown": "sconosciuto",
+          "reembed": "Ricalcola con il modello attivo",
+          "historyTitle": "Cronologia di elaborazione",
+          "noEvents": "Nessun evento recente trovato per il documento.",
+          "noChunks": "Nessun frammento è ancora memorizzato per questo documento.",
+          "chunk": "Frammento {number}",
+          "chars": "{count} caratteri"
+        },
+        "websiteDeleteModal": {
+          "title": "Elimina i dati del sito web",
+          "body": "Vuoi davvero rimuovere completamente {root} e tutte le sue sottopagine addestrate dalla memoria di {platformName}? I vettori verranno eliminati immediatamente.",
+          "cancel": "Annulla",
+          "confirm": "Elimina tutto"
+        }
       }
+    },
+    "widget": {
+      "screen": {
+        "companyTitle": "Distribuzione Widget",
+        "companyDescription": "Configura il front-end incorporabile intelligente specifico di questa azienda.",
+        "globalTitle": "Configurazione Widget Globale",
+        "globalDescription": "Configura il widget di chat incorporabile a livello di sistema gestito dal protocollo AI globale. Le personalizzazioni si applicano immediatamente a tutte le integrazioni consentite.",
+        "publish": "Pubblica configurazione",
+        "save": "Salva configurazione",
+        "errors": {
+          "saveCompany": "Salvataggio delle impostazioni del widget non riuscito.",
+          "saveGlobal": "Salvataggio delle impostazioni del widget globale non riuscito.",
+          "logoUpload": "Caricamento del logo non riuscito.",
+          "clipboard": "L'accesso agli appunti è stato bloccato. Seleziona e copia lo snippet manualmente."
+        },
+        "emptyGlobal": {
+          "title": "Nessun protocollo globale connesso",
+          "description": "Crea un widget incorporabile sicuro per consentire agli utenti esterni di interagire con la base di conoscenza globale e la logica di intercettazione.",
+          "action": "Inizializza widget principale"
+        }
+      },
+      "emptyState": {
+        "title": "Integrazioni non configurate",
+        "description": "Predisponi un widget incorporabile sicuro per permettere ai tuoi clienti di chattare direttamente con l'intelligenza della tua azienda.",
+        "action": "Inizializza widget principale"
+      },
+      "welcome": {
+        "title": "Schermata di benvenuto",
+        "description": "Aggiungi e personalizza i campi di input mostrati nella prima schermata del widget.",
+        "chooseFields": "Scegli i campi di input per avviare una chat",
+        "nameInput": "Campo nome",
+        "emailInput": "Campo email"
+      },
+      "greeting": {
+        "title": "Saluto",
+        "description": "Personalizza il messaggio di saluto che comparirà automaticamente all'utente.",
+        "defaultGreeting": "Saluto predefinito",
+        "shownAutomatically": "Mostrato automaticamente ai visitatori.",
+        "turnedOff": "Disattivato — i visitatori non vedono nulla.",
+        "on": "Attivo",
+        "off": "Spento",
+        "messageLabel": "Messaggio di saluto",
+        "messagePlaceholder": "Scrivi un messaggio di saluto..."
+      },
+      "starters": {
+        "title": "Spunti di conversazione",
+        "description": "Crea fino a 4 risposte rapide che compaiono prima dell'inizio della chat. Adatta i suggerimenti alla lingua dell'utente per incoraggiare l'interazione fin dall'inizio. Attivando gli spunti di conversazione si disattiva la funzione Saluto.",
+        "addLabel": "Aggiungi una risposta rapida",
+        "inputPlaceholder": "Inserisci uno spunto di conversazione",
+        "count": "{count}/4",
+        "addButton": "Aggiungi spunto di conversazione",
+        "empty": "Nessuno spunto di conversazione aggiunto."
+      },
+      "integration": {
+        "title": "Integrazione",
+        "description": "Collega la pipeline sicura di connessione dell'agente a domini esterni.",
+        "domainsLabel": "Siti web autorizzati a mostrarlo",
+        "domainsHint": "Separane più di uno con le virgole. La finestra di chat non si aprirà altrove.",
+        "domainsPlaceholder": "https://esempio.com, https://app.esempio.com",
+        "snippetLabel": "Il codice da incollare nel tuo sito web",
+        "copy": "Copia negli appunti",
+        "copied": "Copiato!",
+        "kiosk": {
+          "title": "Schermo receptionist",
+          "description": "Una versione a schermo intero per un tablet alla scrivania o su un supporto: i visitatori toccano una volta e parlano.",
+          "onHint": "Salva, poi apri lo schermo sul dispositivo.",
+          "offHint": "Attivalo e salva per ottenere l'indirizzo dello schermo.",
+          "open": "Apri lo schermo receptionist",
+          "lastSeen": "Schermo visto l'ultima volta {date} · {count} conversazioni finora",
+          "notSeen": "Lo schermo non si è ancora collegato."
+        },
+        "sandboxHint": "Prova la configurazione del widget in sicurezza nell'ambiente sandbox di {platformName}.",
+        "sandboxButton": "Prova il widget in sandbox"
+      },
+      "appearance": {
+        "title": "Aspetto",
+        "description": "Come appare la finestra di chat ai tuoi visitatori.",
+        "nameLabel": "Nome visibile alle persone",
+        "namePlaceholder": "Per esempio: Assistente vendite",
+        "colourLabel": "Colore principale",
+        "colourPickerLabel": "Scegli il colore principale",
+        "logoLabel": "Logo",
+        "logoAlt": "Logo del widget",
+        "uploading": "Caricamento...",
+        "customLogoSet": "Logo personalizzato impostato",
+        "clickToUpload": "Fai clic per caricare un'immagine",
+        "logoHint": "PNG, JPG, SVG fino a 2MB. Consigliato 256x256.",
+        "placeholderLabel": "Testo in grigio nella casella del messaggio",
+        "placeholderPlaceholder": "Scrivi una risposta...",
+        "sounds": "Attiva le notifiche sonore",
+        "popupPreview": "Mostra l'anteprima del messaggio pop-up"
+      },
+      "preview": {
+        "nameFallback": "Bot del sito",
+        "logoAlt": "logo",
+        "beforeWeBegin": "Prima di iniziare...",
+        "fullName": "Nome e cognome",
+        "emailAddress": "Indirizzo email",
+        "startChat": "Avvia chat"
+      }
+    },
+    "evals": {
+      "list": {
+        "title": "Valutazioni",
+        "companyDescription": "Una valutazione è una domanda, e la descrizione di una buona risposta. Eseguirla pone la domanda all'AI di questa azienda, poi una seconda AI giudica la risposta.",
+        "globalDescription": "Una valutazione è una domanda, e la descrizione di una buona risposta. Eseguirla pone la domanda all'AI globale, poi una seconda AI giudica la risposta.",
+        "status": {
+          "passing": "Superata",
+          "failing": "Non superata",
+          "notRun": "Mai eseguita",
+          "notTested": "Non testata"
+        },
+        "filters": {
+          "all": "Tutte",
+          "passing": "Superate",
+          "failing": "Non superate",
+          "notRun": "Mai eseguite"
+        },
+        "headline": {
+          "loading": "Caricamento…",
+          "lead": "{passed} su {total, plural, one {1 valutazione} other {# valutazioni}} superate.",
+          "failing": "{count} non superate",
+          "notTested": "{count} non ancora testate"
+        },
+        "notices": {
+          "startersFailed": "Impossibile aggiungere le valutazioni di partenza.",
+          "startersAdded": "Aggiunte {count} valutazioni di partenza. Premi Esegui valutazioni per vedere come se la cava la tua AI.",
+          "deleteFailed": "Impossibile eliminare la valutazione.",
+          "runFailed": "Impossibile eseguire la valutazione.",
+          "batchFailed": "Impossibile avviare le valutazioni.",
+          "nothingToRun": "Niente da eseguire.",
+          "batchStarted": "In esecuzione {count, plural, one {1 valutazione} other {# valutazioni}}. I risultati compaiono qui man mano che ognuna finisce."
+        },
+        "runEvals": "Esegui valutazioni",
+        "newEval": "Nuova valutazione",
+        "proposed": {
+          "headline": "{count, plural, one {1 valutazione abbozzata da una domanda reale} other {# valutazioni abbozzate da domande reali}}",
+          "description": "L'Esaminatore le ha abbozzate da domande realmente poste. Una bozza non esegue nulla e non blocca nulla finché non la approvi; una rifiutata non torna più.",
+          "prompt": "“{prompt}”",
+          "approve": "Approva",
+          "reject": "Rifiuta"
+        },
+        "searchPlaceholder": "Cerca valutazioni...",
+        "empty": {
+          "label": "Ancora nessuna valutazione",
+          "hint": "Una valutazione coglie la tua AI mentre dice qualcosa di sbagliato prima che lo veda un cliente.",
+          "addStarters": "Aggiungi 3 valutazioni di partenza",
+          "writeOwn": "Scrivo la mia",
+          "table": "Nessuna valutazione"
+        },
+        "columns": {
+          "eval": "Valutazione",
+          "status": "Stato",
+          "mustPass": "Deve passare",
+          "lastRun": "Ultima esecuzione"
+        },
+        "yes": "Sì",
+        "no": "No",
+        "run": "Esegui",
+        "deleteRow": "Elimina {name}",
+        "batchModal": {
+          "title": "Esegui valutazioni",
+          "bodyCompany": "Questo pone all'AI dell'azienda {count, plural, one {1 domanda} other {# domande}}, poi una seconda AI giudica ogni risposta — {calls} chiamate AI in totale, che costano denaro.",
+          "bodyGlobal": "Questo pone all'AI globale {count, plural, one {1 domanda} other {# domande}}, poi una seconda AI giudica ogni risposta — {calls} chiamate AI in totale, che costano denaro.",
+          "stay": "I risultati compaiono su questa pagina man mano che ognuna finisce. Puoi lasciare la pagina.",
+          "capped": "Questa volta verranno eseguite solo le prime {cap} valutazioni. Esegui di nuovo in seguito per coprire il resto.",
+          "cancel": "Annulla"
+        },
+        "deleteModal": {
+          "title": "Elimina valutazione",
+          "body": "Questo elimina {name} e i suoi risultati per sempre. Non si può annullare.",
+          "cancel": "Annulla",
+          "confirm": "Elimina valutazione"
+        }
+      },
+      "detail": {
+        "description": "Cosa chiede questa valutazione, e cosa ha detto l'AI l'ultima volta che le è stata posta.",
+        "status": {
+          "passing": "Superata",
+          "failing": "Non superata",
+          "notRunYet": "Non ancora eseguita",
+          "notTested": "Non testata"
+        },
+        "lastRun": "Ultima esecuzione {date}",
+        "mustPassBadge": "Deve passare prima della messa in produzione",
+        "edit": "Modifica",
+        "runFailed": "Impossibile eseguire la valutazione.",
+        "runThis": "Esegui questa valutazione",
+        "question": "La domanda",
+        "goodAnswer": "Cosa deve fare una buona risposta",
+        "answered": "Cosa ha risposto la tua AI",
+        "neverRun": "Questa valutazione non è mai stata eseguita. Premi <highlight>Esegui questa valutazione</highlight> per interrogare la tua AI.",
+        "evidence": "Usati {documents, plural, one {1 documento} other {# documenti}}, {memories, plural, one {1 memoria} other {# memorie}} e {skills, plural, one {1 competenza} other {# competenze}}",
+        "answeredBy": "· risposta di {model}",
+        "askedTimes": "· chiesta {count} volte",
+        "cost": "· costo {cost}",
+        "marked": "Come è stata giudicata",
+        "earlierRuns": "Esecuzioni precedenti"
+      },
+      "form": {
+        "where": {
+          "internalChat": "Chat interna",
+          "internalChatHint": "Il personale che fa domande alla tua AI",
+          "widget": "Widget clienti",
+          "widgetHint": "Il widget pubblico sul tuo sito"
+        },
+        "saveFailed": "Impossibile salvare la valutazione.",
+        "createFailed": "Impossibile creare la valutazione.",
+        "editTitle": "Modifica controllo",
+        "newTitle": "Nuova valutazione",
+        "editDescription": "Cambiare la domanda o cosa deve fare una buona risposta ritira i risultati precedenti di questa valutazione, quindi eseguila di nuovo dopo.",
+        "newDescription": "Una domanda, e come appare una buona risposta. Eseguirla interroga l'AI e fa giudicare la risposta a una seconda AI.",
+        "nameLabel": "Dai un nome a questa valutazione",
+        "namePlaceholder": "Non inventa prezzi",
+        "promptLabel": "Cosa chiederebbe qualcuno?",
+        "promptPlaceholder": "Quanto costa il vostro piano enterprise?",
+        "goodAnswerLabel": "Come appare una buona risposta?",
+        "goodAnswerHint": "In parole semplici. È ciò che legge l'AI che giudica.",
+        "goodAnswerPlaceholder": "Dovrebbe dire che i prezzi non sono pubblicati e offrire di metterli in contatto con le vendite. Non deve mai citare una cifra.",
+        "bannedLabel": "Parole che non deve mai dire",
+        "bannedHint": "Facoltativo. Premi Invio dopo ognuna.",
+        "bannedPlaceholder": "enterprise è gratis",
+        "removePhrase": "Rimuovi {phrase}",
+        "whereLabel": "Dove si applica?",
+        "mustPassLabel": "Deve passare prima che l'AI vada in produzione",
+        "mustPassHint": "Lascia spuntato per tutto ciò che ti metterebbe in imbarazzo davanti a un cliente.",
+        "advanced": "Avanzate",
+        "sampleLabel": "Chiedi più di una volta",
+        "sampleHint": "Facoltativo. Una valutazione che passa due volte su tre è una valutazione che fallisce una conversazione su tre. Ogni richiesta in più costa altre due chiamate AI.",
+        "askOnce": "Chiedi una volta",
+        "askThree": "Chiedi 3 volte — devono passare tutte",
+        "askFive": "Chiedi 5 volte — devono passare tutte",
+        "skillsLabel": "La risposta deve usare queste competenze",
+        "skillsHint": "{count} selezionate. Lascia vuoto a meno che tu non stia verificando che una particolare competenza venga usata.",
+        "skillsEmpty": "Nessuna competenza è ancora disponibile per questa azienda. Aggiungine prima una dal Centro Competenze.",
+        "saving": "Salvataggio…",
+        "saveCheck": "Salva controllo",
+        "creating": "Creazione…",
+        "createEval": "Crea valutazione"
+      }
+    },
+    "workspaceNav": {
+      "ariaLabel": "Sezioni intelligenza artificiale",
+      "instructions": "Istruzioni",
+      "rules": "Regole",
+      "systemPrompt": "Prompt di sistema",
+      "wiki": "Wiki",
+      "voice": "Voce",
+      "unanswered": "Senza risposta",
+      "diary": "Diario",
+      "evals": "Valutazioni",
+      "providers": "Provider",
+      "modelCatalogue": "Catalogo modelli",
+      "defaults": "Predefiniti",
+      "appearance": "Aspetto",
+      "welcomeScreen": "Schermata di benvenuto",
+      "conversationStarters": "Spunti di conversazione",
+      "greeting": "Saluto",
+      "integration": "Integrazione",
+      "runningCosts": "Costi di esercizio",
+      "value": "Valore",
+      "chatLogs": "Registri chat",
+      "skillCenter": "Centro competenze",
+      "widget": "Widget",
+      "models": "Modelli"
     }
   },
   "user": {
@@ -3369,8 +5903,8 @@
   },
   "aiVoice": {
     "title": "Voce",
-    "subtitle": "La voce con cui parla Sonae — su Ask Sonae, al telefono e sullo schermo della reception.",
-    "hint": "Questa è la voce che i clienti sentono quando Sonae parla. Premi Ascolta per sentire una voce. Premi \"Usa questa voce\" per attivarla — il cambio vale subito per le nuove conversazioni.",
+    "subtitle": "La voce con cui parla {platformName} — su Ask {platformName}, al telefono e sullo schermo della reception.",
+    "hint": "Questa è la voce che i clienti sentono quando {platformName} parla. Premi Ascolta per sentire una voce. Premi \"Usa questa voce\" per attivarla — il cambio vale subito per le nuove conversazioni.",
     "columns": {
       "voice": "Voce",
       "sound": "Come suona",
@@ -3382,7 +5916,7 @@
     "current": "In uso",
     "success": {
       "title": "Voce salvata",
-      "message": "Le nuove conversazioni vocali useranno questa voce ovunque Sonae parli."
+      "message": "Le nuove conversazioni vocali useranno questa voce ovunque {platformName} parli."
     },
     "errors": {
       "saveTitle": "La voce non è stata salvata",
@@ -3398,12 +5932,12 @@
   },
   "aiPages": {
     "title": "Wiki",
-    "subtitle": "Ciò che Sonae ricorda — clienti, prodotti, regole e questioni ricorrenti — scritto e tenuto aggiornato da Sonae stessa.",
-    "hint": "Dopo ogni telefonata o email con un cliente conosciuto, Sonae riscrive la sua pagina — e quando una conversazione insegna qualcosa su un prodotto, una regola o una questione ricorrente, anche la pagina di quel tema impara, e le pagine si collegano. Apri una pagina per leggerla, modificarla o fissare un fatto che Sonae deve sempre rispettare.",
+    "subtitle": "Ciò che {platformName} ricorda — clienti, prodotti, regole e questioni ricorrenti — scritto e tenuto aggiornato da {platformName} stessa.",
+    "hint": "Dopo ogni telefonata o email con un cliente conosciuto, {platformName} riscrive la sua pagina — e quando una conversazione insegna qualcosa su un prodotto, una regola o una questione ricorrente, anche la pagina di quel tema impara, e le pagine si collegano. Apri una pagina per leggerla, modificarla o fissare un fatto che {platformName} deve sempre rispettare.",
     "searchPlaceholder": "Cerca clienti o testo delle pagine...",
     "columns": {
       "customer": "Pagina",
-      "remembers": "Cosa ricorda Sonae",
+      "remembers": "Cosa ricorda {platformName}",
       "lastChange": "Ultima modifica",
       "rewrites": "Riscritture",
       "sources": "Fonti",
@@ -3411,7 +5945,7 @@
       "usedSort": "Ordina per più usate"
     },
     "empty": "Ancora nessuna pagina",
-    "emptyState": "Ancora nessuna pagina. Quando Sonae parla con un cliente conosciuto al telefono o via email, la sua pagina appare qui.",
+    "emptyState": "Ancora nessuna pagina. Quando {platformName} parla con un cliente conosciuto al telefono o via email, la sua pagina appare qui.",
     "emptySearch": "Nessun risultato per questa ricerca.",
     "sources": {
       "phone": "Telefonata",
@@ -3441,16 +5975,16 @@
       },
       "pinned": {
         "title": "Fissato dallo staff",
-        "hint": "I fatti fissati qui sono permanenti. Sonae li legge con ogni pagina ma non può mai cambiarli o rimuoverli — solo una persona può farlo.",
+        "hint": "I fatti fissati qui sono permanenti. {platformName} li legge con ogni pagina ma non può mai cambiarli o rimuoverli — solo una persona può farlo.",
         "none": "Ancora niente di fissato.",
-        "placeholder": "Scrivi un fatto che Sonae deve sempre rispettare...",
+        "placeholder": "Scrivi un fatto che {platformName} deve sempre rispettare...",
         "add": "Fissa",
         "remove": "Rimuovi questo fatto fissato",
-        "hintShort": "Fatto fissato — Sonae lo rispetta sempre e non può mai riscriverlo"
+        "hintShort": "Fatto fissato — {platformName} lo rispetta sempre e non può mai riscriverlo"
       },
       "body": {
         "title": "La pagina",
-        "hint": "Scritta e tenuta aggiornata da Sonae. Puoi modificarla direttamente — la tua modifica viene registrata nella cronologia come ogni altra.",
+        "hint": "Scritta e tenuta aggiornata da {platformName}. Puoi modificarla direttamente — la tua modifica viene registrata nella cronologia come ogni altra.",
         "save": "Salva la pagina",
         "saving": "Salvataggio...",
         "discard": "Annulla le modifiche"
@@ -3503,7 +6037,7 @@
       "title": "La Mappa",
       "subtitle": "Ogni pagina è un punto, ogni collegamento una linea — la conoscenza dell'azienda, che cresce a ogni conversazione.",
       "back": "Tutte le pagine",
-      "empty": "Ancora nessuna pagina da disegnare. Quando Sonae parla con clienti conosciuti, la mappa cresce da sola.",
+      "empty": "Ancora nessuna pagina da disegnare. Quando {platformName} parla con clienti conosciuti, la mappa cresce da sola.",
       "zoomIn": "Ingrandisci",
       "zoomOut": "Riduci",
       "zoomReset": "Ripristina la vista"
@@ -3515,14 +6049,14 @@
         "text": "Testo",
         "vault": "Vault"
       },
-      "websitePlaceholder": "Incolla l'indirizzo di un sito e premi Leggilo — Sonae lo leggerà e scriverà le pagine",
+      "websitePlaceholder": "Incolla l'indirizzo di un sito e premi Leggilo — {platformName} lo leggerà e scriverà le pagine",
       "textTitlePlaceholder": "Di cosa si tratta? (un titolo breve)",
       "textBodyPlaceholder": "Incolla o scrivi qui la conoscenza...",
       "readIt": "Leggilo",
       "feedback": {
-        "website": "Trovate {count} pagine. Sonae le sta leggendo — il wiki qui sotto si riempie man mano.",
-        "text": "Sonae lo sta leggendo — il wiki qui sotto si aggiorna quando ha finito.",
-        "files": "{count, plural, =1 {File caricato. Sonae lo sta leggendo.} other {# file caricati. Sonae li sta leggendo.}}",
+        "website": "Trovate {count} pagine. {platformName} le sta leggendo — il wiki qui sotto si riempie man mano.",
+        "text": "{platformName} lo sta leggendo — il wiki qui sotto si aggiorna quando ha finito.",
+        "files": "{count, plural, =1 {File caricato. {platformName} lo sta leggendo.} other {# file caricati. {platformName} li sta leggendo.}}",
         "vault": "{count, plural, =1 {1 pagina} other {# pagine}} del vault sono in lettura.",
         "vaultSkipped": "{count, plural, =1 {1 pagina} other {# pagine}} del vault sono in lettura; {skipped} file non markdown saltati."
       },
@@ -3537,7 +6071,7 @@
       "vaultHint": "Trascina qui un vault di Obsidian - uno zip della cartella o alcuni file .md. Ogni pagina markdown passa dall'importazione normale: il wiki la legge, link compresi. Ciò che non è markdown viene saltato e conteggiato."
     },
     "progress": {
-      "title": "Sonae sta leggendo",
+      "title": "{platformName} sta leggendo",
       "count": "{done} di {total} documenti",
       "written": "{count, plural, =1 {1 pagina scritta} other {# pagine scritte}}",
       "improved": "{count, plural, =1 {1 pagina migliorata} other {# pagine migliorate}}",
@@ -3734,7 +6268,7 @@
   },
   "connections": {
     "title": "Connessioni",
-    "subtitle": "Tutto ciò da cui Sonae dipende, e se sta rispondendo in questo momento.",
+    "subtitle": "Tutto ciò da cui {platformName} dipende, e se sta rispondendo in questo momento.",
     "hint": "Sono verifiche dal vivo, non controlli di configurazione: alla casella viene chiesta la posta, a ogni fornitore AI l'elenco dei modelli, alla linea telefonica il suo account. Una connessione che smette di rispondere appare qui entro un'ora.",
     "loading": "Verifica in corso...",
     "allWell": "Tutto risponde.",
@@ -3784,12 +6318,12 @@
   "aiMailbox": {
     "title": "Casella di posta",
     "subtitle": "Ogni email vista dall'AI di questa azienda, e cosa ne ha fatto.",
-    "hint": "Sonae conserva mittente, oggetto e la sua decisione - mai il corpo del messaggio. Per leggere una conversazione completa, aprila nella casella collegata.",
+    "hint": "{platformName} conserva mittente, oggetto e la sua decisione - mai il corpo del messaggio. Per leggere una conversazione completa, aprila nella casella collegata.",
     "searchPlaceholder": "Cerca per mittente o oggetto...",
     "columns": {
       "from": "Da",
       "subject": "Oggetto",
-      "decision": "Cosa ha fatto Sonae",
+      "decision": "Cosa ha fatto {platformName}",
       "when": "Quando"
     },
     "decision": {
@@ -3876,5 +6410,56 @@
       "cancel": "Annulla"
     },
     "honesty": "Ogni numero è un conteggio di eventi reali registrati. La riga delle ore è una stima costruita sull'ipotesi visibile sopra - modificala perché rispecchi quanto tempo servirebbe davvero al tuo team."
+  },
+  "ui": {
+    "table": {
+      "noEntries": "Nessuna voce trovata",
+      "previous": "Precedente",
+      "next": "Successivo",
+      "pageOf": "Pagina {page} di {totalPages}",
+      "showingRange": "Visualizzazione {start}-{end} di {total}",
+      "showingPage": "Visualizzazione {count} · pagina {page}",
+      "showingCount": "Visualizzazione {count}",
+      "loadMore": "Carica altro",
+      "loading": "Caricamento...",
+      "actionsColumn": "Azioni"
+    },
+    "detailTabs": {
+      "itemSelected": "{label} selezionato"
+    },
+    "cursorPagination": {
+      "previousPage": "Pagina precedente",
+      "nextPage": "Pagina successiva"
+    },
+    "modal": {
+      "close": "Chiudi"
+    },
+    "jsonSchemaBuilder": {
+      "addField": "Aggiungi un campo",
+      "empty": "Nessun campo ancora, quindi l'agente risponde in testo libero.",
+      "fieldNamePlaceholder": "nome_campo",
+      "descriptionPlaceholder": "Cosa deve contenere questo campo?",
+      "typeString": "Stringa",
+      "typeNumber": "Numero",
+      "typeBoolean": "Booleano",
+      "always": "Sempre"
+    },
+    "timeframeDropdown": {
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "7d": "Ultimi 7 Giorni",
+      "14d": "Ultimi 14 Giorni",
+      "30d": "Ultimi 30 Giorni",
+      "60d": "Ultimi 60 Giorni",
+      "90d": "Ultimi 90 Giorni",
+      "180d": "Ultimi 180 Giorni",
+      "365d": "Ultimi 365 Giorni",
+      "customRange": "Intervallo Personalizzato",
+      "selectRange": "Seleziona Intervallo",
+      "presets": "Preimpostazioni",
+      "startDate": "Data di Inizio",
+      "endDateOptional": "Data di Fine (Opzionale)",
+      "applyRange": "Applica Intervallo"
+    }
   }
 }

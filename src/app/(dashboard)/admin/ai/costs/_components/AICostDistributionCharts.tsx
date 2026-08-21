@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
@@ -32,19 +33,24 @@ const PROVIDER_COLORS = [
   CHART_SERIES_ROSE,
 ];
 
-function formatProviderName(providerKey: string) {
+/**
+ * Provider names are brands and stay as written; only the bucket for calls
+ * whose provider is no longer known is copy, so only it goes through the
+ * catalogue.
+ */
+function formatProviderName(providerKey: string, unknownLabel: string) {
   if (providerKey === "google") return "Google Vertex AI";
   if (providerKey === "openai") return "OpenAI";
   if (providerKey === "anthropic") return "Anthropic";
   if (providerKey === "openrouter") return "OpenRouter";
-  if (providerKey === "unknown") return "Unknown / Legacy";
+  if (providerKey === "unknown") return unknownLabel;
   return providerKey;
 }
 
-function withProviderNames(providerDistribution?: ProviderDistributionRow[]) {
+function withProviderNames(providerDistribution: ProviderDistributionRow[] | undefined, unknownLabel: string) {
   return providerDistribution?.map((provider) => ({
     ...provider,
-    name: formatProviderName(provider.providerKey),
+    name: formatProviderName(provider.providerKey, unknownLabel),
   }));
 }
 
@@ -55,7 +61,8 @@ type AICostDistributionChartsProps = {
 };
 
 export function AICostDistributionCharts({ modelDistribution, providerDistribution, timeline }: AICostDistributionChartsProps) {
-  const providerChartData = withProviderNames(providerDistribution);
+  const t = useTranslations("ai.costs.distribution");
+  const providerChartData = withProviderNames(providerDistribution, t("unknownProvider"));
 
   return (
     <div className="flex flex-col gap-6 mt-2">
@@ -70,16 +77,16 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
                 <PieChartIcon className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_VIOLET }} />
-                <h2 className="text-[14px] font-bold text-foreground">Model Invocations</h2>
+                <h2 className="text-[14px] font-bold text-foreground">{t("modelTitle")}</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
-                Cost drivers by LLM
+                {t("modelSub")}
               </span>
             </div>
             <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
               {!modelDistribution || modelDistribution.length === 0 ? (
                 <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
-                  No Data
+                  {t("noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260} debounce={50}>
@@ -106,7 +113,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                         border: "1px solid rgba(255,255,255,0.1)",
                       }}
                       itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
-                      formatter={(value: unknown) => `${Number(value).toLocaleString()} Calls`}
+                      formatter={(value: unknown) => t("calls", { count: Number(value).toLocaleString() })}
                     />
                     <Legend
                       iconType="circle"
@@ -134,16 +141,16 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
                 <Network className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_TEAL }} />
-                <h2 className="text-[14px] font-bold text-foreground">Provider Distribution</h2>
+                <h2 className="text-[14px] font-bold text-foreground">{t("providerTitle")}</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
-                Cost drivers by provider
+                {t("providerSub")}
               </span>
             </div>
             <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
               {!providerChartData || providerChartData.length === 0 ? (
                 <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
-                  No Data
+                  {t("noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260} debounce={50}>
@@ -198,16 +205,16 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
                 <BarChart3 className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_EMERALD }} />
-                <h2 className="text-[14px] font-bold text-foreground">Token Flux</h2>
+                <h2 className="text-[14px] font-bold text-foreground">{t("tokenTitle")}</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
-                Input vs Output Volume
+                {t("tokenSub")}
               </span>
             </div>
             <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
               {!timeline || timeline.length === 0 ? (
                 <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
-                  No Data
+                  {t("noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260} debounce={50}>
@@ -239,8 +246,8 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                         color: "#888",
                       }}
                     />
-                    <Bar isAnimationActive={false} dataKey="inputTokens" name="Input (Context)" stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
-                    <Bar isAnimationActive={false} dataKey="outputTokens" name="Output (Gen)" stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
+                    <Bar isAnimationActive={false} dataKey="inputTokens" name={t("inputSeries")} stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
+                    <Bar isAnimationActive={false} dataKey="outputTokens" name={t("outputSeries")} stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

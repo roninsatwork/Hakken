@@ -1,90 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { FormEvent } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ShieldCheck, Loader2, Send } from "lucide-react";
-import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-import {
-  FeedbackPill,
-  SaveAction,
-} from "@/src/ui/components/screens/SaveControls";
+import { ShieldCheck, Loader2 } from "lucide-react";
+import { InviteDispatchScreen } from "@/src/app/(dashboard)/admin/_features/invites/InviteDispatchScreen";
+import { useTranslations } from "next-intl";
 
-export default function InviteUsersPage() {
+/** Inviting a system super admin: same desk as the workspace one, fixed role. */
+export default function InviteSuperAdminsPage() {
+  const t = useTranslations("admin.invites");
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
-  const activeTemplate = useQuery(api.invites.getActiveTemplate, isSuperAdmin ? {} : "skip");
-  const saveTemplate = useMutation(api.invites.saveTemplate);
-  const dispatchInvite = useAction(api.invites.dispatchInviteEmail);
-
-  const [formData, setFormData] = useState({
-    subject: "",
-    headline: "",
-    body: "",
-    ctaText: "",
-  });
-  const [inviteEmail, setInviteEmail] = useState("");
-  const inviteRole = "SUPER_ADMIN";
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (activeTemplate) {
-      setFormData({
-         subject: activeTemplate.subject,
-         headline: activeTemplate.headline,
-         body: activeTemplate.body,
-         ctaText: activeTemplate.ctaText,
-      });
-    }
-  }, [activeTemplate]);
-
-  const handleSaveTemplate = async () => {
-    setIsSaving(true);
-    try {
-      await saveTemplate(formData);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-       console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSendInvite = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail) return;
-    setIsSending(true);
-    setSendSuccess(false);
-    setSendError(null);
-
-    try {
-      await dispatchInvite({
-         email: inviteEmail,
-         role: "SUPER_ADMIN",
-         companyId: undefined,
-         template: formData,
-      });
-      setSendSuccess(true);
-      setInviteEmail("");
-      setTimeout(() => setSendSuccess(false), 3000);
-    } catch (e: unknown) {
-      console.error(e);
-      setSendError("Email delivery rejected by Resend API. Check your domain limits.");
-      setTimeout(() => setSendError(null), 5000);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  if (user === undefined || activeTemplate === undefined) {
+  // Anyone who is not a super admin stays on the spinner, exactly as before:
+  // the old page skipped its template query for them and so never left it.
+  if (user === undefined || !isSuperAdmin) {
     return (
       <div className="w-full flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-muted" />
@@ -92,168 +22,30 @@ export default function InviteUsersPage() {
     );
   }
 
-  if (!isSuperAdmin) {
-    return <div className="p-8 text-secondary">Unauthorized area.</div>;
-  }
-
   return (
-    <div className="w-full h-full flex flex-col gap-8 pb-20">
-        
-        {/* Header */}
-        <div className="flex flex-col gap-2 border-b border-border-dim/50 pb-6">
-          <h1 className="text-[24px] font-bold tracking-tight text-foreground flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-brand" />
-            System Admin Invitations
-          </h1>
-          <p className="text-[14px] text-secondary max-w-xl leading-relaxed">
-            Dispatch secure access tokens directly to new system administrators.
-          </p>
+    <InviteDispatchScreen
+      role="SUPER_ADMIN"
+      roleSelector={
+        <div className="flex flex-col gap-2">
+          <label htmlFor="invite-system-role" className="mt-1 flex items-center gap-2 text-[12px] font-medium text-secondary">
+            {t("roleQuestion")} <ShieldCheck className="w-3.5 h-3.5 text-brand" />
+          </label>
+          <select
+            id="invite-system-role"
+            value="SUPER_ADMIN"
+            disabled
+            className="h-[46px] w-full cursor-not-allowed rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground opacity-50 outline-none"
+          >
+            <option value="SUPER_ADMIN">{t("systemSuperAdmin")}</option>
+          </select>
         </div>
-
-        {/* Master Workflow Form */}
-        <form onSubmit={handleSendInvite} className="flex flex-col gap-12 relative z-10 pt-4">
-          
-          {/* STEP 1: TARGETING */}
-          <div className="flex flex-col gap-6">
-             <h2 className="text-[14px] font-semibold text-foreground tracking-wide flex items-center gap-2 border-b border-border-dim/50 pb-4">
-               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand/20 text-brand text-[11px] font-mono">1</span>
-               Target Recipient
-             </h2>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {/* The failure message has its own place at the foot of the
-                   form, so the box carries the red border and not the sentence
-                   twice. */}
-               <Field
-                 label="Their email address"
-                 type="email"
-                 required
-                 value={inviteEmail}
-                 onChange={e => {
-                   setInviteEmail(e.target.value);
-                   if (sendError) setSendError(null);
-                 }}
-                 placeholder="colleague@company.com"
-                 className={sendError ? 'border-red-500/50 focus:border-red-500' : undefined}
-               />
-
-               <div className="flex flex-col gap-2">
-                  <label htmlFor="invite-system-role" className="mt-1 flex items-center gap-2 text-[12px] font-medium text-secondary">
-                    What they will be <ShieldCheck className="w-3.5 h-3.5 text-brand" />
-                  </label>
-                  <select
-                    id="invite-system-role"
-                    value={inviteRole}
-                    disabled
-                    className="h-[46px] w-full cursor-not-allowed rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground opacity-50 outline-none"
-                  >
-                    <option value="SUPER_ADMIN">System Super Admin</option>
-                  </select>
-                </div>
-              </div>
-           </div>
-
-          {/* STEP 2: PAYLOAD & TEMPLATE */}
-          <div className="flex flex-col gap-6">
-             
-             {/* Header */}
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim/50 pb-4">
-               <h2 className="text-[14px] font-semibold text-foreground tracking-wide flex items-center gap-2">
-                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand/20 text-brand text-[11px] font-mono">2</span>
-                 Email Payload Configuration
-               </h2>
-               
-               <SaveAction
-                 isSaving={isSaving}
-                 label="Save Default Template"
-                 savingLabel="Saving..."
-                 successLabel="Synchronized"
-                 showSuccess={saveSuccess}
-                 onClick={handleSaveTemplate}
-               />
-             </div>
-
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-               
-               {/* Left: Input Config */}
-               <div className="flex flex-col gap-6 pt-2">
-                  <Field
-                    label="Subject line"
-                    value={formData.subject}
-                    onChange={e => setFormData(p => ({...p, subject: e.target.value}))}
-                  />
-                  <Field
-                    label="Heading inside the email"
-                    value={formData.headline}
-                    onChange={e => setFormData(p => ({...p, headline: e.target.value}))}
-                  />
-                  <TextAreaField
-                    label="What the email says"
-                    rows={5}
-                    value={formData.body}
-                    onChange={e => setFormData(p => ({...p, body: e.target.value}))}
-                    className="min-h-[140px] resize-y"
-                  />
-                  <Field
-                    label="Wording on the button"
-                    value={formData.ctaText}
-                    onChange={e => setFormData(p => ({...p, ctaText: e.target.value}))}
-                  />
-               </div>
-
-               {/* Right: Premium Preview */}
-               <div className="p-8 lg:p-10 bg-[#050505] border border-white/5 rounded-[24px] shadow-2xl flex items-center justify-center">
-                  <div className="w-full max-w-[380px] bg-[#121212] border border-[#1A1A1A] rounded-[24px] p-8 flex flex-col items-start transition-all">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-[30px] h-[30px] mb-6">
-                       <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
-                       <circle cx="12" cy="12" r="3" />
-                     </svg>
-
-                     <h1 className="text-[20px] font-semibold text-white tracking-tight mb-3 leading-tight">{formData.headline || "Headline Input Empty"}</h1>
-                     
-                     <p className="text-[#A3A3A3] text-[13px] leading-relaxed mb-8 whitespace-pre-wrap">{formData.body || "No paragraph content configured currently."}</p>
-
-                     <button type="button" className="bg-white text-black font-medium px-5 py-2.5 rounded-[10px] text-[13px] pointer-events-none">
-                       {formData.ctaText || "Validating"}
-                     </button>
-
-                     <div className="w-full mt-8 pt-4 border-t border-[#1A1A1A] text-[9px] font-mono text-[#666666] tracking-widest uppercase">
-                       Sonae - to be prepared
-                     </div>
-                  </div>
-               </div>
-             </div>
-          </div>
-
-          {/* STEP 3: DISPATCH GATEWAY */}
-          <div className="flex flex-col items-center justify-center pt-4">
-             <WriteButton
-
-               type="submit"
-               disabled={isSending || !inviteEmail}
-               className="w-full md:w-auto min-w-[300px] flex items-center justify-center gap-3 bg-foreground text-background font-medium px-8 py-4 rounded-[14px] text-[15px] hover:bg-foreground/90 transition-all shadow-2xl shadow-foreground/10 disabled:opacity-50"
-             >
-               {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-               {isSending ? "Sending Invitation..." : "Send Invitation"}
-             </WriteButton>
-
-             {/* Functional Feedback Stream */}
-             <div className="h-[40px] mt-4 flex items-center justify-center w-full max-w-md">
-               {sendSuccess && (
-                  <FeedbackPill tone="success">
-                    Success! Resend API accepted the payload.
-                  </FeedbackPill>
-               )}
-               {sendError && (
-                  <FeedbackPill tone="error">{sendError}</FeedbackPill>
-               )}
-             </div>
-          </div>
-
-        </form>
-
-
-
-      </div>
+      }
+      previewCta={(label) => (
+        /* Stays raw: an inert white-on-black mock inside the email preview — not a themed control. */
+        <button type="button" className="bg-white text-black font-medium px-5 py-2.5 rounded-[10px] text-[13px] pointer-events-none">
+          {label}
+        </button>
+      )}
+    />
   );
 }

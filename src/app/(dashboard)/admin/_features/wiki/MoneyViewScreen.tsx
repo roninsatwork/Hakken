@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 /**
@@ -151,6 +152,7 @@ export function MoneyViewScreen({
             >
               {isSaving ? t("assumptions.saving") : t("assumptions.save")}
             </WriteButton>
+            {/* Raw: an inline text link, not a button shape — no kit variant is a bare link. */}
             <button
               type="button"
               onClick={() => {
@@ -164,16 +166,16 @@ export function MoneyViewScreen({
             </button>
           </span>
         ) : (
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => setIsEditingAssumptions(true)}
-            className="text-[12px] text-secondary border border-border-dim rounded-[10px] px-3.5 py-2 hover:text-foreground transition-colors"
+            className="px-3.5 text-[12px]"
           >
             {t("assumptions.summary", {
               perConversation: view.minutesPerConversation,
               perCall: view.minutesPerCall,
             })}
-          </button>
+          </Button>
         )}
       </div>
 

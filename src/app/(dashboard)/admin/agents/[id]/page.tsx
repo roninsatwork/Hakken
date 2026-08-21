@@ -181,9 +181,9 @@ export default function AgentDashboard() {
             align: "right",
             cell: (tx) => (
               <div className="flex items-center justify-end gap-2 text-[12px] font-mono text-secondary">
-                <span title="Input Tokens">{tx.inputTokens.toLocaleString()}</span>
+                <span title={t("inputTokens")}>{tx.inputTokens.toLocaleString()}</span>
                 <ArrowRight className="w-3 h-3 text-muted" />
-                <span title="Output Tokens" className="text-foreground">{tx.outputTokens.toLocaleString()}</span>
+                <span title={t("outputTokens")} className="text-foreground">{tx.outputTokens.toLocaleString()}</span>
               </div>
             ),
           },

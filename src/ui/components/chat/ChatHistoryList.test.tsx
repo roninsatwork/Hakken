@@ -5,6 +5,13 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import * as nextNavigation from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/app/assistant"),
@@ -135,7 +142,7 @@ describe("ChatHistoryList", () => {
   it("displays an empty state when there are no conversations", () => {
     mockPage({ results: [], status: "Exhausted" });
     render(<ChatHistoryList />);
-    expect(screen.getByText("No previous conversations. Start exploring Sonae.")).toBeInTheDocument();
+    expect(screen.getByText("No previous conversations. Start exploring Acme Copilot.")).toBeInTheDocument();
   });
 
   it("offers older conversations a page at a time", () => {

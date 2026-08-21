@@ -1,9 +1,17 @@
+import React from "react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, vi } from "vitest";
 import { usePaginatedQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { CompanyMailboxScreen } from "./CompanyMailboxScreen";
+
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 
 /**
  * Pins what the company mailbox does today, before it moves onto the shared
@@ -19,6 +27,9 @@ vi.mock("convex/react", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
 }));
 

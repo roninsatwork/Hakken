@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import type { HTMLAttributes, ReactNode } from "react";
 import ManageSuperAdminsPage from "./page";

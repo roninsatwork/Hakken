@@ -20,6 +20,8 @@ import {
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useLocale, useTranslations } from "next-intl";
 
 type EngagementPerson = {
   userId: Id<"users">;
@@ -55,13 +57,17 @@ type Engagement = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** "3 days ago", not a timestamp. The gap is the point, not the date. */
+/**
+ * "3 days ago", not a timestamp. The gap is the point, not the date.
+ * Returns a catalogue key (relative to `admin.companyDetails.dashboard`)
+ * plus its parameters; the screen says the words.
+ */
 function describeLastSeen(lastSeenAt?: number) {
-  if (!lastSeenAt) return { label: "Never", stale: true };
+  if (!lastSeenAt) return { key: "lastSeen.never", params: undefined, stale: true };
   const days = Math.floor((Date.now() - lastSeenAt) / DAY_MS);
-  if (days <= 0) return { label: "Today", stale: false };
-  if (days === 1) return { label: "Yesterday", stale: false };
-  return { label: `${days} days ago`, stale: days >= 14 };
+  if (days <= 0) return { key: "lastSeen.today", params: undefined, stale: false };
+  if (days === 1) return { key: "lastSeen.yesterday", params: undefined, stale: false };
+  return { key: "lastSeen.daysAgo", params: { days }, stale: days >= 14 };
 }
 
 /**
@@ -77,17 +83,17 @@ function describeLastSeen(lastSeenAt?: number) {
  * against this card's own surface.
  */
 const SIGN_IN_BANDS = [
-  { key: "didNotSignIn", label: "Did not sign in", fill: "#4d4d52" },
-  { key: "oneSession", label: "1 session", fill: "#256abf" },
-  { key: "twoSessions", label: "2 sessions", fill: "#3987e5" },
-  { key: "threeSessions", label: "3 sessions", fill: "#6da7ec" },
-  { key: "fourSessions", label: "4 sessions", fill: "#9ec5f4" },
-  { key: "fivePlusSessions", label: "5+ sessions", fill: "#cde2fb" },
+  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: "#4d4d52" },
+  { key: "oneSession", labelKey: "bands.oneSession", fill: "#256abf" },
+  { key: "twoSessions", labelKey: "bands.twoSessions", fill: "#3987e5" },
+  { key: "threeSessions", labelKey: "bands.threeSessions", fill: "#6da7ec" },
+  { key: "fourSessions", labelKey: "bands.fourSessions", fill: "#9ec5f4" },
+  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: "#cde2fb" },
 ] as const;
 
-function formatDay(day: string) {
+function formatDay(day: string, locale = "en-GB") {
   const date = new Date(`${day}T00:00:00Z`);
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 function ChartCard({ title, description, children }: {
@@ -123,6 +129,8 @@ function SignInTooltip({ active, payload, label }: {
   payload?: Array<{ dataKey?: string | number; value?: number }>;
   label?: string;
 }) {
+  const tBands = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   const rows = SIGN_IN_BANDS
     .map((band) => ({
@@ -133,11 +141,11 @@ function SignInTooltip({ active, payload, label }: {
 
   return (
     <div className="rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label) : ""}</div>
+      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label, locale) : ""}</div>
       {rows.map((row) => (
         <div key={row.band.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: row.band.fill }} />
-          {row.value} {row.value === 1 ? "person" : "people"} · {row.band.label.toLowerCase()}
+          {tBands("charts.signInTooltipRow", { count: row.value, band: tBands(row.band.labelKey).toLowerCase() })}
         </div>
       ))}
     </div>
@@ -149,13 +157,15 @@ function QuestionsTooltip({ active, payload, label }: {
   payload?: Array<{ value?: number }>;
   label?: string;
 }) {
+  const t = useTranslations("admin.companyDetails.dashboard");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value ?? 0;
   return (
     <div className="rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label) : ""}</div>
+      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label, locale) : ""}</div>
       <div className="mt-1 text-[12px] text-secondary">
-        {value} {value === 1 ? "question" : "questions"} asked
+        {t("charts.questionsTooltip", { count: value })}
       </div>
     </div>
   );
@@ -170,6 +180,11 @@ function QuestionsTooltip({ active, payload, label }: {
  * to ask: who is using this, how often, and who has stopped.
  */
 export default function CompanyDashboardPage() {
+  const t = useTranslations("admin.companyDetails.dashboard");
+  const tBands = useTranslations("admin.overview.dashboard");
+  const locale = useLocale();
+  const formatDayTick = (day: string) => formatDay(day, locale);
+  const { platformName } = useSystemSettings();
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const engagement = useQuery(api.companyEngagement.getCompanyEngagement, { companyId }) as Engagement | undefined;
@@ -179,20 +194,20 @@ export default function CompanyDashboardPage() {
   const invitations = engagement?.invitations;
 
   const headline = !engagement
-    ? "Counting what this company's people have been doing."
+    ? t("headline.loading")
     : people!.total === 0
-      ? "Nobody has been added to this company yet."
+      ? t("headline.nobody")
       : people!.active === 0
-        ? `None of the ${people!.total} people here have used Sonae in the last ${engagement.daysBack} days.`
-        : `${people!.active} of ${people!.total} people used Sonae in the last ${engagement.daysBack} days`
-          + `${people!.quiet > 0 ? `, and ${people!.quiet} did not` : ""}.`;
+        ? t("headline.noneActive", { total: people!.total, platformName, days: engagement.daysBack })
+        : t("headline.active", { active: people!.active, total: people!.total, platformName, days: engagement.daysBack })
+          + `${people!.quiet > 0 ? t("headline.andQuiet", { quiet: people!.quiet }) : ""}.`;
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<LayoutDashboard className="h-6 w-6 text-brand" />}
-        title="Dashboard"
-        description="Who is using Sonae here, how often, and who has gone quiet."
+        title={t("header.title")}
+        description={t("header.description", { platformName })}
       />
 
       {/* The answer in a sentence, before any number. The screen this replaces
@@ -202,35 +217,35 @@ export default function CompanyDashboardPage() {
       {engagement ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Questions asked</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.questionsAsked")}</div>
             <div className="mt-1 text-[28px] font-semibold text-foreground">{engagement.questions.asked}</div>
             <div className="mt-1 text-[12px] text-muted">
-              by {engagement.questions.byPeople} {engagement.questions.byPeople === 1 ? "person" : "people"}
+              {t("cards.byPeople", { count: engagement.questions.byPeople })}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Sign-ins</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.signIns")}</div>
             <div className="mt-1 text-[28px] font-semibold text-foreground">{engagement.signIns.total}</div>
             {/* Ten sign-ins on one day is not ten days of use, so the days are
                 what the number is judged against. */}
             <div className="mt-1 text-[12px] text-muted">
-              across {engagement.signIns.onDays} {engagement.signIns.onDays === 1 ? "day" : "days"}
+              {t("cards.acrossDays", { count: engagement.signIns.onDays })}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
-            <div className="text-[12px] font-medium text-secondary">Gone quiet</div>
+            <div className="text-[12px] font-medium text-secondary">{t("cards.goneQuiet")}</div>
             <div className={cn("mt-1 text-[28px] font-semibold", people!.quiet > 0 ? "text-[#f59e0b]" : "text-foreground")}>
               {people!.quiet}
             </div>
-            <div className="mt-1 text-[12px] text-muted">nothing recorded in {engagement.daysBack} days</div>
+            <div className="mt-1 text-[12px] text-muted">{t("cards.nothingRecorded", { days: engagement.daysBack })}</div>
           </div>
         </div>
       ) : null}
 
       {engagement ? (
         <ChartCard
-          title="How often people sign in"
-          description={`Each bar is everyone here, banded by how many times they signed in that day. Last ${engagement.daysBack} days, people who run the platform excluded.`}
+          title={t("charts.signInsTitle")}
+          description={t("charts.signInsDescription", { days: engagement.daysBack })}
         >
           {/* A numeric height, not a percentage: Recharts measures its parent,
               and a percentage of an unresolved height renders nothing on first
@@ -242,7 +257,7 @@ export default function CompanyDashboardPage() {
                 <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="day"
-                  tickFormatter={formatDay}
+                  tickFormatter={formatDayTick}
                   tick={{ fontSize: 11, fill: "var(--color-muted)" }}
                   tickLine={false}
                   axisLine={false}
@@ -275,14 +290,14 @@ export default function CompanyDashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <ChartLegend items={SIGN_IN_BANDS} />
+          <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: tBands(band.labelKey), fill: band.fill }))} />
         </ChartCard>
       ) : null}
 
       {engagement ? (
         <ChartCard
-          title="What they are asking"
-          description={`Questions put to Sonae each day, over the last ${engagement.daysBack} days.`}
+          title={t("charts.askingTitle")}
+          description={t("charts.askingDescription", { platformName, days: engagement.daysBack })}
         >
           <div className="w-full">
             <ResponsiveContainer width="100%" height={200}>
@@ -290,7 +305,7 @@ export default function CompanyDashboardPage() {
                 <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="day"
-                  tickFormatter={formatDay}
+                  tickFormatter={formatDayTick}
                   tick={{ fontSize: 11, fill: "var(--color-muted)" }}
                   tickLine={false}
                   axisLine={false}
@@ -318,7 +333,7 @@ export default function CompanyDashboardPage() {
       ) : null}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-semibold text-foreground">People</h2>
+        <h2 className="text-[15px] font-semibold text-foreground">{t("people.title")}</h2>
 
         <DataTable
           rows={engagement === undefined ? undefined : everyone}
@@ -326,13 +341,13 @@ export default function CompanyDashboardPage() {
           minWidthClassName="min-w-[820px]"
           empty={{
             icon: <Users className="h-8 w-8 text-muted/30" />,
-            label: "Nobody here yet",
+            label: t("people.empty"),
             action: (
               <Link
                 href={`/admin/companies/${companyId}/directory/invites`}
                 className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
               >
-                Invite someone
+                {t("people.invite")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             ),
@@ -346,19 +361,19 @@ export default function CompanyDashboardPage() {
             isLoading: engagement === undefined,
             onPageChange: () => {},
             labels: {
-              empty: "Nobody here yet",
-              showing: (_start, _end, total) => `${total} ${total === 1 ? "person" : "people"}`,
+              empty: t("people.empty"),
+              showing: (_start, _end, total) => t("people.showing", { count: total }),
             },
           }}
           columns={[
             {
               key: "person",
-              header: "Person",
+              header: t("people.columnPerson"),
               cell: (person) => (
                 <>
                   <div className="text-[13px] font-medium text-foreground">
                     {person.name}
-                    {person.isAdmin ? <span className="ml-2 text-[12px] text-muted">Admin</span> : null}
+                    {person.isAdmin ? <span className="ml-2 text-[12px] text-muted">{t("people.admin")}</span> : null}
                   </div>
                   <div className="text-[12px] text-muted">{person.email}</div>
                 </>
@@ -366,31 +381,31 @@ export default function CompanyDashboardPage() {
             },
             {
               key: "lastSeen",
-              header: "Last seen",
+              header: t("people.columnLastSeen"),
               /* Least recently seen sorts to the top, so the people worth a call
                  are the first thing read. */
               cell: (person) => {
                 const lastSeen = describeLastSeen(person.lastSeenAt);
                 return (
                   <span className={cn("text-[13px]", lastSeen.stale ? "text-[#f59e0b]" : "text-secondary")}>
-                    {lastSeen.label}
+                    {t(lastSeen.key, lastSeen.params)}
                   </span>
                 );
               },
             },
             {
               key: "signIns",
-              header: "Sign-ins",
+              header: t("people.columnSignIns"),
               cell: (person) => <span className="text-[13px] text-secondary">{person.signIns}</span>,
             },
             {
               key: "questions",
-              header: "Questions",
+              header: t("people.columnQuestions"),
               cell: (person) => <span className="text-[13px] text-secondary">{person.questions}</span>,
             },
             {
               key: "agentRuns",
-              header: "Agents run",
+              header: t("people.columnAgentRuns"),
               cell: (person) => <span className="text-[13px] text-secondary">{person.agentRuns}</span>,
             },
           ]}
@@ -407,14 +422,14 @@ export default function CompanyDashboardPage() {
           <MailPlus className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />
           <div className="min-w-0 flex-1">
             <div className="text-[14px] font-semibold text-foreground">
-              {invitations.pending} {invitations.pending === 1 ? "person has" : "people have"} been invited and not arrived
+              {t("invites.title", { count: invitations.pending })}
             </div>
             <div className="mt-0.5 text-[13px] text-secondary">
-              They cannot use Sonae until they accept.
+              {t("invites.sub", { platformName })}
             </div>
           </div>
           <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] text-brand">
-            Open invitations
+            {t("invites.cta")}
             <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>
@@ -424,11 +439,11 @@ export default function CompanyDashboardPage() {
           cannot see, or the numbers get read as the whole truth. */}
       {engagement ? (
         <div className="rounded-[10px] border border-border-dim bg-card/30 px-4 py-3">
-          <div className="text-[12px] font-medium text-secondary">What this does not cover</div>
+          <div className="text-[12px] font-medium text-secondary">{t("notCovered.title")}</div>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-4 text-[12px] leading-relaxed text-muted">
-            <li>People who run the platform are left out, so their activity is never counted as this company&apos;s.</li>
-            <li>Visitors using the public chat widget are anonymous and cannot be tied to a person here.</li>
-            <li>Sign-ins are recorded once an hour per device, so this counts sessions rather than page loads.</li>
+            <li>{t("notCovered.item1")}</li>
+            <li>{t("notCovered.item2")}</li>
+            <li>{t("notCovered.item3")}</li>
           </ul>
         </div>
       ) : null}

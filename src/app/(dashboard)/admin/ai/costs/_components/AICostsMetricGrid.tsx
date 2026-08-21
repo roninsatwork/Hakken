@@ -17,21 +17,21 @@ export function AICostsMetricGrid({ aggregates, t }: AICostsMetricGridProps) {
         icon={PoundSterling}
         title={t("metrics.periodCost")}
         value={formatSmallUsdAmount(aggregates.totalCostGBP, 5)}
-        sub={t("metrics.exchangeSub") || "TOTAL GBP BURNED"}
+        sub={t("metrics.exchangeSub")}
         delay={0}
       />
       <MetricBlock
         icon={MessageSquare}
         title={t("metrics.avgCostConv")}
         value={formatSmallUsdAmount(aggregates.avgCostPerMessage, 5)}
-        sub={t("metrics.avgCostConvSub") || "COST PER MESSAGE"}
+        sub={t("metrics.avgCostConvSub")}
         delay={0.1}
       />
       <MetricBlock
         icon={Users}
         title={t("metrics.avgCostUser")}
         value={formatSmallUsdAmount(aggregates.costPerActiveUser, 5)}
-        sub={t("metrics.avgCostUserSub") || "COST PER ACTIVE USER"}
+        sub={t("metrics.avgCostUserSub")}
         delay={0.15}
       />
       <MetricBlock
@@ -39,13 +39,10 @@ export function AICostsMetricGrid({ aggregates, t }: AICostsMetricGridProps) {
         icon={Cpu}
         title={t("metrics.tokensProcessed")}
         value={(aggregates.totalTokens ?? 0).toLocaleString()}
-        sub={
-          t("metrics.tokenSub", {
-            input: (aggregates.totalInputTokens ?? 0).toLocaleString(),
-            output: (aggregates.totalOutputTokens ?? 0).toLocaleString(),
-          }) ||
-          `${(aggregates.totalInputTokens ?? 0).toLocaleString()} IN • ${(aggregates.totalOutputTokens ?? 0).toLocaleString()} OUT`
-        }
+        sub={t("metrics.tokenSub", {
+          input: (aggregates.totalInputTokens ?? 0).toLocaleString(),
+          output: (aggregates.totalOutputTokens ?? 0).toLocaleString(),
+        })}
         delay={0.2}
       />
     </div>

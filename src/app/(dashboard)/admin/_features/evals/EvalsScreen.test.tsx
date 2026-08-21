@@ -21,6 +21,17 @@ vi.mock("convex/react", () => ({
   useAction: vi.fn(() => vi.fn()),
 }));
 
+vi.mock("next-intl", () => ({
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
+  useTranslations: (namespace: string) => {
+    const t = (key: string) => `${namespace}.${key}`;
+    t.rich = (key: string) => `${namespace}.${key}`;
+    return t;
+  },
+}));
+
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>
@@ -70,8 +81,8 @@ describe("EvalsScreen", () => {
       },
       sampleRows: cases,
       sampleRowText: "Never invents a price",
-      emptyText: "No evals yet",
-      searchPlaceholder: "Search evals...",
+      emptyText: "ai.evals.list.empty.label",
+      searchPlaceholder: "ai.evals.list.searchPlaceholder",
     });
   });
 });

@@ -152,7 +152,7 @@ export default function AgentsPage() {
                         switchable, never deletable. */}
                     {agent.systemKey && (
                       <span className="px-1.5 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] font-medium">
-                        Wiki staff
+                        {t("wikiStaff")}
                       </span>
                     )}
                   </span>

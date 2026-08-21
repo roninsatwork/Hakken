@@ -8,6 +8,8 @@ import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { WorkflowCanvasEdge, WorkflowCanvasNode, WorkflowNodeUpdateHandler } from "./types";
+import { Button } from "@/src/ui/atoms/Button";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";
@@ -44,8 +46,10 @@ type AgentEditorModalProps = {
 
 
 export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onUpdateNode }: AgentEditorModalProps) {
+  const { platformName } = useSystemSettings();
   const t = useTranslations('admin.workflows.designer.editor');
   const tAlerts = useTranslations('admin.workflows.designer.alerts');
+  const tDesigner = useTranslations('admin.workflows.designer');
   const tCommon = useTranslations('common');
 
   const getUpstreamNodes = (): WorkflowCanvasNode[] => {
@@ -109,7 +113,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
 
-  const generateConfig = useAction(api.ai.generateNodeConfig);
+  const generateConfig = useAction(api.workflowNodeConfig.generateNodeConfig);
 
   useEffect(() => {
     if (agent && node) {
@@ -195,7 +199,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
       setAiPrompt("");
       setIsDeveloperMode(true);
     } catch {
-      setFeedbackMessage("AI Configuration failed. Please try again or construct the payload manually.");
+      setFeedbackMessage(tAlerts('autoConfigureFailed'));
     } finally {
       setIsGenerating(false);
     }
@@ -299,21 +303,22 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
               </div>
             )}
 
-	          {/* Tabs */}
+	          {/* Tabs — both raw on purpose: active-underline tabs, not a Button
+	              variant's recipe. */}
           <div className="flex border-b border-border-dim mb-2 w-full max-w-[400px]">
              <button
                 type="button"
                 onClick={() => setActiveTab('MAPPING')}
                 className={`flex-1 py-3 px-4 font-semibold text-sm transition-all border-b-2 flex items-center justify-center gap-2 ${activeTab === 'MAPPING' ? 'border-brand text-foreground' : 'border-transparent text-muted hover:text-foreground'}`}
              >
-                <Wand2 className="w-4 h-4" /> AI Configuration
+                <Wand2 className="w-4 h-4" /> {t('tabs.aiConfiguration')}
              </button>
              <button
                 type="button"
                 onClick={() => setActiveTab('IDENTITY')}
                 className={`flex-1 py-3 px-4 font-semibold text-sm transition-all border-b-2 flex items-center justify-center gap-2 ${activeTab === 'IDENTITY' ? 'border-brand text-foreground' : 'border-transparent text-muted hover:text-foreground'}`}
              >
-                <Bot className="w-4 h-4" /> Advanced Engine
+                <Bot className="w-4 h-4" /> {t('tabs.advancedEngine')}
              </button>
           </div>
 
@@ -350,26 +355,26 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Expected Variables in Input</label>
+                    <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">{t('variables.inputLabel')}</label>
                     <textarea
                       value={formData._inputFields !== undefined ? formData._inputFields : formData.inputSchema || ""}
                       onChange={e => setFormData({ ...formData, _inputFields: e.target.value })}
                       rows={2}
                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[12px] outline-none focus:border-brand/50 custom-scrollbar resize-none"
-                      placeholder='e.g. textEmail, topic, userPreferences'
+                      placeholder={t('variables.inputPlaceholder')}
                     />
-                    <span className="text-[10px] text-muted">Comma separated variables Sonae will pass to the AI.</span>
+                    <span className="text-[10px] text-muted">{t('variables.inputHint', { platformName })}</span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Variables in AI Output</label>
+                    <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">{t('variables.outputLabel')}</label>
                     <textarea
                       value={formData._outputFields !== undefined ? formData._outputFields : formData.outputSchema || ""}
                       onChange={e => setFormData({ ...formData, _outputFields: e.target.value })}
                       rows={2}
                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[12px] outline-none focus:border-brand/50 custom-scrollbar resize-none"
-                      placeholder='e.g. summary, sentiment, nextSteps'
+                      placeholder={t('variables.outputPlaceholder')}
                     />
-                    <span className="text-[10px] text-muted">Comma separated variables matching the agent output format. Sonae strictly enforces this output.</span>
+                    <span className="text-[10px] text-muted">{t('variables.outputHint', { platformName })}</span>
                   </div>
                 </div>
               </div>
@@ -427,7 +432,13 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                     <div className="pl-7 pt-2 border-t border-border-dim/50 mt-1 flex flex-col gap-2">
                       <span className="text-[10px] uppercase tracking-widest text-muted">{t('thinking.effort')}</span>
                       <div className="flex gap-2">
-                        {(["LOW", "MEDIUM", "HIGH"] as const).map(level => (
+                        {/* Raw on purpose: a selected/unselected segment of the
+                            effort picker — no Button variant is a segment. */}
+                        {([
+                          { value: "LOW", label: t('effort.low') },
+                          { value: "MEDIUM", label: t('effort.medium') },
+                          { value: "HIGH", label: t('effort.high') },
+                        ] as const).map(({ value: level, label }) => (
                           <button
                             key={level}
                             type="button"
@@ -437,7 +448,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                               : 'bg-sidebar border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5'
                               }`}
                           >
-                            {level}
+                            {label}
                           </button>
                         ))}
                       </div>
@@ -464,15 +475,15 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <BrainCircuit className="w-3.5 h-3.5" /> Central skills
+                        <BrainCircuit className="w-3.5 h-3.5" /> {t('skills.label')}
                       </span>
-                      <span className="text-[11px] text-muted leading-tight">{formData.selectedSkillIds.length} selected from active library skills.</span>
+                      <span className="text-[11px] text-muted leading-tight">{t('skills.selectedCount', { count: formData.selectedSkillIds.length })}</span>
                     </div>
                   </div>
                   <div className="max-h-[220px] overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
                     {activeSkills.length === 0 ? (
                       <p className="rounded-[8px] border border-border-dim bg-card/60 px-3 py-2 text-[12px] text-secondary">
-                        No active central skills are available yet.
+                        {t('skills.empty')}
                       </p>
                     ) : activeSkills.map((skill) => {
                       const isSelected = formData.selectedSkillIds.includes(skill._id);
@@ -494,16 +505,16 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-2">
                               <span className="text-[12px] font-semibold text-foreground">{skill.name}</span>
-                              <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{skill.riskLevel.toLowerCase()} risk</span>
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{t('skills.risk', { level: skill.riskLevel.toLowerCase() })}</span>
                             </span>
-                            <span className="mt-0.5 block line-clamp-2 text-[11px] text-secondary">{skill.description || "No description provided."}</span>
+                            <span className="mt-0.5 block line-clamp-2 text-[11px] text-secondary">{skill.description || t('skills.noDescription')}</span>
                           </span>
                         </label>
                       );
                     })}
                   </div>
                   <span className="text-[11px] text-muted leading-tight">
-                    Saving binds selected skills to this agent with current version snapshots. Tool permissions are still controlled separately.
+                    {t('skills.bindHint')}
                   </span>
                 </div>
 
@@ -529,38 +540,39 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
           {activeTab === 'MAPPING' && (
              <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto py-2">
                 <div className="flex bg-sidebar/50 p-1 rounded-xl border border-border-dim mb-2 w-[300px]">
-                  <button type="button" onClick={() => setIsDeveloperMode(false)} className={`flex-1 text-xs py-2 rounded-lg font-medium transition-all ${!isDeveloperMode ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}>🪄 Standard Configurator</button>
-                  <button type="button" onClick={() => setIsDeveloperMode(true)} className={`flex-1 text-xs py-2 rounded-lg font-medium transition-all ${isDeveloperMode ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}>⚡️ Developer Mapping</button>
+                  {/* Both raw on purpose: halves of a segmented mode toggle. */}
+                  <button type="button" onClick={() => setIsDeveloperMode(false)} className={`flex-1 text-xs py-2 rounded-lg font-medium transition-all ${!isDeveloperMode ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}>{t('mapping.standardTab')}</button>
+                  <button type="button" onClick={() => setIsDeveloperMode(true)} className={`flex-1 text-xs py-2 rounded-lg font-medium transition-all ${isDeveloperMode ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}>{t('mapping.developerTab')}</button>
                 </div>
 
                 {!isDeveloperMode ? (
                   <div className="flex flex-col gap-3 border border-border-dim bg-sidebar/50 p-6 rounded-[16px] relative overflow-hidden">
                      <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <Wand2 className="w-4 h-4" /> AI Mapping Auto-Configuration
+                        <Wand2 className="w-4 h-4" /> {t('mapping.autoTitle')}
                      </label>
                      <p className="text-[13px] text-muted leading-relaxed">
-                        Describe what upstream data should be passed to this Agent, or what specific operation it should be performing with prior payload variables. We will analyze the graph context and construct the dynamic injection templates.
+                        {t('mapping.autoDescription')}
                      </p>
-                     <textarea 
+                     <textarea
                        value={aiPrompt}
                        onChange={(e) => setAiPrompt(e.target.value)}
-                       placeholder="e.g. Map the contents of the previous Scrape Action into the Agent's evaluation payload."
+                       placeholder={t('mapping.autoPlaceholder')}
                        className="w-full bg-background border border-border-dim rounded-[12px] p-4 text-sm focus:border-brand/50 outline-none resize-none min-h-[120px] shadow-inner mt-2"
                      />
-                     <button
-                       type="button"
+                     <Button
+                       variant="primary"
                        disabled={isGenerating || !aiPrompt.trim()}
                        onClick={handleAutoConfigure}
-                       className="w-full mt-2 py-3 rounded-[12px] bg-foreground text-background text-sm font-semibold hover:bg-foreground/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-foreground/20"
+                       className="w-full mt-2 py-3 rounded-[12px] font-semibold shadow-foreground/20 flex items-center justify-center gap-2"
                      >
-                       {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing Graph Context...</> : <><Wand2 className="w-4 h-4" /> Auto-Configure Mapping Requirements</>}
-                     </button>
+                       {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> {tDesigner('analyzing')}</> : <><Wand2 className="w-4 h-4" /> {t('mapping.autoConfigure')}</>}
+                     </Button>
                   </div>
                 ) : (
                   <>
                     <div className="flex flex-col gap-2">
                       <label className="text-[12px] font-medium text-secondary uppercase tracking-wider flex items-center gap-2">
-                        <Database className="w-4 h-4" /> JSON Structured Input Mapping (Phase 2)
+                        <Database className="w-4 h-4" /> {t('mapping.jsonLabel')}
                       </label>
                       <textarea
                         value={formData._inputMapping}
@@ -570,13 +582,16 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                         placeholder='{&#10;  "textToAnalyze": "{{nodes.triggerNode-123.output.emailBody}}"&#10;}'
                       />
                       <span className="text-[11px] text-muted leading-tight mt-1">
-                        Use <code className="text-brand">{"{{nodes.id.output}}"}</code> to bind variables mathematically. If mapped, this JSON overrides raw templates. It aligns nicely to match the <strong className="text-foreground">Input Schema</strong> defined in the Agent Engine tab.
+                        {t.rich('mapping.jsonHint', {
+                          syntax: () => <code className="text-brand">{"{{nodes.id.output}}"}</code>,
+                          strong: (chunks) => <strong className="text-foreground">{chunks}</strong>,
+                        })}
                       </span>
                     </div>
 
                     <div className="flex flex-col gap-2 mt-4">
                       <label className="text-[12px] font-medium text-secondary uppercase tracking-wider flex items-center gap-2">
-                        <Code2 className="w-4 h-4" /> Raw String Prompt Template
+                        <Code2 className="w-4 h-4" /> {t('mapping.templateLabel')}
                       </label>
                       <textarea
                         value={formData._inputTemplate}
@@ -594,6 +609,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 pt-6 border-t border-border-dim gap-4">
             <div>
               {agent?.isGlobal === false && (
+	                // Raw on purpose: an outline that floods solid brand on hover —
+	                // `outline` never fills and `accent` stays a tinted chip, so no variant is this.
 	                <button
 	                  type="button"
 	                  onClick={() => setIsPromoteModalOpen(true)}
@@ -605,20 +622,16 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto justify-end">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+                className="rounded-[10px] text-sm hover:bg-foreground/5"
               >
                 {tCommon('cancel')}
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-md shadow-foreground/10 text-sm disabled:opacity-50"
-              >
+              </Button>
+              <Button variant="primary" type="submit" disabled={isSaving} className="shadow-md">
                 {isSaving ? tCommon('saving') : (agent?.isGlobal ? tCommon('save') : t('save'))}
-              </button>
+              </Button>
             </div>
           </div>
 	        </form>
@@ -633,13 +646,15 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         <div className="flex flex-col gap-6">
           <p className="text-[14px] text-secondary leading-relaxed">{t('promoteConfirm')}</p>
           <div className="flex justify-end gap-3">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setIsPromoteModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all"
+              className="rounded-[10px]"
             >
               {tCommon('cancel')}
-            </button>
+            </Button>
+            {/* Raw on purpose: a brand fill with brand-foreground text —
+                `brand` wears plain white, so no variant is this. */}
             <button
               type="button"
               onClick={handlePromote}

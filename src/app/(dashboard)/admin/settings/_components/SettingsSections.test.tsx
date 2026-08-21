@@ -1,5 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
 import { IdentitySettingsSection } from "./IdentitySettingsSection";
@@ -186,8 +187,10 @@ describe("settings sections", () => {
     fireEvent.change(fileInputs[0], { target: { files: [new File(["light"], "light.png")] } });
     fireEvent.change(fileInputs[1], { target: { files: [new File(["dark"], "dark.png")] } });
 
-    expect(screen.getByAltText("Light mode")).toBeInTheDocument();
-    expect(screen.getByAltText("Dark mode")).toBeInTheDocument();
+    // The alt text now resolves through the catalogue, via the same keys as
+    // the card titles.
+    expect(screen.getByAltText("Light logo")).toBeInTheDocument();
+    expect(screen.getByAltText("Dark logo")).toBeInTheDocument();
     expect(setFormData).toHaveBeenCalledWith({ ...formData, platformName: "New Sonae" });
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "light");
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "dark");

@@ -17,23 +17,26 @@ import {
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { useLocale, useTranslations } from "next-intl";
 
 type ScriptRunStatus = "RUNNING" | "SUCCESS" | "FAILED";
 
-function formatDate(timestamp?: number) {
-  if (!timestamp) return "Never";
-  return new Intl.DateTimeFormat("en-GB", {
+/** Returns `undefined` when nothing has run — the screen says "Never" in the reader's language. */
+function formatDate(timestamp: number | undefined, locale: string) {
+  if (!timestamp) return undefined;
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(timestamp));
 }
 
 function StatusBadge({ status }: { status?: ScriptRunStatus }) {
+  const t = useTranslations("admin.settings.scripts");
   if (!status) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">
         <Clock3 className="w-3.5 h-3.5" />
-        Not run
+        {t("notRun")}
       </span>
     );
   }
@@ -48,7 +51,7 @@ function StatusBadge({ status }: { status?: ScriptRunStatus }) {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium ${statusClass}`}>
       <Icon className={`w-3.5 h-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`} />
-      {status}
+      {status === "SUCCESS" ? t("statusSuccess") : status === "FAILED" ? t("statusFailed") : t("statusRunning")}
     </span>
   );
 }
@@ -60,14 +63,17 @@ function RiskBadge({ riskLevel }: { riskLevel: string }) {
       ? "bg-amber-500/10 text-amber-500"
       : "bg-red-500/10 text-red-500";
 
+  const t = useTranslations("admin.settings.scripts");
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-[11px] font-medium ${className}`}>
-      {riskLevel}
+      {riskLevel === "LOW" ? t("riskLow") : riskLevel === "MEDIUM" ? t("riskMedium") : riskLevel === "HIGH" ? t("riskHigh") : riskLevel}
     </span>
   );
 }
 
 export default function MaintenanceScriptsPage() {
+  const t = useTranslations("admin.settings.scripts");
+  const locale = useLocale();
   const router = useRouter();
   const scripts = useQuery(api.maintenanceScripts.list);
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,10 +113,10 @@ export default function MaintenanceScriptsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Wrench className="w-6 h-6 text-brand" />
-            Maintenance
+            {t("title")}
           </h1>
           <p className="text-[13px] text-secondary mt-1">
-            Run approved operational scripts from a controlled, audited surface.
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -118,9 +124,9 @@ export default function MaintenanceScriptsPage() {
       <div className="flex items-start gap-4 p-4 bg-foreground/[0.015] border border-border-dim/50 rounded-[12px] text-secondary">
         <FileWarning className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted" />
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-[13px] font-medium text-foreground tracking-wide">Allowlisted scripts only</h2>
+          <h2 className="text-[13px] font-medium text-foreground tracking-wide">{t("allowlistedTitle")}</h2>
           <p className="text-[12.5px] leading-relaxed text-secondary opacity-80 tracking-wide">
-            This page never runs arbitrary commands. Each script is permission-checked, confirmation-gated, and recorded in audit logs.
+            {t("allowlistedBody")}
           </p>
         </div>
       </div>
@@ -133,11 +139,11 @@ export default function MaintenanceScriptsPage() {
         search={{
           value: searchTerm,
           onChange: handleSearch,
-          placeholder: "Search scripts by name, category, risk, or description...",
+          placeholder: t("searchPlaceholder"),
         }}
         empty={{
           icon: <SearchX className="w-8 h-8 text-muted/30" />,
-          label: "No maintenance scripts match your search",
+          label: t("noMatch"),
         }}
         footer={{
           mode: "paged",
@@ -148,14 +154,14 @@ export default function MaintenanceScriptsPage() {
           isLoading,
           onPageChange: setPage,
           labels: {
-            empty: "No scripts found",
-            showing: (start, end, total) => `Showing ${start}-${end} of ${total}`,
+            empty: t("footerEmpty"),
+            showing: (start, end, total) => t("showing", { start, end, total }),
           },
         }}
         columns={[
           {
             key: "name",
-            header: "Name",
+            header: t("columnName"),
             cell: (script) => (
               <div className="flex flex-col gap-1">
                 <span className="text-[13px] font-semibold text-foreground">{script.name}</span>
@@ -165,34 +171,34 @@ export default function MaintenanceScriptsPage() {
           },
           {
             key: "category",
-            header: "Category",
+            header: t("columnCategory"),
             cell: (script) => <span className="text-[13px] text-secondary">{script.category}</span>,
           },
-          { key: "risk", header: "Risk", cell: (script) => <RiskBadge riskLevel={script.riskLevel} /> },
-          { key: "status", header: "Status", cell: (script) => <StatusBadge status={script.lastRun?.status} /> },
+          { key: "risk", header: t("columnRisk"), cell: (script) => <RiskBadge riskLevel={script.riskLevel} /> },
+          { key: "status", header: t("columnStatus"), cell: (script) => <StatusBadge status={script.lastRun?.status} /> },
           {
             key: "lastRun",
-            header: "Last run",
+            header: t("columnLastRun"),
             cell: (script) => (
               <span className="text-[12px] text-secondary">
-                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt)}
+                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
               </span>
             ),
           },
           {
             key: "lastRunBy",
-            header: "Last run by",
+            header: t("columnLastRunBy"),
             cell: (script) => (
-              <span className="text-[12px] text-secondary">{script.lastRun?.actorName ?? "None"}</span>
+              <span className="text-[12px] text-secondary">{script.lastRun?.actorName ?? t("nobody")}</span>
             ),
           },
           {
             key: "open",
-            header: "Open",
+            header: t("columnOpen"),
             align: "right",
             cell: (script) => (
               <RowIconButton
-                label={`Open ${script.name}`}
+                label={t("openAria", { name: script.name })}
                 onClick={() => router.push(`/admin/settings/scripts/${script.id}`)}
               >
                 <ArrowRight className="w-4 h-4" />

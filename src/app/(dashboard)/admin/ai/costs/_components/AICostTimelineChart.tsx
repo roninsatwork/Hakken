@@ -30,7 +30,7 @@ export function AICostTimelineChart({
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <TrendingUp className="w-5 h-5 text-brand" />
-              <h3 className="text-[15px] font-bold tracking-wide">{aggregationLabel} (USD)</h3>
+              <h3 className="text-[15px] font-bold tracking-wide">{t("chart.titleUsd", { label: aggregationLabel })}</h3>
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export function AICostTimelineChart({
                     }}
                     formatter={(value: unknown) => [
                       formatCostAxisTick(Number(value || 0)),
-                      t("chart.tooltipLabel") || "COST",
+                      t("chart.tooltipLabel"),
                     ]}
                   />
                   {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}

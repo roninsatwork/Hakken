@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -62,7 +63,7 @@ describe("HealthPage", () => {
     vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
       void args;
       const name = getFunctionName(queryFn);
-      if (name === "analyticsCron:getSystemHealthForAdmin") return healthFixture as ReturnType<typeof useQuery>;
+      if (name === "systemHealth:getSystemHealthForAdmin") return healthFixture as ReturnType<typeof useQuery>;
       if (name === "agentRuns:getRunObservatory") return runsFixture as ReturnType<typeof useQuery>;
       return undefined as unknown as ReturnType<typeof useQuery>;
     });

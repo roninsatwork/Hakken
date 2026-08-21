@@ -71,7 +71,11 @@ vi.mock("next-intl", () => ({
       unnamed: "Unnamed Agent",
     };
 
-    return (key: string) => labels[key] ?? key;
+    return (key: string, values?: Record<string, string>) => {
+      // DetailTabs' own key (ui.detailTabs), naming the ticked dropdown item.
+      if (key === "itemSelected") return `${values?.label} selected`;
+      return labels[key] ?? key;
+    };
   },
 }));
 
@@ -171,8 +175,8 @@ describe("AgentDashboardLayout navigation", () => {
       </AgentDashboardLayout>
     );
 
-    expect(screen.getByRole("button", { name: "Run Agent" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Stop Agent" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "headerRun" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "headerStop" })).not.toBeInTheDocument();
   });
 
   /**
@@ -187,7 +191,7 @@ describe("AgentDashboardLayout navigation", () => {
       </AgentDashboardLayout>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Run Agent" }));
+    fireEvent.click(screen.getByRole("button", { name: "headerRun" }));
 
     await waitFor(() => {
       expect(manualRunMock).toHaveBeenCalledWith({ agentId: "agent_1" });
@@ -210,12 +214,11 @@ describe("AgentDashboardLayout navigation", () => {
       </AgentDashboardLayout>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Stop Agent" }));
+    fireEvent.click(screen.getByRole("button", { name: "headerStop" }));
 
-    expect(screen.getByText("This will cancel the running job and any pending approvals or tool calls. It cannot be undone."))
-      .toBeInTheDocument();
+    expect(screen.getByText("stopModal.body")).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Stop Agent" }).at(-1)!);
+    fireEvent.click(screen.getAllByRole("button", { name: "stopModal.stop" }).at(-1)!);
 
     await waitFor(() => {
       expect(cancelRunMock).toHaveBeenCalledWith({

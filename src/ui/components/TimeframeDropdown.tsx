@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
@@ -25,9 +26,10 @@ export default function TimeframeDropdown({
   setCustomEnd,
   className = ""
 }: TimeframeDropdownProps) {
+  const t = useTranslations("ui.timeframeDropdown");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -39,20 +41,20 @@ export default function TimeframeDropdown({
   }, []);
 
   const presets = [
-    { id: "today", label: "Today" },
-    { id: "yesterday", label: "Yesterday" },
-    { id: "7d", label: "Last 7 Days" },
-    { id: "14d", label: "Last 14 Days" },
-    { id: "30d", label: "Last 30 Days" },
-    { id: "60d", label: "Last 60 Days" },
-    { id: "90d", label: "Last 90 Days" },
-    { id: "180d", label: "Last 180 Days" },
-    { id: "365d", label: "Last 365 Days" },
+    { id: "today", label: t("today") },
+    { id: "yesterday", label: t("yesterday") },
+    { id: "7d", label: t("7d") },
+    { id: "14d", label: t("14d") },
+    { id: "30d", label: t("30d") },
+    { id: "60d", label: t("60d") },
+    { id: "90d", label: t("90d") },
+    { id: "180d", label: t("180d") },
+    { id: "365d", label: t("365d") },
   ];
 
   const getActiveLabel = () => {
-    if (timeframe === "custom") return "Custom Range";
-    return presets.find(p => p.id === timeframe)?.label || "Select Range";
+    if (timeframe === "custom") return t("customRange");
+    return presets.find(p => p.id === timeframe)?.label || t("selectRange");
   };
 
   const handleApplyCustom = () => {
@@ -67,6 +69,8 @@ export default function TimeframeDropdown({
 
   return (
     <div className={`relative z-50 ${className}`} ref={containerRef}>
+      {/* Raw on purpose (this trigger and the menu below): a glass dropdown
+          drawn in its own hex palette — nothing the kit freezes. */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 bg-card/40 backdrop-blur-lg border border-border-dim px-4 py-2 rounded-[12px] shadow-sm transition-all hover:bg-card/60 text-[13px] font-medium text-foreground"
@@ -87,7 +91,8 @@ export default function TimeframeDropdown({
           >
             {/* Left Panel: Presets */}
             <div className="flex flex-col w-[170px] border-r border-[#333333] py-3">
-              <span className="text-[10px] font-bold tracking-widest text-[#888888] uppercase px-5 mb-3 mt-1">Presets</span>
+              <span className="text-[10px] font-bold tracking-widest text-[#888888] uppercase px-5 mb-3 mt-1">{t("presets")}</span>
+              {/* Raw on purpose: hex-palette menu rows. */}
               {presets.map(p => (
                 <button
                   key={p.id}
@@ -105,11 +110,11 @@ export default function TimeframeDropdown({
 
             {/* Right Panel: Custom Range */}
             <div className="flex flex-col flex-1 p-5 relative">
-              <span className="text-[10px] font-bold tracking-widest text-[#888888] uppercase mb-5 mt-0">Custom Range</span>
+              <span className="text-[10px] font-bold tracking-widest text-[#888888] uppercase mb-5 mt-0">{t("customRange")}</span>
               
               <div className="flex flex-col gap-5 flex-1">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[12px] text-[#aaaaaa]">Start Date</label>
+                  <label className="text-[12px] text-[#aaaaaa]">{t("startDate")}</label>
                   <div className="relative">
                     <input 
                       type="date"
@@ -121,7 +126,7 @@ export default function TimeframeDropdown({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[12px] text-[#aaaaaa]">End Date (Optional)</label>
+                  <label className="text-[12px] text-[#aaaaaa]">{t("endDateOptional")}</label>
                   <div className="relative">
                     <input 
                       type="date"
@@ -134,12 +139,13 @@ export default function TimeframeDropdown({
               </div>
 
               <div className="mt-8">
-                <button 
+                {/* Raw on purpose: the hex-palette apply control. */}
+                <button
                   onClick={handleApplyCustom}
                   disabled={!customStart}
                   className="w-full bg-[#333333] hover:bg-[#444444] disabled:opacity-50 disabled:hover:bg-[#333333] text-[#cccccc] text-[13px] font-medium py-2.5 rounded-[8px] transition-colors"
                 >
-                  Apply Range
+                  {t("applyRange")}
                 </button>
               </div>
             </div>

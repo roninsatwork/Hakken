@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, renderWithProviders as render, screen, waitFor } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -10,6 +10,13 @@ import { ConfigDrawer } from "./ConfigDrawer";
 import { GenericNode } from "./GenericNode";
 import { WorkflowSidebar } from "./WorkflowSidebar";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 vi.mock("@xyflow/react", () => ({
   Handle: ({ type }: { type: string }) => <span data-testid={`handle-${type}`} />,
   Position: { Left: "left", Right: "right" },
@@ -19,18 +26,6 @@ vi.mock("convex/react", () => ({
   useAction: vi.fn(),
   useMutation: vi.fn(),
   useQuery: vi.fn(),
-}));
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-    if (key === "save") return "Save";
-    if (key === "cancel") return "Cancel";
-    if (key === "configureAgent") return "Configure agent";
-    if (key === "loading") return "Loading";
-    if (key === "temperature.label") return `Temperature ${values?.value ?? ""}`;
-    if (key === "header.trigger") return `Trigger ${values?.type ?? ""}`;
-    return key;
-  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -209,7 +204,7 @@ describe("workflow shared components", () => {
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Approval Handoff"));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sync Changes" }));
 
     await waitFor(() => {
       expect(updateAgent).toHaveBeenCalledWith(expect.objectContaining({
@@ -260,7 +255,7 @@ describe("workflow shared components", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Advanced Engine/i }));
     fireEvent.click(screen.getByText("Research Briefing"));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sync Changes" }));
 
     await waitFor(() => {
       expect(unbindSkillFromAgent).toHaveBeenCalledWith({ bindingId: "binding_research" });

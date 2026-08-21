@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import type { FormEvent, ReactNode } from "react";
 import { redirect, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -16,6 +17,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 import {
   ModalField,
   ModalFormField,
@@ -28,6 +30,7 @@ function formatCount(value: number | undefined) {
 
 
 export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
+  const t = useTranslations("admin.agents.skillCenter");
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
   const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
   const deleteSkill = useMutation(api.agentSkills.deleteSkill);
@@ -52,11 +55,11 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
     setValidationError("");
     const name = newName.trim();
     if (!name) {
-      setValidationError("Give the skill a name.");
+      setValidationError(t("nameRequired"));
       return;
     }
     if (!newFile) {
-      setValidationError("Choose a SKILL.md file.");
+      setValidationError(t("fileRequired"));
       return;
     }
 
@@ -81,10 +84,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       // Uploaded means available. There is no publish step.
       await updateSkill({ skillId: created.skillId, status: "ACTIVE" });
       return created;
-    }, { key: ADD_KEY, fallbackMessage: "The skill could not be added.", suppressErrorToast: true });
+    }, { key: ADD_KEY, fallbackMessage: t("addFailed"), suppressErrorToast: true });
 
     if (!outcome.ok) return;
-    setFeedback(`Added ${name}.`);
+    setFeedback(t("added", { name }));
     setNewName("");
     setNewDescription("");
     setNewFile(null);
@@ -112,7 +115,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
     if (!editTarget) return;
     const name = editName.trim();
     if (!name) {
-      setValidationError("Give the skill a name.");
+      setValidationError(t("nameRequired"));
       return;
     }
 
@@ -139,10 +142,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         name,
         description: editDescription.trim() || undefined,
       });
-    }, { key: EDIT_KEY, fallbackMessage: "The skill could not be saved.", suppressErrorToast: true });
+    }, { key: EDIT_KEY, fallbackMessage: t("saveFailed"), suppressErrorToast: true });
 
     if (!outcome.ok) return;
-    setFeedback(markdown ? `Saved ${name} and replaced its file.` : `Saved ${name}.`);
+    setFeedback(markdown ? t("savedReplaced", { name }) : t("saved", { name }));
     setEditTarget(null);
   };
   const DELETE_KEY = "delete";
@@ -151,13 +154,13 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
     if (!deleteTarget) return;
     const outcome = await action.run(() => deleteSkill({ skillId: deleteTarget.id }), {
       key: DELETE_KEY,
-      fallbackMessage: "The skill could not be deleted.",
+      fallbackMessage: t("deleteFailed"),
     });
     if (!outcome.ok) return;
     setFeedback(
       outcome.data.detachedAgents > 0
-        ? `Deleted ${deleteTarget.name}. It was removed from ${outcome.data.detachedAgents} agent${outcome.data.detachedAgents === 1 ? "" : "s"}.`
-        : `Deleted ${deleteTarget.name}.`,
+        ? t("deletedDetached", { name: deleteTarget.name, count: outcome.data.detachedAgents })
+        : t("deleted", { name: deleteTarget.name }),
     );
     setDeleteTarget(null);
   };
@@ -223,21 +226,21 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       <PageHeader
         divider
         icon={<BrainCircuit className="w-6 h-6 text-brand" />}
-        title="Skill Center"
-        description="Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here."
+        title={t("title")}
+        description={t("description")}
         action={
           // One action, because there is one way skills arrive: a SKILL.md file.
-          <button
-            type="button"
+          <Button
+            variant="brand"
             onClick={() => {
               setIsMarkdownOpen(true);
               setFeedback("");
             }}
-            className="h-10 shrink-0 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+            className="h-10 shrink-0 px-5 rounded-[8px] flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
-            Add new skill
-          </button>
+            {t("addNew")}
+          </Button>
         }
       />
       {/* Below the title, as on every other page in this section. It used to be
@@ -264,16 +267,16 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           <div>
             <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-brand" />
-              How your skills are being used
+              {t("analytics.title")}
             </h2>
             <p className="text-[12px] text-secondary mt-1">
-              Which agents have picked up your skills, and which of those need attention.
+              {t("analytics.description")}
             </p>
           </div>
           {analytics === undefined ? (
             <div className="text-[12px] text-muted flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Loading analytics
+              {t("analytics.loading")}
             </div>
           ) : (
             // These counts are recomputed periodically rather than on every
@@ -281,18 +284,20 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             // of unknown age as live is the habit this whole pass is removing.
             <div className="text-[12px] text-muted">
               {analytics.computedAt
-                ? `Counted ${formatDateTime(analytics.computedAt)}${analytics.isPartial ? ` · first ${analytics.skillsCounted} skills` : ""}`
-                : "Not counted yet"}
+                ? analytics.isPartial
+                  ? t("analytics.countedPartial", { date: formatDateTime(analytics.computedAt), count: analytics.skillsCounted })
+                  : t("analytics.counted", { date: formatDateTime(analytics.computedAt) })
+                : t("analytics.notCounted")}
             </div>
           )}
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
           {[
-            { label: "Skills", value: analytics?.totals?.skills },
-            { label: "In use by agents", value: analytics?.totals?.enabledBindings },
-            { label: "Out of date", value: analytics?.totals?.outdatedBindings },
-            { label: "Tested", value: analytics?.totals?.validatedBindings },
-            { label: "Untested", value: analytics?.totals?.needsSmokeBindings },
+            { label: t("stats.skills"), value: analytics?.totals?.skills },
+            { label: t("stats.inUse"), value: analytics?.totals?.enabledBindings },
+            { label: t("stats.outOfDate"), value: analytics?.totals?.outdatedBindings },
+            { label: t("stats.tested"), value: analytics?.totals?.validatedBindings },
+            { label: t("stats.untested"), value: analytics?.totals?.needsSmokeBindings },
           ].map((stat) => (
             <div key={stat.label} className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 min-w-0">
               <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>
@@ -310,8 +315,8 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           <TableSearchInput
             value={searchTerm}
             onChange={(next) => { setSearchTerm(next); setPage(1); }}
-            placeholder="Search skills by name"
-            clearLabel="Clear search"
+            placeholder={t("searchPlaceholder")}
+            clearLabel={t("clearSearch")}
           />
         </div>
       </div>
@@ -331,7 +336,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         onRowClick={(skill) => openEdit(skill)}
         empty={{
           icon: <BrainCircuit className="w-8 h-8 text-muted/30" />,
-          label: "No skills yet — upload a SKILL.md file to add your first one",
+          label: t("emptyLabel"),
         }}
         footer={{
           mode: "paged",
@@ -342,11 +347,11 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
           onPageChange: goToPage,
           labels: {
-            empty: "No skills yet",
+            empty: t("footerEmpty"),
             showing: (start, end, total) =>
               isFiltered
-                ? `Showing ${start}-${end} of ${total} matching`
-                : `Showing ${start}-${end} of ${total} skills`,
+                ? t("showingMatching", { start, end, total })
+                : t("showingSkills", { start, end, total }),
           },
         }}
         /* A skill is a name and a file. Category, status, risk and the
@@ -354,14 +359,14 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         columns={[
           {
             key: "skill",
-            header: "Skill",
+            header: t("columns.skill"),
             cell: (skill) => (
               <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
             ),
           },
           {
             key: "file",
-            header: "File",
+            header: t("columns.file"),
             className: "w-[220px] truncate",
             cell: (skill) => (
               <span className="text-[12px] text-secondary">{skill.sourceFilename || "—"}</span>
@@ -369,7 +374,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           },
           {
             key: "uploaded",
-            header: "Uploaded",
+            header: t("columns.uploaded"),
             className: "w-[190px]",
             cell: (skill) => (
               <span className="text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</span>
@@ -382,11 +387,11 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             className: "w-[120px] whitespace-nowrap",
             cell: (skill) => (
               <RowActions>
-                <RowIconButton label={`Edit ${skill.name}`} onClick={() => openEdit(skill)}>
+                <RowIconButton label={t("editAria", { name: skill.name })} onClick={() => openEdit(skill)}>
                   <Pencil className="w-4 h-4" />
                 </RowIconButton>
                 <RowIconButton
-                  label={`Delete ${skill.name}`}
+                  label={t("deleteAria", { name: skill.name })}
                   tone="danger"
                   onClick={() => setDeleteTarget({ id: skill._id, name: skill.name })}
                 >
@@ -398,25 +403,25 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         ]}
       />
 
-      <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit skill" size="lg">
+      <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title={t("editTitle")} size="lg">
         <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">
           {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
           <ModalField
-            label="Name"
+            label={t("nameLabel")}
             value={editName}
             onChange={(event) => setEditName(event.target.value)}
           />
           <ModalTextAreaField
-            label="Description"
+            label={t("descriptionLabel")}
             value={editDescription}
             onChange={(event) => setEditDescription(event.target.value)}
             rows={3}
-            placeholder="What this skill is for, in your own words."
+            placeholder={t("descriptionPlaceholder")}
           />
           {/* A file picker is the browser's own control, so it keeps its own
               styling; the kit's wrapper is here for the label tie and the
               sentence underneath. */}
-          <ModalFormField label="Replace the file" htmlFor="skill-edit-file">
+          <ModalFormField label={t("replaceFile")} htmlFor="skill-edit-file">
             <input
               id="skill-edit-file"
               type="file"
@@ -426,36 +431,33 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             />
             <span className="text-[11px] text-muted">
               {editTarget?.sourceFilename
-                ? `Currently ${editTarget.sourceFilename}. Leave empty to keep it.`
-                : "No file behind this skill yet."}
+                ? t("currently", { filename: editTarget.sourceFilename })
+                : t("noFile")}
             </span>
           </ModalFormField>
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={() => setEditTarget(null)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
-              Cancel
-            </button>
+            <Button variant="outline" onClick={() => setEditTarget(null)} className="h-10 rounded-[8px]">
+              {t("cancel")}
+            </Button>
             <WriteButton type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(EDIT_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
-              Save
+              {t("save")}
             </WriteButton>
           </div>
         </form>
       </SonaeModal>
 
-      <SonaeModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete skill" size="sm">
+      <SonaeModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t("deleteTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
-            Delete <span className="text-foreground font-semibold">{deleteTarget?.name}</span>? This removes the
-            file and takes the skill away from any agent using it. It cannot be undone.
+            {t.rich("deleteBody", {
+              name: () => <span className="text-foreground font-semibold">{deleteTarget?.name}</span>,
+            })}
           </p>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(null)}
-              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
-            >
-              Cancel
-            </button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="h-10 rounded-[8px]">
+              {t("cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={confirmDelete}
@@ -463,32 +465,32 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
               className="h-10 px-4 rounded-[8px] bg-red-500 text-white text-[13px] font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
             >
               {action.isBusy(DELETE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Delete skill
+              {t("deleteConfirm")}
             </WriteButton>
           </div>
         </div>
       </SonaeModal>
 
-      <SonaeModal isOpen={isMarkdownOpen} onClose={() => setIsMarkdownOpen(false)} title="Add new skill" size="lg">
+      <SonaeModal isOpen={isMarkdownOpen} onClose={() => setIsMarkdownOpen(false)} title={t("addTitle")} size="lg">
         {/* A skill is a name and a file. The previous version of this dialog
             parsed the file, showed a readiness panel, a tool-mapping picker and
             a list of validation warnings before it would let anyone finish. */}
         <form onSubmit={addSkill} className="flex flex-col gap-4 px-1 pb-2">
           {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
           <ModalField
-            label="Name"
+            label={t("nameLabel")}
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="What you want to call this skill"
+            placeholder={t("newNamePlaceholder")}
           />
           <ModalTextAreaField
-            label="Description"
+            label={t("descriptionLabel")}
             value={newDescription}
             onChange={(event) => setNewDescription(event.target.value)}
             rows={3}
-            placeholder="What this skill is for, in your own words."
+            placeholder={t("descriptionPlaceholder")}
           />
-          <ModalFormField label="Skill file" htmlFor="skill-new-file">
+          <ModalFormField label={t("fileLabel")} htmlFor="skill-new-file">
             <input
               id="skill-new-file"
               type="file"
@@ -496,15 +498,15 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
               onChange={(event) => setNewFile(event.target.files?.[0] ?? null)}
               className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
             />
-            <span className="text-[11px] text-muted">A SKILL.md file. Its contents become the instructions the agent follows.</span>
+            <span className="text-[11px] text-muted">{t("fileHint")}</span>
           </ModalFormField>
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
-              Cancel
-            </button>
+            <Button variant="outline" onClick={() => setIsMarkdownOpen(false)} className="h-10 rounded-[8px]">
+              {t("cancel")}
+            </Button>
             <WriteButton type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(ADD_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
-              Add skill
+              {t("addSkill")}
             </WriteButton>
           </div>
         </form>

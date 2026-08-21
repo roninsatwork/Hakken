@@ -8,6 +8,7 @@ import { Bot, ImagePlus, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/src/ui/lib/utils";
+import { Button } from "@/src/ui/atoms/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
@@ -113,6 +114,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
           </div>
         )}
         <div className="flex flex-col items-start gap-1.5">
+          {/* Stays raw: a foreground-tinted chip (bg-foreground/10, bright text) whose colours match no variant. */}
           <button
             type="button"
             onClick={() => setIsOpen(true)}
@@ -176,14 +178,14 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
           </div>
 
           <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-border-dim/50">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => !isUploading && setIsOpen(false)}
               disabled={isUploading}
-              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all disabled:opacity-50"
+              className="rounded-[10px]"
             >
               {labels.cancel}
-            </button>
+            </Button>
           </div>
         </div>
       </SonaeModal>

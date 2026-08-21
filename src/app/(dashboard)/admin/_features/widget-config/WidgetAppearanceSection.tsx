@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { AppWindow, Bell, Loader2, UploadCloud, Volume2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { LogoUploadHandler } from "./types";
 import { WidgetPanel } from "./WidgetPanel";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -41,23 +42,24 @@ export function WidgetAppearanceSection({
   themePlaceholder,
   themePrimaryColor,
 }: WidgetAppearanceSectionProps) {
+  const t = useTranslations("ai.widget.appearance");
   return (
     <WidgetPanel
-      title="Appearance"
-      description="How the chat window looks to your visitors."
+      title={t("title")}
+      description={t("description")}
     >
       <div className="grid grid-cols-1 gap-6">
         <Field
-          label="Name people see"
+          label={t("nameLabel")}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="For example: Sales Assistant"
+          placeholder={t("namePlaceholder")}
         />
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Field
-              label="Main colour"
+              label={t("colourLabel")}
               value={themePrimaryColor}
               onChange={(event) => setThemePrimaryColor(event.target.value)}
               className="font-mono tracking-wider"
@@ -65,7 +67,7 @@ export function WidgetAppearanceSection({
           </div>
           <input
             type="color"
-            aria-label="Pick the main colour"
+            aria-label={t("colourPickerLabel")}
             value={activeColor}
             onChange={(event) => setThemePrimaryColor(event.target.value)}
             className="h-[46px] w-14 shrink-0 cursor-pointer rounded-[12px] border border-border-dim bg-transparent"
@@ -73,14 +75,14 @@ export function WidgetAppearanceSection({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="mt-1 text-[12px] font-medium text-secondary">Logo</label>
+          <label className="mt-1 text-[12px] font-medium text-secondary">{t("logoLabel")}</label>
           {themeLogoUrl ? (
             <div className="flex items-center gap-4 bg-background border border-border-dim rounded-[10px] p-3">
               <div className="w-12 h-12 rounded-full overflow-hidden border border-border-dim/50 flex-shrink-0 bg-sidebar/50">
                 {logoPreviewUrl ? (
                   <Image
                     src={logoPreviewUrl}
-                    alt="Widget Logo"
+                    alt={t("logoAlt")}
                     width={48}
                     height={48}
                     unoptimized
@@ -92,9 +94,10 @@ export function WidgetAppearanceSection({
               </div>
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span className="text-[13px] text-foreground font-medium truncate">
-                  {themeLogoUrl.startsWith("blob:") ? "Uploading..." : "Custom Logo Set"}
+                  {themeLogoUrl.startsWith("blob:") ? t("uploading") : t("customLogoSet")}
                 </span>
               </div>
+              {/* Raw: icon-shaped but with a destructive hover tone the icon variant does not offer. */}
               <button
                 onClick={() => setThemeLogoUrl("")}
                 disabled={isUploadingLogo}
@@ -118,20 +121,20 @@ export function WidgetAppearanceSection({
                 <UploadCloud className="w-6 h-6 text-brand mb-2 group-hover:scale-110 transition-transform" />
               )}
               <span className="text-[13px] font-medium text-foreground tracking-wide">
-                {isUploadingLogo ? "Uploading..." : "Click to upload an image"}
+                {isUploadingLogo ? t("uploading") : t("clickToUpload")}
               </span>
               <span className="text-[11px] text-secondary mt-1">
-                PNG, JPG, SVG up to 2MB. Recommended 256x256.
+                {t("logoHint")}
               </span>
             </div>
           )}
         </div>
 
         <Field
-          label="Greyed-out text in the message box"
+          label={t("placeholderLabel")}
           value={themePlaceholder}
           onChange={(event) => setThemePlaceholder(event.target.value)}
-          placeholder="Write a reply..."
+          placeholder={t("placeholderPlaceholder")}
         />
 
         <div className="flex flex-col gap-4 mt-2">
@@ -139,7 +142,7 @@ export function WidgetAppearanceSection({
             <div className="flex items-center gap-3">
               <Volume2 className="w-4 h-4 text-brand" />
               <span className="text-[13px] font-semibold tracking-wide text-foreground">
-                Enable sound notifications
+                {t("sounds")}
               </span>
             </div>
             <input
@@ -153,7 +156,7 @@ export function WidgetAppearanceSection({
             <div className="flex items-center gap-3">
               <Bell className="w-4 h-4 text-brand" />
               <span className="text-[13px] font-semibold tracking-wide text-foreground">
-                Show pop-up message preview
+                {t("popupPreview")}
               </span>
             </div>
             <input

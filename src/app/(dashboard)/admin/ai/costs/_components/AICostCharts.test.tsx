@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import { AICostDistributionCharts } from "./AICostDistributionCharts";
 import { AICostTimelineChart } from "./AICostTimelineChart";
@@ -18,6 +19,9 @@ vi.mock("framer-motion", () => ({
       },
     }
   ),
+  // renderWithProviders mounts the toast viewport, which animates with
+  // AnimatePresence — the mock passes it through.
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 vi.mock("@/src/ui/components/charts/ChartExportWrapper", () => ({
@@ -58,8 +62,10 @@ vi.mock("recharts", () => {
   };
 });
 
-const t: Translate = (key) => {
+const t: Translate = (key, values) => {
   if (key === "chart.tooltipLabel") return "Spend";
+  // The title carries the reader's aggregation label through the catalogue.
+  if (key === "chart.titleUsd") return `${values?.label} (USD)`;
   return key;
 };
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   AudioLines,
   BarChart3,
@@ -39,7 +40,7 @@ import { cn } from "@/src/ui/lib/utils";
  */
 const instructionItems = [
   {
-    label: "Rules",
+    labelKey: "rules",
     href: "/admin/ai/rules",
     icon: ShieldCheck,
     matches: (pathname: string) => (
@@ -48,7 +49,7 @@ const instructionItems = [
     ),
   },
   {
-    label: "System Prompt",
+    labelKey: "systemPrompt",
     href: "/admin/ai/system-prompt",
     icon: TerminalSquare,
     matches: (pathname: string) => (
@@ -57,7 +58,7 @@ const instructionItems = [
     ),
   },
   {
-    label: "Wiki",
+    labelKey: "wiki",
     href: "/admin/ai/knowledge",
     icon: BookOpen,
     matches: (pathname: string) => (
@@ -66,19 +67,19 @@ const instructionItems = [
     ),
   },
   {
-    label: "Voice",
+    labelKey: "voice",
     href: "/admin/ai/voice",
     icon: AudioLines,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/voice"),
   },
   {
-    label: "Unanswered",
+    labelKey: "unanswered",
     href: "/admin/ai/unanswered",
     icon: MessageSquareText,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/unanswered"),
   },
   {
-    label: "Diary",
+    labelKey: "diary",
     href: "/admin/ai/diary",
     icon: NotebookPen,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/diary"),
@@ -86,7 +87,7 @@ const instructionItems = [
   {
     // The global AI's own evals (Anthony's ruling, 2026-08-16): the same
     // screen every company has, kept by hand rather than written for it.
-    label: "Evals",
+    labelKey: "evals",
     href: "/admin/ai/evals",
     icon: ClipboardCheck,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/evals"),
@@ -102,13 +103,13 @@ function isModelDetailRoute(pathname: string) {
 
 const modelItems = [
   {
-    label: "Providers",
+    labelKey: "providers",
     href: "/admin/ai/models/providers",
     icon: BrainCircuit,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/models/providers"),
   },
   {
-    label: "Model Catalogue",
+    labelKey: "modelCatalogue",
     href: "/admin/ai/models/catalogue",
     icon: List,
     matches: (pathname: string) => (
@@ -118,7 +119,7 @@ const modelItems = [
     ),
   },
   {
-    label: "Defaults",
+    labelKey: "defaults",
     href: "/admin/ai/models/defaults",
     icon: Cpu,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/models/defaults"),
@@ -131,7 +132,7 @@ function getWidgetSectionHref(section: string) {
 
 const widgetItems = [
   {
-    label: "Appearance",
+    labelKey: "appearance",
     href: "/admin/ai/widget",
     icon: Palette,
     matches: (pathname: string, searchParams: URLSearchParams) => (
@@ -140,25 +141,25 @@ const widgetItems = [
     ),
   },
   {
-    label: "Welcome Screen",
+    labelKey: "welcomeScreen",
     href: getWidgetSectionHref("welcome-screen"),
     icon: Monitor,
     query: { section: "welcome-screen" },
   },
   {
-    label: "Conversation Starters",
+    labelKey: "conversationStarters",
     href: getWidgetSectionHref("conversation-starters"),
     icon: ListPlus,
     query: { section: "conversation-starters" },
   },
   {
-    label: "Greeting",
+    labelKey: "greeting",
     href: getWidgetSectionHref("greeting"),
     icon: MessageSquareText,
     query: { section: "greeting" },
   },
   {
-    label: "Integration",
+    labelKey: "integration",
     href: getWidgetSectionHref("integration"),
     icon: Code2,
     query: { section: "integration" },
@@ -167,7 +168,7 @@ const widgetItems = [
 
 const workspaceTabs = [
   {
-    label: "Running Costs",
+    labelKey: "runningCosts",
     href: "/admin/ai/usage/costs",
     icon: BarChart3,
     matches: (pathname: string) => (
@@ -176,13 +177,13 @@ const workspaceTabs = [
     ),
   },
   {
-    label: "Value",
+    labelKey: "value",
     href: "/admin/ai/money",
     icon: BarChart3,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/money"),
   },
   {
-    label: "Chat Logs",
+    labelKey: "chatLogs",
     href: "/admin/ai/usage/chat-logs",
     icon: MessageSquareText,
     matches: (pathname: string) => (
@@ -191,19 +192,21 @@ const workspaceTabs = [
     ),
   },
   {
-    label: "Skill Center",
+    labelKey: "skillCenter",
     href: "/admin/ai/skills",
     icon: FileText,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/skills"),
   },
   {
-    label: "Widget",
+    key: "widget",
+    labelKey: "widget",
     href: "/admin/ai/widget",
     icon: MessageSquareCode,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/widget"),
   },
   {
-    label: "Models",
+    key: "models",
+    labelKey: "models",
     href: "/admin/ai/models",
     icon: BrainCircuit,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/models"),
@@ -227,6 +230,7 @@ function isWidgetItemActive(
 }
 
 export function AiWorkspaceNav() {
+  const t = useTranslations("ai.workspaceNav");
   const pathname = usePathname() || "/admin/ai";
   const readonlySearchParams = useSearchParams();
   const searchParams = new URLSearchParams(readonlySearchParams?.toString());
@@ -276,7 +280,7 @@ export function AiWorkspaceNav() {
 
   return (
     <nav
-      aria-label="Artificial intelligence sections"
+      aria-label={t("ariaLabel")}
       className="flex items-center gap-1 border-b border-border-dim/50 pb-px"
     >
       {workspaceTabs.map((tab) => {
@@ -284,9 +288,10 @@ export function AiWorkspaceNav() {
         const isActive = tab.matches(pathname);
 
         return (
-          <div key={tab.href} className={cn("shrink-0", tab.label === "Widget" && "flex items-center gap-1")}>
-            {tab.label === "Widget" && (
+          <div key={tab.href} className={cn("shrink-0", "key" in tab && tab.key === "widget" && "flex items-center gap-1")}>
+            {"key" in tab && tab.key === "widget" && (
               <div ref={instructionsRef} className="relative shrink-0">
+                {/* Stays raw (here and the two dropdown tabs below): an active-state underline tab — matches no variant. */}
                 <button
                   type="button"
                   aria-expanded={isInstructionsOpen}
@@ -304,7 +309,7 @@ export function AiWorkspaceNav() {
                   )}
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Instructions</span>
+                  <span>{t("instructions")}</span>
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isInstructionsOpen && "rotate-180")} />
                 </button>
 
@@ -332,7 +337,7 @@ export function AiWorkspaceNav() {
                         >
                           <span className="flex min-w-0 items-center gap-2">
                             <ItemIcon className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate">{t(item.labelKey)}</span>
                           </span>
                           {isItemActive && <Check className="h-4 w-4 shrink-0" />}
                         </Link>
@@ -343,7 +348,7 @@ export function AiWorkspaceNav() {
               </div>
             )}
 
-            {tab.label === "Widget" ? (
+            {"key" in tab && tab.key === "widget" ? (
               <div ref={widgetRef} className="relative shrink-0">
                 <button
                   type="button"
@@ -362,7 +367,7 @@ export function AiWorkspaceNav() {
                   )}
                 >
                   <MessageSquareCode className="h-4 w-4" />
-                  <span>Widget</span>
+                  <span>{t("widget")}</span>
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isWidgetOpen && "rotate-180")} />
                 </button>
 
@@ -390,7 +395,7 @@ export function AiWorkspaceNav() {
                         >
                           <span className="flex min-w-0 items-center gap-2">
                             <ItemIcon className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate">{t(item.labelKey)}</span>
                           </span>
                           {isItemActive && <Check className="h-4 w-4 shrink-0" />}
                         </Link>
@@ -399,7 +404,7 @@ export function AiWorkspaceNav() {
                   </div>
                 )}
               </div>
-            ) : tab.label === "Models" ? (
+            ) : "key" in tab && tab.key === "models" ? (
               <div ref={modelsRef} className="relative shrink-0">
                 <button
                   type="button"
@@ -418,7 +423,7 @@ export function AiWorkspaceNav() {
                   )}
                 >
                   <BrainCircuit className="h-4 w-4" />
-                  <span>Models</span>
+                  <span>{t("models")}</span>
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isModelsOpen && "rotate-180")} />
                 </button>
 
@@ -446,7 +451,7 @@ export function AiWorkspaceNav() {
                         >
                           <span className="flex min-w-0 items-center gap-2">
                             <ItemIcon className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate">{t(item.labelKey)}</span>
                           </span>
                           {isItemActive && <Check className="h-4 w-4 shrink-0" />}
                         </Link>
@@ -466,7 +471,7 @@ export function AiWorkspaceNav() {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                {tab.label}
+                {t(tab.labelKey)}
               </Link>
             )}
           </div>

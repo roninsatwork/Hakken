@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import { Activity, Settings } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";

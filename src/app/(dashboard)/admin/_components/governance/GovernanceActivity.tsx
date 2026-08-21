@@ -125,6 +125,7 @@ export function GovernanceActivity({ riskMix, systems }: GovernanceActivityProps
 
         <div className="flex gap-1.5" role="group" aria-label={t("rangeLabel")}>
           {RANGES.map((range) => (
+            // Stays raw: an aria-pressed range chip whose border swaps with selection — matches no variant.
             <button
               key={range}
               type="button"

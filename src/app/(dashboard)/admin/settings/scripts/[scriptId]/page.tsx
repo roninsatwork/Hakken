@@ -17,7 +17,9 @@ import {
   XCircle,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { useLocale, useTranslations } from "next-intl";
 
 // Mirrors the list page's RiskBadge. This was previously hardcoded to the
 // emerald "low risk" styling, so a MEDIUM or HIGH risk script was presented as
@@ -29,20 +31,22 @@ const RISK_BADGE_CLASSES: Record<string, string> = {
   HIGH: "bg-red-500/10 text-red-500",
 };
 
-function formatDate(timestamp?: number) {
-  if (!timestamp) return "Never";
-  return new Intl.DateTimeFormat("en-GB", {
+/** Returns `undefined` when nothing has run — the screen says "Never" in the reader's language. */
+function formatDate(timestamp: number | undefined, locale: string) {
+  if (!timestamp) return undefined;
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(timestamp));
 }
 
 function StatusBadge({ status }: { status?: "RUNNING" | "SUCCESS" | "FAILED" }) {
+  const t = useTranslations("admin.settings.scripts");
   if (!status) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">
         <Clock3 className="w-3.5 h-3.5" />
-        Not run
+        {t("notRun")}
       </span>
     );
   }
@@ -57,12 +61,14 @@ function StatusBadge({ status }: { status?: "RUNNING" | "SUCCESS" | "FAILED" }) 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium ${statusClass}`}>
       <Icon className={`w-3.5 h-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`} />
-      {status}
+      {status === "SUCCESS" ? t("statusSuccess") : status === "FAILED" ? t("statusFailed") : t("statusRunning")}
     </span>
   );
 }
 
 export default function MaintenanceScriptDetailPage() {
+  const t = useTranslations("admin.settings.scripts");
+  const locale = useLocale();
   const router = useRouter();
   const params = useParams<{ scriptId: string }>();
   const scriptId = params.scriptId ?? "";
@@ -78,13 +84,13 @@ export default function MaintenanceScriptDetailPage() {
     try {
       const result = await runScript({ scriptId });
       if (result.success) {
-        setFeedback({ type: "success", message: result.summary ?? "Maintenance script completed." });
+        setFeedback({ type: "success", message: result.summary ?? t("runCompleted") });
         setIsConfirmOpen(false);
       } else {
-        setFeedback({ type: "error", message: result.error ?? "Maintenance script failed." });
+        setFeedback({ type: "error", message: result.error ?? t("runFailed") });
       }
     } catch {
-      setFeedback({ type: "error", message: "Maintenance script could not be started." });
+      setFeedback({ type: "error", message: t("runNotStarted") });
     } finally {
       setIsRunning(false);
     }
@@ -103,11 +109,11 @@ export default function MaintenanceScriptDetailPage() {
       <div className="flex flex-col gap-5">
         <Link href="/admin/settings/scripts" className="inline-flex items-center gap-2 text-[13px] text-secondary hover:text-foreground">
           <ArrowLeft className="w-4 h-4" />
-          Back to maintenance
+          {t("back")}
         </Link>
         <div className="border border-border-dim rounded-[16px] p-8 bg-sidebar/20">
-          <h1 className="text-xl font-semibold text-foreground">Maintenance script not found</h1>
-          <p className="text-[13px] text-secondary mt-2">This script is not in the approved maintenance registry.</p>
+          <h1 className="text-xl font-semibold text-foreground">{t("notFoundTitle")}</h1>
+          <p className="text-[13px] text-secondary mt-2">{t("notFoundBody")}</p>
         </div>
       </div>
     );
@@ -115,13 +121,14 @@ export default function MaintenanceScriptDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-16">
+      {/* Stays raw: an inline padding-free back link drawn as a button — matches no variant. */}
       <button
         type="button"
         onClick={() => router.push("/admin/settings/scripts")}
         className="inline-flex items-center gap-2 text-[13px] text-secondary hover:text-foreground w-fit"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to maintenance
+        {t("back")}
       </button>
 
       <header className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 pb-6 border-b border-border-dim/50">
@@ -133,7 +140,7 @@ export default function MaintenanceScriptDetailPage() {
           <p className="text-[13px] text-secondary tracking-wide max-w-2xl">{script.shortDescription}</p>
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <span className="px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">{script.category}</span>
-            <span className={`px-2 py-1 rounded-[6px] text-[11px] font-medium ${RISK_BADGE_CLASSES[script.riskLevel] ?? RISK_BADGE_CLASSES.HIGH}`}>{script.riskLevel} risk</span>
+            <span className={`px-2 py-1 rounded-[6px] text-[11px] font-medium ${RISK_BADGE_CLASSES[script.riskLevel] ?? RISK_BADGE_CLASSES.HIGH}`}>{t("riskBadge", { level: script.riskLevel === "LOW" ? t("riskLow") : script.riskLevel === "MEDIUM" ? t("riskMedium") : script.riskLevel === "HIGH" ? t("riskHigh") : script.riskLevel })}</span>
             <StatusBadge status={script.lastRun?.status} />
           </div>
         </div>
@@ -145,7 +152,7 @@ export default function MaintenanceScriptDetailPage() {
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[10px] bg-foreground text-background text-[13px] font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50"
         >
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          Run script
+          {t("runScript")}
         </WriteButton>
       </header>
 
@@ -163,17 +170,17 @@ export default function MaintenanceScriptDetailPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <section className="flex flex-col gap-4">
           <div className="border border-border-dim rounded-[16px] p-6 bg-sidebar/20">
-            <h2 className="text-[15px] font-semibold text-foreground mb-2">What this does</h2>
+            <h2 className="text-[15px] font-semibold text-foreground mb-2">{t("whatThisDoes")}</h2>
             <p className="text-[13px] text-secondary leading-relaxed">{script.description}</p>
           </div>
 
           <div className="border border-border-dim rounded-[16px] p-6 bg-sidebar/20">
-            <h2 className="text-[15px] font-semibold text-foreground mb-2">When to run it</h2>
+            <h2 className="text-[15px] font-semibold text-foreground mb-2">{t("whenToRun")}</h2>
             <p className="text-[13px] text-secondary leading-relaxed">{script.whenToRun}</p>
           </div>
 
           <div className="border border-border-dim rounded-[16px] p-6 bg-sidebar/20">
-            <h2 className="text-[15px] font-semibold text-foreground mb-3">What it changes</h2>
+            <h2 className="text-[15px] font-semibold text-foreground mb-3">{t("whatItChanges")}</h2>
             <ul className="flex flex-col gap-2">
               {script.changes.map((change) => (
                 <li key={change} className="flex items-start gap-2 text-[13px] text-secondary">
@@ -189,24 +196,24 @@ export default function MaintenanceScriptDetailPage() {
           <div className="border border-border-dim rounded-[16px] p-5 bg-sidebar/20">
             <h2 className="text-[13px] font-semibold text-foreground mb-4 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-brand" />
-              Safety notes
+              {t("safetyNotes")}
             </h2>
             <div className="flex flex-col gap-4 text-[12.5px] text-secondary leading-relaxed">
               <div>
-                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">Repeatability</span>
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("repeatability")}</span>
                 {script.repeatability}
               </div>
               <div>
-                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">Expected duration</span>
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("expectedDuration")}</span>
                 {script.expectedDuration}
               </div>
               <div>
-                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">Last run</span>
-                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt)}
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("columnLastRun")}</span>
+                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
               </div>
               <div>
-                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">Last run by</span>
-                {script.lastRun?.actorName ?? "None"}
+                <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("columnLastRunBy")}</span>
+                {script.lastRun?.actorName ?? t("nobody")}
               </div>
             </div>
           </div>
@@ -214,20 +221,20 @@ export default function MaintenanceScriptDetailPage() {
           <div className="border border-border-dim rounded-[16px] p-5 bg-sidebar/20">
             <h2 className="text-[13px] font-semibold text-foreground mb-4 flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-brand" />
-              Recent runs
+              {t("recentRuns")}
             </h2>
             <div className="flex flex-col gap-3">
               {script.history.length === 0 ? (
-                <p className="text-[12.5px] text-secondary">No runs recorded yet.</p>
+                <p className="text-[12.5px] text-secondary">{t("noRuns")}</p>
               ) : (
                 script.history.map((run) => (
                   <div key={run._id} className="flex flex-col gap-1 border-b border-border-dim/50 pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-center justify-between gap-2">
                       <StatusBadge status={run.status} />
-                      <span className="text-[11px] text-muted">{formatDate(run.completedAt ?? run.startedAt)}</span>
+                      <span className="text-[11px] text-muted">{formatDate(run.completedAt ?? run.startedAt, locale) ?? t("never")}</span>
                     </div>
-                    <p className="text-[12px] text-secondary">{run.summary ?? run.error ?? "Run recorded."}</p>
-                    <span className="text-[11px] text-muted">{run.actorName ?? "Super Admin"}</span>
+                    <p className="text-[12px] text-secondary">{run.summary ?? run.error ?? t("runRecorded")}</p>
+                    <span className="text-[11px] text-muted">{run.actorName ?? t("superAdmin")}</span>
                   </div>
                 ))
               )}
@@ -241,14 +248,14 @@ export default function MaintenanceScriptDetailPage() {
         onClose={() => {
           if (!isRunning) setIsConfirmOpen(false);
         }}
-        title={`Run ${script.name}`}
+        title={t("runModalTitle", { name: script.name })}
         size="md"
       >
         <div className="flex flex-col gap-4 text-[14px] text-secondary leading-relaxed">
           <p>{script.description}</p>
           <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4">
-            <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">Before you run</span>
-            This action is audited and should only be run when the notes on this page match the issue you are fixing.
+            <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("beforeYouRun")}</span>
+            {t("beforeYouRunBody")}
           </div>
           {feedback?.type === "error" ? (
             <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-3 text-red-500 text-[13px]">
@@ -258,23 +265,23 @@ export default function MaintenanceScriptDetailPage() {
         </div>
 
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setIsConfirmOpen(false)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+            className="rounded-[10px] text-sm hover:bg-foreground/5"
             disabled={isRunning}
           >
-            Cancel
-          </button>
-          <button
-            type="button"
+            {t("cancel")}
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleRun}
             disabled={isRunning}
-            className="px-5 py-2.5 rounded-[10px] bg-foreground text-background hover:bg-foreground/90 transition-all text-sm font-medium shadow-lg shadow-foreground/10 disabled:opacity-50 inline-flex items-center gap-2"
+            className="px-5 shadow-lg inline-flex items-center gap-2"
           >
             {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run script
-          </button>
+            {t("runScript")}
+          </Button>
         </div>
       </SonaeModal>
     </div>

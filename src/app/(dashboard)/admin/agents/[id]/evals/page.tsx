@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -31,6 +32,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 
 type AgentEvalFixture = Doc<"agentEvalFixtures">;
 
@@ -52,12 +54,15 @@ const DEFAULT_FIXTURE_TYPE = "HAPPY_PATH" as const;
  * show it as a green SUCCESS anyway, so the number an admin read and the number that
  * gated going live disagreed, and the screen showed the flattering one.
  */
-function describeStatus(entry: { status: string; gradingMode: string } | undefined) {
-  if (!entry) return { label: "Not run yet", tone: "text-muted" };
-  if (entry.gradingMode !== "MODEL_GRADED") return { label: "Setup only", tone: "text-amber-400" };
-  if (entry.status === "SUCCESS") return { label: "Passing", tone: "text-emerald-400" };
-  if (entry.status === "FAILED") return { label: "Failing", tone: "text-red-400" };
-  return { label: "Running…", tone: "text-secondary" };
+function describeStatus(
+  entry: { status: string; gradingMode: string } | undefined,
+  t: (key: string) => string
+) {
+  if (!entry) return { label: t("status.notRunYet"), tone: "text-muted" };
+  if (entry.gradingMode !== "MODEL_GRADED") return { label: t("status.setupOnly"), tone: "text-amber-400" };
+  if (entry.status === "SUCCESS") return { label: t("status.passing"), tone: "text-emerald-400" };
+  if (entry.status === "FAILED") return { label: t("status.failing"), tone: "text-red-400" };
+  return { label: t("status.running"), tone: "text-secondary" };
 }
 
 const DEFAULT_FORM = {
@@ -69,6 +74,7 @@ const DEFAULT_FORM = {
 };
 
 export default function AgentEvalsPage() {
+  const t = useTranslations("admin.agents.details.evals");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -172,7 +178,7 @@ export default function AgentEvalsPage() {
     };
 
     const outcome = await formAction.run(save, {
-      fallbackMessage: "The eval could not be saved.",
+      fallbackMessage: t("saveFailed"),
       suppressErrorToast: true,
     });
 
@@ -183,9 +189,7 @@ export default function AgentEvalsPage() {
     setForm(DEFAULT_FORM);
     // Editing bumps the check's timestamp, which retires its earlier passes. That
     // used to happen in silence, so a gate could re-block with no explanation.
-    setNotice(wasEditing
-      ? "Eval saved. Its earlier results no longer count, so run it again."
-      : "Eval created. Run it to see how the agent does.");
+    setNotice(wasEditing ? t("savedEdit") : t("savedNew"));
   };
 
   const handleRun = async (fixtureId: Id<"agentEvalFixtures">) => {
@@ -194,7 +198,7 @@ export default function AgentEvalsPage() {
     // configuration check — the thing that is not a test — and say it had passed.
     await runAction.run(() => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }), {
       key: `run:${fixtureId}`,
-      fallbackMessage: "The eval could not be run.",
+      fallbackMessage: t("runFailed"),
     });
   };
 
@@ -211,25 +215,25 @@ export default function AgentEvalsPage() {
       gradingMode: "MODEL_GRADED",
     }), {
       key: "run:unproven",
-      fallbackMessage: "The evals could not be run.",
+      fallbackMessage: t("runManyFailed"),
       suppressErrorToast: true,
     });
-    if (outcome.ok) setNotice(`Running ${count} check${count === 1 ? "" : "s"}. Results appear here as each one finishes.`);
+    if (outcome.ok) setNotice(t("runningCount", { count }));
   };
 
   const handleCheckSetup = async () => {
     setNotice("");
     const outcome = await runAction.run(() => runEvalSuite({ agentId, gradingMode: "CONTRACT_ONLY" }), {
       key: "run:setup",
-      fallbackMessage: "The setup eval could not be run.",
+      fallbackMessage: t("setupFailed"),
     });
-    if (outcome.ok) setNotice("Setup checked. This confirms the agent is wired up correctly — it does not test its answers.");
+    if (outcome.ok) setNotice(t("setupChecked"));
   };
 
   const handleArchive = async () => {
     if (!archiveTarget) return;
     const outcome = await archiveAction.run(() => archiveFixture({ fixtureId: archiveTarget._id }), {
-      fallbackMessage: "The eval could not be removed.",
+      fallbackMessage: t("removeFailed"),
     });
     if (outcome.ok) setArchiveTarget(null);
   };
@@ -240,41 +244,41 @@ export default function AgentEvalsPage() {
         <div>
           <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
             <ClipboardCheck className="h-6 w-6 text-brand" />
-            Evals
+            {t("title")}
           </h1>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-            An eval is a task, and a description of a good result. Running one gives the task to
-            this agent for real, then has a second AI mark what it did.
+            {t("description")}
           </p>
         </div>
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <p className="text-[15px] font-semibold text-foreground">
             {fixtures === undefined
-              ? "Loading…"
+              ? t("headline.loading")
               : rows.length === 0
-                ? "No evals yet."
-                : `${passing} of ${rows.length} eval${rows.length === 1 ? "" : "s"} passing.${unproven.length > 0 ? ` ${unproven.length} not proven yet.` : ""}`}
+                ? t("headline.none")
+                : `${t("headline.passing", { passing, total: rows.length })}${unproven.length > 0 ? ` ${t("headline.unproven", { count: unproven.length })}` : ""}`}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <Button
+              variant="brand"
               onClick={handleRunUnproven}
               disabled={runAction.isBusy() || rows.length === 0}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {runAction.isBusy("run:unproven") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Run evals
-            </button>
+              {t("runEvals")}
+            </Button>
+            {/* Raw: bordered chip with no fill, foreground text and a foreground/5 hover — quiet matches no pixel of it. */}
             <button
               type="button"
               onClick={handleCheckSetup}
               disabled={runAction.isBusy() || rows.length === 0}
-              title="Confirms the agent is wired up. Does not test its answers."
+              title={t("setupTitle")}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
             >
               {runAction.isBusy("run:setup") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
-              Eval setup
+              {t("evalSetup")}
             </button>
             <WriteButton
               type="button"
@@ -282,7 +286,7 @@ export default function AgentEvalsPage() {
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
               <Plus className="h-4 w-4" />
-              New eval
+              {t("newEval")}
             </WriteButton>
           </div>
         </div>
@@ -295,8 +299,7 @@ export default function AgentEvalsPage() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              {gate.passedCriticalFixtureCount} of {gate.criticalFixtureCount} must-pass evals are
-              passing. This agent cannot go live until all of them do.
+              {t("gateBlocked", { passed: gate.passedCriticalFixtureCount, total: gate.criticalFixtureCount })}
             </p>
           </div>
         </section>
@@ -305,7 +308,7 @@ export default function AgentEvalsPage() {
         <section className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>No eval has to pass before this agent goes live. Mark at least one as must-pass.</p>
+            <p>{t("gateNone")}</p>
           </div>
         </section>
       )}
@@ -328,7 +331,7 @@ export default function AgentEvalsPage() {
       <SearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder="Search evals by what they ask"
+        placeholder={t("searchPlaceholder")}
       />
 
       <DataTable
@@ -337,7 +340,7 @@ export default function AgentEvalsPage() {
         minWidthClassName="min-w-[760px]"
         empty={{
           icon: <ClipboardCheck className="h-8 w-8 text-muted/30" />,
-          label: "No evals yet — add one to catch this agent getting it wrong",
+          label: t("emptyLabel"),
         }}
         footer={{
           mode: "paged",
@@ -347,12 +350,12 @@ export default function AgentEvalsPage() {
           pageSize: paged.pageSize,
           isLoading: fixtures === undefined,
           onPageChange: paged.goToPage,
-          labels: { empty: "No evals" },
+          labels: { empty: t("footerEmpty") },
         }}
         columns={[
           {
             key: "eval",
-            header: "Eval",
+            header: t("columns.eval"),
             cell: (fixture) => (
               <>
                 <Link
@@ -369,26 +372,26 @@ export default function AgentEvalsPage() {
           },
           {
             key: "status",
-            header: "Status",
+            header: t("columns.status"),
             className: "w-[130px]",
             cell: (fixture) => {
-              const status = describeStatus(latestByFixture.get(fixture._id));
+              const status = describeStatus(latestByFixture.get(fixture._id), t);
               return <span className={`text-[13px] font-semibold ${status.tone}`}>{status.label}</span>;
             },
           },
           {
             key: "mustPass",
-            header: "Must pass",
+            header: t("columns.mustPass"),
             className: "w-[120px]",
             cell: (fixture) => (
               <span className="text-[12px] text-secondary">
-                {fixture.tags.includes(MUST_PASS_TAG) ? "Yes" : "No"}
+                {fixture.tags.includes(MUST_PASS_TAG) ? t("yes") : t("no")}
               </span>
             ),
           },
           {
             key: "lastRun",
-            header: "Last run",
+            header: t("columns.lastRun"),
             className: "w-[170px]",
             cell: (fixture) => {
               const latest = latestByFixture.get(fixture._id);
@@ -408,6 +411,7 @@ export default function AgentEvalsPage() {
               const isRunning = runAction.isBusy(`run:${fixture._id}`);
               return (
                 <div className="flex items-center justify-end gap-1">
+                  {/* Raw: borderless row action with a foreground/5 hover — quiet's border and fill match no pixel of it. */}
                   <button
                     type="button"
                     onClick={() => handleRun(fixture._id)}
@@ -415,13 +419,13 @@ export default function AgentEvalsPage() {
                     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
                   >
                     {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                    Run
+                    {t("run")}
                   </button>
-                  <RowIconButton label={`Edit ${fixture.objective}`} onClick={() => openEdit(fixture)}>
+                  <RowIconButton label={t("editAria", { name: fixture.objective })} onClick={() => openEdit(fixture)}>
                     <Pencil className="h-4 w-4" />
                   </RowIconButton>
                   <RowIconButton
-                    label={`Remove ${fixture.objective}`}
+                    label={t("removeAria", { name: fixture.objective })}
                     tone="danger"
                     onClick={() => setArchiveTarget(fixture)}
                   >
@@ -440,30 +444,30 @@ export default function AgentEvalsPage() {
       <SonaeModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        title={editingId ? "Edit eval" : "New eval"}
+        title={editingId ? t("form.editTitle") : t("form.newTitle")}
         size="lg"
       >
         <div className="flex flex-col gap-5 pt-2">
           <ModalFormError>{formAction.error}</ModalFormError>
 
-          <ModalFormField label="What should the agent be asked to do?">
+          <ModalFormField label={t("form.objectiveLabel")}>
             <textarea
               className={`${modalTextareaClassName} min-h-[110px]`}
               value={form.objective}
               onChange={(event) => setForm((current) => ({ ...current, objective: event.target.value }))}
-              placeholder="Find this month's overdue invoices and summarise who owes what."
+              placeholder={t("form.objectivePlaceholder")}
             />
           </ModalFormField>
 
           <ModalFormField
-            label="What does a good result look like?"
-            hint="Plain English. This is what the marking AI reads."
+            label={t("form.rubricLabel")}
+            hint={t("form.rubricHint")}
           >
             <textarea
               className={`${modalTextareaClassName} min-h-[130px]`}
               value={form.rubric}
               onChange={(event) => setForm((current) => ({ ...current, rubric: event.target.value }))}
-              placeholder="Lists each overdue invoice with the customer and the amount. Never invents a figure it did not look up."
+              placeholder={t("form.rubricPlaceholder")}
             />
           </ModalFormField>
 
@@ -475,62 +479,62 @@ export default function AgentEvalsPage() {
               className="mt-0.5 accent-brand"
             />
             <span>
-              <span className="block text-[13px] font-semibold text-foreground">This must pass before the agent goes live</span>
-              <span className="block text-[12px] text-secondary">Nothing stops an agent going live unless at least one eval says so.</span>
+              <span className="block text-[13px] font-semibold text-foreground">{t("form.mustPassLabel")}</span>
+              <span className="block text-[12px] text-secondary">{t("form.mustPassHint")}</span>
             </span>
           </label>
 
           <details className="rounded-[8px] border border-border-dim px-3 py-2.5">
-            <summary className="cursor-pointer text-[13px] font-semibold text-foreground">Advanced</summary>
+            <summary className="cursor-pointer text-[13px] font-semibold text-foreground">{t("form.advanced")}</summary>
             <div className="mt-4 flex flex-col gap-5">
               <ModalFormField
-                label="Give it the task more than once"
-                hint="An eval that passes two times in three is an eval that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade."
+                label={t("form.sampleLabel")}
+                hint={t("form.sampleHint")}
               >
                 <select
                   className={modalInputClassName}
                   value={String(form.sampleCount)}
                   onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
                 >
-                  <option value="1">Once</option>
-                  <option value="3">3 times — all must pass</option>
-                  <option value="5">5 times — all must pass</option>
+                  <option value="1">{t("form.once")}</option>
+                  <option value="3">{t("form.three")}</option>
+                  <option value="5">{t("form.five")}</option>
                 </select>
               </ModalFormField>
               <ModalField
-                label="Tools it should use"
-                hint="Optional, comma separated. Leave empty unless you are testing that a particular tool gets used."
+                label={t("form.toolsLabel")}
+                hint={t("form.toolsHint")}
                 value={form.tools}
                 onChange={(event) => setForm((current) => ({ ...current, tools: event.target.value }))}
-                placeholder="knowledge.search, crm.lookup"
+                placeholder={t("form.toolsPlaceholder")}
               />
             </div>
           </details>
 
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button type="button" onClick={() => setIsFormOpen(false)} disabled={formAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
-              Cancel
-            </button>
+            <Button variant="ghost" onClick={() => setIsFormOpen(false)} disabled={formAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
+              {t("form.cancel")}
+            </Button>
             <WriteButton type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
               {formAction.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editingId ? "Save check" : "Create check"}
+              {editingId ? t("form.saveCheck") : t("form.createCheck")}
             </WriteButton>
           </div>
         </div>
       </SonaeModal>
 
-      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title="Remove check" size="sm">
+      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModal.title")} size="sm">
         <div className="flex flex-col gap-6">
           <p className="text-[13px] leading-relaxed text-secondary">
-            This stops the check counting towards going live. Its past results stay in the audit record.
+            {t("removeModal.body")}
           </p>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button type="button" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
-              Cancel
-            </button>
+            <Button variant="ghost" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
+              {t("removeModal.cancel")}
+            </Button>
             <WriteButton type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
               {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Remove
+              {t("removeModal.confirm")}
             </WriteButton>
           </div>
         </div>

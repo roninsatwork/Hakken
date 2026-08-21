@@ -36,6 +36,9 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string, values?: Record<string, string | number>) => {
     const full = `${namespace}.${key}`;
     return values?.id !== undefined ? `${full} ${values.id}` : full;
@@ -43,7 +46,7 @@ vi.mock("next-intl", () => ({
 }));
 
 const FORM = "admin.agents.details.rules.form";
-const NAME = "For example: Office address";
+const NAME = "admin.agents.details.rules.form.name.placeholder";
 const TRIGGER = `${FORM}.trigger.placeholder`;
 const INSTRUCTION = `${FORM}.instruction.placeholder.edit`;
 const SUBMIT = `${FORM}.edit.submit`;
@@ -134,7 +137,7 @@ describe("EditAgentRulePage", () => {
   it("gives every box a label that addresses it", () => {
     show();
 
-    expect(screen.getByLabelText("What to call this rule")).toBe(screen.getByPlaceholderText(NAME));
+    expect(screen.getByLabelText("admin.agents.details.rules.form.name.label")).toBe(screen.getByPlaceholderText(NAME));
     expect(screen.getByLabelText(`${FORM}.trigger.entity`)).toBe(screen.getByPlaceholderText(TRIGGER));
     expect(screen.getByLabelText(`${FORM}.instruction.context`)).toBe(screen.getByPlaceholderText(INSTRUCTION));
   });

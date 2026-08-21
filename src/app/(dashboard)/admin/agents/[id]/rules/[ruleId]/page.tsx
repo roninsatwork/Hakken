@@ -141,11 +141,11 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
            
            <div className="ml-1">
              <Field
-               label="What to call this rule"
+               label={t("name.label")}
                autoFocus
                value={form.name}
                onChange={(e) => updateDraft({ name: e.target.value })}
-               placeholder="For example: Office address"
+               placeholder={t("name.placeholder")}
              />
            </div>
         </section>

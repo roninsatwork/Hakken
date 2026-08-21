@@ -1,6 +1,18 @@
-import type React from "react";
+import React from "react";
+import { NextIntlClientProvider } from "next-intl";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { renderWithProviders } from "@/src/test/renderWithProviders";
+import { renderWithProviders as renderBase } from "@/src/test/renderWithProviders";
+import messages from "../../../../../../../messages/en.json";
+
+// The screen resolves its copy through the catalogue, so it renders inside
+// the same intl provider the root layout supplies.
+function renderWithProviders(ui: React.ReactElement) {
+  return renderBase(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";

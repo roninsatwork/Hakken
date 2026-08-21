@@ -174,6 +174,7 @@ export default function WorkflowExecutionDetailPage() {
             cell: (step) =>
               step.status === "PENDING_APPROVAL" ? (
                 <div className="flex items-center justify-end gap-2">
+                  {/* Stays raw: a brand fill with theme-background text — `brand` wears white text, so no variant is this. */}
                   <button
                     type="button"
                     onClick={() => decide(step.nodeId, "APPROVED")}
@@ -183,6 +184,7 @@ export default function WorkflowExecutionDetailPage() {
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {t("detail.approve")}
                   </button>
+                  {/* Stays raw: a compact red row chip — destructive's confirm recipe is a big uppercase pill. */}
                   <button
                     type="button"
                     onClick={() => setPendingRejection({ nodeId: step.nodeId })}

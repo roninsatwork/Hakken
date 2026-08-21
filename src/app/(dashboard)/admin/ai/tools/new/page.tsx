@@ -110,6 +110,7 @@ export default function RegisterToolPage() {
               <span className="mt-1 text-[12px] font-medium text-secondary">{t("fields.role.label")}</span>
               <div className="grid grid-cols-2 gap-3">
                  {(["ADMIN", "SUPER_ADMIN"] as const).map(p => (
+                   // Stays raw: a selected-state role card with per-role colours — matches no variant.
                    <button
                      key={p}
                      type="button"

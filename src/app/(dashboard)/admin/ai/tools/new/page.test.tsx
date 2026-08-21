@@ -35,6 +35,9 @@ vi.mock("next/link", () => ({
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 const NEW = "admin.aiTools.new";

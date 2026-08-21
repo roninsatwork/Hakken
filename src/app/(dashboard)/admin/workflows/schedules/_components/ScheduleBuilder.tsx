@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, ChevronDown, Clock3, Repeat2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/src/ui/atoms/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import {
   addTargetedTime,
@@ -62,6 +63,7 @@ function ModeCard(props: {
   title: string;
 }) {
   return (
+    // Stays raw: a selected-state mode card whose colours swap with selection — matches no variant.
     <button
       type="button"
       onClick={props.onClick}
@@ -162,6 +164,7 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
             <label className="text-[10px] font-mono tracking-[0.28em] text-muted uppercase">{t("fields.interval.executionInterval")}</label>
             <div className="grid grid-cols-4 rounded-[12px] border border-border-dim p-1">
               {cadenceOptions.map((option) => (
+                // Stays raw: a segmented-control cell whose fill swaps with selection — matches no variant.
                 <button
                   key={option.id}
                   type="button"
@@ -247,13 +250,13 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
                 className="font-mono"
               />
             </div>
-            <button
-              type="button"
+            <Button
+              variant="primary"
               onClick={() => onChange(addTargetedTime(draft, pendingTime))}
-              className="h-12 rounded-[10px] bg-foreground px-6 text-[14px] font-bold text-background transition-opacity hover:opacity-90"
+              className="h-12 py-0 text-[14px] font-bold shadow-none"
             >
               {t("fields.interval.addTime")}
-            </button>
+            </Button>
           </div>
 
           <div className="rounded-[12px] border border-border-dim p-4">
@@ -268,6 +271,7 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
                       <span className="font-mono text-[16px] font-bold text-foreground">{time} <span className="font-sans text-[12px] text-muted">Local</span></span>
                       <span className="font-mono text-[12px] text-muted">{formatUtcPreview(time)} UTC</span>
                     </div>
+                    {/* Stays raw: a borderless red text action — ghost is grey and destructive is a bordered pill. */}
                     <button
                       type="button"
                       onClick={() => onChange(removeTargetedTime(draft, time))}

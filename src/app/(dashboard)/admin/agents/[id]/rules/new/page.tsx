@@ -93,11 +93,11 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
            
            <div className="ml-1">
              <Field
-               label="What to call this rule"
+               label={t("name.label")}
                autoFocus
                value={name}
                onChange={(e) => setName(e.target.value)}
-               placeholder="For example: Office address"
+               placeholder={t("name.placeholder")}
              />
            </div>
         </section>
@@ -127,6 +127,7 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
             {(["LOW", "NORMAL", "HIGH", "CRITICAL"] as const).map(p => (
+              /* Raw: priority picker card — selection swaps whole colour schemes; no kit variant is stateful. */
               <button
                 key={p}
                 type="button"

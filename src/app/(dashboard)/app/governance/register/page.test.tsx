@@ -1,3 +1,4 @@
+import React from "react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, vi } from "vitest";
 import { useQuery } from "convex/react";
@@ -16,6 +17,9 @@ vi.mock("convex/react", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  // renderWithProviders wraps every screen in the provider, so the mocked
+  // module has to export it too — as a pass-through.
+  NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
 }));
 

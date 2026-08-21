@@ -80,7 +80,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
         {/* Header */}
         <div className="flex items-center gap-3 p-3 border-b border-border-dim/30">
           {data.avatar ? (
-            <Image src={data.avatar} alt="Avatar" width={32} height={32} unoptimized className="w-8 h-8 rounded-full border border-border-dim object-cover" />
+            <Image src={data.avatar} alt={t('avatarAlt')} width={32} height={32} unoptimized className="w-8 h-8 rounded-full border border-border-dim object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground">
               <Bot className="w-4 h-4 text-brand" />
@@ -129,7 +129,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
           )}
           {skillNames.length ? (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">Skills</span>
+              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">{t('skills')}</span>
               <div className="flex flex-wrap gap-1">
                 {skillNames.slice(0, 3).map((name) => (
                   <span key={name} className="px-1.5 py-0.5 rounded-[4px] bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-300">
@@ -145,7 +145,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
             </div>
           ) : skillCount ? (
             <div className="flex items-center justify-between rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-mono text-emerald-300">
-              <span>Skills</span>
+              <span>{t('skills')}</span>
               <span>{skillCount}</span>
             </div>
           ) : null}

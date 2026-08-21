@@ -54,6 +54,7 @@ export default function SystemSecurityPage() {
               <span className="text-[14px] text-foreground font-semibold">{t("security.masterToggle")}</span>
               <span className="text-[12px] text-muted">{t("security.masterToggleSub")}</span>
             </div>
+            {/* This switch and the four below stay raw: bare toggle glyphs whose colour is the state — matches no variant. */}
             <button
               type="button"
               aria-pressed={piiData.enabled ?? false}

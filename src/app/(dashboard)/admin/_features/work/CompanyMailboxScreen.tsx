@@ -11,6 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type Decision = "PENDING" | "REPLIED" | "TASK" | "SKIPPED";
 
@@ -31,6 +32,7 @@ const DECISION_FILTERS: Array<{ value: Decision | "ALL"; labelKey: string }> = [
  */
 export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies"> }) {
   const t = useTranslations("aiMailbox");
+  const { platformName } = useSystemSettings();
   const [search, setSearch] = useState("");
   const [decision, setDecision] = useState<Decision | "ALL">("ALL");
 
@@ -58,7 +60,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
         divider
       />
 
-      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
+      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint", { platformName })}</p>
 
       <DataTable
         rows={mail.isLoading ? undefined : mail.rows}
@@ -68,6 +70,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
         filters={
           <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
             {DECISION_FILTERS.map((option) => (
+              /* Raw: segmented filter — the active option swaps its colours; no kit variant is stateful. */
               <button
                 key={option.value}
                 type="button"
@@ -119,7 +122,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
           },
           {
             key: "decision",
-            header: t("columns.decision"),
+            header: t("columns.decision", { platformName }),
             className: "whitespace-nowrap",
             cell: (row) => (
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${decisionClass[row.decision] ?? "text-secondary"}`}>

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ClipboardCheck, Lightbulb, Loader2, RotateCcw } from "lucide-react";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -18,7 +19,7 @@ import {
   getStepTone,
   type ReplayMode,
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
-import { formatMoney } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
+import { formatMoney, type LabelRef } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/atoms/Button";
@@ -53,6 +54,10 @@ export function RunDetailModal({
   onReflect: (runId: Id<"agentRuns">) => void;
   onCreateEvalFixture: (runId: Id<"agentRuns">) => void;
 }) {
+  const t = useTranslations("admin.agents.details.runs.detail");
+  const tLabels = useTranslations("admin.agents.labels");
+  // The pure rules return catalogue keys, not words; this says them.
+  const label = (ref: LabelRef) => tLabels(ref.key, ref.params);
   const router = useRouter();
   const runDetail = useQuery(api.agentRuns.getRunDetail, detailRunId ? { runId: detailRunId } : "skip");
 
@@ -60,7 +65,7 @@ export function RunDetailModal({
     <SonaeModal
       isOpen={!!detailRunId}
       onClose={onClose}
-      title="Job detail"
+      title={t("title")}
       size="xl"
     >
       {!detailRunId ? null : runDetail === undefined ? (
@@ -69,7 +74,7 @@ export function RunDetailModal({
         </div>
       ) : runDetail === null ? (
         <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
-          This job could not be found, or it belongs to a workspace you cannot see.
+          {t("notFound")}
         </div>
       ) : (
         <div className="flex flex-col gap-5">
@@ -83,7 +88,7 @@ export function RunDetailModal({
                   <span className="text-[11px] font-mono text-muted">{runDetail.run.triggerType}</span>
                   {runDetail.run.isRehearsal && (
                     <span className="rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                      Rehearsal — writes recorded, not performed
+                      {t("rehearsalNote")}
                     </span>
                   )}
                   <span className="text-[11px] font-mono text-muted">{formatDateTime(runDetail.run.startedAt)}</span>
@@ -102,20 +107,20 @@ export function RunDetailModal({
                   onClick={() => router.push(`/admin/agents/${agentId}/observability/${runDetail.run._id}`)}
                   className="text-[12px] text-brand hover:underline mt-2"
                 >
-                  See where the time went
+                  {t("seeTime")}
                 </button>
               </div>
               <div className="text-[11px] font-mono text-muted md:text-right flex flex-col gap-1 shrink-0">
-                <span>run: {runDetail.run._id}</span>
-                {runDetail.run.agentVersionId && <span>version: {runDetail.run.agentVersionId}</span>}
-                {runDetail.run.modelId && <span>model: {runDetail.run.modelId}</span>}
+                <span>{t("runId", { id: runDetail.run._id })}</span>
+                {runDetail.run.agentVersionId && <span>{t("version", { id: runDetail.run.agentVersionId })}</span>}
+                {runDetail.run.modelId && <span>{t("model", { id: runDetail.run.modelId })}</span>}
               </div>
             </div>
 
             {(runDetail.run.finalOutput || runDetail.run.error) && (
               <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
-                  {runDetail.run.error ? "Error" : "Final output"}
+                  {runDetail.run.error ? t("error") : t("finalOutput")}
                 </div>
                 <p className={`text-[12px] leading-relaxed whitespace-pre-wrap ${runDetail.run.error ? "text-destructive" : "text-secondary"}`}>
                   {runDetail.run.error || runDetail.run.finalOutput}
@@ -126,13 +131,13 @@ export function RunDetailModal({
 
           <div className="border border-border-dim rounded-[14px] bg-card px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-[12px] uppercase tracking-widest text-muted">What you can do with this job</h3>
+              <h3 className="text-[12px] uppercase tracking-widest text-muted">{t("whatYouCanDo")}</h3>
               <p className="text-[12px] text-secondary mt-1 leading-relaxed">
                 {runDetail.evalFixtureContext.activeCount > 0
-                  ? `This run is covered by ${runDetail.evalFixtureContext.activeCount} active eval fixture${runDetail.evalFixtureContext.activeCount === 1 ? "" : "s"}.`
+                  ? t("covered", { count: runDetail.evalFixtureContext.activeCount })
                   : runDetail.evalFixtureContext.canCreateFromRun
-                    ? "Turn this job into a check, so this exact case is tested from now on."
-                    : "A job can become a check once it has finished."}
+                    ? t("turnIntoCheck")
+                    : t("canBecomeCheck")}
               </p>
               {runDetail.evalFixtureContext.fixtures.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -157,7 +162,7 @@ export function RunDetailModal({
                   className="flex items-center gap-2"
                 >
                   {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                  Run again now
+                  {t("runAgainNow")}
                 </Button>
               )}
               {canReplay(runDetail.run.status) && runDetail.run.agentVersionId && (
@@ -168,7 +173,7 @@ export function RunDetailModal({
                   className="px-3 py-2 rounded-[8px] border border-info/20 bg-info/10 text-info text-[12px] font-semibold hover:bg-info/15 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
-                  Run again as it was
+                  {t("runAgainAsWas")}
                 </button>
               )}
               {canReplay(runDetail.run.status) && (
@@ -179,7 +184,7 @@ export function RunDetailModal({
                   className="px-3 py-2 rounded-[8px] border border-info/20 bg-info/10 text-info text-[12px] font-semibold hover:bg-info/15 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
-                  Ask what it would change
+                  {t("askChange")}
                 </button>
               )}
               {runDetail.evalFixtureContext.canCreateFromRun && (
@@ -190,7 +195,7 @@ export function RunDetailModal({
                   className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
-                  {runDetail.evalFixtureContext.activeCount > 0 ? "Update eval" : "Create eval"}
+                  {runDetail.evalFixtureContext.activeCount > 0 ? t("updateEval") : t("createEval")}
                 </WriteButton>
               )}
             </div>
@@ -200,9 +205,9 @@ export function RunDetailModal({
             <div className="border border-border-dim rounded-[14px] bg-card px-4 py-3 flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div>
-                  <h3 className="text-[12px] uppercase tracking-widest text-muted">Other times this job was run</h3>
+                  <h3 className="text-[12px] uppercase tracking-widest text-muted">{t("otherTimes")}</h3>
                   <p className="text-[12px] text-secondary mt-1">
-                    How this job went the other times it was run.
+                    {t("otherTimesHint")}
                   </p>
                 </div>
                 {runDetail.run.replayMode && (
@@ -216,7 +221,7 @@ export function RunDetailModal({
                 <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-3 flex flex-col gap-3">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Replay of</div>
+                      <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("replayOf")}</div>
                       <button
                         type="button"
                         onClick={() => onInspectRun(runDetail.replayContext.sourceRun?.runId || null)}
@@ -227,22 +232,22 @@ export function RunDetailModal({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.sourceRun.status)]}`}>
-                        original {runDetail.replayContext.sourceRun.status.replace("_", " ")}
+                        {t("originalStatus", { status: runDetail.replayContext.sourceRun.status.replace("_", " ") })}
                       </span>
                       <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.comparison.replayStatus)]}`}>
-                        replay {runDetail.replayContext.comparison.replayStatus.replace("_", " ")}
+                        {t("replayStatus", { status: runDetail.replayContext.comparison.replayStatus.replace("_", " ") })}
                       </span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                     {[
-                      { label: "Latency", value: formatSignedDurationDelta(runDetail.replayContext.comparison.latencyDeltaMs) },
-                      { label: "Cost", value: formatSignedCurrencyDelta(runDetail.replayContext.comparison.costDeltaGBP) },
-                      { label: "Tokens", value: formatSignedNumberDelta(runDetail.replayContext.comparison.tokenDelta) },
-                      { label: "Steps", value: formatSignedNumberDelta(runDetail.replayContext.comparison.stepCountDelta) },
+                      { label: t("deltas.latency"), value: formatSignedDurationDelta(runDetail.replayContext.comparison.latencyDeltaMs) ?? tLabels("notAvailable") },
+                      { label: t("deltas.cost"), value: formatSignedCurrencyDelta(runDetail.replayContext.comparison.costDeltaGBP) ?? tLabels("notAvailable") },
+                      { label: t("deltas.tokens"), value: formatSignedNumberDelta(runDetail.replayContext.comparison.tokenDelta) ?? tLabels("notAvailable") },
+                      { label: t("deltas.steps"), value: formatSignedNumberDelta(runDetail.replayContext.comparison.stepCountDelta) ?? tLabels("notAvailable") },
                       {
-                        label: "Output",
-                        value: runDetail.replayContext.comparison.outputChanged ? "changed" : "same",
+                        label: t("deltas.output"),
+                        value: runDetail.replayContext.comparison.outputChanged ? t("deltas.changed") : t("deltas.same"),
                       },
                     ].map((item) => (
                       <div key={item.label} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
@@ -253,13 +258,13 @@ export function RunDetailModal({
                   </div>
                   {runDetail.replayContext.timelineDiff.length > 0 && (
                     <div className="flex flex-col gap-2">
-                      <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Timeline diff</div>
+                      <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("timelineDiff")}</div>
                       {runDetail.replayContext.timelineDiff.map((diff) => (
                         <div key={diff.stepIndex} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-3 flex flex-col gap-3">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                                step {diff.stepIndex}
+                                {t("step", { index: diff.stepIndex })}
                               </span>
                               <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepDiffTone(diff.changeType)]}`}>
                                 {diff.changeType.toLowerCase()}
@@ -271,15 +276,15 @@ export function RunDetailModal({
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
-                              {diff.kindChanged && <span>kind</span>}
-                              {diff.statusChanged && <span>status</span>}
-                              {diff.outputChanged && <span>output</span>}
-                              {diff.errorChanged && <span>error</span>}
+                              {diff.kindChanged && <span>{t("kindWord")}</span>}
+                              {diff.statusChanged && <span>{t("statusWord")}</span>}
+                              {diff.outputChanged && <span>{t("outputWord")}</span>}
+                              {diff.errorChanged && <span>{t("errorWord")}</span>}
                             </div>
                           </div>
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                             <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 min-w-0">
-                              <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">Original</div>
+                              <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">{t("original")}</div>
                               {diff.source ? (
                                 <div className="flex flex-col gap-1">
                                   <div className="flex flex-wrap gap-2">
@@ -291,11 +296,11 @@ export function RunDetailModal({
                                   <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.source.summary}</p>
                                 </div>
                               ) : (
-                                <p className="text-[11px] text-muted">No matching original step.</p>
+                                <p className="text-[11px] text-muted">{t("noOriginalStep")}</p>
                               )}
                             </div>
                             <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 min-w-0">
-                              <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">Replay</div>
+                              <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">{t("replay")}</div>
                               {diff.replay ? (
                                 <div className="flex flex-col gap-1">
                                   <div className="flex flex-wrap gap-2">
@@ -307,7 +312,7 @@ export function RunDetailModal({
                                   <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.replay.summary}</p>
                                 </div>
                               ) : (
-                                <p className="text-[11px] text-muted">No matching replay step.</p>
+                                <p className="text-[11px] text-muted">{t("noReplayStep")}</p>
                               )}
                             </div>
                           </div>
@@ -320,7 +325,7 @@ export function RunDetailModal({
 
               {runDetail.replayContext.replayRuns.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Recent replays</div>
+                  <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("recentReplays")}</div>
                   {runDetail.replayContext.replayRuns.map((replay) => (
                     <button
                       key={replay.runId}
@@ -341,24 +346,24 @@ export function RunDetailModal({
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             <div className="border border-border-dim rounded-[14px] bg-card px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-muted">Steps</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted">{t("statSteps")}</div>
               <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.steps.length}</div>
             </div>
             <div className="border border-border-dim rounded-[14px] bg-card px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-muted">Tools used</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted">{t("statTools")}</div>
               <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.toolCalls.length}</div>
             </div>
             <div className="border border-border-dim rounded-[14px] bg-card px-4 py-3">
-              <div className="text-[10px] uppercase tracking-widest text-muted">Waiting on people</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted">{t("statApprovals")}</div>
               <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.approvals.length}</div>
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            <h3 className="text-[12px] uppercase tracking-widest text-muted">What it did, step by step</h3>
+            <h3 className="text-[12px] uppercase tracking-widest text-muted">{t("stepByStep")}</h3>
             {runDetail.timeline.length === 0 ? (
               <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
-                This job did not get far enough to record what it was doing.
+                {t("didNotGetFar")}
               </div>
             ) : (
               runDetail.timeline.map((step) => (
@@ -366,10 +371,10 @@ export function RunDetailModal({
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                        {step.stepIndex}. {describeStepKind(step.kind)}
+                        {step.stepIndex}. {label(describeStepKind(step.kind))}
                       </span>
                       <span className={`text-[11px] px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepTone(step.status)]}`}>
-                        {describeStepStatus(step.status)}
+                        {label(describeStepStatus(step.status))}
                       </span>
                       {step.durationMs !== undefined && (
                         <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-black/20 text-muted">
@@ -385,14 +390,14 @@ export function RunDetailModal({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                       {step.inputPreview && (
                         <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
-                          <div className="text-[10px] uppercase tracking-widest text-muted mb-1">What we sent</div>
+                          <div className="text-[10px] uppercase tracking-widest text-muted mb-1">{t("whatWeSent")}</div>
                           <pre className="text-[11px] text-secondary whitespace-pre-wrap overflow-x-auto">{step.inputPreview}</pre>
                         </div>
                       )}
                       {(step.outputPreview || step.errorPreview) && (
                         <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
                           <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
-                            {step.errorPreview ? "What went wrong" : "What came back"}
+                            {step.errorPreview ? t("whatWentWrong") : t("whatCameBack")}
                           </div>
                           <pre className={`text-[11px] whitespace-pre-wrap overflow-x-auto ${step.errorPreview ? "text-destructive" : "text-secondary"}`}>
                             {step.errorPreview || step.outputPreview}
@@ -407,20 +412,20 @@ export function RunDetailModal({
                         measured in, and calling them words would be plainer
                         but wrong — a token is roughly three quarters of one. */}
                     {step.inputTokens !== undefined && step.outputTokens !== undefined && (
-                      <span>{(step.inputTokens + step.outputTokens).toLocaleString("en-GB")} tokens</span>
+                      <span>{t("tokens", { count: (step.inputTokens + step.outputTokens).toLocaleString("en-GB") })}</span>
                     )}
-                    {step.costGBP !== undefined && <span>cost {formatMoney(step.costGBP)}</span>}
+                    {step.costGBP !== undefined && <span>{t("costLabel", { amount: formatMoney(step.costGBP) })}</span>}
                   </div>
                   {(step.linkedToolCalls.length > 0 || step.linkedApprovals.length > 0) && (
                     <div className="flex flex-wrap gap-2">
                       {step.linkedToolCalls.map((toolCall) => (
                         <span key={toolCall.toolCallId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
-                          tool {toolCall.handlerMapping}: {toolCall.status.toLowerCase().replace("_", " ")}
+                          {t("toolBadge", { mapping: toolCall.handlerMapping, status: toolCall.status.toLowerCase().replace("_", " ") })}
                         </span>
                       ))}
                       {step.linkedApprovals.map((approval) => (
                         <span key={approval.approvalId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
-                          approval {approval.status.toLowerCase()}
+                          {t("approvalBadge", { status: approval.status.toLowerCase() })}
                         </span>
                       ))}
                     </div>
@@ -432,7 +437,7 @@ export function RunDetailModal({
 
           {runDetail.toolCalls.length > 0 && (
             <div className="flex flex-col gap-3">
-              <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Tool calls</h3>
+              <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">{t("toolCalls")}</h3>
               {runDetail.toolCalls.map((toolCall) => (
                 <div key={toolCall._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
@@ -447,17 +452,17 @@ export function RunDetailModal({
                   <div className="flex flex-wrap gap-3 text-[11px] font-mono text-muted">
                     <span>{toolCall.sideEffectLevel.toLowerCase()}</span>
                     <span>{toolCall.requiredRole.toLowerCase()}</span>
-                    {toolCall.confirmationRequired && <span>confirmation required</span>}
-                    <span>{toolCall.argumentViewMode.toLowerCase()} args</span>
+                    {toolCall.confirmationRequired && <span>{t("confirmationRequired")}</span>}
+                    <span>{t("args", { mode: toolCall.argumentViewMode.toLowerCase() })}</span>
                   </div>
                   <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                       <div className="text-[10px] uppercase tracking-widest font-mono text-muted">
-                        {toolCall.argumentViewMode === "RAW" ? "Raw arguments" : "Redacted arguments"}
+                        {toolCall.argumentViewMode === "RAW" ? t("rawArguments") : t("redactedArguments")}
                       </div>
                       {toolCall.rawArgumentsAvailable && toolCall.argumentViewMode !== "RAW" && (
                         <span className="text-[10px] uppercase tracking-widest font-mono text-muted">
-                          raw restricted
+                          {t("rawRestricted")}
                         </span>
                       )}
                     </div>
@@ -477,7 +482,7 @@ export function RunDetailModal({
 
           {runDetail.approvals.length > 0 && (
             <div className="flex flex-col gap-3">
-              <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Approvals</h3>
+              <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">{t("approvals")}</h3>
               {runDetail.approvals.map((approval) => (
                 <div key={approval._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -494,7 +499,7 @@ export function RunDetailModal({
                   )}
                   {approval.decisionReason && (
                     <p className="text-[12px] text-secondary leading-relaxed">
-                      <span className="text-muted font-mono">decision:</span> {approval.decisionReason}
+                      <span className="text-muted font-mono">{t("decisionLabel")}</span> {approval.decisionReason}
                     </p>
                   )}
                 </div>

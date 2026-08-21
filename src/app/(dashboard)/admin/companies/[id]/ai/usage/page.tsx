@@ -39,12 +39,13 @@ type ProviderDistributionRow = {
   cost: number;
 };
 
-function formatProviderName(providerKey: string) {
+/** Provider names are brands; only the unknown bucket is copy and comes from the caller. */
+function formatProviderName(providerKey: string, unknownLabel: string) {
   if (providerKey === "google") return "Google Vertex AI";
   if (providerKey === "openai") return "OpenAI";
   if (providerKey === "anthropic") return "Anthropic";
   if (providerKey === "openrouter") return "OpenRouter";
-  if (providerKey === "unknown") return "Unknown / Legacy";
+  if (providerKey === "unknown") return unknownLabel;
   return providerKey;
 }
 
@@ -67,7 +68,9 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: MetricBlockPr
   </motion.div>
 );
 
-const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[] }) => (
+const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[] }) => {
+  const t = useTranslations("admin.companyDetails.providerUsage");
+  return (
   <motion.section
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
@@ -77,22 +80,22 @@ const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[
     <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
       <div className="flex items-center gap-3">
         <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
-        <h2 className="text-[14px] font-bold text-foreground">Provider Usage</h2>
+        <h2 className="text-[14px] font-bold text-foreground">{t("title")}</h2>
       </div>
-      <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Tenant spend by provider</span>
+      <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">{t("subtitle")}</span>
     </div>
     <div className="flex flex-col">
       {!providers || providers.length === 0 ? (
-        <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Provider Data</div>
+        <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t("noData")}</div>
       ) : (
         providers.map((provider) => (
           <div key={provider.providerKey} className="flex items-center justify-between px-6 py-4 border-b border-border-dim/50 last:border-0">
             <div className="flex min-w-0 flex-col">
               <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
-                {formatProviderName(provider.providerKey)}
+                {formatProviderName(provider.providerKey, t("unknownProvider"))}
               </span>
               <span className="text-[10px] text-secondary/70 font-mono tracking-widest uppercase">
-                {(provider.calls ?? 0).toLocaleString()} calls
+                {t("calls", { count: (provider.calls ?? 0).toLocaleString() })}
               </span>
             </div>
             <span className="text-[13px] font-bold text-foreground tracking-tight">
@@ -103,7 +106,8 @@ const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[
       )}
     </div>
   </motion.section>
-);
+  );
+};
 
 export default function CompanyAiUsagePage() {
   const params = useParams();

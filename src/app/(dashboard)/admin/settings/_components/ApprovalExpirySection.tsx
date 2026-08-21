@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
 import { Field } from "@/src/ui/components/screens/Field";
+import { useTranslations } from "next-intl";
 
 /**
  * How long an agent run may wait for a person before the platform gives up.
@@ -18,6 +19,7 @@ import { Field } from "@/src/ui/components/screens/Field";
  * system health screen can only display.
  */
 export function ApprovalExpirySection() {
+  const t = useTranslations("admin.settings.approvals");
   const config = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
   const updateConfig = useMutation(api.agentRunApprovals.updateApprovalExpiryConfig);
 
@@ -40,7 +42,7 @@ export function ApprovalExpirySection() {
     } catch (error) {
       // The server refuses a window below the minimum by name, so the reason is
       // shown rather than a generic failure.
-      setSaveError(getErrorMessage(error, "Could not save the approval window."));
+      setSaveError(getErrorMessage(error, t("saveFailed")));
     } finally {
       setIsSaving(false);
     }
@@ -48,21 +50,18 @@ export function ApprovalExpirySection() {
 
   return (
     <SettingBlock
-      title="Agent Approval Window"
-      sub="How long a paused agent run waits for a decision before it stops."
+      title={t("title")}
+      sub={t("subtitle")}
     >
       <div className="flex flex-col gap-4">
         <p className="text-[12px] text-secondary leading-relaxed max-w-2xl">
-          A run that needs approval waits until someone answers. After this long it
-          stops, nothing it was waiting to do is done, and the conversation says so.
-          It is never approved automatically. An individual agent can be set to give
-          up sooner on its own settings screen.
+          {t("explainer")}
         </p>
 
         <div className="max-w-[260px]">
           <Field
             id="approval-expiry-hours"
-            label="Give up after (hours)"
+            label={t("hoursLabel")}
             type="number"
             min={config?.minHours ?? 1}
             max={config?.maxHours ?? 720}
@@ -73,8 +72,8 @@ export function ApprovalExpirySection() {
             className="disabled:opacity-50"
             hint={
               config
-                ? `Default ${config.defaultHours} · at least ${config.minHours} · at most ${config.maxHours}`
-                : "Loading..."
+                ? t("hoursHint", { default: config.defaultHours, min: config.minHours, max: config.maxHours })
+                : t("loading")
             }
           />
         </div>
@@ -86,9 +85,9 @@ export function ApprovalExpirySection() {
             onClick={handleSave}
             isSaving={isSaving}
             showSuccess={saveSuccess}
-            label="Save window"
-            savingLabel="Saving..."
-            successLabel="Saved"
+            label={t("save")}
+            savingLabel={t("saving")}
+            successLabel={t("saved")}
             disabled={config === undefined}
           />
         </div>

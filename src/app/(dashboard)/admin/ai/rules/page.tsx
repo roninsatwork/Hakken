@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -105,9 +106,9 @@ export default function RulesDashboard() {
         onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
         onDelete={(rule) => setDeleteId(rule._id)}
         labels={{
-          priority: "Priority",
-          rule: "Rule Name / Trigger",
-          status: "Status",
+          priority: t("table.priority"),
+          rule: t("table.rule"),
+          status: t("table.status"),
           activate: t("status.activate"),
           deactivate: t("status.deactivate"),
           edit: t("status.edit"),
@@ -134,12 +135,13 @@ export default function RulesDashboard() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
-            <button
+            <Button
+              variant="quiet"
               onClick={() => setDeleteId(null)}
-              className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim"
+              className="px-5 py-2.5 rounded-full text-[13px] tracking-wide bg-transparent hover:bg-foreground/5"
             >
               {t("deleteModal.abort")}
-            </button>
+            </Button>
             <WriteButton
               onClick={handleDeleteRule}
               disabled={isDeleting}

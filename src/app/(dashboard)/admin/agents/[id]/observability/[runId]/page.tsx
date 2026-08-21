@@ -5,6 +5,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { toUserFacingMessage } from "@/src/lib/errors";
 import {
   ArrowLeft,
   ChevronDown,
@@ -20,6 +22,7 @@ import {
   formatDuration,
   formatMoney,
   formatRelativeTime,
+  type LabelRef,
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import {
   buildWaterfall,
@@ -29,6 +32,7 @@ import {
   type WaterfallRow,
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { Button } from "@/src/ui/atoms/Button";
 
 const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   thinking: "bg-secondary/40",
@@ -46,7 +50,10 @@ const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
  * heading and every other agent had its instructions shouted at title size.
  * Nothing new should be added to it; give the run a title where it is created.
  */
-function getRunDisplay(objective: string) {
+function getRunDisplay(
+  objective: string,
+  t: (key: string, params?: Record<string, string | number>) => string
+) {
   const rightmoveUrl = objective.match(/^Rightmove search URL:\s*(.+)$/m)?.[1]?.trim();
   const propertyLimit = objective.match(/^Gather up to\s+(\d+)\s+properties\./m)?.[1];
   const isRightmoveCollection =
@@ -62,8 +69,8 @@ function getRunDisplay(objective: string) {
   }
 
   return {
-    title: "Gather Rightmove properties",
-    detail: propertyLimit ? `Rightmove search · up to ${propertyLimit} properties` : "Rightmove search",
+    title: t("rightmove.title"),
+    detail: propertyLimit ? t("rightmove.detailWithLimit", { count: propertyLimit }) : t("rightmove.detail"),
     url: rightmoveUrl,
   };
 }
@@ -75,6 +82,10 @@ function useRunDetail(runId: Id<"agentRuns">) {
 type RunDetail = NonNullable<ReturnType<typeof useRunDetail>>;
 
 export default function AgentJobDetailPage() {
+  const t = useTranslations("admin.agents.details.observability.run");
+  const tLabels = useTranslations("admin.agents.labels");
+  // The pure helpers return catalogue keys, not words; this says them.
+  const label = (ref: LabelRef) => tLabels(ref.key, ref.params);
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as Id<"agents">;
@@ -105,7 +116,7 @@ export default function AgentJobDetailPage() {
     } catch (error) {
       setNotice({
         tone: "bad",
-        text: error instanceof Error ? error.message : "That did not work.",
+        text: toUserFacingMessage(error, t("actionFailed")),
       });
     } finally {
       setBusy(null);
@@ -160,16 +171,17 @@ export default function AgentJobDetailPage() {
   if (detail === null) {
     return (
       <div className="w-full py-20 flex flex-col items-center justify-center gap-4 text-center">
-        <p className="text-[15px] font-semibold text-foreground">This job could not be found</p>
+        <p className="text-[15px] font-semibold text-foreground">{t("notFoundTitle")}</p>
         <p className="text-[13px] text-secondary max-w-md">
-          It may have been removed, or it belongs to a workspace you cannot see.
+          {t("notFoundBody")}
         </p>
+        {/* Raw: quiet's shape but deliberately no hover fill — one token short of the variant. */}
         <button
           type="button"
           onClick={() => router.push(`/admin/agents/${agentId}/observability`)}
           className="px-4 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground transition-all"
         >
-          Back to the overview
+          {t("backToOverview")}
         </button>
       </div>
     );
@@ -178,7 +190,7 @@ export default function AgentJobDetailPage() {
   const { run } = detail;
   // The run's own title wins. Deriving one is only for runs recorded before
   // runs carried a title.
-  const derived = getRunDisplay(run.objective);
+  const derived = getRunDisplay(run.objective, t);
   const runDisplay = run.title ? { ...derived, title: run.title } : derived;
   const durationMs = run.completedAt ? run.completedAt - run.startedAt : undefined;
   // Matches the runtime's own rule: only a job that stopped short can be
@@ -190,13 +202,14 @@ export default function AgentJobDetailPage() {
     <div className="flex flex-col gap-5 w-full pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div className="min-w-0">
+          {/* Raw: an inline back link, not a button shape — no kit variant is a bare link. */}
           <button
             type="button"
             onClick={() => router.push(`/admin/agents/${agentId}/observability`)}
             className="text-[12px] text-secondary hover:text-foreground transition-colors flex items-center gap-1.5 mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to the overview
+            {t("backToOverview")}
           </button>
           <h2 className="text-[19px] font-semibold text-foreground tracking-tight">{runDisplay.title}</h2>
           {runDisplay.detail && (
@@ -210,20 +223,20 @@ export default function AgentJobDetailPage() {
               $0.021 · failed at the last step." — the outcome is part of the
               sentence, not a badge off to one side. */}
           <p className="text-[13px] text-secondary mt-1.5">
-            {describeTrigger(run.triggerType)} {formatRelativeTime(run.startedAt, now)}
-            {durationMs === undefined ? " · still running" : ` · took ${formatDuration(durationMs)}`}
-            {run.costGBP !== undefined ? ` · cost ${formatMoney(run.costGBP)}` : ""}
+            {label(describeTrigger(run.triggerType))} {label(formatRelativeTime(run.startedAt, now))}
+            {durationMs === undefined ? ` ${t("stillRunning")}` : ` ${t("took", { duration: formatDuration(durationMs) })}`}
+            {run.costGBP !== undefined ? ` ${t("cost", { amount: formatMoney(run.costGBP) })}` : ""}
             {/* A run that worked to its ceiling and was picked up by the next
                 run is the job working as designed, and must not read as a
                 death. Only a run nothing continued gets the failure wording. */}
             {run.status === "FAILED"
               ? run.continuedByRunId
-                ? " · worked its stint, then handed the queue to the next run"
-                : " · it did not finish"
+                ? ` ${t("handedOver")}`
+                : ` ${t("didNotFinish")}`
               : run.status === "PENDING_APPROVAL"
-                ? " · waiting for someone to approve it"
+                ? ` ${t("waitingApproval")}`
                 : run.status === "SUCCESS"
-                  ? " · finished cleanly"
+                  ? ` ${t("finishedCleanly")}`
                   : ""}
           </p>
         </div>
@@ -237,18 +250,18 @@ export default function AgentJobDetailPage() {
                 perform(
                   "replay",
                   () => replayRun({ runId, mode: "CURRENT_ACTIVE" }),
-                  "Started again. The new job will appear in Activity."
+                  t("replayDone")
                 )
               }
               icon={<RotateCcw className="w-3.5 h-3.5" />}
-              label="Run it again"
+              label={t("runAgain")}
             />
           )}
           <Action
             onClick={() => setRating((open) => !open)}
             disabled={busy !== null}
             icon={<ThumbsUp className="w-3.5 h-3.5" />}
-            label="Rate this job"
+            label={t("rate")}
             active={rating}
           />
           {detail.evalFixtureContext.canCreateFromRun && (
@@ -259,14 +272,14 @@ export default function AgentJobDetailPage() {
                 perform(
                   "check",
                   () => createEvalFixture({ runId }),
-                  "Saved as a check. This case will be tested from now on."
+                  t("checkDone")
                 )
               }
               icon={<ClipboardCheck className="w-3.5 h-3.5" />}
               label={
                 detail.evalFixtureContext.activeCount > 0
-                  ? "Update the check"
-                  : "Turn into a check"
+                  ? t("updateCheck")
+                  : t("turnIntoCheck")
               }
             />
           )}
@@ -275,7 +288,7 @@ export default function AgentJobDetailPage() {
 
       {rating && (
         <div className="rounded-[12px] border border-border-dim bg-card px-4 py-3 flex flex-wrap items-center gap-3">
-          <span className="text-[12.5px] text-secondary">Did this job do what you wanted?</span>
+          <span className="text-[12.5px] text-secondary">{t("ratingQuestion")}</span>
           <div className="flex gap-2">
             <Action
               busy={busy === "rate-good"}
@@ -284,11 +297,11 @@ export default function AgentJobDetailPage() {
                 perform(
                   "rate-good",
                   () => upsertFeedback({ runId, rating: "POSITIVE", labels: ["GOOD_ANSWER"] }),
-                  "Thanks — recorded as a good one."
+                  t("ratedGood")
                 )
               }
               icon={<ThumbsUp className="w-3.5 h-3.5" />}
-              label="It did"
+              label={t("itDid")}
             />
             <Action
               busy={busy === "rate-bad"}
@@ -297,11 +310,11 @@ export default function AgentJobDetailPage() {
                 perform(
                   "rate-bad",
                   () => upsertFeedback({ runId, rating: "NEGATIVE", labels: ["INCORRECT"] }),
-                  "Thanks — recorded as one that went wrong."
+                  t("ratedBad")
                 )
               }
               icon={<ThumbsDown className="w-3.5 h-3.5" />}
-              label="It did not"
+              label={t("itDidNot")}
             />
           </div>
         </div>
@@ -323,7 +336,7 @@ export default function AgentJobDetailPage() {
 
       {run.error && (
         <div className="rounded-[12px] border border-destructive/20 bg-destructive/[0.06] px-4 py-3">
-          <div className="text-[11.5px] text-muted mb-1">Why it stopped</div>
+          <div className="text-[11.5px] text-muted mb-1">{t("whyStopped")}</div>
           <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-destructive">{run.error}</p>
         </div>
       )}
@@ -342,21 +355,21 @@ export default function AgentJobDetailPage() {
       )}
 
       <section
-        aria-label="Where the time went"
+        aria-label={t("timeTitle")}
         className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-4"
       >
         <div>
-          <h3 className="text-[14px] font-semibold text-foreground tracking-tight">Where the time went</h3>
+          <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("timeTitle")}</h3>
           <p className="text-[12px] text-secondary mt-1">
-            Each step of the job, drawn against the time it took.
+            {t("timeHint")}
           </p>
         </div>
 
         {rows.length === 0 ? (
           <div className="rounded-[10px] border border-border-dim bg-white/[0.02] px-4 py-8 text-center">
-            <p className="text-[13px] text-foreground font-medium">No steps were recorded</p>
+            <p className="text-[13px] text-foreground font-medium">{t("noSteps")}</p>
             <p className="text-[12px] text-muted mt-1">
-              This job did not get far enough to record what it was doing.
+              {t("noStepsHint")}
             </p>
           </div>
         ) : (
@@ -364,7 +377,7 @@ export default function AgentJobDetailPage() {
             {rows.map((row) => (
               <div key={row.id} className="grid grid-cols-[minmax(120px,190px)_minmax(0,1fr)_64px] gap-3 items-center">
                 <span className={`text-[12.5px] truncate ${row.isLongest ? "text-foreground font-medium" : "text-secondary"}`}>
-                  {row.label}
+                  {label(row.label)}
                 </span>
                 <span className="h-[22px] rounded-[6px] bg-white/[0.03] border border-border-dim/60 relative">
                   <span
@@ -382,7 +395,11 @@ export default function AgentJobDetailPage() {
 
         {/* The reading of the chart sits under it, as drawn — a reader looks at
             the bars first and wants the sentence confirming what they saw. */}
-        {summary && <p className="text-[12px] text-muted">{summary}</p>}
+        {summary && (
+          <p className="text-[12px] text-muted">
+            {tLabels(summary.key, { share: summary.share, step: label(summary.step).toLowerCase() })}
+          </p>
+        )}
       </section>
 
       <RawExchange logs={logs} />
@@ -397,6 +414,7 @@ export default function AgentJobDetailPage() {
  * screen knows how to read.
  */
 function RunRecord({ runId }: { runId: Id<"agentRuns"> }) {
+  const t = useTranslations("admin.agents.details.observability.run.record");
   const record = useQuery(api.salesDataResearchJobs.getRunRecord, { runId });
   if (!record) return null;
 
@@ -406,21 +424,21 @@ function RunRecord({ runId }: { runId: Id<"agentRuns"> }) {
   // the panel quietly disappearing.
   return (
     <section
-      aria-label="What it recorded"
+      aria-label={t("title")}
       className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-3"
     >
       <div>
-        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">What it recorded</h3>
+        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("title")}</h3>
         <p className="text-[12px] text-secondary mt-1">
-          Built from the rows this run wrote, not from what the agent says it did.
+          {t("hint")}
         </p>
       </div>
 
       {total === 0 ? (
         <div className="rounded-[10px] border border-border-dim bg-white/[0.02] px-4 py-6 text-center">
-          <p className="text-[13px] text-foreground font-medium">This run recorded nothing</p>
+          <p className="text-[13px] text-foreground font-medium">{t("nothing")}</p>
           <p className="text-[12px] text-muted mt-1">
-            If the account below says it did, that claim has nothing behind it.
+            {t("nothingHint")}
           </p>
         </div>
       ) : (
@@ -498,18 +516,20 @@ function RecordLine({
 
 /** The agent's closing prose, collapsed, labelled as its account of its work. */
 function CollapsedAccount({ finalOutput }: { finalOutput: string }) {
+  const t = useTranslations("admin.agents.details.observability.run.account");
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-[12px] border border-border-dim bg-white/[0.02]">
+      {/* Raw: a full-width fold header is the hit target — a layout, not a button recipe. */}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left"
       >
         <span className="text-[12.5px] font-medium text-foreground flex-1">
-          The agent&apos;s own account of its work
+          {t("title")}
         </span>
-        <span className="text-[11.5px] text-muted">written by the agent, unchecked</span>
+        <span className="text-[11.5px] text-muted">{t("unchecked")}</span>
         <ChevronDown
           className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         />
@@ -539,6 +559,7 @@ function Action({
   active?: boolean;
 }) {
   return (
+    // Raw: swaps whole colour schemes with its active state; no kit variant is stateful.
     <button
       type="button"
       onClick={onClick}
@@ -569,6 +590,7 @@ function RepeatHistory({
   detail: RunDetail;
   onOpenRun: (runId: Id<"agentRuns">) => void;
 }) {
+  const t = useTranslations("admin.agents.details.observability.run.repeat");
   const { sourceRun, replayRuns } = detail.replayContext;
   const related = [...(sourceRun ? [sourceRun] : []), ...replayRuns];
   if (related.length === 0) return null;
@@ -579,38 +601,40 @@ function RepeatHistory({
   return (
     <div className="rounded-[14px] border border-border-dim bg-card px-5 py-4 flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0">
-        <div className="text-[12px] text-muted">This job has been run {total} times</div>
+        <div className="text-[12px] text-muted">{t("timesRun", { count: total })}</div>
         <div className="text-[13.5px] text-foreground mt-1">
           {worked === related.length
-            ? `The other ${related.length === 1 ? "one" : related.length} finished cleanly.`
+            ? t("allWorked", { count: related.length })
             : worked === 0
-              ? `The other ${related.length === 1 ? "one did not finish either" : `${related.length} did not finish either`}.`
-              : `${worked} of the other ${related.length} finished cleanly.`}
+              ? t("noneWorked", { count: related.length })
+              : t("someWorked", { worked, count: related.length })}
         </div>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="quiet"
         onClick={() => onOpenRun((sourceRun ?? related[0]).runId as Id<"agentRuns">)}
-        className="px-3.5 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12.5px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all shrink-0"
+        className="px-3.5 py-2 text-[12.5px] shrink-0"
       >
-        {sourceRun ? "See the one it repeated" : "See another"}
-      </button>
+        {sourceRun ? t("seeSource") : t("seeAnother")}
+      </Button>
     </div>
   );
 }
 
 function RawExchange({ logs }: { logs: Doc<"agentLogs">[] | undefined }) {
+  const t = useTranslations("admin.agents.details.observability.run");
+  const tLabels = useTranslations("admin.agents.labels");
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section
-      aria-label="What was actually said"
+      aria-label={t("exchange.title")}
       className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-4"
     >
       <div>
-        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">What was actually said</h3>
+        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("exchange.title")}</h3>
         <p className="text-[12px] text-secondary mt-1">
-          Word for word, what this agent was sent and what came back. Open any line to see it in full.
+          {t("exchange.hint")}
         </p>
       </div>
 
@@ -620,9 +644,9 @@ function RawExchange({ logs }: { logs: Doc<"agentLogs">[] | undefined }) {
         </div>
       ) : logs.length === 0 ? (
         <div className="rounded-[10px] border border-border-dim bg-white/[0.02] px-4 py-8 text-center">
-          <p className="text-[13px] text-foreground font-medium">Nothing was recorded for this job</p>
+          <p className="text-[13px] text-foreground font-medium">{t("exchange.nothingRecorded")}</p>
           <p className="text-[12px] text-muted mt-1">
-            Jobs that ran before the exchange was linked to them show nothing here.
+            {t("exchange.nothingHint")}
           </p>
         </div>
       ) : (
@@ -631,16 +655,17 @@ function RawExchange({ logs }: { logs: Doc<"agentLogs">[] | undefined }) {
             const isOpen = openId === log._id;
             return (
               <div key={log._id} className="border-t border-border-dim/40 first:border-t-0">
+                {/* Raw: a whole list row is the hit target — a layout, not a button recipe. */}
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : log._id)}
                   className="w-full flex items-center gap-3 py-2.5 text-left min-w-0"
                 >
                   <span className={`text-[10.5px] px-2 py-1 rounded-[6px] whitespace-nowrap shrink-0 w-[86px] text-center ${outcomeTone(log.outcome)}`}>
-                    {outcomeLabel(log.outcome)}
+                    {t(outcomeKey(log.outcome))}
                   </span>
                   <span className="flex-1 min-w-0 text-[12.5px] text-foreground truncate">
-                    {describeInteractionType(log.interactionType)}
+                    {tLabels(describeInteractionType(log.interactionType).key, describeInteractionType(log.interactionType).params)}
                   </span>
                   <span className="text-[11px] text-muted tabular-nums whitespace-nowrap shrink-0">
                     {log.durationMs !== undefined ? formatDuration(log.durationMs) : ""}
@@ -652,8 +677,8 @@ function RawExchange({ logs }: { logs: Doc<"agentLogs">[] | undefined }) {
 
                 {isOpen && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-4 pt-1">
-                    <Pane title="What we sent" body={log.promptContent} />
-                    <Pane title="What came back" body={log.responseContent} isError={log.outcome === "FAILED"} />
+                    <Pane title={t("exchange.whatWeSent")} body={log.promptContent} />
+                    <Pane title={t("exchange.whatCameBack")} body={log.responseContent} isError={log.outcome === "FAILED"} />
                   </div>
                 )}
               </div>
@@ -680,10 +705,10 @@ function Pane({ title, body, isError }: { title: string; body: string; isError?:
   );
 }
 
-function outcomeLabel(outcome: string | undefined) {
-  if (outcome === "SUCCESS") return "Worked";
-  if (outcome === "FAILED") return "Failed";
-  return "Not recorded";
+function outcomeKey(outcome: string | undefined) {
+  if (outcome === "SUCCESS") return "outcome.worked";
+  if (outcome === "FAILED") return "outcome.failed";
+  return "outcome.notRecorded";
 }
 
 function outcomeTone(outcome: string | undefined) {

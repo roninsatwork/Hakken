@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { Button } from "@/src/ui/atoms/Button";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 export function getSafeCompanyAiReturnTo(
@@ -42,6 +44,7 @@ export function CompanyAiFormPageHeader({
   description,
   icon,
 }: CompanyAiFormPageHeaderProps) {
+  const t = useTranslations("common");
   return (
     <header className="flex flex-col gap-4">
       <Link
@@ -49,7 +52,7 @@ export function CompanyAiFormPageHeader({
         className="inline-flex h-8 w-fit items-center gap-2 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[12px] font-semibold text-secondary transition-colors hover:border-brand/30 hover:bg-brand/5 hover:text-brand"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Back
+        {t("back")}
       </Link>
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
@@ -75,21 +78,23 @@ export function CompanyAiFormActions({
   submitLabel,
   isSubmitting,
 }: CompanyAiFormActionsProps) {
+  const t = useTranslations("common");
   return (
     <div className="flex flex-col-reverse gap-3 border-t border-border-dim pt-5 sm:flex-row sm:justify-end">
       <Link
         href={backHref}
         className="inline-flex h-9 items-center justify-center rounded-[8px] px-4 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground"
       >
-        Cancel
+        {t("cancel")}
       </Link>
-      <button
+      <Button
+        variant="brand"
         type="submit"
         disabled={isSubmitting}
-        className="inline-flex h-9 items-center justify-center rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+        className="inline-flex h-9 items-center justify-center rounded-[8px] font-semibold disabled:opacity-50"
       >
         {submitLabel}
-      </button>
+      </Button>
     </div>
   );
 }

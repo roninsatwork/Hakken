@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Ban, Brain, Check, ClipboardCheck, Lightbulb, Loader2, MessageSquare, MinusCircle, MoreHorizontal, RotateCcw, SlidersHorizontal, Timer } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -15,6 +16,7 @@ import {
   describeTrigger,
   formatMoney,
   formatRelativeTime,
+  type LabelRef,
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import {
   canCancel,
@@ -68,6 +70,10 @@ export function RunsTable({
   onReflect: (runId: Id<"agentRuns">) => void;
   onCreateEvalFixture: (runId: Id<"agentRuns">) => void;
 }) {
+  const t = useTranslations("admin.agents.details.runs.table");
+  const tLabels = useTranslations("admin.agents.labels");
+  // The pure formatters return catalogue keys, not words; this says them.
+  const label = (ref: LabelRef) => tLabels(ref.key, ref.params);
   const router = useRouter();
   const now = useNow();
   const { showToast } = useToast();
@@ -108,22 +114,22 @@ export function RunsTable({
   const handleCancel = async (runId: Id<"agentRuns">) => {
     await action.run(() => cancelRun({ runId, reason: "Cancelled from the agent Runs dashboard" }), {
       key: runId,
-      successMessage: "Run cancelled. Pending approvals and tool calls were cancelled and audited.",
-      fallbackMessage: "The run could not be cancelled.",
+      successMessage: t("cancelSuccess"),
+      fallbackMessage: t("cancelFailed"),
     });
   };
 
   const handleGenerateMemoryCandidates = async (runId: Id<"agentRuns">) => {
     const outcome = await action.run(
       () => generateMemoryCandidates({ runId, autoApplyLowRisk: false }),
-      { key: runId, fallbackMessage: "The candidate memory could not be generated." },
+      { key: runId, fallbackMessage: t("memoryFailed") },
     );
     if (!outcome.ok) return;
     const created = outcome.data.createdIds.length;
     showToast(
       created > 0
-        ? `Created ${created} candidate memory item${created === 1 ? "" : "s"} for review.`
-        : "No new safe candidate memory could be generated from this run.",
+        ? t("memoryCreated", { count: created })
+        : t("memoryNone"),
       created > 0 ? "success" : "info",
     );
   };
@@ -138,9 +144,9 @@ export function RunsTable({
       {
         key: candidateId,
         successMessage: decision === "APPROVED"
-          ? "Candidate stored as governed agent memory."
-          : "Candidate rejected. It will not be used as agent memory.",
-        fallbackMessage: "The candidate memory could not be reviewed.",
+          ? t("candidateApproved")
+          : t("candidateRejected"),
+        fallbackMessage: t("candidateFailed"),
       },
     );
   };
@@ -148,14 +154,14 @@ export function RunsTable({
   const handleGenerateSuggestions = async (runId: Id<"agentRuns">) => {
     const outcome = await action.run(() => generateImprovementSuggestions({ runId }), {
       key: runId,
-      fallbackMessage: "The suggestion could not be generated.",
+      fallbackMessage: t("suggestionFailed"),
     });
     if (!outcome.ok) return;
     const created = outcome.data.createdIds.length;
     showToast(
       created > 0
-        ? `Created ${created} config suggestion${created === 1 ? "" : "s"} for review.`
-        : "No new config suggestion could be generated from this run.",
+        ? t("suggestionsCreated", { count: created })
+        : t("suggestionsNone"),
       created > 0 ? "success" : "info",
     );
   };
@@ -171,9 +177,9 @@ export function RunsTable({
       {
         key: suggestionId,
         successMessage: decision === "APPROVED"
-          ? "Suggestion applied. A new agent version snapshot was recorded."
-          : "Suggestion rejected. No configuration was changed.",
-        fallbackMessage: "The suggestion could not be reviewed.",
+          ? t("suggestionApplied")
+          : t("suggestionRejected"),
+        fallbackMessage: t("suggestionReviewFailed"),
       },
     );
   };
@@ -187,8 +193,8 @@ export function RunsTable({
         icon: <Timer className="w-9 h-9 text-brand opacity-60" />,
         label:
           statusFilter === "ALL"
-            ? "This agent has not run any jobs yet"
-            : "No jobs match that filter",
+            ? t("emptyAll")
+            : t("emptyFiltered"),
       }}
       /* By cursor, not by number: see the note on the query. The footer used
          to be drawn here by hand, in buttons a shade off the shared ones. */
@@ -201,24 +207,24 @@ export function RunsTable({
         isLoading,
         onStep: goToPage,
         labels: {
-          empty: "No jobs to show",
-          showing: (count, page) => `Showing ${count} ${count === 1 ? "job" : "jobs"} · page ${page}`,
+          empty: t("footerEmpty"),
+          showing: (count, page) => t("footerShowing", { count, page }),
         },
       }}
       columns={[
         {
           key: "outcome",
-          header: "Outcome",
+          header: t("columns.outcome"),
           className: "w-[110px] align-top",
           cell: (run) => (
             <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>
-              {describeRunStatus(run.status, Boolean(run.continuedByRunId))}
+              {label(describeRunStatus(run.status, Boolean(run.continuedByRunId)))}
             </span>
           ),
         },
         {
           key: "objective",
-          header: "What it was asked to do",
+          header: t("columns.objective"),
           className: "align-top min-w-0",
           cell: (run) => (
             <>
@@ -238,15 +244,15 @@ export function RunsTable({
                 || run.markers.suggestionIds.length > 0) && (
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {run.markers.feedback && (
-                    <RowMarker>you rated this {run.markers.feedback.rating.toLowerCase()}</RowMarker>
+                    <RowMarker>{t("markers.rated", { rating: run.markers.feedback.rating.toLowerCase() })}</RowMarker>
                   )}
-                  {run.markers.reflected && <RowMarker>looked back on</RowMarker>}
-                  {run.markers.usedAsCheck && <RowMarker>used as a check</RowMarker>}
+                  {run.markers.reflected && <RowMarker>{t("markers.reflected")}</RowMarker>}
+                  {run.markers.usedAsCheck && <RowMarker>{t("markers.usedAsCheck")}</RowMarker>}
                   {run.markers.memoryCandidateIds.length > 0 && (
-                    <RowMarker tone="attention">something to remember</RowMarker>
+                    <RowMarker tone="attention">{t("markers.memory")}</RowMarker>
                   )}
                   {run.markers.suggestionIds.length > 0 && (
-                    <RowMarker tone="attention">has a suggested change</RowMarker>
+                    <RowMarker tone="attention">{t("markers.suggestion")}</RowMarker>
                   )}
                 </div>
               )}
@@ -255,18 +261,18 @@ export function RunsTable({
         },
         {
           key: "when",
-          header: "When",
+          header: t("columns.when"),
           className: "w-[150px] align-top text-[12px] text-secondary whitespace-nowrap",
           cell: (run) => (
             <>
-              {formatRelativeTime(run.startedAt, now)}
+              {label(formatRelativeTime(run.startedAt, now))}
               <span className="block text-[11px] text-muted">
-                {describeTrigger(run.triggerType)}
+                {label(describeTrigger(run.triggerType))}
                 {run.isRehearsal && (
                   // Text, not colour: a drill must be readable as a drill
                   // by everyone, on every screen.
                   <span className="ml-1.5 rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                    Rehearsal
+                    {t("rehearsal")}
                   </span>
                 )}
               </span>
@@ -275,7 +281,7 @@ export function RunsTable({
         },
         {
           key: "cost",
-          header: "Took / cost",
+          header: t("columns.cost"),
           align: "right",
           className: "w-[130px] align-top text-[12px] text-secondary tabular-nums whitespace-nowrap",
           cell: (run) => (
@@ -298,7 +304,7 @@ export function RunsTable({
                 variant="quiet"
                 onClick={() => router.push(`/admin/agents/${agentId}/observability/${run._id}`)}
               >
-                Open
+                {t("open")}
               </Button>
               {/* Everything else lives behind one control. Seven bare
                   icons in a row told nobody what any of them did. */}
@@ -395,6 +401,7 @@ function RowMenu({
   onReplay: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("admin.agents.details.runs.table");
   const items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }> = [];
 
   // Anything waiting on a decision comes first: it is the only reason somebody
@@ -402,12 +409,12 @@ function RowMenu({
   if (pendingCandidateId) {
     items.push(
       {
-        label: "Let it remember this",
+        label: t("menu.rememberYes"),
         icon: <Check className="w-3.5 h-3.5" />,
         onClick: () => onDecideCandidate(pendingCandidateId, "APPROVED"),
       },
       {
-        label: "Do not remember this",
+        label: t("menu.rememberNo"),
         icon: <MinusCircle className="w-3.5 h-3.5" />,
         onClick: () => onDecideCandidate(pendingCandidateId, "REJECTED"),
       }
@@ -417,37 +424,37 @@ function RowMenu({
   if (pendingSuggestionId) {
     items.push(
       {
-        label: "Accept the suggested change",
+        label: t("menu.acceptSuggestion"),
         icon: <Check className="w-3.5 h-3.5" />,
         onClick: () => onDecideSuggestion(pendingSuggestionId, "APPROVED"),
       },
       {
-        label: "Dismiss the suggested change",
+        label: t("menu.dismissSuggestion"),
         icon: <MinusCircle className="w-3.5 h-3.5" />,
         onClick: () => onDecideSuggestion(pendingSuggestionId, "REJECTED"),
       }
     );
   }
 
-  items.push({ label: "Tell us how this went", icon: <MessageSquare className="w-3.5 h-3.5" />, onClick: onRate });
+  items.push({ label: t("menu.rate"), icon: <MessageSquare className="w-3.5 h-3.5" />, onClick: onRate });
 
   if (canLearnFrom(status)) {
     items.push(
-      { label: "Work out what to remember", icon: <Brain className="w-3.5 h-3.5" />, onClick: onRemember },
-      { label: "Turn this into a check", icon: <ClipboardCheck className="w-3.5 h-3.5" />, onClick: onMakeCheck },
-      { label: "Suggest a change to this agent", icon: <SlidersHorizontal className="w-3.5 h-3.5" />, onClick: onSuggest }
+      { label: t("menu.remember"), icon: <Brain className="w-3.5 h-3.5" />, onClick: onRemember },
+      { label: t("menu.makeCheck"), icon: <ClipboardCheck className="w-3.5 h-3.5" />, onClick: onMakeCheck },
+      { label: t("menu.suggest"), icon: <SlidersHorizontal className="w-3.5 h-3.5" />, onClick: onSuggest }
     );
   }
 
   if (canReplay(status)) {
     items.push(
-      { label: "Ask what it would do differently", icon: <Lightbulb className="w-3.5 h-3.5" />, onClick: onReflect },
-      { label: "Run this again", icon: <RotateCcw className="w-3.5 h-3.5" />, onClick: onReplay }
+      { label: t("menu.reflect"), icon: <Lightbulb className="w-3.5 h-3.5" />, onClick: onReflect },
+      { label: t("menu.replay"), icon: <RotateCcw className="w-3.5 h-3.5" />, onClick: onReplay }
     );
   }
 
   if (canCancel(status)) {
-    items.push({ label: "Stop this job", icon: <Ban className="w-3.5 h-3.5" />, onClick: onCancel, danger: true });
+    items.push({ label: t("menu.cancel"), icon: <Ban className="w-3.5 h-3.5" />, onClick: onCancel, danger: true });
   }
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -470,7 +477,7 @@ function RowMenu({
         variant="quiet"
         ref={triggerRef}
         onClick={handleToggle}
-        aria-label="More things you can do with this job"
+        aria-label={t("menuAria")}
         aria-expanded={isOpen}
         className="p-2"
       >

@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { ToastProvider } from '@/src/context/ToastContext';
 import { UIProvider } from '@/src/context/UIContext';
+import messages from '../../messages/en.json';
 
 /**
  * Renders a component inside the providers the root layout always supplies.
@@ -22,9 +24,11 @@ export function renderWithProviders(
   return render(ui, {
     ...options,
     wrapper: ({ children }: { children: React.ReactNode }) => (
-      <UIProvider>
-        <ToastProvider>{children}</ToastProvider>
-      </UIProvider>
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <UIProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </UIProvider>
+      </NextIntlClientProvider>
     ),
   });
 }

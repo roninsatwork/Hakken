@@ -22,6 +22,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { AgentNode, type AgentNodeType } from "@/src/ui/components/workflows/AgentNode";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -184,10 +185,11 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
               <Save className="w-4 h-4" />
               <span>{isSaving ? t('header.saving') : t('header.saveGraph')}</span>
            </WriteButton>
-           <button
+           <Button
+              variant="primary"
               onClick={handleManualRun}
               disabled={isRunning}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-1.5 text-[13px] shadow-foreground/20"
            >
               {isRunning ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -195,7 +197,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
                 <Play className="w-4 h-4 fill-current" />
               )}
               <span>{isRunning ? t('header.dispatching') : t('header.manualRun')}</span>
-           </button>
+           </Button>
         </div>
       </div>
 
@@ -232,16 +234,17 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
 
         {/* Floating Library Toggle Button right */}
         <div className="absolute top-4 right-4 z-10 flex gap-2">
-           <button
+           <Button
+              variant="quiet"
               onClick={() => {
                  setIsSidebarOpen(true);
                  setEditingNode(null);
               }}
-              className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-sidebar text-foreground font-medium hover:bg-foreground/5 transition-all shadow-xl border border-border-dim"
+              className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-sidebar text-foreground hover:bg-foreground/5 shadow-xl"
            >
               <Plus className="w-4 h-4" />
               <span>Node Library</span>
-           </button>
+           </Button>
         </div>
 
         {/* Manual Run Modal */}
@@ -252,13 +255,13 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
         >
           <p className="text-secondary mb-6 text-[13px]">{t('runModal.description')}</p>
           <div className="flex justify-end gap-3">
-            <button
-              type="button"
+            <Button
+              variant="primary"
               onClick={() => setIsManualRunModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-md shadow-foreground/10 text-sm"
+              className="px-5 shadow-md"
             >
               {t('runModal.acknowledge')}
-            </button>
+            </Button>
           </div>
         </SonaeModal>
 

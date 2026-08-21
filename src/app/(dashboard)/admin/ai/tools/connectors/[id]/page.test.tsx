@@ -1,10 +1,18 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
 import ConnectorSetupPage from "./page";
+
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
@@ -24,6 +32,9 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/src/context/ToastContext", () => ({
   useToast: () => ({ showErrorToast: vi.fn() }),
+  // renderWithProviders mounts the provider, so the mocked module has to
+  // export it too — as a pass-through.
+  ToastProvider: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 const baseDetails = {

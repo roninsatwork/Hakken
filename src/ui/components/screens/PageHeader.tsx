@@ -1,6 +1,8 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { cn } from "@/src/ui/lib/utils";
+import { Button } from "@/src/ui/atoms/Button";
 import { useCanWriteHere } from "./AccessLevel";
 
 type AdminPageHeaderProps = {
@@ -55,13 +57,17 @@ export function PagePrimaryAction({
   if (!canWriteHere) return null;
 
   return (
-    <button
+    <Button
+      variant="primary"
       type={type}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 text-[13px] whitespace-nowrap disabled:cursor-not-allowed",
+        className
+      )}
       {...buttonProps}
     >
       {icon}
       <span>{children}</span>
-    </button>
+    </Button>
   );
 }

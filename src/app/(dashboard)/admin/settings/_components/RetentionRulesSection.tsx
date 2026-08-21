@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { WriteButton, useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import {
@@ -119,6 +120,7 @@ export function RetentionRulesSection() {
                   { id: 'enabled', label: t('purges.modals.config.enabled') },
                   { id: 'disabled', label: t('purges.modals.config.disabled') },
                 ] as const).map((tab) => (
+                  // Stays raw: a segmented-filter tab whose fill swaps with selection — matches no variant.
                   <button
                     key={tab.id}
                     type="button"
@@ -221,41 +223,44 @@ export function RetentionRulesSection() {
                             </td>
                             <td className="px-4 py-3 text-right">
                               {canWrite && <div className="flex items-center justify-end gap-2">
-                                <button
+                                <Button
+                                  variant="icon"
                                   onClick={() => {
                                     setConfigModalPipeline(key);
                                     setConfigModalData({ ...conf });
                                     setIsConfigModalOpen(true);
                                   }}
-                                  className="p-1.5 text-secondary hover:text-foreground hover:bg-foreground/5 rounded-[6px] transition-colors"
+                                  className="rounded-[6px] p-1.5"
                                   title={t('purges.table.configure')}
                                 >
                                   <Settings2 className="w-4 h-4" />
-                                </button>
+                                </Button>
                                 {runningLog ? (
-                                  <button
+                                  <Button
+                                    variant="icon"
                                     onClick={() => {
                                       setCancelModalHistoryId(runningLog._id);
                                       setCancelModalPipeline(key);
                                       setIsCancelModalOpen(true);
                                     }}
-                                    className="p-1.5 text-destructive hover:bg-destructive/10 rounded-[6px] transition-colors animate-pulse"
+                                    className="rounded-[6px] p-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 animate-pulse"
                                     title={t('purges.table.stop')}
                                   >
                                     <Square className="w-4 h-4 fill-destructive" />
-                                  </button>
+                                  </Button>
                                 ) : (
-                                  <button
+                                  <Button
+                                    variant="icon"
                                     onClick={() => {
                                       setConfirmModalPipeline(key);
                                       setIsConfirmModalOpen(true);
                                     }}
                                     disabled={isManualRunning}
-                                    className="p-1.5 text-secondary hover:text-brand hover:bg-brand/5 rounded-[6px] transition-colors disabled:opacity-50"
+                                    className="rounded-[6px] p-1.5 hover:text-brand hover:bg-brand/5 disabled:opacity-50"
                                     title={t('purges.table.runNow')}
                                   >
                                     <Play className="w-4 h-4" />
-                                  </button>
+                                  </Button>
                                 )}
                               </div>}
                             </td>
@@ -279,6 +284,7 @@ export function RetentionRulesSection() {
             <div className="flex flex-col gap-1">
               <span className="text-[14px] text-foreground font-semibold">{t('purges.modals.config.status')}</span>
             </div>
+            {/* Stays raw: a bare toggle glyph whose colour is the state — matches no variant. */}
             <button
               onClick={() => setConfigModalData({ ...configModalData, enabled: !configModalData.enabled })}
               className={`transition-colors flex-shrink-0 ${configModalData.enabled ? "text-brand" : "text-muted"}`}
@@ -413,12 +419,13 @@ export function RetentionRulesSection() {
           </div>
 
           <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setIsConfigModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+              className="rounded-[10px] hover:bg-foreground/5"
             >
               {t('purges.modals.config.cancel')}
-            </button>
+            </Button>
             <WriteButton
               onClick={async () => {
                 if (configModalPipeline) {
@@ -471,12 +478,13 @@ export function RetentionRulesSection() {
           </div>
 
           <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setIsConfirmModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+              className="rounded-[10px] hover:bg-foreground/5"
             >
               {t('purges.modals.confirm.cancel')}
-            </button>
+            </Button>
             <WriteButton
               onClick={async () => {
                 if (confirmModalPipeline) {
@@ -523,12 +531,13 @@ export function RetentionRulesSection() {
           </div>
 
           <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setIsCancelModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+              className="rounded-[10px] hover:bg-foreground/5"
             >
               {t('purges.modals.cancelConfirm.cancel')}
-            </button>
+            </Button>
             <WriteButton
               onClick={async () => {
                 if (cancelModalHistoryId) {

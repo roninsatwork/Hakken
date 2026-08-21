@@ -91,16 +91,33 @@ vi.mock("framer-motion", () => ({
 const labels: Record<string, string> = {
   admin: "Administration",
   ai: "Artificial Intelligence",
+  arcade: "Arcade",
   authenticating: "Authenticating",
+  calls: "Calls",
   dashboard: "Dashboard",
+  information: "Information",
   loading: "Loading",
+  logs: "Logs",
+  organization: "Organization",
+  postureStudio: "Posture Studio",
   properties: "Properties",
   propertiesSearch: "Search",
+  reports: "Reports",
+  roninsRun: "Ronin's Run",
   runningCosts: "Running Costs",
+  salesReport: "Sales Report",
+  skillCenter: "Skill Center",
+  tasks: "Tasks",
+  teamMembers: "Team Members",
+  tools: "Tools",
+  widget: "Widget",
 };
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => labels[key] ?? key,
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+    if (key === "askPlatform") return `Ask ${values?.platformName ?? ""}`;
+    return labels[key] ?? key;
+  },
 }));
 
 describe("Header route labels", () => {

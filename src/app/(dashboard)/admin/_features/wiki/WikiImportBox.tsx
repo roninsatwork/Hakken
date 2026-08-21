@@ -10,6 +10,7 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import {
   buildUploadTitle,
   collectPickedFiles,
@@ -25,6 +26,7 @@ import {
  */
 export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const t = useTranslations("aiPages.import");
+  const { platformName } = useSystemSettings();
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
   const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
   const saveManualText = useMutation(api.knowledge.saveManualText);
@@ -68,7 +70,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       const links: string[] = await mapWebsite({ url: cleaned });
       await queueWebsiteUrls({ ...scopeArgs, urls: links, wikiReview: reviewFirst });
       setUrl("");
-      return t("feedback.website", { count: links.length });
+      return t("feedback.website", { count: links.length, platformName });
     });
 
   const importText = () =>
@@ -77,7 +79,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody, wikiReview: reviewFirst });
       setTextTitle("");
       setTextBody("");
-      return t("feedback.text");
+      return t("feedback.text", { platformName });
     });
 
   const importFiles = (fileList: FileList | null) =>
@@ -108,7 +110,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       }
       if (collected.length > 1) await startKnowledgeFileQueue({});
       if (fileInputRef.current) fileInputRef.current.value = "";
-      return t("feedback.files", { count: collected.length });
+      return t("feedback.files", { count: collected.length, platformName });
     });
 
   // The Obsidian round trip (living-wiki plan, phase 4): a vault's
@@ -173,6 +175,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
     <div id="wiki-import" className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-5">
       <div className="flex items-center gap-2">
         {tabs.map(({ key, icon: Icon, label }) => (
+          /* Raw: stateful tab pill — the active tab swaps its colours; no kit variant is stateful. */
           <button
             key={key}
             type="button"
@@ -194,12 +197,12 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           {/* The chosen tab already says what this box is for. */}
           <div className="flex-1">
             <Field
-              label={t("websitePlaceholder")}
+              label={t("websitePlaceholder", { platformName })}
               labelHidden
               type="url"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
-              placeholder={t("websitePlaceholder")}
+              placeholder={t("websitePlaceholder", { platformName })}
               disabled={isBusy}
             />
           </div>

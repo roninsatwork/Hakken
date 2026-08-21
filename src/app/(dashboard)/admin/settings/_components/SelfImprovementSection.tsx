@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
+import { useTranslations } from "next-intl";
 
 type SwitchKey =
   | "autoReflection"
@@ -22,27 +23,11 @@ type SwitchState = Record<SwitchKey, boolean>;
  * whether to switch learning behaviour off mid-incident should not need the
  * plan document open to know what stops.
  */
-const LEARNING_SWITCHES: Array<{ key: SwitchKey; label: string; sub: string }> = [
-  {
-    key: "autoReflection",
-    label: "Learn from failed runs",
-    sub: "When an agent run fails, the platform writes up why and queues anything worth remembering for review. Off: write-ups only happen when an admin asks on the run screen.",
-  },
-  {
-    key: "outcomeWeightedRanking",
-    label: "Prefer memories with a good track record",
-    sub: "Approved memories that keep helping rank higher; ones present in failed runs rank lower. Nothing is ever hidden or removed by this. Off: newest-first ordering.",
-  },
-  {
-    key: "endUserFeedback",
-    label: "Feedback buttons in chat",
-    sub: "Users can mark an answer Helpful or Not right, and that feeds the suggestion queue. Off: the buttons disappear and nothing is collected.",
-  },
-  {
-    key: "retrievalPriors",
-    label: "Knowledge search learns from rated answers",
-    sub: "Documents that keep producing well-rated answers get a small ranking boost, within a hard cap. Off: pure text relevance.",
-  },
+const LEARNING_SWITCHES: Array<{ key: SwitchKey; labelKey: string; subKey: string }> = [
+  { key: "autoReflection", labelKey: "autoReflection", subKey: "autoReflectionSub" },
+  { key: "outcomeWeightedRanking", labelKey: "outcomeWeightedRanking", subKey: "outcomeWeightedRankingSub" },
+  { key: "endUserFeedback", labelKey: "endUserFeedback", subKey: "endUserFeedbackSub" },
+  { key: "retrievalPriors", labelKey: "retrievalPriors", subKey: "retrievalPriorsSub" },
 ];
 
 /**
@@ -55,6 +40,7 @@ const LEARNING_SWITCHES: Array<{ key: SwitchKey; label: string; sub: string }> =
  * it is the one switch that changes who writes memory.
  */
 export function SelfImprovementSection() {
+  const t = useTranslations("admin.settings.selfImprovement");
   const config = useQuery(api.selfImprovementConfig.getConfig, {});
   const updateConfig = useMutation(api.selfImprovementConfig.updateConfig);
 
@@ -76,7 +62,7 @@ export function SelfImprovementSection() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (error) {
-      setSaveError(getErrorMessage(error, "Could not save the learning switches."));
+      setSaveError(getErrorMessage(error, t("saveFailed")));
     } finally {
       setIsSaving(false);
     }
@@ -85,6 +71,7 @@ export function SelfImprovementSection() {
   const renderToggle = (key: SwitchKey, label: string, sub: string) => {
     const isOn = switches?.[key] ?? false;
     return (
+      // Stays raw: a full-width aria-pressed toggle card — matches no variant.
       <button
         key={key}
         type="button"
@@ -95,7 +82,7 @@ export function SelfImprovementSection() {
       >
         <span className="flex flex-col gap-1 min-w-0">
           <span className={`text-[14px] font-semibold ${isOn ? "text-foreground" : "text-muted"}`}>
-            {label} — {isOn ? "on" : "off"}
+            {label} — {isOn ? t("on") : t("off")}
           </span>
           <span className="text-[12px] text-secondary leading-relaxed">{sub}</span>
         </span>
@@ -108,25 +95,20 @@ export function SelfImprovementSection() {
 
   return (
     <SettingBlock
-      title="Self-Improvement"
-      sub="How the AI learns from what happens. Every switch takes effect platform-wide as soon as it is saved."
+      title={t("title")}
+      sub={t("subtitle")}
     >
       <div className="flex flex-col gap-3">
-        {LEARNING_SWITCHES.map((entry) => renderToggle(entry.key, entry.label, entry.sub))}
+        {LEARNING_SWITCHES.map((entry) => renderToggle(entry.key, t(entry.labelKey), t(entry.subKey)))}
 
         <div className="mt-2 rounded-[16px] border border-warning/30 bg-warning/5 p-4 flex flex-col gap-3">
           <p className="text-[12px] text-secondary leading-relaxed">
-            The switch below is different from the ones above. With it on, what
-            the AI learns is saved to its memory straight away — nothing waits
-            for approval. Every self-saved memory is labelled &ldquo;Saved by the
-            AI&rdquo; on the Memory screens, is written to the audit trail, and
-            can be removed at any time. Off: suggestions queue for a person to
-            approve, as before.
+            {t("autonomyExplainer")}
           </p>
           {renderToggle(
             "autonomousMemory",
-            "Autonomous memory",
-            "The AI saves what it learns immediately, on its own. Off: every new memory waits for approval."
+            t("autonomousMemory"),
+            t("autonomousMemorySub")
           )}
         </div>
 
@@ -137,9 +119,9 @@ export function SelfImprovementSection() {
             onClick={handleSave}
             isSaving={isSaving}
             showSuccess={saveSuccess}
-            label="Save switches"
-            savingLabel="Saving..."
-            successLabel="Saved"
+            label={t("save")}
+            savingLabel={t("saving")}
+            successLabel={t("saved")}
             disabled={switches === null}
           />
         </div>

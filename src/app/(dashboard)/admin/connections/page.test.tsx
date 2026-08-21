@@ -5,6 +5,13 @@ import { getFunctionName } from "convex/server";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import ConnectionsPage from "./page";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 /**
  * A two-table screen: what is connected, and what has run recently. The rows
  * here describe the first, so the floor is told the count and the index.

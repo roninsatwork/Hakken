@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import TimeframeDropdown from "./TimeframeDropdown";
 

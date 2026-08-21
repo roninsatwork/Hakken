@@ -75,6 +75,8 @@ export function PhotoActionChip({
         </span>
       ) : (
         <div className="flex flex-col gap-1.5 mt-1">
+          {/* Raw on purpose: brand-filled and recoloured per widget via an
+              inline style — no variant wears the brand as a background. */}
           <button
             type="button"
             onClick={handleConfirm}

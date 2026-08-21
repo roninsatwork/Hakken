@@ -14,6 +14,7 @@ import { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage } from "@/src/lib/google
 import { decodePcm16Base64 } from "@/src/lib/voiceSession";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { cn } from "@/src/ui/lib/utils";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * One voice for everywhere Sonae speaks.
@@ -28,6 +29,7 @@ import { cn } from "@/src/ui/lib/utils";
  */
 export default function SpokenVoicePage() {
   const t = useTranslations("aiVoice");
+  const { platformName } = useSystemSettings();
   const setting = useQuery(api.voiceSettings.getSpokenVoice, {});
   const setSpokenVoice = useMutation(api.voiceSettings.setSpokenVoice);
   const mintPreview = useAction(api.voicePreview.mintVoicePreviewTicket);
@@ -160,7 +162,7 @@ export default function SpokenVoicePage() {
       <PageHeader
         icon={<AudioLines className="w-6 h-6 text-brand" />}
         title={t("title")}
-        description={t("subtitle")}
+        description={t("subtitle", { platformName })}
         divider
       />
 
@@ -169,13 +171,13 @@ export default function SpokenVoicePage() {
       <SaveFeedback
         status={saveStatus}
         successTitle={t("success.title")}
-        successMessage={t("success.message")}
+        successMessage={t("success.message", { platformName })}
         errorTitle={t("errors.saveTitle")}
         errorMessage=""
       />
       <SaveError>{errorMessage}</SaveError>
 
-      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
+      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint", { platformName })}</p>
 
       <DataTable
         rows={isLoading ? undefined : setting.options}
@@ -229,6 +231,7 @@ export default function SpokenVoicePage() {
               const isPreviewing = previewVoice === option.key;
               return (
                 <div className="flex items-center justify-end gap-2">
+                  {/* Stays raw: a playing-state toggle whose colours swap while previewing — matches no variant. */}
                   <button
                     type="button"
                     onClick={() => (isPreviewing ? stopPreview() : playPreview(option.key))}

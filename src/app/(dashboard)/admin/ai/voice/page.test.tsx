@@ -4,6 +4,13 @@ import { useQuery } from "convex/react";
 
 import SpokenVoicePage from "./page";
 
+// The screen reads the configured platform name, so copy is branded per
+// deployment rather than carrying a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
+
 /**
  * Not on the shared table floor, and deliberately.
  *

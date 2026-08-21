@@ -6,6 +6,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { Button } from "@/src/ui/atoms/Button";
 import {
   Activity,
   AppWindow,
@@ -38,6 +39,7 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
+import { useTranslations } from "next-intl";
 
 function matchesCompanyRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -48,6 +50,7 @@ function getWidgetSectionHref(companyHref: string, section: string) {
 }
 
 export default function CompanyDashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("admin.companyDetails.layout");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const company = useQuery(api.companies.getCompanyById, { id: companyId });
@@ -68,19 +71,19 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   };
 
   if (company === undefined) {
-    return <div className="p-8 text-secondary">Loading workspace...</div>;
+    return <div className="p-8 text-secondary">{t("loadingWorkspace")}</div>;
   }
   if (!company) {
-    return <div className="p-8 text-red-500">Workspace not found</div>;
+    return <div className="p-8 text-red-500">{t("notFound")}</div>;
   }
 
   const companyHref = `/admin/companies/${companyId}`;
   const aiHref = `${companyHref}/ai`;
   const tabs = [
-    { label: "Dashboard", href: companyHref, icon: LayoutDashboard },
-    { label: "Overview", href: `${companyHref}/overview`, icon: FileText },
+    { label: t("tabs.dashboard"), href: companyHref, icon: LayoutDashboard },
+    { label: t("tabs.overview"), href: `${companyHref}/overview`, icon: FileText },
     {
-      label: "Directory",
+      label: t("tabs.directory"),
       href: `${companyHref}/directory`,
       icon: Users,
       matches: (pathname: string) => (
@@ -90,7 +93,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       ),
       dropdownItems: [
         {
-          label: "Directory",
+          label: t("tabs.directory"),
           href: `${companyHref}/directory/users`,
           icon: Users,
           matches: (pathname: string) => (
@@ -100,7 +103,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           ),
         },
         {
-          label: "Invites",
+          label: t("tabs.invites"),
           href: `${companyHref}/directory/invites`,
           icon: UserPlus,
           matches: (pathname: string) => (
@@ -111,7 +114,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       ],
     },
     {
-      label: "AI",
+      label: t("tabs.ai"),
       href: aiHref,
       icon: BrainCircuit,
       matches: (pathname: string) => (
@@ -124,7 +127,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       ),
       dropdownItems: [
         {
-          label: "Overview",
+          label: t("tabs.overview"),
           href: aiHref,
           icon: Gauge,
           matches: (pathname: string) => pathname === aiHref,
@@ -133,13 +136,13 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           // What used to be the company's Dashboard tab: tokens, quota, provider
           // spend. It was an AI usage report filed under a name nobody looking
           // for AI usage would open.
-          label: "AI Usage",
+          label: t("tabs.aiUsage"),
           href: `${aiHref}/usage`,
           icon: Activity,
         },
         {
           // What the AI handled, in a person's hours (money view).
-          label: "Value",
+          label: t("tabs.value"),
           href: `${aiHref}/money`,
           icon: CircleDollarSign,
         },
@@ -150,7 +153,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           // Knowledge route stays reachable as the archive of source
           // documents behind each page's receipts, but it is no longer a
           // destination the menu offers.
-          label: "Wiki",
+          label: t("tabs.wiki"),
           href: `${aiHref}/pages`,
           icon: BookOpen,
           matches: (pathname: string) => (
@@ -162,14 +165,14 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
         {
           // Every brain's gaps get a dedicated screen (Anthony's ruling,
           // 2026-08-17) — this company's own, beside its Wiki.
-          label: "Unanswered",
+          label: t("tabs.unanswered"),
           href: `${aiHref}/unanswered`,
           icon: MessageCircleQuestion,
         },
         {
           // The brain's diary (watch-it-think plan, phase 4): what this
           // company's wiki learned, as a feed, beside the Wiki it feeds.
-          label: "Diary",
+          label: t("tabs.diary"),
           href: `${aiHref}/diary`,
           icon: NotebookPen,
         },
@@ -178,12 +181,12 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
         // their receipt, facts live as pinned corrections, and instructions
         // as AI Rules. Their addresses redirect.
         {
-          label: "Skills",
+          label: t("tabs.skills"),
           href: `${aiHref}/skills`,
           icon: Puzzle,
         },
         {
-          label: "Prompt",
+          label: t("tabs.prompt"),
           href: `${aiHref}/prompt`,
           icon: TerminalSquare,
           matches: (pathname: string) => (
@@ -192,7 +195,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           ),
         },
         {
-          label: "AI Rules",
+          label: t("tabs.aiRules"),
           href: `${aiHref}/rules`,
           icon: ShieldCheck,
           matches: (pathname: string) => (
@@ -201,7 +204,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           ),
         },
         {
-          label: "AI Models",
+          label: t("tabs.aiModels"),
           href: `${aiHref}/models`,
           icon: Cpu,
           matches: (pathname: string) => (
@@ -210,12 +213,12 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           ),
         },
         {
-          label: "Evals",
+          label: t("tabs.evals"),
           href: `${aiHref}/evals`,
           icon: ClipboardCheck,
         },
         {
-          label: "Chat Logs",
+          label: t("tabs.chatLogs"),
           href: `${aiHref}/chat-logs`,
           icon: MessageSquareText,
           matches: (pathname: string) => (
@@ -226,25 +229,25 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
         {
           // Seeing the work (seven-gaps plan, phase 1): the calls the AI
           // took, beside the chats it had.
-          label: "Calls",
+          label: t("tabs.calls"),
           href: `${companyHref}/calls`,
           icon: PhoneCall,
         },
         {
           // The mail it handled — recorded from day one, on a screen at last.
-          label: "Mailbox",
+          label: t("tabs.mailbox"),
           href: `${companyHref}/mailbox`,
           icon: Inbox,
         },
       ],
     },
     {
-      label: "Widget",
+      label: t("tabs.widget"),
       href: `${companyHref}/widget`,
       icon: AppWindow,
       dropdownItems: [
         {
-          label: "Appearance",
+          label: t("tabs.appearance"),
           href: `${companyHref}/widget`,
           icon: Palette,
           matches: (pathname: string, searchParams: URLSearchParams) => (
@@ -253,25 +256,25 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           ),
         },
         {
-          label: "Welcome Screen",
+          label: t("tabs.welcomeScreen"),
           href: getWidgetSectionHref(companyHref, "welcome-screen"),
           icon: Monitor,
           query: { section: "welcome-screen" },
         },
         {
-          label: "Conversation Starters",
+          label: t("tabs.conversationStarters"),
           href: getWidgetSectionHref(companyHref, "conversation-starters"),
           icon: ListPlus,
           query: { section: "conversation-starters" },
         },
         {
-          label: "Greeting",
+          label: t("tabs.greeting"),
           href: getWidgetSectionHref(companyHref, "greeting"),
           icon: MessageSquareText,
           query: { section: "greeting" },
         },
         {
-          label: "Integration",
+          label: t("tabs.integration"),
           href: getWidgetSectionHref(companyHref, "integration"),
           icon: Code2,
           query: { section: "integration" },
@@ -282,7 +285,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
     // offered to anyone who would only find a refusal behind it.
     ...(currentUser?.role === "SUPER_ADMIN"
       ? [{
-          label: "Features",
+          label: t("tabs.features"),
           href: `${companyHref}/features`,
           icon: Blocks,
         }]
@@ -294,21 +297,22 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       leading={
         <Building2 className="w-6 h-6 text-brand shrink-0" />
       }
-      title={`${company.name} Workspace`}
-      description={company.description || "Manage workspace settings."}
+      title={t("workspaceTitle", { name: company.name })}
+      description={company.description || t("defaultDescription")}
       tabs={tabs}
       rootHref={companyHref}
       actions={
         <>
             {currentUser?.role === "SUPER_ADMIN" && (
-                <button 
+                <Button
+                  variant="brand"
                   onClick={handleImpersonate}
                   disabled={isImpersonating}
-                  className="px-5 py-2 rounded-[10px] bg-brand text-white font-medium hover:bg-brand/90 transition-all text-[13px] flex items-center gap-2 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
+                  className="px-5 py-2 flex items-center gap-2 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
                 >
                   {isImpersonating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
-                  Impersonate Workspace
-                </button>
+                  {t("impersonate")}
+                </Button>
             )}
 
             <Link 
@@ -316,7 +320,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
               className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Companies
+              {t("backToCompanies")}
             </Link>
         </>
       }

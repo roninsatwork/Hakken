@@ -52,7 +52,7 @@ export function IdentitySettingsSection({
                 height={80}
                 unoptimized
                 className="max-w-[80%] max-h-[80%] object-contain mix-blend-multiply"
-                alt="Light mode"
+                alt={t("identity.logoLight")}
               />
             ) : (
               <ImageIcon className="w-8 h-8 text-black/20" />
@@ -61,6 +61,7 @@ export function IdentitySettingsSection({
             {/* Sits above the file input, which covers the whole tile: without a
                 higher layer the click to remove would open the file picker. */}
             {formData.logoUrlLight ? (
+              // Stays raw: an overlay chip pinned to the logo tile's colours, not the theme — matches no variant.
               <button
                 type="button"
                 onClick={() => onRemoveLogo("light")}
@@ -85,13 +86,14 @@ export function IdentitySettingsSection({
                 height={80}
                 unoptimized
                 className="max-w-[80%] max-h-[80%] object-contain"
-                alt="Dark mode"
+                alt={t("identity.logoDark")}
               />
             ) : (
               <ImageIcon className="w-8 h-8 text-white/20" />
             )}
             <input type="file" onChange={(event) => onFileUpload(event, "dark")} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
             {formData.logoUrlDark ? (
+              // Stays raw: an overlay chip pinned to the logo tile's colours, not the theme — matches no variant.
               <button
                 type="button"
                 onClick={() => onRemoveLogo("dark")}

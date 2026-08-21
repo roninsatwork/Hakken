@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import axe from "axe-core";
 import { BookOpen, Database, Settings, Trash2 } from "lucide-react";

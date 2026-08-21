@@ -119,10 +119,29 @@ const labels: Record<string, string> = {
   userManagement: "User Management",
   allUsers: "All Users",
   webhookDeliveries: "Webhook Deliveries",
+  arcade: "Arcade",
+  calls: "Calls",
+  information: "Information",
+  logs: "Logs",
+  organization: "Organization",
+  plans: "Plans",
+  postureStudio: "Posture Studio",
+  reception: "Reception",
+  replayAlignment: "Replay Alignment",
+  reports: "Reports",
+  roninsRun: "Ronin's Run",
+  salesReport: "Sales Report",
+  studioLibrary: "Studio Library",
+  tasks: "Tasks",
+  teamMembers: "Team Members",
 };
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => labels[key] ?? key,
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+    if (key === "badgeWaiting") return `${values?.count ?? ""} waiting`;
+    if (key === "askPlatform") return `Ask ${values?.platformName ?? ""}`;
+    return labels[key] ?? key;
+  },
 }));
 
 describe("SidebarNavigation AI guardrails", () => {

@@ -10,6 +10,7 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * Connections that are really checked (seven-gaps plan, phase 2).
@@ -21,6 +22,7 @@ import { formatDateTime } from "@/src/lib/dates";
  */
 export default function ConnectionsPage() {
   const t = useTranslations("connections");
+  const { platformName } = useSystemSettings();
   const [connectionSearch, setConnectionSearch] = useState("");
   const [connectionPage, setConnectionPage] = useState(1);
   const [jobSearch, setJobSearch] = useState("");
@@ -62,7 +64,7 @@ export default function ConnectionsPage() {
       <PageHeader
         icon={<PlugZap className="w-6 h-6 text-brand" />}
         title={t("title")}
-        description={t("subtitle")}
+        description={t("subtitle", { platformName })}
         divider
         action={
           <WriteButton

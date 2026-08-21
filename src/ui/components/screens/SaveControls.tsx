@@ -36,6 +36,8 @@ export function SaveAction({
           {successLabel}
         </span>
       ) : null}
+      {/* Raw on purpose: a white-tinted bordered save chip — near `quiet` but
+          every colour token differs, so mapping it would restate the recipe. */}
       <button
         type={type}
         disabled={isSaving || buttonProps.disabled}

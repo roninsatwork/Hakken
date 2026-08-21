@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Bot, Building2, TrendingUp } from "lucide-react";
 import type { AgentLeaderboardRow, CompanyLeaderboardRow, Translate, UserLeaderboardRow } from "./types";
 import { formatUsdAmount, getAgentMessageCount } from "./costFormatters";
@@ -12,6 +13,7 @@ type AICostLeaderboardsProps = {
 };
 
 export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, topUsers }: AICostLeaderboardsProps) {
+  const t = useTranslations("ai.costs.leaderboards");
   return (
     <div className="flex flex-col gap-6 mt-2">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -96,7 +98,7 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
         <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
           <div className="flex items-center gap-3">
             <Bot className="w-4 h-4 text-brand opacity-80" />
-            <h2 className="text-[14px] font-bold text-foreground">Top Agents By Compute</h2>
+            <h2 className="text-[14px] font-bold text-foreground">{t("topAgents")}</h2>
           </div>
         </div>
         <div className="flex flex-col">
@@ -115,7 +117,7 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
                     <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
                       {agent.name}
                     </span>
-                    <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
+                    <span className="text-[10px] text-secondary/70 tracking-wide truncate">{t("autonomousProcess")}</span>
                   </div>
                 </div>
                 <LeaderboardStats cost={agent.cost} messages={getAgentMessageCount(agent.interactions, agent.messages)} />
@@ -153,14 +155,15 @@ function LeaderboardEmptyState({ label }: { label: string }) {
 }
 
 function LeaderboardStats({ cost, messages }: { cost: number; messages: number }) {
+  const t = useTranslations("ai.costs.leaderboards");
   return (
     <div className="flex items-center gap-6 shrink-0 pr-2">
       <div className="flex flex-col items-end min-w-[65px]">
-        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t("messages")}</span>
         <span className="text-[13px] font-bold text-foreground tracking-tight">{messages.toLocaleString()}</span>
       </div>
       <div className="flex flex-col items-end min-w-[65px]">
-        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
+        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t("cost")}</span>
         <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">{formatUsdAmount(cost, 4)}</span>
       </div>
     </div>

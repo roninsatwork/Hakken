@@ -8,13 +8,16 @@ import { AlertOctagon, BrainCircuit, Plus, RefreshCcw, Trash2 } from "lucide-rea
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { useTranslations } from "next-intl";
 
 export default function CompanyAiRulesPage() {
+  const t = useTranslations("admin.companyDetails.rules");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   
@@ -64,10 +67,10 @@ export default function CompanyAiRulesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <BrainCircuit className="w-6 h-6 text-brand" />
-            AI Rules
+            {t("title")}
           </h1>
           <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            Set rules for how the AI responds to users.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -76,17 +79,17 @@ export default function CompanyAiRulesPage() {
           className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Create Rule</span>
+          <span>{t("createRule")}</span>
         </Link>
       </header>
 
-      <SearchBar value={searchTerm} onChange={handleSearchChange} placeholder="Search triggers or instructions..." />
+      <SearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
       
       <AdminRulesTable
         rules={filteredRules}
         isLoading={isLoading}
         emptyIcon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
-        emptyLabel="No Rules Yet"
+        emptyLabel={t("empty")}
         page={page}
         totalPages={totalPages}
         totalCount={totalCount}
@@ -97,48 +100,49 @@ export default function CompanyAiRulesPage() {
         onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
         onDelete={(rule) => setDeleteId(rule._id)}
         labels={{
-          priority: "Priority",
-          rule: "Rule Name / Trigger",
-          status: "Status",
-          activate: "Activate",
-          deactivate: "Deactivate",
-          edit: "Edit",
-          delete: "Delete",
+          priority: t("columnPriority"),
+          rule: t("columnRule"),
+          status: t("columnStatus"),
+          activate: t("activate"),
+          deactivate: t("deactivate"),
+          edit: t("edit"),
+          delete: t("delete"),
         }}
       />
 
       <SonaeModal
         isOpen={deleteId !== null}
         onClose={() => !isDeleting && setDeleteId(null)}
-        title="Delete Rule"
+        title={t("deleteTitle")}
         size="sm"
       >
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-2">
             <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
             <p className="text-[14px] text-secondary leading-relaxed">
-              This rule will be removed from the workspace rule set.
+              {t("deleteBody")}
             </p>
             <p className="text-[13px] font-bold text-foreground mt-2">
-              This action cannot be undone.
+              {t("deleteWarning")}
             </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
-            <button
+            <Button
+              variant="quiet"
               onClick={() => setDeleteId(null)}
               disabled={isDeleting}
-              className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim disabled:opacity-50"
+              className="px-5 py-2.5 rounded-full text-[13px] tracking-wide bg-transparent hover:bg-foreground/5"
             >
-              Cancel
-            </button>
+              {t("cancel")}
+            </Button>
             <WriteButton
               onClick={handleDeleteRule}
               disabled={isDeleting}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
             >
               {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              <span>Delete Rule</span>
+              <span>{t("deleteConfirm")}</span>
             </WriteButton>
           </div>
         </div>

@@ -1,11 +1,31 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { fireEvent, render as renderBase, screen, waitFor } from "@testing-library/react";
+import messages from "../../../../../../../messages/en.json";
+
+// The widget screen resolves its copy through the catalogue, so the page
+// renders inside the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompanyWidgetPage from "./page";
 
 const navigationState = vi.hoisted(() => ({ section: "" }));
+
+// The shared widget screen reads the configured platform name for the
+// default bot name, so copy is branded per deployment.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "company_1" }),

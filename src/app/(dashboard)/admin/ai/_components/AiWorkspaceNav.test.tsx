@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { usePathname, useSearchParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 import { AiWorkspaceNav } from "./AiWorkspaceNav";

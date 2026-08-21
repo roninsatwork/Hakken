@@ -1,5 +1,5 @@
 import React from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import SonaeModal from "./SonaeModal";
 

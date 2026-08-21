@@ -1,6 +1,21 @@
-import { render, screen } from "@testing-library/react";
+import React from "react";
+import { NextIntlClientProvider } from "next-intl";
+import { render as renderBase, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import messages from "../../../../../messages/en.json";
 import { AiRuleSafetyWarningPanel, getAiRuleSafetyWarnings } from "./AiRuleSafetyWarning";
+
+// The panel resolves its copy through the catalogue, so it renders inside
+// the same intl provider the root layout supplies.
+function render(ui: React.ReactElement) {
+  return renderBase(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
 
 describe("AI rule safety warning", () => {
   it("does not render for ordinary rules", () => {

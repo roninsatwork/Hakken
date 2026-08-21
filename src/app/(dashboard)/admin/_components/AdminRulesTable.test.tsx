@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { renderWithProviders as render, screen, fireEvent } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BrainCircuit } from "lucide-react";
 import { AdminRulesTable, type AdminRuleTableRow } from "./AdminRulesTable";

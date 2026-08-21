@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { BrainCircuit, Loader2, MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useTranslations } from "next-intl";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ModalField, ModalFormError } from "@/src/ui/components/screens/ModalForm";
@@ -38,6 +39,7 @@ const DEFAULT_FORM: ChatMemoryFormData = {
 };
 
 export default function NewChatMemoryCandidatePage() {
+  const t = useTranslations("admin.companyDetails.chatMemoryNew");
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,10 +68,10 @@ export default function NewChatMemoryCandidatePage() {
   // paint. In an effect the user sees an empty form first.
   if (thread && selectedMessage && !hasHydrated) {
       setFormData({
-        title: thread.title ? `${thread.title.slice(0, 70)} memory` : "",
+        title: thread.title ? t("defaultTitle", { title: thread.title.slice(0, 70) }) : "",
         content: selectedMessage.content,
         applyMode: "WHEN_RELEVANT",
-        reason: `Suggested from chat thread ${threadId}.`,
+        reason: t("defaultReason", { threadId }),
       });
       setHasHydrated(true);
   }
@@ -85,7 +87,7 @@ export default function NewChatMemoryCandidatePage() {
           applyMode: formData.applyMode,
           reason: formData.reason || undefined,
       }), {
-      fallbackMessage: "Memory candidate could not be created.",
+      fallbackMessage: t("createFailed"),
       // The form renders the message itself, so a toast would repeat it.
       suppressErrorToast: true,
     });
@@ -105,8 +107,8 @@ export default function NewChatMemoryCandidatePage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <CompanyAiFormPageHeader
         backHref={backHref}
-        title="Suggest a memory"
-        description="Turn something said in this conversation into a memory, for review on the Memory screen."
+        title={t("title")}
+        description={t("description")}
         icon={<BrainCircuit className="h-6 w-6 text-brand" />}
       />
 
@@ -114,13 +116,13 @@ export default function NewChatMemoryCandidatePage() {
         <div className="flex items-start gap-3">
           <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
           <div className="min-w-0">
-            <h2 className="text-[14px] font-semibold text-foreground">{thread.title || "Selected chat evidence"}</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">{thread.title || t("evidenceTitle")}</h2>
             <p className="mt-2 text-[12px] leading-relaxed text-secondary whitespace-pre-wrap">
-              {selectedMessage?.content || "No selected message content."}
+              {selectedMessage?.content || t("noContent")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted">
-              <span>{selectedMessage?.role || "message"}</span>
-              <span>{thread.widgetId ? "widget" : "company chat"}</span>
+              <span>{selectedMessage?.role || t("message")}</span>
+              <span>{thread.widgetId ? t("surfaceWidget") : t("surfaceCompanyChat")}</span>
               <span>{threadId}</span>
             </div>
           </div>
@@ -131,12 +133,12 @@ export default function NewChatMemoryCandidatePage() {
         <div className="flex flex-col gap-5">
           <ModalFormError>{action.error}</ModalFormError>
           <ModalField
-            label="Title"
-            hint="Optional"
+            label={t("titleLabel")}
+            hint={t("optional")}
             type="text"
             value={formData.title}
             onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
-            placeholder="No delivery dates over chat"
+            placeholder={t("titlePlaceholder")}
           />
           <MemoryContentField
             value={formData.content}
@@ -146,17 +148,17 @@ export default function NewChatMemoryCandidatePage() {
             value={formData.applyMode}
             onChange={(applyMode) => setFormData((current) => ({ ...current, applyMode }))}
           />
-          <ModalFormField label="Why?" hint="Optional review note">
+          <ModalFormField label={t("whyLabel")} hint={t("whyHint")}>
             <textarea
               value={formData.reason}
               onChange={(event) => setFormData((current) => ({ ...current, reason: event.target.value }))}
               className={modalTextareaClassName}
-              placeholder="Why should this become durable memory?"
+              placeholder={t("whyPlaceholder")}
             />
           </ModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={action.isBusy() ? "Saving..." : "Suggest memory"}
+            submitLabel={action.isBusy() ? t("saving") : t("suggest")}
             isSubmitting={action.isBusy()}
           />
         </div>

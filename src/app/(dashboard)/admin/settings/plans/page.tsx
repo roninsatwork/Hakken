@@ -14,6 +14,7 @@ import {
   Info
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { useTranslations } from "next-intl";
@@ -342,14 +343,14 @@ export default function SubscriptionPlansPage() {
           </div>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+              className="rounded-[10px] text-sm hover:bg-foreground/5"
               disabled={isSubmitting}
             >
               {tCommon('cancel')}
-            </button>
+            </Button>
             <WriteButton
               type="submit"
               disabled={isSubmitting}

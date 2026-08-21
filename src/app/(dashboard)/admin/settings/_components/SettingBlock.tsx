@@ -70,6 +70,7 @@ export function ColorInput({ label, sub, value, onChange, defaultValue, alpha, r
       </div>
       <div className="flex items-center gap-3 pr-2 flex-shrink-0">
         {defaultValue && value && value.toUpperCase() !== defaultValue.toUpperCase() ? (
+          // Stays raw: a dotted-underline text link drawn as a button — matches no variant.
           <button
             type="button"
             onClick={() => onChange(defaultValue.toUpperCase())}

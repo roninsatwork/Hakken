@@ -11,6 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { cn } from "@/src/ui/lib/utils";
+import { useTranslations } from "next-intl";
 
 type HealthExample = {
   id?: string;
@@ -67,7 +68,8 @@ type RunObservatory = {
   }>;
 };
 
-type Attention = { key: string; label: string; count: number; action: string; href: string };
+/** `labelKey`/`actionKey` are catalogue keys relative to `admin.health` — the screen says the words. */
+type Attention = { key: string; labelKey: string; count: number; actionKey: string; href: string };
 
 /**
  * Everything that needs attention is worth naming; everything that does not is
@@ -85,26 +87,26 @@ function buildAttention(health: SystemHealth): Attention[] {
   // to `.count` meant one absent field took the whole screen down with it —
   // exactly what an admin does not need from the screen that tells them
   // whether anything is wrong.
-  const add = (key: string, label: string, bucket: { count: number } | undefined, action: string, href: string) => {
+  const add = (key: string, labelKey: string, bucket: { count: number } | undefined, actionKey: string, href: string) => {
     if (!bucket || bucket.count <= 0) return;
-    rows.push({ key, label, count: bucket.count, action, href });
+    rows.push({ key, labelKey, count: bucket.count, actionKey, href });
   };
   const ops = health.operations ?? ({} as SystemHealth["operations"]);
   const budgets = health.budgetHealth ?? ({} as SystemHealth["budgetHealth"]);
 
-  add("agentFailures", "Agent runs that failed", ops.agentFailures, "Open the runs", "/admin/agents");
-  add("staleAgentRuns", "Runs that started and never finished", ops.staleAgentRuns, "Open the runs", "/admin/agents");
-  add("pendingApprovals", "Approvals waiting on a person", ops.pendingApprovals, "Open approvals", "/admin/governance/approvals");
-  add("failedToolCalls", "Tool calls that failed", ops.failedToolCalls, "Open tools", "/admin/ai/tools");
-  add("providerFailures", "Repeated failures from a model provider", ops.providerFailures, "Open models", "/admin/ai/models/providers");
-  add("highCostAgents", "Agents costing more than expected", ops.highCostAgents, "Open agents", "/admin/agents");
-  add("agentCostBudgets", "Agents close to their spend limit", budgets.agentCostBudgets, "Open agents", "/admin/agents");
-  add("tenantMessageBudgets", "Companies close to their message limit", budgets.tenantMessageBudgets, "Open companies", "/admin/companies");
-  add("overdueSchedules", "Schedules that should have run by now", ops.overdueSchedules, "Open schedules", "/admin/workflows/schedules");
-  add("schedulesMissingNextRun", "Schedules with nothing planned next", ops.schedulesMissingNextRun, "Open schedules", "/admin/workflows/schedules");
-  add("failedScheduledExecutions", "Scheduled runs that failed", ops.failedScheduledExecutions, "Open workflow runs", "/admin/workflows/executions");
-  add("staleRunningScheduledExecutions", "Scheduled runs that never finished", ops.staleRunningScheduledExecutions, "Open workflow runs", "/admin/workflows/executions");
-  add("failedAgentTransactions", "Agent charges that failed", ops.failedAgentTransactions, "Open agents", "/admin/agents");
+  add("agentFailures", "attention.agentFailures", ops.agentFailures, "actions.openRuns", "/admin/agents");
+  add("staleAgentRuns", "attention.staleAgentRuns", ops.staleAgentRuns, "actions.openRuns", "/admin/agents");
+  add("pendingApprovals", "attention.pendingApprovals", ops.pendingApprovals, "actions.openApprovals", "/admin/governance/approvals");
+  add("failedToolCalls", "attention.failedToolCalls", ops.failedToolCalls, "actions.openTools", "/admin/ai/tools");
+  add("providerFailures", "attention.providerFailures", ops.providerFailures, "actions.openModels", "/admin/ai/models/providers");
+  add("highCostAgents", "attention.highCostAgents", ops.highCostAgents, "actions.openAgents", "/admin/agents");
+  add("agentCostBudgets", "attention.agentCostBudgets", budgets.agentCostBudgets, "actions.openAgents", "/admin/agents");
+  add("tenantMessageBudgets", "attention.tenantMessageBudgets", budgets.tenantMessageBudgets, "actions.openCompanies", "/admin/companies");
+  add("overdueSchedules", "attention.overdueSchedules", ops.overdueSchedules, "actions.openSchedules", "/admin/workflows/schedules");
+  add("schedulesMissingNextRun", "attention.schedulesMissingNextRun", ops.schedulesMissingNextRun, "actions.openSchedules", "/admin/workflows/schedules");
+  add("failedScheduledExecutions", "attention.failedScheduledExecutions", ops.failedScheduledExecutions, "actions.openWorkflowRuns", "/admin/workflows/executions");
+  add("staleRunningScheduledExecutions", "attention.staleRunningScheduledExecutions", ops.staleRunningScheduledExecutions, "actions.openWorkflowRuns", "/admin/workflows/executions");
+  add("failedAgentTransactions", "attention.failedAgentTransactions", ops.failedAgentTransactions, "actions.openAgents", "/admin/agents");
 
   return rows;
 }
@@ -121,17 +123,19 @@ function formatDuration(ms: number) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-const RUN_RESULT_LABELS: Record<string, string> = {
-  SUCCESS: "Worked",
-  FAILED: "Failed",
-  CANCELLED: "Stopped",
-  RUNNING: "Running",
-  QUEUED: "Queued",
-  PENDING_APPROVAL: "Waiting for approval",
+// Catalogue keys, relative to `admin.health` — the screen says the words.
+const RUN_RESULT_LABEL_KEYS: Record<string, string> = {
+  SUCCESS: "results.worked",
+  FAILED: "results.failed",
+  CANCELLED: "results.stopped",
+  RUNNING: "results.running",
+  QUEUED: "results.queued",
+  PENDING_APPROVAL: "results.waitingApproval",
 };
 
 export default function HealthPage() {
-  const health = useQuery(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 }) as SystemHealth | undefined;
+  const t = useTranslations("admin.health");
+  const health = useQuery(api.systemHealth.getSystemHealthForAdmin, { daysBack: 7 }) as SystemHealth | undefined;
   const runs = useQuery(api.agentRuns.getRunObservatory, { lookbackDays: 7 }) as RunObservatory | undefined;
   // The outside world, and the platform's own scheduled work (seven-gaps
   // plan, phase 2). This page reads internal tables only; without these two
@@ -146,18 +150,18 @@ export default function HealthPage() {
   if (brokenConnections > 0) {
     attention.unshift({
       key: "connections",
-      label: "Connections that stopped answering",
+      labelKey: "attention.connections",
       count: brokenConnections,
-      action: "Open connections",
+      actionKey: "actions.openConnections",
       href: "/admin/connections",
     });
   }
   if (troubledJobs > 0) {
     attention.unshift({
       key: "scheduledJobs",
-      label: "Scheduled jobs failing or late",
+      labelKey: "attention.scheduledJobs",
       count: troubledJobs,
-      action: "Open connections",
+      actionKey: "actions.openConnections",
       href: "/admin/connections",
     });
   }
@@ -183,8 +187,8 @@ export default function HealthPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<HeartPulse className="h-6 w-6 text-brand" />}
-        title="Health"
-        description="Whether anything needs your attention, and how your agents have been running."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
       />
 
       {health ? (
@@ -202,21 +206,19 @@ export default function HealthPage() {
               : <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />}
             <span className={cn("text-[15px] font-semibold", isHealthy ? "text-[#10b981]" : "text-[#f59e0b]")}>
               {isHealthy
-                ? "Nothing needs attention"
-                : attention.length === 1
-                  ? "1 thing needs attention"
-                  : `${attention.length} things need attention`}
+                ? t("statusHealthy")
+                : t("statusAttention", { count: attention.length })}
             </span>
             {health.checkedAt ? (
               <span className={cn("text-[14px]", isHealthy ? "text-[#10b981]" : "text-[#f59e0b]")}>
-                · checked {formatDateTime(health.checkedAt)}
+                {t("checkedAt", { date: formatDateTime(health.checkedAt) })}
               </span>
             ) : null}
           </div>
 
           {attention.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h2 className="text-[13px] font-semibold text-foreground">Fix these first</h2>
+              <h2 className="text-[13px] font-semibold text-foreground">{t("fixFirst")}</h2>
               {attention.map((item) => (
                 <Link
                   key={item.key}
@@ -225,13 +227,13 @@ export default function HealthPage() {
                 >
                   <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-semibold text-foreground">{item.label}</div>
+                    <div className="text-[14px] font-semibold text-foreground">{t(item.labelKey)}</div>
                     <div className="mt-0.5 text-[13px] text-secondary">
-                      {item.count} in the last 7 days
+                      {t("inLastDays", { count: item.count })}
                     </div>
                   </div>
                   <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] text-brand">
-                    {item.action}
+                    {t(item.actionKey)}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </Link>
@@ -243,13 +245,13 @@ export default function HealthPage() {
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-foreground">The last 7 days</h2>
+          <h2 className="text-[15px] font-semibold text-foreground">{t("lastDaysTitle")}</h2>
           <p className="mt-1 text-[13px] leading-relaxed text-secondary">
             {runs === undefined
-              ? "Counting recent runs."
+              ? t("countingRuns")
               : !totals || totals.runs === 0
-                ? "No agent has run in the last 7 days."
-                : `${totals.runs} run${totals.runs === 1 ? "" : "s"}, ${totals.failedRuns} failed, ${formatSpend(totals.costGBP)} spent, ${formatDuration(totals.averageLatencyMs)} on average.`}
+                ? t("noRuns")
+                : t("runsSummary", { runs: totals.runs, failed: totals.failedRuns, spend: formatSpend(totals.costGBP), duration: formatDuration(totals.averageLatencyMs) })}
           </p>
         </div>
 
@@ -260,7 +262,7 @@ export default function HealthPage() {
           search={{
             value: runSearch,
             onChange: setRunSearch,
-            placeholder: "Search by what ran or which agent",
+            placeholder: t("searchPlaceholder"),
           }}
           footer={{
             mode: "paged",
@@ -270,13 +272,13 @@ export default function HealthPage() {
             pageSize: runPaged.pageSize,
             isLoading: runs === undefined,
             onPageChange: setRunPage,
-            labels: { empty: "Nothing has run yet" },
+            labels: { empty: t("emptyRuns") },
           }}
-          empty={{ icon: <HeartPulse className="h-8 w-8 text-muted/30" />, label: "Nothing has run yet" }}
+          empty={{ icon: <HeartPulse className="h-8 w-8 text-muted/30" />, label: t("emptyRuns") }}
           columns={[
             {
               key: "what",
-              header: "What ran",
+              header: t("columnWhat"),
               cell: (run) => (
                 <>
                   <Link
@@ -293,12 +295,12 @@ export default function HealthPage() {
             },
             {
               key: "agent",
-              header: "Agent",
+              header: t("columnAgent"),
               cell: (run) => <span className="text-[13px] text-secondary">{run.agentName}</span>,
             },
             {
               key: "result",
-              header: "Result",
+              header: t("columnResult"),
               cell: (run) => (
                 <span
                   className={cn(
@@ -306,27 +308,27 @@ export default function HealthPage() {
                     run.status === "FAILED" ? "text-rose-300" : "text-secondary",
                   )}
                 >
-                  {RUN_RESULT_LABELS[run.status] ?? run.status}
+                  {RUN_RESULT_LABEL_KEYS[run.status] ? t(RUN_RESULT_LABEL_KEYS[run.status]) : run.status}
                 </span>
               ),
             },
             {
               key: "took",
-              header: "Took",
+              header: t("columnTook"),
               cell: (run) => (
                 <span className="text-[13px] text-secondary">{formatDuration(run.latencyMs ?? 0)}</span>
               ),
             },
             {
               key: "cost",
-              header: "Cost",
+              header: t("columnCost"),
               cell: (run) => (
                 <span className="text-[13px] text-secondary">{formatSpend(run.costGBP ?? 0)}</span>
               ),
             },
             {
               key: "when",
-              header: "When",
+              header: t("columnWhen"),
               cell: (run) => (
                 <span className="text-[13px] text-secondary">{formatDateTime(run.startedAt)}</span>
               ),

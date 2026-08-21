@@ -5,7 +5,6 @@ import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScree
 import MaintenanceScriptsPage from "./page";
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
-vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/navigation", async () => (await import("@/src/test/screenMocks")).nextNavigation());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 

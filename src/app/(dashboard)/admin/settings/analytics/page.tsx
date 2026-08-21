@@ -18,14 +18,16 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
+import { useTranslations } from "next-intl";
 
 function formatCount(value: number) {
   return new Intl.NumberFormat("en-GB").format(value);
 }
 
 export default function AnalyticsPage() {
+  const t = useTranslations("admin.settings.analytics");
   const currentId = useQuery(api.system.getAnalyticsId);
-  const health = useQuery(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 });
+  const health = useQuery(api.systemHealth.getAnalyticsDataHealthForAdmin, { daysBack: 7 });
   const updateId = useMutation(api.system.updateAnalyticsId);
   
   const [trackingId, setTrackingId] = useState("");
@@ -64,7 +66,7 @@ export default function AnalyticsPage() {
     } catch (error: unknown) {
       console.error("Failed to save analytics configuration:", error);
       setSaveStatus("error");
-      setErrorMessage(getErrorMessage(error, "Failed to transmit changes to the persistent Edge store."));
+      setErrorMessage(getErrorMessage(error, t("saveFailedFallback")));
     } finally {
       setIsSaving(false);
     }
@@ -84,10 +86,10 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <LineChart className="w-6 h-6 text-brand" />
-            Global Analytics Engine
+            {t("title")}
           </h1>
           <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            Integrate Google Tag Manager (GTM) or Google Analytics (GA4) system-wide.
+            {t("subtitle")}
           </p>
         </div>
         
@@ -101,7 +103,7 @@ export default function AnalyticsPage() {
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
-              <span>Revert</span>
+              <span>{t("revert")}</span>
             </WriteButton>
           )}
 
@@ -120,16 +122,16 @@ export default function AnalyticsPage() {
             ) : (
               <Save className="w-3.5 h-3.5" />
             )}
-            <span>Commit Configuration</span>
+            <span>{t("commit")}</span>
           </WriteButton>
         </div>
       </header>
 
       <SaveFeedback
         status={saveStatus}
-        successTitle="Tracking Integrated"
-        successMessage="The structural analytics script identifier was successfully deployed to the platform core."
-        errorTitle="Transmission Failure"
+        successTitle={t("savedTitle")}
+        successMessage={t("savedMessage")}
+        errorTitle={t("saveFailedTitle")}
         errorMessage={errorMessage}
       />
 
@@ -143,9 +145,9 @@ export default function AnalyticsPage() {
               <Activity className="w-3 h-3" />
             </div>
             <div>
-              <span className="text-foreground text-[14px] font-bold tracking-wide">Analytics Data Health</span>
+              <span className="text-foreground text-[14px] font-bold tracking-wide">{t("healthTitle")}</span>
               <p className="text-[12px] text-muted mt-0.5">
-                Snapshot coverage, dimension drift, and live ingestion over the last 7 days.
+                {t("healthSub")}
               </p>
             </div>
           </div>
@@ -164,14 +166,14 @@ export default function AnalyticsPage() {
             ) : (
               <AlertTriangle className="w-3 h-3" />
             )}
-            <span>{isHealthLoading ? "Checking" : isHealthy ? "Healthy" : `${healthIssueCount} signals`}</span>
+            <span>{isHealthLoading ? t("checking") : isHealthy ? t("healthy") : t("signals", { count: healthIssueCount })}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Snapshots</span>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">{t("snapshots")}</span>
               <Database className="w-4 h-4 text-brand" />
             </div>
             <div className="text-2xl font-semibold text-foreground">
@@ -179,14 +181,14 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-[12px] text-secondary leading-relaxed">
               {health
-                ? `${formatCount(health.snapshotCoverage.missingGlobalDates.length)} missing global dates, ${formatCount(health.snapshotCoverage.duplicateSnapshotGroups.length)} duplicate groups.`
-                : "Loading snapshot coverage."}
+                ? t("snapshotsSummary", { missing: formatCount(health.snapshotCoverage.missingGlobalDates.length), duplicates: formatCount(health.snapshotCoverage.duplicateSnapshotGroups.length) })
+                : t("snapshotsLoading")}
             </p>
           </div>
 
           <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Dimensions</span>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">{t("dimensions")}</span>
               <MessageSquare className="w-4 h-4 text-emerald-500" />
             </div>
             <div className="text-2xl font-semibold text-foreground">
@@ -194,14 +196,14 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-[12px] text-secondary leading-relaxed">
               {health
-                ? `${formatCount(health.messageDimensions.missingDimensions)} missing, ${formatCount(health.messageDimensions.mismatched)} mismatched, ${formatCount(health.messageDimensions.missingThreads)} missing threads.`
-                : "Loading recent message checks."}
+                ? t("dimensionsSummary", { missing: formatCount(health.messageDimensions.missingDimensions), mismatched: formatCount(health.messageDimensions.mismatched), missingThreads: formatCount(health.messageDimensions.missingThreads) })
+                : t("dimensionsLoading")}
             </p>
           </div>
 
           <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Live Today</span>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">{t("liveToday")}</span>
               <Activity className="w-4 h-4 text-blue-500" />
             </div>
             <div className="text-2xl font-semibold text-foreground">
@@ -209,14 +211,14 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-[12px] text-secondary leading-relaxed">
               {health
-                ? `${formatCount(health.liveToday.agentTransactions)} agent transactions on ${health.liveToday.date}.`
-                : "Loading today's live ingestion."}
+                ? t("liveTodaySummary", { count: formatCount(health.liveToday.agentTransactions), date: health.liveToday.date })
+                : t("liveTodayLoading")}
             </p>
           </div>
 
           <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Window</span>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">{t("window")}</span>
               <CalendarDays className="w-4 h-4 text-rose-500" />
             </div>
             <div className="text-2xl font-semibold text-foreground">
@@ -224,8 +226,8 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-[12px] text-secondary leading-relaxed">
               {health
-                ? `${health.checkedDates[0]} through ${health.checkedDates[health.checkedDates.length - 1]}.`
-                : "Loading checked date range."}
+                ? t("windowSummary", { from: health.checkedDates[0], to: health.checkedDates[health.checkedDates.length - 1] })
+                : t("windowLoading")}
             </p>
           </div>
         </div>
@@ -234,26 +236,26 @@ export default function AnalyticsPage() {
           <div className="rounded-[10px] border border-amber-500/20 bg-amber-500/10 p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 text-amber-500">
               <AlertTriangle className="w-4 h-4" />
-              <span className="text-[12px] font-bold uppercase tracking-widest">Operator attention needed</span>
+              <span className="text-[12px] font-bold uppercase tracking-widest">{t("attentionNeeded")}</span>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[12px] text-secondary leading-relaxed">
               <p>
-                Missing snapshot dates: {health.snapshotCoverage.missingGlobalDates.length > 0
+                {t("missingDates", { dates: health.snapshotCoverage.missingGlobalDates.length > 0
                   ? health.snapshotCoverage.missingGlobalDates.join(", ")
-                  : "none"}.
+                  : t("none") })}
               </p>
               <p>
-                Duplicate snapshot groups: {health.snapshotCoverage.duplicateSnapshotGroups.length > 0
+                {t("duplicateGroups", { groups: health.snapshotCoverage.duplicateSnapshotGroups.length > 0
                   ? health.snapshotCoverage.duplicateSnapshotGroups.map((group) => `${group.date} ${group.type}:${group.scopeId}`).join(", ")
-                  : "none"}.
+                  : t("none") })}
               </p>
               <p>
-                Message dimension examples: {health.messageDimensions.examples.length > 0
+                {t("dimensionExamples", { examples: health.messageDimensions.examples.length > 0
                   ? health.messageDimensions.examples.join(", ")
-                  : "none"}.
+                  : t("none") })}
               </p>
               <p>
-                Next action: run the documented Convex health/backfill commands before removing legacy analytics fallbacks.
+                {t("nextAction")}
               </p>
             </div>
           </div>
@@ -266,13 +268,13 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Tracking Container Code</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("containerTitle")}</span>
           </div>
            
            <div className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest transition-colors ${
              hasUnsavedChanges ? "bg-amber-500/10 text-amber-500 font-bold" : "bg-border-dim text-muted"
            }`}>
-             {hasUnsavedChanges ? "Unsaved" : "Synced"}
+             {hasUnsavedChanges ? t("unsaved") : t("synced")}
            </div>
         </div>
 
@@ -285,24 +287,24 @@ export default function AnalyticsPage() {
               <div className="absolute inset-0 flex items-center justify-center bg-transparent backdrop-blur-sm z-20">
                  <div className="flex flex-col items-center gap-3 text-muted">
                    <RefreshCcw className="w-5 h-5 animate-spin opacity-50" />
-                   <span className="text-[11px] font-mono tracking-widest uppercase">Connecting...</span>
+                   <span className="text-[11px] font-mono tracking-widest uppercase">{t("connecting")}</span>
                  </div>
               </div>
             ) : null}
 
             <Field
-              label="Universal Tracking ID"
+              label={t("trackingIdLabel")}
               labelHidden
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
               disabled={currentId === undefined || isSaving}
               className="font-mono tracking-widest"
-              placeholder="e.g. GTM-XXXXXXX or G-XXXXXXX"
+              placeholder={t("trackingIdPlaceholder")}
               spellCheck={false}
             />
           </div>
           <p className="text-[13px] text-muted font-light leading-relaxed px-1 mt-1">
-            Specify the Google Tag Manager (GTM-XXXXX) ID, or Google Analytics Universal (G-XXXXX/AW-XXXXX) ID. The system safely mounts this ID using the Next.js official third-party router logic so it avoids execution-blocking delays and guarantees platform stability. Leave blank and click commit to remove analytics completely.
+            {t("trackingIdHelp")}
           </p>
         </div>
       </section>

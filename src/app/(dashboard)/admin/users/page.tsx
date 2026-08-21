@@ -4,18 +4,24 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import Image from "next/image";
 import type { FormEvent } from "react";
 import {
   Users,
   Plus,
   MoreVertical,
-  ShieldCheck,
-  User,
   Trash2,
   Edit2
 } from "lucide-react";
+import {
+  DirectoryInviteAwaitingActions,
+  DirectoryInviteIdentityCell,
+  DirectoryInviteRolePill,
+  DirectoryTextCell,
+  DirectoryUserIdentityCell,
+  DirectoryUserRolePill,
+} from "@/src/app/(dashboard)/_features/user-directory/DirectoryTableCells";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -215,34 +221,13 @@ export default function ManageUsersPage() {
             header: tCommon('table.user'),
             cell: (row) =>
               row.kind === "invite" ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                    <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                      {t('table.pending')}
-                    </span>
-                    <span className="text-[12px] text-secondary">{row.invite.email}</span>
-                  </div>
-                </div>
+                <DirectoryInviteIdentityCell pendingLabel={t('table.pending')} email={row.invite.email} />
               ) : (
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={row.user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${row.user.name ?? row.user.email ?? row.user._id}`}
-                    alt={row.user.name ?? row.user.email ?? tCommon('table.user')}
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                  />
-                  <div>
-                    <Link href={`/admin/users/${row.user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
-                      {row.user.name}
-                    </Link>
-                    <span className="text-[12px] text-secondary">{row.user.email}</span>
-                  </div>
-                </div>
+                <DirectoryUserIdentityCell
+                  user={row.user}
+                  alt={row.user.name ?? row.user.email ?? tCommon('table.user')}
+                  href={`/admin/users/${row.user._id}`}
+                />
               ),
           },
           {
@@ -250,18 +235,14 @@ export default function ManageUsersPage() {
             header: tCommon('table.role'),
             cell: (row) =>
               row.kind === "invite" ? (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                  <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                    {t('table.pending')} {row.invite.role}
-                  </span>
-                </div>
+                <DirectoryInviteRolePill>
+                  {t('table.pending')} {row.invite.role}
+                </DirectoryInviteRolePill>
               ) : (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                  {row.user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                  <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                    {row.user.role === 'SUPER_ADMIN' ? t('roles.superAdmin') : row.user.role === 'ADMIN' ? t('roles.admin') : t('roles.user')}
-                  </span>
-                </div>
+                <DirectoryUserRolePill
+                  isAdmin={row.user.role === 'ADMIN'}
+                  label={row.user.role === 'SUPER_ADMIN' ? t('roles.superAdmin') : row.user.role === 'ADMIN' ? t('roles.admin') : t('roles.user')}
+                />
               ),
           },
           ...(isSuperAdmin
@@ -270,7 +251,7 @@ export default function ManageUsersPage() {
                   key: "workspace",
                   header: t('table.workspace'),
                   cell: (row: DirectoryRow) => (
-                    <span className="text-[12px] text-secondary">
+                    <DirectoryTextCell>
                       {row.kind === "invite"
                         ? row.invite.companyId
                           ? getCompanyName(row.invite.companyId)
@@ -278,7 +259,7 @@ export default function ManageUsersPage() {
                         : row.user.companyId
                           ? row.user.companyName ?? getCompanyName(row.user.companyId)
                           : t('table.sonaeGlobal')}
-                    </span>
+                    </DirectoryTextCell>
                   ),
                 },
               ]
@@ -287,11 +268,11 @@ export default function ManageUsersPage() {
             key: "joined",
             header: t('table.joined'),
             cell: (row) => (
-              <span className="text-[12px] text-secondary">
+              <DirectoryTextCell>
                 {row.kind === "invite"
                   ? formatDate(row.invite.invitedAt, { fallback: t('table.na') })
                   : formatDate(row.user.createdAt, { fallback: t('table.na') })}
-              </span>
+              </DirectoryTextCell>
             ),
           },
           {
@@ -300,14 +281,11 @@ export default function ManageUsersPage() {
             align: "right",
             cell: (row) =>
               row.kind === "invite" ? (
-                <RowActions>
-                  <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
-                    {t('table.awaiting')}
-                  </span>
-                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label={t('buttons.revoke')}>
-                    <Trash2 className="w-4 h-4" />
-                  </RowIconButton>
-                </RowActions>
+                <DirectoryInviteAwaitingActions
+                  awaitingLabel={t('table.awaiting')}
+                  revokeLabel={t('buttons.revoke')}
+                  onRevoke={() => setDeletingInvite(row.invite)}
+                />
               ) : (
                 <RowActions>
                   {/* These carried no label at all, so they read as "button,
@@ -403,14 +381,14 @@ export default function ManageUsersPage() {
           </ModalField>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setIsAddModalOpen(false)}
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+              className="rounded-[10px] text-sm hover:bg-foreground/5"
             >
               {t('buttons.cancel')}
-            </button>
+            </Button>
             <WriteButton
               type="submit"
               disabled={isSubmitting}

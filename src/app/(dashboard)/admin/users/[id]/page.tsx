@@ -142,6 +142,7 @@ export default function UserProfilePage() {
 
       {/* Advanced Details tabs */}
       <div className="w-full flex gap-6 border-b border-border-dim/50 pb-3 mt-6 relative z-10">
+        {/* This pair stays raw: underline tabs that turn brand when active — matches no variant. */}
         <button
           onClick={() => setActiveTab("logins")}
           className={`text-[13px] font-medium transition-colors relative ${activeTab === "logins" ? "text-brand" : "text-secondary hover:text-foreground"}`}

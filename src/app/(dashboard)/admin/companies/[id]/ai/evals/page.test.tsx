@@ -1,6 +1,18 @@
 import React from "react";
 import { screen, within } from "@testing-library/react";
-import { renderWithProviders } from "@/src/test/renderWithProviders";
+import { NextIntlClientProvider } from "next-intl";
+import { renderWithProviders as renderBase } from "@/src/test/renderWithProviders";
+import messages from "../../../../../../../../messages/en.json";
+
+// The evals screen resolves its copy through the catalogue, so the page
+// renders inside the same intl provider the root layout supplies.
+function renderWithProviders(ui: React.ReactElement) {
+  return renderBase(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";

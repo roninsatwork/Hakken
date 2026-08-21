@@ -69,6 +69,7 @@ interface NavItemProps {
 }
 
 function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit }: { label: string, isActive: boolean, onClick: () => void, href?: string, badge?: number, badgeAtLimit?: boolean }) {
+  const t = useTranslations('sidebar');
   // Absent at zero rather than a grey "0". A badge that is always there stops
   // being read, and the whole point of this one is that it means something.
   const showBadge = typeof badge === "number" && badge > 0;
@@ -86,7 +87,7 @@ function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit }: { l
         <span className="truncate">{label}</span>
         {showBadge && (
           <span
-            aria-label={`${badge}${badgeAtLimit ? "+" : ""} waiting`}
+            aria-label={t('badgeWaiting', { count: `${badge}${badgeAtLimit ? "+" : ""}` })}
             className="shrink-0 min-w-[18px] px-1.5 py-0.5 rounded-full bg-[#f59e0b]/20 border border-[#f59e0b]/30 text-[#f59e0b] text-[10px] font-semibold leading-none text-center tabular-nums"
           >
             {badge}{badgeAtLimit ? "+" : ""}
@@ -110,6 +111,8 @@ function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit }: { l
   }
 
   return (
+    // Raw on purpose: a nav row twin of the Link above — its recipe arrives
+    // via `className`, so no one Button variant can stand here.
     <button onClick={onClick} className={className}>
       {content}
     </button>
@@ -159,6 +162,7 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
       );
     }
     return (
+      // Raw on purpose: same nav-row pattern as SubNavItem above.
       <button onClick={hasChildren ? (onToggle || onClick) : onClick} className={className}>
         {content}
       </button>
@@ -420,6 +424,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
 
 export default function SidebarNavigation() {
   const t = useTranslations('sidebar');
+  const tc = useTranslations('common');
   const pathname = usePathname();
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const settings = useSystemSettings();
@@ -538,6 +543,8 @@ export default function SidebarNavigation() {
                 </span>
               )}
             </Link>
+            {/* Raw on purpose: gains a border on hover — the `icon` variant is
+                round and borderless, so mapping it would shift the corner. */}
             <button
               onClick={() => setIsSidebarOpen(false)}
               className="text-muted hover:text-foreground transition-colors border border-transparent hover:border-border-dim p-1.5 rounded-md"
@@ -675,7 +682,7 @@ export default function SidebarNavigation() {
                           onToggle={() => toggleSection('settings')}
                         >
                           <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={isSystemSettingsRoute(pathname)} onClick={() => setActiveItem('System Settings')} />
-                          <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+                          <SubNavItem label={t('plans')} href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
                           <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
                           <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
@@ -738,7 +745,7 @@ export default function SidebarNavigation() {
 
                     <NavItem
                       icon={Bot}
-                      label={`Ask ${settings.platformName}`}
+                      label={t('askPlatform', { platformName: settings.platformName })}
                       href="/app/assistant"
                       isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
                       onClick={() => setActiveItem('Assistant')}
@@ -747,7 +754,7 @@ export default function SidebarNavigation() {
                     {hasCapability(CORE_MODULES.tasks) && (
                     <NavItem
                       icon={ListChecks}
-                      label="Tasks"
+                      label={t('tasks')}
                       href="/app/tasks"
                       isActive={activeItem === 'Tasks' || pathname.startsWith('/app/tasks')}
                       onClick={() => setActiveItem('Tasks')}
@@ -757,7 +764,7 @@ export default function SidebarNavigation() {
                     {hasCapability(CORE_MODULES.calls) && (
                     <NavItem
                       icon={Phone}
-                      label="Calls"
+                      label={t('calls')}
                       href="/app/calls"
                       isActive={activeItem === 'Calls' || pathname.startsWith('/app/calls')}
                       onClick={() => setActiveItem('Calls')}
@@ -767,7 +774,7 @@ export default function SidebarNavigation() {
                     {hasCapability(CORE_MODULES.reception) && (
                     <NavItem
                       icon={MonitorSpeaker}
-                      label="Reception"
+                      label={t('reception')}
                       href="/app/reception"
                       isActive={activeItem === 'Reception' || pathname.startsWith('/app/reception')}
                       onClick={() => setActiveItem('Reception')}
@@ -778,15 +785,15 @@ export default function SidebarNavigation() {
                     {hasCapability(REPORTS_MODULE_KEY) && (
                     <NavItem
                       icon={LineChart}
-                      label="Reports"
+                      label={t('reports')}
                       isActive={activeItem === 'Reports'}
                       onClick={() => setActiveItem('Reports')}
                       hasChildren
                       isOpen={openSections.reports}
                       onToggle={() => toggleSection('reports')}
                     >
-                      <SubNavItem label="Information" href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
-                      <SubNavItem label="Sales Report" href="/app/reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label={t('information')} href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label={t('salesReport')} href="/app/reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
                     )}
                     {/* template:remove:end */}
@@ -802,10 +809,10 @@ export default function SidebarNavigation() {
                       isOpen={openSections.properties}
                       onToggle={() => toggleSection('properties')}
                     >
-                      <SubNavItem label="Information" href="/app/properties/information" isActive={pathname.startsWith('/app/properties/information')} onClick={() => setActiveItem('Properties')} />
+                      <SubNavItem label={t('information')} href="/app/properties/information" isActive={pathname.startsWith('/app/properties/information')} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
-                      <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
+                      <SubNavItem label={t('logs')} href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
                     )}
                     {/* template:remove:end */}
@@ -828,16 +835,16 @@ export default function SidebarNavigation() {
                     {hasCapability(POSTURE_STUDIO_MODULE_KEY) && (
                     <NavItem
                       icon={Globe}
-                      label="Posture Studio"
+                      label={t('postureStudio')}
                       isActive={activeItem === 'Demos' || pathname.startsWith('/demos')}
                       onClick={() => setActiveItem('Demos')}
                       hasChildren
                       isOpen={openSections.demos}
                       onToggle={() => toggleSection('demos')}
                     >
-                      <SubNavItem label="Information" href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Studio Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label={t('information')} href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label={t('studioLibrary')} href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label={t('replayAlignment')} href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
 
                     </NavItem>
                     )}
@@ -870,15 +877,15 @@ export default function SidebarNavigation() {
                     {!isSuperAdmin && user?.role === "ADMIN" && (
                       <NavItem
                         icon={Building2}
-                        label="Organization"
+                        label={t('organization')}
                         isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team' || activeItem === 'Auth Diagnostics'}
                         onClick={() => setActiveItem('Organization Dashboard')}
                         hasChildren
                         isOpen={openSections.organization}
                         onToggle={() => toggleSection('organization')}
                       >
-                        <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
-                        <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                        <SubNavItem label={t('dashboard')} href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
+                        <SubNavItem label={t('teamMembers')} href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
                         <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                       </NavItem>
                     )}
@@ -887,14 +894,14 @@ export default function SidebarNavigation() {
                     {settings.diagnosticRoutingEnabled && (
                       <NavItem
                         icon={Gamepad2}
-                        label="Arcade"
+                        label={t('arcade')}
                         isActive={activeItem === 'Arcade' || activeItem === 'RoninsRun'}
                         onClick={() => setActiveItem('Arcade')}
                         hasChildren
                         isOpen={openSections.arcade}
                         onToggle={() => toggleSection('arcade')}
                       >
-                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronins-run" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
+                        <SubNavItem label={t('roninsRun')} href="/app/arcade/ronins-run" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
                       </NavItem>
                     )}
                     {/* template:remove:end */}
@@ -912,9 +919,11 @@ export default function SidebarNavigation() {
                       {t('impersonatingLabel')}
                     </span>
                     <span className="text-[13px] font-light text-foreground tracking-wide truncate">
-                      {impersonatedCompany?.name || "Loading..."}
+                      {impersonatedCompany?.name || tc('loading')}
                     </span>
                   </div>
+                  {/* Raw on purpose: a foreground-tinted banner action that
+                      grows on hover — no Button variant is this recipe. */}
                   <button
                     onClick={handleExitImpersonation}
                     className="w-full text-center py-2 px-3 rounded-[8px] bg-foreground/5 hover:bg-foreground/10 text-foreground text-[11px] font-medium tracking-[0.08em] transition-all border border-border-dim/50 hover:scale-[1.02]"

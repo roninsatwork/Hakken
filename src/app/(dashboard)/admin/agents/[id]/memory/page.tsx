@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   ArchiveX,
@@ -42,6 +43,7 @@ import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/atoms/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Button } from "@/src/ui/atoms/Button";
 
 type AgentMemory = Doc<"agentMemories">;
 type SourceRunSummary = {
@@ -95,22 +97,23 @@ function resolveApplyMode(memory: { applyMode?: MemoryApplyMode; kind?: string }
  * with a blue/amber accent — never a colour alone.
  */
 function MemoryTrackRecord({ memory }: { memory: AgentMemory }) {
+  const t = useTranslations("admin.agents.details.memory");
   const successCount = memory.successCount ?? 0;
   const troubleCount = (memory.failureCount ?? 0) + (memory.cancelledCount ?? 0);
   const total = successCount + troubleCount;
 
   if (total === 0) {
-    return <span className="text-[11px] text-muted">No history yet</span>;
+    return <span className="text-[11px] text-muted">{t("trackRecord.noHistory")}</span>;
   }
 
-  const label = troubleCount > successCount ? "Review" : "Helping";
+  const label = troubleCount > successCount ? t("trackRecord.review") : t("trackRecord.helping");
   const tone = troubleCount > successCount ? "warning" : "info";
 
   return (
     <div className="flex flex-col gap-1">
       <StatusPill tone={tone}>{label}</StatusPill>
       <span className="text-[11px] text-secondary">
-        {successCount} helped · {troubleCount} in failed runs
+        {t("trackRecord.summary", { success: successCount, trouble: troubleCount })}
       </span>
     </div>
   );
@@ -125,30 +128,31 @@ function formatCostGBP(value?: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 4 }).format(value);
 }
 
-function formatPatchValue(value: unknown) {
+function formatPatchValue(value: unknown, unpreviewableLabel: string) {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (value === null) return "null";
   try {
     return JSON.stringify(value, null, 2);
   } catch {
-    return "Unpreviewable value";
+    return unpreviewableLabel;
   }
 }
 
-function getPatchRows(proposedPatchJson: string) {
+function getPatchRows(proposedPatchJson: string, unpreviewableLabel: string) {
   try {
     const parsed = JSON.parse(proposedPatchJson) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return [{ key: "patch", value: formatPatchValue(parsed) }];
+      return [{ key: "patch", value: formatPatchValue(parsed, unpreviewableLabel) }];
     }
-    return Object.entries(parsed).map(([key, value]) => ({ key, value: formatPatchValue(value) }));
+    return Object.entries(parsed).map(([key, value]) => ({ key, value: formatPatchValue(value, unpreviewableLabel) }));
   } catch {
     return [{ key: "patch", value: proposedPatchJson }];
   }
 }
 
 function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary | null; agentId: Id<"agents"> }) {
+  const t = useTranslations("admin.agents.details.memory");
   if (!sourceRun) return null;
   const cost = formatCostGBP(sourceRun.costGBP);
 
@@ -173,20 +177,23 @@ function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary |
         className="text-[11px] text-brand hover:text-brand-light font-semibold flex items-center gap-1 w-fit"
       >
         <ExternalLink className="w-3 h-3" />
-        Open run detail
+        {t("sourceRun.openRun")}
       </Link>
     </div>
   );
 }
 
 function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary | null }) {
+  const t = useTranslations("admin.agents.details.memory");
   if (!sourceSkill) return null;
-  const versionLabel = typeof sourceSkill.versionNumber === "number" ? `v${sourceSkill.versionNumber}` : "pinned version";
+  const versionLabel = typeof sourceSkill.versionNumber === "number"
+    ? t("sourceSkill.version", { number: sourceSkill.versionNumber })
+    : t("sourceSkill.pinnedVersion");
 
   return (
     <div className="rounded-[8px] border border-info/20 bg-info/10 px-3 py-2 flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase font-mono tracking-widest text-info">Skill attribution</span>
+        <span className="text-[10px] uppercase font-mono tracking-widest text-info">{t("sourceSkill.attribution")}</span>
         <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(sourceSkill.riskLevel)]}`}>
           {sourceSkill.riskLevel}
         </span>
@@ -220,12 +227,13 @@ function PatchPreview({
   proposedPatchJson: string;
   patchPreview?: PatchPreviewRow[];
 }) {
-  const fallbackRows = getPatchRows(proposedPatchJson);
+  const t = useTranslations("admin.agents.details.memory");
+  const fallbackRows = getPatchRows(proposedPatchJson, t("patch.unpreviewable"));
 
   return (
     <div className="rounded-[8px] border border-border-dim bg-black/20 overflow-hidden">
       <div className="px-3 py-2 border-b border-border-dim text-[10px] uppercase tracking-widest font-mono text-muted">
-        Proposed change
+        {t("patch.proposedChange")}
       </div>
       {patchPreview && patchPreview.length > 0 ? (
         <div className="divide-y divide-border-dim">
@@ -237,7 +245,7 @@ function PatchPreview({
                 </span>
                 <span className="text-[11px] font-semibold text-foreground">{row.target}</span>
               </div>
-              {row.before && <p className="text-[11px] text-muted leading-relaxed">Before: {row.before}</p>}
+              {row.before && <p className="text-[11px] text-muted leading-relaxed">{t("patch.before", { value: row.before })}</p>}
               {row.after && (
                 <pre className="text-[11px] text-secondary whitespace-pre-wrap break-words font-mono leading-relaxed max-h-28 overflow-auto">
                   {row.after}
@@ -248,7 +256,7 @@ function PatchPreview({
           ))}
           {patchPreview.length > 6 && (
             <div className="px-3 py-2 text-[11px] text-muted">
-              {patchPreview.length - 6} more changes hidden.
+              {t("patch.moreHidden", { count: patchPreview.length - 6 })}
             </div>
           )}
         </div>
@@ -279,13 +287,14 @@ function ReviewMetadata({
   reason?: string;
   appliedEffect?: string | null;
 }) {
+  const t = useTranslations("admin.agents.details.memory");
   if (!reviewedAt && !reviewer && !reason && !appliedEffect) return null;
 
   return (
     <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 flex flex-col gap-1 text-[11px] text-muted">
       {(reviewedAt || reviewer) && (
         <div className="flex flex-wrap gap-2">
-          {reviewer && <span>Reviewed by {reviewer.name}</span>}
+          {reviewer && <span>{t("reviewedBy", { name: reviewer.name })}</span>}
           {reviewedAt && <span>{formatDateTime(reviewedAt)}</span>}
         </div>
       )}
@@ -296,6 +305,7 @@ function ReviewMetadata({
 }
 
 export default function AgentMemoryPage() {
+  const t = useTranslations("admin.agents.details.memory");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -376,7 +386,7 @@ export default function AgentMemoryPage() {
         }
         await createMemory({ agentId, content: formData.content, applyMode: formData.applyMode });
       },
-      { fallbackMessage: "The memory could not be saved.", suppressErrorToast: true },
+      { fallbackMessage: t("saveFailed"), suppressErrorToast: true },
     );
     if (!outcome.ok) return;
     setIsEditorOpen(false);
@@ -387,7 +397,7 @@ export default function AgentMemoryPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const outcome = await action.run(() => deleteMemory({ memoryId: deleteTarget._id }), {
-      fallbackMessage: "The memory could not be removed.",
+      fallbackMessage: t("removeFailed"),
       suppressErrorToast: true,
     });
     if (!outcome.ok) return;
@@ -397,16 +407,16 @@ export default function AgentMemoryPage() {
   const handleRestore = async (memory: AgentMemory) => {
     await action.run(() => restoreMemory({ memoryId: memory._id }), {
       key: memory._id,
-      successMessage: "Memory restored.",
-      fallbackMessage: "The memory could not be restored.",
+      successMessage: t("restored"),
+      fallbackMessage: t("restoreFailed"),
     });
   };
 
   const handleApproveCandidate = async (candidateId: Id<"agentMemoryCandidates">) => {
     await action.run(() => decideCandidate({ candidateId, decision: "APPROVED" }), {
       key: `memory:${candidateId}`,
-      successMessage: "Added to this agent's memory.",
-      fallbackMessage: "The suggestion could not be approved.",
+      successMessage: t("candidateApproved"),
+      fallbackMessage: t("approveFailed"),
     });
   };
 
@@ -418,7 +428,7 @@ export default function AgentMemoryPage() {
         decision: "REJECTED",
         ...(rejectionReason ? { rejectionReason } : {}),
       }),
-      { fallbackMessage: "The suggestion could not be turned down.", suppressErrorToast: true },
+      { fallbackMessage: t("turnDownFailed"), suppressErrorToast: true },
     );
     if (!outcome.ok) return;
     setRejectTarget(null);
@@ -438,8 +448,8 @@ export default function AgentMemoryPage() {
       }),
       {
         key: `suggestion:${suggestionId}`,
-        successMessage: decision === "APPROVED" ? "Change applied." : "Suggestion turned down.",
-        fallbackMessage: "The suggestion could not be reviewed.",
+        successMessage: decision === "APPROVED" ? t("suggestionApplied") : t("suggestionRejected"),
+        fallbackMessage: t("suggestionReviewFailed"),
       },
     );
   };
@@ -447,8 +457,8 @@ export default function AgentMemoryPage() {
   const handleCreateEvalFromReflection = async (reflectionId: Id<"agentRunReflections">, runId: Id<"agentRuns">) => {
     await action.run(() => createEvalFixture({ runId }), {
       key: `reflection:${reflectionId}`,
-      successMessage: "Eval created from the source run.",
-      fallbackMessage: "The eval could not be created.",
+      successMessage: t("evalCreated"),
+      fallbackMessage: t("evalCreateFailed"),
     });
   };
 
@@ -457,8 +467,8 @@ export default function AgentMemoryPage() {
       () => dismissReflection({ reflectionId, reason: "Dismissed from the agent memory screen" }),
       {
         key: `reflection:${reflectionId}`,
-        successMessage: "Dismissed.",
-        fallbackMessage: "The reflection could not be dismissed.",
+        successMessage: t("dismissed"),
+        fallbackMessage: t("dismissFailed"),
       },
     );
   };
@@ -475,21 +485,20 @@ export default function AgentMemoryPage() {
           <div>
             <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
               <Brain className="h-6 w-6 text-brand" />
-              Agent memory
+              {t("title")}
             </h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              What this agent knows. Up to {MAX_ALWAYS_MEMORIES} can apply to every message &mdash; the rest are
-              looked up when the conversation calls for them.
+              {t("description", { max: MAX_ALWAYS_MEMORIES })}
             </p>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="brand"
             onClick={() => openEditor(null)}
-            className="inline-flex h-9 items-center justify-center gap-2 self-start rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
+            className="inline-flex h-9 items-center justify-center gap-2 self-start rounded-[8px] font-semibold"
           >
             <Plus className="h-4 w-4" />
-            Add memory
-          </button>
+            {t("addMemory")}
+          </Button>
         </div>
 
       </header>
@@ -504,14 +513,15 @@ export default function AgentMemoryPage() {
             setSearchTerm(value);
             setPage(1);
           },
-          placeholder: "Search memories",
+          placeholder: t("searchPlaceholder"),
         }}
         filters={
           <div className="flex items-center gap-1 rounded-[10px] border border-border-dim bg-sidebar/30 p-1">
             {[
-              { label: "In use", removed: false },
-              { label: "Removed", removed: true },
+              { label: t("filters.inUse"), removed: false },
+              { label: t("filters.removed"), removed: true },
             ].map((tab) => (
+              /* Raw: segmented filter — the active option swaps its colours; no kit variant is stateful. */
               <button
                 key={tab.label}
                 type="button"
@@ -533,8 +543,8 @@ export default function AgentMemoryPage() {
         empty={{
           icon: <Brain className="h-8 w-8 text-muted/30" />,
           label: showRemoved
-            ? "Nothing has been removed"
-            : "No memories yet — add what the agent should know",
+            ? t("empty.removed")
+            : t("empty.none"),
         }}
         /* The pager used to be hidden whenever the list was empty. It now stays,
            because it is the only thing on the screen that says how many there
@@ -549,19 +559,19 @@ export default function AgentMemoryPage() {
           isLoading: memories.status === "LoadingMore",
           onPageChange: goToPage,
           labels: {
-            showing: (start, end, total) => `Showing ${start}-${end} of ${total} loaded`,
-            empty: showRemoved ? "Nothing has been removed" : "No memories yet",
+            showing: (start, end, total) => t("footer.showing", { start, end, total }),
+            empty: showRemoved ? t("footer.emptyRemoved") : t("footer.emptyNone"),
           },
         }}
         columns={[
           {
             key: "content",
-            header: "What the agent knows",
+            header: t("columns.content"),
             cell: (memory) => (
               <>
                 {memory.autoApplied && (
                   <StatusPill tone="warning" className="mb-1">
-                    Saved by the AI
+                    {t("savedByAi")}
                   </StatusPill>
                 )}
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-secondary line-clamp-3">
@@ -572,19 +582,19 @@ export default function AgentMemoryPage() {
           },
           {
             key: "applies",
-            header: "Applies",
+            header: t("columns.applies"),
             className: "w-[150px]",
             cell: (memory) => <MemoryApplyModeBadge applyMode={resolveApplyMode(memory)} />,
           },
           {
             key: "trackRecord",
-            header: "Track record",
+            header: t("columns.trackRecord"),
             className: "w-[150px]",
             cell: (memory) => <MemoryTrackRecord memory={memory} />,
           },
           {
             key: "added",
-            header: "Added",
+            header: t("columns.added"),
             className: "w-[190px] text-[12px] text-secondary",
             cell: (memory) => formatDateTime(memory.createdAt),
           },
@@ -596,18 +606,18 @@ export default function AgentMemoryPage() {
             cell: (memory) => (
               <RowActions>
                 {showRemoved ? (
-                  <RowIconButton label="Put this memory back" onClick={() => handleRestore(memory)}>
+                  <RowIconButton label={t("rowActions.restore")} onClick={() => handleRestore(memory)}>
                     {action.isBusy(memory._id)
                       ? <Loader2 className="h-4 w-4 animate-spin" />
                       : <RotateCcw className="h-4 w-4" />}
                   </RowIconButton>
                 ) : (
                   <>
-                    <RowIconButton label="Edit memory" onClick={() => openEditor(memory)}>
+                    <RowIconButton label={t("rowActions.edit")} onClick={() => openEditor(memory)}>
                       <Edit2 className="h-4 w-4" />
                     </RowIconButton>
                     <RowIconButton
-                      label="Remove memory"
+                      label={t("rowActions.remove")}
                       tone="danger"
                       onClick={() => {
                         action.clearError();
@@ -627,9 +637,9 @@ export default function AgentMemoryPage() {
       <section className="overflow-hidden rounded-[16px] border border-border-dim/80 bg-sidebar/20">
         <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-foreground">Suggestions</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">{t("suggestions.title")}</h2>
             <p className="mt-0.5 text-[12px] text-secondary">
-              Raised from this agent&rsquo;s runs. Nothing here takes effect until it is approved.
+              {t("suggestions.description")}
             </p>
           </div>
           {reviewInbox === undefined && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
@@ -640,13 +650,13 @@ export default function AgentMemoryPage() {
             <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
           </div>
         ) : !hasSuggestions ? (
-          <div className="px-4 py-10 text-center text-[13px] text-muted">Nothing waiting for review.</div>
+          <div className="px-4 py-10 text-center text-[13px] text-muted">{t("suggestions.nothingWaiting")}</div>
         ) : (
           <div className="divide-y divide-border-dim">
             {memoryCandidates.map((candidate) => (
               <div key={candidate.candidateId} className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-muted">Memory</span>
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{t("suggestions.memoryTag")}</span>
                   <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(candidate.riskLevel)]}`}>
                     {candidate.riskLevel}
                   </span>
@@ -670,20 +680,20 @@ export default function AgentMemoryPage() {
                       {action.isBusy(`memory:${candidate.candidateId}`)
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <Check className="h-3.5 w-3.5" />}
-                      Approve
+                      {t("suggestions.approve")}
                     </WriteButton>
-                    <button
-                      type="button"
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         action.clearError();
                         setRejectTarget(candidate.candidateId);
                       }}
                       disabled={action.isBusy(`memory:${candidate.candidateId}`)}
-                      className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-2 rounded-[8px] px-3 text-[12px] font-semibold disabled:opacity-50"
                     >
                       <X className="h-3.5 w-3.5" />
-                      Turn down
-                    </button>
+                      {t("suggestions.turnDown")}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -722,7 +732,7 @@ export default function AgentMemoryPage() {
                       {action.isBusy(`suggestion:${suggestion.suggestionId}`)
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <SlidersHorizontal className="h-3.5 w-3.5" />}
-                      Apply
+                      {t("suggestions.apply")}
                     </WriteButton>
                     <WriteButton
                       type="button"
@@ -731,7 +741,7 @@ export default function AgentMemoryPage() {
                       className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground disabled:opacity-50"
                     >
                       <X className="h-3.5 w-3.5" />
-                      Turn down
+                      {t("suggestions.turnDown")}
                     </WriteButton>
                   </div>
                 )}
@@ -751,7 +761,7 @@ export default function AgentMemoryPage() {
                 <p className="text-[12px] leading-relaxed text-secondary">{reflection.rootCause}</p>
                 <SourceRunDetail sourceRun={reflection.sourceRun} agentId={agentId} />
                 {reflection.proposedEvalFixture && (
-                  <p className="text-[11px] leading-relaxed text-info">Eval: {reflection.proposedEvalFixture}</p>
+                  <p className="text-[11px] leading-relaxed text-info">{t("suggestions.evalPrefix", { fixture: reflection.proposedEvalFixture })}</p>
                 )}
                 <ReviewMetadata
                   reviewedAt={reflection.reviewedAt}
@@ -770,18 +780,18 @@ export default function AgentMemoryPage() {
                         {action.isBusy(`reflection:${reflection.reflectionId}`)
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           : <ClipboardCheck className="h-3.5 w-3.5" />}
-                        Create eval
+                        {t("suggestions.createEval")}
                       </WriteButton>
                     )}
-                    <button
-                      type="button"
+                    <Button
+                      variant="outline"
                       onClick={() => handleDismissReflection(reflection.reflectionId)}
                       disabled={action.isBusy(`reflection:${reflection.reflectionId}`)}
-                      className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-2 rounded-[8px] px-3 text-[12px] font-semibold disabled:opacity-50"
                     >
                       <ArchiveX className="h-3.5 w-3.5" />
-                      Dismiss
-                    </button>
+                      {t("suggestions.dismiss")}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -793,7 +803,7 @@ export default function AgentMemoryPage() {
       <SonaeModal
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
-        title={editorTarget ? "Edit memory" : "Add memory"}
+        title={editorTarget ? t("editor.editTitle") : t("editor.addTitle")}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -812,8 +822,8 @@ export default function AgentMemoryPage() {
           />
           <ModalFormError>{action.error}</ModalFormError>
           <ModalFormActions
-            cancelLabel="Cancel"
-            submitLabel={action.isBusy() ? "Saving..." : "Save memory"}
+            cancelLabel={t("editor.cancel")}
+            submitLabel={action.isBusy() ? t("editor.saving") : t("editor.save")}
             isSubmitting={action.isBusy()}
             onCancel={() => setIsEditorOpen(false)}
           />
@@ -823,23 +833,23 @@ export default function AgentMemoryPage() {
       <SonaeModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
-        title="Remove memory"
+        title={t("removeModal.title")}
         size="sm"
       >
         <div className="flex flex-col gap-5">
           <p className="text-[13px] leading-relaxed text-secondary">
-            The agent stops using this straight away. It stays under &ldquo;Removed&rdquo; and can be put back.
+            {t("removeModal.body")}
           </p>
           <ModalFormError>{action.error}</ModalFormError>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setDeleteTarget(null)}
               disabled={action.isBusy()}
-              className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
+              className="px-4 py-2 font-semibold hover:bg-foreground/5"
             >
-              Cancel
-            </button>
+              {t("removeModal.cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={handleDelete}
@@ -847,7 +857,7 @@ export default function AgentMemoryPage() {
               className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Remove
+              {t("removeModal.confirm")}
             </WriteButton>
           </div>
         </div>
@@ -856,28 +866,28 @@ export default function AgentMemoryPage() {
       <SonaeModal
         isOpen={Boolean(rejectTarget)}
         onClose={() => setRejectTarget(null)}
-        title="Turn down suggestion"
+        title={t("rejectModal.title")}
         size="sm"
       >
         <div className="flex flex-col gap-5">
-          <ModalFormField label="Why?" hint="Optional">
+          <ModalFormField label={t("rejectModal.whyLabel")} hint={t("rejectModal.optional")}>
             <textarea
               value={rejectionReason}
               onChange={(event) => setRejectionReason(event.target.value)}
               className={modalTextareaClassName}
-              placeholder="Why should the agent not remember this?"
+              placeholder={t("rejectModal.placeholder")}
             />
           </ModalFormField>
           <ModalFormError>{action.error}</ModalFormError>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => setRejectTarget(null)}
               disabled={action.isBusy()}
-              className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
+              className="px-4 py-2 font-semibold hover:bg-foreground/5"
             >
-              Cancel
-            </button>
+              {t("rejectModal.cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={handleRejectCandidate}
@@ -885,7 +895,7 @@ export default function AgentMemoryPage() {
               className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-              Turn down
+              {t("rejectModal.confirm")}
             </WriteButton>
           </div>
         </div>

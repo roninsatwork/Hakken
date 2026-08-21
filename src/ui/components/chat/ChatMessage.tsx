@@ -98,7 +98,7 @@ export default function ChatMessage({
                 {/* eslint-disable-next-line @next/next/no-img-element -- Convex storage URLs are signed and external; next/image adds nothing here */}
                 <img
                   src={image.url}
-                  alt="Attached photo"
+                  alt={t("attachedPhoto")}
                   className="max-h-48 max-w-[16rem] rounded-[10px] border border-border-dim object-cover"
                 />
               </a>
@@ -131,7 +131,7 @@ export default function ChatMessage({
         <SonaeMarkdown content={reveal.text} />
         {isStreaming && (
           <span
-            aria-label="Still writing"
+            aria-label={t("stillWriting")}
             role="status"
             className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] ml-[2px] bg-brand animate-pulse"
           />

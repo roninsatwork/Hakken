@@ -29,20 +29,25 @@ export function formatRunDuration(ms: number) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export function formatSignedDurationDelta(ms: number | undefined) {
-  if (ms === undefined) return "not available";
+/**
+ * The delta formatters return `undefined` when there is nothing to compare;
+ * the screen says "not available" in the reader's language
+ * (`admin.agents.labels.notAvailable`). The numbers themselves are not copy.
+ */
+export function formatSignedDurationDelta(ms: number | undefined): string | undefined {
+  if (ms === undefined) return undefined;
   const prefix = ms > 0 ? "+" : "";
   return `${prefix}${formatRunDuration(ms)}`;
 }
 
-export function formatSignedNumberDelta(value: number | undefined) {
-  if (value === undefined) return "not available";
+export function formatSignedNumberDelta(value: number | undefined): string | undefined {
+  if (value === undefined) return undefined;
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${value.toLocaleString()}`;
 }
 
-export function formatSignedCurrencyDelta(value: number | undefined) {
-  if (value === undefined) return "not available";
+export function formatSignedCurrencyDelta(value: number | undefined): string | undefined {
+  if (value === undefined) return undefined;
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${formatMoney(value)}`;
 }
@@ -77,8 +82,12 @@ export function getSmokeEvalTone(status: RunStatus): StatusTone {
   return "info";
 }
 
-export function getSmokeEvalModeLabel(mode: string) {
-  return mode === "MODEL_GRADED" ? "Model graded" : "Contract";
+/**
+ * The catalogue key for a grading mode, relative to `admin.agents.labels` —
+ * the screen translates it with `useTranslations("admin.agents.labels")`.
+ */
+export function getSmokeEvalModeKey(mode: string) {
+  return mode === "MODEL_GRADED" ? "evalMode.modelGraded" : "evalMode.contract";
 }
 
 export function getStepTone(status: string): StatusTone {

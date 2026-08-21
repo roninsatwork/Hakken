@@ -3,7 +3,19 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
-import { renderWithProviders } from "@/src/test/renderWithProviders";
+import { NextIntlClientProvider } from "next-intl";
+import { renderWithProviders as renderBase } from "@/src/test/renderWithProviders";
+import messages from "../../../../../../../../../messages/en.json";
+
+// The rule form resolves its copy through the catalogue, so the page renders
+// inside the same intl provider the root layout supplies.
+function renderWithProviders(ui: React.ReactElement) {
+  return renderBase(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
 import { routeParams } from "@/src/test/routeParams";
 import EditCompanyRulePage from "./page";
 

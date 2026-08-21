@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import type { ComponentType } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/src/ui/lib/utils";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -66,6 +68,7 @@ function isActiveDropdownItem(
 const MENU_WIDTH = 240;
 
 export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
+  const t = useTranslations("ui.detailTabs");
   const pathname = usePathname() || rootHref;
   const readonlySearchParams = useSearchParams();
   const searchParams = new URLSearchParams(readonlySearchParams?.toString());
@@ -154,6 +157,8 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
 
           return (
             <div key={tab.href} className="relative shrink-0">
+              {/* Raw on purpose: a tab with an active underline, not a button
+                  recipe — no Button variant draws a border-b-2 tab. */}
               <button
                 type="button"
                 aria-expanded={isOpen}
@@ -210,7 +215,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
                           <ItemIcon className="h-4 w-4 shrink-0" />
                           <span className="truncate">{item.label}</span>
                         </span>
-                        {isItemActive && <Check aria-label={`${item.label} selected`} className="h-4 w-4 shrink-0" />}
+                        {isItemActive && <Check aria-label={t("itemSelected", { label: item.label })} className="h-4 w-4 shrink-0" />}
                       </Link>
                     );
                   })}

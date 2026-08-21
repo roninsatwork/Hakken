@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/atoms/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -24,8 +26,12 @@ import {
   modelSupportsUseCase,
   type GlobalDefaultRow,
 } from "../_components/modelAdminUtils";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 export default function AIModelDefaultsPage() {
+  const t = useTranslations("ai.models.defaults");
+  const tShared = useTranslations("ai.models.shared");
+  const { platformName } = useSystemSettings();
   // Only models that can actually be chosen — enabled, and on a provider that is
   // switched on. The unfiltered catalogue read that used to be here is what made
   // this screen a four-hundred-item dropdown once a large provider synced.
@@ -58,10 +64,10 @@ export default function AIModelDefaultsPage() {
     if (!model) return "";
     const input = formatTokenCost(model.standardInputCostBelow200k);
     const output = formatTokenCost(model.outputResponseCost);
-    if (input === "—" && output === "—") return "No price set";
+    if (input === "—" && output === "—") return t("noPriceSet");
     // The unit is said once, in the panel header. Printing "per million" on all
     // ten rows was the same three words ten times down one edge.
-    return `${input} in · ${output} out`;
+    return t("costInOut", { input, output });
   };
 
   const enabledModels = allModels.filter((model) => model.isEnabled);
@@ -98,7 +104,7 @@ export default function AIModelDefaultsPage() {
       setEveryJobModelId("");
     } catch (err) {
       console.error(err);
-      setDefaultsError(`Failed to apply that model to every job: ${getErrorMessage(err, String(err))}`);
+      setDefaultsError(t("applyFailed", { message: getErrorMessage(err, String(err)) }));
     } finally {
       setIsApplyingEveryJob(false);
     }
@@ -115,7 +121,7 @@ export default function AIModelDefaultsPage() {
       }
     } catch (err) {
       console.error(err);
-      setDefaultsError(`Failed to update ${useCase} default: ${getErrorMessage(err, String(err))}`);
+      setDefaultsError(t("updateFailed", { useCase, message: getErrorMessage(err, String(err)) }));
     } finally {
       setSavingDefaultUseCase(null);
     }
@@ -126,15 +132,14 @@ export default function AIModelDefaultsPage() {
       <PageHeader
         divider
         icon={<Cpu className="w-6 h-6 text-brand" />}
-        title="Model Defaults"
-        description="Which model handles each kind of work, unless something more specific says otherwise."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
       />
       <AiWorkspaceNav />
       <SaveError>{defaultsError}</SaveError>
 
       <p className="text-[13px] text-secondary">
-        The model Sonae reaches for when nothing more specific has been chosen. A company, an agent
-        or a workflow can override any of these. Prices are per million tokens.
+        {t("intro", { platformName })}
       </p>
 
       {/* The standard admin table, as the Model Catalogue and AI Providers use.
@@ -145,7 +150,7 @@ export default function AIModelDefaultsPage() {
         rows={isLoading ? undefined : globalDefaults}
         rowKey={(row) => row.useCase}
         minWidthClassName="min-w-[860px]"
-        empty={{ icon: <Cpu className="w-8 h-8 text-muted/30" />, label: "No jobs to configure yet" }}
+        empty={{ icon: <Cpu className="w-8 h-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",
           page: 1,
@@ -155,14 +160,14 @@ export default function AIModelDefaultsPage() {
           isLoading,
           onPageChange: () => {},
           labels: {
-            empty: "No jobs to configure yet",
-            showing: (_start, _end, total) => `${total} job${total === 1 ? "" : "s"}`,
+            empty: t("empty"),
+            showing: (_start, _end, total) => t("showing", { count: total }),
           },
         }}
         columns={[
           {
             key: "job",
-            header: "Job",
+            header: t("columnJob"),
             className: "w-[38%]",
             cell: (row) => (
               <>
@@ -170,9 +175,11 @@ export default function AIModelDefaultsPage() {
                 {/* What the job is, in a sentence. The internal key used to sit
                     here instead, printing the same word twice — once for a
                     person and once for a machine. */}
-                <div className="text-[12px] leading-relaxed text-secondary mt-0.5">
-                  {describeModelUseCase(row.useCase)}
-                </div>
+                {describeModelUseCase(row.useCase) && (
+                  <div className="text-[12px] leading-relaxed text-secondary mt-0.5">
+                    {tShared(describeModelUseCase(row.useCase)!)}
+                  </div>
+                )}
                 {/* A short list with no explanation reads as a bug; a short list
                     with a reason reads as a constraint. */}
                 {describeUseCaseProviderLimit(row.useCase) && (
@@ -185,7 +192,7 @@ export default function AIModelDefaultsPage() {
           },
           {
             key: "model",
-            header: "Model",
+            header: t("columnModel"),
             className: "w-[42%]",
             cell: (row) => {
               // Only models that can actually do this job. The screen used to
@@ -224,22 +231,21 @@ export default function AIModelDefaultsPage() {
                       isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
                     )}
                   >
-                    <option value="">No platform default</option>
+                    <option value="">{t("noPlatformDefault")}</option>
                     {strandedModel && (
                       <option value={strandedModel.modelId}>
-                        {formatModelDisplayName(strandedModel)} — cannot do this job
+                        {t("cannotDoJob", { name: formatModelDisplayName(strandedModel) })}
                       </option>
                     )}
                     {candidates.map((model) => (
                       <option key={model.modelId} value={model.modelId}>
-                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider")}
                       </option>
                     ))}
                   </select>
                   {isStranded && (
                     <div className="text-[11px] leading-relaxed text-[#f59e0b] mt-1">
-                      This model cannot do this job, so the work falls through to whatever is set
-                      below it. Choose another, or clear it.
+                      {t("strandedWarning")}
                     </div>
                   )}
                 </>
@@ -248,7 +254,7 @@ export default function AIModelDefaultsPage() {
           },
           {
             key: "price",
-            header: "Price",
+            header: t("columnPrice"),
             align: "right",
             className: "w-[20%]",
             cell: (row) =>
@@ -260,7 +266,7 @@ export default function AIModelDefaultsPage() {
                 // Only the exception is worth saying. A badge reading
                 // "Configured" on every row cost attention and carried no
                 // information.
-                <span className="text-[12px] text-[#f59e0b]">Not set</span>
+                <span className="text-[12px] text-[#f59e0b]">{t("notSet")}</span>
               ),
           },
         ]}
@@ -271,9 +277,9 @@ export default function AIModelDefaultsPage() {
       {globalDefaults.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[8px] border border-border-dim bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-[13px] font-semibold text-foreground">Use one model for every job</h3>
+            <h3 className="text-[13px] font-semibold text-foreground">{t("everyJobTitle")}</h3>
             <p className="mt-0.5 text-[12px] text-secondary">
-              Sets every row above that the model can handle. It will replace those choices.
+              {t("everyJobSub")}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -282,10 +288,10 @@ export default function AIModelDefaultsPage() {
               onChange={(event) => setEveryJobModelId(event.target.value)}
               className="h-9 min-w-0 rounded-[8px] border border-border-dim bg-background/60 px-3 text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-[260px]"
             >
-              <option value="">Choose a model</option>
+              <option value="">{t("chooseModel")}</option>
               {enabledModels.map((model) => (
                 <option key={model._id} value={model._id}>
-                  {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                  {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider")}
                 </option>
               ))}
             </select>
@@ -295,7 +301,7 @@ export default function AIModelDefaultsPage() {
               onClick={() => setIsEveryJobConfirmOpen(true)}
               className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
             >
-              Apply
+              {t("apply")}
             </WriteButton>
           </div>
         </div>
@@ -304,38 +310,37 @@ export default function AIModelDefaultsPage() {
       <SonaeModal
         isOpen={isEveryJobConfirmOpen}
         onClose={() => setIsEveryJobConfirmOpen(false)}
-        title="Use one model for every job"
+        title={t("everyJobTitle")}
         size="sm"
       >
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
-            <span className="font-semibold text-foreground">
-              {everyJobModel ? formatModelDisplayName(everyJobModel) : ""}
-            </span>{" "}
-            will take over {everyJobSplit.can.length} of the {globalDefaults.length} jobs above,
-            replacing what is set for each:
+            {t.rich("modalTakeOver", {
+              model: everyJobModel ? formatModelDisplayName(everyJobModel) : "",
+              can: everyJobSplit.can.length,
+              total: globalDefaults.length,
+              b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+            })}
           </p>
           <p className="text-[12px] leading-relaxed text-muted">
-            {everyJobSplit.can.map(formatModelTag).join(", ")}.
+            {t("jobsList", { jobs: everyJobSplit.can.map(formatModelTag).join(", ") })}
           </p>
           {everyJobSplit.cannot.length > 0 && (
             // Named rather than silently skipped. "Apply to every job" used to
             // write all ten rows without checking, which is how a model ended up
             // set for a job it cannot do.
             <p className="text-[12px] leading-relaxed text-[#f59e0b]">
-              It cannot do {everyJobSplit.cannot.map(formatModelTag).join(", ")}, so
-              {everyJobSplit.cannot.length === 1 ? " that row is" : " those rows are"} left as
-              {everyJobSplit.cannot.length === 1 ? " it is" : " they are"}.
+              {t("cannotDoList", { jobs: everyJobSplit.cannot.map(formatModelTag).join(", "), count: everyJobSplit.cannot.length })}
             </p>
           )}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => setIsEveryJobConfirmOpen(false)}
-              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
+              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
             >
-              Cancel
-            </button>
+              {t("cancel")}
+            </Button>
             <WriteButton
               type="button"
               onClick={applyToEveryJob}
@@ -343,7 +348,7 @@ export default function AIModelDefaultsPage() {
               className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
             >
               {isApplyingEveryJob && <Loader2 className="w-4 h-4 animate-spin" />}
-              Apply to every job
+              {t("applyToEveryJob")}
             </WriteButton>
           </div>
         </div>

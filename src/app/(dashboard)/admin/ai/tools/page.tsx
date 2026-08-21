@@ -6,22 +6,26 @@ import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { Loader2, Plus, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useTranslations } from "next-intl";
 
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "System admins",
-  ADMIN: "Admins",
-  USER: "Anyone",
+// Catalogue keys, relative to `admin.aiTools.shelf` — the screen says the words.
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  SUPER_ADMIN: "roles.superAdmin",
+  ADMIN: "roles.admins",
+  USER: "roles.anyone",
 };
 
-const EFFECT_LABELS: Record<string, string> = {
-  READ: "Reads only",
-  WRITE: "Writes",
-  DESTRUCTIVE: "Deletes",
-  EXTERNAL: "Reaches outside",
+const EFFECT_LABEL_KEYS: Record<string, string> = {
+  READ: "effects.read",
+  WRITE: "effects.write",
+  DESTRUCTIVE: "effects.destructive",
+  EXTERNAL: "effects.external",
 };
 
 /**
@@ -34,19 +38,21 @@ const EFFECT_LABELS: Record<string, string> = {
  * — the inbox, the phone line — above the abilities they give an agent.
  */
 
-type Group = { key: string; label: string; blurb: string };
+type Group = { key: string; labelKey: string; blurbKey: string };
 
 const GROUPS: Group[] = [
-  { key: "EMAIL", label: "Email", blurb: "Reading and replying in a connected mailbox." },
-  { key: "VOICE", label: "Phone", blurb: "The number Sonae answers." },
-  { key: "KNOWLEDGE", label: "Knowledge", blurb: "Reading documents and pages." },
-  { key: "PROFILE", label: "Company records", blurb: "Reading and updating the company's own details." },
-  { key: "WORKFLOW", label: "Work", blurb: "Jobs an agent can carry out for a person." },
-  { key: "HTTP", label: "Other systems", blurb: "Calling an API you point it at." },
-  { key: "CUSTOM", label: "Built by you", blurb: "Tools written here rather than connected." },
+  { key: "EMAIL", labelKey: "groups.email", blurbKey: "groups.emailBlurb" },
+  { key: "VOICE", labelKey: "groups.phone", blurbKey: "groups.phoneBlurb" },
+  { key: "KNOWLEDGE", labelKey: "groups.knowledge", blurbKey: "groups.knowledgeBlurb" },
+  { key: "PROFILE", labelKey: "groups.companyRecords", blurbKey: "groups.companyRecordsBlurb" },
+  { key: "WORKFLOW", labelKey: "groups.work", blurbKey: "groups.workBlurb" },
+  { key: "HTTP", labelKey: "groups.otherSystems", blurbKey: "groups.otherSystemsBlurb" },
+  { key: "CUSTOM", labelKey: "groups.builtByYou", blurbKey: "groups.builtByYouBlurb" },
 ];
 
 export default function ToolsPage() {
+  const t = useTranslations("admin.aiTools.shelf");
+  const { platformName } = useSystemSettings();
   const deleteToolMutation = useMutation(api.aiTools.deleteTool);
   const installConnector = useMutation(api.aiTools.installConnector);
   const marketplace = useQuery(api.aiTools.getConnectorMarketplace);
@@ -80,7 +86,7 @@ export default function ToolsPage() {
     try {
       await installConnector({ key });
     } catch {
-      setError("That could not be added. Try again.");
+      setError(t("addFailed"));
     } finally {
       setAddingKey(null);
     }
@@ -94,32 +100,32 @@ export default function ToolsPage() {
       await deleteToolMutation({ id });
       setDeleteId(null);
     } catch {
-      setError("That could not be removed. Try again.");
+      setError(t("removeFailed"));
     } finally {
       setIsDeleting(false);
     }
   };
 
   const describeConnection = (entry: (typeof connections)[number]) => {
-    if (!entry.installation) return { label: "Not added yet", tone: "bg-foreground/5 text-muted" };
+    if (!entry.installation) return { label: t("states.notAdded"), tone: "bg-foreground/5 text-muted" };
     if (entry.installation.authConnectionStatus === "ERROR") {
-      return { label: "Needs attention", tone: "bg-warning/15 text-warning" };
+      return { label: t("states.needsAttention"), tone: "bg-warning/15 text-warning" };
     }
     if (!entry.installation.isActive) {
-      return { label: "Switched off", tone: "bg-foreground/5 text-muted" };
+      return { label: t("states.switchedOff"), tone: "bg-foreground/5 text-muted" };
     }
     if (entry.installation.authConnectionStatus === "NOT_CONNECTED") {
-      return { label: "Needs setting up", tone: "bg-warning/15 text-warning" };
+      return { label: t("states.needsSetup"), tone: "bg-warning/15 text-warning" };
     }
-    return { label: "Working", tone: "bg-info/15 text-info" };
+    return { label: t("states.working"), tone: "bg-info/15 text-info" };
   };
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<Wrench className="h-6 w-6 text-brand" />}
-        title="Tools"
-        description="What your agents can reach, and what each one is allowed to do."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
         divider
         action={
           <Link
@@ -127,7 +133,7 @@ export default function ToolsPage() {
             className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
-            Build a tool
+            {t("buildTool")}
           </Link>
         }
       />
@@ -142,7 +148,7 @@ export default function ToolsPage() {
         <SearchBar
           value={searchTerm}
           onChange={setSearchTerm}
-          placeholder="Search tools by name..."
+          placeholder={t("searchPlaceholder")}
         />
       </div>
 
@@ -154,6 +160,7 @@ export default function ToolsPage() {
             const count = shelf?.counts?.[entry.key] ?? 0;
             const isActive = !term && entry.key === group;
             return (
+              // Stays raw: a selected-state shelf row (fill and weight swap with selection) — matches no variant.
               <button
                 key={entry.key}
                 type="button"
@@ -167,7 +174,7 @@ export default function ToolsPage() {
                     : "text-secondary hover:text-foreground"
                 }`}
               >
-                {entry.label}
+                {t(entry.labelKey)}
                 <span className="text-[12px] tabular-nums text-muted">{count}</span>
               </button>
             );
@@ -176,7 +183,7 @@ export default function ToolsPage() {
 
         <div className="flex flex-col gap-5">
           {!term && (
-            <p className="text-[13px] text-secondary">{activeGroup.blurb}</p>
+            <p className="text-[13px] text-secondary">{t(activeGroup.blurbKey, { platformName })}</p>
           )}
 
           {/* The connections in this group: things in the real world, each
@@ -202,7 +209,7 @@ export default function ToolsPage() {
                         href={`/admin/ai/tools/connectors/${entry.installation._id}`}
                         className="shrink-0 rounded-[8px] border border-border-dim px-3 py-1.5 text-[12.5px] font-medium text-foreground transition-colors hover:bg-hover"
                       >
-                        Settings
+                        {t("settings")}
                       </Link>
                     ) : (
                       <WriteButton
@@ -210,7 +217,7 @@ export default function ToolsPage() {
                         disabled={addingKey === entry.key}
                         className="shrink-0 rounded-[8px] bg-brand px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity disabled:opacity-40"
                       >
-                        {addingKey === entry.key ? "Adding..." : "Add"}
+                        {addingKey === entry.key ? t("adding") : t("add")}
                       </WriteButton>
                     )}
                   </div>
@@ -223,13 +230,11 @@ export default function ToolsPage() {
           <div className="flex flex-col gap-2">
             {status === "LoadingFirstPage" ? (
               <div className="flex items-center gap-2 rounded-[14px] border border-border-dim bg-card/40 px-4 py-6 text-[13px] text-muted">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
               </div>
             ) : tools.length === 0 ? (
               <div className="rounded-[14px] border border-border-dim bg-card/40 px-4 py-8 text-center text-[13px] text-muted">
-                {term
-                  ? "No tools match that search."
-                  : "Nothing here yet. Add a connection above, or build your own tool."}
+                {term ? t("noMatch") : t("emptyGroup")}
               </div>
             ) : (
               tools.map((tool) => (
@@ -241,33 +246,33 @@ export default function ToolsPage() {
                     <p className="flex items-center gap-2 text-[13.5px] font-semibold text-foreground">
                       {tool.name}
                       {tool.isActive === false && (
-                        <span className="text-[11px] font-normal text-muted">Off</span>
+                        <span className="text-[11px] font-normal text-muted">{t("off")}</span>
                       )}
                     </p>
                     <p className="text-[12.5px] text-secondary line-clamp-2">{tool.description}</p>
                   </div>
                   <span className="shrink-0 text-[12px] text-secondary">
-                    {EFFECT_LABELS[tool.sideEffectLevel ?? "READ"] ?? tool.sideEffectLevel}
+                    {EFFECT_LABEL_KEYS[tool.sideEffectLevel ?? "READ"] ? t(EFFECT_LABEL_KEYS[tool.sideEffectLevel ?? "READ"]) : tool.sideEffectLevel}
                   </span>
                   <span className="shrink-0 text-[12px] text-muted">
-                    {ROLE_LABELS[tool.requiredRole] ?? tool.requiredRole}
+                    {ROLE_LABEL_KEYS[tool.requiredRole] ? t(ROLE_LABEL_KEYS[tool.requiredRole]) : tool.requiredRole}
                   </span>
                   {deleteId === tool._id ? (
                     <span className="inline-flex shrink-0 items-center gap-2">
-                      <span className="text-[12px] text-secondary">Remove it?</span>
-                      <button
-                        type="button"
+                      <span className="text-[12px] text-secondary">{t("removeIt")}</span>
+                      <Button
+                        variant="icon"
                         onClick={() => setDeleteId(null)}
-                        aria-label="Keep"
-                        className="rounded-[8px] p-1.5 text-secondary transition-colors hover:bg-hover hover:text-foreground"
+                        aria-label={t("keep")}
+                        className="rounded-[8px] p-1.5 hover:bg-hover"
                       >
                         <X className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                       <WriteButton
                         type="button"
                         onClick={() => void handleDeleteTool(tool._id)}
                         disabled={isDeleting}
-                        aria-label="Remove"
+                        aria-label={t("remove")}
                         className="rounded-[8px] bg-rose-500 p-1.5 text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -277,7 +282,7 @@ export default function ToolsPage() {
                     <WriteButton
                       type="button"
                       onClick={() => setDeleteId(tool._id)}
-                      aria-label={`Remove ${tool.name}`}
+                      aria-label={t("removeAria", { name: tool.name })}
                       className="shrink-0 rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -288,13 +293,13 @@ export default function ToolsPage() {
             )}
 
             {status === "CanLoadMore" && (
-              <button
-                type="button"
+              <Button
+                variant="quiet"
                 onClick={() => loadMore(TABLE_PAGE_SIZE)}
-                className="self-start rounded-[8px] border border-border-dim px-3 py-1.5 text-[12.5px] font-medium text-secondary transition-colors hover:text-foreground"
+                className="self-start text-[12.5px] bg-transparent hover:bg-transparent"
               >
-                Show more
-              </button>
+                {t("showMore")}
+              </Button>
             )}
           </div>
         </div>

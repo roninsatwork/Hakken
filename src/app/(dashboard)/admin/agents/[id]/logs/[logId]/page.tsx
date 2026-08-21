@@ -38,7 +38,7 @@ export default function ExecutionTraceDetailPage({ params }: { params: Promise<{
   if (log === null) {
     return (
       <div className="flex w-full min-h-[40vh] items-center text-rose-500 font-mono tracking-wide">
-        Trace not found or deleted.
+        {t("notFound")}
       </div>
     );
   }
@@ -83,6 +83,7 @@ export default function ExecutionTraceDetailPage({ params }: { params: Promise<{
 
       {/* Tabs Layout */}
       <div className="flex items-center gap-6 border-b border-border-dim/30 w-full px-2 shrink-0">
+        {/* Raw (both tabs): underline tabs — the active tab swaps colour and draws its bar; no kit variant is stateful. */}
         <button
           onClick={() => setActiveTab("payload")}
           className={`py-3 text-[12px] font-bold tracking-[0.1em] transition-colors relative uppercase ${
@@ -110,10 +111,11 @@ export default function ExecutionTraceDetailPage({ params }: { params: Promise<{
       {/* Trace Body */}
       <div className="w-full relative group bg-black/40 border border-white/5 rounded-[12px] overflow-hidden -mt-2 flex-1 flex flex-col min-h-0">
         
+        {/* Raw: hover-revealed copy chip floating over the pane — its fills and reveal match no variant. */}
         <button
           onClick={handleCopy}
           className="absolute top-4 right-4 z-20 p-2 rounded-[8px] bg-white/5 border border-white/10 text-muted hover:text-foreground hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
-          title="Copy to clipboard"
+          title={t("copyTitle")}
         >
           {copied ? <Check className="w-4 h-4 text-brand" /> : <Copy className="w-4 h-4" />}
         </button>

@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { ClipboardCheck, Loader2, MessageSquareText, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useTranslations } from "next-intl";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -21,9 +22,9 @@ import {
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 
-const WHERE_OPTIONS: Array<{ value: EvalTargetSurface; label: string; hint: string }> = [
-  { value: "COMPANY_CHAT", label: "Internal chat", hint: "Staff asking your AI questions" },
-  { value: "WIDGET", label: "Customer widget", hint: "The public widget on your site" },
+const WHERE_OPTIONS: Array<{ value: EvalTargetSurface; labelKey: string; hintKey: string }> = [
+  { value: "COMPANY_CHAT", labelKey: "whereInternal", hintKey: "whereInternalHint" },
+  { value: "WIDGET", labelKey: "whereWidget", hintKey: "whereWidgetHint" },
 ];
 type EvalSeverity = CompanyEvalCase["severity"];
 type EvalTargetSurface = CompanyEvalCase["targetSurface"];
@@ -37,6 +38,7 @@ const DEFAULT_EVAL_FORM = {
 };
 
 export default function NewChatEvalPage() {
+  const t = useTranslations("admin.companyDetails.chatEvalNew");
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,13 +82,13 @@ export default function NewChatEvalPage() {
   // paint. In an effect the user sees an empty form first.
   if (thread && messages && !hasHydrated) {
       setEvalForm({
-        name: thread.title ? `${thread.title.slice(0, 90)} regression` : "Chat evidence regression",
+        name: thread.title ? t("defaultNameFromTitle", { title: thread.title.slice(0, 90) }) : t("defaultName"),
         severity: thread.widgetId ? "BLOCKER" : "WARNING",
         targetSurface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
         prompt: latestUserMessage?.content ?? "",
         expectedBehavior: selectedAssistantMessage
-          ? "Preserve the useful parts of the observed answer, stay grounded in approved company context, and avoid unsupported claims."
-          : "Answer should be grounded in approved company context and avoid unsupported claims.",
+          ? t("defaultExpectedWithAnswer")
+          : t("defaultExpected"),
       });
       setHasHydrated(true);
   }
@@ -104,7 +106,7 @@ export default function NewChatEvalPage() {
           expectedBehavior: evalForm.expectedBehavior,
           forbiddenClaimsJson: bannedPhrases.length > 0 ? JSON.stringify(bannedPhrases) : undefined,
       }), {
-      fallbackMessage: "Eval case could not be created.",
+      fallbackMessage: t("createFailed"),
       // The form renders the message itself, so a toast would repeat it.
       suppressErrorToast: true,
     });
@@ -124,8 +126,8 @@ export default function NewChatEvalPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <CompanyAiFormPageHeader
         backHref={backHref}
-        title="Create Eval From Chat"
-        description="Convert selected chat evidence into a regression eval on a full screen with the evidence kept visible."
+        title={t("title")}
+        description={t("description")}
         icon={<ClipboardCheck className="h-6 w-6 text-brand" />}
       />
 
@@ -133,23 +135,23 @@ export default function NewChatEvalPage() {
         <div className="flex items-start gap-3">
           <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
           <div className="min-w-0">
-            <h2 className="text-[14px] font-semibold text-foreground">{thread.title || "Selected chat evidence"}</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">{thread.title || t("evidenceTitle")}</h2>
             <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div className="rounded-[8px] border border-border-dim bg-background/50 p-3">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Prompt evidence</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted">{t("promptEvidence")}</div>
                 <p className="mt-2 whitespace-pre-wrap text-[12px] leading-relaxed text-secondary">
-                  {latestUserMessage?.content || "No user message found."}
+                  {latestUserMessage?.content || t("noUserMessage")}
                 </p>
               </div>
               <div className="rounded-[8px] border border-border-dim bg-background/50 p-3">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Observed answer</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted">{t("observedAnswer")}</div>
                 <p className="mt-2 whitespace-pre-wrap text-[12px] leading-relaxed text-secondary">
-                  {selectedAssistantMessage?.content || "No assistant message selected."}
+                  {selectedAssistantMessage?.content || t("noAssistantMessage")}
                 </p>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted">
-              <span>{thread.widgetId ? "widget" : "company chat"}</span>
+              <span>{thread.widgetId ? t("surfaceWidget") : t("surfaceCompanyChat")}</span>
               <span>{threadId}</span>
             </div>
           </div>
@@ -160,13 +162,13 @@ export default function NewChatEvalPage() {
         <div className="flex flex-col gap-5">
           <ModalFormError>{action.error}</ModalFormError>
           <ModalField
-            label="Name"
+            label={t("nameLabel")}
             required
             value={evalForm.name}
             onChange={(event) => setEvalForm((current) => ({ ...current, name: event.target.value }))}
-            placeholder="Regression name"
+            placeholder={t("namePlaceholder")}
           />
-          <ModalFormField label="Where does this apply?">
+          <ModalFormField label={t("whereLabel")}>
             <div className="flex flex-col gap-2">
               {WHERE_OPTIONS.map((option) => (
                 <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
@@ -178,8 +180,8 @@ export default function NewChatEvalPage() {
                     className="mt-0.5 accent-brand"
                   />
                   <span>
-                    <span className="block text-[13px] font-semibold text-foreground">{option.label}</span>
-                    <span className="block text-[12px] text-secondary">{option.hint}</span>
+                    <span className="block text-[13px] font-semibold text-foreground">{t(option.labelKey)}</span>
+                    <span className="block text-[12px] text-secondary">{t(option.hintKey)}</span>
                   </span>
                 </label>
               ))}
@@ -187,24 +189,24 @@ export default function NewChatEvalPage() {
           </ModalFormField>
 
           <ModalTextAreaField
-            label="What would someone ask?"
+            label={t("promptLabel")}
             required
             minHeightClassName="min-h-[190px]"
             value={evalForm.prompt}
             onChange={(event) => setEvalForm((current) => ({ ...current, prompt: event.target.value }))}
-            placeholder="Question or task to replay as an eval."
+            placeholder={t("promptPlaceholder")}
           />
           <ModalTextAreaField
-            label="What does a good answer look like?"
+            label={t("expectedLabel")}
             required
             minHeightClassName="min-h-[190px]"
             value={evalForm.expectedBehavior}
             onChange={(event) => setEvalForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
-            placeholder="What a passing answer must do."
+            placeholder={t("expectedPlaceholder")}
           />
           <ModalField
-            label="Words it must never say"
-            hint="Optional. Press Enter after each one."
+            label={t("bannedLabel")}
+            hint={t("bannedHint")}
             value={phraseDraft}
             onChange={(event) => setPhraseDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -214,16 +216,17 @@ export default function NewChatEvalPage() {
               }
             }}
             onBlur={addPhrase}
-            placeholder="enterprise is free"
+            placeholder={t("bannedPlaceholder")}
           >
             {bannedPhrases.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {bannedPhrases.map((phrase) => (
                   <span key={phrase} className="inline-flex items-center gap-1.5 rounded-full border border-border-dim bg-foreground/5 px-3 py-1 text-[12px] text-foreground">
                     {phrase}
+                    {/* Stays raw: a bare in-chip dismiss glyph that turns red — matches no variant. */}
                     <button
                       type="button"
-                      aria-label={`Remove ${phrase}`}
+                      aria-label={t("removePhrase", { phrase })}
                       onClick={() => setBannedPhrases((current) => current.filter((entry) => entry !== phrase))}
                       className="text-muted transition-colors hover:text-red-400"
                     >
@@ -243,14 +246,14 @@ export default function NewChatEvalPage() {
               className="mt-0.5 accent-brand"
             />
             <span>
-              <span className="block text-[13px] font-semibold text-foreground">This must pass before the AI goes live</span>
-              <span className="block text-[12px] text-secondary">Leave ticked for anything that would embarrass you in front of a customer.</span>
+              <span className="block text-[13px] font-semibold text-foreground">{t("blockerTitle")}</span>
+              <span className="block text-[12px] text-secondary">{t("blockerHint")}</span>
             </span>
           </label>
 
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={action.isBusy() ? "Creating..." : "Create eval"}
+            submitLabel={action.isBusy() ? t("creating") : t("create")}
             isSubmitting={action.isBusy()}
           />
         </div>

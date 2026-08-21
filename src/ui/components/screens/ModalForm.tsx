@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { Button } from "@/src/ui/atoms/Button";
 import { useCanWriteHere } from "./AccessLevel";
 
 export const modalInputClassName =
@@ -137,22 +138,18 @@ export function ModalFormActions({
 
   return (
     <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={onCancel}
-        className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+        className="rounded-[10px] text-sm hover:bg-foreground/5"
         disabled={isSubmitting}
       >
         {cancelLabel}
-      </button>
+      </Button>
       {canWriteHere ? (
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-        >
+        <Button variant="primary" type="submit" disabled={isSubmitting}>
           {submitLabel}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

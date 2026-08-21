@@ -7,7 +7,7 @@ import {
   formatSignedCurrencyDelta,
   formatSignedDurationDelta,
   formatSignedNumberDelta,
-  getSmokeEvalModeLabel,
+  getSmokeEvalModeKey,
   getSmokeEvalTone,
   getStatusTone,
   getStepDiffTone,
@@ -30,8 +30,8 @@ describe("formatRunDuration", () => {
 });
 
 describe("formatSignedDurationDelta", () => {
-  it("says when there is nothing to compare", () => {
-    expect(formatSignedDurationDelta(undefined)).toBe("not available");
+  it("returns nothing when there is nothing to compare, so the screen can say so in the reader's language", () => {
+    expect(formatSignedDurationDelta(undefined)).toBeUndefined();
   });
 
   it("marks a slower replay with a plus", () => {
@@ -46,8 +46,8 @@ describe("formatSignedDurationDelta", () => {
 });
 
 describe("formatSignedNumberDelta", () => {
-  it("says when there is nothing to compare", () => {
-    expect(formatSignedNumberDelta(undefined)).toBe("not available");
+  it("returns nothing when there is nothing to compare, so the screen can say so in the reader's language", () => {
+    expect(formatSignedNumberDelta(undefined)).toBeUndefined();
   });
 
   it("marks an increase with a plus and leaves a decrease's own minus", () => {
@@ -58,8 +58,8 @@ describe("formatSignedNumberDelta", () => {
 });
 
 describe("formatSignedCurrencyDelta", () => {
-  it("says when there is nothing to compare", () => {
-    expect(formatSignedCurrencyDelta(undefined)).toBe("not available");
+  it("returns nothing when there is nothing to compare, so the screen can say so in the reader's language", () => {
+    expect(formatSignedCurrencyDelta(undefined)).toBeUndefined();
   });
 
   it("marks a cost increase with a plus", () => {
@@ -131,11 +131,11 @@ describe("getSmokeEvalTone", () => {
   });
 });
 
-describe("getSmokeEvalModeLabel", () => {
-  it("names the two grading modes and treats anything unknown as a contract", () => {
-    expect(getSmokeEvalModeLabel("MODEL_GRADED")).toBe("Model graded");
-    expect(getSmokeEvalModeLabel("CONTRACT")).toBe("Contract");
-    expect(getSmokeEvalModeLabel("SOMETHING_NEW")).toBe("Contract");
+describe("getSmokeEvalModeKey", () => {
+  it("maps the two grading modes to their catalogue keys and treats anything unknown as a contract", () => {
+    expect(getSmokeEvalModeKey("MODEL_GRADED")).toBe("evalMode.modelGraded");
+    expect(getSmokeEvalModeKey("CONTRACT")).toBe("evalMode.contract");
+    expect(getSmokeEvalModeKey("SOMETHING_NEW")).toBe("evalMode.contract");
   });
 });
 

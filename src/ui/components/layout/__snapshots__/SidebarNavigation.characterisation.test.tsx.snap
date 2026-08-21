@@ -3,35 +3,35 @@
 exports[`sidebar navigation characterisation > company admin navigation is unchanged 1`] = `
 {
   "links": [
-    "Ask Sonae -> /app/assistant",
-    "Calls -> /app/calls",
-    "Dashboard -> /app/settings",
-    "Information -> /app/properties/information",
-    "Information -> /app/reports/information",
-    "Information -> /demos/movements/information",
-    "Logs -> /app/properties/logs",
-    "Reception -> /app/reception",
-    "Replay Alignment -> /demos/movements/replay-lab",
-    "Sales Report -> /app/reports",
     "Sonae -> /",
-    "Studio Library -> /demos/movements",
-    "Tasks -> /app/tasks",
-    "Team Members -> /app/settings/team",
     "aiRegister -> /app/governance/register",
+    "askPlatform -> /app/assistant",
     "auditTrail -> /app/governance/audit-trail",
     "authDiagnostics -> /app/settings/auth-diagnostics",
+    "calls -> /app/calls",
     "dashboard -> /app",
+    "dashboard -> /app/settings",
     "governanceOverview -> /app/governance",
+    "information -> /app/properties/information",
+    "information -> /app/reports/information",
+    "information -> /demos/movements/information",
+    "logs -> /app/properties/logs",
     "policiesInForce -> /app/governance/policies",
     "propertiesScrapedData -> /app/properties/scraped-data",
     "propertiesSearch -> /app/properties/search",
+    "reception -> /app/reception",
+    "replayAlignment -> /demos/movements/replay-lab",
+    "salesReport -> /app/reports",
+    "studioLibrary -> /demos/movements",
+    "tasks -> /app/tasks",
+    "teamMembers -> /app/settings/team",
   ],
   "sections": [
-    "Organization",
-    "Posture Studio",
-    "Reports",
     "governance",
+    "organization",
+    "postureStudio",
     "properties",
+    "reports",
   ],
 }
 `;
@@ -39,8 +39,8 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
 exports[`sidebar navigation characterisation > signed-out navigation is unchanged 1`] = `
 {
   "links": [
-    "Ask Sonae -> /app/assistant",
     "Sonae -> /",
+    "askPlatform -> /app/assistant",
     "dashboard -> /app",
   ],
   "sections": [],
@@ -50,26 +50,26 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
 exports[`sidebar navigation characterisation > standard user navigation is unchanged 1`] = `
 {
   "links": [
-    "Ask Sonae -> /app/assistant",
-    "Calls -> /app/calls",
-    "Information -> /app/properties/information",
-    "Information -> /app/reports/information",
-    "Information -> /demos/movements/information",
-    "Logs -> /app/properties/logs",
-    "Reception -> /app/reception",
-    "Replay Alignment -> /demos/movements/replay-lab",
-    "Sales Report -> /app/reports",
     "Sonae -> /",
-    "Studio Library -> /demos/movements",
-    "Tasks -> /app/tasks",
+    "askPlatform -> /app/assistant",
+    "calls -> /app/calls",
     "dashboard -> /app",
+    "information -> /app/properties/information",
+    "information -> /app/reports/information",
+    "information -> /demos/movements/information",
+    "logs -> /app/properties/logs",
     "propertiesScrapedData -> /app/properties/scraped-data",
     "propertiesSearch -> /app/properties/search",
+    "reception -> /app/reception",
+    "replayAlignment -> /demos/movements/replay-lab",
+    "salesReport -> /app/reports",
+    "studioLibrary -> /demos/movements",
+    "tasks -> /app/tasks",
   ],
   "sections": [
-    "Posture Studio",
-    "Reports",
+    "postureStudio",
     "properties",
+    "reports",
   ],
 }
 `;
@@ -77,7 +77,6 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
 exports[`sidebar navigation characterisation > super admin navigation is unchanged 1`] = `
 {
   "links": [
-    "Plans -> /admin/settings/plans",
     "Sonae -> /",
     "aiRegister -> /admin/governance/register",
     "allUsers -> /admin/directory",
@@ -95,6 +94,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "manageCompanies -> /admin/companies",
     "manageGlobalAi -> /admin/ai",
     "manageWorkflows -> /admin/workflows",
+    "plans -> /admin/settings/plans",
     "policiesInForce -> /admin/governance/policies",
     "schedules -> /admin/workflows/schedules",
     "scripts -> /admin/settings/scripts",

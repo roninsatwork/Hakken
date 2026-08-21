@@ -9,6 +9,7 @@ import { useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, CircleCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type AreaState = "NEEDS_ATTENTION" | "SET_HERE" | "NOT_CONFIGURED";
 
@@ -35,10 +36,11 @@ const STATE_ORDER: Record<AreaState, number> = {
   NOT_CONFIGURED: 2,
 };
 
-function getStateLabel(state: AreaState) {
-  if (state === "NEEDS_ATTENTION") return "Needs attention";
-  if (state === "SET_HERE") return "Set for this company";
-  return "Not configured";
+// Catalogue keys, relative to `admin.companyDetails.aiOverview` — the screen says the words.
+function getStateLabelKey(state: AreaState) {
+  if (state === "NEEDS_ATTENTION") return "stateNeedsAttention";
+  if (state === "SET_HERE") return "stateSetHere";
+  return "stateNotConfigured";
 }
 
 // Only the state that needs acting on is coloured. "Not configured" is the
@@ -50,6 +52,7 @@ function getStateClassName(state: AreaState) {
 }
 
 export default function CompanyAiOverviewPage() {
+  const t = useTranslations("admin.companyDetails.aiOverview");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
 
@@ -66,8 +69,8 @@ export default function CompanyAiOverviewPage() {
     <div className="flex w-full flex-col gap-6 pb-10">
       <PageHeader
         icon={<Sparkles className="h-6 w-6 text-brand" />}
-        title="Company AI"
-        description="What this company has set up of its own, and whether any of it needs attention."
+        title={t("headerTitle")}
+        description={t("headerDescription")}
       />
 
       {readiness && (
@@ -86,29 +89,27 @@ export default function CompanyAiOverviewPage() {
               <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-[#f59e0b]" />
             )}
             <span className={cn("text-[15px] font-semibold", isReady ? "text-[#10b981]" : "text-[#f59e0b]")}>
-              {isReady ? "Ready" : "Needs attention"}
+              {isReady ? t("ready") : t("needsAttention")}
             </span>
             {/* Taken from the list below, so the headline and the table cannot
                 disagree. The old screen took its percentage from five areas and
                 its reasons from nine, which is why it argued with itself. */}
             <span className={cn("text-[14px]", isReady ? "text-[#10b981]" : "text-[#f59e0b]")}>
               {isReady
-                ? "· nothing needs attention"
-                : `· ${readiness.needsAttentionCount} of ${areas.length} areas`}
+                ? t("nothingNeedsAttention")
+                : t("areasCount", { count: readiness.needsAttentionCount, total: areas.length })}
             </span>
           </div>
 
           <p className="text-[13px] leading-relaxed text-secondary">
-            A company does not have to set any of this up — anything left alone uses the platform&apos;s
-            setup, which is normal and does not hold up a launch. Only something set here that
-            does not work needs attention.
+            {t("intro")}
           </p>
         </>
       )}
 
       {needsAttention.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h2 className="text-[13px] font-semibold text-foreground">Fix these first</h2>
+          <h2 className="text-[13px] font-semibold text-foreground">{t("fixFirst")}</h2>
           {needsAttention.map((area) => (
             <Link
               key={area.key}
@@ -133,7 +134,7 @@ export default function CompanyAiOverviewPage() {
         rows={readiness === undefined ? undefined : sortedAreas}
         rowKey={(area) => area.key}
         minWidthClassName="min-w-[720px]"
-        empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: "Nothing to report yet" }}
+        empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",
           page: 1,
@@ -143,14 +144,14 @@ export default function CompanyAiOverviewPage() {
           isLoading: readiness === undefined,
           onPageChange: () => {},
           labels: {
-            empty: "Nothing to report yet",
-            showing: (_start, _end, total) => `${total} area${total === 1 ? "" : "s"}`,
+            empty: t("empty"),
+            showing: (_start, _end, total) => t("showing", { count: total }),
           },
         }}
         columns={[
           {
             key: "area",
-            header: "Area",
+            header: t("columnArea"),
             className: "w-[24%]",
             cell: (area) => (
               <Link
@@ -163,7 +164,7 @@ export default function CompanyAiOverviewPage() {
           },
           {
             key: "summary",
-            header: "What this company has",
+            header: t("columnSummary"),
             className: "w-[47%]",
             cell: (area) => (
               <span className="text-[13px] leading-relaxed text-secondary">{area.summary}</span>
@@ -171,11 +172,11 @@ export default function CompanyAiOverviewPage() {
           },
           {
             key: "state",
-            header: "State",
+            header: t("columnState"),
             className: "w-[29%]",
             cell: (area) => (
               <span className={cn("text-[13px]", getStateClassName(area.state))}>
-                {getStateLabel(area.state)}
+                {t(getStateLabelKey(area.state))}
               </span>
             ),
           },

@@ -18,6 +18,7 @@ import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWor
 import { WikiImportBox } from "./WikiImportBox";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiAskBox } from "./WikiAskBox";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 const PAGE_SIZE = 15;
 
@@ -38,6 +39,7 @@ export function WikiPagesListScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiPages");
+  const { platformName } = useSystemSettings();
   const [search, setSearch] = useState("");
   const [sortByUse, setSortByUse] = useState(false);
   const searchArg = search.trim() ? { search: search.trim() } : {};
@@ -227,7 +229,7 @@ export function WikiPagesListScreen({
       <PageHeader
         icon={<BookOpen className="w-6 h-6 text-brand" />}
         title={companyId ? t("title") : t("globalTitle")}
-        description={companyId ? t("subtitle") : t("globalSubtitle")}
+        description={companyId ? t("subtitle", { platformName }) : t("globalSubtitle")}
         divider
       />
 
@@ -240,7 +242,7 @@ export function WikiPagesListScreen({
       </p>
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">
-        {companyId ? t("hint") : t("globalHint")}
+        {companyId ? t("hint", { platformName }) : t("globalHint")}
       </p>
 
       {weekReport && !weekReport.quiet && (
@@ -287,7 +289,7 @@ export function WikiPagesListScreen({
       {progress?.isReading && (
         <div className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <span className="text-[14px] font-semibold text-foreground">{t("progress.title")}</span>
+            <span className="text-[14px] font-semibold text-foreground">{t("progress.title", { platformName })}</span>
             <span className="text-[12px] text-secondary tabular-nums">
               {t("progress.count", {
                 done: progress.totalDocuments - progress.remainingDocuments,
@@ -436,6 +438,7 @@ export function WikiPagesListScreen({
         }}
         filters={
           <>
+            {/* Raw: card-toned chip with a brand hover, drawn to match the Link beside it — no variant pairs with a Link. */}
             <button
               type="button"
               onClick={() => void downloadVault()}
@@ -468,7 +471,7 @@ export function WikiPagesListScreen({
           label: search.trim()
             ? t("emptySearch")
             : companyId
-              ? t("emptyState")
+              ? t("emptyState", { platformName })
               : t("globalEmptyState"),
         }}
         footer={{
@@ -505,7 +508,7 @@ export function WikiPagesListScreen({
           },
           {
             key: "remembers",
-            header: t("columns.remembers"),
+            header: t("columns.remembers", { platformName }),
             className: "max-w-[380px]",
             cell: (row) => (
               <span className="line-clamp-2 text-[13px] text-secondary">{row.preview}</span>
@@ -526,6 +529,7 @@ export function WikiPagesListScreen({
             /* The only sortable column here, so the button is the header rather
                than a control beside it. */
             header: (
+              // Raw: a sortable column header label, not a button shape.
               <button
                 type="button"
                 onClick={() => {

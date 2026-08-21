@@ -82,6 +82,8 @@ export function TableSearchInput({
         }`}
       />
       {draft !== "" && (
+        // Raw on purpose: a bare inline X inside the search field — no padding,
+        // no shape; the `icon` variant's round hit-target would shift the row.
         <button
           type="button"
           onClick={() => setDraft("")}
@@ -208,6 +210,8 @@ export function TableFilterSelect({
 
   return (
     <div className="relative" ref={containerRef}>
+      {/* Raw on purpose: a filter trigger whose whole recipe swaps with the
+          active-filter state — no Button variant is a two-state chip. */}
       <button
         type="button"
         onClick={() => (isOpen ? close() : setIsOpen(true))}
@@ -292,6 +296,7 @@ function Option({
   onSelect: () => void;
 }) {
   return (
+    // Raw on purpose: a listbox option row, not a standalone button.
     <button
       type="button"
       role="option"

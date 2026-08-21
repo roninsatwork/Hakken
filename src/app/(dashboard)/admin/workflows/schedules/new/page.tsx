@@ -14,6 +14,7 @@ import {
   ToggleLeft
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -109,12 +110,13 @@ export default function NewSchedulePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button
+          <Button
+            variant="icon"
             onClick={() => router.push("/admin/workflows/schedules")}
-            className="w-10 h-10 rounded-full bg-sidebar/50 border border-border-dim flex items-center justify-center text-muted hover:text-foreground hover:bg-foreground/5 transition-colors"
+            className="flex h-10 w-10 items-center justify-center p-0 border border-border-dim bg-sidebar/50 text-muted"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <Timer className="w-6 h-6 text-brand" />
@@ -125,6 +127,7 @@ export default function NewSchedulePage() {
         </div>
 
         {/* State Toggle in Header */}
+        {/* Stays raw: a labelled toggle glyph whose colour is the state — matches no variant. */}
         <button
           type="button"
           onClick={() => setIsActive(!isActive)}
@@ -166,6 +169,7 @@ export default function NewSchedulePage() {
               
               {/* Segmented Control from Screenshot */}
               <div className="flex items-center p-1 bg-transparent border border-border-dim rounded-[12px] w-fit">
+                {/* This pair stays raw: segmented-control halves whose fill swaps with selection — matches no variant. */}
                 <button
                   type="button"
                   onClick={() => { setPayloadType("workflow"); setFormData(p => ({ ...p, agentId: "" })); setSearchQuery(""); }}
@@ -197,6 +201,7 @@ export default function NewSchedulePage() {
                     </span>
                     <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
                   </div>
+                  {/* Stays raw: a foreground-tint chip that inverts on hover — matches no variant. */}
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, workflowId: "" })}
@@ -249,6 +254,7 @@ export default function NewSchedulePage() {
                     </span>
                     <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
                   </div>
+                  {/* Stays raw: a foreground-tint chip that inverts on hover — matches no variant. */}
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, agentId: "" })}
@@ -305,14 +311,14 @@ export default function NewSchedulePage() {
         {/* Action Belt */}
         <div className="flex items-center justify-end pt-4 border-t border-border-dim mt-2">
           <div className="flex items-center">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => router.push("/admin/workflows/schedules")}
-              className="px-5 py-2.5 rounded-full text-secondary hover:text-foreground transition-all text-[13px] font-bold tracking-wide mr-3"
+              className="rounded-full font-bold tracking-wide mr-3 hover:bg-transparent"
               disabled={isSubmitting}
             >
               {t('actions.cancel')}
-            </button>
+            </Button>
             <WriteButton
               type="submit"
               disabled={isSubmitting || (payloadType === "workflow" ? !formData.workflowId : !formData.agentId) || !formData.name}
@@ -336,6 +342,7 @@ export default function NewSchedulePage() {
           <p>{errorModal}</p>
         </div>
         <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
+          {/* Stays raw: a dismiss that floods solid red on hover — destructive keeps its tint, so no variant matches. */}
           <button
             type="button"
             onClick={() => setErrorModal("")}

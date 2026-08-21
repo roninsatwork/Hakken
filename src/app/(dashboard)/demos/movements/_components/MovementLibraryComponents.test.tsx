@@ -1,4 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+// The demo renders the shared Table/ConfirmationModal, whose own copy now
+// resolves through the catalogue, so tests render inside the intl provider
+// the way the app does (harness-only change; the frozen demo is untouched).
+import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import MovementDeleteDialog from "./MovementDeleteDialog";
