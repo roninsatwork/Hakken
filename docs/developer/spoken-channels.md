@@ -1,6 +1,6 @@
 # Spoken Channels
 
-Spoken Channels cover real-time voice in Ask Sonae, inbound telephony, call records, the receptionist screen, the shared spoken voice setting, and the voice relay knowledge endpoint. They are implemented across `convex/ai.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `convex/kiosk.ts`, `convex/kioskActions.ts`, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, and the `/app/calls`, `/app/reception`, `/kiosk/[widgetId]`, and `/admin/ai/voice` routes.
+Spoken Channels cover real-time voice in Ask Sonae, inbound telephony, call records, the receptionist screen, the shared spoken voice setting, and the voice relay knowledge endpoint. They are implemented across `convex/aiVoiceSession.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `convex/kiosk.ts`, `convex/kioskActions.ts`, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, and the `/app/calls`, `/app/reception`, `/kiosk/[widgetId]`, and `/admin/ai/voice` routes.
 
 Read this before changing real-time voice sessions, spoken model defaults, the voice relay, Twilio webhooks, call records, receptionist sessions, spoken-voice settings, or post-call follow-up behavior.
 
@@ -16,11 +16,11 @@ Implemented routes and components:
 - `/kiosk/[widgetId]` is the full-screen anonymous voice surface for an opted-in widget.
 - `/admin/ai/voice` lets an admin choose and preview the workspace spoken voice.
 
-Voice dictation through `src/hooks/useVoiceToText.ts` remains a separate turn-based transcription feature documented in the assistant guide. It calls `api.ai.transcribeAudio` and fills the text composer; it is not the live spoken conversation path.
+Voice dictation through `src/hooks/useVoiceToText.ts` remains a separate turn-based transcription feature documented in the assistant guide. It calls `api.aiSpeech.transcribeAudio` and fills the text composer; it is not the live spoken conversation path.
 
 ## Real-Time Voice Sessions
 
-`api.ai.createRealtimeVoiceSession` creates the session used by Ask Sonae voice mode. It:
+`api.aiVoiceSession.createRealtimeVoiceSession` creates the session used by Ask Sonae voice mode. It:
 
 - requires an authenticated tenant action
 - rate-limits session creation through `aiActionRequests`
@@ -45,7 +45,7 @@ Google live-audio sessions use the relay ticket path. `signVoiceTicket` signs a 
 - verifies the HMAC signature with Web Crypto
 - allows lookups for a signed thread or company fallback
 - rejects expired, malformed, unauthenticated, oversized, or scope-less requests
-- calls `internal.ai.searchKnowledgeForVoiceInternal`
+- calls `internal.aiVoiceSession.searchKnowledgeForVoiceInternal`
 
 Thread id remains the preferred scope. The company id in the ticket is only a fallback for a thread that belongs to no workspace, which prevents a relay-side caller from swapping a ticket onto another tenant's documents.
 
@@ -60,7 +60,7 @@ Thread id remains the preferred scope. The company id in the ticket is only a fa
 - atomically spends one company conversation allowance when the company plan has a finite message limit
 - records the call with `upsertCallOnAnswer`
 - optionally loads the matched caller's Wiki page for session instructions
-- mints a company voice ticket with `internal.ai.createVoiceTicketForCompany`
+- mints a company voice ticket with `internal.aiVoiceSession.createVoiceTicketForCompany`
 - returns TwiML that speaks the AI disclosure, then connects the stream to `TELEPHONY_STREAM_URL`
 
 Configured environment and connector inputs include:

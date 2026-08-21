@@ -288,7 +288,7 @@ though they sit outside this plan's ownership:
   the ten-minute stale presentation; the agent loop has a real sweeper cron.
   If a sweeper is ever wanted for the assistant path, it belongs beside
   `agentRunCheckpoints.recoverStalledRuns`, not in this plan.
-- Two near-identical flush loops exist (`convex/ai.ts` and
+- Two near-identical flush loops exist (`convex/aiChat.ts` and
   `convex/agentRuntime.ts`). Consolidation was considered and declined here:
   this plan changes adapters, and a shared-loop refactor would widen the
   blast radius of every phase.
@@ -320,7 +320,7 @@ for all three.
 
 ## Reading list before touching this area
 
-- `docs/plans/active/platform-improvement-plan.md` — Phase 3, the Vertex half
+- `docs/plans/completed/platform-improvement-plan.md` — Phase 3, the Vertex half
   of this work and the origin of the "~1 day each" estimate.
 - `convex/streamingService.ts` — the flush contract and its reasoning; the
   file header is the cost argument in full.

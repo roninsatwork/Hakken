@@ -48,7 +48,7 @@ Anything optional that is absent renders nothing — a minimal message is just
 
 | Surface | Builder | Renders |
 | --- | --- | --- |
-| Platform alerts | `buildSystemHealthAlertEmail` in `convex/platformAlertService.ts` | Sent from `convex/analyticsCron.ts` |
+| Platform alerts | `buildSystemHealthAlertEmail` in `convex/platformAlertService.ts` | Sent from `convex/platformAlerts.ts` |
 | Invites | `convex/invites.ts` calls `renderEmail` directly | Template record supplies headline and body |
 | Agent notifications | `buildAgentNotificationEmail` in `convex/aiToolNotificationService.ts` | Sent from `convex/aiToolExecutionService.ts` |
 | Workflow email nodes | `convex/workflowRuntime.ts` calls `renderEmail` directly | Body is author-written and template-substituted |

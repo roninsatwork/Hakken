@@ -535,7 +535,7 @@ The engine the agent side already has, pointed at company chat.
 
 - A new action opens a throwaway thread marked `purpose: "EVAL"`, sends the
   check's question down the **real** company chat path
-  (`internal.ai.generateSonaeResponse`), and reads the answer back — the same
+  (`internal.aiChat.generateSonaeResponse`), and reads the answer back — the same
   pattern as `getEvalThreadOutcomeInternal` on the agent side. Eval threads stay
   filtered out of the admin thread list.
 - A second, different enabled model marks the answer against "what a good answer

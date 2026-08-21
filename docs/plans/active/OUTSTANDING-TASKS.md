@@ -182,7 +182,7 @@ pushes. `ci.yml` and `deploy.yml` both cap themselves; this one was missed.
 - **The Posture Studio movement demo stays in the product repo.** It is fenced,
   not deleted: the platform cannot import it, and the template drops it.
 - **npm's block on package install scripts stays on.** See the note in
-  `HANDOVER.md`.
+  `../completed/HANDOVER-platform-hardening.md`.
 - **The navigation profiles still name the product verticals** in their hide
   lists. Hiding something that does not exist is harmless, and it means a future
   product inherits the same decision.

@@ -54,7 +54,7 @@ developer pairs or targeted refreshes.
   backend modules.
 - Spoken-channel routes and services, including `/app/calls`,
   `/app/calls/[id]`, `/admin/ai/voice`, Ask Sonae's real-time voice overlay,
-  `convex/ai.ts` live voice helpers, `convex/voice*.ts`, `convex/telephony*.ts`,
+  `convex/aiVoiceSession.ts` live voice helpers, `convex/voice*.ts`, `convex/telephony*.ts`,
   and the browser voice-session helpers under `src/lib/`.
 - Gmail mailbox connector and watcher implementation, including the
   `google-gmail` connector definition, OAuth authorize/callback routes,
@@ -62,7 +62,7 @@ developer pairs or targeted refreshes.
   handlers, `mailboxMessages`, the watcher cron, follow-up tasks, and Wiki
   handoff.
 - Photo-action implementation, including Assistant chat image attachments,
-  widget photo uploads, `convex/ai.ts` vision routing, `convex/agentRuntime.ts`
+  widget photo uploads, `convex/aiChat.ts` vision routing, `convex/agentRuntime.ts`
   image handling, `convex/photoActionService.ts`, `PhotoActionChip`,
   `tasks.confirmPhotoAction`, and upload-policy limits.
 - Receptionist screen implementation, including `/app/reception`,
@@ -243,7 +243,7 @@ gaps. The next queue should re-audit the then-current implementation and
 indexes for any newly changed routes, Convex modules, scripts, operational
 procedures, or active plans rather than assuming this result is permanent.
 
-This pass also refreshed `docs/plans/active/global-wiki-plan.md` after the
+This pass also refreshed `docs/plans/completed/global-wiki-plan.md` after the
 current worktree showed the platform Wiki screen fold and global Wiki doors had
 landed. The plan now records the platform Wiki as partially built, with answer
 integration, global staff rounds, and browser/audit proof still tracked as

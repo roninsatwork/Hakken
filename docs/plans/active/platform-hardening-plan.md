@@ -150,7 +150,7 @@ not exist today; `convex/workflowRuntime.test.ts:151` only asserts output shape.
 
 ### P0.4 — RAG discards relevance scores, starving tenant knowledge
 
-**Where:** `convex/aiPromptAssembly.ts:94-100`, consumed at `convex/ai.ts:290-311`.
+**Where:** `convex/aiPromptAssembly.ts:94-100`, consumed at `convex/aiChat.ts:290-311`.
 
 **Problem:** `orderAssistantKnowledgeMatches` is literally
 `[...globalMatches, ...companyMatches, ...threadMatches]`. Convex's `_score` is
@@ -1367,7 +1367,7 @@ API for deployment details, which a fresh template directory has none of.
 | Claim | Reality |
 |---|---|
 | "Turing-complete workflow orchestrator", "thousands of computational loops" | Cycles are rejected client-side only; `WORKFLOWS.md` itself says loops are prevented |
-| "natively executes Javascript V8 Sandboxes" | No interpreter, no isolate, no `eval`. The code node is a `{{a.b.c}}` string replacer (`convex/workflowRuntimeService.ts:363`). Worse, the AI copilot at `convex/ai.ts:545` instructs users to write JS for it, producing silently wrong workflows |
+| "natively executes Javascript V8 Sandboxes" | No interpreter, no isolate, no `eval`. The code node is a `{{a.b.c}}` string replacer (`convex/workflowRuntimeService.ts:363`). Worse, the AI copilot at `convex/workflowNodeConfig.ts:545` instructs users to write JS for it, producing silently wrong workflows |
 | "militarized data isolation", "no possibility of cross-contamination" | Convention-only enforcement; see P2.1 |
 | "Zero-Trust Security Framework ... relies strictly on CORS allowedDomains" | No CORS check exists in that path; see P0.1 |
 | Connector marketplace with OAuth lifecycle | 2 of 29 handlers executable; OAuth authorize route does not exist |

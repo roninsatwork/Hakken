@@ -35,7 +35,7 @@ Implementation changes to frozen movement-demo files require an explicit decisio
 - Manual smoke checklist: `docs/operator/movement-demo-manual-smoke-checklist.md`
 - Live rehearsal notes: `docs/operator/movement-demo-live-rehearsal-notes-template.md`
 - Existing pitch plan: `docs/plans/active/movement-demo-client-pitch-excellence-plan.md`
-- Developer demo context: `docs/developer/movement-demo-client-recovery-plan.md`
+- Developer demo context: `docs/plans/completed/movement-demo-client-recovery-plan.md`
 
 ## Phase 1: Demo Freeze And Evidence
 

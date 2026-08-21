@@ -13,7 +13,7 @@ Read this before changing invite emails, magic-link sender configuration, workfl
 - `convex/auth.ts` uses `buildEmailFromAddress` for auth email delivery.
 - `convex/invites.ts` uses stored email branding for invite email copy and sender address assembly.
 - `convex/workflowRuntime.ts` uses email branding for workflow email node defaults.
-- `convex/analyticsCron.ts` uses email branding for platform system health alert emails.
+- `convex/platformAlerts.ts` uses email branding for platform system health alert emails.
 
 The System Settings UI stores sender fields as part of global system preferences. Updating them is super-admin-only and writes `UPDATE_SYSTEM_PREFERENCES`.
 

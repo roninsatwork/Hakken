@@ -90,7 +90,7 @@ Departures from the spec above, each deliberate:
 - `agentMemories` (`convex/schema.ts:1286`) and `companyMemories`
   (`convex/schema.ts:1352`) hold FACT/PREFERENCE/SUMMARY/INSTRUCTION memories
   with ALWAYS/WHEN_RELEVANT apply modes. ALWAYS memories are injected into the
-  system instruction (`convex/aiPromptAssembly.ts:95-103`, `convex/ai.ts:264-286`,
+  system instruction (`convex/aiPromptAssembly.ts:95-103`, `convex/aiChat.ts:264-286`,
   `convex/agentRuntime.ts:465-478`); WHEN_RELEVANT memories are searched per
   message (`convex/agentRuntime.ts:696-710`).
 - The company sweep (`convex/companyMemorySuggestions.ts`, cron at
@@ -594,7 +594,7 @@ export function chunkPrior(args: {
 }
 ```
 
-The retrieval call site (the fusion consumer in `convex/ai.ts:290-352` and the
+The retrieval call site (the fusion consumer in `convex/aiChat.ts:290-352` and the
 agent-side equivalent) batch-loads stats for the candidate chunk ids via
 `by_company_chunk` **after** the searches return (candidates are ~100, so this
 is one indexed get per candidate at most — measure, and if it shows up in
@@ -602,7 +602,7 @@ latency, load only the top 3× budget). When `retrievalPriors` is off in
 config, pass no priors; the function is then byte-identical to today.
 
 Floors, not exclusion, again: the prior reorders; every relevance filter and
-budget rule (`convex/ai.ts:290-352`, 32k budget, 30% thread reservation) stays
+budget rule (`convex/aiChat.ts:290-352`, 32k budget, 30% thread reservation) stays
 untouched. A chunk with only negative evidence still appears when it is the
 only relevant source.
 

@@ -487,9 +487,9 @@ Twelve call sites bypass both registries and call
 
 | Surface | Call site |
 |---|---|
-| Assistant RAG search | `convex/ai.ts:270` |
-| Audio transcription | `convex/ai.ts:454` |
-| Workflow validation | `convex/ai.ts:534` |
+| Assistant RAG search | `convex/aiChat.ts:270` |
+| Audio transcription | `convex/aiSpeech.ts:454` |
+| Workflow validation | `convex/workflowNodeConfig.ts:534` |
 | Agent RAG search | `convex/agentRuntime.ts:584` |
 | Triggered agent execution | `convex/agentRuntime.ts:1704` |
 | Workflow agent execution | `convex/agentRuntime.ts:2205` |

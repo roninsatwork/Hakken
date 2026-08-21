@@ -1,5 +1,11 @@
 # Handover — Sonae platform hardening
 
+> **Completed — filed 2026-08-21.** This is a historical handover kept for the
+> technical detail behind the platform-hardening work. Its claims about
+> uncommitted work, test counts, and "nothing pushed" were long ago superseded;
+> everything it describes has been committed and shipped. Do not act on its
+> instructions.
+
 **State: green.** 3,072 tests passing (425 files), typecheck silent, lint 0 errors
 / 103 warnings, `npm audit --omit=dev` 0 vulnerabilities, build compiles.
 Working tree is dirty with all the plan work. **Nothing has been committed or
@@ -109,19 +115,11 @@ kept only for the technical detail behind each entry.
 
 ## P4.3 is done — what a later reader needs
 
-`npm run template:build -- --out <dir>` writes the platform template. It reads
-`template.manifest.json`; `src/template-boundary.test.ts` keeps that manifest
-honest and runs in the normal suite.
-
-- **Adding a product vertical means adding it to the manifest in the same
-  commit.** The boundary test fails otherwise.
-- **A platform file that needs a vertical** must either move into the vertical or
-  be wrapped in `template:remove:start <vertical>` … `template:remove:end`. The
-  test names the file when this is missed.
-- **The generated template was run through its own full gate** when this landed —
-  typecheck, 1,223 tests, lint, build. Repeat that after any manifest change; a
-  unit test cannot stand in for it.
-- The build never touches git. It prints the `git init`/`tag` commands and stops.
+> **Superseded 2026-08-09.** The manifest and boundary-test machinery this
+> section described (`template.manifest.json`, `src/template-boundary.test.ts`)
+> was deleted. The current mechanism is `scripts/strip-verticals.mjs`
+> (`npm run template:build`), which strips fenced vertical blocks from shared
+> files; whole vertical files are removed by hand after each clone.
 
 ---
 

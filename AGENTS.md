@@ -47,7 +47,8 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 
 ## What A Push Costs
 
-Every push to `dev` runs lint, types and the whole test suite on GitHub. That
+Every push to `dev` runs the source guards, lint, types, the whole test suite
+and a small browser smoke subset on GitHub. That
 is real money on a metered allowance, and in July 2026 the account reached 90%
 of its 3,000 monthly minutes with three days to go — 221 pushes to `dev`, most
 of them one-per-step rather than one-per-finished-piece.
@@ -59,8 +60,8 @@ of them one-per-step rather than one-per-finished-piece.
   than one each. `main` is exempt — those gate a deploy and each must stand on
   its own.
 - Documentation-only pushes skip the suite. Pull requests never skip it.
-- The browser suite already runs only on pull requests into `main`. Leave it
-  there.
+- A four-spec browser smoke subset runs on every push and PR; the full browser
+  suite runs only on pull requests into `main`. Leave that split alone.
 
 **The failure mode to know about.** The cached dependency tree is keyed on the
 lockfile, and this project carries a workaround for an npm bug that installs
@@ -88,29 +89,36 @@ trigger.
 **Every push to `dev`, and every pull request** (`.github/workflows/ci.yml`):
 
 ```bash
+npm run check:guards
 npm run lint
 npm run typecheck
 npm run test:coverage
 npm run coverage:check
+npm run test:e2e:smoke
 ```
 
 This is the one that runs constantly and costs the Actions allowance. It does
 not build the app and it does not audit dependencies, so a change that
 type-checks and passes its tests can still fail on the way to production.
 
-A pull request **into `main`** additionally runs the browser suite
-(`npm run test:e2e`) in a second job.
+A pull request **into `main`** additionally runs the full browser suite
+(`npm run test:e2e`) plus coverage in a second job, the full gate.
 
 **Only on a push to `main`** (`.github/workflows/deploy.yml`), before deploying:
 
 ```bash
 npm audit --omit=dev --audit-level=high
-npm run lint
-npm run typecheck
-npm run test:run
-npm run build
+npm run check:guards      # skipped when a passing CI run
+npm run lint              # already covers this exact code
+npm run typecheck         # (documentation-only releases,
+npm run test:coverage     # or the same SHA passed CI)
+npm run coverage:check
 npx convex deploy
 ```
+
+There is no `npm run build` in the deploy any more — deliberate, not an
+omission. The Docker image builds the app itself in its builder stage, so a
+separate build produced output nothing read; `deploy.yml` explains it inline.
 
 `--omit=dev` is deliberate: only runtime dependencies block a release. The dev
 toolchain currently pins an unpatchable transitive advisory, which

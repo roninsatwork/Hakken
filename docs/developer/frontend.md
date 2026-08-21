@@ -70,6 +70,12 @@ Prefer existing shared components before creating page-local variants:
 
 Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use Sonae modal or inline feedback patterns.
 
+## Chart Exporting And The Tailwind v4 Oklab Constraint
+
+`ChartExportWrapper` (`src/ui/components/charts/ChartExportWrapper.tsx`) exports charts by rasterizing the DOM node to a PNG with `html2canvas`. That library parses computed CSS itself, and it cannot parse `color-mix(in oklab, ...)` values. Tailwind v4 compiles opacity shorthands on custom-variable colors — `bg-card/20`, `text-primary/50`, and similar — into exactly those `color-mix(in oklab, ...)` expressions, so a single such class inside an exported node crashes the export.
+
+The rule: anything rendered inside an exported boundary must avoid custom-variable opacity shorthands. Use a standard opacity utility (`opacity-60`) or an explicit hex-with-alpha color instead. Grep for `ChartExportWrapper` usages before restyling chart panels to know whether a component sits inside an export boundary.
+
 ## Data And State
 
 Frontend data access uses `convex/react` hooks:

@@ -58,6 +58,7 @@ Sonae has several AI execution paths:
 - Workflows execute React Flow graphs with trigger, agent, API action, logic, iterator, merge, wait, approval, email, database, and mapping nodes.
 - Provider-backed helper actions support voice transcription, workflow node configuration generation, and intent routing with input limits and action-specific rate reservations.
 - Reports and knowledge ingestion use AI providers through configured model defaults, not hardcoded runtime literals.
+- Model resolution degrades safely: if an agent's configured model is inactive or invalid, execution falls back to the active default, and finally to the system failsafe model (`SYSTEM_FAILSAFE_MODEL_ID` in `convex/aiModels.ts`).
 
 AI output is not authorization. Tool execution, database nodes, public triggers, widget messages, and retrieval paths must validate scope and role before reading or mutating data.
 
@@ -66,6 +67,10 @@ AI output is not authorization. Tool execution, database nodes, public triggers,
 Audit logs are the durable ledger for many privileged actions, but coverage is broad rather than universal. New destructive, privilege-sensitive, cross-tenant, security, or configuration mutations should add audit evidence unless there is a documented reason not to.
 
 Operational evidence also lives outside `auditLogs`: agent timelines, workflow execution steps, public API request rows, webhook deliveries, auth events, analytics snapshots, maintenance script runs, Apify run logs, and system health reports. Use the feature-specific developer guide before promising support teams that a particular action is audited.
+
+## Deployment Shape
+
+The Next.js app is containerized and hosted on Google Cloud Run; the backend and database are managed by Convex. Never deploy to Vercel. `dev` is the daily working branch; `main` is production, and a push to `main` triggers the production deployment through GitHub Actions after its own gate passes. See [Infrastructure And Deployment](./deployment.md) for the workflows, gates, and secrets.
 
 ## Documentation Routing
 

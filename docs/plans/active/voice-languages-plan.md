@@ -15,7 +15,7 @@ report a language, no per-turn prompt assembly to receive one, and no
 synthesis call to pick a voice for.
 
 So the reply-language feature became an instruction rather than a pipeline,
-and it is now in `REALTIME_VOICE_STYLE` (`convex/ai.ts`): answer in the
+and it is now in `REALTIME_VOICE_STYLE` (`convex/aiVoiceSession.ts`): answer in the
 language you are spoken to in, switch the moment the speaker switches, never
 announce it, and never read a stored passage out in its language rather than
 theirs. The knowledge tool's description carries the other half — search in
@@ -89,13 +89,13 @@ reply-language feature is now implemented as realtime voice instruction and
 knowledge-tool behavior, as described at the top of this plan.
 
 **Transcription has no language handling at all.**
-`api.ai.transcribeAudio` (`convex/ai.ts:537-582`) prompts "Transcribe the
+`api.aiSpeech.transcribeAudio` (`convex/aiSpeech.ts:537-582`) prompts "Transcribe the
 following audio exactly…" with no language parameter; whatever language the
 model hears, it transcribes at its own discretion. The client hook
 (`src/hooks/useVoiceToText.ts`) sets no `lang` anywhere.
 
 **No reply-language rule exists.** Nothing in the prompt assembly for
-`generateSonaeResponse` (`convex/ai.ts:154`) mentions language.
+`generateSonaeResponse` (`convex/aiChat.ts:154`) mentions language.
 
 **Messages carry no language field** (`messages`,
 `convex/schema.ts:1930-1971`) — and this plan does not add one; language
@@ -129,7 +129,7 @@ voice for it.
 
 ## Phase A — Transcription reports the language
 
-- `transcribeAudio` (`convex/ai.ts:537`) prompt extended to return the
+- `transcribeAudio` (`convex/aiSpeech.ts:537`) prompt extended to return the
   transcript plus a BCP-47 language code as structured output; the action's
   return shape becomes `{ text, languageCode }`. Existing callers
   (`ChatInput.tsx:68`, assistant welcome page) keep working — they use only
@@ -142,7 +142,7 @@ voice for it.
 - The voice session passes the detected code with `sendMessage`, and the
   prompt assembly for voice-session turns gains one instruction: reply in
   the language of the user's message. (Anchor the change where
-  `generateSonaeResponse` builds its system content, `convex/ai.ts:154` —
+  `generateSonaeResponse` builds its system content, `convex/aiChat.ts:154` —
   scoped so typed chat behaviour is untouched.)
 - `synthesizeSpeech` accepts the language code and picks the voice from
   the config map (commitment 3).

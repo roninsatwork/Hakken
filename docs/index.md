@@ -42,10 +42,10 @@ operator procedures continue to change.
 ### Plans
 
 - [Plans Index](./plans/index.md)
+- [Admin Clone-Readiness Plan](./plans/completed/admin-clone-readiness-plan.md) — approved plan for the admin section's last hand-drawn debts: button migration onto the screen kit, collapsing mirrored screens, de-branding via `platformName`, and full admin copy externalisation into the message catalogues.
+- [Foundation Quality Plan](./plans/completed/foundation-quality-plan.md) — approved pre-clone plan for wiki/AI-runtime test coverage, `appError` conversion, splitting the `ai.ts` and `analyticsCron.ts` grab-bags, and the docs tidy-up.
 - [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
 - [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
-- [Platform Improvement Plan](./plans/active/platform-improvement-plan.md) — delivered plan for shared hybrid retrieval, workflow retry safety, assistant streaming, rehearsal evals, and operational error monitoring.
-- [Widget Messages Spend From The Company's Plan](./plans/active/widget-plan-quota-plan.md) — implemented widget quota, billing-privacy, PII-redaction, and visitor-language decision record.
 - [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
 - [OpenRouter And Model Scale Plan](./plans/active/openrouter-and-model-scale-plan.md) — active AI provider/model catalogue scale plan for OpenRouter, provider resolution, paging, search indexes, and rollups.
 - [AI Checks Plan](./plans/active/ai-checks-plan.md) — active AI testing plan for company evals, agent evals, shared check vocabulary, and readiness gates.
@@ -74,7 +74,6 @@ operator procedures continue to change.
 - [Assistant Streaming All Providers Plan](./plans/active/assistant-streaming-all-providers-plan.md) — current provider adapter streaming contract for plain assistant replies.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
-- [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
 
 ### Developer
@@ -153,13 +152,13 @@ Before changing movement-side behaviour, read **[Movement Mirror And Side-Owners
 Before changing movement capture, Replay Studio, or Game Studio behaviour, read **[Movement Definitive Plan](./plans/active/movement-definitive-plan.md)**. It defines the two goals (capture countdown with full-body walk-back gate; correct avatar/instructor motion in Replay and Game), the two-part acceptance (automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation), and the capture-screen rules that must never regress. Retired background on the repair-loop discipline lives in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans); treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
 
 - [Movement Tracking](./developer/movement-tracking.md)
-- [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)
-- [Movement Demo Game And Replay Parity Plan](./developer/movement-demo-game-replay-parity-plan.md)
-- [Movement Demo Replay Lab Plan](./developer/movement-demo-replay-lab-plan.md)
+- [Movement Demo Client Recovery Plan](./plans/completed/movement-demo-client-recovery-plan.md)
+- [Movement Demo Game And Replay Parity Plan](./plans/completed/movement-demo-game-replay-parity-plan.md)
+- [Movement Demo Replay Lab Plan](./plans/completed/movement-demo-replay-lab-plan.md)
 - **[Movement Mirror And Side-Ownership Contract — required](./developer/movement-mirror-and-side-ownership-contract.md)**
 - [Movement Demo Retargeting Approach](./developer/movement-demo-retargeting-approach.md)
-- [Movement Studio And Replay Unification Plan](./developer/movement-studio-replay-unification-plan.md)
-- [Movement Studio Reward Presentation Fix Plan](./developer/movement-studio-reward-presentation-fix-plan.md)
+- [Movement Studio And Replay Unification Plan](./plans/completed/movement-studio-replay-unification-plan.md)
+- [Movement Studio Reward Presentation Fix Plan](./plans/active/movement-studio-reward-presentation-fix-plan.md)
 - [Movement Studio VrmAvatar Inventory](./developer/movement-studio-vrm-avatar-inventory.md)
 
 ### Operator

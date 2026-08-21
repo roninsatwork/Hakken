@@ -2,15 +2,16 @@
 
 Analytics rollups are the daily precomputed usage snapshots behind Sonae's admin analytics dashboards and data-health checks. They reduce historical dashboard work by storing global, company, and user summaries in `analyticsDailySnapshots`, while the analytics queries add today's live messages and agent transactions on top.
 
-Read this before changing `convex/analytics.ts`, `convex/analyticsCron.ts`, `convex/analyticsService.ts`, analytics snapshot schema, analytics data-health checks, or the Global Analytics Engine settings page. For system health alerts that consume analytics health, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
+Read this before changing `convex/analytics.ts`, `convex/analyticsSnapshots.ts`, `convex/analyticsService.ts`, analytics snapshot schema, the analytics data-health checks in `convex/systemHealth.ts`, or the Global Analytics Engine settings page. For system health alerts that consume analytics health, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
 ## Product Surface
 
 - `src/app/(dashboard)/admin/settings/analytics/page.tsx` renders the Global Analytics Engine settings page and analytics data-health summary.
 - `convex/analytics.ts` serves admin analytics queries for global costs, platform overview, user costs, company metrics, global inventory metrics, and global analytics.
-- `convex/analyticsCron.ts` generates daily snapshots, seeds historical snapshots, validates/backfills message analytics dimensions, and exposes analytics data health.
+- `convex/analyticsSnapshots.ts` generates daily snapshots, seeds historical snapshots, and validates/backfills message analytics dimensions.
+- `convex/systemHealth.ts` exposes analytics data health.
 - `convex/analyticsService.ts` owns timeframe resolution, aggregation grouping, model cost lookup, cost calculation, USD-to-GBP conversion, and metric rounding helpers.
-- `convex/crons.ts` schedules `internal.analyticsCron.generateDailySnapshots` daily at 00:05 UTC.
+- `convex/crons.ts` schedules `internal.analyticsSnapshots.generateDailySnapshots` daily at 00:05 UTC.
 
 Analytics settings also manage the Google Analytics or Google Tag Manager tracking id through `api.system.getAnalyticsId` and `api.system.updateAnalyticsId`. This guide focuses on usage and cost rollups, not browser tracking injection.
 

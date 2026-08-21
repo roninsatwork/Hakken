@@ -85,13 +85,13 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 **Required Replay Studio context:** read the active [Movement Definitive Plan](../plans/active/movement-definitive-plan.md) before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, rendered fidelity thresholds, or the movement agent debugging workflow. Historical background lives in [Replay Studio Agent Repair Harness Plan](../plans/completed/replay-studio-agent-repair-harness-plan.md) and [Replay Lab Visual Acceptance Tightening Plan](../plans/completed/replay-lab-visual-acceptance-tightening-plan.md); use those for context only unless they are deliberately reopened. Replay Studio owns recorded-motion diagnosis, and Game Studio live-camera checks are final confirmation after Replay proof, not the primary debugging loop.
 
 - [Movement Tracking](./movement-tracking.md)
-- [Movement Demo Client Recovery Plan](./movement-demo-client-recovery-plan.md)
-- [Movement Demo Game And Replay Parity Plan](./movement-demo-game-replay-parity-plan.md)
-- [Movement Demo Replay Lab Plan](./movement-demo-replay-lab-plan.md)
+- [Movement Demo Client Recovery Plan](../plans/completed/movement-demo-client-recovery-plan.md)
+- [Movement Demo Game And Replay Parity Plan](../plans/completed/movement-demo-game-replay-parity-plan.md)
+- [Movement Demo Replay Lab Plan](../plans/completed/movement-demo-replay-lab-plan.md)
 - **[Movement Mirror And Side-Ownership Contract — required](./movement-mirror-and-side-ownership-contract.md)**
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
-- [Movement Studio And Replay Unification Plan](./movement-studio-replay-unification-plan.md)
-- [Movement Studio Reward Presentation Fix Plan](./movement-studio-reward-presentation-fix-plan.md)
+- [Movement Studio And Replay Unification Plan](../plans/completed/movement-studio-replay-unification-plan.md)
+- [Movement Studio Reward Presentation Fix Plan](../plans/active/movement-studio-reward-presentation-fix-plan.md)
 - [Movement Studio VrmAvatar Inventory](./movement-studio-vrm-avatar-inventory.md)
 
 ## Coverage Status

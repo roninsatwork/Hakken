@@ -8,7 +8,7 @@ Frozen implementation paths:
 - `src/app/(dashboard)/demos/movement-capture/page.tsx`
 - `convex/movements.ts`
 
-Read `docs/developer/movement-demo-retargeting-approach.md` before changing avatar body motion, `VrmAvatar`, lower-body tracking, retargeting, or debug tracking. Also read `docs/developer/movement-demo-game-replay-parity-plan.md` before using replay-lab findings to tune game behavior.
+Read `docs/developer/movement-demo-retargeting-approach.md` before changing avatar body motion, `VrmAvatar`, lower-body tracking, retargeting, or debug tracking. Also read `docs/plans/completed/movement-demo-game-replay-parity-plan.md` before using replay-lab findings to tune game behavior.
 
 ## Product Surface
 
@@ -86,7 +86,7 @@ Existing developer notes are split by purpose:
 
 - `docs/developer/movement-tracking.md` documents coordinate-system and VRM tracking rules.
 - `docs/developer/movement-demo-retargeting-approach.md` documents the required future direction for body-motion work.
-- `docs/developer/movement-demo-game-replay-parity-plan.md` documents the acceptance rule that replay-lab fixes must prove themselves against the actual game path.
+- `docs/plans/completed/movement-demo-game-replay-parity-plan.md` documents the acceptance rule that replay-lab fixes must prove themselves against the actual game path.
 
 The current implementation includes source skeleton proof overlays, retarget analysis, exact frame jumps in debug mode, neutral source model selection from the recording, foot contact diagnostics, conservative planted squat handling, and debug metadata for lower-body retargeting. These are part of the frozen demo state and should not be replaced casually.
 

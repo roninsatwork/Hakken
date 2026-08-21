@@ -80,7 +80,7 @@ actually be attached from the UI today.
 reads it (only the purge path and the widget upload counter touch it).
 
 **Vision works on exactly one path.** The plain-chat runtime inlines
-attachment bytes to the model (`convex/ai.ts:370-405`) and only the Google
+attachment bytes to the model (`convex/aiChat.ts:370-405`) and only the Google
 adapter accepts them (`toGoogleParts`,
 `convex/googleProviderAdapter.ts:9-22`); Anthropic, OpenAI and OpenRouter
 adapters all throw on non-text parts (`assertTextOnlyContents`,
@@ -158,7 +158,7 @@ widget.
   honouring the existing 1 MB/images-only policy and 10-message cap.
 - Fix the cross-threaded pipe: the agent runtime learns to inline image
   attachments for vision-capable Google models (the same `inlineData`
-  shape the plain path uses at `convex/ai.ts:370-405`), because the widget
+  shape the plain path uses at `convex/aiChat.ts:370-405`), because the widget
   always routes to the agent path; where the model cannot take images the
   reply says so (commitment 3), never silence.
 - Tests: widget attach end-to-end, agent-path image inlining, the

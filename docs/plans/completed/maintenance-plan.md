@@ -40,7 +40,7 @@ stripper, and a Button primitive.
 - **Finding 15 — movement/Posture Studio.** The demo and its debug lab
   (`scripts/movement-debug/`, the 101 `movement:*` scripts) stay in Sonae.
   It is a live demo / POC. Movement work is governed by
-  [Movement Definitive Plan](./movement-definitive-plan.md).
+  [Movement Definitive Plan](../active/movement-definitive-plan.md).
 
 **Standing decisions recorded here so nobody "fixes" them later:**
 - Anthony (`anthony@ronins.co.uk`) as SUPER_ADMIN on deployments is **the
@@ -347,7 +347,7 @@ refusal copy.
 
 ## Phase 10 — Template stripper exists or the markers go (Day 17) *(audit finding 11)*
 
-**Where:** 35+ `template:remove:start <vertical>` fences across `src/` and
+**Where:** 35+ `template:remove` fences (start/end pairs naming a vertical) across `src/` and
 `convex/` (incl. `schema.ts`) for 5 verticals — with no script anywhere
 that reads them. `platform-hardening-plan.md:1291` records P4.3 "Template
 branch — DONE 2026-07-25" describing `npm run template:build` and

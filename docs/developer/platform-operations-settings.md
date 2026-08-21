@@ -69,7 +69,7 @@ The detailed retention contract, pipeline behavior, batch limits, cancellation s
 
 ## System Health
 
-`src/app/(dashboard)/admin/health/page.tsx` reads system health from `api.analyticsCron.getSystemHealthForAdmin` and renders signal rows, alert rule cards, budget pressure, analytics health, and a downloadable JSON report.
+`src/app/(dashboard)/admin/health/page.tsx` reads system health from `api.systemHealth.getSystemHealthForAdmin` and renders signal rows, alert rule cards, budget pressure, analytics health, and a downloadable JSON report.
 
 Health report construction is supported by `convex/platformAlertService.ts` and related system/analytics modules. The report covers missing or duplicate analytics snapshots, message dimension drift, missing threads, agent error logs, failed transactions, stale runs, pending approvals, failed tool calls, provider failures, high-cost agents, budget pressure, failed or stale scheduled executions, overdue schedules, and schedules missing a next run.
 
@@ -79,9 +79,9 @@ The detailed health-report shape, scoping behavior, threshold rules, platform al
 
 ## Analytics Rollups
 
-`convex/analyticsCron.ts` generates daily `analyticsDailySnapshots` for global, company, and user usage. `convex/analytics.ts` combines historical snapshots with today's live messages and agent transactions for admin dashboards. The analytics settings page also surfaces snapshot coverage and message dimension health.
+`convex/analyticsSnapshots.ts` generates daily `analyticsDailySnapshots` for global, company, and user usage. `convex/analytics.ts` combines historical snapshots with today's live messages and agent transactions for admin dashboards. The analytics settings page also surfaces snapshot coverage and message dimension health.
 
-`admin/settings/analytics/page.tsx` reads `api.system.getAnalyticsId`, writes `api.system.updateAnalyticsId`, and reads `api.analyticsCron.getAnalyticsDataHealthForAdmin` with a seven-day window. It treats the tracking id and data-health report separately: saving a GTM/GA id updates frontend analytics mounting, while health signals report snapshot coverage, duplicate groups, missing or mismatched message dimensions, missing threads, and live counts.
+`admin/settings/analytics/page.tsx` reads `api.system.getAnalyticsId`, writes `api.system.updateAnalyticsId`, and reads `api.systemHealth.getAnalyticsDataHealthForAdmin` with a seven-day window. It treats the tracking id and data-health report separately: saving a GTM/GA id updates frontend analytics mounting, while health signals report snapshot coverage, duplicate groups, missing or mismatched message dimensions, missing threads, and live counts.
 
 The detailed rollup schema, snapshot generation flow, attribution rules, cost calculation, data-health checks, message-dimension backfill, and historical seeding behavior are documented in [Analytics Rollups](./analytics-rollups.md).
 

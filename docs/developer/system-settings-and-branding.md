@@ -124,7 +124,7 @@ Keep PII config writes super-admin-only. Admins can read current posture, but th
 
 ## Analytics Tracking Id
 
-`/admin/settings/analytics` reads `api.system.getAnalyticsId`, writes through `api.system.updateAnalyticsId`, and also renders analytics data-health status from `api.analyticsCron.getAnalyticsDataHealthForAdmin`.
+`/admin/settings/analytics` reads `api.system.getAnalyticsId`, writes through `api.system.updateAnalyticsId`, and also renders analytics data-health status from `api.systemHealth.getAnalyticsDataHealthForAdmin`.
 
 `getAnalyticsId` is public by design. The value should be treated as a browser tracking id, not a secret. Writes still require a super admin and are audited.
 

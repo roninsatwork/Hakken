@@ -45,7 +45,7 @@ of care, and one of them accidentally became the house style.
 
 | Surface | Builder | State today |
 | --- | --- | --- |
-| Platform alerts | `convex/platformAlertService.ts:507` | Bare `<div><ul><table>`, zero styling. Sent from `convex/analyticsCron.ts:1458`. |
+| Platform alerts | `convex/platformAlertService.ts:507` | Bare `<div><ul><table>`, zero styling. Sent from `convex/platformAlerts.ts:1458`. |
 | Invites | `convex/invites.ts:250` | The only designed one. Full HTML doc, dark card, button, footer. **Interpolates `template.headline` and `template.body` unescaped** (`:270-271`). |
 | Agent notifications | `convex/aiToolNotificationService.ts:122` | Escapes correctly, but emits bare `<p>` tags with no styling. Sent from `convex/aiToolExecutionService.ts:563`. |
 | Workflow email nodes | `convex/workflowRuntime.ts:133` | Sends `html: body` raw — unwrapped and unescaped. |
@@ -302,7 +302,7 @@ verdict, stat and action URL present in the HTML.
 ### Phase 2 — Platform alerts — DONE 2026-07-31
 
 `buildSystemHealthAlertEmail` in `convex/platformAlertService.ts` renders
-through the shell; `convex/analyticsCron.ts` sends `{subject, html, text}`.
+through the shell; `convex/platformAlerts.ts` sends `{subject, html, text}`.
 Both hand-rolled builders are gone (82 lines). Full suite green: 446 files,
 3,507 tests.
 
@@ -390,7 +390,7 @@ production.
 **Correction, 2026-07-31.** This phase was written on my claim that the platform
 sends an all-clear email when nothing is wrong. It does not.
 `dispatchPlatformAlerts` returns early on `!decision.shouldAlert`
-(`convex/analyticsCron.ts:1425`), so a clean report sends nothing. The
+(`convex/platformAlerts.ts:1425`), so a clean report sends nothing. The
 `"[Sonae] Platform alerts healthy"` subject exists on the decision object but is
 never dispatched — that string is what I mistook for a send.
 
@@ -452,7 +452,7 @@ preview route gives us the source to hand to a render service at that point.
 - ~~**Deep-link target.**~~ **Resolved 2026-07-31: per-agent log.** Each card
   links to `/admin/agents/<targetId>/logs`. This needed a new optional
   `targetId` on `OperationalFailureExample`, populated at the five agent-typed
-  sites in `analyticsCron.ts` (agent errors, failed transactions, stale runs,
+  sites in `systemHealth.ts` (agent errors, failed transactions, stale runs,
   pending approvals, failed tool calls) — `id` there is the failing *record*,
   which is not routable. Signals with no agent target render no link rather
   than a guess. A dedicated alert-detail screen remains the better answer if

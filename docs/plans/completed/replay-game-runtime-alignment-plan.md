@@ -15,7 +15,7 @@ Related controlling documents:
 - [Movement Studio Best-Practice Architecture Plan](./movement-studio-best-practice-architecture-plan.md)
 - [Replay Studio Agent Repair Harness Plan](./replay-studio-agent-repair-harness-plan.md)
 - [Replay Lab Visual Acceptance Tightening Plan](./replay-lab-visual-acceptance-tightening-plan.md)
-- [Movement Studio And Replay Unification Plan](../../developer/movement-studio-replay-unification-plan.md)
+- [Movement Studio And Replay Unification Plan](./movement-studio-replay-unification-plan.md)
 
 ## Objective
 

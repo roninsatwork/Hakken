@@ -227,7 +227,7 @@ and [Movement Definitive Plan](../plans/active/movement-definitive-plan.md).
 | `/demos/movements/[id]` | Movement detail. | Movement docs and active plan. |
 | `/demos/movements/[id]/play` | Movement game/play surface. | Movement docs and active plan. |
 | `/demos/movements/information` | Public-facing movement info page inside app shell. | [Temporary Posture Studio Demo](../end-user/temporary-posture-studio-demo.md) |
-| `/demos/movements/replay-lab` | Replay Alignment/Replay Studio. | [Movement Demo Replay Lab Plan](./movement-demo-replay-lab-plan.md), active movement plan. |
+| `/demos/movements/replay-lab` | Replay Alignment/Replay Studio. | [Movement Demo Replay Lab Plan](../plans/completed/movement-demo-replay-lab-plan.md), active movement plan. |
 | `/demos/movements/squat-proof` | Squat proof route. | Movement proof docs and tests. |
 | `/demos/movement-capture` and children | Capture, deep capture, benchmark, readiness, hand/face proof routes. | Movement docs, proof scripts, active movement plan. |
 | `/demos/movement-capture/deep` | Deep movement capture route. | Movement docs, proof scripts, active movement plan. |

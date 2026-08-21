@@ -112,7 +112,7 @@ Chat transcript copy is built in the browser through `src/lib/chatTranscript.ts`
 
 ## Provider-Backed Helper Actions
 
-Some AI actions are helper utilities rather than normal chat turns. Voice transcription calls `api.ai.transcribeAudio`; real-time voice calls `api.ai.createRealtimeVoiceSession`; voice preview calls `api.voicePreview.mintVoicePreviewTicket`; workflow node mapping calls `api.ai.generateNodeConfig`. These actions validate payload shape and size where applicable, reserve an `aiActionRequests` row for the actor, and reject rapid repeated calls with a 429-style error.
+Some AI actions are helper utilities rather than normal chat turns. Voice transcription calls `api.aiSpeech.transcribeAudio`; real-time voice calls `api.aiVoiceSession.createRealtimeVoiceSession`; voice preview calls `api.voicePreview.mintVoicePreviewTicket`; workflow node mapping calls `api.workflowNodeConfig.generateNodeConfig`. These actions validate payload shape and size where applicable, reserve an `aiActionRequests` row for the actor, and reject rapid repeated calls with a 429-style error.
 
 `convex/aiActionRequests.ts` owns the reservation mutation. It queries the most recent rows by actor and action name, delegates the window check to `convex/aiActionRequestService.ts`, and inserts a new reservation only after the caller is still inside the allowed window. The current implementation does not prune old request rows during reservation, so cleanup or retention should be handled deliberately if request volume grows. The helper service is intentionally small and pure so rate-limit behavior can be tested without invoking provider actions.
 

@@ -130,7 +130,7 @@ Worth recording because it shaped the design: **no operational threshold on this
 platform is configurable by an admin.** `PENDING_APPROVAL_THRESHOLD_MINUTES`,
 `STALE_RUNNING_THRESHOLD_MINUTES`, `HIGH_COST_AGENT_THRESHOLD_GBP`,
 `BUDGET_WARNING_PERCENT` and `REPEATED_PROVIDER_FAILURE_THRESHOLD` are all module
-constants in `convex/analyticsCron.ts:78` and following. The system health screen
+constants in `convex/systemHealth.ts:78` and following. The system health screen
 displays them as text and has no inputs.
 
 The one exception is the purge retention policy, which is a proper configurable
@@ -257,7 +257,7 @@ and can never be changed.
   `SubNavItem` with a label. The file has no badge or count mechanism at all.
 - **The only link into the queue in the whole application** is on the system
   health page (`admin/settings/system-health/page.tsx:476`). The health tile
-  behind it (`convex/analyticsCron.ts:497-521`) only counts approvals already
+  behind it (`convex/systemHealth.ts:497-521`) only counts approvals already
   pending longer than 30 minutes (`PENDING_APPROVAL_THRESHOLD_MINUTES`, `:78`),
   so for the first half hour the platform's one signal reads zero.
 - **The backend authorises a reviewer the product does not want.**
@@ -1266,7 +1266,7 @@ code with them.
     `FAILED`, audit row. Today the only thing that ever touches one is the retention
     purge (`convex/purges.ts:241-260`), minimum 30 days, which deletes the execution
     without ever completing or failing it.
-13. `convex/analyticsCron.ts:497-521` — the stale-approvals health signal counts
+13. `convex/systemHealth.ts:497-521` — the stale-approvals health signal counts
     workflow steps as well as `agentRunApprovals`. The workflow health checks at
     `:588-633` only look at `SCHEDULE`-triggered executions, so a manual or webhook
     run parked on an approval is invisible to every signal on the platform.

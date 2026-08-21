@@ -272,9 +272,9 @@ Steps:
 
 Read these together:
 
-- [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md) for frozen scope and routes.
-- [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md) for avatar body architecture.
+- [Temporary Posture Studio Demo](../../developer/temporary-posture-studio-demo.md) for frozen scope and routes.
+- [Movement Demo Retargeting Approach](../../developer/movement-demo-retargeting-approach.md) for avatar body architecture.
 - [Movement Demo Replay Lab Plan](./movement-demo-replay-lab-plan.md) for stored-session replay tooling.
-- [Movement Tracking](./movement-tracking.md) for coordinate systems, smoothing, and tracking contracts.
+- [Movement Tracking](../../developer/movement-tracking.md) for coordinate systems, smoothing, and tracking contracts.
 
 This document adds the missing acceptance rule: replay-lab success must prove game-path success.

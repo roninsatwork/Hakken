@@ -19,7 +19,7 @@ streamed speech back, shows listening/thinking/speaking state and captions, can
 interrupt replies, persists completed turns back to the normal thread, and can
 call the voice knowledge search tool during the conversation.
 
-The shared implementation uses `convex/ai.ts` realtime session/ticket helpers,
+The shared implementation uses `convex/aiVoiceSession.ts` realtime session/ticket helpers,
 `convex/voiceRelay.ts` for signed relay knowledge lookup,
 `convex/voiceSettings.ts` and `convex/voicePreview.ts` for the workspace spoken
 voice, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, and the browser voice
@@ -142,8 +142,8 @@ current product state.
 
 **Hearing exists and is turn-based.** `src/hooks/useVoiceToText.ts` (90
 lines): MediaRecorder buffers the whole clip, base64s it, and calls
-`api.ai.transcribeAudio` (`convex/ai.ts:537-582`) — a `tenantAction`,
-Google-Vertex-only, MIME allowlist (`convex/ai.ts:51-63`), 10 MB cap, 6
+`api.aiSpeech.transcribeAudio` (`convex/aiSpeech.ts:537-582`) — a `tenantAction`,
+Google-Vertex-only, MIME allowlist (`convex/aiSpeech.ts:51-63`), 10 MB cap, 6
 calls/minute rate limit reserved through `aiActionRequests`. No interim
 results, no language setting, errors swallowed to `console.error`, and no
 `MediaRecorder.isTypeSupported` negotiation (Safari's `audio/mp4` happens to
@@ -232,7 +232,7 @@ code exists anywhere.)
   exclusion filters in `convex/aiModelsActions.ts:73,100` and
   `convex/vertexProviderService.ts:127` learn to admit the configured
   speech model rather than stripping every TTS model from the catalogue.
-- `convex/ai.ts` gains `synthesizeSpeech` (tenantAction): input
+- `convex/aiSpeech.ts` gains `synthesizeSpeech` (tenantAction): input
   `{ text, voiceKey? }`, text length cap, rate limit via
   `aiActionRequests.reserve` (new `"synthesizeSpeech"` literal beside
   `"transcribeAudio"` in `convex/schema.ts:553` and

@@ -2,17 +2,18 @@
 
 System health is Sonae's in-product operational risk report for analytics drift, agent failures, schedules, approvals, tool failures, provider failures, and cost pressure. Platform alerts are the daily email path built from the same health report. Optional Sentry monitoring covers unexpected Next.js browser/server errors separately; see [Infrastructure And Deployment](./deployment.md#error-monitoring).
 
-Read this before changing `analyticsCron.getSystemHealthForAdmin`, health signal thresholds, platform alert emails, analytics health checks, or the System Health settings page. For the broader operations surface, see [Platform Operations Settings](./platform-operations-settings.md).
+Read this before changing `systemHealth.getSystemHealthForAdmin`, health signal thresholds, platform alert emails, analytics health checks, or the System Health settings page. For the broader operations surface, see [Platform Operations Settings](./platform-operations-settings.md).
 
 ## Product Surface
 
 - `src/app/(dashboard)/admin/health/page.tsx` renders `/admin/health`.
-- `convex/analyticsCron.ts` builds analytics, operations, budget, alert-rule, and system health reports.
+- `convex/systemHealth.ts` builds analytics, operations, budget, alert-rule, and system health reports.
+- `convex/platformAlerts.ts` dispatches the daily platform alert emails built from those reports.
 - `convex/platformAlertService.ts` converts health reports into alert decisions and email HTML.
 - `convex/emailBrandingService.ts` supplies the sender name/address for alert dispatch.
 - `convex/crons.ts` runs daily analytics snapshots at 00:05 UTC and daily platform alerts at 00:25 UTC.
 
-The page uses `api.analyticsCron.getSystemHealthForAdmin` with a 7-day lookback. It renders metric tiles, budget controls, alert rules, operator signals with runbooks, investigation links, and a downloadable JSON report.
+The page uses `api.systemHealth.getSystemHealthForAdmin` with a 7-day lookback. It renders metric tiles, budget controls, alert rules, operator signals with runbooks, investigation links, and a downloadable JSON report.
 
 ## Access And Scope
 

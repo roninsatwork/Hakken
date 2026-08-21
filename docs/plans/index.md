@@ -14,21 +14,6 @@ completed work.
   reads a handful of rows instead of sweeping up to ~34,500 — and the
   compliance figures stop being silently capped. Agreed 2026-08-18; ~2.5 days.
 
-- [The Wiki's Staff](./active/wiki-agents-plan.md) — agents that tend, check
-  and file, drawn from Anthony's own Second-Brain playbook: contradiction
-  finding, freshness checking, the full-import-first source-note layer, a
-  pre-ingest reviewer, and write-back of durable synthesis from questions.
-  Drafted 2026-08-15; ~5.5 build-days; awaiting Anthony's go on the order.
-- [The Wiki Replaces Knowledge](./active/wiki-replaces-knowledge-plan.md) —
-  the agreed direction as of 2026-08-15: importing a website, file or text
-  writes wiki pages directly, answers come from whole pages, and the
-  document-and-fragment machinery retires behind an exam. Designs drawn;
-  three decisions open; build not started.
-- [The Self-Improving Wiki](./active/self-improving-wiki-plan.md) — Karpathy's
-  LLM Wiki pattern built faithfully into Sonae: whole pages the AI rewrites
-  after every conversation, tended on a schedule, readable and correctable in
-  the company AI section. Agreed 2026-08-14; build awaits Anthony's go,
-  phase by phase.
 - [Movement Definitive Plan](./active/movement-definitive-plan.md) — the vision,
   acceptance rules, capture-screen rules, and work queue for all movement work.
 - [Platform Hardening Plan](./active/platform-hardening-plan.md) — the platform
@@ -36,15 +21,6 @@ completed work.
   runtime, and reusability work. Its current handover states that all planned
   days are complete, but the document remains in `active/` as the detailed
   write-up until it is deliberately archived.
-- [Platform Improvement Plan](./active/platform-improvement-plan.md) — the
-  delivered follow-up covering shared hybrid retrieval, workflow retry safety,
-  assistant streaming, rehearsal evals, and Sentry-backed error monitoring.
-  Read it for the cross-feature acceptance record and use the more specific
-  active plans where ownership has since split out.
-- [Widget Messages Spend From The Company's Plan](./active/widget-plan-quota-plan.md) —
-  the implemented decision that anonymous widget messages share the company's
-  plan allocation, while quota refusals hide billing state, preserve PII
-  redaction, and localize the platform-authored notice from browser language.
 - [Admin UI/UX Plan](./active/admin-ux-plan.md) — the current admin usability
   plan for model catalogue, Skill Center, skill detail, model defaults, system
   options, API keys, and related admin surfaces.
@@ -231,15 +207,6 @@ completed work.
   `OUTSTANDING-TASKS.md` item 6. Read it before adding anything that assigns
   work to a person or tells them something happened. A task is not an
   approval — approvals stay with the Agent Autonomy And Approvals Plan.
-- [Closing The Loop Plan](./active/closing-the-loop-plan.md) — the plan for
-  four features that each turn something the platform already records into
-  something a person can use: typing the correction a thumbs-down cannot
-  carry, saving a good answer into company knowledge, and showing the evidence
-  a reply already stores. A fourth — asking a question on a schedule — was
-  built, proven, and then withdrawn; the plan says why. Owns the correction
-  field on `messageFeedback.comment` and the evidence panel. It feeds the
-  Self-Improvement Plan's candidate queue without changing its rules, and
-  raises the tasks and notifications the Tasks And Notifications Plan owns.
 - [Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo](./active/showcase-channels-plan.md) —
   the showcase roadmap giving the one brain more doors: voice-to-voice with a
   talking character, spoken answers in the caller's own language, an inbound
@@ -262,14 +229,6 @@ completed work.
   phase 2: the reply follows the language of the caller's latest turn.
   Owns language detection in `transcribeAudio`'s return shape, the
   reply-language rule for voice turns, and the language→voice map.
-- [Sonae Answers The Phone](./active/telephone-agent-plan.md) — phase 3:
-  the inbound number, the turn-based call loop over provider webhooks,
-  and the hang-up-and-watch finale. Owns the `phoneCalls` table and its
-  purge pipeline, the `/api/telephony/voice` route, the call log and call
-  detail screens, and the per-company "inbound goes to" assignee setting
-  it shares with the photo plan. Records the decisions that calls are
-  turn-based (no audio streaming), the call loop is read-only while live,
-  and unknown callers become tasks, not CRM rows.
 - [Show Sonae A Photo And It Acts](./active/photo-actions-plan.md) —
   phase 4: photos into chat and widget, vision-aware model routing, and
   the human-confirmed action chip that files a task from what the photo
@@ -294,28 +253,15 @@ completed work.
   inactivity reset and token rotation between visitors, and kiosk health
   on the admin widget screen. Records the decisions that the kiosk is a
   widget presented differently, and that wake words are out of scope.
-- [Company Skills Apply Where They Are Bound](./active/company-skills-surfaces-plan.md) —
-  the plan to wire up the per-surface skill switches that the schema, readiness
-  gates, and eval categories already assume exist: the runtime filters company
-  skills through enabled COMPANY_CHAT/WIDGET bindings, import creates them on
-  by default, the admin skills list gets the two toggles, and a migration
-  backfills existing skills so deploy day changes nothing. Records the
-  decisions that skills stay always-on within their surface (no per-question
-  matching) and that agent threads keep bypassing company skills. Read it
-  before touching `getRuntimeCompanySkillsInternal`, `companySkillBindings`,
-  or the company skills screen.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
-- [Handover](./active/HANDOVER.md) — the current platform-hardening handover
-  state, including verification status, local operating notes, and unfinished
-  follow-up context.
 
 The plans do not overlap. If work touches movement, the Movement Definitive Plan
 wins. If work touches non-movement platform hardening, check the Platform
-Hardening Plan, then Outstanding Tasks and Handover for current status. If work
+Hardening Plan, then Outstanding Tasks for current status. If work
 touches AI providers, provider resolution at run time, or the scale of the model
 catalogue, use the OpenRouter And Model Scale Plan. If work touches AI testing —
 company evals, agent evals, or the readiness gates that read eval evidence — use
@@ -389,8 +335,74 @@ instructions unless they are deliberately reopened.
 
 ## Completed
 
+- [Admin Clone-Readiness Plan](./completed/admin-clone-readiness-plan.md) —
+  delivered 2026-08-21, same day as approved: raw buttons 408→307 with two
+  new frozen variants (`brand`, `outline`), all mirrored admin screens
+  collapsed to shared `_features` bodies (three invitation screens now one),
+  the admin section fully de-branded behind a zero-allowance guard, and
+  ~2,143 catalogue keys per language externalising all admin copy with an
+  adoption-floor ratchet. Uncommitted on `dev` pending the owner's word.
+- [Foundation Quality Plan](./completed/foundation-quality-plan.md) —
+  delivered 2026-08-21, same day as approved: 118 wiki/AI-runtime tests,
+  ~340 `appError` conversions behind a clean-by-default guard, the `ai.ts`
+  and `analyticsCron.ts` grab-bags split into seven modules, the docs
+  contradictions removed, plus a ten-finding adversarial review fixed the
+  same day. Coverage floor ratcheted 66→69. Uncommitted on `dev`.
 - [Every Screen Is Built From The Same Parts](./completed/shared-screen-kit-plan.md) —
   the base-layer plan, completed 2026-08-18: every admin screen on the shared
   kit, the kit accessible and phone-safe, capabilities withheld per company and
   granted by plan. Page headers were closed out of it for a future plan of
   their own. Still the document to read before adding a screen.
+- [The Self-Improving Wiki](./completed/self-improving-wiki-plan.md) —
+  delivered 2026-08-14: Karpathy's LLM Wiki pattern built faithfully into
+  Sonae — whole pages the AI rewrites after every conversation, tended on a
+  schedule, readable and correctable in the company AI section.
+- [Sonae Answers The Phone](./completed/telephone-agent-plan.md) — delivered
+  and proven live 2026-08-14: phase 3 of the showcase channels roadmap — the
+  inbound number, the turn-based call loop over provider webhooks, the
+  hang-up-and-watch finale, the `phoneCalls` table and its purge pipeline,
+  the `/api/telephony/voice` route, and the call log and detail screens.
+- [The Wiki Replaces Knowledge](./completed/wiki-replaces-knowledge-plan.md) —
+  delivered 2026-08-15: importing a website, file or text writes wiki pages
+  directly, answers come from whole pages, and the document-and-fragment
+  machinery retired behind an exam the new path passed.
+- [The Wiki's Staff](./completed/wiki-agents-plan.md) — delivered 2026-08-15:
+  the staff of seven live agents that tend, check and file — Distiller,
+  Tidier, Linker, Contradiction Finder, Freshness Checker, Reviewer, Filing
+  Clerk — drawn from Anthony's own Second-Brain playbook.
+- [The Global Brain](./completed/global-wiki-plan.md) — delivered 2026-08-16:
+  the platform's own wiki at the top — same wiki, same staff, same receipts,
+  holding only what is true for every company; a company's wiki visible only
+  inside its own company's section.
+- [Watch It Think](./completed/watch-it-think-plan.md) — delivered
+  2026-08-16: receipts on every answer, the Ask box, clean captures, and the
+  wiki's diary.
+- [One Brain](./completed/one-brain-plan.md) — delivered 2026-08-17: Saved
+  Answers and Memory folded into the wiki, one place to correct the AI.
+- [The Living Wiki](./completed/living-wiki-plan.md) — delivered 2026-08-17:
+  the quick switcher, the local graph, wiki health, and the round trip.
+- [Closing The Loop](./completed/closing-the-loop-plan.md) — delivered
+  2026-08-17: the wiki learns from what people ask — every unanswerable
+  question becomes a to-do, every answer marks the pages it stood on, the
+  system reports its own week, and the exam grows from real questions.
+- [Company Skills Apply Where They Are Bound](./completed/company-skills-surfaces-plan.md) —
+  delivered 2026-08-13: the per-surface skill switches wired up — the runtime
+  filters company skills through enabled COMPANY_CHAT/WIDGET bindings, import
+  creates them on by default, and a migration backfilled existing skills.
+  Records the decisions that skills stay always-on within their surface and
+  that agent threads keep bypassing company skills.
+- [Widget Messages Spend From The Company's Plan](./completed/widget-plan-quota-plan.md) —
+  done 2026-08-09: the implemented decision that anonymous widget messages
+  share the company's plan allocation, while quota refusals hide billing
+  state, preserve PII redaction, and localize the platform-authored notice
+  from browser language.
+- [Platform Improvement Plan](./completed/platform-improvement-plan.md) —
+  delivered across August 2026: shared hybrid retrieval, workflow retry
+  safety, assistant streaming, rehearsal evals, and Sentry-backed error
+  monitoring. Read it for the cross-feature acceptance record.
+- [Maintenance Plan](./completed/maintenance-plan.md) — complete 2026-08-19:
+  all 11 phases of the code-maintenance audit executed the same day the plan
+  was written, with the coverage gate raised and the guard count at eight.
+- [Handover — platform hardening](./completed/HANDOVER-platform-hardening.md) —
+  the historical platform-hardening handover, kept for the technical detail
+  behind each entry; its claims about uncommitted work are long superseded.
