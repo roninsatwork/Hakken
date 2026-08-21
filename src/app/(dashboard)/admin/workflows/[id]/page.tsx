@@ -243,7 +243,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
               className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-sidebar text-foreground hover:bg-foreground/5 shadow-xl"
            >
               <Plus className="w-4 h-4" />
-              <span>Node Library</span>
+              <span>{t('library.title')}</span>
            </Button>
         </div>
 

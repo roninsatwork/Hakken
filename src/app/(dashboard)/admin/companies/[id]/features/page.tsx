@@ -93,7 +93,7 @@ export default function CompanyFeaturesPage() {
       <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
         <div className="flex items-center gap-3">
           <Blocks className="w-5 h-5 text-brand opacity-80" />
-          <h2 className="text-[15px] font-bold text-foreground tracking-wide">Features</h2>
+          <h2 className="text-[15px] font-bold text-foreground tracking-wide">{t("featuresTitle")}</h2>
         </div>
         <p className="text-[13px] text-secondary">
           What this workspace can reach. Switching one off removes it from their menu

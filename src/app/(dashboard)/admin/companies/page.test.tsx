@@ -25,6 +25,7 @@ vi.mock("next-intl", () => ({
         companies: "companies",
         createSubtitle: "Create a tenant",
         createTitle: "Create Company",
+        deleteAndWipe: "Delete Company & Wipe Data",
         deleteTenant: "Delete Tenant",
         deleteTitle: "Delete Company",
         editSubtitle: "Edit tenant",

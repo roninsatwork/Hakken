@@ -489,6 +489,7 @@ function RowMenu({
           {/* Clicking anywhere else closes it, without any of the rows needing
               to know the menu exists. Backdrop and menu share the overlay
               layer; the menu is the later sibling, so it paints on top. */}
+          {/* Stays raw: an invisible full-screen backdrop — not a themed control. */}
           <button
             type="button"
             aria-hidden="true"
@@ -502,6 +503,7 @@ function RowMenu({
             className={`fixed ${LAYER.OVERLAY} w-[248px] rounded-[12px] border border-border-dim bg-card p-1.5 shadow-xl`}
           >
             {items.map((item) => (
+              // Stays raw: a full-width dropdown menu row (danger rows flood red on hover) — matches no variant.
               <button
                 key={item.label}
                 type="button"

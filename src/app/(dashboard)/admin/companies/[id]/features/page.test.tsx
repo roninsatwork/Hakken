@@ -78,7 +78,7 @@ describe("CompanyFeaturesPage", () => {
   it("shows every feature to a super admin", () => {
     render(<CompanyFeaturesPage />);
 
-    expect(screen.getByRole("heading", { name: "Features" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "featuresTitle" })).toBeInTheDocument();
     expect(screen.getByText("modules.salesData.name")).toBeInTheDocument();
   });
 

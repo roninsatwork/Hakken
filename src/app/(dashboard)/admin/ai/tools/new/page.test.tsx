@@ -118,9 +118,9 @@ describe("RegisterToolPage", () => {
 
     fillIn();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "DESTRUCTIVE" } });
-    fireEvent.click(screen.getByLabelText("Require approval"));
-    fireEvent.click(screen.getByLabelText("Active"));
-    fireEvent.click(screen.getByRole("button", { name: "System admin" }));
+    fireEvent.click(screen.getByLabelText(`${NEW}.fields.gates.requireApproval`));
+    fireEvent.click(screen.getByLabelText(`${NEW}.fields.gates.active`));
+    fireEvent.click(screen.getByRole("button", { name: `${NEW}.fields.role.systemAdmin` }));
     fireEvent.change(screen.getByPlaceholderText(OUTPUT_SCHEMA), { target: { value: '{"type":"object"}' } });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 

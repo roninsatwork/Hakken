@@ -102,6 +102,7 @@ export function RunDetailModal({
                 {/* This modal is for acting on a run — replay it, learn from
                     it, turn it into a check. Reading where its time went is a
                     different job, and it has its own screen. */}
+                {/* Stays raw: an inline brand text link drawn as a button — matches no variant. */}
                 <button
                   type="button"
                   onClick={() => router.push(`/admin/agents/${agentId}/observability/${runDetail.run._id}`)}
@@ -166,6 +167,7 @@ export function RunDetailModal({
                 </Button>
               )}
               {canReplay(runDetail.run.status) && runDetail.run.agentVersionId && (
+                // Stays raw: an info-tinted bordered pill — no variant wears the info tone.
                 <button
                   type="button"
                   onClick={() => onReplay(runDetail.run._id, "SAME_VERSION")}
@@ -177,6 +179,7 @@ export function RunDetailModal({
                 </button>
               )}
               {canReplay(runDetail.run.status) && (
+                // Stays raw: an info-tinted bordered pill — no variant wears the info tone.
                 <button
                   type="button"
                   onClick={() => onReflect(runDetail.run._id)}
@@ -222,6 +225,7 @@ export function RunDetailModal({
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("replayOf")}</div>
+                      {/* Stays raw: an inline brand text link drawn as a button — matches no variant. */}
                       <button
                         type="button"
                         onClick={() => onInspectRun(runDetail.replayContext.sourceRun?.runId || null)}
@@ -327,6 +331,7 @@ export function RunDetailModal({
                 <div className="flex flex-col gap-2">
                   <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("recentReplays")}</div>
                   {runDetail.replayContext.replayRuns.map((replay) => (
+                    // Stays raw: a whole card row made clickable, status chip inside — matches no variant.
                     <button
                       key={replay.runId}
                       type="button"

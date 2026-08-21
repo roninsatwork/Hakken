@@ -223,14 +223,14 @@ export default function CompanyUsersPage() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
             >
               <Plus className="w-4 h-4" />
-              <span>Invite User</span>
+              <span>{t("inviteUser")}</span>
             </Link>
           </div>
         </div>
 
       </header>
 
-      <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search users by name or email..." />
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t("searchPlaceholder")} />
 
       {/* Users Table */}
       <DataTable
@@ -331,7 +331,7 @@ export default function CompanyUsersPage() {
                   <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
                     Awaiting Login
                   </span>
-                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label="Revoke Invitation">
+                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label={t("revokeInvitation")}>
                     <Trash2 className="w-4 h-4" />
                   </RowIconButton>
                 </RowActions>
@@ -349,7 +349,7 @@ export default function CompanyUsersPage() {
                       </RowIconButton>
                     )
                   ) : (
-                    <RowIconButton onClick={() => setDeletingUser(row.user)} tone="danger" label="Delete User">
+                    <RowIconButton onClick={() => setDeletingUser(row.user)} tone="danger" label={t("deleteUser")}>
                       <Trash2 className="w-4 h-4" />
                     </RowIconButton>
                   )}
@@ -373,7 +373,7 @@ export default function CompanyUsersPage() {
           {editingUser ? (
             <div className="flex flex-col gap-3 p-4 rounded-[10px] bg-foreground/[0.02] border border-border-dim/50 mb-2">
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">User</span>
+                <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t("userLabel")}</span>
                 <span className="text-[14px] text-foreground font-medium">{editingUser.name}</span>
                 <span className="text-[13px] text-secondary">{editingUser.email}</span>
               </div>
@@ -381,7 +381,7 @@ export default function CompanyUsersPage() {
           ) : (
             <>
               <ModalField
-                label="Full Name"
+                label={t("fullName")}
                 type="text"
                 required
                 value={formData.name}
@@ -390,7 +390,7 @@ export default function CompanyUsersPage() {
               />
 
               <ModalField
-                label="Email Address"
+                label={t("emailAddress")}
                 type="email"
                 required
                 value={formData.email}
@@ -453,9 +453,9 @@ export default function CompanyUsersPage() {
       <ConfirmationModal
         isOpen={!!deletingUser}
         onClose={() => { setDeletingUser(null); setSubmitError(""); }}
-        title="Delete User"
+        title={t("deleteUser")}
         cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? "Deleting..." : "Delete User"}
+        confirmLabel={isSubmitting ? t("deleting") : t("deleteUser")}
         isSubmitting={isSubmitting}
         onConfirm={confirmDelete}
         error={submitError}

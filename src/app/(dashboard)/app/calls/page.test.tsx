@@ -22,6 +22,10 @@ vi.mock("next-intl", () => ({
   }),
 }));
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Sonae" }),
+}));
+
 /**
  * The wall display. What matters most is what it does NOT show: a room reads
  * this screen, so a caller's number appears only in its masked form.

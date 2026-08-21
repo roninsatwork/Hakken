@@ -97,6 +97,7 @@ export function FeedbackModal({
               { rating: "NEUTRAL" as const, label: t("neutral"), icon: MinusCircle },
               { rating: "NEGATIVE" as const, label: t("negative"), icon: ThumbsDown },
             ]).map(({ rating, label, icon: Icon }) => (
+              // Stays raw: a selected-state rating pill whose fill swaps with selection — matches no variant.
               <button
                 key={rating}
                 type="button"
@@ -119,6 +120,7 @@ export function FeedbackModal({
               {feedbackLabels.map((option) => {
                 const selected = draft.labels.includes(option.label);
                 return (
+                  // Stays raw: a selected-state label chip whose tint swaps with selection — matches no variant.
                   <button
                     key={option.label}
                     type="button"

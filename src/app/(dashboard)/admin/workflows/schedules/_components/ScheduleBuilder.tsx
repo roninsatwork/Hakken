@@ -268,7 +268,7 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
                 normalizeTimes(draft.timesLocal).map((time) => (
                   <div key={time} className="flex items-center justify-between rounded-[10px] border border-border-dim px-4 py-3">
                     <div className="flex flex-col gap-1">
-                      <span className="font-mono text-[16px] font-bold text-foreground">{time} <span className="font-sans text-[12px] text-muted">Local</span></span>
+                      <span className="font-mono text-[16px] font-bold text-foreground">{time} <span className="font-sans text-[12px] text-muted">{t("fields.interval.localLabel")}</span></span>
                       <span className="font-mono text-[12px] text-muted">{formatUtcPreview(time)} UTC</span>
                     </div>
                     {/* Stays raw: a borderless red text action — ghost is grey and destructive is a bordered pill. */}

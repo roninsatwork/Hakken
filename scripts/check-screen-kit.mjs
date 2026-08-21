@@ -127,7 +127,8 @@ const RULES = {
     headline: "These draw more raw <button>s than their frozen count allows:",
     fix:
       "Use Button from src/ui/atoms/Button.tsx — pick the variant whose look the screen\n" +
-      "wants (primary, pill, quiet, ghost, accent, destructive, icon) and adjust size\n" +
+      "wants (primary, pill, quiet, ghost, accent, destructive, icon, brand, outline)\n" +
+      "and adjust size\n" +
       "through className if it must. A button whose colours or behaviour genuinely match\n" +
       "no variant may stay raw, but only inside a file's frozen count: the counts may\n" +
       "fall, never rise.",

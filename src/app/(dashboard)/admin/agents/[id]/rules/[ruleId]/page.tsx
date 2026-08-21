@@ -35,6 +35,7 @@ function createRuleDraft(rule: Doc<"aiRules">): RuleDraft {
 
 export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id<"agents">, ruleId: Id<"aiRules"> }> }) {
   const t = useTranslations("admin.agents.details.rules.form");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const unwrappedParams = use(params);
   const agentId = unwrappedParams.id;
@@ -130,7 +131,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">{tCommon("table.name")}</span>
              </div>
              
              {/* Read-Only Identity Tag */}

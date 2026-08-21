@@ -133,7 +133,7 @@
     "src/ui/components/layout/Header.tsx": 2,
     "src/ui/components/layout/NotificationBell.tsx": 3,
     "src/ui/components/layout/SidebarNavigation.tsx": 4,
-    "src/ui/components/screens/AccessLevel.tsx": 4,
+    "src/ui/components/screens/AccessLevel.tsx": 3,
     "src/ui/components/screens/ConfirmationModal.tsx": 1,
     "src/ui/components/screens/CursorPagination.tsx": 2,
     "src/ui/components/screens/DetailTabs.tsx": 1,

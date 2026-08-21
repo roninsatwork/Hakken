@@ -223,7 +223,7 @@ export default function CompaniesPage() {
                 <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
                   <Edit2 className="w-4 h-4" />
                 </RowIconButton>
-                <RowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
+                <RowIconButton label={t('deleteAndWipe')} tone="danger" onClick={() => setDeletingCompany(company)}>
                   <Trash2 className="w-4 h-4" />
                 </RowIconButton>
               </RowActions>
@@ -272,7 +272,7 @@ export default function CompaniesPage() {
             />
           </ModalFormField>
 
-          <ModalFormField label="Subscription Plan">
+          <ModalFormField label={t('planLabel')}>
              <select
                  value={formData.planId}
                  onChange={e => setFormData({ ...formData, planId: e.target.value })}

@@ -1,7 +1,7 @@
 # Admin Clone-Readiness Plan
 
 Last reviewed: 2026-08-21
-Status: COMPLETE — all four phases plus the invite unification executed 2026-08-21; final gate 5,660 tests green; visually verified in fixture mode. Uncommitted on `dev`.
+Status: COMPLETE — all four phases plus the invite unification executed 2026-08-21; committed and pushed to `dev` (21a0e7b2 and neighbours), then an independent completeness audit's sixteen findings were closed the same day (record below; fix round committed separately).
 Approved by Anthony on 2026-08-21, scoped in conversation the same day.
 Owner: Anthony
 
@@ -200,7 +200,7 @@ kit's sense.
   bordered no-fill chip, ~10 copies), both frozen pixel-for-pixel from the
   most-repeated recipes per the primitive's own method. Six "drifted ghost"
   cancels converted with their one drift token merged explicitly.
-- **Ledger: 408 → 307 raw buttons; 22 files deleted from it entirely.**
+- **Ledger: 408 → 305 raw buttons; 23 files deleted from it entirely** (the audit round corrected an earlier "307/22" here, removed a phantom count from a comment the checker's regex matched, and restored one quietly-raised ceiling).
   Counts regenerated with the checker's own regex; `check:screen-kit` green.
 - **The remainder is annotated, not backlog.** Every in-scope raw button now
   carries a one-line comment naming its family: segmented filters/tabs
@@ -209,18 +209,22 @@ kit's sense.
   These are interaction patterns the button kit deliberately does not
   cover — a future Segmented/Tabs primitive is the natural next extraction,
   out of this plan's scope.
-- ~104 of the 307 remaining sit in out-of-scope files (user front end,
+- ~104 of the 305 remaining sit in out-of-scope files (user front end,
   demos) and were not touched.
-- Visual verification pending: the owner's real-mode dev server holds the
-  build directory; the fixture-mode pass runs when it frees up. Until then
-  the claim rests on the pixel-freeze method plus 5,655 green tests, and is
-  recorded as such.
+- Visual verification: initially pending on the dev server; the
+  fixture-mode pass then ran (see the completion note) — dashboard,
+  invites, workflows, agents, health and analytics screens all render on
+  the kit with no drift visible.
 
 ## Phase 2 record (2026-08-21)
 
-All five pairs collapsed; the nine pair files went 2,631 → 965 lines with
-1,011 lines of shared screens extracted — net −655 lines, every page a thin
-wrapper. New shared screens: `_features/invites/InviteDispatchScreen`
+All five pairs collapsed; the nine pair files went 2,625 → 963 lines with
+1,077 lines of shared screens extracted — net −585 (the audit round
+corrected an earlier "2,631 → 965 / −655" here). Every page is a thin
+wrapper — the admin users page joined them in the audit round (441 → 157
+over the new `UserDirectoryScreen`; 0 clones at the plan's threshold),
+closing the one pair the first pass had only half-collapsed (its cells had
+moved, its body had not). New shared screens: `_features/invites/InviteDispatchScreen`
 (role/preview differences as slots, so page-owned raw buttons stay within
 the shrink-only ledger), `_features/widget-config/WidgetConfigScreen`,
 `_features/rules/EditRuleScreen`, one `EvalCaseFormScreen` handling create
@@ -230,7 +234,7 @@ task 2.2 — its adoption is a one-move follow-up). Duplication over admin
 after the phase: 0.42%, none of it the five pairs; the two residues (a
 third modernised invite screen; the rules/new pair that differs by
 deliberate styling) are recorded with reasons. Layering allowlist shrank by
-two entries in passing. 2,212 dashboard tests and all guards green.
+three entries in passing. 2,212 dashboard tests and all guards green.
 
 ## Phase 3 record (2026-08-21)
 
@@ -283,4 +287,30 @@ verification: admin dashboard, unified invite screen, workflows list,
 agents list, health and analytics screens checked in e2e-auth fixture mode
 — kit buttons, catalogue copy and settings-driven naming all render; no raw
 keys, no layout breakage. Everything uncommitted on `dev` alongside the
-foundation-quality work, awaiting the owner's commit decision.
+foundation-quality work; both were committed and pushed to `dev` on
+2026-08-21 (cd71774d, 3ab65ff9, 21a0e7b2).
+
+## Audit round record (2026-08-21)
+
+An independent completeness audit against this plan found sixteen items —
+none breaking, all closed the same day:
+
+- The shrink-only button ledger had been raised by one to accommodate a
+  why-comment containing the checker's own match string; the comment was
+  reworded and the ceiling restored (true count: 408 → 305, 23 files off
+  the ledger — the record's earlier 307/22 was wrong and is corrected
+  above, as are the Phase 2 line counts, now −585).
+- Nine raw buttons in three run-screen components lacked why-comments; all
+  annotated.
+- Three "Sonae" values had escaped into the message catalogues (which the
+  code-only guard could not see) plus two Italian-only slips; all
+  parameterised or aligned, and the branding guard now scans both
+  catalogues against a shrink-only list of the seven reviewed public-site
+  keys.
+- ~30 English strings survived in already-translated screens; externalised
+  (27 new keys per language, two keys reused).
+- The admin users page became a true thin wrapper (441 → 157 over the new
+  `UserDirectoryScreen`), closing pair 5 properly.
+- Record and docstring corrections throughout: Button's variant count,
+  the checker's guidance now naming `brand`/`outline`, provenance aligned,
+  and these records reconciled with what actually happened.

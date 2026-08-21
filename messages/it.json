@@ -627,7 +627,7 @@
   "admin": {
     "overview": {
       "title": "Dashboard Protocollo",
-      "subtitle": "Telemetria globale e stato di orchestrazione dell'architettura Sonae.",
+      "subtitle": "Utilizzo e analisi della piattaforma.",
       "charts": {
         "daily": "Attività Giornaliera",
         "weekly": "Throughput Settimanale",
@@ -808,6 +808,9 @@
       "warningCascade": "Eliminazione Permanente Dati",
       "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
       "deleteTenant": "Purga Tenant",
+      "deleteAndWipe": "Elimina l'azienda e cancella i dati",
+      "planLabel": "Piano di abbonamento",
+      "featuresTitle": "Funzionalità",
       "modulesLabel": "Moduli opzionali",
       "modulesHint": "Sezioni aggiuntive visibili solo a questo spazio di lavoro",
       "modules": {
@@ -928,7 +931,10 @@
       },
       "leaderboard": {
         "title": "Iniziatori Diretti",
-        "empty": "Nessun iniziatore attivo in questo ciclo."
+        "empty": "Nessun iniziatore attivo in questo ciclo.",
+        "actions": "Azioni",
+        "orchestratorsTitle": "Migliori Orchestratori",
+        "agentType": "Agente di Workflow Autonomo"
       },
       "aiUsageTitle": "Utilizzo AI",
       "aiUsageSubtitle": "Cosa ha usato questa azienda e quanto è costato.",
@@ -1802,6 +1808,7 @@
               "configuredTimes": "Orari Configurati",
               "removeTime": "Rimuovi",
               "noConfiguredTimes": "Nessun orario mirato configurato.",
+              "localLabel": "Locale",
               "days": {
                 "monday": "Lunedì",
                 "tuesday": "Martedì",
@@ -1867,7 +1874,27 @@
             "placeholder": "For example: api.stock.check"
           },
           "role": {
-            "label": "Who is allowed to use it"
+            "label": "Who is allowed to use it",
+            "admin": "Admin",
+            "systemAdmin": "Amministratore di sistema"
+          },
+          "sideEffect": {
+            "label": "Cosa può fare",
+            "read": "Lettura",
+            "write": "Scrittura",
+            "destructive": "Distruttiva",
+            "external": "Esterna"
+          },
+          "gates": {
+            "label": "Prima che venga eseguito",
+            "requireApproval": "Richiedi approvazione",
+            "active": "Attivo"
+          },
+          "inputSchema": {
+            "label": "Cosa gli serve (JSON)"
+          },
+          "outputSchema": {
+            "label": "Cosa restituisce (JSON)"
           }
         },
         "submit": "Add tool"
@@ -4187,7 +4214,8 @@
         "pending": "Invito in Attesa",
         "awaiting": "In attesa di risposta",
         "systemLevel": "Livello di Sistema",
-        "sonaeGlobal": "Sonae Global",
+        "platformGlobal": "{platformName} Global",
+        "noOneFound": "Nessuno trovato",
         "noMatches": "Nessuna identità attiva trovata corrispondente alla query.",
         "na": "N/D",
         "loadMore": "Carica altri utenti",
@@ -4216,7 +4244,7 @@
       },
       "modal": {
         "inviteTitle": "Invita Intelligenza",
-        "inviteDesc": "Provisioning di una nuova identità per l'architettura Sonae.",
+        "inviteDesc": "Provisioning di una nuova identità per l'architettura {platformName}.",
         "editTitle": "Modifica Identità Protocollo",
         "editDesc": "Modifica gli handle di autenticazione e i livelli di autorizzazione.",
         "deleteTitle": "Elimina Identità",
@@ -4659,7 +4687,7 @@
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",
-      "subtitle": "Monitoraggio in tempo reale del consumo di token e dei costi operativi dei modelli in tutta la rete Sonae.",
+      "subtitle": "Monitora il consumo di token AI e i costi operativi di tutte le aziende.",
       "metrics": {
         "periodCost": "Total Cost",
         "exchangeSub": "Estimated total spend",
@@ -5549,6 +5577,14 @@
     "detachConfirm": "Sei sicuro di voler scollegare {name} da questa azienda? Manterrà il suo account amministratore di sistema ma non sarà più assegnato a questo spazio di lavoro.",
     "detach": "Scollega",
     "detaching": "Scollegamento in corso...",
+    "inviteUser": "Invita Utente",
+    "searchPlaceholder": "Cerca utenti per nome o email...",
+    "revokeInvitation": "Revoca Invito",
+    "deleteUser": "Elimina Utente",
+    "deleting": "Eliminazione...",
+    "userLabel": "Utente",
+    "fullName": "Nome Completo",
+    "emailAddress": "Indirizzo Email",
     "table": {
       "empty": "Nessun utente trovato corrispondente alla query.",
       "showingLoaded": "Visualizzazione di {count} utenti",
@@ -6181,7 +6217,7 @@
   },
   "calls": {
     "title": "Chiamate",
-    "subtitle": "Sonae risponde a questo numero",
+    "subtitle": "{platformName} risponde a questo numero",
     "dialUs": "Chiamaci al",
     "noNumber": "Nessun numero di telefono è ancora collegato a questo spazio di lavoro.",
     "live": "In chiamata ora",
@@ -6197,7 +6233,7 @@
     "turns": "{count} scambi",
     "viewCall": "Apri",
     "caller": "Chiamante",
-    "sonae": "Sonae",
+    "sonae": "{platformName}",
     "summary": "Di cosa si trattava",
     "transcript": "La conversazione",
     "noTranscript": "In questa chiamata non è stato detto nulla.",

@@ -8,6 +8,7 @@ import { ArrowLeft, CheckSquare, Phone, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * One call, in full, from the admin's seat (seven-gaps plan, phase 1).
@@ -22,6 +23,7 @@ export default function AdminCallDetailPage({
   const { id, callId } = use(params);
   const companyId = id as Id<"companies">;
   const t = useTranslations("calls");
+  const { platformName } = useSystemSettings();
   const call = useQuery(api.telephony.getCallForCompany, { companyId, callId });
 
   if (call === undefined) return <div />;
@@ -106,7 +108,7 @@ export default function AdminCallDetailPage({
                 }`}
               >
                 <p className="mb-1 text-[11px] uppercase tracking-widest text-secondary">
-                  {turn.role === "CALLER" ? t("caller") : t("sonae")}
+                  {turn.role === "CALLER" ? t("caller") : t("sonae", { platformName })}
                 </p>
                 {turn.text}
               </li>

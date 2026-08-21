@@ -117,7 +117,7 @@ export default function RegisterToolPage() {
                      onClick={() => setRequiredRole(p)}
                      className={`flex flex-col items-start gap-1 p-3.5 rounded-[10px] border transition-all text-left ${p === requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
                    >
-                     <span className="text-[13px] font-bold tracking-wide">{p === "ADMIN" ? "Admin" : "System admin"}</span>
+                     <span className="text-[13px] font-bold tracking-wide">{p === "ADMIN" ? t("fields.role.admin") : t("fields.role.systemAdmin")}</span>
                    </button>
                  ))}
               </div>
@@ -125,29 +125,29 @@ export default function RegisterToolPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label htmlFor="tool-side-effect" className="mt-1 text-[12px] font-medium text-secondary">What it can do</label>
+                <label htmlFor="tool-side-effect" className="mt-1 text-[12px] font-medium text-secondary">{t("fields.sideEffect.label")}</label>
                 <select
                   id="tool-side-effect"
                   value={sideEffectLevel}
                   onChange={(e) => setSideEffectLevel(e.target.value as ToolSideEffectLevel)}
                   className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
                 >
-                  <option value="READ">Read</option>
-                  <option value="WRITE">Write</option>
-                  <option value="DESTRUCTIVE">Destructive</option>
-                  <option value="EXTERNAL">External</option>
+                  <option value="READ">{t("fields.sideEffect.read")}</option>
+                  <option value="WRITE">{t("fields.sideEffect.write")}</option>
+                  <option value="DESTRUCTIVE">{t("fields.sideEffect.destructive")}</option>
+                  <option value="EXTERNAL">{t("fields.sideEffect.external")}</option>
                 </select>
               </div>
 
               <div className="flex flex-col gap-3">
-                <span className="mt-1 text-[12px] font-medium text-secondary">Before it runs</span>
+                <span className="mt-1 text-[12px] font-medium text-secondary">{t("fields.gates.label")}</span>
                 <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
                   <input
                     type="checkbox"
                     checked={confirmationRequired}
                     onChange={(e) => setConfirmationRequired(e.target.checked)}
                   />
-                  Require approval
+                  {t("fields.gates.requireApproval")}
                 </label>
                 <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
                   <input
@@ -155,7 +155,7 @@ export default function RegisterToolPage() {
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
                   />
-                  Active
+                  {t("fields.gates.active")}
                 </label>
               </div>
             </div>
@@ -174,14 +174,14 @@ export default function RegisterToolPage() {
 
             <div className="grid grid-cols-1 gap-5">
               <TextAreaField
-                label="What it needs (JSON)"
+                label={t("fields.inputSchema.label")}
                 value={inputSchema}
                 onChange={(e) => setInputSchema(e.target.value)}
                 className="min-h-[130px] resize-y font-mono text-[12px]"
                 spellCheck={false}
               />
               <TextAreaField
-                label="What it gives back (JSON)"
+                label={t("fields.outputSchema.label")}
                 value={outputSchema}
                 onChange={(e) => setOutputSchema(e.target.value)}
                 placeholder='Optional: {"type":"object","properties":{}}'

@@ -336,18 +336,20 @@ instructions unless they are deliberately reopened.
 ## Completed
 
 - [Admin Clone-Readiness Plan](./completed/admin-clone-readiness-plan.md) —
-  delivered 2026-08-21, same day as approved: raw buttons 408→307 with two
+  delivered 2026-08-21, same day as approved: raw buttons 408→305 with two
   new frozen variants (`brand`, `outline`), all mirrored admin screens
-  collapsed to shared `_features` bodies (three invitation screens now one),
-  the admin section fully de-branded behind a zero-allowance guard, and
-  ~2,143 catalogue keys per language externalising all admin copy with an
-  adoption-floor ratchet. Uncommitted on `dev` pending the owner's word.
+  collapsed to shared `_features` bodies (three invitation screens now one,
+  the users directory too), the admin section fully de-branded behind a
+  zero-allowance guard that also scans both message catalogues, and ~2,170
+  catalogue keys per language externalising all admin copy with an
+  adoption-floor ratchet. Pushed to `dev` (21a0e7b2), then a sixteen-finding
+  completeness audit closed the same day.
 - [Foundation Quality Plan](./completed/foundation-quality-plan.md) —
   delivered 2026-08-21, same day as approved: 118 wiki/AI-runtime tests,
   ~340 `appError` conversions behind a clean-by-default guard, the `ai.ts`
   and `analyticsCron.ts` grab-bags split into seven modules, the docs
   contradictions removed, plus a ten-finding adversarial review fixed the
-  same day. Coverage floor ratcheted 66→69. Uncommitted on `dev`.
+  same day. Coverage floor ratcheted 66→69. Pushed to `dev` (cd71774d).
 - [Every Screen Is Built From The Same Parts](./completed/shared-screen-kit-plan.md) —
   the base-layer plan, completed 2026-08-18: every admin screen on the shared
   kit, the kit accessible and phone-safe, capabilities withheld per company and

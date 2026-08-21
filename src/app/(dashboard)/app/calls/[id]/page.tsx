@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * One call, in full.
@@ -19,6 +20,7 @@ import Header from "@/src/ui/components/layout/Header";
 export default function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations("calls");
+  const { platformName } = useSystemSettings();
   const call = useQuery(api.telephony.getCall, { callId: id });
 
   if (call === undefined) {
@@ -118,7 +120,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
                   }`}
                 >
                   <p className="mb-1 text-[11px] uppercase tracking-widest text-secondary">
-                    {turn.role === "CALLER" ? t("caller") : t("sonae")}
+                    {turn.role === "CALLER" ? t("caller") : t("sonae", { platformName })}
                   </p>
                   {turn.text}
                 </li>

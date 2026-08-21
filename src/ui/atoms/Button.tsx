@@ -15,7 +15,7 @@ import { cn } from "@/src/ui/lib/utils";
  * the recipes that actually recur, exactly as they are on screen today —
  * moving onto a variant should not shift a button by a pixel.
  *
- * Seven variants, each the most-repeated exact recipe of a real family:
+ * Nine variants, each the most-repeated exact recipe of a real family:
  *
  * - `primary` — the dark call-to-action: solid foreground, dims on hover.
  * - `pill` — the same call-to-action in its rounded-full, bold, glowing form,
@@ -27,7 +27,7 @@ import { cn } from "@/src/ui/lib/utils";
  * - `destructive` — the red-tinted confirm used before deleting something.
  * - `icon` — a round hit-target around a single icon.
  * - `brand` — the solid brand-filled call-to-action (white text on brand),
- *   frozen 2026-08-21 from the ~18 sites the admin button migration found
+ *   frozen 2026-08-21 from the ~16 sites the admin button migration found
  *   drawing it by hand; sizes drift per site and merge via className.
  * - `outline` — the bordered chip with no fill and no hover fill, only a
  *   text-colour lift; frozen 2026-08-21 from the recurring bordered-cancel

@@ -808,6 +808,9 @@
       "warningCascade": "Permanent Data Deletion",
       "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
       "deleteTenant": "Delete Company",
+      "deleteAndWipe": "Delete Company & Wipe Data",
+      "planLabel": "Subscription Plan",
+      "featuresTitle": "Features",
       "modulesLabel": "Optional Modules",
       "modulesHint": "Extra sections only this workspace can see",
       "modules": {
@@ -928,7 +931,10 @@
       },
       "leaderboard": {
         "title": "Top Users",
-        "empty": "No active users in this period."
+        "empty": "No active users in this period.",
+        "actions": "Actions",
+        "orchestratorsTitle": "Top Orchestrators",
+        "agentType": "Autonomous Workflow Agent"
       },
       "aiUsageTitle": "AI Usage",
       "aiUsageSubtitle": "What this company has used, and what it has cost.",
@@ -1802,6 +1808,7 @@
               "configuredTimes": "Configured Times",
               "removeTime": "Remove",
               "noConfiguredTimes": "No targeted times configured yet.",
+              "localLabel": "Local",
               "days": {
                 "monday": "Monday",
                 "tuesday": "Tuesday",
@@ -1867,7 +1874,27 @@
             "placeholder": "For example: api.stock.check"
           },
           "role": {
-            "label": "Who is allowed to use it"
+            "label": "Who is allowed to use it",
+            "admin": "Admin",
+            "systemAdmin": "System admin"
+          },
+          "sideEffect": {
+            "label": "What it can do",
+            "read": "Read",
+            "write": "Write",
+            "destructive": "Destructive",
+            "external": "External"
+          },
+          "gates": {
+            "label": "Before it runs",
+            "requireApproval": "Require approval",
+            "active": "Active"
+          },
+          "inputSchema": {
+            "label": "What it needs (JSON)"
+          },
+          "outputSchema": {
+            "label": "What it gives back (JSON)"
           }
         },
         "submit": "Add tool"
@@ -4187,7 +4214,8 @@
         "pending": "Invite Pending",
         "awaiting": "Awaiting Callback",
         "systemLevel": "System Level",
-        "sonaeGlobal": "Sonae Global",
+        "platformGlobal": "{platformName} Global",
+        "noOneFound": "No one found",
         "noMatches": "Nobody matches that search.",
         "na": "N/A",
         "loadMore": "Load more users",
@@ -4216,7 +4244,7 @@
       },
       "modal": {
         "inviteTitle": "Invite Intelligence",
-        "inviteDesc": "Provision a new identity for the Sonae architecture.",
+        "inviteDesc": "Provision a new identity for the {platformName} architecture.",
         "editTitle": "Edit Protocol Identity",
         "editDesc": "Modify authentication handles and authorization levels.",
         "deleteTitle": "Purge Identity",
@@ -5549,6 +5577,14 @@
     "detachConfirm": "Are you sure you want to detach {name} from this company? They will retain their system admin account but will no longer be assigned to this workspace.",
     "detach": "Detach",
     "detaching": "Detaching...",
+    "inviteUser": "Invite User",
+    "searchPlaceholder": "Search users by name or email...",
+    "revokeInvitation": "Revoke Invitation",
+    "deleteUser": "Delete User",
+    "deleting": "Deleting...",
+    "userLabel": "User",
+    "fullName": "Full Name",
+    "emailAddress": "Email Address",
     "table": {
       "empty": "No users found matching your query.",
       "showingLoaded": "Showing {count} users",
@@ -6181,7 +6217,7 @@
   },
   "calls": {
     "title": "Calls",
-    "subtitle": "Sonae answers this number",
+    "subtitle": "{platformName} answers this number",
     "dialUs": "Call us on",
     "noNumber": "No phone number is connected to this workspace yet.",
     "live": "On a call now",
@@ -6197,7 +6233,7 @@
     "turns": "{count} exchanges",
     "viewCall": "Open",
     "caller": "Caller",
-    "sonae": "Sonae",
+    "sonae": "{platformName}",
     "summary": "What it was about",
     "transcript": "The conversation",
     "noTranscript": "Nothing was said on this call.",

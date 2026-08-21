@@ -88,6 +88,25 @@ const ADMIN_SCAN_ROOTS = ["src/app/(dashboard)/admin", "src/ui"];
 const ALLOWED_ADMIN_BUILDER_STRING_COUNTS: Record<string, number> = {};
 
 /**
+ * The catalogues are copy too. Phase 4 moved admin wording into
+ * `messages/*.json`, which the source scans above cannot see — the audit
+ * caught three "Sonae" values that had escaped the de-brand that way. Every
+ * catalogue value containing a builder name must be one of the reviewed key
+ * paths below: all public-site or user-front-end surfaces, which stay
+ * branded until each clone rebuilds them. Shrink-only; an admin-consumed
+ * key must never appear here — parameterise it with {platformName} instead.
+ */
+const ALLOWED_BUILDER_STRING_MESSAGE_KEYS = new Set([
+  "projectName",
+  "landing.frameworkDescription",
+  "landing.copyright",
+  "dashboard.layers.platform",
+  "dashboard.capabilities.items.0.body",
+  "dashboard.capabilities.items.2.body",
+  "dashboard.hosting.items.1.body",
+]);
+
+/**
  * The text of every string literal in a TS/JS source, comments and regex
  * literals excluded. A small state machine rather than a parser dependency:
  * it understands line and block comments, single/double/backtick strings with
@@ -315,6 +334,53 @@ describe("no client-specific fallbacks", () => {
         "A clone renames itself by setting platformName in admin settings; a hardcoded",
         "builder name in an admin-screen string undoes that for every product cloned",
         "from this repo.",
+        "",
+        ...failures,
+      ].join("\n"),
+    ).toEqual([]);
+  });
+
+  test("builder names appear in catalogue values only at the reviewed keys", () => {
+    const failures: string[] = [];
+
+    for (const catalogue of ["messages/en.json", "messages/it.json"]) {
+      const walkValues = (node: unknown, prefix: string) => {
+        if (typeof node === "string") {
+          const carries = BUILDER_STRINGS.some((name) => node.includes(name));
+          if (carries && !ALLOWED_BUILDER_STRING_MESSAGE_KEYS.has(prefix)) {
+            failures.push(`${catalogue}: ${prefix} = ${JSON.stringify(node)}`);
+          }
+          return;
+        }
+        if (node && typeof node === "object") {
+          for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+            walkValues(value, prefix ? `${prefix}.${key}` : key);
+          }
+        }
+      };
+      walkValues(JSON.parse(fs.readFileSync(path.join(repoRoot, catalogue), "utf8")), "");
+    }
+
+    const staleAllowances = [...ALLOWED_BUILDER_STRING_MESSAGE_KEYS].filter((key) => {
+      return !["messages/en.json", "messages/it.json"].some((catalogue) => {
+        const data = JSON.parse(fs.readFileSync(path.join(repoRoot, catalogue), "utf8"));
+        const value = key.split(".").reduce<unknown>(
+          (node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined),
+          data,
+        );
+        return typeof value === "string" && BUILDER_STRINGS.some((name) => value.includes(name));
+      });
+    });
+    for (const key of staleAllowances) {
+      failures.push(`stale allowance: ${key} no longer carries a builder name — remove its entry (shrink-only).`);
+    }
+
+    expect(
+      failures,
+      [
+        "A catalogue value with a hardcoded builder name undoes the rename-by-settings",
+        "de-brand for every clone. Use a {platformName} parameter, or — for public-site",
+        "and user-front-end copy only — add the key to the reviewed list.",
         "",
         ...failures,
       ].join("\n"),

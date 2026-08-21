@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { formatPhoneNumberForDisplay } from "@/convex/telephonyService";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
  * The screen behind the presenter.
@@ -23,6 +24,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
  */
 export default function CallsPage() {
   const t = useTranslations("calls");
+  const { platformName } = useSystemSettings();
   const number = useQuery(api.telephony.getCompanyPhoneNumber, {});
   const calls = useQuery(api.telephony.listCalls, {});
 
@@ -48,7 +50,7 @@ export default function CallsPage() {
             <Phone className="w-6 h-6 text-brand" />
             {t("title")}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
+          <p className="text-[13px] text-secondary mt-1">{t("subtitle", { platformName })}</p>
         </div>
 
         <section className="rounded-2xl border border-border-dim bg-sidebar/30 px-8 py-10 text-center">

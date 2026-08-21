@@ -25,6 +25,12 @@ vi.mock("next/image", () => ({
   },
 }));
 
+// The page and shared screen resolve the platform name from settings for the
+// global-scope label and the invite copy.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, string>) => {
     const labels: Record<string, string> = {

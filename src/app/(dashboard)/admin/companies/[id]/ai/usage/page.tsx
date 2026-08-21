@@ -327,7 +327,7 @@ export default function CompanyAiUsagePage() {
                       </div>
                       <div className="flex items-center justify-end shrink-0 pr-2">
                         <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Actions</span>
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t('leaderboard.actions')}</span>
                           <span className="text-[13px] font-bold text-foreground tracking-tight">{(u.messages ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
@@ -344,7 +344,7 @@ export default function CompanyAiUsagePage() {
               <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <BrainCircuit className="w-4 h-4 text-brand opacity-80" />
-                  <h2 className="text-[14px] font-bold text-foreground">Top Orchestrators</h2>
+                  <h2 className="text-[14px] font-bold text-foreground">{t('leaderboard.orchestratorsTitle')}</h2>
                 </div>
               </div>
               <div className="flex flex-col">
@@ -374,12 +374,12 @@ export default function CompanyAiUsagePage() {
                         )}
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
-                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Workflow Agent</span>
+                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">{t('leaderboard.agentType')}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-end shrink-0 pr-2">
                         <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Actions</span>
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t('leaderboard.actions')}</span>
                           <span className="text-[13px] font-bold text-foreground tracking-tight">{(a.interactions ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
