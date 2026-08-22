@@ -25,6 +25,7 @@ import {
   buildUntrustedKnowledgeContext,
   rankAssistantKnowledgeMatches,
   selectKnowledgeChunksWithinBudget,
+  shouldInjectPersonalNote,
 } from "./aiPromptAssembly";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import {
@@ -188,7 +189,7 @@ export const generateSonaeResponse = internalAction({
         });
 
         // Dynamically extract the live Administrator protocol rulebook
-        const [customPrompt, customRules, company, companySkills, companyMemories] = await Promise.all([
+        const [customPrompt, customRules, company, companySkills, companyMemories, userMemories] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
             ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
             thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null),
@@ -208,6 +209,15 @@ export const generateSonaeResponse = internalAction({
                     limit: 5,
                 })
                 : Promise.resolve(null),
+            // The personal layer (personal-layer-and-goals-plan.md, part 2):
+            // the thread owner's own private note, and only theirs. The
+            // walls (widget visitors, EVAL threads) live in
+            // shouldInjectPersonalNote so they cannot drift per caller.
+            thread?.userId && shouldInjectPersonalNote(thread)
+                ? ctx.runQuery(internal.userMemories.getActiveForUserInternal, {
+                    userId: thread.userId,
+                })
+                : Promise.resolve([]),
         ]);
 
         const alwaysMemories = companyMemories?.always ?? [];
@@ -222,6 +232,7 @@ export const generateSonaeResponse = internalAction({
             // instruction; only the looked-up ones go in the per-message block.
             companyMemories: alwaysMemories,
             platformName,
+            userMemories: userMemories.map((memory) => memory.content),
         });
 
         const companyMemoryContext = buildCompanyMemoryContext(relevantMemories);
@@ -516,6 +527,14 @@ User Prompt: ${args.content}`;
                 ...(thread?.companyId ? { companyId: thread.companyId } : {}),
                 question: args.content.slice(0, 500),
                 pageKeys: wikiPageKeys,
+            });
+        }
+
+        // Usage stamps for the personal note, scheduled like the wiki's own
+        // marks so they never delay the reply.
+        if (userMemories.length > 0) {
+            await ctx.scheduler.runAfter(0, internal.userMemories.markUsedInternal, {
+                memoryIds: userMemories.map((memory) => memory.memoryId),
             });
         }
 

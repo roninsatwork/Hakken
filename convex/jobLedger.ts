@@ -41,6 +41,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runMutation(internal.governanceRollups.rebuildGovernanceRollups, {}),
   "company-memory-suggestion-sweep": (ctx) =>
     ctx.runAction(internal.companyMemorySuggestionActions.sweepDispatcher, {}),
+  "user-memory-suggestion-sweep": (ctx) =>
+    ctx.runAction(internal.userMemorySuggestionActions.sweepDispatcher, {}),
   "wiki-tending-sweep": (ctx) => ctx.runAction(internal.wikiTendingActions.tendDispatcher, {}),
   "wiki-distill-sweep": (ctx) => ctx.runAction(internal.wikiDistillActions.distilSweep, {}),
   "wiki-contradiction-sweep": (ctx) =>
@@ -85,6 +87,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "vector-garbage-collection": 60,
   "tool-idempotency-purge": 60,
   "company-memory-suggestion-sweep": 360,
+  "user-memory-suggestion-sweep": 360,
   "generate-daily-analytics-snapshots": 1440,
   "user-login-count-rollup": 1440,
   "dispatch-platform-alerts": 1440,

@@ -77,7 +77,7 @@ export const autoResolveStaleQuestionsInternal = internalMutation({
           .withIndex("by_company_kind_subject", (q) =>
             q
               .eq("companyId", args.companyId)
-              .eq("kind", pageKey.slice(0, separator) as "PRODUCT" | "POLICY" | "ISSUE" | "CUSTOMER" | "SOURCE")
+              .eq("kind", pageKey.slice(0, separator) as "PRODUCT" | "POLICY" | "ISSUE" | "GOAL" | "CUSTOMER" | "SOURCE")
               .eq("subjectKey", pageKey.slice(separator + 1))
           )
           .unique();
@@ -234,16 +234,17 @@ export const getContradictionClusterInternal = internalQuery({
     ctx,
     args
   ): Promise<Array<{ pageKey: string; excerpt: string }>> => {
+    // Read off the kind index (wiki-scaling-note.md): the old 500-row
+    // all-kinds window read every source note to find a dozen topic pages,
+    // and lost whole kinds once the wiki outgrew the window.
     const pages = await ctx.db
       .query("wikiPages")
-      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
-      .take(500);
-    return pages
-      .filter(
-        (page) =>
-          page.kind === args.kind &&
-          !page.subjectKey.endsWith("-index")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", args.kind)
       )
+      .take(20);
+    return pages
+      .filter((page) => !page.subjectKey.endsWith("-index"))
       .slice(0, 12)
       .map((page) => ({
         pageKey: `${page.kind}:${page.subjectKey}`,

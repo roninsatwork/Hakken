@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import {
   WIKI_PAGE_MAX_CHARS,
@@ -577,7 +577,9 @@ describe("links live in the writing", () => {
         .unique(),
     }));
     expect(hub?.content).toContain("[[web-development]]");
-    expect(hub?.links).toEqual(["PRODUCT:web-development", "PRODUCT:mobile-apps"]);
+    // Membership, not order: the hub now reads its members off the kind
+    // index, which is subject-alphabetical.
+    expect([...(hub?.links ?? [])].sort()).toEqual(["PRODUCT:mobile-apps", "PRODUCT:web-development"]);
     expect(member?.links).toContain("PRODUCT:products-index");
 
     // The catch-up linker's list never offers a hub to the model.
@@ -809,5 +811,282 @@ describe("the catch-up linker's list", () => {
       limit: 10,
     });
     expect(sparse.map((page) => page.subjectKey)).toEqual([]);
+  });
+});
+
+describe("the goals door (personal-layer-and-goals-plan.md, part 1)", () => {
+  async function seedSuperAdmin(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "owner@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      })
+    );
+  }
+
+  test("a person writes a goal: slugged, audited, signed as human work", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const adminId = await seedSuperAdmin(t);
+    const admin = t.withIdentity({ subject: adminId });
+
+    const pageId = await admin.mutation(api.wikiPages.createGoalPageForCompany, {
+      companyId,
+      title: "Grow Comax revenue",
+      content: "Lift Comax to £1m by year end, measured monthly.",
+    });
+
+    const page = await t.run(async (ctx) => ctx.db.get(pageId));
+    expect(page?.kind).toBe("GOAL");
+    expect(page?.subjectKey).toBe("grow-comax-revenue");
+    expect(page?.lastRewriteSource).toBe(`HUMAN:${adminId}`);
+    expect(page?.pinnedCorrections).toEqual([]);
+
+    const audits = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    const created = audits.filter((row) => row.actionType === "WIKI_PAGE_HUMAN_CREATE");
+    expect(created).toHaveLength(1);
+    expect(created[0].actorId).toBe(adminId);
+  });
+
+  test("the same name twice is refused — edit the page instead", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const adminId = await seedSuperAdmin(t);
+    const admin = t.withIdentity({ subject: adminId });
+
+    await admin.mutation(api.wikiPages.createGoalPageForCompany, {
+      companyId,
+      title: "Grow Comax revenue",
+      content: "The aim.",
+    });
+    await expect(
+      admin.mutation(api.wikiPages.createGoalPageForCompany, {
+        companyId,
+        title: "Grow Comax revenue",
+        content: "The aim again.",
+      })
+    ).rejects.toThrow();
+  });
+
+  test("the hub pass grows goals-index and back-links every goal to it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const adminId = await seedSuperAdmin(t);
+    const admin = t.withIdentity({ subject: adminId });
+
+    await admin.mutation(api.wikiPages.createGoalPageForCompany, {
+      companyId,
+      title: "Grow Comax revenue",
+      content: "The aim.",
+    });
+    await t.mutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+
+    const pages = await t.run(async (ctx) => ctx.db.query("wikiPages").collect());
+    const hub = pages.find((page) => page.subjectKey === "goals-index");
+    expect(hub?.kind).toBe("GOAL");
+    expect(hub?.links).toContain("GOAL:grow-comax-revenue");
+    const goal = pages.find((page) => page.subjectKey === "grow-comax-revenue");
+    expect(goal?.links).toContain("GOAL:goals-index");
+  });
+
+  test("report grounding reads the goals and skips the hub", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const adminId = await seedSuperAdmin(t);
+    const admin = t.withIdentity({ subject: adminId });
+
+    await admin.mutation(api.wikiPages.createGoalPageForCompany, {
+      companyId,
+      title: "Grow Comax revenue",
+      content: "The aim.",
+    });
+    await t.mutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+
+    const goals = await t.query(internal.wikiPages.getGoalPagesInternal, { companyId });
+    expect(goals.map((goal) => goal.title)).toEqual(["Grow Comax revenue"]);
+  });
+
+  test("a [[reference]] to a goal resolves like any topic link", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const adminId = await seedSuperAdmin(t);
+    const admin = t.withIdentity({ subject: adminId });
+
+    await admin.mutation(api.wikiPages.createGoalPageForCompany, {
+      companyId,
+      title: "Grow Comax revenue",
+      content: "The aim.",
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "pricing",
+      title: "pricing",
+      content: "Discounts serve [[grow-comax-revenue]].",
+      source: "DOCUMENT:doc-1",
+    });
+
+    const pages = await t.run(async (ctx) => ctx.db.query("wikiPages").collect());
+    const policy = pages.find((page) => page.subjectKey === "pricing");
+    expect(policy?.links).toContain("GOAL:grow-comax-revenue");
+  });
+});
+
+describe("goals stay out of the machine's mouth", () => {
+  test("the distiller's topic kinds never include GOAL", async () => {
+    // personal-layer-and-goals-plan.md, part 1: goals are human intent. If
+    // WIKI_TOPIC_KINDS ever widens to GOAL, the distiller starts writing
+    // aims from documents and this rule breaks silently.
+    const { WIKI_TOPIC_KINDS, parseTopicSuggestions } = await import("./wikiRewriteService");
+    expect(WIKI_TOPIC_KINDS).not.toContain("GOAL");
+    const parsed = parseTopicSuggestions(
+      JSON.stringify({ topics: [{ kind: "GOAL", slug: "grow-comax", learned: "An aim." }] })
+    );
+    expect(parsed).toEqual([]);
+  });
+});
+
+describe("the chooser's index reads freshest-first", () => {
+  test("the newest-updated page leads the index, so the cap cuts stale pages, not fresh ones", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const base = Date.now();
+    await t.run(async (ctx) => {
+      for (const [subjectKey, updatedAt] of [
+        ["old-page", base - 200_000],
+        ["newest-page", base],
+        ["middling-page", base - 100_000],
+      ] as const) {
+        await ctx.db.insert("wikiPages", {
+          companyId,
+          kind: "POLICY" as const,
+          subjectKey,
+          title: subjectKey,
+          content: "Words.",
+          links: [],
+          pinnedCorrections: [],
+          rewriteCount: 1,
+          lastRewriteSource: "DOCUMENT:doc-1",
+          createdAt: updatedAt,
+          updatedAt,
+        });
+      }
+    });
+
+    const index = await t.query(internal.wikiPages.getWikiIndexInternal, {
+      companyId,
+      includeCustomerPages: false,
+    });
+    expect(index.map((entry) => entry.key)).toEqual([
+      "POLICY:newest-page",
+      "POLICY:middling-page",
+      "POLICY:old-page",
+    ]);
+  });
+});
+
+describe("the two-stage index (wiki-scaling-note.md)", () => {
+  test("past the full-index limit, the question's words reach a page too old for the recent slice", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const base = Date.now();
+    const { WIKI_INDEX_FULL_LIMIT } = await import("./wikiPages");
+
+    await t.run(async (ctx) => {
+      // The oldest page on the shelf, about winter linen.
+      await ctx.db.insert("wikiPages", {
+        companyId,
+        kind: "POLICY" as const,
+        subjectKey: "winter-linen-contracts",
+        title: "winter-linen-contracts",
+        content: "Winter linen contracts renew in October.",
+        searchText: "winter-linen-contracts winter linen contracts renew in october",
+        links: [],
+        pinnedCorrections: [],
+        rewriteCount: 1,
+        lastRewriteSource: "DOCUMENT:doc-1",
+        createdAt: base - 10_000_000,
+        updatedAt: base - 10_000_000,
+      });
+      // Enough newer pages to push the wiki past the full-index limit.
+      for (let i = 0; i < WIKI_INDEX_FULL_LIMIT + 10; i++) {
+        await ctx.db.insert("wikiPages", {
+          companyId,
+          kind: "POLICY" as const,
+          subjectKey: `filler-${i}`,
+          title: `filler-${i}`,
+          content: "Filler.",
+          searchText: `filler-${i} filler`,
+          links: [],
+          pinnedCorrections: [],
+          rewriteCount: 1,
+          lastRewriteSource: "DOCUMENT:doc-1",
+          createdAt: base - i,
+          updatedAt: base - i,
+        });
+      }
+    });
+
+    // Without the question, the old page is beyond the recent slice.
+    const blind = await t.query(internal.wikiPages.getWikiIndexInternal, {
+      companyId,
+      includeCustomerPages: false,
+    });
+    expect(blind.map((entry) => entry.key)).not.toContain("POLICY:winter-linen-contracts");
+
+    // The question's own words bring it into the index.
+    const asked = await t.query(internal.wikiPages.getWikiIndexInternal, {
+      companyId,
+      includeCustomerPages: false,
+      query: "when do the winter linen contracts renew?",
+    });
+    expect(asked.map((entry) => entry.key)).toContain("POLICY:winter-linen-contracts");
+    // And the shortlist stays bounded — nowhere near the whole shelf.
+    expect(asked.length).toBeLessThanOrEqual(260);
+  });
+});
+
+describe("hubs survive their own success", () => {
+  test("a hub with hundreds of members stays inside the page cap and counts the rest", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const base = Date.now();
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 300; i++) {
+        await ctx.db.insert("wikiPages", {
+          companyId,
+          kind: "PRODUCT" as const,
+          subjectKey: `product-number-${i}`,
+          title: `product-number-${i}`,
+          content: "A product.",
+          links: [],
+          pinnedCorrections: [],
+          rewriteCount: 1,
+          lastRewriteSource: "DOCUMENT:doc-1",
+          createdAt: base - i,
+          updatedAt: base - i,
+        });
+      }
+    });
+
+    await t.mutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+
+    const hub = await t.run(async (ctx) =>
+      ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "PRODUCT").eq("subjectKey", "products-index")
+        )
+        .unique()
+    );
+    expect(hub).not.toBeNull();
+    expect(hub!.content.length).toBeLessThanOrEqual(WIKI_PAGE_MAX_CHARS);
+    expect(hub!.content).toContain("more.");
+    // The links array stays complete — the map and backlinks need every member.
+    expect(hub!.links).toHaveLength(300);
+    // The most recently touched member is named; the oldest is only counted.
+    expect(hub!.content).toContain("[[product-number-0]]");
+    expect(hub!.content).not.toContain("[[product-number-299]]");
   });
 });

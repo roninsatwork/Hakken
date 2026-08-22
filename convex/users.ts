@@ -467,6 +467,20 @@ export const purgeUserEntitiesInternal = internalMutation({
     for (const rule of rules) await ctx.db.delete(rule._id);
     if (rules.length === 100) hasMore = true;
 
+    // The personal layer goes with the person (personal-layer-and-goals-plan.md,
+    // part 2): every note about them, and the sweep marker behind it.
+    const personalNotes = await ctx.db
+      .query("userMemories")
+      .withIndex("by_user_status_updated", q => q.eq("userId", args.userId))
+      .take(100);
+    for (const note of personalNotes) await ctx.db.delete(note._id);
+    if (personalNotes.length === 100) hasMore = true;
+    const noteSweep = await ctx.db
+      .query("userMemorySweeps")
+      .withIndex("by_user", q => q.eq("userId", args.userId))
+      .unique();
+    if (noteSweep) await ctx.db.delete(noteSweep._id);
+
     const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", args.userId)).take(10);
     for (const thread of threads) {
       const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).take(100);

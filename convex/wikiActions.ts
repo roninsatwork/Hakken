@@ -53,6 +53,9 @@ export const selectWikiContextForQuery = internalAction({
             companyId: args.companyId,
             includeCustomerPages: args.includeCustomerPages,
             includeSourceNotes,
+            // Past the full-index limit the shelf goes two-stage, and the
+            // question's own words are what keep an old page findable.
+            query: args.query,
           })
         : [];
       // The global brain fills gaps and never overrules (global-wiki-plan.md,
@@ -63,6 +66,7 @@ export const selectWikiContextForQuery = internalAction({
         await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
           includeCustomerPages: false,
           includeSourceNotes,
+          query: args.query,
         })
       ).filter((entry) => !companyKeys.has(entry.key));
       return [

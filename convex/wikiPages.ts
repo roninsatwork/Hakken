@@ -12,6 +12,7 @@ import {
   extractWikiLinkSlugs,
   linkKeyFor,
   normaliseEmail,
+  normaliseTopicSlug,
   parseSourceKey,
   renderPageForReading,
 } from "./wikiRewriteService";
@@ -22,10 +23,11 @@ const wikiKindValidator = v.union(
   v.literal("PRODUCT"),
   v.literal("POLICY"),
   v.literal("ISSUE"),
-  v.literal("SOURCE")
+  v.literal("SOURCE"),
+  v.literal("GOAL")
 );
 
-type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE";
+type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL";
 
 /** A brain to read or write: a company's, or (absent) the global shelf. */
 type WikiScope = Id<"companies"> | undefined;
@@ -160,6 +162,7 @@ export const findTopicPagesForQueryInternal = internalQuery({
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
       .take(500);
     return pages
       .filter((page) => page.kind !== "CUSTOMER")
@@ -213,6 +216,7 @@ export const getWikiAnswerContextInternal = internalQuery({
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
       .take(500);
     const eligible = pages.filter(
       (page) => args.includeCustomerPages || page.kind !== "CUSTOMER"
@@ -294,20 +298,81 @@ export const getWikiAnswerContextInternal = internalQuery({
  * for surfaces allowed to see them; source notes only for readers that
  * want fine print (the answer chooser yes, the prose weaver no).
  */
+/** Below this many pages the chooser reads the whole shelf, exactly as it
+ * always has. Past it, the index goes two-stage (wiki-scaling-note.md). */
+export const WIKI_INDEX_FULL_LIMIT = 200;
+/** The two-stage index's recent slice: the newest pages, always present. */
+const WIKI_INDEX_RECENT = 150;
+/** The two-stage index's matched slice: pages the question's own words
+ * find through the search index — how a page of any age stays findable. */
+const WIKI_INDEX_MATCHED = 100;
+
 export const getWikiIndexInternal = internalQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     includeCustomerPages: v.boolean(),
     includeSourceNotes: v.optional(v.boolean()),
+    /** The question being answered. On a wiki past WIKI_INDEX_FULL_LIMIT
+     * pages it drives the matched slice; without it a big wiki's index is
+     * just the recent slice plus the hubs. */
+    query: v.optional(v.string()),
   },
   handler: async (
     ctx,
     args
   ): Promise<Array<{ key: string; title: string; hint: string }>> => {
-    const pages = await ctx.db
+    // Newest-updated first, explicitly: the recent slice is a cap, and
+    // without the order it kept the STALEST pages — past the cap it was
+    // exactly the freshest knowledge that went invisible to answers.
+    const recent = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
-      .take(800);
+      .order("desc")
+      .take(WIKI_INDEX_FULL_LIMIT + 1);
+
+    let pages: Doc<"wikiPages">[];
+    if (recent.length <= WIKI_INDEX_FULL_LIMIT) {
+      // The whole wiki fits: the chooser sees everything, as it always did.
+      pages = recent;
+    } else {
+      // Two-stage (wiki-scaling-note.md): the newest pages, plus the pages
+      // the question's words reach through the search index, plus the hubs
+      // — so the model reads a bounded shortlist however large the wiki
+      // grows, and no page is ever unreachable by an answer that names it.
+      const chosen = new Map<string, Doc<"wikiPages">>();
+      for (const page of recent.slice(0, WIKI_INDEX_RECENT)) {
+        chosen.set(page._id.toString(), page);
+      }
+      const needle = args.query?.trim().slice(0, 200);
+      if (needle) {
+        const matched = await ctx.db
+          .query("wikiPages")
+          .withSearchIndex("search_text", (q) =>
+            q.search("searchText", needle).eq("companyId", args.companyId)
+          )
+          .take(WIKI_INDEX_MATCHED + 50);
+        let admitted = 0;
+        for (const page of matched) {
+          if (admitted >= WIKI_INDEX_MATCHED) break;
+          if (chosen.has(page._id.toString())) continue;
+          chosen.set(page._id.toString(), page);
+          admitted += 1;
+        }
+      }
+      // The hubs are the shelf's own table of contents; on a big wiki they
+      // must never fall out of the index.
+      for (const hub of [
+        { kind: "PRODUCT" as const, subjectKey: "products-index" },
+        { kind: "POLICY" as const, subjectKey: "policies-index" },
+        { kind: "ISSUE" as const, subjectKey: "issues-index" },
+        { kind: "GOAL" as const, subjectKey: "goals-index" },
+      ]) {
+        const page = await getPage(ctx, args.companyId, hub.kind, hub.subjectKey);
+        if (page) chosen.set(page._id.toString(), page);
+      }
+      pages = [...chosen.values()];
+    }
+
     return pages
       .filter((page) => args.includeCustomerPages || page.kind !== "CUSTOMER")
       .filter((page) => (args.includeSourceNotes ?? false) || page.kind !== "SOURCE")
@@ -499,7 +564,7 @@ async function syncLinksFromContent(
   const slugs = extractWikiLinkSlugs(page.content);
   const additions: string[] = [];
   for (const slug of slugs.slice(0, 8)) {
-    for (const kind of ["PRODUCT", "POLICY", "ISSUE"] as const) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "GOAL"] as const) {
       const target = await getPage(ctx, page.companyId, kind, slug);
       if (!target) continue;
       const key = linkKeyFor(kind, slug);
@@ -695,6 +760,7 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
       .take(500);
     const now = Date.now();
     const restMs = 7 * 24 * 60 * 60 * 1000;
@@ -745,6 +811,7 @@ export const listOrphanSourceNotesInternal = internalQuery({
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
       .take(500);
     const now = Date.now();
     const restMs = 7 * 24 * 60 * 60 * 1000;
@@ -775,29 +842,43 @@ export const listOrphanSourceNotesInternal = internalQuery({
 export const refreshHubPagesInternal = internalMutation({
   args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<void> => {
-    const pages = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
-      .take(500);
     const now = Date.now();
     const hubs = [
       { kind: "PRODUCT" as const, subjectKey: "products-index", intro: "Everything the company offers, one page per product or service" },
       { kind: "POLICY" as const, subjectKey: "policies-index", intro: "How the company works, one page per policy" },
       { kind: "ISSUE" as const, subjectKey: "issues-index", intro: "What keeps coming up, one page per recurring issue" },
+      { kind: "GOAL" as const, subjectKey: "goals-index", intro: "What the company is aiming at, one page per goal" },
     ];
     for (const hub of hubs) {
-      const members = pages.filter(
-        (page) => page.kind === hub.kind && page.subjectKey !== hub.subjectKey
-      );
+      // Each hub reads its own kind off the kind index (wiki-scaling-note.md):
+      // the old single 500-row window silently dropped members past it, and
+      // read every source note along the way for nothing.
+      const members = (
+        await ctx.db
+          .query("wikiPages")
+          .withIndex("by_company_kind_subject", (q) =>
+            q.eq("companyId", args.companyId).eq("kind", hub.kind)
+          )
+          .take(1000)
+      ).filter((page) => page.subjectKey !== hub.subjectKey);
       if (members.length === 0) continue;
       const memberKeys = members.map((page) => linkKeyFor(page.kind, page.subjectKey));
-      const content =
-        `${hub.intro}: ` +
-        members.map((page) => `[[${page.subjectKey}]]`).join(", ") +
-        ".";
-      const existing = pages.find(
-        (page) => page.kind === hub.kind && page.subjectKey === hub.subjectKey
-      );
+      // The page body stays inside the page cap however many members exist:
+      // the most recently touched are named, the rest are counted. The links
+      // array stays complete — the map and backlinks need every member.
+      const named = [...members].sort((a, b) => b.updatedAt - a.updatedAt);
+      const contentBudget = WIKI_PAGE_MAX_CHARS - 100;
+      let body = `${hub.intro}: `;
+      let namedCount = 0;
+      for (const page of named) {
+        const mention = `${namedCount > 0 ? ", " : ""}[[${page.subjectKey}]]`;
+        if (body.length + mention.length > contentBudget) break;
+        body += mention;
+        namedCount += 1;
+      }
+      const unnamed = members.length - namedCount;
+      const content = unnamed > 0 ? `${body} — and ${unnamed} more.` : `${body}.`;
+      const existing = await getPage(ctx, args.companyId, hub.kind, hub.subjectKey);
       if (existing) {
         if (existing.content !== content || existing.links.length !== memberKeys.length) {
           await ctx.db.patch(existing._id, {
@@ -853,12 +934,18 @@ async function listPagesRows(
   companyId: WikiScope,
   paginationOpts: { numItems: number; cursor: string | null },
   search?: string,
-  kind?: "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE"
+  kind?: WikiKind
 ) {
   const needle = search?.trim();
   // Searched, filtered and paged where the pages are. This used to take five
   // hundred rows and sift them in the browser: a growing bill on every
   // keystroke, and page five hundred and one simply did not exist.
+  //
+  // Three shapes, each fully served by an index: search (kind is a filter
+  // field on the search index), kind alone (the kind-subject index — sifting
+  // a kind out of already-cut pages returned near-empty pages for the rare
+  // kinds, which are exactly the ones worth filtering to), and the plain
+  // newest-first list.
   const page = needle
     ? await ctx.db
       .query("wikiPages")
@@ -867,13 +954,18 @@ async function listPagesRows(
         return kind ? base.eq("kind", kind) : base;
       })
       .paginate(paginationOpts)
-    : await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
-      .order("desc")
-      .paginate(paginationOpts);
+    : kind
+      ? await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) => q.eq("companyId", companyId).eq("kind", kind))
+        .paginate(paginationOpts)
+      : await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+        .order("desc")
+        .paginate(paginationOpts);
 
-  const rows = kind && !needle ? page.page.filter((row) => row.kind === kind) : page.page;
+  const rows = page.page;
 
   return {
     ...page,
@@ -921,6 +1013,7 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
   const neighbourhood = await ctx.db
     .query("wikiPages")
     .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .order("desc")
     .take(500);
   const myKey = linkKeyFor(page.kind, page.subjectKey);
   const bySubject = new Map<string, (typeof neighbourhood)[number]>();
@@ -929,7 +1022,7 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
   }
   const wantedKeys = new Set<string>(page.links);
   for (const slug of extractWikiLinkSlugs(page.content)) {
-    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CUSTOMER", "SOURCE"] as const) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "GOAL", "CUSTOMER", "SOURCE"] as const) {
       const key = linkKeyFor(kind, slug);
       if (bySubject.has(key)) {
         wantedKeys.add(key);
@@ -1050,6 +1143,7 @@ async function searchRows(ctx: QueryCtx, companyId: WikiScope, term: string) {
   const pages = await ctx.db
     .query("wikiPages")
     .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .order("desc")
     .take(500);
   const hits = [];
   for (const page of pages) {
@@ -1503,6 +1597,88 @@ export const unpinCorrectionForCompany = adminMutation({
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyUnpin(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+/**
+ * The goals door (personal-layer-and-goals-plan.md, part 1): GOAL pages are
+ * intent, so people write them — the Distiller never does. Created here they
+ * join the wiki whole: linked, indexed, mapped, retrieved and exported like
+ * any page, and the nightly hub pass grows goals-index around them.
+ */
+async function applyGoalCreate(
+  ctx: MutationCtx,
+  args: { companyId: WikiScope; userId: Id<"users">; title: string; content: string }
+): Promise<Id<"wikiPages">> {
+  const title = args.title.trim().slice(0, 120);
+  const subjectKey = normaliseTopicSlug(title);
+  if (!subjectKey) throw appError("INVALID_INPUT", "A goal needs a name of a few words.");
+  if (subjectKey.endsWith("-index")) throw appError("INVALID_INPUT", "That name is reserved for the index.");
+  const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
+  if (!content) throw appError("INVALID_INPUT", "A goal needs words: what is the aim, and how is it measured?");
+  const existing = await getPage(ctx, args.companyId, "GOAL", subjectKey);
+  if (existing) throw appError("INVALID_INPUT", "A goal with this name already exists — edit that page instead.");
+
+  const now = Date.now();
+  const pageId = await ctx.db.insert("wikiPages", {
+    companyId: args.companyId,
+    kind: "GOAL",
+    subjectKey,
+    title,
+    content,
+    searchText: buildWikiSearchText({ title, subjectKey, content }),
+    links: [],
+    pinnedCorrections: [],
+    rewriteCount: 0,
+    lastRewriteSource: `HUMAN:${args.userId}`,
+    createdAt: now,
+    updatedAt: now,
+  });
+  const page = await ctx.db.get(pageId);
+  if (page) await syncLinksFromContent(ctx, page);
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_PAGE_HUMAN_CREATE",
+    entityId: pageId.toString(),
+    entityType: "wikiPages",
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    timestamp: now,
+    metadata: JSON.stringify({ kind: "GOAL", subjectKey, chars: content.length }),
+  });
+  return pageId;
+}
+
+export const createGoalPageForCompany = adminMutation({
+  args: { companyId: v.id("companies"), title: v.string(), content: v.string() },
+  handler: async (ctx, args): Promise<Id<"wikiPages">> => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await applyGoalCreate(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const createGoalPageForGlobal = adminMutation({
+  args: { title: v.string(), content: v.string() },
+  handler: async (ctx, args): Promise<Id<"wikiPages">> => {
+    assertPlatformWikiWrite(ctx.user);
+    return await applyGoalCreate(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
+/** The company's stated aims, for report grounding — hubs excluded. Read
+ * off the kind index, so goals surface however large the wiki grows. */
+export const getGoalPagesInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (ctx, args): Promise<Array<{ title: string; content: string }>> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", "GOAL")
+      )
+      .take(50);
+    return pages
+      .filter((page) => !page.subjectKey.endsWith("-index"))
+      .slice(0, 8)
+      .map((page) => ({ title: page.title, content: page.content }));
   },
 });
 

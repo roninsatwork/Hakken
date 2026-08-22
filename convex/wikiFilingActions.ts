@@ -56,7 +56,7 @@ export const considerAnswer = internalAction({
           ? "A person decided this answer must be kept in their company wiki — your job is only WHERE and WHAT, never whether. " +
             'Reply with strict JSON, nothing else: {"file": true, "kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "note": string} — slug names the page it belongs to (kebab-case, an existing page name where one fits), and note states what the answer establishes in two or three plain sentences, personal detail left out.'
           : "You decide whether an answered question produced durable NEW knowledge worth filing into a company wiki: a cross-page synthesis, a resolved comparison, or a durable relationship not already on the pages it used. " +
-            "NEVER file routine answers, restatements of what the pages already say, transient status, speculation, or personal/customer-specific detail. For most answers the correct decision is no. " +
+            "NEVER file routine answers, restatements of what the pages already say, transient status, speculation, or personal/customer-specific detail. Anything about the asker themselves — who they are, what they prefer, what they keep asking — is their private note's business and never the wiki's. For most answers the correct decision is no. " +
             'Reply with strict JSON, nothing else: {"file": boolean, "kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "note": string} — when file is true, slug names the page (kebab-case) and note states the durable insight in two or three plain sentences.',
         contents: [
           {

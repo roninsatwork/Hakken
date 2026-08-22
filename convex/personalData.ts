@@ -8,6 +8,7 @@ import {
   PERSONAL_DATA_RULES,
   describeErasure,
   indexFor,
+  ruleFor,
   rulesFor,
   type ErasureResult,
   type ErasureTally,
@@ -139,7 +140,21 @@ export const collectPage = internalQuery({
     // filter still walks the whole table looking for matches, which is the
     // thing that was blowing the limit; paginating first bounds what is read,
     // and the match then costs nothing.
-    const rows = indexed ? page.page : page.page.filter((row) => row[args.field] === args.userId);
+    const matched = indexed ? page.page : page.page.filter((row) => row[args.field] === args.userId);
+
+    // Fields the manifest marks redacted come back blanked: the admin
+    // producing the export may not read them (the personal-layer ruling —
+    // admins see counts, never words). The row's existence still shows.
+    const redactFields = ruleFor(args.table)?.redactFields;
+    const rows = redactFields && redactFields.length > 0
+      ? matched.map((row) => {
+          const copy: Record<string, unknown> = { ...(row as Record<string, unknown>) };
+          for (const field of redactFields) {
+            if (field in copy) copy[field] = "[REDACTED — visible only to the person themselves]";
+          }
+          return copy;
+        })
+      : matched;
 
     return { rows, cursor: page.continueCursor, isDone: page.isDone };
   },

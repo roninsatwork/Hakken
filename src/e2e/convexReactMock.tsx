@@ -1375,6 +1375,21 @@ export function useAction(functionReference: FunctionReference) {
   return async () => true;
 }
 
+/**
+ * The imperative client handle, for screens that query outside the hook
+ * cycle (the wiki's vault export). Fixture mode has no real client, so a
+ * one-off query answers empty — enough for layout, never for data.
+ */
+export function useConvex() {
+  return {
+    query: async (functionReference: FunctionReference, args?: unknown) => {
+      void functionReference;
+      void args;
+      return [];
+    },
+  };
+}
+
 export function usePaginatedQuery(functionReference: FunctionReference, args?: unknown) {
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;

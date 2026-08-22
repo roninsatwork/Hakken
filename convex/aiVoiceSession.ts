@@ -512,7 +512,7 @@ export const createRealtimeVoiceSession = tenantAction({
     const companyId = thread.companyId ?? user.companyId;
 
     // The same company voice the typed assistant uses, plus the speech style.
-    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding] =
+    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding, userMemories] =
       await Promise.all([
         ctx.runQuery(internal.system.getInternalSystemPrompt),
         ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId }),
@@ -537,6 +537,11 @@ export const createRealtimeVoiceSession = tenantAction({
             })
           : Promise.resolve(null),
         ctx.runQuery(internal.settings.getEmailBranding, {}),
+        // The speaker's own private note (personal-layer-and-goals-plan.md,
+        // part 2): this session was opened by a signed-in person, and the
+        // note injected is theirs alone. Phone callers and kiosks go through
+        // buildSpokenSessionInstructions instead, which carries none.
+        ctx.runQuery(internal.userMemories.getActiveForUserInternal, { userId }),
       ]);
 
     const instructions = `${buildAssistantSystemInstruction({
@@ -546,12 +551,21 @@ export const createRealtimeVoiceSession = tenantAction({
       companySkills: companySkills?.skills,
       companyMemories: companyMemories?.always,
       platformName: emailBranding.platformName,
+      userMemories: userMemories.map((memory) => memory.content),
     })}
 
 ====================
 SPEAKING OUT LOUD:
 
 ${REALTIME_VOICE_STYLE}`;
+
+    // The note's usage stamps, same as the typed path: a session that
+    // carries the note counts as a use.
+    if (userMemories.length > 0) {
+      await ctx.runMutation(internal.userMemories.markUsedInternal, {
+        memoryIds: userMemories.map((memory) => memory.memoryId),
+      });
+    }
 
     if (modelConfig.providerKey === GOOGLE_VERTEX_PROVIDER_KEY) {
       // Google's live models run through our own relay: Vertex issues no

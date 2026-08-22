@@ -9,11 +9,14 @@ import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucid
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { describeDevice } from "@/src/lib/devices";
+import { Button } from "@/src/ui/atoms/Button";
+import { AssistantNoteTab } from "./AssistantNoteTab";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
   const tCommon = useTranslations('common');
   const tPrefs = useTranslations('user.preferences');
+  const tNote = useTranslations('user.assistantNote');
   const { theme, setTheme } = useTheme();
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -84,6 +87,16 @@ export default function ProfileTabs() {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
           )}
         </button>
+        <Button
+          variant="ghost"
+          onClick={() => setActiveTab("assistantNote")}
+          className={`px-0 pt-0 pb-3 rounded-none hover:bg-transparent relative ${activeTab === "assistantNote" ? "text-foreground" : ""}`}
+        >
+          {tNote('tab')}
+          {activeTab === "assistantNote" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
+          )}
+        </Button>
         {isSuperAdmin && (
           <button
             onClick={() => setActiveTab("logins")}
@@ -274,6 +287,9 @@ export default function ProfileTabs() {
           </div>
         </div>
       )}
+
+      {/* Tab Content: What the assistant knows about me */}
+      {activeTab === "assistantNote" && <AssistantNoteTab />}
 
       {/* Tab Content: Logins */}
       {activeTab === "logins" && isSuperAdmin && (

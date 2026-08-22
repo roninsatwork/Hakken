@@ -1803,6 +1803,46 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_company", ["companyId"]),
 
+  /**
+   * The personal layer (personal-layer-and-goals-plan.md, part 2): what the
+   * assistant knows about one person — role, preferences, recurring asks.
+   * Private by ruling (Anthony, 2026-08-21): only the person reads their own
+   * rows; admins see counts, never words. Keyed by userId alone — the note
+   * travels with the person, not the workspace. A hard cap keeps it a sticky
+   * note, not a dossier. Company facts never land here: they belong to the
+   * wiki, per the one-brain sorting rule.
+   */
+  userMemories: defineTable({
+    userId: v.id("users"),
+    content: v.string(),
+    normalizedContent: v.string(),
+    /** One state only: a note exists or it was deleted outright. There is
+     * no archive on purpose — an archived note about a person would be a
+     * copy the person believed gone. */
+    status: v.literal("APPROVED"),
+    sourceType: v.union(v.literal("CHAT"), v.literal("MANUAL")),
+    /** Saved by the sweep under the autonomousMemory switch, no person
+     * approving it — labelled on screen so the person can see and remove
+     * what the AI taught itself about them. */
+    autoApplied: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    usageCount: v.number(),
+  })
+    .index("by_user_status_updated", ["userId", "status", "updatedAt"]),
+
+  /** The per-person sweep's marker, mirror of companyMemorySweeps. */
+  userMemorySweeps: defineTable({
+    userId: v.id("users"),
+    lastSweptAt: v.number(),
+    lastRunAt: v.number(),
+    lastMessagesRead: v.number(),
+    lastSuggested: v.number(),
+    lastSkippedReason: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   companySkills: defineTable({
     companyId: v.id("companies"),
     sourceAgentSkillId: v.optional(v.id("agentSkills")),
@@ -3408,7 +3448,11 @@ export default defineSchema({
       // Full-import-first (wiki-agents plan, phase 3): one full note per
       // ingested document, substantially intact — the layer the synthesis
       // pages stand on, mechanical and never model-shortened.
-      v.literal("SOURCE")
+      v.literal("SOURCE"),
+      // What the company is aiming at (personal-layer-and-goals-plan.md):
+      // human-authored intent, never distilled from documents and never
+      // model-tidied — the staff's only move on a stale goal is a question.
+      v.literal("GOAL")
     ),
     subjectKey: v.string(),
     title: v.string(),

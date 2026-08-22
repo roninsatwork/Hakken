@@ -115,6 +115,17 @@ crons.interval(
   { job: "company-memory-suggestion-sweep" }
 );
 
+// The personal layer's sweep (personal-layer-and-goals-plan.md, part 2):
+// each person's own recent conversations, read for durable notes about the
+// person. Spends nothing while the autonomousMemory switch is off, and a
+// full note is never read at all.
+crons.interval(
+  "user-memory-suggestion-sweep",
+  { hours: 6 },
+  internal.jobLedger.runJob,
+  { job: "user-memory-suggestion-sweep" }
+);
+
 // The wiki's nightly gardener (wiki plan, phase 4): mechanical link repair
 // costs nothing, and at most a few overgrown pages per company see a model.
 // A company with no wiki pages is never even visited.

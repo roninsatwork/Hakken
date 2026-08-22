@@ -81,13 +81,13 @@ export const getForMessage = tenantQuery({
       const separator = key.indexOf(":");
       if (separator <= 0) continue;
       const kind = key.slice(0, separator);
-      if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE"].includes(kind)) continue;
+      if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE", "GOAL"].includes(kind)) continue;
       const page = await ctx.db
         .query("wikiPages")
         .withIndex("by_company_kind_subject", (q) =>
           q
             .eq("companyId", isPlatform ? undefined : thread.companyId)
-            .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE")
+            .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL")
             .eq("subjectKey", key.slice(separator + 1))
         )
         .unique()

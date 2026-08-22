@@ -69,3 +69,30 @@ describe("sales report grounding context", () => {
     expect(grounding).toContain("[TRUNCATED TO FIT CONTEXT BUDGET]");
   });
 });
+
+describe("goals in the grounding (personal-layer-and-goals-plan.md, part 1)", () => {
+  test("stated aims lead the grounding under their own label", () => {
+    const grounding = buildSalesReportGroundingContext({
+      agentMemories: ["A memory."],
+      companyMemories: [],
+      knowledgeChunks: [],
+      goalPages: [{ title: "Grow Comax revenue", content: "Lift Comax to £1m by year end." }],
+    });
+
+    expect(grounding).toContain("company goal");
+    expect(grounding).toContain("Grow Comax revenue: Lift Comax to £1m by year end.");
+    // Goals come first: the numbers are measured against the aims.
+    expect(grounding.indexOf("company goal")).toBeLessThan(grounding.indexOf("agent memory"));
+  });
+
+  test("no goals means no goal block, and the field may be absent entirely", () => {
+    expect(
+      buildSalesReportGroundingContext({
+        agentMemories: [],
+        companyMemories: [],
+        knowledgeChunks: [],
+        goalPages: [],
+      })
+    ).toBe("");
+  });
+});

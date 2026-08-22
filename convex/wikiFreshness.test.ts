@@ -98,3 +98,43 @@ describe("the freshness checker's reading list", () => {
     expect(sources.missingSources).toBe(0);
   });
 });
+
+describe("stale goals (personal-layer-and-goals-plan.md, part 1)", () => {
+  test("only untouched goals are listed — never hubs, fresh goals, or other kinds", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const { WIKI_GOAL_STALE_AGE_MS } = await import("./wikiFreshness");
+    const stale = Date.now() - WIKI_GOAL_STALE_AGE_MS - 60_000;
+
+    await t.run(async (ctx) => {
+      const base = {
+        companyId,
+        links: [] as string[],
+        pinnedCorrections: [] as { text: string; pinnedAt: number }[],
+        rewriteCount: 0,
+        lastRewriteSource: "HUMAN:someone",
+        createdAt: stale,
+      };
+      await ctx.db.insert("wikiPages", {
+        ...base, kind: "GOAL", subjectKey: "old-aim", title: "old-aim",
+        content: "Lift Comax to £1m.", updatedAt: stale,
+      });
+      await ctx.db.insert("wikiPages", {
+        ...base, kind: "GOAL", subjectKey: "new-aim", title: "new-aim",
+        content: "Fresh aim.", updatedAt: Date.now(),
+      });
+      await ctx.db.insert("wikiPages", {
+        ...base, kind: "GOAL", subjectKey: "goals-index", title: "goals-index",
+        content: "The hub.", updatedAt: stale,
+      });
+      await ctx.db.insert("wikiPages", {
+        ...base, kind: "POLICY", subjectKey: "old-policy", title: "old-policy",
+        content: "An old policy.", updatedAt: stale,
+      });
+    });
+
+    const staleGoals = await t.query(internal.wikiFreshness.getStaleGoalsInternal, { companyId });
+    expect(staleGoals.map((goal) => goal.pageKey)).toEqual(["GOAL:old-aim"]);
+    expect(staleGoals[0].content).toContain("Comax");
+  });
+});

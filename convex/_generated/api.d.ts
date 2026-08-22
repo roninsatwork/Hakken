@@ -219,6 +219,8 @@ import type * as tenantFunctions from "../tenantFunctions.js";
 import type * as toolConnectorDefinitions from "../toolConnectorDefinitions.js";
 import type * as userActivityService from "../userActivityService.js";
 import type * as userManagementService from "../userManagementService.js";
+import type * as userMemories from "../userMemories.js";
+import type * as userMemorySuggestionActions from "../userMemorySuggestionActions.js";
 import type * as users from "../users.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_appError from "../utils/appError.js";
@@ -504,6 +506,8 @@ declare const fullApi: ApiFromModules<{
   toolConnectorDefinitions: typeof toolConnectorDefinitions;
   userActivityService: typeof userActivityService;
   userManagementService: typeof userManagementService;
+  userMemories: typeof userMemories;
+  userMemorySuggestionActions: typeof userMemorySuggestionActions;
   users: typeof users;
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/appError": typeof utils_appError;

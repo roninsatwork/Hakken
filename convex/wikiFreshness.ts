@@ -88,6 +88,42 @@ export const getSourceTextsForPageInternal = internalQuery({
   },
 });
 
+/**
+ * A goal left untouched this long gets asked about, not rewritten
+ * (personal-layer-and-goals-plan.md, part 1). Roughly double the page
+ * threshold above: aims move slower than facts.
+ */
+export const WIKI_GOAL_STALE_AGE_MS = 45 * 24 * 60 * 60 * 1000;
+
+/** Stale goals: human intent past its check-in date. Purely mechanical —
+ * goals have no source documents to read against, so the model never runs. */
+export const getStaleGoalsInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ pageKey: string; content: string; updatedAt: number }>> => {
+    const now = Date.now();
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    return pages
+      .filter(
+        (page) =>
+          page.kind === "GOAL" &&
+          !page.subjectKey.endsWith("-index") &&
+          now - page.updatedAt >= WIKI_GOAL_STALE_AGE_MS
+      )
+      .slice(0, 10)
+      .map((page) => ({
+        pageKey: `${page.kind}:${page.subjectKey}`,
+        content: page.content.slice(0, 200),
+        updatedAt: page.updatedAt,
+      }));
+  },
+});
+
 export const markVerifiedInternal = internalMutation({
   args: { pageId: v.id("wikiPages") },
   handler: async (ctx, args): Promise<void> => {

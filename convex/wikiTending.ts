@@ -47,28 +47,69 @@ export const getTendingCandidatesInternal = internalQuery({
       pinnedCorrections: Array<{ text: string; pinnedAt: number }>;
     }>;
   }> => {
+    // The newest pages first: activity — and therefore fresh dead links —
+    // lives at this end, and the window is a window, not the wiki
+    // (wiki-scaling-note.md).
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
       .take(500);
 
+    // A link's target being outside the window proves nothing on a wiki
+    // bigger than the window — the old in-window-or-broken rule would have
+    // stripped valid links to older pages. A candidate is only declared
+    // dead after a point read fails to find its target, a bounded number
+    // per night; unverified candidates simply wait for another pass.
     const livingSubjects = new Set(pages.map((page) => `${page.kind}:${page.subjectKey}`));
-    const linkRepairs = pages
-      .map((page) => ({
-        pageId: page._id,
-        links: page.links.filter((link) => livingSubjects.has(link)),
-        broken: page.links.some((link) => !livingSubjects.has(link)),
-      }))
-      .filter((repair) => repair.broken)
-      .map(({ pageId, links }) => ({ pageId, links }));
+    let verifyBudget = 200;
+    const linkRepairs: Array<{ pageId: Id<"wikiPages">; links: string[] }> = [];
+    for (const page of pages) {
+      const kept: string[] = [];
+      let removedAny = false;
+      for (const link of page.links) {
+        if (livingSubjects.has(link)) {
+          kept.push(link);
+          continue;
+        }
+        const separator = link.indexOf(":");
+        if (separator <= 0) {
+          removedAny = true;
+          continue;
+        }
+        if (verifyBudget <= 0) {
+          kept.push(link);
+          continue;
+        }
+        verifyBudget -= 1;
+        const target = await ctx.db
+          .query("wikiPages")
+          .withIndex("by_company_kind_subject", (q) =>
+            q
+              .eq("companyId", args.companyId)
+              .eq("kind", link.slice(0, separator) as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL")
+              .eq("subjectKey", link.slice(separator + 1))
+          )
+          .unique();
+        if (target) {
+          livingSubjects.add(link);
+          kept.push(link);
+        } else {
+          removedAny = true;
+        }
+      }
+      if (removedAny) linkRepairs.push({ pageId: page._id, links: kept });
+    }
 
     const now = Date.now();
     const overgrown = pages
       .filter(
         (page) =>
-          // Hub index pages are mechanical, and source notes are full
-          // imports; the model never tidies (i.e. shortens) either.
+          // Hub index pages are mechanical, source notes are full imports,
+          // and goals are human intent; the model never tidies (i.e.
+          // shortens) any of them.
           page.kind !== "SOURCE" &&
+          page.kind !== "GOAL" &&
           !page.subjectKey.endsWith("-index") &&
           page.content.length >= WIKI_TENDING_LENGTH_THRESHOLD &&
           now - (page.lastTendedAt ?? 0) >= WIKI_TENDING_MIN_INTERVAL_MS

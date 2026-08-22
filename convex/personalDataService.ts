@@ -36,6 +36,13 @@ export type PersonalDataRule = {
   treatment: PersonalDataTreatment;
   /** Why, in a sentence. Shown in the record of what was done. */
   reason: string;
+  /**
+   * Fields blanked in the subject access export, because the admin
+   * producing it may not read them (the personal-layer ruling, 2026-08-21:
+   * admins see counts, never words). Erasure is untouched — the rows still
+   * go whole. The subject reads the words themselves on their own screen.
+   */
+  redactFields?: string[];
 };
 
 export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
@@ -51,6 +58,14 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   { table: "aiActionRequests", fields: ["actorId"], treatment: "ERASE", reason: "Their rate-limit counters." },
   { table: "analyticsDailySnapshots", fields: ["userId"], treatment: "ERASE", reason: "Their usage, counted per person." },
   { table: "agentMemories", fields: ["userId"], treatment: "ERASE", reason: "What an assistant remembered about them." },
+  {
+    table: "userMemories",
+    fields: ["userId"],
+    treatment: "ERASE",
+    reason: "The assistant's private note about them — the personal layer, theirs alone. The words are redacted in the export because the admin producing it may not read them; the person sees them in full on their own profile.",
+    redactFields: ["content", "normalizedContent"],
+  },
+  { table: "userMemorySweeps", fields: ["userId"], treatment: "ERASE", reason: "The bookkeeping behind their private note." },
   { table: "movements", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
   { table: "movementDebugSessions", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
   { table: "notifications", fields: ["userId"], treatment: "ERASE", reason: "Their inbox. A notification exists only for the person it was sent to." },
@@ -242,6 +257,8 @@ export const PERSONAL_DATA_INDEXES: Readonly<Record<string, string>> = {
   "logins.userId": "by_user",
   "messages.userId": "by_user_role_created",
   "threads.userId": "by_user",
+  "userMemories.userId": "by_user_status_updated",
+  "userMemorySweeps.userId": "by_user",
 };
 
 /** The index to search a table's personal field by, when there is one. */

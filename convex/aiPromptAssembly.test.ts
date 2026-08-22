@@ -365,3 +365,31 @@ describe("assistant prompt assembly", () => {
     expect(withoutSkills).not.toContain("SKILLS AVAILABLE TO THIS COMPANY");
   });
 });
+
+describe("the who-is-asking section (personal-layer-and-goals-plan.md, part 2)", () => {
+  test("the asker's note is rendered with its walls, and absent means silence", () => {
+    const withNote = buildAssistantSystemInstruction({
+      globalSystemPrompt: "GLOBAL",
+      companySystemPrompt: null,
+      activeRules: [],
+      userMemories: ["Prefers short answers, no jargon."],
+    });
+    expect(withNote).toContain("WHO IS ASKING");
+    expect(withNote).toContain("Prefers short answers, no jargon.");
+    expect(withNote).toContain("never be repeated into answers for anyone else");
+
+    const withoutNote = buildAssistantSystemInstruction({
+      globalSystemPrompt: "GLOBAL",
+      companySystemPrompt: null,
+      activeRules: [],
+    });
+    expect(withoutNote).not.toContain("WHO IS ASKING");
+    const withEmptyNote = buildAssistantSystemInstruction({
+      globalSystemPrompt: "GLOBAL",
+      companySystemPrompt: null,
+      activeRules: [],
+      userMemories: [],
+    });
+    expect(withEmptyNote).not.toContain("WHO IS ASKING");
+  });
+});

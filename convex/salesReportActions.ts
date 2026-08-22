@@ -70,7 +70,7 @@ export const generateReport = internalAction({
     const queryText = buildReportQueryText(args.focus);
     let groundingContext = "";
     try {
-        const [memoryMatches, companyMemories] = await Promise.all([
+        const [memoryMatches, companyMemories, goalPages] = await Promise.all([
             ctx.runQuery(internal.agentMemories.searchMemoryInternal, {
                 agentId: args.agentId,
                 companyId: args.companyId,
@@ -84,6 +84,12 @@ export const generateReport = internalAction({
                     limit: 5,
                 })
                 : Promise.resolve({ relevant: [] as { title: string; content: string }[] }),
+            // The workspace's stated aims, so the report can measure
+            // against what the company wants — absent companyId means an
+            // agent with no workspace, which has no goals to read.
+            args.companyId
+                ? ctx.runQuery(internal.wikiPages.getGoalPagesInternal, { companyId: args.companyId })
+                : Promise.resolve([] as { title: string; content: string }[]),
         ]);
 
         const knowledgeChunks: string[] = [];
@@ -122,6 +128,7 @@ export const generateReport = internalAction({
             agentMemories: memoryMatches.map((memory) => memory.content),
             companyMemories: companyMemories.relevant,
             knowledgeChunks,
+            goalPages,
         });
     } catch (error) {
         console.error("Sales report grounding failed to assemble", getErrorMessage(error, "Unknown error during AI Generation"));

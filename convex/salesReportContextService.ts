@@ -37,8 +37,20 @@ export function buildSalesReportGroundingContext(args: {
   agentMemories: string[];
   companyMemories: { title: string; content: string }[];
   knowledgeChunks: string[];
+  goalPages?: { title: string; content: string }[];
 }) {
   let grounding = "";
+
+  // The company's stated aims lead (personal-layer-and-goals-plan.md,
+  // part 1): a board report measures the numbers against what the
+  // workspace said it wants, not just against last month.
+  if (args.goalPages && args.goalPages.length > 0) {
+    grounding += buildUntrustedKnowledgeContext({
+      sourceLabel: "company goal (what the workspace is aiming at)",
+      chunks: args.goalPages.map((goal) => `${goal.title}: ${goal.content}`),
+      maxChars: REPORT_MEMORY_MAX_CHARS,
+    });
+  }
 
   if (args.agentMemories.length > 0) {
     grounding += buildUntrustedKnowledgeContext({
