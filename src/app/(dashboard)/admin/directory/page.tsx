@@ -102,6 +102,7 @@ export default function UserDirectoryPage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       <PageHeader
+        divider
         icon={<Users className="w-5 h-5" />}
         title={t("title")}
         description={t("description")}

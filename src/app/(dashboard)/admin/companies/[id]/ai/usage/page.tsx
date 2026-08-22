@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import type { LucideIcon } from "lucide-react";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
@@ -135,30 +136,23 @@ export default function CompanyAiUsagePage() {
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
-      {/* Central Header & Navigational Date Scrubber */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-[#10b981]" />
-            {t('aiUsageTitle')}
-          </h1>
-          <p className="text-[13px] text-secondary tracking-wide max-w-xl">
-            {t('aiUsageSubtitle')}
-          </p>
-        </div>
-
-        {/* Date Filters native block */}
-        <div className="flex flex-col items-end gap-3 z-20">
-          <TimeframeDropdown
-            timeframe={timeframe}
-            setTimeframe={setTimeframe}
-            customStart={customStart}
-            setCustomStart={setCustomStart}
-            customEnd={customEnd}
-            setCustomEnd={setCustomEnd}
-          />
-        </div>
-      </header>
+      <PageHeader
+        icon={<Building2 className="w-6 h-6 text-[#10b981]" />}
+        title={t('aiUsageTitle')}
+        description={t('aiUsageSubtitle')}
+        action={
+          <div className="flex flex-col items-end gap-3 z-20">
+            <TimeframeDropdown
+              timeframe={timeframe}
+              setTimeframe={setTimeframe}
+              customStart={customStart}
+              setCustomStart={setCustomStart}
+              customEnd={customEnd}
+              setCustomEnd={setCustomEnd}
+            />
+          </div>
+        }
+      />
 
       {/* Synchronized Loader */}
       {data === undefined ? (

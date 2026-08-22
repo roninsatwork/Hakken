@@ -21,6 +21,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 export default function RulesDashboard() {
   const t = useTranslations("ai.rules");
@@ -67,25 +68,21 @@ export default function RulesDashboard() {
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
       {/* Header Area */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border-dim pb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <BrainCircuit className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            {t("subtitle")}
-          </p>
-        </div>
-
-        <Link
-          href="/admin/ai/rules/new"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t("addRule")}</span>
-        </Link>
-      </header>
+      <PageHeader
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+        divider
+        action={
+          <Link
+            href="/admin/ai/rules/new"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t("addRule")}</span>
+          </Link>
+        }
+      />
 
       <AiWorkspaceNav />
 

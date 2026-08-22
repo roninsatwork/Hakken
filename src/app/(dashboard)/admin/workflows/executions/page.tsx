@@ -35,6 +35,7 @@ export default function WorkflowExecutionsPage() {
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
       <PageHeader
+        divider
         icon={<History className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}

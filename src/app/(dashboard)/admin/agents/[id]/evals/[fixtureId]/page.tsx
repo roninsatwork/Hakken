@@ -1,15 +1,15 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ClipboardCheck, FlaskConical, Loader2, Play, XCircle } from "lucide-react";
+import { ClipboardCheck, FlaskConical, Loader2, Play, XCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/atoms/Button";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 
 const MUST_PASS_TAG = "critical";
 
@@ -74,57 +74,50 @@ export default function AgentCheckDetailPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <header className="flex flex-col gap-3">
-        <Link
-          href={backHref}
-          className="inline-flex w-fit items-center gap-2 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {t("detail.back")}
-        </Link>
-        <h1 className="flex items-start gap-3 text-2xl font-bold tracking-tight text-foreground">
-          <ClipboardCheck className="mt-1 h-6 w-6 shrink-0 text-brand" />
-          {detail.check.objective}
-        </h1>
-      </header>
-
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <span className={`text-[18px] font-semibold ${status.tone}`}>{status.label}</span>
-          {latest && <span className="text-[12px] text-secondary">{t("detail.lastRun", { date: formatDateTime(latest.completedAt) })}</span>}
-          {mustPass && <span className="text-[12px] text-secondary">{t("detail.mustPassBadge")}</span>}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {/* A rehearsal runs the agent for real but records its writes instead
-              of performing them, then grades what it did. The safe way to ask
-              "would it behave?" against live data. */}
-          {/* Raw: sidebar-toned chip — its bg-sidebar fills match no variant's colours. */}
-          <button
-            type="button"
-            onClick={() => rehearseAction.run(
-              () => runRehearsalEval({ agentId, fixtureId }),
-              { fallbackMessage: t("detail.rehearseFailed") },
-            )}
-            disabled={rehearseAction.isBusy() || action.isBusy()}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-sidebar/50 px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-sidebar disabled:opacity-50"
-          >
-            {rehearseAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-            {t("detail.rehearse")}
-          </button>
-          <Button
-            variant="brand"
-            onClick={() => action.run(
-              () => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }),
-              { fallbackMessage: t("detail.runCheckFailed") },
-            )}
-            disabled={action.isBusy() || rehearseAction.isBusy()}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] font-semibold disabled:opacity-50"
-          >
-            {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {t("detail.runThisCheck")}
-          </Button>
-        </div>
-      </div>
+      <DetailHeader
+        back={{ label: t("detail.back"), href: backHref }}
+        icon={<ClipboardCheck className="mt-1 h-6 w-6 shrink-0 text-brand" />}
+        title={detail.check.objective}
+        pills={
+          <>
+            <span className={`text-[18px] font-semibold ${status.tone}`}>{status.label}</span>
+            {latest && <span className="text-[12px] text-secondary">{t("detail.lastRun", { date: formatDateTime(latest.completedAt) })}</span>}
+            {mustPass && <span className="text-[12px] text-secondary">{t("detail.mustPassBadge")}</span>}
+          </>
+        }
+        action={
+          <div className="flex shrink-0 items-center gap-2">
+            {/* A rehearsal runs the agent for real but records its writes instead
+                of performing them, then grades what it did. The safe way to ask
+                "would it behave?" against live data. */}
+            {/* Raw: sidebar-toned chip — its bg-sidebar fills match no variant's colours. */}
+            <button
+              type="button"
+              onClick={() => rehearseAction.run(
+                () => runRehearsalEval({ agentId, fixtureId }),
+                { fallbackMessage: t("detail.rehearseFailed") },
+              )}
+              disabled={rehearseAction.isBusy() || action.isBusy()}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-sidebar/50 px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-sidebar disabled:opacity-50"
+            >
+              {rehearseAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+              {t("detail.rehearse")}
+            </button>
+            <Button
+              variant="brand"
+              onClick={() => action.run(
+                () => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }),
+                { fallbackMessage: t("detail.runCheckFailed") },
+              )}
+              disabled={action.isBusy() || rehearseAction.isBusy()}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] font-semibold disabled:opacity-50"
+            >
+              {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {t("detail.runThisCheck")}
+            </Button>
+          </div>
+        }
+      />
 
       <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <h2 className="text-[11px] uppercase tracking-[0.1em] text-muted">{t("detail.goodResult")}</h2>

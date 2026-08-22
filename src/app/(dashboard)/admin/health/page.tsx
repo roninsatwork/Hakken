@@ -186,6 +186,7 @@ export default function HealthPage() {
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
+        divider
         icon={<HeartPulse className="h-6 w-6 text-brand" />}
         title={t("headerTitle")}
         description={t("headerDescription")}

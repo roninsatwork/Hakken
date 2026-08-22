@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { useLocale, useTranslations } from "next-intl";
 
 // Mirrors the list page's RiskBadge. This was previously hardcoded to the
@@ -69,7 +70,6 @@ function StatusBadge({ status }: { status?: "RUNNING" | "SUCCESS" | "FAILED" }) 
 export default function MaintenanceScriptDetailPage() {
   const t = useTranslations("admin.settings.scripts");
   const locale = useLocale();
-  const router = useRouter();
   const params = useParams<{ scriptId: string }>();
   const scriptId = params.scriptId ?? "";
   const script = useQuery(api.maintenanceScripts.get, { scriptId });
@@ -121,40 +121,30 @@ export default function MaintenanceScriptDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-16">
-      {/* Stays raw: an inline padding-free back link drawn as a button — matches no variant. */}
-      <button
-        type="button"
-        onClick={() => router.push("/admin/settings/scripts")}
-        className="inline-flex items-center gap-2 text-[13px] text-secondary hover:text-foreground w-fit"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {t("back")}
-      </button>
-
-      <header className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 pb-6 border-b border-border-dim/50">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Wrench className="w-6 h-6 text-brand" />
-            {script.name}
-          </h1>
-          <p className="text-[13px] text-secondary tracking-wide max-w-2xl">{script.shortDescription}</p>
-          <div className="flex flex-wrap items-center gap-2 pt-2">
+      <DetailHeader
+        back={{ label: t("back"), href: "/admin/settings/scripts" }}
+        icon={<Wrench className="w-6 h-6 text-brand" />}
+        title={script.name}
+        description={script.shortDescription}
+        pills={
+          <>
             <span className="px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">{script.category}</span>
             <span className={`px-2 py-1 rounded-[6px] text-[11px] font-medium ${RISK_BADGE_CLASSES[script.riskLevel] ?? RISK_BADGE_CLASSES.HIGH}`}>{t("riskBadge", { level: script.riskLevel === "LOW" ? t("riskLow") : script.riskLevel === "MEDIUM" ? t("riskMedium") : script.riskLevel === "HIGH" ? t("riskHigh") : script.riskLevel })}</span>
             <StatusBadge status={script.lastRun?.status} />
-          </div>
-        </div>
-
-        <WriteButton
-          type="button"
-          onClick={() => setIsConfirmOpen(true)}
-          disabled={isRunning}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[10px] bg-foreground text-background text-[13px] font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50"
-        >
-          {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {t("runScript")}
-        </WriteButton>
-      </header>
+          </>
+        }
+        action={
+          <WriteButton
+            type="button"
+            onClick={() => setIsConfirmOpen(true)}
+            disabled={isRunning}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+          >
+            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {t("runScript")}
+          </WriteButton>
+        }
+      />
 
       {feedback ? (
         <div className={`flex items-start gap-3 p-4 rounded-[12px] border text-[13px] ${

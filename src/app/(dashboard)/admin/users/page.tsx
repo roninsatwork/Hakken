@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ModalFormField } from "@/src/ui/components/screens/ModalForm";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
 
@@ -44,23 +45,21 @@ export default function ManageUsersPage() {
       scope="platform"
       emptySearchMessage="Nobody matches that search."
       header={() => (
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Users className="w-6 h-6 text-brand" />
-              {t('title')}
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-          </div>
-
-          <Link
-            href="/admin/users/invite"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('invite')}</span>
-          </Link>
-        </div>
+        <PageHeader
+          divider
+          icon={<Users className="w-6 h-6 text-brand" />}
+          title={t('title')}
+          description={t('description')}
+          action={
+            <Link
+              href="/admin/users/invite"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('invite')}</span>
+            </Link>
+          }
+        />
       )}
       extraColumns={
         isSuperAdmin

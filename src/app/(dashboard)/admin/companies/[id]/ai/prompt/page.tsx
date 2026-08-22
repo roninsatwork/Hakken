@@ -14,6 +14,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
 
 
@@ -72,51 +73,44 @@ export default function CompanySystemPromptPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full h-full">
-      {/* Admin Headers */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <TerminalSquare className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            {t("subtitle", { name: company?.name || t("thisWorkspace") })}
-          </p>
-        </div>
-        
-        {/* Dynamic Action Area */}
-        <div className="flex items-center gap-3">
-          {hasUnsavedChanges && (
+      <PageHeader
+        icon={<TerminalSquare className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle", { name: company?.name || t("thisWorkspace") })}
+        action={
+          <div className="flex items-center gap-3">
+            {hasUnsavedChanges && (
+              <WriteButton
+
+                onClick={handleRevert}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
+              >
+                <RefreshCcw className="w-3.5 h-3.5" />
+                <span>{t("revert")}</span>
+              </WriteButton>
+            )}
+
             <WriteButton
 
-              onClick={handleRevert}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges || isSaving}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${
+                hasUnsavedChanges
+                  ? "bg-foreground text-background hover:opacity-90 dark:shadow-black/30"
+                  : "bg-card border border-border-dim text-muted cursor-not-allowed"
+              }`}
             >
-              <RefreshCcw className="w-3.5 h-3.5" />
-              <span>{t("revert")}</span>
+              {isSaving ? (
+                <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              <span>{t("savePrompt")}</span>
             </WriteButton>
-          )}
-
-          <WriteButton
-
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges || isSaving}
-            className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${
-              hasUnsavedChanges 
-                ? "bg-foreground text-background hover:opacity-90 dark:shadow-black/30" 
-                : "bg-card border border-border-dim text-muted cursor-not-allowed"
-            }`}
-          >
-            {isSaving ? (
-              <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Save className="w-3.5 h-3.5" />
-            )}
-            <span>{t("savePrompt")}</span>
-          </WriteButton>
-        </div>
-      </header>
+          </div>
+        }
+      />
 
       <SaveFeedback
         status={saveStatus}

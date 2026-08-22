@@ -4,13 +4,13 @@ import { useState, use } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BrainCircuit, Loader2 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 
 export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.rules.form");
@@ -64,24 +64,12 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
-      <header className="flex flex-col gap-1">
-        <Link
-          href={`/admin/agents/${agentId}/rules`}
-          className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t("back")}</span>
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          <BrainCircuit className="w-6 h-6 text-brand" />
-          {t("create.title")}
-        </h1>
-        <p className="text-[13px] text-secondary tracking-wide">
-          {t("create.subtitle")}
-        </p>
-      </header>
-
-      <div className="w-full h-[1px] bg-border-dim my-2" />
+      <DetailHeader
+        back={{ label: t("back"), href: `/admin/agents/${agentId}/rules` }}
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title={t("create.title")}
+        description={t("create.subtitle")}
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 flex-1 relative max-w-4xl">
 

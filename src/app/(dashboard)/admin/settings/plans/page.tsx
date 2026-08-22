@@ -20,6 +20,7 @@ import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -133,24 +134,21 @@ export default function SubscriptionPlansPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <CreditCard className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('subtitle')}</p>
-        </div>
-
-        <WriteButton
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('newPlan')}</span>
-        </WriteButton>
-      </div>
+      <PageHeader
+        divider
+        icon={<CreditCard className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('subtitle')}
+        action={
+          <WriteButton
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('newPlan')}</span>
+          </WriteButton>
+        }
+      />
 
       {/* Explanation Notice */}
       <div className="flex items-start gap-4 p-4 bg-foreground/[0.015] border border-border-dim/50 rounded-[12px] text-secondary">

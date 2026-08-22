@@ -5,13 +5,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import { BrainCircuit, Loader2, ArrowLeft, Save } from "lucide-react";
-import Link from "next/link";
+import { BrainCircuit, Loader2, Save } from "lucide-react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -105,24 +105,12 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
 
   return (
     <div className="flex flex-col gap-4 w-full pb-8">
-      <header className="flex flex-col gap-1">
-        <Link
-          href={`/admin/agents/${agentId}/rules`}
-          className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t("back")}</span>
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          <BrainCircuit className="w-6 h-6 text-brand" />
-          {t("edit.title")}
-        </h1>
-        <p className="text-[13px] text-secondary tracking-wide">
-          {t("edit.subtitle")}
-        </p>
-      </header>
-
-      <div className="w-full h-[1px] bg-border-dim my-2" />
+      <DetailHeader
+        back={{ label: t("back"), href: `/admin/agents/${agentId}/rules` }}
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title={t("edit.title")}
+        description={t("edit.subtitle")}
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 flex-1 relative max-w-4xl">
 

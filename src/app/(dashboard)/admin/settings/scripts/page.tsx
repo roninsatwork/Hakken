@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useLocale, useTranslations } from "next-intl";
@@ -109,17 +110,12 @@ export default function MaintenanceScriptsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Wrench className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        divider
+        icon={<Wrench className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+      />
 
       <div className="flex items-start gap-4 p-4 bg-foreground/[0.015] border border-border-dim/50 rounded-[12px] text-secondary">
         <FileWarning className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted" />

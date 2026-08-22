@@ -21,15 +21,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import {
   purgePipelineKeys,
   type PurgeConfigMap,
@@ -93,6 +85,139 @@ export function RetentionRulesSection() {
 
   const [isManualRunning, setIsManualRunning] = useState(false);
 
+  const configs = (purgeConfigs || {}) as Partial<PurgeConfigMap>;
+
+  const columns: DataTableColumn<PurgePipelineKey>[] = [
+    {
+      key: "category",
+      header: t('purges.table.category'),
+      cell: (key) => (
+        <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${key}.title`)}</span>
+      ),
+    },
+    {
+      key: "description",
+      header: t('purges.table.description'),
+      className: "max-w-md",
+      cell: (key) => (
+        <span className="text-[12px] text-secondary leading-snug inline-block">{t(`purges.categories.${key}.description`)}</span>
+      ),
+    },
+    {
+      key: "retention",
+      header: t('purges.table.retention'),
+      className: "w-[190px]",
+      cell: (key) => {
+        const conf = configs[key] || {};
+        return (
+          <>
+            <span className="text-[13px] font-mono font-medium text-foreground">{t('purges.modals.config.days', { days: conf.retentionDays || 0 })}</span>
+            {previewCounts?.[key] && (
+              <span className="block text-[11px] text-muted mt-0.5">
+                {previewCounts[key].count === 0
+                  ? t('purges.table.previewNone')
+                  : previewCounts[key].capped
+                    ? t('purges.table.previewCapped', { count: previewCounts[key].count.toLocaleString() })
+                    : t('purges.table.previewNow', { count: previewCounts[key].count.toLocaleString() })}
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "interval",
+      header: t('purges.table.interval'),
+      className: "w-[190px]",
+      cell: (key) => {
+        const conf = configs[key] || {};
+        return (
+          <>
+            <span className="text-[13px] font-mono font-medium text-foreground">
+              {conf.interval === "Weekly" ? (
+                `${t('purges.intervals.Weekly')} (${t(`purges.daysOfWeek.${conf.dayOfWeek !== undefined ? conf.dayOfWeek : 0}`)})`
+              ) : conf.interval === "Monthly" ? (
+                `${t('purges.intervals.Monthly')} (${getOrdinalSuffix(conf.dayOfMonth || 1)})`
+              ) : (
+                t(`purges.intervals.${conf.interval || "Daily"}`)
+              )}
+            </span>
+            {conf.interval !== "Hourly" && (
+              <span className="text-[11px] text-muted ml-2">@{String(conf.hourUtc || 0).padStart(2, '0')}:00 UTC</span>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: t('purges.table.status'),
+      className: "w-[120px]",
+      cell: (key) => {
+        const isEnabled = configs[key]?.enabled;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium tracking-wide uppercase ${isEnabled ? 'bg-brand/10 text-brand' : 'bg-foreground/5 text-muted'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-brand' : 'bg-muted'}`} />
+            {isEnabled ? t('purges.modals.config.enabled') : t('purges.modals.config.disabled')}
+          </div>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: t('purges.table.actions'),
+      className: "w-[110px]",
+      align: "right",
+      cell: (key) => {
+        const conf = configs[key] || {};
+        const runningLog = runningPurges?.find((log) => log.pipelineKey === key);
+        return canWrite ? (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="icon"
+              onClick={() => {
+                setConfigModalPipeline(key);
+                setConfigModalData({ ...conf });
+                setIsConfigModalOpen(true);
+              }}
+              className="rounded-[6px] p-1.5"
+              title={t('purges.table.configure')}
+            >
+              <Settings2 className="w-4 h-4" />
+            </Button>
+            {runningLog ? (
+              <Button
+                variant="icon"
+                onClick={() => {
+                  setCancelModalHistoryId(runningLog._id);
+                  setCancelModalPipeline(key);
+                  setIsCancelModalOpen(true);
+                }}
+                className="rounded-[6px] p-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 animate-pulse"
+                title={t('purges.table.stop')}
+              >
+                <Square className="w-4 h-4 fill-destructive" />
+              </Button>
+            ) : (
+              <Button
+                variant="icon"
+                onClick={() => {
+                  setConfirmModalPipeline(key);
+                  setIsConfirmModalOpen(true);
+                }}
+                disabled={isManualRunning}
+                className="rounded-[6px] p-1.5 hover:text-brand hover:bg-brand/5 disabled:opacity-50"
+                title={t('purges.table.runNow')}
+              >
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ) : null;
+      },
+    },
+  ];
+
   return (
     <>
           <section className="flex flex-col gap-6">
@@ -103,173 +228,59 @@ export function RetentionRulesSection() {
               <p className="text-[13px] text-secondary mt-1 max-w-2xl">{t('purges.subtitle')}</p>
             </div>
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <div className="flex-1">
-                <SearchBar
-                  value={searchTerm}
-                  onChange={(value) => {
-                    setSearchTerm(value);
-                    setPage(1);
-                  }}
-                  placeholder={t('purges.table.searchPlaceholder')}
-                />
-              </div>
-              <div className="flex items-center gap-1 rounded-[10px] border border-border-dim bg-sidebar/30 p-1">
-                {([
-                  { id: 'all', label: t('purges.table.filterAll') },
-                  { id: 'enabled', label: t('purges.modals.config.enabled') },
-                  { id: 'disabled', label: t('purges.modals.config.disabled') },
-                ] as const).map((tab) => (
-                  // Stays raw: a segmented-filter tab whose fill swaps with selection — matches no variant.
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      setStatusFilter(tab.id);
-                      setPage(1);
-                    }}
-                    className={`rounded-[7px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                      statusFilter === tab.id
-                        ? 'bg-foreground/10 text-foreground'
-                        : 'text-secondary hover:text-foreground'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <TableShell
+            <DataTable
+              rows={purgeConfigs === undefined ? undefined : pageKeys}
+              columns={columns}
+              rowKey={(key) => key}
+              empty={{
+                icon: <Database className="h-8 w-8 text-muted/30" />,
+                label: t('purges.table.noMatches'),
+              }}
+              search={{
+                value: searchTerm,
+                onChange: (value) => {
+                  setSearchTerm(value);
+                  setPage(1);
+                },
+                placeholder: t('purges.table.searchPlaceholder'),
+              }}
+              filters={
+                <div className="flex items-center gap-1 rounded-[10px] border border-border-dim bg-sidebar/30 p-1">
+                  {([
+                    { id: 'all', label: t('purges.table.filterAll') },
+                    { id: 'enabled', label: t('purges.modals.config.enabled') },
+                    { id: 'disabled', label: t('purges.modals.config.disabled') },
+                  ] as const).map((tab) => (
+                    // Stays raw: a segmented-filter tab whose fill swaps with selection — matches no variant.
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(tab.id);
+                        setPage(1);
+                      }}
+                      className={`rounded-[7px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                        statusFilter === tab.id
+                          ? 'bg-foreground/10 text-foreground'
+                          : 'text-secondary hover:text-foreground'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              }
+              footer={{
+                mode: "paged",
+                page,
+                totalPages,
+                totalCount: filteredKeys.length,
+                pageSize: TABLE_PAGE_SIZE,
+                isLoading: purgeConfigs === undefined,
+                onPageChange: setPage,
+              }}
               minWidthClassName="min-w-[900px]"
-              footer={filteredKeys.length > 0 ? (
-                <PaginationFooter
-                  page={page}
-                  totalPages={totalPages}
-                  totalCount={filteredKeys.length}
-                  pageSize={TABLE_PAGE_SIZE}
-                  isLoading={purgeConfigs === undefined}
-                  onPageChange={setPage}
-                />
-              ) : undefined}
-            >
-                <thead>
-                  <TableHeaderRow>
-                    <TableHeaderCell>{t('purges.table.category')}</TableHeaderCell>
-                    <TableHeaderCell>{t('purges.table.description')}</TableHeaderCell>
-                    <TableHeaderCell className="w-[190px]">{t('purges.table.retention')}</TableHeaderCell>
-                    <TableHeaderCell className="w-[190px]">{t('purges.table.interval')}</TableHeaderCell>
-                    <TableHeaderCell className="w-[120px]">{t('purges.table.status')}</TableHeaderCell>
-                    <TableHeaderCell className="w-[110px]" align="right">{t('purges.table.actions')}</TableHeaderCell>
-                  </TableHeaderRow>
-                </thead>
-                <tbody>
-                    {purgeConfigs === undefined ? (
-                      <TableLoadingRow colSpan={6} />
-                    ) : filteredKeys.length === 0 ? (
-                      <TableEmptyRow
-                        colSpan={6}
-                        icon={<Database className="h-8 w-8 text-muted/30" />}
-                        label={t('purges.table.noMatches')}
-                      />
-                    ) : (
-                      pageKeys.map((key) => {
-                        const configs = (purgeConfigs || {}) as Partial<PurgeConfigMap>;
-                        const conf = configs[key] || {};
-                        const isEnabled = conf.enabled;
-                        const runningLog = runningPurges?.find(
-                          (log) => log.pipelineKey === key
-                        );
-
-                        return (
-                          <tr key={key} className="group border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]">
-                            <td className="px-4 py-3">
-                              <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${key}.title`)}</span>
-                            </td>
-                            <td className="px-4 py-3 max-w-md">
-                              <span className="text-[12px] text-secondary leading-snug inline-block">{t(`purges.categories.${key}.description`)}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-[13px] font-mono font-medium text-foreground">{t('purges.modals.config.days', { days: conf.retentionDays || 0 })}</span>
-                              {previewCounts?.[key] && (
-                                <span className="block text-[11px] text-muted mt-0.5">
-                                  {previewCounts[key].count === 0
-                                    ? t('purges.table.previewNone')
-                                    : previewCounts[key].capped
-                                      ? t('purges.table.previewCapped', { count: previewCounts[key].count.toLocaleString() })
-                                      : t('purges.table.previewNow', { count: previewCounts[key].count.toLocaleString() })}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-[13px] font-mono font-medium text-foreground">
-                                {conf.interval === "Weekly" ? (
-                                  `${t('purges.intervals.Weekly')} (${t(`purges.daysOfWeek.${conf.dayOfWeek !== undefined ? conf.dayOfWeek : 0}`)})`
-                                ) : conf.interval === "Monthly" ? (
-                                  `${t('purges.intervals.Monthly')} (${getOrdinalSuffix(conf.dayOfMonth || 1)})`
-                                ) : (
-                                  t(`purges.intervals.${conf.interval || "Daily"}`)
-                                )}
-                              </span>
-                              {conf.interval !== "Hourly" && (
-                                <span className="text-[11px] text-muted ml-2">@{String(conf.hourUtc || 0).padStart(2, '0')}:00 UTC</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium tracking-wide uppercase ${isEnabled ? 'bg-brand/10 text-brand' : 'bg-foreground/5 text-muted'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-brand' : 'bg-muted'}`} />
-                                {isEnabled ? t('purges.modals.config.enabled') : t('purges.modals.config.disabled')}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {canWrite && <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="icon"
-                                  onClick={() => {
-                                    setConfigModalPipeline(key);
-                                    setConfigModalData({ ...conf });
-                                    setIsConfigModalOpen(true);
-                                  }}
-                                  className="rounded-[6px] p-1.5"
-                                  title={t('purges.table.configure')}
-                                >
-                                  <Settings2 className="w-4 h-4" />
-                                </Button>
-                                {runningLog ? (
-                                  <Button
-                                    variant="icon"
-                                    onClick={() => {
-                                      setCancelModalHistoryId(runningLog._id);
-                                      setCancelModalPipeline(key);
-                                      setIsCancelModalOpen(true);
-                                    }}
-                                    className="rounded-[6px] p-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 animate-pulse"
-                                    title={t('purges.table.stop')}
-                                  >
-                                    <Square className="w-4 h-4 fill-destructive" />
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="icon"
-                                    onClick={() => {
-                                      setConfirmModalPipeline(key);
-                                      setIsConfirmModalOpen(true);
-                                    }}
-                                    disabled={isManualRunning}
-                                    className="rounded-[6px] p-1.5 hover:text-brand hover:bg-brand/5 disabled:opacity-50"
-                                    title={t('purges.table.runNow')}
-                                  >
-                                    <Play className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                </tbody>
-            </TableShell>
+            />
 
           </section>
 

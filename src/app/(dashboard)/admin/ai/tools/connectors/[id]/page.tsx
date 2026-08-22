@@ -8,11 +8,12 @@ import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
-import { ArrowLeft, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
+import { Cable, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/atoms/Button";
 import { formatDateTime } from "@/src/lib/dates";
 import { SaveAction } from "@/src/ui/components/screens/SaveControls";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Field } from "@/src/ui/components/screens/Field";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
@@ -214,19 +215,12 @@ export default function ConnectorSetupPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12 animate-in fade-in slide-in-from-bottom-2">
-      <header className="flex flex-col gap-2">
-        <Link
-          href="/admin/ai/tools"
-          className="flex w-max items-center gap-2 text-[12px] text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {t("back")}
-        </Link>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">{name}</h1>
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">{description}</p>
-          </div>
+      <DetailHeader
+        back={{ label: t("back"), href: "/admin/ai/tools" }}
+        icon={<Cable className="w-6 h-6 text-brand" />}
+        title={name}
+        description={description}
+        action={
           <SaveAction
             isSaving={isSaving}
             label={t("save")}
@@ -235,8 +229,8 @@ export default function ConnectorSetupPage() {
             showSuccess={saveSuccess}
             onClick={handleSave}
           />
-        </div>
-      </header>
+        }
+      />
 
       <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">

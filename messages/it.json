@@ -5552,9 +5552,24 @@
         "it": "Italiano (IT)",
         "label": "Lingua dell'Area di Lavoro"
       }
+    },
+    "assistantNote": {
+      "tab": "Cosa sa di me l'AI",
+      "title": "Cosa sa di te l'assistente",
+      "description": "Brevi note che l'assistente usa per risponderti a modo tuo. Le impara dalle tue conversazioni; nessun altro può vederle — nemmeno gli amministratori.",
+      "empty": "Ancora niente. Mentre chatti, l'assistente annoterà come preferisci le risposte — oppure aggiungi tu una nota qui sotto.",
+      "sourceLearned": "Imparata dalle tue conversazioni",
+      "sourceManual": "Aggiunta da te",
+      "delete": "Rimuovi questa nota",
+      "addPlaceholder": "Di' qualcosa di te all'assistente, es. \"Risposte brevi\"",
+      "addButton": "Aggiungi",
+      "addFailed": "Impossibile salvare la nota. Forse il blocco è pieno o la formulazione è stata rifiutata.",
+      "privacyHint": "Le note influenzano solo le tue risposte. Eliminarne una la rimuove subito."
     }
   },
   "companyUsers": {
+    "title": "Elenco dello Spazio di Lavoro",
+    "description": "Le persone che possono accedere allo spazio di lavoro di questa azienda.",
     "roles": {
       "superAdmin": "Super Admin",
       "admin": "Amministratore",
@@ -6066,7 +6081,8 @@
       "PRODUCT": "Prodotto",
       "POLICY": "Regola",
       "ISSUE": "Questione ricorrente",
-      "SOURCE": "Documento fonte"
+      "SOURCE": "Documento fonte",
+      "GOAL": "Obiettivo"
     },
     "map": {
       "open": "Vista mappa",
@@ -6213,6 +6229,22 @@
       "action": "Svuota il wiki",
       "clearing": "Svuotamento...",
       "failed": "Non è stato possibile svuotare del tutto il wiki. Premi di nuovo per finire."
+    },
+    "goal": {
+      "button": "Nuovo obiettivo",
+      "title": "Nuovo obiettivo",
+      "hint": "Un obiettivo è ciò a cui punta questo spazio di lavoro. L'AI legge gli obiettivi quando risponde e quando scrive i report, e chiederà se un obiettivo sembra superato.",
+      "namePlaceholder": "Dai un nome all'obiettivo in poche parole",
+      "bodyPlaceholder": "Qual è il traguardo, e come saprai che è stato raggiunto?",
+      "action": "Aggiungi obiettivo",
+      "saving": "Aggiunta in corso…",
+      "failed": "Impossibile salvare l'obiettivo. Controlla che il nome sia nuovo e riprova."
+    },
+    "kindFilter": {
+      "label": "Tipo",
+      "all": "Tutti i tipi",
+      "search": "Filtra i tipi",
+      "noMatches": "Nessun tipo corrispondente"
     }
   },
   "calls": {

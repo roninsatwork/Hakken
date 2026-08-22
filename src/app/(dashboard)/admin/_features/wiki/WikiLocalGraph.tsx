@@ -12,6 +12,7 @@ const KIND_CLASS: Record<string, string> = {
   POLICY: "text-warning",
   ISSUE: "text-secondary",
   SOURCE: "text-muted",
+  GOAL: "text-success",
 };
 
 /**

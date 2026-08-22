@@ -18,6 +18,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/atoms/Button";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;
@@ -149,17 +150,11 @@ export default function AgentSkillsPage() {
 
   return (
     <div className="flex flex-col gap-5 pb-12">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <BrainCircuit className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            {t("description")}
-          </p>
-        </div>
+      <PageHeader
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        action={
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/admin/ai/skills"
@@ -182,9 +177,8 @@ export default function AgentSkillsPage() {
               {t("addFromCenter")}
             </Button>
           </div>
-        </div>
-
-      </header>
+        }
+      />
 
 
       <DataTable

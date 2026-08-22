@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, BookOpen, Download, Network, Pin, Trash2, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
 import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { TableFilterSelect } from "@/src/ui/components/screens/TableControls";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
@@ -21,6 +23,9 @@ import { WikiAskBox } from "./WikiAskBox";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 const PAGE_SIZE = 15;
+
+const WIKI_KINDS = ["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE", "GOAL"] as const;
+type WikiKindFilter = (typeof WIKI_KINDS)[number];
 
 /**
  * The wiki's front room, mounted at two heights (Anthony's rulings,
@@ -42,7 +47,11 @@ export function WikiPagesListScreen({
   const { platformName } = useSystemSettings();
   const [search, setSearch] = useState("");
   const [sortByUse, setSortByUse] = useState(false);
-  const searchArg = search.trim() ? { search: search.trim() } : {};
+  const [kindFilter, setKindFilter] = useState<WikiKindFilter | null>(null);
+  const searchArg = {
+    ...(search.trim() ? { search: search.trim() } : {}),
+    ...(kindFilter ? { kind: kindFilter } : {}),
+  };
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted. Searching and paging both
   // happen in the query — this list is the busiest table in the product and
@@ -119,6 +128,33 @@ export function WikiPagesListScreen({
   const [isClearingWiki, setIsClearingWiki] = useState(false);
   const [clearWikiError, setClearWikiError] = useState("");
 
+  // The goals door (personal-layer-and-goals-plan.md, part 1): goals are
+  // the one page kind people write from scratch — the Distiller never does.
+  const createGoalCompany = useMutation(api.wikiPages.createGoalPageForCompany);
+  const createGoalGlobal = useMutation(api.wikiPages.createGoalPageForGlobal);
+  const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalContent, setGoalContent] = useState("");
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
+  const [goalError, setGoalError] = useState("");
+
+  const handleSaveGoal = async () => {
+    if (isSavingGoal || !goalTitle.trim() || !goalContent.trim()) return;
+    setIsSavingGoal(true);
+    setGoalError("");
+    try {
+      if (companyId) await createGoalCompany({ companyId, title: goalTitle, content: goalContent });
+      else await createGoalGlobal({ title: goalTitle, content: goalContent });
+      setIsGoalFormOpen(false);
+      setGoalTitle("");
+      setGoalContent("");
+    } catch {
+      setGoalError(t("goal.failed"));
+    } finally {
+      setIsSavingGoal(false);
+    }
+  };
+
   const handleConfirmPageDelete = async () => {
     if (!pageToDelete || isDeletingPage) return;
     setIsDeletingPage(true);
@@ -179,6 +215,7 @@ export function WikiPagesListScreen({
         POLICY: "policies",
         ISSUE: "issues",
         SOURCE: "sources",
+        GOAL: "goals",
       };
       const files: Record<string, Uint8Array> = {};
       for (const page of pages) {
@@ -438,6 +475,27 @@ export function WikiPagesListScreen({
         }}
         filters={
           <>
+            <TableFilterSelect
+              label={t("kindFilter.label")}
+              options={WIKI_KINDS.map((kind) => t(`kinds.${kind}`))}
+              value={kindFilter ? t(`kinds.${kindFilter}`) : null}
+              onChange={(next) => {
+                setKindFilter(
+                  next ? WIKI_KINDS.find((kind) => t(`kinds.${kind}`) === next) ?? null : null
+                );
+                rows.goToPage(1);
+              }}
+              allLabel={t("kindFilter.all")}
+              filterPlaceholder={t("kindFilter.search")}
+              noMatchesLabel={t("kindFilter.noMatches")}
+            />
+            <WriteButton
+              onClick={() => setIsGoalFormOpen(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap"
+            >
+              <Target className="w-4 h-4" />
+              {t("goal.button")}
+            </WriteButton>
             {/* Raw: card-toned chip with a brand hover, drawn to match the Link beside it — no variant pairs with a Link. */}
             <button
               type="button"
@@ -620,6 +678,62 @@ export function WikiPagesListScreen({
               className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-50"
             >
               {t("delete.action")}
+            </WriteButton>
+          </div>
+        </div>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={isGoalFormOpen}
+        onClose={() => {
+          if (!isSavingGoal) {
+            setIsGoalFormOpen(false);
+            setGoalError("");
+          }
+        }}
+        title={t("goal.title")}
+        size="sm"
+      >
+        <div className="flex flex-col gap-4 w-full pt-4">
+          <p className="text-[13px] text-secondary">{t("goal.hint")}</p>
+          <Field
+            label={t("goal.namePlaceholder")}
+            labelHidden
+            value={goalTitle}
+            onChange={(event) => setGoalTitle(event.target.value)}
+            placeholder={t("goal.namePlaceholder")}
+            disabled={isSavingGoal}
+          />
+          <TextAreaField
+            label={t("goal.bodyPlaceholder")}
+            labelHidden
+            value={goalContent}
+            onChange={(event) => setGoalContent(event.target.value)}
+            placeholder={t("goal.bodyPlaceholder")}
+            rows={4}
+            disabled={isSavingGoal}
+            className="min-h-[120px] resize-y"
+          />
+          {goalError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">{goalError}</span>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setIsGoalFormOpen(false)}
+              disabled={isSavingGoal}
+            >
+              {t("delete.cancel")}
+            </Button>
+            <WriteButton
+              onClick={() => void handleSaveGoal()}
+              disabled={isSavingGoal || !goalTitle.trim() || !goalContent.trim()}
+              className="px-4 py-2 rounded-md bg-brand text-white transition-colors text-[13px] font-medium hover:bg-brand/90 disabled:opacity-50"
+            >
+              {isSavingGoal ? t("goal.saving") : t("goal.action")}
             </WriteButton>
           </div>
         </div>

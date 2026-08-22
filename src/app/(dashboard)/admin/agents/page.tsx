@@ -97,11 +97,12 @@ export default function AgentsPage() {
   return (
     <div className="flex flex-col gap-5 h-full">
       <PageHeader
+        divider
         icon={<Workflow className="w-6 h-6 text-brand" />}
         title={t('title')}
         description={t('description')}
         action={
-          <PagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+          <PagePrimaryAction variant="brand" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
             {t('new')}
           </PagePrimaryAction>
         }

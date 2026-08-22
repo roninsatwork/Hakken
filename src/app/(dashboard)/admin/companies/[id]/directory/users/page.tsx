@@ -30,6 +30,7 @@ import { formatDate } from "@/src/lib/dates";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 type CompanyUser = Doc<"users">;
 type PendingInvite = Doc<"invitations">;
@@ -197,16 +198,12 @@ export default function CompanyUsersPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Users className="w-6 h-6 text-brand" />
-              Workspace Directory
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">Manage users strictly assigned to this tenant isolation.</p>
-          </div>
-
+      <header>
+      <PageHeader
+        icon={<Users className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        action={
           <div className="flex items-center gap-2">
             {isSuperAdmin && (
               <Button
@@ -226,8 +223,8 @@ export default function CompanyUsersPage() {
               <span>{t("inviteUser")}</span>
             </Link>
           </div>
-        </div>
-
+        }
+      />
       </header>
 
       <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t("searchPlaceholder")} />

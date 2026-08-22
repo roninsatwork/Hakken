@@ -205,7 +205,10 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
       }
     >
       {/* Header Block */}
-      <header className="flex items-start justify-between w-full mb-6 shrink-0">
+      {/* The AI workspace's header anatomy is title, rule, tab strip; the
+          company variant sits inside the company's own tabs, where headers
+          carry no rule. */}
+      <header className={`flex items-start justify-between w-full mb-6 shrink-0 ${scope.kind === "global" ? "border-b border-border-dim pb-6" : ""}`}>
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <HeaderIcon className="w-6 h-6 text-brand" />

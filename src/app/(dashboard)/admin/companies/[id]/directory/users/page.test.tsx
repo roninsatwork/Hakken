@@ -61,6 +61,7 @@ vi.mock("next-intl", () => ({
       detachConfirm: "Are you sure you want to detach...",
       detach: "Detach",
       detaching: "Detaching...",
+      title: "Workspace Directory",
       searchPlaceholder: "Search users by name or email...",
       "table.empty": "No users found matching your query.",
       "table.loadMore": "Load more users",

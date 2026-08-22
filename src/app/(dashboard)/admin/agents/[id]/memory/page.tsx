@@ -43,6 +43,7 @@ import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/atoms/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/atoms/Button";
 
 type AgentMemory = Doc<"agentMemories">;
@@ -480,17 +481,11 @@ export default function AgentMemoryPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              <Brain className="h-6 w-6 text-brand" />
-              {t("title")}
-            </h1>
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              {t("description", { max: MAX_ALWAYS_MEMORIES })}
-            </p>
-          </div>
+      <PageHeader
+        icon={<Brain className="h-6 w-6 text-brand" />}
+        title={t("title")}
+        description={t("description", { max: MAX_ALWAYS_MEMORIES })}
+        action={
           <Button
             variant="brand"
             onClick={() => openEditor(null)}
@@ -499,9 +494,8 @@ export default function AgentMemoryPage() {
             <Plus className="h-4 w-4" />
             {t("addMemory")}
           </Button>
-        </div>
-
-      </header>
+        }
+      />
 
       <DataTable
         rows={isLoading ? undefined : pageMemories}

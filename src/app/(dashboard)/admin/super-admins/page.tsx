@@ -27,6 +27,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
 
 type SuperAdminFormData = {
@@ -273,23 +274,21 @@ export default function ManageSuperAdminsPage() {
   return (
     <div className="flex flex-col gap-5">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Users className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
-        </div>
-        
-        <Link 
-          href="/admin/super-admins/invite"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t("inviteUser")}</span>
-        </Link>
-      </div>
+      <PageHeader
+        divider
+        icon={<Users className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+        action={
+          <Link
+            href="/admin/super-admins/invite"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t("inviteUser")}</span>
+          </Link>
+        }
+      />
 
       <DataTable<DirectoryRow>
         rows={isLoadingFirstPage ? undefined : paged.pageRows}

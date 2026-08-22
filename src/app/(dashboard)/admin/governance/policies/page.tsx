@@ -68,6 +68,7 @@ export default function GovernancePoliciesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
+        divider
         icon={<ScrollText className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}

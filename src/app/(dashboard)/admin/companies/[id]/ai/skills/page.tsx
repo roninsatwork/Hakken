@@ -21,6 +21,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
 
 type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: boolean } };
@@ -136,17 +137,11 @@ export default function CompanyAiSkillsPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              <BrainCircuit className="h-6 w-6 text-brand" />
-              {t("title")}
-            </h1>
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              {t("subtitle")}
-            </p>
-          </div>
+      <PageHeader
+        icon={<BrainCircuit className="h-6 w-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+        action={
           <div className="flex flex-wrap gap-2">
             <Button
               variant="brand"
@@ -163,9 +158,8 @@ export default function CompanyAiSkillsPage() {
               {t("addFromCenter")}
             </Button>
           </div>
-        </div>
-
-      </header>
+        }
+      />
 
       {/* Search, then the same table and pager the Skill Center uses. */}
       <div className="flex">

@@ -133,6 +133,26 @@ const RULES = {
       "no variant may stay raw, but only inside a file's frozen count: the counts may\n" +
       "fall, never rise.",
   },
+  headings: {
+    part: "a page heading",
+    headline: "These draw more page headings by hand than their frozen count allows:",
+    fix:
+      "Use PageHeader from src/ui/components/screens/PageHeader.tsx for a page that opens\n" +
+      "on its own (add `divider` when a tab strip follows it), DetailHeader from the same\n" +
+      "file for a page that opens on top of a record (it draws the back row, the title,\n" +
+      "the pills and the rule), or DetailLayout (screens/DetailLayout.tsx) for a section\n" +
+      "whose tabs live in a layout. All three own the same title recipe, so a heading\n" +
+      "written by hand is a copy that will drift from it.",
+  },
+  headerRule: {
+    part: "the header's rule",
+    headline: "These draw the header's underline by hand:",
+    fix:
+      "`border-b border-border-dim pb-6` is the header components' own line. Pass\n" +
+      "`divider` to PageHeader, or use DetailHeader/DetailLayout, which always draw it.\n" +
+      "Drawing it by hand is how the line went missing from three AI screens and the\n" +
+      "whole company section on 2026-08-22: each copy is one more place to forget it.",
+  },
 };
 
 /**
@@ -179,6 +199,12 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     // with eleven raw buttons cannot be asked to reach zero in one sitting —
     // it is only asked never to reach twelve.
     buttons: new Map(Object.entries(allowlist.buttons ?? {})),
+    // Counted per file for the same reason as buttons: a screen may carry a
+    // second heading inside its body that has nothing to do with the page
+    // title, so the question is never "any heading?" but "one more than it
+    // had?".
+    headings: new Map(Object.entries(allowlist.headings ?? {})),
+    headerRule: new Set(allowlist.headerRule ?? []),
   };
 }
 
@@ -230,6 +256,20 @@ function readOpeningTag(text, start) {
 export function countRawButtons(text) {
   return (text.match(/<button\b/g) ?? []).length;
 }
+
+/** How many headings a file draws by hand. The kit's components render their own. */
+export function countHandWrittenHeadings(text) {
+  return (text.match(/<h1\b/g) ?? []).length;
+}
+
+/**
+ * The header's underline, exactly as the kit draws it.
+ *
+ * Matched as the literal recipe rather than "any bottom border": a card, a
+ * table row and a modal footer all legitimately carry a border-b, and failing
+ * those would be a build error with no correct fix.
+ */
+const HEADER_RULE_CLASSES = /border-b border-border-dim pb-6/g;
 
 /** Every file the buttons rule reads, already relative to the repo root. */
 function listButtonFiles() {
@@ -289,6 +329,11 @@ function findInFile(relative, text) {
     found.push({ rule: "inputs", file: relative, line: lineOf(match.index) });
   }
 
+  const headerRules = new RegExp(HEADER_RULE_CLASSES.source, "g");
+  while ((match = headerRules.exec(text))) {
+    found.push({ rule: "headerRule", file: relative, line: lineOf(match.index) });
+  }
+
   // One hit per file rather than per part: the fault is the assembly, and
   // listing nine lines of it would read as nine problems rather than one.
   if (!/<DataTable\b/.test(text)) {
@@ -339,6 +384,20 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
     }
   }
 
+  // Headings count the same way, over the screens directory alone: the kit's
+  // own components draw the heading every screen is meant to use, so a heading
+  // in src/ui is the part rather than a copy of it.
+  for (const file of listFiles(path.join(rootDir, SCAN_DIR))) {
+    const relative = path.relative(rootDir, file);
+    const count = countHandWrittenHeadings(fs.readFileSync(file, "utf8"));
+    if (count === 0) continue;
+
+    const ceiling = frozen.headings.get(relative) ?? 0;
+    if (count > ceiling) {
+      offenders.push({ rule: "headings", file: relative, count, frozen: ceiling });
+    }
+  }
+
   return offenders;
 }
 
@@ -357,7 +416,18 @@ export function findStaleFreezes(frozen = loadFrozen()) {
     }
   }
 
-  for (const rule of ["tables", "inputs", "assembled"]) {
+  for (const relative of frozen.headings.keys()) {
+    const full = path.join(rootDir, relative);
+    if (!fs.existsSync(full)) {
+      stale.push({ rule: "headings", file: relative, reason: "no longer exists" });
+      continue;
+    }
+    if (countHandWrittenHeadings(fs.readFileSync(full, "utf8")) === 0) {
+      stale.push({ rule: "headings", file: relative, reason: "no longer draws a heading by hand" });
+    }
+  }
+
+  for (const rule of ["tables", "inputs", "assembled", "headerRule"]) {
     for (const relative of frozen[rule]) {
       const full = path.join(rootDir, relative);
       if (!fs.existsSync(full)) {
@@ -382,10 +452,13 @@ function main() {
 
   if (offenders.length === 0 && stale.length === 0) {
     const buttonCount = [...frozen.buttons.values()].reduce((sum, count) => sum + count, 0);
+    const headingCount = [...frozen.headings.values()].reduce((sum, count) => sum + count, 0);
     console.log(
       `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields, ` +
-        `${frozen.assembled.size} hand-assembled tables and ${buttonCount} raw buttons ` +
-        `(across ${frozen.buttons.size} files) frozen, no new ones.`
+        `${frozen.assembled.size} hand-assembled tables, ${buttonCount} raw buttons ` +
+        `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +
+        `(across ${frozen.headings.size} files) and ${frozen.headerRule.size} hand-drawn ` +
+        `header rules frozen, no new ones.`
     );
     return;
   }
@@ -397,7 +470,9 @@ function main() {
     console.error(`\n${RULES[rule].headline}\n`);
     for (const offender of forRule) {
       if (offender.count !== undefined) {
-        console.error(`  ${offender.file} — ${offender.count} raw <button>s, frozen at ${offender.frozen}`);
+        console.error(
+          `  ${offender.file} — ${offender.count} × ${RULES[rule].part}, frozen at ${offender.frozen}`
+        );
       } else {
         console.error(`  ${offender.file}:${offender.line}`);
       }

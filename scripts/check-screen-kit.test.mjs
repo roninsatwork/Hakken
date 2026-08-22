@@ -313,3 +313,83 @@ describe("the frozen lists", () => {
     ]);
   });
 });
+
+/**
+ * The two rules added on 2026-08-22, after the header work.
+ *
+ * They exist because of a specific failure: the AI section's established
+ * anatomy is title, rule, tab strip, and three screens drifted off it while
+ * the whole company section never had the rule at all. Nothing in the build
+ * noticed, because a screen missing a line still looks like a screen. The
+ * headings rule stops the next hand-drawn title; the header-rule rule stops
+ * the next hand-drawn line.
+ */
+describe("the headings rule", () => {
+  const oneHeading = 'export const Probe = () => <h1 className="text-2xl">Probe</h1>;\n';
+
+  it("catches a screen that draws its own page heading", () => {
+    write(oneHeading);
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "headings",
+      file: probeRelative,
+      count: 1,
+      frozen: 0,
+    });
+  });
+
+  it("lets a screen keep exactly the headings it had", () => {
+    write(oneHeading);
+
+    const offenders = findHandWrittenParts(
+      loadFrozen({ tables: [], inputs: [], assembled: [], headings: { [probeRelative]: 1 } })
+    ).filter((offender) => offender.rule === "headings" && offender.file === probeRelative);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("leaves a screen that takes its heading from the kit alone", () => {
+    write(
+      'import { PageHeader } from "@/src/ui/components/screens/PageHeader";\n' +
+        "export const Probe = () => <PageHeader icon={null} title=\"Probe\" divider />;\n"
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "headings")
+    ).toEqual([]);
+  });
+
+  it("reports a frozen screen that has since moved onto the kit", () => {
+    write('export const Probe = () => <PageHeader icon={null} title="Probe" />;\n');
+
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], headings: { [probeRelative]: 1 } })
+    );
+
+    expect(stale).toContainEqual({
+      rule: "headings",
+      file: probeRelative,
+      reason: "no longer draws a heading by hand",
+    });
+  });
+});
+
+describe("the header rule rule", () => {
+  it("catches a screen drawing the header's underline by hand", () => {
+    write(
+      'export const Probe = () => <div className="border-b border-border-dim pb-6" />;\n'
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "headerRule")
+    ).toContainEqual({ rule: "headerRule", file: probeRelative, line: 1 });
+  });
+
+  it("leaves an ordinary bottom border alone — a card is not a header", () => {
+    write('export const Probe = () => <div className="border-b border-border-dim/50 p-4" />;\n');
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "headerRule")
+    ).toEqual([]);
+  });
+});

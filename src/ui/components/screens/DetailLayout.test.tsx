@@ -39,4 +39,29 @@ describe("DetailLayout", () => {
     expect(screen.getByRole("link", { name: "Settings" })).toHaveClass("border-brand");
     expect(screen.getByText("Detail body")).toBeInTheDocument();
   });
+
+  it("rules off the header above the tab strip", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/companies/company-1");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
+
+    render(
+      <DetailLayout
+        title="Acme Workspace"
+        tabs={tabs}
+        rootHref="/admin/companies/company-1"
+      >
+        <section>Detail body</section>
+      </DetailLayout>
+    );
+
+    // Every tabbed section wears title, rule, tabs (2026-08-22). The whole
+    // company section lost its line by this element quietly dropping the
+    // classes, and nothing else in the suite would notice.
+    const header = screen.getByRole("heading", { name: "Acme Workspace" }).closest("header");
+
+    expect(header).toHaveClass("border-b", "border-border-dim", "pb-6");
+    expect(
+      header?.compareDocumentPosition(screen.getByRole("link", { name: "Dashboard" }))
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });

@@ -153,11 +153,12 @@ export default function CompaniesPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
+        divider
         icon={<Building2 className="w-6 h-6 text-brand" />}
         title={t('title')}
         description={t('subtitle')}
         action={
-          <PagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+          <PagePrimaryAction variant="brand" icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
             {t('newCompany')}
           </PagePrimaryAction>
         }

@@ -234,7 +234,10 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      {/* The AI workspace's header anatomy is title, rule, tab strip; the
+          company variant sits inside the company's own tabs, where headers
+          carry no rule. */}
+      <header className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4 ${companyId ? "" : "border-b border-border-dim pb-6"}`}>
         {companyId ? (
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">

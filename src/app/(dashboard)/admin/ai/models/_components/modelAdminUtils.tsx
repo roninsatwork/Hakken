@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 export type ModelStatusFilter = "active" | "inactive";
 export type SyncProviderKey = "google" | "openai" | "anthropic" | "openrouter";
@@ -170,18 +171,7 @@ export function ModelAdminHeader({
   title: string;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border-dim pb-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          {icon}
-          {title}
-        </h1>
-        <p className="text-[13px] text-secondary mt-1 tracking-wide">
-          {subtitle}
-        </p>
-      </div>
-      {children}
-    </div>
+    <PageHeader icon={icon} title={title} description={subtitle} action={children} divider />
   );
 }
 

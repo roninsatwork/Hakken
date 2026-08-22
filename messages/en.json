@@ -5552,9 +5552,24 @@
         "it": "Italiano (IT)",
         "label": "Workspace Language"
       }
+    },
+    "assistantNote": {
+      "tab": "What the AI knows about me",
+      "title": "What the assistant knows about you",
+      "description": "Short notes the assistant uses to answer you your way. It learns them from your own conversations; nobody else can see them — not even admins.",
+      "empty": "Nothing yet. As you chat, the assistant will note how you like your answers — or add a note yourself below.",
+      "sourceLearned": "Learned from your conversations",
+      "sourceManual": "Added by you",
+      "delete": "Remove this note",
+      "addPlaceholder": "Tell the assistant something about you, e.g. \"Keep answers short\"",
+      "addButton": "Add",
+      "addFailed": "The note could not be saved. It may be full, or the wording was refused.",
+      "privacyHint": "Notes shape your answers only. Deleting one removes it immediately."
     }
   },
   "companyUsers": {
+    "title": "Workspace Directory",
+    "description": "The people who can sign in to this company's workspace.",
     "roles": {
       "superAdmin": "Super Admin",
       "admin": "Administrator",
@@ -6066,7 +6081,8 @@
       "PRODUCT": "Product",
       "POLICY": "Policy",
       "ISSUE": "Recurring issue",
-      "SOURCE": "Source document"
+      "SOURCE": "Source document",
+      "GOAL": "Goal"
     },
     "map": {
       "open": "Map view",
@@ -6213,6 +6229,22 @@
       "action": "Clear the wiki",
       "clearing": "Clearing...",
       "failed": "The wiki could not be fully cleared. Press it again to finish."
+    },
+    "goal": {
+      "button": "New goal",
+      "title": "New goal",
+      "hint": "A goal is what this workspace is aiming at. The AI reads goals when it answers and when it writes reports, and it will ask if a goal looks out of date.",
+      "namePlaceholder": "Name the goal in a few words",
+      "bodyPlaceholder": "What is the aim, and how will you know it is met?",
+      "action": "Add goal",
+      "saving": "Adding…",
+      "failed": "The goal could not be saved. Check the name is new and try again."
+    },
+    "kindFilter": {
+      "label": "Kind",
+      "all": "All kinds",
+      "search": "Filter kinds",
+      "noMatches": "No matching kind"
     }
   },
   "calls": {

@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -64,25 +65,22 @@ export default function UserProfilePage() {
     <div className="flex flex-col gap-5 pb-8 relative z-10">
 
       {/* Header Section */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <User className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Link
-            href="/admin/users"
-            className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            {t('backToDirectory')}
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        icon={<User className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('description')}
+        action={
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin/users"
+              className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              {t('backToDirectory')}
+            </Link>
+          </div>
+        }
+      />
 
       {/* Profile Info Grid */}
       <div className="w-full mt-6">

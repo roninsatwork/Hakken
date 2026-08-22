@@ -14,6 +14,7 @@ import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRu
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
 
 export default function CompanyAiRulesPage() {
@@ -62,26 +63,20 @@ export default function CompanyAiRulesPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
-      {/* Header Area */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <BrainCircuit className="w-6 h-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            {t("subtitle")}
-          </p>
-        </div>
-
-        <Link
-          href={`/admin/companies/${companyId}/ai/rules/new`}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t("createRule")}</span>
-        </Link>
-      </header>
+      <PageHeader
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+        action={
+          <Link
+            href={`/admin/companies/${companyId}/ai/rules/new`}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t("createRule")}</span>
+          </Link>
+        }
+      />
 
       <SearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
       

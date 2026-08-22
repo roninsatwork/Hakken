@@ -258,6 +258,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
+        divider
         icon={<LayoutDashboard className="h-6 w-6 text-brand" />}
         title={t("header.title")}
         description={t("header.description")}

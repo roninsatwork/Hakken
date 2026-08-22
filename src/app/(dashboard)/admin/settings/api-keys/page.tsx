@@ -177,6 +177,7 @@ export default function ApiKeysPage() {
           the key and what it is allowed to do — so the screen that unlocks it
           was telling the reader it did not exist yet. */}
       <PageHeader
+        divider
         icon={<KeyRound className="h-6 w-6 text-brand" />}
         title={t("headerTitle")}
         description={t("headerDescription")}

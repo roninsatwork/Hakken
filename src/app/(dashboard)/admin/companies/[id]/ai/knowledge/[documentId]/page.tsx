@@ -20,6 +20,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { toneForStatus } from "@/src/ui/atoms/statusTone";
 
@@ -88,39 +89,34 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
 
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
-      <header className="flex flex-col gap-3">
-        <Link href={backHref} className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors w-max">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t("back")}</span>
-        </Link>
-        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <StatusPill
-                // PROCESSING is not yet in the shared status map; keep its amber semantics.
-                tone={document.status === "processing" ? "warning" : toneForStatus(document.status)}
-                className="rounded-md px-2 py-1 font-normal uppercase font-mono tracking-widest"
-              >
-                {document.status}
-              </StatusPill>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
-                {document.format}
-              </span>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
-                {t("sampledChunks", { count: inspection.chunkCount })}
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <FileText className="w-6 h-6 text-brand shrink-0" />
-              <span className="truncate">{document.title}</span>
-            </h1>
+      <DetailHeader
+        back={{ label: t("back"), href: backHref }}
+        icon={<FileText className="w-6 h-6 text-brand shrink-0" />}
+        title={<span className="truncate">{document.title}</span>}
+        pills={
+          <>
+            <StatusPill
+              // PROCESSING is not yet in the shared status map; keep its amber semantics.
+              tone={document.status === "processing" ? "warning" : toneForStatus(document.status)}
+              className="rounded-md px-2 py-1 font-normal uppercase font-mono tracking-widest"
+            >
+              {document.status}
+            </StatusPill>
+            <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
+              {document.format}
+            </span>
+            <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
+              {t("sampledChunks", { count: inspection.chunkCount })}
+            </span>
             {document.sourceUrl && (
-              <a href={document.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-[13px] text-brand hover:underline break-all">
+              <a href={document.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-[13px] text-brand hover:underline break-all">
                 <span>{document.sourceUrl}</span>
                 <ExternalLink className="w-3.5 h-3.5 shrink-0" />
               </a>
             )}
-          </div>
+          </>
+        }
+        action={
           <WriteButton
             type="button"
             onClick={handleRetry}
@@ -130,8 +126,8 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
             {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
             {t("retryIngestion")}
           </WriteButton>
-        </div>
-      </header>
+        }
+      />
 
       {retryError && (
         <div className="rounded-[8px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">

@@ -23,6 +23,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
   formatUtcPreview,
   getPrimaryScheduleTime,
@@ -236,25 +237,23 @@ export default function SchedulesPage() {
 
   return (
     <div className="flex flex-col gap-5 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Timer className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-          <WriteButton
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('newSchedule')}</span>
-          </WriteButton>
-        </div>
-      </div>
+      <PageHeader
+        divider
+        icon={<Timer className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('description')}
+        action={
+          <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            <WriteButton
+              onClick={handleOpenAdd}
+              className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('newSchedule')}</span>
+            </WriteButton>
+          </div>
+        }
+      />
 
       <DataTable<ScheduleRow>
         rows={paginatedSchedules}

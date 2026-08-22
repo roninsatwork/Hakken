@@ -5,11 +5,11 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import { Wrench, Loader2, ArrowLeft, Save } from "lucide-react";
-import Link from "next/link";
+import { Wrench, Loader2, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 
 type ToolRole = "ADMIN" | "SUPER_ADMIN";
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
@@ -111,24 +111,12 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
-      <header className="flex flex-col gap-1">
-        <Link 
-          href="/admin/ai/tools"
-          className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t("back")}</span>
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          <Wrench className="w-6 h-6 text-brand" />
-          {t("title")}
-        </h1>
-        <p className="text-[13px] text-secondary tracking-wide">
-          {t("subtitle")}
-        </p>
-      </header>
-
-      <div className="w-full h-[1px] bg-border-dim my-2" />
+      <DetailHeader
+        back={{ label: t("back"), href: "/admin/ai/tools" }}
+        icon={<Wrench className="w-6 h-6 text-brand" />}
+        title={t("title")}
+        description={t("subtitle")}
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-10 flex-1 relative max-w-4xl">
         

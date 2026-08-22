@@ -32,6 +32,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/atoms/Button";
 
 type AgentEvalFixture = Doc<"agentEvalFixtures">;
@@ -241,15 +242,11 @@ export default function AgentEvalsPage() {
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <header className="flex flex-col gap-4">
-        <div>
-          <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-            <ClipboardCheck className="h-6 w-6 text-brand" />
-            {t("title")}
-          </h1>
-          <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-            {t("description")}
-          </p>
-        </div>
+        <PageHeader
+          icon={<ClipboardCheck className="h-6 w-6 text-brand" />}
+          title={t("title")}
+          description={t("description")}
+        />
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <p className="text-[15px] font-semibold text-foreground">

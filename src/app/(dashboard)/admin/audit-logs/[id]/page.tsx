@@ -6,6 +6,7 @@ import { Loader2, ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 type AuditLogRow = {
    _id: string;
@@ -81,13 +82,11 @@ export default function AuditLogDetail() {
 
          {log ? (
             <div className="flex flex-col gap-8 mt-4">
-               <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                     <ShieldAlert className="w-6 h-6 text-brand" />
-                     {t('title')}
-                  </h1>
-                  <p className="text-[13px] text-secondary mt-1 tracking-wide">{t('subtitle', { id: log._id })}</p>
-               </div>
+               <PageHeader
+                  icon={<ShieldAlert className="w-6 h-6 text-brand" />}
+                  title={t('title')}
+                  description={t('subtitle', { id: log._id })}
+               />
 
                <div className="p-8 rounded-[24px] bg-card/40 backdrop-blur-2xl border border-border-dim shadow-sm flex flex-col gap-6">
                   <div className="grid grid-cols-2 gap-8">

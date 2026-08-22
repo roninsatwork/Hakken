@@ -7,13 +7,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  ArrowLeft,
   Timer,
   CheckCircle2,
   ToggleRight,
   ToggleLeft
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/atoms/Button";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
@@ -108,38 +108,27 @@ export default function NewSchedulePage() {
     <div className="flex flex-col gap-4">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="icon"
-            onClick={() => router.push("/admin/workflows/schedules")}
-            className="flex h-10 w-10 items-center justify-center p-0 border border-border-dim bg-sidebar/50 text-muted"
+      <DetailHeader
+        back={{ label: tCommon('actions.back'), href: "/admin/workflows/schedules" }}
+        icon={<Timer className="w-6 h-6 text-brand" />}
+        title={t('createTitle')}
+        description={t('description')}
+        action={
+          /* State Toggle in Header */
+          /* Stays raw: a labelled toggle glyph whose colour is the state — matches no variant. */
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`flex items-center gap-3 group transition-colors ${isActive ? "text-[#10b981]" : "text-muted hover:text-foreground"}`}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Timer className="w-6 h-6 text-brand" />
-              {t('createTitle')}
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-          </div>
-        </div>
-
-        {/* State Toggle in Header */}
-        {/* Stays raw: a labelled toggle glyph whose colour is the state — matches no variant. */}
-        <button
-          type="button"
-          onClick={() => setIsActive(!isActive)}
-          className={`flex items-center gap-3 group transition-colors ${isActive ? "text-[#10b981]" : "text-muted hover:text-foreground"}`}
-        >
-          <div className="flex flex-col items-end gap-0.5 text-right">
-            <span className="text-[12px] font-bold tracking-widest uppercase">{isActive ? t('status.armed') : t('status.paused')}</span>
-            <span className="text-[10px] text-muted/70 font-medium tracking-wide">{isActive ? t('status.armedDesc') : t('status.pausedDesc')}</span>
-          </div>
-          {isActive ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-        </button>
-      </div>
+            <div className="flex flex-col items-end gap-0.5 text-right">
+              <span className="text-[12px] font-bold tracking-widest uppercase">{isActive ? t('status.armed') : t('status.paused')}</span>
+              <span className="text-[10px] text-muted/70 font-medium tracking-wide">{isActive ? t('status.armedDesc') : t('status.pausedDesc')}</span>
+            </div>
+            {isActive ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+          </button>
+        }
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 flex-1 relative w-full pt-2">
 

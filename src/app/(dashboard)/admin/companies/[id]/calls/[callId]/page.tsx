@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 /**
  * One call, in full, from the admin's seat (seven-gaps plan, phase 1).
@@ -49,17 +50,17 @@ export default function AdminCallDetailPage({
     <div className="flex flex-col gap-6 pb-8">
       <BackLink label={t("back")} />
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          <Phone className="w-6 h-6 text-brand" />
-          <span className="font-mono">{call.fromNumber}</span>
-        </h1>
-        <p className="text-[13px] text-secondary mt-1">
-          {t("started")} {when(call.startedAt)}
-          {call.endedAt ? ` · ${t("ended")} ${when(call.endedAt)}` : ""} ·{" "}
-          {t(`status.${call.status}`)}
-        </p>
-      </div>
+      <PageHeader
+        icon={<Phone className="w-6 h-6 text-brand" />}
+        title={<span className="font-mono">{call.fromNumber}</span>}
+        description={
+          <>
+            {t("started")} {when(call.startedAt)}
+            {call.endedAt ? ` · ${t("ended")} ${when(call.endedAt)}` : ""} ·{" "}
+            {t(`status.${call.status}`)}
+          </>
+        }
+      />
 
       {(call.matchedCustomerKey || call.taskId) && (
         <div className="flex flex-wrap gap-3">
