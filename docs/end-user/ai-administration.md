@@ -9,11 +9,16 @@ This guide describes the implemented product surface. It is written for platform
 Global AI administration is under `/admin/ai`:
 
 - `/admin/ai/costs` shows AI cost and usage analytics.
+- `/admin/ai/money` shows the Wiki-backed financial/cost lens for AI work where enabled.
 - `/admin/ai/chat-logs` lists conversation threads and lets an admin inspect and copy transcripts.
+- `/admin/ai/diary` lists the platform Wiki's learning and review events from audit rows.
+- `/admin/ai/unanswered` lists platform and company questions the Wiki could not answer yet.
+- `/admin/ai/evals`, `/admin/ai/evals/new`, and eval detail/edit pages manage platform-level AI checks.
 - `/admin/ai/rules` manages global AI rules.
 - `/admin/ai/rules/new` and `/admin/ai/rules/[id]` create and edit rules.
 - `/admin/ai/system-prompt` edits the global system prompt.
-- `/admin/ai/global-knowledge` manages global knowledge.
+- `/admin/ai/global-knowledge` redirects to the current global Wiki address.
+- `/admin/ai/knowledge` manages global Wiki pages, imports, reviews, open questions, and the map.
 - `/admin/ai/widget` configures the global embeddable widget.
 - `/admin/ai/models` manages providers, model catalog entries, enabled status, and defaults.
 - `/admin/ai/models/[id]` edits model display and pricing configuration.
@@ -26,9 +31,15 @@ Company-level AI administration appears inside company detail routes:
 - `/admin/companies/[id]/ai` shows the Company AI readiness overview: what the company has configured, what inherits platform defaults, and what needs attention.
 - `/admin/companies/[id]/ai/prompt` manages the company prompt.
 - `/admin/companies/[id]/ai/rules` manages company-scoped rules.
-- `/admin/companies/[id]/ai/knowledge` and `/admin/companies/[id]/knowledge` manage company knowledge.
+- `/admin/companies/[id]/ai/knowledge` manages company knowledge.
+- `/admin/companies/[id]/ai/pages` manages the company's Wiki pages, imports, reviews, open questions, and map.
+- `/admin/companies/[id]/ai/diary` shows what the company Wiki has learned or changed.
+- `/admin/companies/[id]/ai/unanswered` shows questions the company Wiki could not answer yet.
+- `/admin/companies/[id]/ai/saved-answers` redirects into the company Wiki because saved answers now file there with receipts.
+- `/admin/companies/[id]/ai/money` shows company-scoped AI money/cost information.
 - `/admin/companies/[id]/ai/models` manages company model defaults.
 - `/admin/companies/[id]/ai/chat-logs` reviews company-scoped chat logs.
+- `/admin/companies/[id]/calls` and `/admin/companies/[id]/mailbox` expose the company's call and mailbox operational views for platform operators.
 - `/admin/companies/[id]/widget` configures a company widget.
 
 Normal users do not manage these screens. Company admins use organization settings in the main app for tenant-level user and diagnostics work; the global `/admin` AI screens are super-admin platform controls.
@@ -69,7 +80,7 @@ Use rules for targeted guidance that should be easier to review and change than 
 
 ## Knowledge Management
 
-Global knowledge and company knowledge use the same knowledge manager. Knowledge can be added from websites, uploaded files, or manually entered text. Supported file validation is handled before upload, and the backend extracts text, chunks it, embeds it, and stores retrieval-ready chunks. For persisted knowledge, use PDF, CSV, Word `.docx`, or plain text for reliable extraction; Excel files currently pass shared upload validation but do not have dedicated spreadsheet extraction in the knowledge ingestion action. The manager shows document status, quality indicators, repair actions, retry controls, document inspection, and retrieval testing.
+Global knowledge and company knowledge use the same knowledge manager as the source archive behind the Wiki. Knowledge can be added from websites, uploaded files, or manually entered text. Supported file validation is handled before upload, and the backend extracts text, chunks it, embeds it, and stores retrieval-ready chunks. For persisted knowledge, use PDF, CSV, Word `.docx`, or plain text for reliable extraction; Excel files currently pass shared upload validation but do not have dedicated spreadsheet extraction in the knowledge ingestion action. The manager shows document status, quality indicators, repair actions, retry controls, document inspection, and retrieval testing.
 
 Website ingestion starts by mapping a URL, then queueing selected URLs. File ingestion stores the uploaded document and processes it asynchronously. Manual text knowledge is useful for short curated facts or procedures that do not need a separate file.
 
@@ -81,6 +92,8 @@ Knowledge scopes matter:
 - Thread knowledge comes from user chat uploads.
 
 When users report that an answer missed expected knowledge, check whether the document is ready, whether chunks exist, whether retrieval testing finds the content, and whether the relevant assistant, company, agent, or thread scope can actually see it.
+
+Wiki pages are the maintained answer layer over those sources. Diary screens show page creation, rewrites, pins, questions, reviews, exams, and answer-saving events. Unanswered screens show repeated questions that the Wiki could not satisfy and offer a route back to the relevant Wiki page list so an operator can feed the missing information or dismiss demand that should not be answered.
 
 ## Tools And Connectors
 
@@ -102,7 +115,7 @@ Use allowed domains carefully. An empty or wildcard domain configuration makes e
 
 ## Costs And Chat Logs
 
-The AI costs screen shows global AI cost analytics for a selected timeframe. It includes timeline charts, aggregate metrics, provider and model distributions, and leaderboards for top agents, companies, and users. Custom date ranges are available.
+The AI costs screen shows global AI cost analytics for a selected timeframe. It includes timeline charts, aggregate metrics, provider and model distributions, and leaderboards for top agents, companies, and users. Custom date ranges are available. The Money view is separate: it is a narrower operational lens for money-shaped Wiki and AI work, not a replacement for the full cost analytics screen.
 
 Chat logs list conversation threads in a split-pane viewer. Super admins can search global threads, inspect messages, and copy a transcript as rich text or plain text. Company chat log screens scope the same idea to a selected tenant. Use chat logs for support, debugging, safety review, and cost investigation. Remember that chat logs can contain customer data, uploaded-file summaries, or sensitive business context.
 

@@ -11,7 +11,7 @@ Tenant-facing routes:
 - `/app/settings` opens the organization dashboard for the signed-in user's company.
 - `/app/settings/team` manages users and pending invites for the user's company.
 - `/app/settings/auth-diagnostics` opens company-scoped auth diagnostics.
-- `/app/profile` lets a user update their own profile.
+- `/app/profile` lets a user update their own profile, preferences, and Assistant Notes.
 
 Super-admin company routes:
 
@@ -20,11 +20,12 @@ Super-admin company routes:
 - `/admin/users/[id]` shows a user's activity and cost history.
 - `/admin/companies` lists tenant companies.
 - `/admin/companies/[id]` and `/admin/companies/[id]/overview` show company detail and overview.
-- `/admin/companies/[id]/users` manages company users.
-- `/admin/companies/[id]/invites` manages company invitations.
+- `/admin/companies/[id]/features` controls which feature sections the workspace can reach beyond its plan defaults.
 - `/admin/companies/[id]/directory` redirects to `/admin/companies/[id]/directory/users`.
-- `/admin/companies/[id]/directory/users` reuses the company users page.
-- `/admin/companies/[id]/directory/invites` reuses the company invites page.
+- `/admin/companies/[id]/directory/users` manages company users.
+- `/admin/companies/[id]/directory/invites` manages company invitations.
+- `/admin/companies/[id]/calls` reviews company calls.
+- `/admin/companies/[id]/mailbox` reviews company mailbox messages.
 - `/admin/settings` manages platform identity, appearance, security, audit, purge, option, and white-label readiness settings.
 
 ## Organization Dashboard
@@ -47,17 +48,19 @@ Use `USER` for normal workspace users and `ADMIN` only for people who should man
 
 The profile page lets signed-in users update their own name, phone number, and profile image. Email is displayed but fixed. Profile image uploads use the same admin image upload policy and storage flow as other safe image uploads.
 
+The profile page also has an Assistant Note tab. These notes are the user's own durable instructions or facts for the assistant. A user can add a note manually, see notes the assistant has learned about them, and delete notes. Admins do not have a separate screen for another person's Assistant Notes, so this tab is the visibility and control point for the subject of those notes.
+
 The profile page also shows the user's company AI messaging pool, current plan name, monthly reset note, and usage progress when the plan has a finite message limit. If assistant chat reaches that limit, Sonae records the attempted message and returns a quota-block assistant reply until the next billing cycle or a plan change.
 
 ## Company Workspaces For Super Admins
 
-Super admins use company detail routes to inspect and configure a tenant workspace. Company detail pages connect to users, invites, AI prompt, AI rules, knowledge, models, chat logs, and widgets. Directory routes are currently aliases: the directory index redirects to users, and directory user/invite pages re-export the company users and invites pages.
+Super admins use company detail routes to inspect and configure a tenant workspace. Company detail pages connect to overview, feature gates, directory users and invitations, company calls, company mailbox, AI prompt, AI rules, knowledge, Wiki, models, usage, chat logs, and widgets. Directory routes are now the current user/invitation management home inside a company record; older top-level company user and invite routes should be treated as historical references unless a file exists for them.
 
 The company list lets super admins search companies, create a new company, edit its name, edit the company-level system prompt, assign or clear an active plan, and delete a company. Company creation, update, and deletion write audit history. Plan assignment updates the company plan and inventory rollups, but it does not currently write a direct audit event. Deleting a company is destructive: the company row is removed and related company entities are scheduled for purge.
 
 The workspace shell includes an `Impersonate Workspace` action for super admins. It switches the super admin into the selected company context and redirects to the tenant app. Use impersonation for support and verification, then return to the normal super-admin context when the tenant-scoped task is complete.
 
-The overview page edits the company name, tagline, detailed profile overview, and, for super admins, the subscription plan override. The same page displays current plan usage and available active tiers so operators can confirm the visible subscription state after changing the assignment.
+The overview page edits the company name, tagline, detailed profile overview, and, for super admins, the subscription plan override. The same page displays current plan usage and available active tiers so operators can confirm the visible subscription state after changing the assignment. The separate Features screen edits `enabledModules`; plan-granted modules stay enabled even when a workspace-specific checkbox is off.
 
 Company workspaces are the main tenant boundary. Check the company name and route before editing users, invites, prompts, rules, knowledge, model defaults, or widgets.
 

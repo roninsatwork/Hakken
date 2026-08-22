@@ -29,12 +29,14 @@ This is the front door for Sonae documentation. Use the audience sections below 
 ## Coverage Note
 
 The latest implementation audit refreshed every active-plan link and aligned
-the knowledge, workflow, task, notification, agent, assistant, widget, reception, settings,
-deployment, connector, and coverage guides with the implementation through
-2026-08-16. It also added dedicated Company Wiki, spoken-channel, Gmail mailbox,
-photo-action, receptionist-screen, and task/notification guide pairs for the newly routed page/map/import/review
-experience, live voice/phone surfaces, connected inbound mailbox backend, and
-image-to-task/walk-up kiosk/task-routing behavior. Future upkeep
+the knowledge, workflow, task, notification, agent, assistant, widget,
+reception, settings, governance, company AI, profile, screen-kit, maintenance
+connections, deployment, connector, and coverage guides with the implementation
+through 2026-08-22. It also added dedicated Company Wiki, spoken-channel, Gmail
+mailbox, photo-action, receptionist-screen, and task/notification guide pairs
+for the newly routed page/map/import/review experience, live voice/phone
+surfaces, connected inbound mailbox backend, and image-to-task/walk-up
+kiosk/task-routing behavior. Future upkeep
 should still treat broad guides and newly changed implementation areas as
 active audit targets because routes, Convex modules, workflows, scripts, and
 operator procedures continue to change.
@@ -45,6 +47,7 @@ operator procedures continue to change.
 - [Admin Clone-Readiness Plan](./plans/completed/admin-clone-readiness-plan.md) — approved plan for the admin section's last hand-drawn debts: button migration onto the screen kit, collapsing mirrored screens, de-branding via `platformName`, and full admin copy externalisation into the message catalogues.
 - [Foundation Quality Plan](./plans/completed/foundation-quality-plan.md) — approved pre-clone plan for wiki/AI-runtime test coverage, `appError` conversion, splitting the `ai.ts` and `analyticsCron.ts` grab-bags, and the docs tidy-up.
 - [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
+- [Movement Studio Reward Presentation Fix Plan](./plans/active/movement-studio-reward-presentation-fix-plan.md) — active movement presentation fix plan for clearer reward and scoring feedback without reopening frozen motion implementation work.
 - [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
 - [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
 - [OpenRouter And Model Scale Plan](./plans/active/openrouter-and-model-scale-plan.md) — active AI provider/model catalogue scale plan for OpenRouter, provider resolution, paging, search indexes, and rollups.
@@ -66,12 +69,24 @@ operator procedures continue to change.
 - [Comax Opportunity Report Plan](./plans/active/comax-opportunity-report-plan.md) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
 - [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
 - [Governance And Trust Plan](./plans/active/governance-and-trust-plan.md) — delivered 2026-08-06; kept active for its framework test and recorded decisions. Covers the AI register, risk classification, evidence export, the Governance section, and the roles, one-time-code sign-in and personal-data-rights work behind it.
+- [Governance Screens Read A Summary Plan](./plans/active/governance-screens-read-a-summary-plan.md) — active plan for replacing expensive governance overview reads with maintained rollups and snapshots.
 - [Audit Trail Plan](./plans/active/audit-trail-plan.md) — active plan for the real audit-trail screen, filters, detail view, event export, and trust-report path.
 - [Knowledge Markdown And Bulk Upload Plan](./plans/active/knowledge-markdown-and-bulk-upload-plan.md) — implemented Markdown, OKF bundle, folder-upload, and pending-file queue contract.
+- [Two Brains Architecture](./plans/active/two-brains-architecture.md) — active architecture note for the platform/company wiki split and how global and company knowledge stay separate.
+- [Personal Layer And Goals Plan](./plans/active/personal-layer-and-goals-plan.md) — active plan for the user's personal assistant layer, goals, and memory surfaces.
+- [Wiki Scaling Note](./plans/active/wiki-scaling-note.md) — active note for wiki scale limits, route ownership, and follow-up areas as the wiki grows.
 - [Self-Improvement Plan](./plans/active/self-improvement-plan.md) — implemented reflection, memory-ranking, chat-feedback, retrieval-prior, and autonomous-memory control plan.
 - [Retention And Purge Plan](./plans/active/retention-and-purge-plan.md) — current retention pipeline, purge cascade, stuck-run, and enablement decision record.
 - [Theme Compliance Plan](./plans/active/theme-compliance-plan.md) — dashboard theme-token, status-tone, settings, and hardcoded-colour ratchet contract.
 - [Assistant Streaming All Providers Plan](./plans/active/assistant-streaming-all-providers-plan.md) — current provider adapter streaming contract for plain assistant replies.
+- [Tasks And Notifications Plan](./plans/active/tasks-and-notifications-plan.md) — active plan for assigned work, in-app notifications, task tools, and task workflow nodes.
+- [Seven Gaps Plan](./plans/active/seven-gaps-plan.md) — active product gap map covering the last major experience areas around channels, tasks, and personal assistance.
+- [Showcase Channels Plan](./plans/active/showcase-channels-plan.md) — active umbrella plan for voice, phone, language, photo, Gmail, and receptionist-channel work.
+- [Voice Session Plan](./plans/active/voice-session-plan.md) — active spoken-session plan for speech input, spoken replies, and the sound-shape presentation.
+- [Voice Languages Plan](./plans/active/voice-languages-plan.md) — active plan for detecting spoken language and answering in kind.
+- [Photo Actions Plan](./plans/active/photo-actions-plan.md) — active plan for image attachments, vision-aware routing, and task creation from photos.
+- [Gmail Inbox Plan](./plans/active/gmail-inbox-plan.md) — active plan for the dedicated Gmail connector, mailbox watcher, and reply/task handling.
+- [Receptionist Kiosk Plan](./plans/active/receptionist-kiosk-plan.md) — active plan for the walk-up kiosk surface and visitor-session handling.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
@@ -96,6 +111,7 @@ operator procedures continue to change.
 - [Tasks And Notifications](./developer/tasks-and-notifications.md)
 - [Public Website](./developer/public-website.md)
 - [Governance And Trust](./developer/governance-and-trust.md)
+- [Screen Kit](./developer/screen-kit.md)
 - [Sales Data Workspace](./developer/sales-data-workspace.md)
 - [Administration](./developer/administration.md)
 - [Company And User Management](./developer/company-user-management.md)
@@ -106,7 +122,6 @@ operator procedures continue to change.
 - [Gmail Mailbox](./developer/gmail-mailbox.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
 - [Tenancy Enforcement](./developer/tenancy-enforcement.md)
-- [Screen Kit](./developer/screen-kit.md)
 - [AI Administration](./developer/ai-administration.md)
 - [AI Rules And Prompts](./developer/ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./developer/ai-models-providers-and-costs.md)

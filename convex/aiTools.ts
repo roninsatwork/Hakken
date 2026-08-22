@@ -3,7 +3,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, getActiveCompanyId, getCurrentUser } from "./authz";
+import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import {
   CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE,
   isConnectorOAuthAvailable,
@@ -15,7 +15,7 @@ import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnect
 import { assertSafeSecretRefs } from "./connectorSecretPolicy";
 import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
-import { adminMutation, adminQuery, publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 
 const TOOL_CATALOG_LIMIT = 250;
 const AGENT_TOOL_BINDING_LIMIT = 250;
@@ -729,13 +729,9 @@ export const validateConnectorConfiguration = adminMutation({
 });
 
 // Fetch all registered AI system tools
-export const getTools = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getTools = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return [];
-    
     // Tools are strictly globally configured by admins
     return await ctx.db.query("aiTools").order("desc").take(TOOL_CATALOG_LIMIT);
   },
@@ -790,7 +786,7 @@ export const getPaginatedTools = superAdminQuery({
   },
 });
 
-export const getToolById = tenantQuery({
+export const getToolById = superAdminQuery({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
@@ -882,13 +878,9 @@ export const deleteTool = superAdminMutation({
 });
 
 // Fetch all tool bindings for a specific agent
-export const getAgentTools = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getAgentTools = superAdminQuery({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return [];
-
     const bindings = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.agentId))

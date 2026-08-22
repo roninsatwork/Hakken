@@ -243,7 +243,14 @@ export const getAuditFilterOptions = publicQuery({
 
     const actions = [...new Set(recent.map((log) => log.actionType))].sort();
 
-    const people = (await ctx.db.query("users").take(500))
+    const peopleRows = platformWide
+      ? await ctx.db.query("users").take(500)
+      : await ctx.db
+          .query("users")
+          .withIndex("by_company", (q) => q.eq("companyId", companyId))
+          .take(500);
+
+    const people = peopleRows
       .map((user) => ({ id: user._id, name: user.name || user.email || "Unknown" }))
       .sort((a, b) => a.name.localeCompare(b.name));
 

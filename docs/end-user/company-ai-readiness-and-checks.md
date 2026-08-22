@@ -1,6 +1,6 @@
 # Company AI Readiness And Checks
 
-Last reviewed: 2026-07-30 17:39 BST +0100
+Last reviewed: 2026-08-22 01:00 BST +0100
 Status: current; related rebuild and checks plans are still active
 Audience: administrators, operators, support, and customer-success teams reviewing a company's AI setup.
 
@@ -14,9 +14,10 @@ answers two practical questions:
 
 It does not replace global AI administration. Global AI controls decide platform
 defaults, provider state, global rules, global knowledge, and global widgets.
-Company AI shows the tenant-specific layer: company knowledge, company prompt,
-company rules, company model choices, company widget, company memory, company
-skills, company checks, company usage, and company chat logs.
+Company AI shows the tenant-specific layer: company knowledge sources, company
+Wiki pages, company prompt, company rules, company model choices, company
+widget, company memory, company skills, company checks, company usage, money
+view, saved answers, unanswered questions, diary, and company chat logs.
 
 The current overview is not a percentage score. It shows a table of areas and
 uses three states:
@@ -34,6 +35,11 @@ Company AI routes live under a company detail page:
 
 - `/admin/companies/[id]/ai`: overview of company AI areas.
 - `/admin/companies/[id]/ai/knowledge`: company knowledge.
+- `/admin/companies/[id]/ai/pages`: company Wiki pages, import, reviews, and open questions.
+- `/admin/companies/[id]/ai/pages/map`: company Wiki map.
+- `/admin/companies/[id]/ai/diary`: company Wiki learning diary.
+- `/admin/companies/[id]/ai/unanswered`: questions this company's Wiki could not answer yet.
+- `/admin/companies/[id]/ai/saved-answers`: legacy address that redirects to company Wiki pages, where saved answers now live with receipts.
 - `/admin/companies/[id]/ai/prompt`: company instructions.
 - `/admin/companies/[id]/ai/rules`: company AI rules.
 - `/admin/companies/[id]/ai/models`: company model defaults.
@@ -41,18 +47,21 @@ Company AI routes live under a company detail page:
 - `/admin/companies/[id]/ai/memory`: company memory.
 - `/admin/companies/[id]/ai/skills`: company skills.
 - `/admin/companies/[id]/ai/usage`: company AI usage.
+- `/admin/companies/[id]/ai/money`: company money/cost view.
 - `/admin/companies/[id]/ai/chat-logs`: company chat logs.
 - `/admin/companies/[id]/widget`: company widget setup.
 
-Some older company AI routes also exist outside the `/ai` subgroup, such as
-company knowledge, model, prompt, rule, chat-log, and widget routes. They are
-part of the same product area.
+Older company knowledge and chat-log aliases still exist outside the `/ai`
+subgroup. Company models, prompts, rules, users, and invites have moved to the
+current routed sections listed above.
 
 ## Overview Areas
 
 The Company AI overview checks these areas:
 
 - Knowledge: whether company documents exist and whether any failed to process.
+- Wiki: whether maintained company pages, reviews, open questions, diary, and
+  unanswered-demand signals need attention.
 - Widget: whether a company widget exists and whether it is active.
 - Instructions: whether the company has its own prompt or active rules.
 - Model routing: whether company model choices are configured and whether any
@@ -157,10 +166,11 @@ When preparing a company for launch:
 4. Review prompt and rules for customer-specific behavior.
 5. Check model routing only where the company needs overrides.
 6. Review memory and skills.
-7. Add starter checks or custom checks.
-8. Run checks.
-9. Resolve drift by rerunning checks after changes.
-10. Review company usage and chat logs after real testing.
+7. Check Wiki unanswered questions and the diary when users say the assistant missed known context.
+8. Add starter checks or custom checks.
+9. Run checks.
+10. Resolve drift by rerunning checks after changes.
+11. Review company usage, money view, calls, mailbox, and chat logs after real testing.
 
 ## Important Caveat
 

@@ -19,10 +19,8 @@ Company prompt and rule controls live inside a company record:
 - `/admin/companies/[id]/ai/rules` lists company rules.
 - `/admin/companies/[id]/ai/rules/new` creates a company rule.
 - `/admin/companies/[id]/ai/rules/[ruleId]` edits a company rule.
-- `/admin/companies/[id]/system-prompt` is the same company prompt editor reached from direct company navigation.
-- `/admin/companies/[id]/rules` is the same company rules list reached from direct company navigation.
-- `/admin/companies/[id]/rules/new` creates a company rule from the direct route.
-- `/admin/companies/[id]/rules/[ruleId]` edits a company rule from the direct route.
+Older direct company prompt and rule routes have been retired; use the `/ai`
+company routes above.
 
 Agent rules can also be attached to agents from agent administration surfaces:
 

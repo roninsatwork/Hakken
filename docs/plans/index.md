@@ -16,6 +16,10 @@ completed work.
 
 - [Movement Definitive Plan](./active/movement-definitive-plan.md) — the vision,
   acceptance rules, capture-screen rules, and work queue for all movement work.
+- [Movement Studio Reward Presentation Fix Plan](./active/movement-studio-reward-presentation-fix-plan.md) —
+  the active presentation plan for improving movement scoring and reward
+  feedback while respecting the movement demo freeze. Read it before changing
+  movement reward copy, scoring display, or customer-facing movement feedback.
 - [Platform Hardening Plan](./active/platform-hardening-plan.md) — the platform
   hardening record for correctness, security, operational envelope, agent
   runtime, and reusability work. Its current handover states that all planned
@@ -134,6 +138,11 @@ completed work.
   and read-only roles, one-time-code sign-in, and anything claiming compliance
   evidence. Records the decision not to build single sign-on. Read it before
   adding a governance surface, a new role, or a sign-in method.
+- [Seven Gaps Plan](./active/seven-gaps-plan.md) — the active product gap map
+  for the final customer-visible surface areas that make the platform feel
+  complete: channel access, task routing, personal assistance, and related
+  experience gaps. Read it before claiming those gaps are closed or adding a
+  new top-level user-facing gap.
 - [Audit Trail Plan](./active/audit-trail-plan.md) — the plan to make the audit
   trail say what happened rather than only what fields changed, written after
   most rows on the finished screen read "nothing recorded" over records that
@@ -152,6 +161,19 @@ completed work.
   `getNextPendingUrlInternal` defect that bulk file ingestion activates, and
   the decision to leave the whitespace-collapsing chunker alone for now. Read
   it before widening any upload allow-list or scheduling `ingestDocument`.
+- [Two Brains Architecture](./active/two-brains-architecture.md) — the active
+  architecture note for keeping the platform brain and each company brain
+  separate: global wiki content lives only where it is true for every company,
+  while company wiki content stays tenant-scoped. Read it before merging global
+  and company knowledge paths or reworking wiki ownership.
+- [Personal Layer And Goals Plan](./active/personal-layer-and-goals-plan.md) —
+  the active plan for the user's personal assistant layer, goals, and memory
+  surfaces. Read it before changing profile assistant notes, personal memory,
+  or goal-shaped assistant behaviour.
+- [Wiki Scaling Note](./active/wiki-scaling-note.md) — the active note for wiki
+  scale, route ownership, and known follow-up areas as global and company wiki
+  use grows. Read it before adding broad wiki indexes, new wiki routes, or
+  maintenance work that changes wiki volume assumptions.
 - [Self-Improvement Plan](./active/self-improvement-plan.md) — the plan to
   close the four learning loops that already collect signal and throw it away:
   automatic reflection on failed runs, outcome-weighted memory ranking,

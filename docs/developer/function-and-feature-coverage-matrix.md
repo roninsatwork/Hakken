@@ -1,6 +1,6 @@
 # Function And Feature Coverage Matrix
 
-Last reviewed: 2026-08-16
+Last reviewed: 2026-08-22
 Status: active coverage matrix
 Audience: agents and engineers documenting every Sonae feature, route, backend function family, schema area, and operational command.
 
@@ -48,10 +48,10 @@ for package-script ownership.
 | Photo actions | Ask Sonae image attachments, widget photo uploads, image thumbnails, vision model routing, photo-action proposal chips, human-confirmed task creation | `convex/chat.ts`, `convex/aiChat.ts`, `convex/agentRuntime.ts`, `convex/photoActionService.ts`, `convex/tasks.ts`, `convex/widgets.ts`, `src/ui/components/chat/PhotoActionChip.tsx`, `src/lib/constants/uploads.ts`, `threads`, `messages`, `tasks` | `docs/end-user/photo-actions.md`, `docs/developer/photo-actions.md`, `docs/plans/active/photo-actions-plan.md` | Complete pair plus active proof plan | Keep photo upload limits, image-not-knowledge semantics, vision default routing, non-vision fallback, proposal extraction, one-tap task idempotency, and widget-token confirmation current. |
 | Spoken channels and phone calls | Ask Sonae live voice overlay, `/app/calls`, `/app/calls/[id]`, `/admin/ai/voice`, inbound Twilio voice/status webhooks, voice relay knowledge lookup | `convex/aiVoiceSession.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, `phoneCalls`, `companies.spokenVoice`, `aiActionRequests`, `toolConnectors`, `tasks` | `docs/end-user/spoken-channels.md`, `docs/developer/spoken-channels.md`, voice and telephone active plans | Complete pair plus active plans | Keep relay ticket auth, provider signature checks, line ownership, call admission ceilings, quota spending, call privacy, voice settings, post-call tasks, and Wiki handoff current. |
 | Receptionist screen | `/app/reception`, `/kiosk/[widgetId]`, widget Integration receptionist toggle, full-screen tap-to-wake voice session, kiosk heartbeat and session count | `convex/kiosk.ts`, `convex/kioskActions.ts`, `convex/widgets.ts`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, `widgets`, `threads`, `messages`, `companies.spokenVoice` | `docs/end-user/receptionist-screen.md`, `docs/developer/receptionist-screen.md`, `docs/end-user/spoken-channels.md`, `docs/developer/spoken-channels.md`, `docs/plans/active/receptionist-kiosk-plan.md` | Complete pair plus active proof plan | Keep kiosk opt-in, in-memory visitor tokens, heartbeat, session/thread ceilings, silence reset, daily reload, relay/model availability, and tablet proof status current. |
-| Profile and user self-service | `/app/profile` | `convex/users.ts`, `users`, storage uploads | `docs/end-user/organization-and-company-workspaces.md`, `docs/developer/company-user-management.md` | Covered broadly | Add dedicated profile doc if profile settings grow beyond account basics. |
+| Profile and user self-service | `/app/profile`, profile preferences, Assistant Notes, super-admin login history | `convex/users.ts`, `convex/userMemories.ts`, `users`, `userMemories`, storage uploads | `docs/end-user/organization-and-company-workspaces.md`, `docs/developer/company-user-management.md` | Covered broadly | Add dedicated profile doc if profile settings or personal memory governance grow beyond account basics. |
 | Organization workspace | `/app/settings`, `/app/settings/team`, `/app/settings/auth-diagnostics` | `convex/users.ts`, `convex/companies.ts`, `convex/plans.ts`, `companies`, `users`, `plans`, `logins` | `docs/end-user/organization-and-company-workspaces.md`, `docs/end-user/company-workspace-administration.md`, `docs/developer/organization-and-company-workspaces.md`, `docs/developer/company-user-management.md` | Complete pair | Keep tenant-admin limits, team invite behavior, and diagnostics aligned. |
 | Administration overview | `/admin`, admin layout | `convex/adminQueryService.ts`, admin auth helpers | `docs/end-user/administration.md`, `docs/developer/administration.md` | Complete pair | Umbrella only; specialized admin routes are tracked separately below. |
-| Company management | `/admin/companies`, `/admin/companies/[id]`, overview, users, invites, directory, chat logs, company detail tabs | `convex/companies.ts`, `convex/users.ts`, `convex/invites.ts`, `companies`, `users`, `invitations`, `emailTemplates` | `docs/end-user/administration.md`, `docs/end-user/company-workspace-administration.md`, `docs/developer/company-user-management.md` | Complete pair | Check directory and invite routes when company workspace UX changes. |
+| Company management | `/admin/companies`, `/admin/companies/[id]`, overview, feature gates, directory users/invites, company calls, company mailbox, company detail tabs | `convex/companies.ts`, `convex/users.ts`, `convex/invites.ts`, `convex/telephony.ts`, `convex/mailbox.ts`, `companies`, `users`, `invitations`, `emailTemplates`, `phoneCalls`, `mailboxMessages` | `docs/end-user/administration.md`, `docs/end-user/company-workspace-administration.md`, `docs/end-user/organization-and-company-workspaces.md`, `docs/developer/company-user-management.md`, `docs/developer/spoken-channels.md`, `docs/developer/gmail-mailbox.md` | Complete pair | Check directory, feature-gate, call, and mailbox routes when company workspace UX changes. |
 | Super-admin and user management | `/admin/users`, `/admin/users/invite`, `/admin/super-admins`, `/admin/super-admins/invite` | `convex/users.ts`, `convex/invites.ts`, `users`, `invitations`, `auditLogs` | `docs/end-user/administration.md`, `docs/developer/company-user-management.md`, `docs/developer/tenancy-enforcement.md` | Complete pair | Keep privilege escalation and super-admin assignment rules explicit. |
 | Read-only user directory | `/admin/directory` | `convex/users.ts`, `convex/userActivityService.ts`, `users`, `logins` | `docs/end-user/administration.md`, `docs/developer/administration.md`, `docs/plans/active/user-directory-plan.md` | Covered broadly | Keep this read-only; account mutations belong in `/admin/users`. |
 | Governance and trust | `/admin/governance`, register, policies, audit trail, approvals; `/app/governance`, register, policies, audit trail | `convex/governanceDashboard.ts`, `convex/governanceRegister.ts`, `convex/governanceActivity.ts`, `convex/evidencePack.ts`, `convex/personalData.ts`, `convex/conformanceService.ts`, `auditLogs`, `agentRuns`, `aiRules`, `agents`, `widgets`, `workflows` | `docs/end-user/governance-and-trust.md`, `docs/developer/governance-and-trust.md`, `docs/plans/active/governance-and-trust-plan.md` | Complete pair plus active plan | Refresh when evidence-pack contents, personal-data rules, audit export, or register inputs change. |
@@ -65,9 +65,9 @@ for package-script ownership.
 | Embedded widgets | `/w/[widgetId]`, `/sandbox/[widgetId]`, global widget, company widget, server-minted embed pass, per-widget frame-ancestors, photo upload and photo-action confirmation | `convex/widgets.ts`, `convex/chat.ts`, `convex/tasks.ts`, `convex/utils/widgetEmbedPass.ts`, `convex/utils/widgetOriginPolicy.ts`, `src/proxy.ts`, `src/lib/widgetEmbedPolicy.ts`, `src/lib/widgetSystemMessages.ts`, `widgets`, `threads`, `messages`, upload policy | `docs/end-user/embedded-widgets.md`, `docs/end-user/widget-handoff-and-troubleshooting.md`, `docs/developer/embedded-widgets.md`, `docs/end-user/photo-actions.md`, `docs/developer/photo-actions.md` | Complete pair | Company-plan quota, anonymous billing privacy, refused-message PII redaction, Italian quota notice, embed-pass enforcement, frame-ancestor policy, widget thread ceiling, widget photo uploads, and anonymous task confirmation are current. |
 | Agent builder and configuration | `/admin/agents`, agent detail dashboard/settings/interfaces/system prompt/rules/skills/knowledge | `convex/agents.ts`, `convex/agentSkills.ts`, `convex/agentTemplates.ts`, `agents`, `agentSkills`, `agentTools`, `agentVersions` | `docs/end-user/agents.md`, `docs/end-user/agent-setup-and-configuration.md`, `docs/developer/agents.md`, `docs/developer/agent-configuration-and-catalogs.md` | Complete pair | Update after active agent model-defaults and autonomy work. |
 | Agent runtime, runs, approvals, memory, evals, and observability | `/admin/agents/[id]/runs`, evals, memory, logs, observability, approvals | `convex/agentRuns.ts`, `convex/agentRuntime.ts`, `convex/agentEvalFixtures.ts`, `convex/rehearsalEvalService.ts`, `convex/selfImprovementConfig.ts`, `convex/agentMemories.ts`, `convex/agentLogs.ts`, `convex/agentRunFeedback.ts`, `convex/agentImprovementSuggestions.ts` | `docs/end-user/agent-operations-and-review.md`, `docs/developer/agent-runtime-operations.md`, `docs/developer/run-observatory.md`, active agent plans | Complete pair plus active plans | Rehearsal evals, automatic reflection, outcome ranking, feedback controls, retrieval priors, and autonomous memory are current. |
-| Company AI readiness, evals, memories, skills, and usage | `/admin/companies/[id]/ai`, evals, memory, skills, usage, chat-log eval/memory actions | `convex/companyReadiness.ts`, `convex/companyEvals.ts`, `convex/companyEvalRuns.ts`, `convex/companyMemories.ts`, `convex/companySkills.ts`, `convex/companyMemorySuggestions.ts` | `docs/end-user/company-ai-readiness-and-checks.md`, `docs/developer/company-ai-readiness-and-checks.md`, active company AI plans | Complete current pair plus active plans | Refresh when the Company AI readiness rebuild and AI Checks plans settle. |
+| Company AI readiness, evals, memories, skills, Wiki demand, money, and usage | `/admin/companies/[id]/ai`, evals, memory, skills, pages, diary, unanswered, saved-answers redirect, money, usage, chat-log eval/memory actions | `convex/companyReadiness.ts`, `convex/companyEvals.ts`, `convex/companyEvalRuns.ts`, `convex/companyMemories.ts`, `convex/companySkills.ts`, `convex/companyMemorySuggestions.ts`, `convex/wikiFeedback.ts`, `convex/wikiDiary.ts`, `convex/moneyView.ts` | `docs/end-user/company-ai-readiness-and-checks.md`, `docs/developer/company-ai-readiness-and-checks.md`, `docs/end-user/company-wiki.md`, `docs/developer/company-wiki.md`, active company AI plans | Complete current pair plus active plans | Refresh when the Company AI readiness rebuild, AI Checks plan, Wiki answer filing, or Wiki demand flow changes. |
 | Workflow automation and schedules | `/admin/workflows`, workflow detail, executions, schedules | `convex/workflows.ts`, `convex/workflowRuntime.ts`, `convex/workflowRetryService.ts`, `convex/workflowEngine.ts`, `convex/scheduler.ts`, `src/lib/convexHttpActionsUrl.ts`, `workflows`, `workflowExecutions`, `workflowExecutionSteps`, `schedules` | `docs/end-user/workflow-automation.md`, `docs/developer/workflow-automation.md`, `docs/developer/workflow-runtime-internals.md` | Complete pair | Safe agent-node transient retry, three-attempt budget, backoff, webhook origin, approvals, and schedule behavior are current. |
-| Platform operations settings | `/admin/settings`, plans, API keys, analytics, scripts | `convex/settings.ts`, `convex/plans.ts`, `convex/apiKeys.ts`, `convex/maintenanceScripts.ts`, `systemSettings`, `plans`, `apiKeys`, `maintenanceScriptRuns` | `docs/end-user/platform-operations-settings.md`, `docs/developer/platform-operations-settings.md`, `docs/developer/platform-plans-and-quotas.md`, `docs/developer/maintenance-scripts.md` | Complete pair | Maintenance scripts are concise; deepen if new scripts become operator-facing. |
+| Platform operations settings | `/admin/settings`, plans, API keys, analytics, scripts, connection checks | `convex/settings.ts`, `convex/plans.ts`, `convex/apiKeys.ts`, `convex/maintenanceScripts.ts`, `convex/connectionProbes.ts`, `convex/jobLedger.ts`, `systemSettings`, `plans`, `apiKeys`, `maintenanceScriptRuns`, `toolConnectors`, `aiProviders`, `jobRuns` | `docs/end-user/platform-operations-settings.md`, `docs/developer/platform-operations-settings.md`, `docs/developer/platform-plans-and-quotas.md`, `docs/developer/maintenance-scripts.md` | Complete pair | Maintenance scripts are concise; deepen if new scripts or external probes become operator-facing. |
 | System health, alerts, diagnostics, retention, purges, and external error monitoring | `/admin/health`, `/admin/auth-diagnostics`, audit log detail, purge settings/history; Next.js instrumentation | `convex/systemHealth.ts`, `convex/platformAlerts.ts`, `convex/analyticsSnapshots.ts`, `convex/platformAlertService.ts`, `convex/purges.ts`, `convex/auditLogs.ts`, `src/instrumentation*.ts`, `src/lib/errorMonitoring.ts`, `purgeHistory`, `analyticsDailySnapshots`, `auditLogs` | `docs/end-user/health.md`, `docs/end-user/system-health-and-maintenance.md`, `docs/end-user/operational-diagnostics-and-retention.md`, `docs/developer/system-health-and-platform-alerts.md`, `docs/developer/data-retention-and-purges.md`, `docs/developer/deployment.md` | Complete pair plus developer operations | Keep alert recipients, Sentry environment/release configuration, health thresholds, and purge semantics current. |
 | Public API and webhooks | `/api/health`, public agent/workflow/run-status API, Apify webhook, webhook delivery monitor | `convex/publicApi.ts`, `convex/http.ts`, `convex/webhooks.ts`, `convex/webhookDeliveries.ts`, `publicApiRequests`, `webhookDeliveries`, `apifyRuns` | `docs/end-user/public-api-and-webhooks.md`, `docs/developer/public-api-and-webhooks.md` | Complete pair | Add endpoint-level examples when public API expands. |
 | Property research and Rightmove/Apify flow | `/app/properties/information`, search, scraped data, detail, logs | `convex/properties.ts`, `convex/propertyAgents.ts`, `convex/apify.ts`, `convex/webhooks.ts`, `properties`, `apifyRuns` | `docs/end-user/property-research-and-reports.md`, `docs/developer/property-research-and-reports.md`, `docs/plans/active/rightmove-agent-execution-plan.md` | Complete pair plus active plan | The Search page now queues the Rightmove Agent. Refresh again when Apify run records link visibly back to agent run detail or the active plan is retired. |
@@ -144,18 +144,13 @@ feature family above.
 - `/admin/companies`
 - `/admin/companies/[id]`
 - `/admin/companies/[id]/overview`
-- `/admin/companies/[id]/users`
-- `/admin/companies/[id]/invites`
+- `/admin/companies/[id]/features`
 - `/admin/companies/[id]/directory`
 - `/admin/companies/[id]/directory/users`
 - `/admin/companies/[id]/directory/invites`
-- `/admin/companies/[id]/chat-logs`
-- `/admin/companies/[id]/knowledge`
-- `/admin/companies/[id]/models`
-- `/admin/companies/[id]/system-prompt`
-- `/admin/companies/[id]/rules`
-- `/admin/companies/[id]/rules/new`
-- `/admin/companies/[id]/rules/[ruleId]`
+- `/admin/companies/[id]/calls`
+- `/admin/companies/[id]/calls/[callId]`
+- `/admin/companies/[id]/mailbox`
 - `/admin/companies/[id]/widget`
 - `/admin/companies/[id]/ai`
 - `/admin/companies/[id]/ai/prompt`
@@ -168,6 +163,8 @@ feature family above.
 - `/admin/companies/[id]/ai/pages`
 - `/admin/companies/[id]/ai/pages/[pageId]`
 - `/admin/companies/[id]/ai/pages/map`
+- `/admin/companies/[id]/ai/diary`
+- `/admin/companies/[id]/ai/unanswered`
 - `/admin/companies/[id]/ai/chat-logs`
 - `/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new`
 - `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new`
@@ -178,12 +175,21 @@ feature family above.
 - `/admin/companies/[id]/ai/memory`
 - `/admin/companies/[id]/ai/skills`
 - `/admin/companies/[id]/ai/skills/new`
+- `/admin/companies/[id]/ai/saved-answers`
 - `/admin/companies/[id]/ai/usage`
+- `/admin/companies/[id]/ai/money`
 - `/admin/ai`
 - `/admin/ai/costs`
 - `/admin/ai/usage/costs`
+- `/admin/ai/money`
 - `/admin/ai/chat-logs`
 - `/admin/ai/usage/chat-logs`
+- `/admin/ai/diary`
+- `/admin/ai/unanswered`
+- `/admin/ai/evals`
+- `/admin/ai/evals/new`
+- `/admin/ai/evals/[evalCaseId]`
+- `/admin/ai/evals/[evalCaseId]/edit`
 - `/admin/ai/system-prompt`
 - `/admin/ai/rules`
 - `/admin/ai/rules/new`
@@ -238,6 +244,7 @@ feature family above.
 - `/admin/settings/scripts`
 - `/admin/settings/scripts/[scriptId]`
 - `/admin/health`
+- `/admin/connections`
 - `/admin/auth-diagnostics`
 - `/admin/audit-logs/[id]`
 - `/admin/users`

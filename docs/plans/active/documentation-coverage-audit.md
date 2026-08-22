@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-16
+Last reviewed: 2026-08-22
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -248,6 +248,33 @@ current worktree showed the platform Wiki screen fold and global Wiki doors had
 landed. The plan now records the platform Wiki as partially built, with answer
 integration, global staff rounds, and browser/audit proof still tracked as
 implementation follow-up rather than missing documentation.
+
+## 2026-08-22 Refresh
+
+This pass re-audited the implementation changes since the 2026-08-16
+documentation loop. It found that the main documentation map was broadly
+complete but stale in fast-moving implementation references:
+
+- The admin section moved onto the shared screen kit and removed the older
+  `docs/developer/shared-admin-ui.md` guide.
+- Company detail navigation now has separate Features, Calls, and Mailbox
+  routes, while older top-level company knowledge/model/prompt/rule/user/invite
+  routes are no longer implemented.
+- Global and company AI gained Wiki Diary, Unanswered, Money, Saved Answers,
+  and company-scope usage surfaces that were not consistently represented in
+  route and coverage maps.
+- The profile screen gained the personal Assistant Note tab backed by
+  user-owned memories.
+- Maintenance gained `/admin/connections`, backed by connection probes and the
+  job ledger.
+- Governance screens now read rollup/snapshot tables instead of sweeping the
+  full estate at page load.
+
+The queue item processed in this pass was a stale-map refresh rather than a new
+feature-pair creation. The central, end-user, developer, route, Convex/schema,
+coverage, administration, AI administration, Company AI, Governance, platform
+operations, and profile/workspace docs were refreshed to name the current
+implemented routes and backend owners.
 
 The public website still contains links to routes owned by
 `docs/plans/active/public-website-plan.md` that have not shipped. That is a

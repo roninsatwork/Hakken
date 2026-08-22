@@ -1,6 +1,6 @@
 # Route Reference
 
-Last reviewed: 2026-08-16
+Last reviewed: 2026-08-22
 Status: current route inventory
 Audience: engineers and agents changing Sonae routing, navigation, page ownership, or documentation coverage.
 
@@ -79,18 +79,13 @@ in the same documentation pass.
 | `/admin/companies` | Company list and management. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]` | Company detail redirect/root. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/overview` | Company overview. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/users` | Company user management. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/invites` | Company invitation management. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
+| `/admin/companies/[id]/features` | Workspace feature gates outside plan defaults. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/directory` | Company directory shell. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/directory/users` | Directory user list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/directory/invites` | Directory invitation list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
-| `/admin/companies/[id]/chat-logs` | Company chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/companies/[id]/knowledge` | Company knowledge source archive. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
-| `/admin/companies/[id]/models` | Company model defaults. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
-| `/admin/companies/[id]/system-prompt` | Company prompt editor. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/rules` and children | Company AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/rules/new` | New company AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/rules/[ruleId]` | Company AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
+| `/admin/companies/[id]/calls` | Company call list for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
+| `/admin/companies/[id]/calls/[callId]` | Company call detail for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
+| `/admin/companies/[id]/mailbox` | Company mailbox view for platform operators. | [Gmail Mailbox](../end-user/gmail-mailbox.md), [Gmail Mailbox Developer Guide](./gmail-mailbox.md) |
 | `/admin/companies/[id]/widget` | Company widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
 
 ## Company AI Routes
@@ -102,9 +97,12 @@ in the same documentation pass.
 | `/admin/companies/[id]/ai/models` | Company model routing/defaults. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/companies/[id]/ai/rules` and children | Company AI rules. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/knowledge` and document detail | Company knowledge source archive behind Wiki receipts. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
+| `/admin/companies/[id]/ai/knowledge/[documentId]` | Company knowledge source document detail. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
 | `/admin/companies/[id]/ai/pages` | Company Wiki page list, import, reviews, open questions, and progress. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/companies/[id]/ai/pages/[pageId]` | Company Wiki page detail, editing, pins, receipts, and history. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/companies/[id]/ai/pages/map` | Company Wiki map. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/companies/[id]/ai/diary` | Company Wiki learning diary. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/companies/[id]/ai/unanswered` | Company unanswered Wiki demand. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/companies/[id]/ai/chat-logs` | Company chat logs. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new` | Create a company check from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new` | Create a memory candidate from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
@@ -115,10 +113,11 @@ in the same documentation pass.
 | `/admin/companies/[id]/ai/memory` | Company memories and memory suggestions. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/skills` and children | Company skills. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/skills/new` | New company skill. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/knowledge/[documentId]` | Company knowledge source document detail. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
+| `/admin/companies/[id]/ai/saved-answers` | Legacy saved-answers address; redirects to company Wiki pages. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/companies/[id]/ai/rules/new` | New company AI rule in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/rules/[ruleId]` | Company AI rule detail/edit in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/usage` | Company AI usage. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Administration Developer Guide](./ai-administration.md) |
+| `/admin/companies/[id]/ai/money` | Company AI money view. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 
 ## Global AI Routes
 
@@ -126,7 +125,14 @@ in the same documentation pass.
 | --- | --- | --- |
 | `/admin/ai` | Global AI landing. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/ai/costs`, `/admin/ai/usage/costs` | Global AI cost analytics. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
+| `/admin/ai/money` | Global AI money view. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/ai/chat-logs`, `/admin/ai/usage/chat-logs` | Global chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
+| `/admin/ai/diary` | Platform Wiki learning diary. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/unanswered` | Platform and company unanswered Wiki demand. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/evals` | Platform-level AI checks. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
+| `/admin/ai/evals/new` | New platform AI check. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
+| `/admin/ai/evals/[evalCaseId]` | Platform AI check detail. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
+| `/admin/ai/evals/[evalCaseId]/edit` | Platform AI check editing. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/ai/system-prompt` | Global system prompt. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules` | Global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules/new` | New global AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
@@ -205,6 +211,7 @@ in the same documentation pass.
 | `/admin/settings/scripts` and detail | Maintenance scripts. | [System Health And Maintenance](../end-user/system-health-and-maintenance.md), [Maintenance Scripts Developer Guide](./maintenance-scripts.md) |
 | `/admin/settings/scripts/[scriptId]` | Maintenance script detail/run review. | [System Health And Maintenance](../end-user/system-health-and-maintenance.md), [Maintenance Scripts Developer Guide](./maintenance-scripts.md) |
 | `/admin/health` | System health. | [Health](../end-user/health.md), [System Health And Platform Alerts](./system-health-and-platform-alerts.md) |
+| `/admin/connections` | External dependency probes and scheduled-job recency. | [Platform Operations Settings](../end-user/platform-operations-settings.md), [Platform Operations Settings Developer Guide](./platform-operations-settings.md) |
 | `/admin/auth-diagnostics` | Admin auth diagnostics. | [Operational Diagnostics And Retention](../end-user/operational-diagnostics-and-retention.md), [Auth Diagnostics](./auth-diagnostics.md) |
 | `/admin/audit-logs/[id]` | Audit log detail. | [Administration User Guide](../end-user/administration.md), [Audit Log Service](./audit-log-service.md) |
 | `/admin/users` and children | Global users and invitations. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |

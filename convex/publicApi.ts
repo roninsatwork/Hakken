@@ -2,6 +2,8 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
+const PUBLIC_API_MAX_BODY_BYTES = 128 * 1024;
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -13,6 +15,59 @@ function getBearerToken(request: Request) {
   const authorization = request.headers.get("Authorization") || request.headers.get("authorization") || "";
   const [scheme, token] = authorization.split(" ");
   return scheme?.toLowerCase() === "bearer" && token ? token : undefined;
+}
+
+function bodyTooLargeResponse() {
+  return jsonResponse({
+    ok: false,
+    error: `Request body cannot exceed ${PUBLIC_API_MAX_BODY_BYTES} bytes.`,
+  }, 413);
+}
+
+async function readBoundedJson(request: Request): Promise<
+  | { ok: true; payload: unknown }
+  | { ok: false; response: Response }
+> {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > PUBLIC_API_MAX_BODY_BYTES) {
+    return { ok: false, response: bodyTooLargeResponse() };
+  }
+
+  if (!request.body) {
+    return { ok: false, response: jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400) };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > PUBLIC_API_MAX_BODY_BYTES) {
+        await reader.cancel();
+        return { ok: false, response: bodyTooLargeResponse() };
+      }
+      chunks.push(value);
+    }
+
+    const bodyBytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bodyBytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes);
+    return { ok: true, payload: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false, response: jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400) };
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export const handlePublicApiPing = httpAction(async (ctx, request) => {
@@ -78,12 +133,9 @@ export const handlePublicAgentRunTrigger = httpAction(async (ctx, request) => {
     return jsonResponse({ ok: false, error: auth.error }, auth.statusCode);
   }
 
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400);
-  }
+  const parsed = await readBoundedJson(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.payload;
 
   const body = payload && typeof payload === "object" ? payload as { agentId?: unknown; objective?: unknown } : {};
   if (typeof body.agentId !== "string" || !body.agentId.trim()) {
@@ -127,12 +179,9 @@ export const handlePublicWorkflowRunTrigger = httpAction(async (ctx, request) =>
     return jsonResponse({ ok: false, error: auth.error }, auth.statusCode);
   }
 
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400);
-  }
+  const parsed = await readBoundedJson(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.payload;
 
   const body = payload && typeof payload === "object"
     ? payload as { workflowId?: unknown; initialInput?: unknown }

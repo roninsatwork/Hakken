@@ -7,8 +7,7 @@ Company knowledge now has a separate page-based layer documented in [Company Wik
 ## Route Map
 
 - `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` renders global knowledge for super admins.
-- `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx` renders company knowledge source documents.
-- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` re-exports the company knowledge page for archived source access behind Wiki receipts.
+- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` renders company knowledge source documents behind the Company AI area.
 - `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx` renders agent knowledge.
 - `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx` is the shared admin knowledge UI.
 - `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.ts` walks dropped folders, preserves relative paths, caps batches, skips reserved OKF bundle files, and limits browser upload concurrency.

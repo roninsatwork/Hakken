@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import {
   isInlinePoseData,
   parseMovementFramePayload,
 } from "../_lib/movementFrameCodec";
 import type { MovementDataFormat, MovementFrame } from "../_lib/movementTypes";
 
-type MovementFrameSource = Pick<Doc<"movements">, "poseData"> & {
+type MovementFrameSource = Pick<Doc<"movements">, "_id" | "poseData"> & {
   poseDataFormat?: MovementDataFormat;
 };
 
@@ -26,7 +26,7 @@ export function useMovementFrames(movement: MovementFrameSource | null | undefin
   const shouldFetchStorage = typeof poseData === "string" && !isInlinePoseData(poseData);
   const fileUrl = useQuery(
     api.movements.getFileUrl,
-    shouldFetchStorage && poseData ? { storageId: poseData as Id<"_storage"> } : "skip"
+    shouldFetchStorage && poseData ? { movementId: movement._id } : "skip"
   );
 
   const reload = useCallback(() => {

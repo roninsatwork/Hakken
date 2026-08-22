@@ -1,6 +1,6 @@
 # Organization And Company Workspaces Developer Guide
 
-Organization and company workspace implementation spans tenant-facing settings under `/app`, super-admin company detail routes under `/admin/companies`, profile management, scoped user management, and white-label system settings. This guide covers the implementation that exists now and should be reviewed before changing tenant admin workflows, company directory aliases, profile uploads, plan usage displays, or white-label packaging readiness.
+Organization and company workspace implementation spans tenant-facing settings under `/app`, super-admin company detail routes under `/admin/companies`, profile management, personal assistant notes, scoped user management, workspace feature gates, and white-label system settings. This guide covers the implementation that exists now and should be reviewed before changing tenant admin workflows, company directory aliases, profile uploads, plan usage displays, module gating, or white-label packaging readiness.
 
 ## Product Surface
 
@@ -9,7 +9,7 @@ Tenant-facing routes:
 - `src/app/(dashboard)/app/settings/page.tsx` renders the organization dashboard for the signed-in user's company.
 - `src/app/(dashboard)/app/settings/team/page.tsx` renders company team management.
 - `src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx` renders shared auth diagnostics from the app settings area.
-- `src/app/(dashboard)/app/profile/page.tsx` renders personal profile editing and company plan usage.
+- `src/app/(dashboard)/app/profile/page.tsx` renders personal profile editing, preferences, Assistant Notes, login history for super admins, and company plan usage.
 
 Super-admin account and company routes:
 
@@ -17,7 +17,7 @@ Super-admin account and company routes:
 - `src/app/(dashboard)/admin/users/invite/page.tsx` creates invites outside a company detail page.
 - `src/app/(dashboard)/admin/users/[id]/page.tsx` shows one user's profile, activity, thread, and cost context.
 - `src/app/(dashboard)/admin/companies/page.tsx` lists companies.
-- `src/app/(dashboard)/admin/companies/[id]/**` contains company overview, users, invites, AI, knowledge, models, prompt, rules, chat logs, widget, and directory routes.
+- `src/app/(dashboard)/admin/companies/[id]/**` contains company overview, feature gates, directory users/invites, AI, calls, mailbox, widget, and directory routes.
 - `src/app/(dashboard)/admin/companies/[id]/directory/page.tsx` redirects to `directory/users`.
 - `src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx` re-exports `../../users/page`.
 - `src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx` re-exports `../../invites/page`.
@@ -37,9 +37,11 @@ Backend privilege enforcement lives in `convex/users.ts`, `convex/userManagement
 
 The team page currently contains some inline English and Italian fallback text. If editing user-visible strings, keep `messages/en.json` and `messages/it.json` in parity and reduce hardcoded copy where practical.
 
-## Profile And Plan Usage
+## Profile, Assistant Notes, And Plan Usage
 
-`app/profile/page.tsx` reads the signed-in user, updates personal profile fields through `api.users.updateMyProfile`, generates upload URLs through `api.users.generateUploadUrl`, and validates profile images with the `adminImage` upload policy before uploading. `src/app/(dashboard)/app/profile/ProfileTabs.tsx` renders the profile preferences and login-history tabs. Preferences can change theme through `next-themes` and write the `locale` cookie before reloading; the login-history tab is only shown to super admins, reads `api.users.getLogins` and `api.users.getMyLoginsCount`, searches device metadata, and paginates locally at 15 rows while loading more Convex results as needed.
+`app/profile/page.tsx` reads the signed-in user, updates personal profile fields through `api.users.updateMyProfile`, generates upload URLs through `api.users.generateUploadUrl`, and validates profile images with the `adminImage` upload policy before uploading. `src/app/(dashboard)/app/profile/ProfileTabs.tsx` renders preferences, Assistant Notes, and login-history tabs. Preferences can change theme through `next-themes` and write the `locale` cookie before reloading; the login-history tab is only shown to super admins, reads `api.users.getLogins` and `api.users.getMyLoginsCount`, searches device metadata, and paginates locally at 15 rows while loading more Convex results as needed.
+
+`src/app/(dashboard)/app/profile/AssistantNoteTab.tsx` is the user-facing control plane for `convex/userMemories.ts`. It reads `api.userMemories.listMine`, adds notes with `api.userMemories.addMine`, and deletes notes with `api.userMemories.deleteMine`. Notes can be manual or learned, but the subject can see and remove both. Keep this route user-owned; do not add an admin screen for editing another person's assistant notes without a privacy and governance decision.
 
 The profile page also reads `api.plans.getMyCompanyPlanStatus` and displays the company AI messaging pool, plan name, monthly reset note, and usage progress. If assistant chat usage reaches a finite limit, the backend records the attempted message and returns a quota-block assistant reply; the profile UI should describe that as assistant-chat quota behavior rather than a global AI feature gate.
 
@@ -54,6 +56,8 @@ Super-admin company pages use company id route params and backend company access
 `admin/companies/[id]/layout.tsx` exposes the super-admin `Impersonate Workspace` action. It calls `api.users.impersonateCompany`, stores `impersonatingCompanyId` on the current super admin, writes an `IMPERSONATE_COMPANY` audit log, and redirects to `/app`. Because `getActiveCompanyId` prefers `impersonatingCompanyId`, tenant-scoped admin routes should continue to use the active company helper rather than the user's base `companyId` directly.
 
 `admin/companies/[id]/overview/page.tsx` updates name, description, and overview through `api.companies.updateCompanyProfile`. Super admins can also assign or clear a plan from that page. Keep the plan control super-admin-only unless the product explicitly adds tenant self-service billing.
+
+`admin/companies/[id]/features/page.tsx` edits workspace-specific `enabledModules` through `api.companies.setCompanyModules`. It displays plan-granted modules separately because the plan still wins; a checkbox can add access beyond the plan but cannot switch off a module granted by the assigned plan. The implementation uses `COMPANY_MODULES` from `convex/utils/companyModules.ts`, shares copy with provisioning and plan screens, and is super-admin-only.
 
 If directory behavior becomes a real product surface later, replace the aliases with dedicated pages and update this guide plus the indexes. Until then, documentation should describe them as aliases, not as separate directory features.
 

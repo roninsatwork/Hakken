@@ -55,14 +55,93 @@ describe("Movements API Authentication Hardening", () => {
       t.mutation(api.movements.generateUploadUrl)
     ).rejects.toThrow("Unauthenticated");
 
-    const storageId = await t.run(async (ctx) => {
-      return await ctx.storage.store(new Blob(["test content"], { type: "text/plain" }));
-    });
-
     // 7. getFileUrl query
     await expect(
-      t.query(api.movements.getFileUrl, { storageId })
+      t.query(api.movements.getFileUrl, { movementId })
     ).rejects.toThrow("Unauthenticated");
+  });
+
+  test("authenticated users cannot read, debug, or delete another user's movement", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { debugSessionId, inlineMovementId, movementId, creatorId, viewerId } = await t.run(async (ctx) => {
+      const creatorId = await ctx.db.insert("users", {
+        email: "creator@pilates.com",
+        role: "USER",
+      });
+      const viewerId = await ctx.db.insert("users", {
+        email: "viewer@pilates.com",
+        role: "USER",
+      });
+      const storageId = await ctx.storage.store(
+        new Blob([JSON.stringify([{ frame: 1 }])], { type: "application/json" })
+      );
+      await ctx.storage.store(new Blob(["unrelated"], { type: "text/plain" }));
+      const movementId = await ctx.db.insert("movements", {
+        title: "Shared Demo",
+        difficulty: "Beginner",
+        poseData: storageId,
+        poseStorageId: storageId,
+        createdBy: creatorId,
+        createdAt: Date.now(),
+      });
+      const debugSessionId = await ctx.db.insert("movementDebugSessions", {
+        movementId,
+        trigger: "manual-debug-save",
+        sampleCount: 1,
+        durationMs: 100,
+        startedAt: 1,
+        endedAt: 2,
+        baselineSummary: "baseline",
+        warningSummary: "none",
+        samplesJson: "[]",
+        createdBy: creatorId,
+        createdAt: Date.now(),
+      });
+      const inlineMovementId = await ctx.db.insert("movements", {
+        title: "Inline Demo",
+        difficulty: "Beginner",
+        poseData: "[]",
+        createdBy: creatorId,
+        createdAt: Date.now(),
+      });
+
+      return { debugSessionId, inlineMovementId, movementId, creatorId, viewerId };
+    });
+
+    const creatorClient = t.withIdentity({ subject: creatorId });
+    const viewerClient = t.withIdentity({ subject: viewerId });
+    const fileUrl = await creatorClient.query(api.movements.getFileUrl, { movementId });
+
+    expect(fileUrl).toMatch(/^https?:\/\//);
+    expect(await creatorClient.query(api.movements.getFileUrl, { movementId: inlineMovementId })).toBeNull();
+    expect(await viewerClient.query(api.movements.list)).toEqual([]);
+    expect((await viewerClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 15, cursor: null },
+    })).page).toEqual([]);
+    expect((await viewerClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 15, cursor: null },
+      searchTerm: "Shared",
+    })).page).toEqual([]);
+    expect(await viewerClient.query(api.movements.get, { id: movementId })).toBeNull();
+    expect(await viewerClient.query(api.movements.getFileUrl, { movementId })).toBeNull();
+    expect(await viewerClient.query(api.movements.listDebugTrackingSessions, { movementId })).toEqual([]);
+    expect(await viewerClient.query(api.movements.getDebugTrackingSession, { id: debugSessionId })).toBeNull();
+    expect(await viewerClient.query(api.movements.getDebugTrackingSessions, { ids: [debugSessionId] })).toEqual([]);
+
+    await expect(viewerClient.mutation(api.movements.saveDebugTrackingSession, {
+      movementId,
+      trigger: "manual-debug-save",
+      sampleCount: 1,
+      durationMs: 100,
+      startedAt: 1,
+      endedAt: 2,
+      baselineSummary: "baseline",
+      warningSummary: "none",
+      samplesJson: "[]",
+    })).rejects.toThrow("Movement not found");
+    await expect(viewerClient.mutation(api.movements.remove, { id: movementId })).rejects.toThrow("Unauthorized");
+    expect(await creatorClient.query(api.movements.get, { id: movementId })).toMatchObject({ title: "Shared Demo" });
   });
 
   test("Authenticated USER can access movements operations successfully", async () => {

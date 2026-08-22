@@ -9,7 +9,7 @@ For company-level maintained pages, maps, review checkpoints, source receipts, a
 Implemented knowledge surfaces include:
 
 - `/admin/ai/global-knowledge` for super-admin-managed global knowledge.
-- `/admin/companies/[id]/knowledge` and `/admin/companies/[id]/ai/knowledge` for company knowledge.
+- `/admin/companies/[id]/ai/knowledge` for company knowledge.
 - `/admin/agents/[id]/knowledge` for agent-scoped knowledge.
 - assistant thread uploads, which are tied to a specific chat thread.
 

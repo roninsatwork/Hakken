@@ -16,7 +16,9 @@ governance question into an AI-configuration task.
 
 The overview shows the current governance standing. It combines checks for AI
 systems, policies, activity, approvals, retention, evidence exports, and personal
-data handling.
+data handling. Current overview cards read precomputed rollups/snapshots where
+available so the page does not sweep the whole operational estate every time it
+opens.
 
 Use it to answer:
 
@@ -28,7 +30,8 @@ Use it to answer:
 
 The customer workspace view is scoped to the active workspace. The platform view
 can see platform-level evidence and cross-workspace status where the operator is
-allowed to see it.
+allowed to see it. Read-only and auditor-style access can inspect governance
+evidence without receiving normal configuration write controls.
 
 ## AI Register
 

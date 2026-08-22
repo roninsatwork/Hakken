@@ -103,6 +103,67 @@ describe("audit trail tenancy", () => {
     expect(logs.some((log) => log.companyId === companyB)).toBe(false);
   });
 
+  test("a company admin's filter people are limited to their workspace", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminAId, userAId, userBId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", {
+        name: "Acme",
+        createdAt: Date.now(),
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
+      });
+      const companyBId = await ctx.db.insert("companies", {
+        name: "Other",
+        createdAt: Date.now(),
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
+      });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin@acme.test",
+        name: "Acme Admin",
+        role: "ADMIN",
+        companyId: companyAId,
+      });
+      const userAId = await ctx.db.insert("users", {
+        email: "user@acme.test",
+        name: "Acme User",
+        role: "USER",
+        companyId: companyAId,
+      });
+      const userBId = await ctx.db.insert("users", {
+        email: "user@other.test",
+        name: "Other User",
+        role: "USER",
+        companyId: companyBId,
+      });
+
+      await ctx.db.insert("auditLogs", {
+        actorId: adminAId,
+        actionType: "UPDATE_COMPANY",
+        entityType: "companies",
+        companyId: companyAId,
+        timestamp: Date.now(),
+      });
+      await ctx.db.insert("auditLogs", {
+        actorId: userBId,
+        actionType: "DELETE_USER",
+        entityType: "users",
+        companyId: companyBId,
+        timestamp: Date.now(),
+      });
+
+      return { adminAId, userAId, userBId };
+    });
+
+    const options = await t
+      .withIdentity({ subject: adminAId })
+      .query(api.auditLogs.getAuditFilterOptions, {});
+
+    expect(options.actions).toEqual(["UPDATE_COMPANY"]);
+    expect(options.people.map((person) => person.id)).toEqual(expect.arrayContaining([adminAId, userAId]));
+    expect(options.people.map((person) => person.id)).not.toContain(userBId);
+    expect(options.workspaces).toEqual([]);
+  });
+
   test("an ordinary user sees nothing at all", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

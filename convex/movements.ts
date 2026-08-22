@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
@@ -85,14 +84,27 @@ function isInlinePoseData(value: string) {
   return trimmed.startsWith("[") || trimmed.startsWith("{");
 }
 
+function movementIsOwnedByUser<T extends { createdBy?: Id<"users"> }>(
+  movement: T | null | undefined,
+  userId: Id<"users">,
+): movement is T & { createdBy: Id<"users"> } {
+  return movement?.createdBy === userId;
+}
+
+function getMovementStorageId(movement: { poseStorageId?: Id<"_storage">; poseData?: string }) {
+  return movement.poseStorageId ?? (
+    movement.poseData && !isInlinePoseData(movement.poseData)
+      ? movement.poseData as Id<"_storage">
+      : null
+  );
+}
+
 export const list = tenantQuery({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     return await ctx.db
       .query("movements")
+      .withIndex("by_createdBy_createdAt", (q) => q.eq("createdBy", ctx.userId))
       .order("desc")
       .take(100);
   },
@@ -103,22 +115,15 @@ export const listReplayAlignmentRecordings = tenantQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const limit = Math.max(1, Math.min(args.limit ?? 50, 100));
     const movements = await ctx.db
       .query("movements")
-      .withIndex("by_createdAt")
+      .withIndex("by_createdBy_createdAt", (q) => q.eq("createdBy", ctx.userId))
       .order("desc")
       .take(limit);
 
     return await Promise.all(movements.map(async (movement) => {
-      const storageId: Id<"_storage"> | null = movement.poseStorageId ?? (
-        movement.poseData && !isInlinePoseData(movement.poseData)
-          ? movement.poseData as Id<"_storage">
-          : null
-      );
+      const storageId = getMovementStorageId(movement);
 
       return {
         ...movement,
@@ -135,28 +140,27 @@ export const getPaginated = tenantQuery({
     spineGoal: v.optional(movementSpineGoalValidator),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const searchTerm = args.searchTerm?.trim();
 
     return searchTerm
       ? await ctx.db
         .query("movements")
         .withSearchIndex("search_title", (q) => {
-          const searched = q.search("title", searchTerm);
+          const searched = q.search("title", searchTerm).eq("createdBy", ctx.userId);
           return args.spineGoal ? searched.eq("spineGoal", args.spineGoal) : searched;
         })
         .paginate(args.paginationOpts)
       : args.spineGoal
         ? await ctx.db
           .query("movements")
-          .withIndex("by_spineGoal_createdAt", (q) => q.eq("spineGoal", args.spineGoal))
+          .withIndex("by_createdBy_spineGoal_createdAt", (q) =>
+            q.eq("createdBy", ctx.userId).eq("spineGoal", args.spineGoal)
+          )
           .order("desc")
           .paginate(args.paginationOpts)
       : await ctx.db
         .query("movements")
-        .withIndex("by_createdAt")
+        .withIndex("by_createdBy_createdAt", (q) => q.eq("createdBy", ctx.userId))
         .order("desc")
         .paginate(args.paginationOpts);
   },
@@ -165,10 +169,8 @@ export const getPaginated = tenantQuery({
 export const get = tenantQuery({
   args: { id: v.id("movements") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
-    return await ctx.db.get(args.id);
+    const movement = await ctx.db.get(args.id);
+    return movementIsOwnedByUser(movement, ctx.userId) ? movement : null;
   },
 });
 
@@ -188,9 +190,6 @@ export const create = tenantMutation({
     bodyFocus: v.optional(v.array(movementBodyFocusValidator)),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     return await ctx.db.insert("movements", {
       title: args.title,
       difficulty: args.difficulty,
@@ -204,7 +203,7 @@ export const create = tenantMutation({
       spineGoal: args.spineGoal,
       primaryCue: args.primaryCue,
       bodyFocus: args.bodyFocus,
-      createdBy: userId,
+      createdBy: ctx.userId,
       createdAt: Date.now(),
     });
   },
@@ -213,15 +212,10 @@ export const create = tenantMutation({
 export const remove = tenantMutation({
   args: { id: v.id("movements") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const movement = await ctx.db.get(args.id);
-    const storageId: Id<"_storage"> | null = movement?.poseStorageId ?? (
-      movement?.poseData && !isInlinePoseData(movement.poseData)
-        ? movement.poseData as Id<"_storage">
-        : null
-    );
+    if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Unauthorized");
+
+    const storageId = getMovementStorageId(movement);
 
     if (storageId) {
       await ctx.storage.delete(storageId).catch(() => {});
@@ -234,20 +228,19 @@ export const remove = tenantMutation({
 export const generateUploadUrl = tenantMutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     return await ctx.storage.generateUploadUrl();
   },
 });
 
 export const getFileUrl = tenantQuery({
-  args: { storageId: v.id("_storage") },
+  args: { movementId: v.id("movements") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
+    const movement = await ctx.db.get(args.movementId);
+    if (!movementIsOwnedByUser(movement, ctx.userId)) return null;
 
-    return await ctx.storage.getUrl(args.storageId);
+    const storageId = getMovementStorageId(movement);
+
+    return storageId ? await ctx.storage.getUrl(storageId) : null;
   },
 });
 
@@ -265,11 +258,8 @@ export const saveDebugTrackingSession = tenantMutation({
     samplesJson: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const movement = await ctx.db.get(args.movementId);
-    if (!movement) throw new Error("Movement not found");
+    if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Movement not found");
 
     return await ctx.db.insert("movementDebugSessions", {
       movementId: args.movementId,
@@ -282,7 +272,7 @@ export const saveDebugTrackingSession = tenantMutation({
       warningSummary: args.warningSummary,
       captureStartReadiness: args.captureStartReadiness,
       samplesJson: args.samplesJson,
-      createdBy: userId,
+      createdBy: ctx.userId,
       createdAt: Date.now(),
     });
   },
@@ -294,21 +284,24 @@ export const listDebugTrackingSessions = tenantQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const limit = Math.max(1, Math.min(args.limit ?? 10, 50));
+    if (args.movementId) {
+      const movement = await ctx.db.get(args.movementId);
+      if (!movementIsOwnedByUser(movement, ctx.userId)) return [];
+    }
     const sessions = args.movementId
       ? await ctx.db
-        .query("movementDebugSessions")
-        .withIndex("by_movement_createdAt", (q) => q.eq("movementId", args.movementId!))
-        .order("desc")
-        .take(limit)
+          .query("movementDebugSessions")
+          .withIndex("by_movement_createdBy_createdAt", (q) =>
+            q.eq("movementId", args.movementId!).eq("createdBy", ctx.userId)
+          )
+          .order("desc")
+          .take(limit)
       : await ctx.db
-        .query("movementDebugSessions")
-        .withIndex("by_createdAt")
-        .order("desc")
-        .take(limit);
+          .query("movementDebugSessions")
+          .withIndex("by_createdBy_createdAt", (q) => q.eq("createdBy", ctx.userId))
+          .order("desc")
+          .take(limit);
 
     return sessions.map((session) => ({
       ...session,
@@ -323,10 +316,8 @@ export const getDebugTrackingSession = tenantQuery({
     id: v.id("movementDebugSessions"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
-    return await ctx.db.get(args.id);
+    const session = await ctx.db.get(args.id);
+    return session?.createdBy === ctx.userId ? session : null;
   },
 });
 
@@ -335,11 +326,8 @@ export const getDebugTrackingSessions = tenantQuery({
     ids: v.array(v.id("movementDebugSessions")),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
     const limitedIds = args.ids.slice(0, 20);
     const sessions = await Promise.all(limitedIds.map((id) => ctx.db.get(id)));
-    return sessions.filter((session) => Boolean(session));
+    return sessions.filter((session) => session?.createdBy === ctx.userId);
   },
 });

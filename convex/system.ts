@@ -1,7 +1,6 @@
 import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { getCurrentUser } from "./authz";
-import { adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
+import { adminQuery, publicQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import {
   buildAnalyticsIdAuditMetadata,
   buildSystemConfigPatch,
@@ -14,14 +13,11 @@ import {
   trimAnalyticsTrackingId,
 } from "./systemService";
 
-// Public authenticated query for the Admin UI editor
-export const getSystemPrompt = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+// Platform readers need the prompt for the Admin UI editor. The runtime uses
+// getInternalSystemPrompt instead, so ordinary signed-in users never need it.
+export const getSystemPrompt = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return null;
-
     const config = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", SYSTEM_PROMPT_CONFIG_KEY))

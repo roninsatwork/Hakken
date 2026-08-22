@@ -9,10 +9,15 @@ This guide describes current behavior only. It should be read with `docs/develop
 Global AI routes:
 
 - `src/app/(dashboard)/admin/ai/costs/page.tsx` renders global AI cost analytics from `api.analytics.getGlobalAnalytics`.
+- `src/app/(dashboard)/admin/ai/money/page.tsx` renders the global money view backed by the Wiki money feature.
 - `src/app/(dashboard)/admin/ai/chat-logs/page.tsx` lists global chat threads and fetches selected messages through `api.chatAdmin`.
+- `src/app/(dashboard)/admin/ai/diary/page.tsx` renders `WikiDiaryScreen` for platform-scope Wiki audit events.
+- `src/app/(dashboard)/admin/ai/unanswered/page.tsx` renders `UnansweredScreen` for platform and company unanswered Wiki demand.
+- `src/app/(dashboard)/admin/ai/evals/**` renders platform-level AI check list, creation, detail, and edit screens.
 - `src/app/(dashboard)/admin/ai/rules/page.tsx`, `rules/new/page.tsx`, and `rules/[id]/page.tsx` manage global AI rules.
 - `src/app/(dashboard)/admin/ai/system-prompt/page.tsx` edits the global system prompt.
-- `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` renders `KnowledgeManager` with global scope.
+- `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` redirects to the current global Wiki address.
+- `src/app/(dashboard)/admin/ai/knowledge/**` renders platform-scope Wiki pages, page detail, and map.
 - `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget.
 - `src/app/(dashboard)/admin/ai/models/page.tsx` manages providers, model catalog rows, global defaults, sync, test, filtering, and enabled status.
 - `src/app/(dashboard)/admin/ai/models/[id]/page.tsx` edits a model friendly name and pricing configuration.
@@ -26,11 +31,18 @@ Company AI routes use the same backend tables but pass a company id and apply co
 - `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` manages company model defaults.
 - `src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx` edits the company prompt.
 - `src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx`, `src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx` manage company-scoped AI rules.
-- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx` render company knowledge management.
+- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` renders company knowledge management.
+- `src/app/(dashboard)/admin/companies/[id]/ai/pages/**` renders company Wiki pages, page detail, and map.
+- `src/app/(dashboard)/admin/companies/[id]/ai/diary/page.tsx` renders company-scope Wiki diary entries.
+- `src/app/(dashboard)/admin/companies/[id]/ai/unanswered/page.tsx` renders company unanswered Wiki demand.
+- `src/app/(dashboard)/admin/companies/[id]/ai/saved-answers/page.tsx` redirects to the company Wiki pages route; saved answers were folded into Wiki pages with chat receipts.
+- `src/app/(dashboard)/admin/companies/[id]/ai/money/page.tsx` renders company-scoped money view.
 - `src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx` expose company chat-log review paths.
+- `src/app/(dashboard)/admin/companies/[id]/calls/**` and `src/app/(dashboard)/admin/companies/[id]/mailbox/page.tsx` expose company calls and mailbox operations to platform operators.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the company widget.
 
 The shared knowledge UI lives in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx`. It is reused for global, company, and agent knowledge.
+The shared Wiki UI lives in `src/app/(dashboard)/admin/_features/wiki/`, including page lists/detail, map, import box, ask box, diary, unanswered questions, and money view. These components support both platform scope and company scope; keep their scope props explicit rather than inferring company access from the URL alone.
 
 ## Data Model
 

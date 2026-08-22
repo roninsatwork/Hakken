@@ -15,7 +15,8 @@ Global model and cost controls:
 Company model controls:
 
 - `/admin/companies/[id]/ai/models` manages model defaults for a specific company.
-- `/admin/companies/[id]/models` opens the same company model-default page from direct company navigation.
+Older direct company model routes have been retired; use the `/ai/models`
+company route.
 
 Related monitoring:
 

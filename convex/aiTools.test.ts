@@ -76,13 +76,17 @@ describe("AI Tools Authorization", () => {
     ).rejects.toThrow("Tool input schema properties must be a JSON object.");
   });
 
-  test("authenticated users can read tools while anonymous clients receive an empty catalog", async () => {
+  test("only platform readers can read tool configuration metadata", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { userId, toolId } = await t.run(async (ctx) => {
+    const { userId, readOnlyId, superAdminId, toolId } = await t.run(async (ctx) => {
       const userId = await ctx.db.insert("users", {
         email: "user@example.com",
         role: "USER",
+      });
+      const readOnlyId = await ctx.db.insert("users", {
+        email: "reader@example.com",
+        role: "READ_ONLY",
       });
       const superAdminId = await ctx.db.insert("users", {
         email: "super@example.com",
@@ -94,16 +98,20 @@ describe("AI Tools Authorization", () => {
         createdBy: superAdminId,
       });
 
-      return { userId, toolId };
+      return { userId, readOnlyId, superAdminId, toolId };
     });
 
     const userClient = t.withIdentity({ subject: userId });
+    const readOnlyClient = t.withIdentity({ subject: readOnlyId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
 
     await expect(t.query(api.aiTools.getToolById, { id: toolId })).rejects.toThrow("Unauthenticated");
-    expect(await t.query(api.aiTools.getTools, {})).toEqual([]);
+    await expect(t.query(api.aiTools.getTools, {})).rejects.toThrow("Unauthenticated");
+    await expect(userClient.query(api.aiTools.getTools, {})).rejects.toThrow("Unauthorized");
+    await expect(userClient.query(api.aiTools.getToolById, { id: toolId })).rejects.toThrow("Unauthorized");
 
-    const tools = await userClient.query(api.aiTools.getTools, {});
-    const tool = await userClient.query(api.aiTools.getToolById, { id: toolId });
+    const tools = await superAdminClient.query(api.aiTools.getTools, {});
+    const tool = await readOnlyClient.query(api.aiTools.getToolById, { id: toolId });
     const internalTool = await t.run(async (ctx) => ctx.runQuery(internal.aiTools.getToolInternal, { id: toolId }));
 
     expect(tools.map((entry) => entry.name)).toEqual([toolInput.name]);
@@ -589,7 +597,8 @@ describe("AI Tools Authorization", () => {
       action: "BIND",
     });
 
-    const boundTools = await userClient.query(api.aiTools.getAgentTools, { agentId });
+    await expect(userClient.query(api.aiTools.getAgentTools, { agentId })).rejects.toThrow("Unauthorized");
+    const boundTools = await superAdminClient.query(api.aiTools.getAgentTools, { agentId });
     const bindingsAfterDuplicateBind = await t.run(async (ctx) =>
       ctx.db.query("agentTools").withIndex("by_agent", (q) => q.eq("agentId", agentId)).collect()
     );
@@ -603,7 +612,7 @@ describe("AI Tools Authorization", () => {
       action: "UNBIND",
     });
 
-    expect(await userClient.query(api.aiTools.getAgentTools, { agentId })).toEqual([]);
+    expect(await superAdminClient.query(api.aiTools.getAgentTools, { agentId })).toEqual([]);
 
     await superAdminClient.mutation(api.aiTools.toggleAgentTool, {
       agentId,

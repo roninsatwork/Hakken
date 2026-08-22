@@ -15,13 +15,9 @@ Global routes:
 
 Company routes:
 
-- `src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx` re-exports the company prompt implementation.
-- `src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx` re-exports the company rules implementation.
+- `src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx` renders the company prompt implementation.
+- `src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx` renders the company rules list.
 - `src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx` and `rules/[ruleId]/page.tsx` use the same rule contracts with a company id.
-- `src/app/(dashboard)/admin/companies/[id]/system-prompt/page.tsx` is the concrete company prompt editor used by the `/ai/prompt` alias.
-- `src/app/(dashboard)/admin/companies/[id]/rules/page.tsx` is the concrete company rule list used by the `/ai/rules` alias.
-- `src/app/(dashboard)/admin/companies/[id]/rules/new/page.tsx` creates company-scoped rules.
-- `src/app/(dashboard)/admin/companies/[id]/rules/[ruleId]/page.tsx` edits company-scoped rules.
 
 Agent routes:
 
@@ -50,7 +46,9 @@ Shared UI:
 - `createRule`, `updateRule`, `toggleRuleActive`, and `deleteRule` write audit logs.
 - `getActiveRulesInternal` returns active global, company, and agent rules for prompt assembly, deduplicated by rule id.
 
-Company route aliases under `/admin/companies/[id]/ai/...` deliberately re-export the direct company pages under `/admin/companies/[id]/...`. Keep both route families documented because operators may arrive from either the company AI hub or direct company navigation.
+Company prompt and rule routes now live under `/admin/companies/[id]/ai/...`.
+Do not add links to the retired direct company prompt/rule routes unless those
+files are reintroduced in implementation.
 
 `convex/aiPromptAssembly.ts` owns instruction assembly and prompt-injection hardening:
 

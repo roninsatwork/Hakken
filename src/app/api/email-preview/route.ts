@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 import { buildEmailPreviews } from "./fixtures";
 
 function isEnabled() {
-  return process.env.NODE_ENV !== "production" || process.env.EMAIL_PREVIEW_ENABLED === "1";
+  return process.env.NODE_ENV !== "production";
 }
 
 function escapeHtml(value: string) {

@@ -1,6 +1,6 @@
 # Platform Operations Settings Developer Guide
 
-Platform operations settings cover API keys, webhook delivery logs, maintenance scripts, data retention, analytics health, system health, auth diagnostics, and audit log detail. These surfaces are implemented as admin operations rather than customer-facing product workflows, but they are important for launch support, incident response, and integration safety. For analytics rollups and data-health internals, see [Analytics Rollups](./analytics-rollups.md). For audit feed and audit purge internals, see [Audit Log Service](./audit-log-service.md). For auth event diagnostics, see [Auth Diagnostics](./auth-diagnostics.md). For email sender resolution, see [Email Branding](./email-branding.md). For maintenance script internals, see [Maintenance Scripts](./maintenance-scripts.md). For purge execution internals, see [Data Retention And Purges](./data-retention-and-purges.md). For health reports and daily platform alert emails, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
+Platform operations settings cover API keys, webhook delivery internals, maintenance scripts, data retention, analytics health, system health, external connection checks, auth diagnostics, and audit log detail. These surfaces are implemented as admin operations rather than customer-facing product workflows, but they are important for launch support, incident response, and integration safety. For analytics rollups and data-health internals, see [Analytics Rollups](./analytics-rollups.md). For audit feed and audit purge internals, see [Audit Log Service](./audit-log-service.md). For auth event diagnostics, see [Auth Diagnostics](./auth-diagnostics.md). For email sender resolution, see [Email Branding](./email-branding.md). For maintenance script internals, see [Maintenance Scripts](./maintenance-scripts.md). For purge execution internals, see [Data Retention And Purges](./data-retention-and-purges.md). For health reports and daily platform alert emails, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
 ## Product Surface
 
@@ -14,11 +14,12 @@ Platform operations settings cover API keys, webhook delivery logs, maintenance 
 - `src/app/(dashboard)/admin/settings/scripts/page.tsx` lists allowlisted maintenance scripts.
 - `src/app/(dashboard)/admin/settings/scripts/[scriptId]/page.tsx` shows one script, run guidance, and history.
 - `src/app/(dashboard)/admin/health/page.tsx` renders platform health, alert rules, budget pressure, analytics health, and runbook signals.
+- `src/app/(dashboard)/admin/connections/page.tsx` renders external dependency probe state and scheduled job recency from `api.connectionProbes` and `api.jobLedger`.
 - `src/app/(dashboard)/admin/auth-diagnostics/page.tsx` re-exports the shared auth diagnostics page.
 - `src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx` exposes the company settings diagnostics route.
 - `src/app/(dashboard)/admin/audit-logs/[id]/page.tsx` renders one audit log record from the settings audit feed.
 
-Shared admin table components and `ADMIN_PAGE_SIZE` are used for API keys, webhook deliveries, and scripts. Keep the 15-row admin pagination convention.
+Shared screen-kit table components and `TABLE_PAGE_SIZE` are used for API keys, connection checks, job rows, scripts, and other table screens. Keep the 15-row admin pagination convention.
 
 ## System Settings Shell
 
@@ -77,6 +78,26 @@ Keep health signals actionable. Each signal should include counts, examples when
 
 The detailed health-report shape, scoping behavior, threshold rules, platform alert decision flow, email dispatch path, and extension checklist are documented in [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
+## Connection Probes And Job Ledger
+
+`src/app/(dashboard)/admin/connections/page.tsx` reads:
+
+- `api.connectionProbes.listConnections` for configured dependency probe rows.
+- `api.jobLedger.listJobRuns` for recent scheduled-job execution state.
+- `api.connectionProbes.probeConnectionsNow` for the write-gated Check Now action.
+
+The screen searches and paginates both tables client-side with
+`TABLE_PAGE_SIZE`. Status copy must include words, not colour alone. This page
+answers "can the outside dependency be reached?" and "has the scheduled
+machinery reported recently?" System Health answers a different question:
+whether Sonae's own stored data and operational thresholds look healthy.
+
+Backend ownership lives in `convex/connectionProbes.ts`, `convex/jobLedger.ts`,
+and scheduled wiring in `convex/crons.ts`. Probe state is stored on existing
+connector/provider records; scheduled-job outcomes are stored in `jobRuns`. Add
+tests there when adding a new probe, changing the job ledger row shape, or
+changing manual-probe authorization.
+
 ## Analytics Rollups
 
 `convex/analyticsSnapshots.ts` generates daily `analyticsDailySnapshots` for global, company, and user usage. `convex/analytics.ts` combines historical snapshots with today's live messages and agent transactions for admin dashboards. The analytics settings page also surfaces snapshot coverage and message dimension health.
@@ -99,13 +120,13 @@ The detailed audit row contract, recent-feed behavior, detail-route limitation, 
 
 ## Data Model
 
-Relevant tables in `convex/schema.ts` include `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `maintenanceScriptRuns`, `auditLogs`, `systemConfig`, `analyticsDailySnapshots`, `inventoryRollups`, `agentRuns`, `agentToolCalls`, and schedule/workflow execution tables used by health reporting.
+Relevant tables in `convex/schema.ts` include `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `maintenanceScriptRuns`, `jobRuns`, `toolConnectors`, `aiProviders`, `auditLogs`, `systemConfig`, `analyticsDailySnapshots`, `inventoryRollups`, `agentRuns`, `agentToolCalls`, and schedule/workflow execution tables used by health reporting.
 
 API key and webhook tables are indexed by company and created/status fields for admin filtering. Maintenance runs are indexed by script and start time. Audit logs are indexed by actor, company, and timestamp.
 
 ## Verification
 
-Focused tests include `convex/apiKeys.test.ts`, `convex/webhookDeliveries.test.ts`, `convex/webhookDeliveryActions.ts` coverage where present, `convex/maintenanceScripts.test.ts`, `convex/system.test.ts`, `convex/systemService.test.ts`, `convex/platformAlertService.test.ts`, `convex/auditLogs.test.ts`, and UI tests for settings pages.
+Focused tests include `convex/apiKeys.test.ts`, `convex/webhookDeliveries.test.ts`, `convex/webhookDeliveryActions.ts` coverage where present, `convex/maintenanceScripts.test.ts`, `convex/connectionProbes.test.ts`, `convex/jobLedger.test.ts`, `convex/system.test.ts`, `convex/systemService.test.ts`, `convex/platformAlertService.test.ts`, `convex/auditLogs.test.ts`, and UI tests for settings pages.
 
 For documentation-only edits, run `git diff --check`. Before merging code changes in this area, run the full repo gate:
 

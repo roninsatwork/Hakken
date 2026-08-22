@@ -18,10 +18,11 @@ Super-admin company routes:
 - `/admin/companies`: company list.
 - `/admin/companies/[id]`: company detail.
 - `/admin/companies/[id]/overview`: company overview.
-- `/admin/companies/[id]/users`: company users.
-- `/admin/companies/[id]/invites`: company invitations.
-- `/admin/companies/[id]/directory/users`: alias for company users.
-- `/admin/companies/[id]/directory/invites`: alias for company invites.
+- `/admin/companies/[id]/features`: workspace feature gates beyond plan defaults.
+- `/admin/companies/[id]/directory/users`: company users.
+- `/admin/companies/[id]/directory/invites`: company invitations.
+- `/admin/companies/[id]/calls`: company call review.
+- `/admin/companies/[id]/mailbox`: company mailbox review.
 
 Company pages are tenant-boundary surfaces. Always confirm the company id and company name before editing users, invites, prompts, rules, models, knowledge, widgets, or chat logs.
 
@@ -75,17 +76,25 @@ Deleting a user removes their access path but does not automatically erase all h
 
 ## Directory Routes
 
-The directory routes under `/admin/companies/[id]/directory` are currently aliases:
+The directory routes under `/admin/companies/[id]/directory` are the current
+company user/invite management home:
 
-- `directory/users` reuses the company users page
-- `directory/invites` reuses the company invites page
+- `directory/users` manages company users
+- `directory/invites` manages company invitations
 - the directory index redirects to users
 
-Do not describe the directory as a separate implemented product module. It is a navigation grouping over the existing users and invites screens.
+Do not describe removed direct `/admin/companies/[id]/users` or
+`/admin/companies/[id]/invites` routes as current unless their files are
+reintroduced.
 
 ## Personal Profile
 
 Users can edit their own profile at `/app/profile`. The profile page supports name, phone number, and profile image updates. Email is displayed but fixed.
+
+The Assistant Note tab lets a user see and manage the durable notes the
+assistant keeps about them. They can add a note manually and delete manual or
+learned notes. This is the user's own visibility and control point; it is not a
+company-admin editing surface for someone else's memory.
 
 The profile page also shows company plan and AI message usage when a finite plan applies. If assistant chat reaches the plan limit, Sonae records the attempted message and returns a quota-block assistant reply until the reset cycle or a plan change.
 
@@ -93,7 +102,7 @@ Profile image uploads use the platform upload policy. Do not ask users to paste 
 
 ## Super-Admin Company Work
 
-Super admins use company detail pages to prepare or support a tenant. Company detail routes connect to users, invites, AI prompt, AI rules, knowledge, model defaults, chat logs, and widget configuration.
+Super admins use company detail pages to prepare or support a tenant. Company detail routes connect to feature gates, directory users and invitations, calls, mailbox, AI prompt, AI rules, knowledge, Wiki pages, model defaults, usage, chat logs, and widget configuration.
 
 Before changing company configuration:
 

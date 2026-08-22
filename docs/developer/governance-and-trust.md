@@ -43,15 +43,18 @@ own the platform-wide approval queue.
 
 `convex/governanceDashboard.ts` exposes the governance overview. It combines
 register, policy, retention, approval, evidence, and personal-data signals into
-stateful checks.
+stateful checks. The current screen reads rollup/snapshot data for expensive
+estate-wide counts instead of collecting the full estate during page render.
 
 `convex/governanceRegister.ts` builds the AI register from current assistants,
 widgets, and workflows. `convex/governanceRegisterService.ts` owns conversion,
 missing-field descriptions, risk sorting, filtering, and summaries.
 
-`convex/governanceActivity.ts` and `convex/governanceActivityService.ts` summarize
-recent AI activity, side-effect levels, oversight outcomes, busiest systems, and
-risk mix.
+`convex/governanceActivity.ts`, `convex/governanceRollups.ts`,
+`convex/governanceRollupService.ts`, and
+`convex/governanceActivityService.ts` summarize recent AI activity, side-effect
+levels, oversight outcomes, busiest systems, and risk mix. Scheduled rollup
+rebuilds keep overview reads bounded.
 
 `convex/governancePolicyService.ts` turns active AI rules into governance policy
 records with priority and scope filters. Policy editing remains in the AI rule
@@ -72,8 +75,9 @@ inside an agent's configured risk rating and describes any findings.
 
 Governance functions use governance-specific wrappers and must preserve the
 difference between platform scope and workspace scope. Platform governance is a
-super-admin concern. Workspace governance must only expose records belonging to
-the active company.
+super-admin, read-only console, or auditor evidence concern depending on the
+route and action. Workspace governance must only expose records belonging to the
+active company.
 
 Personal-data erasure is a super-admin action. Subject-access production and
 retained-exception reads are governance actions and must not expose unrelated
@@ -111,6 +115,8 @@ Focused tests include:
 - `convex/governanceRegisterService.test.ts`
 - `convex/governancePolicyService.test.ts`
 - `convex/governanceActivityService.test.ts`
+- `convex/governanceRollupService.test.ts`
+- `convex/governanceRollups.test.ts`
 - `convex/evidencePack.test.ts`
 - `convex/evidencePackService.test.ts`
 - `convex/personalData.test.ts`

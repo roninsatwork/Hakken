@@ -19,8 +19,7 @@ Scope is those two screens. The third copy of the control, inside
 
 ### The company screen silently loses overrides
 
-`src/app/(dashboard)/admin/companies/[id]/models/page.tsx` (re-exported by
-`.../ai/models/page.tsx`) filters each row's dropdown down to models whose
+`src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` filters each row's dropdown down to models whose
 provider can serve that job — the same rule as the platform screen. It does not
 handle what happens when the saved override falls outside that list, which is
 what a disabled model or a newly restricted provider does to it.
@@ -122,7 +121,7 @@ company, Price. Status is dropped.
 
 ### Phase 1 — Company screen rebuild
 
-`src/app/(dashboard)/admin/companies/[id]/models/page.tsx`.
+`src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx`.
 
 1. Adopt `AdminPageHeader` (with `divider`), `AdminTableShell`,
    `AdminTableLoadingRow`, `AdminTableEmptyRow`, `AdminSaveError`. Delete the

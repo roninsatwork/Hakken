@@ -34,11 +34,13 @@ Pending invites expire after seven days. If an invite is expired, revoked, missi
 
 ## Roles
 
-Sonae uses three roles:
+Sonae uses workspace, platform, and evidence-review roles:
 
 - `USER`: normal workspace user.
 - `ADMIN`: company admin who can manage tenant-scoped organization areas.
 - `SUPER_ADMIN`: platform operator with global administration access.
+- Read-only or auditor-style roles: limited evidence review, especially for
+  Governance, without ordinary platform write controls.
 
 Company admins work inside `/app/settings` and `/app/settings/team`. Super admins use `/admin` for global platform administration.
 
@@ -93,7 +95,8 @@ When a user can sign in but cannot access admin:
 1. Confirm whether they should be a company admin or a super admin.
 2. Use `ADMIN` for tenant organization management.
 3. Use `SUPER_ADMIN` only for trusted platform operators.
-4. Confirm the person is not expecting global admin access from a tenant-admin account.
+4. Use evidence-review roles only when the person should inspect governance or read-only evidence, not manage configuration.
+5. Confirm the person is not expecting global admin access from a tenant-admin account.
 
 When a super admin lands in the wrong context:
 

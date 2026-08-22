@@ -1,6 +1,6 @@
 # Company AI Readiness And Checks Developer Guide
 
-Last reviewed: 2026-07-30 17:39 BST +0100
+Last reviewed: 2026-08-22 01:00 BST +0100
 Status: current; related readiness and checks plans are still active
 Audience: engineers and agents changing company AI readiness, checks, memory, skills, drift, or company AI routes.
 
@@ -9,7 +9,8 @@ Audience: engineers and agents changing company AI readiness, checks, memory, sk
 Company AI is implemented under
 `src/app/(dashboard)/admin/companies/[id]/ai/` and several legacy company detail
 routes. It covers company-specific AI setup: overview, knowledge, prompt, rules,
-model defaults, checks, memory, skills, usage, and chat logs.
+model defaults, checks, memory, skills, usage, money, saved answers, Wiki diary,
+unanswered questions, and chat logs.
 
 The main routes are:
 
@@ -21,6 +22,13 @@ The main routes are:
 - `src/app/(dashboard)/admin/companies/[id]/ai/memory/page.tsx`
 - `src/app/(dashboard)/admin/companies/[id]/ai/skills/page.tsx`
 - `src/app/(dashboard)/admin/companies/[id]/ai/skills/new/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/pages/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/pages/[pageId]/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/pages/map/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/diary/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/unanswered/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/saved-answers/page.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/money/page.tsx`
 - `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx`
 - `src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx`
 - `src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx`
@@ -65,6 +73,11 @@ The page sorts `NEEDS_ATTENTION` first, then `SET_HERE`, then
 `NOT_CONFIGURED`. The headline state is derived from the same area list that the
 table renders, so the summary and table should not disagree.
 
+Company AI pages use the shared `AiWorkspaceNav` for the company-scope AI menu.
+Routes such as diary, unanswered, saved answers, and money are not readiness
+inputs by themselves, but they explain why a company reads the way it does and
+where operators should inspect gaps after a failed answer or customer review.
+
 ## Readiness Inputs
 
 The readiness query reads:
@@ -78,6 +91,14 @@ The readiness query reads:
 - active company eval cases
 - unresolved company AI drift events
 - company prompt length
+
+Related Wiki and answer-demand routes read `wikiPages`, `wikiReviews`,
+`wikiOpenQuestions`, `wikiPageRevisions`, `wikiUnansweredQuestions`, and audit
+rows through the `convex/wiki*` modules. The saved-answers route is a redirect
+into the company Wiki; it does not own a separate table or Convex module. Keep
+those screens scoped by company id; do not let a platform-level Wiki result
+appear in a company AI tab unless the backend explicitly returns it for that
+company.
 
 Important limits include:
 
@@ -225,12 +246,14 @@ platform model is used instead and links to model settings.
 Focused tests include:
 
 - `convex/companyEvals.test.ts`
-- `convex/companyEvals.test.ts`
 - `convex/companyLearningLoop.test.ts`
 - `convex/companyMemories.test.ts`
 - `convex/companyMemorySuggestions.test.ts`
 - `convex/companySkills.test.ts`
 - `convex/companyReadiness.test.ts`
+- `convex/wikiFeedback.test.ts`
+- `convex/wikiDiary.test.ts`
+- `convex/wikiPages.test.ts`
 - UI tests under `src/app/(dashboard)/admin/companies/[id]/ai/`
 
 For documentation-only edits, run `git diff --check` and Markdown link

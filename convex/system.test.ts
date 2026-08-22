@@ -21,6 +21,40 @@ describe("OWASP: Broken Access Control - System", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  test("only platform readers can read the global System Prompt", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { userId, adminId, auditorId, readOnlyId, superAdminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", { email: "user@test.com", role: "USER", companyId });
+      const adminId = await ctx.db.insert("users", { email: "admin@test.com", role: "ADMIN", companyId });
+      const auditorId = await ctx.db.insert("users", { email: "auditor@test.com", role: "AUDITOR", companyId });
+      const readOnlyId = await ctx.db.insert("users", { email: "reader@test.com", role: "READ_ONLY" });
+      const superAdminId = await ctx.db.insert("users", { email: "super@test.com", role: "SUPER_ADMIN" });
+
+      await ctx.db.insert("systemConfig", {
+        key: "SYSTEM_PROMPT",
+        value: "Internal platform instructions.",
+        updatedAt: Date.now(),
+      });
+
+      return { userId, adminId, auditorId, readOnlyId, superAdminId };
+    });
+
+    await expect(t.query(api.system.getSystemPrompt, {})).rejects.toThrow("Unauthenticated");
+    for (const subject of [userId, adminId, auditorId]) {
+      await expect(
+        t.withIdentity({ subject }).query(api.system.getSystemPrompt, {})
+      ).rejects.toThrow("Unauthorized");
+    }
+    await expect(
+      t.withIdentity({ subject: readOnlyId }).query(api.system.getSystemPrompt, {})
+    ).resolves.toBe("Internal platform instructions.");
+    await expect(
+      t.withIdentity({ subject: superAdminId }).query(api.system.getSystemPrompt, {})
+    ).resolves.toBe("Internal platform instructions.");
+  });
+
   test("Standard USER cannot modify the Google Analytics tracking ID", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -67,7 +101,7 @@ describe("OWASP: Broken Access Control - System", () => {
     );
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    expect(await t.query(api.system.getSystemPrompt, {})).toBeNull();
+    await expect(t.query(api.system.getSystemPrompt, {})).rejects.toThrow("Unauthenticated");
     expect(await t.query(api.system.getAnalyticsId, {})).toBeNull();
 
     const promptConfigId = await superAdminClient.mutation(api.system.updateSystemPrompt, {

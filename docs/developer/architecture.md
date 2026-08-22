@@ -18,19 +18,21 @@ For local setup and verification, read [Getting Started](./getting-started.md). 
 
 The app has three major route groups:
 
-- `/app`: authenticated customer workspace for assistant chat, reports, properties, organization settings, profile, auxiliary tools, and tenant diagnostics.
-- `/admin`: super-admin platform operations for companies, users, AI settings, agents, workflows, releases, analytics, API keys, maintenance scripts, audit logs, and system health.
+- `/app`: authenticated customer workspace for assistant chat, tasks, calls, reception, governance, reports, properties, organization settings, profile, auxiliary tools, and tenant diagnostics.
+- `/admin`: platform operations for companies, users, AI settings, agents, workflows, governance, analytics, API keys, connection checks, maintenance scripts, audit logs, and system health.
 - Public/supporting routes: `/login`, `/w/[widgetId]`, `/sandbox/[widgetId]`, `/local-test-auth`, Convex HTTP routes, and the root redirect.
 
 Do not rely on route grouping alone for security. Sensitive Convex functions enforce authorization again with helpers from `convex/authz.ts`, `convex/actionAuth.ts`, or feature-specific access checks.
 
 ## Roles And Tenancy
 
-Sonae uses three roles:
+Sonae uses workspace, platform, and evidence-review roles:
 
 - `SUPER_ADMIN`: platform operator. Can access `/admin`, global configuration, and cross-company operational views where queries permit it.
 - `ADMIN`: company administrator. Can manage tenant-scoped organization areas and company-scoped operational evidence.
 - `USER`: standard workspace user. Can use customer-facing app features allowed for their company.
+- `READ_ONLY`: platform console reader for selected admin evidence surfaces without normal write affordances.
+- `AUDITOR`: governance-focused evidence reviewer with access to the governance section rather than general platform administration.
 
 Tenant isolation is company-based. Most customer data carries `companyId`, while super admins can also operate in an impersonated company context through `impersonatingCompanyId`. Runtime code should use active company helpers rather than accepting untrusted company ids from the client unless the route is deliberately a super-admin company route.
 
@@ -41,10 +43,10 @@ Tenant isolation is company-based. Most customer data carries `companyId`, while
 - identity and tenancy: `users`, `companies`, `invitations`, `logins`
 - AI catalog, governance, and helper throttles: `aiProviders`, `aiModels`, `aiModelDefaults`, `aiRules`, `systemConfig`, and `aiActionRequests`
 - assistant and widgets: `threads`, `messages`, `widgets`, widget session credentials, attachment ids, and analytics dimensions
-- knowledge: `knowledgeDocuments`, `knowledgeChunks`, storage ids, embedding metadata, and vector indexes
+- knowledge and wiki: `knowledgeDocuments`, `knowledgeChunks`, `wikiPages`, source receipts, open questions, unanswered demand, storage ids, embedding metadata, and vector indexes
 - agents and operations: `agents`, `agentRuns`, steps, tool calls, approvals, evals, memories, reflections, improvement suggestions, versions, transactions, logs, releases, skills, and skill bindings
 - workflows and schedules: `workflows`, `workflowExecutions`, `workflowExecutionSteps`, `schedules`
-- integrations and operations: `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `toolConnectors`, connector secret refs, connector OAuth connection records, Apify runs, `maintenanceScriptRuns`, `auditLogs`, and purge history
+- integrations and operations: `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `toolConnectors`, connector secret refs, connector OAuth connection records, Apify runs, `maintenanceScriptRuns`, `jobRuns`, `auditLogs`, and purge history
 - product features: properties, sales reports, plans, inventory rollups, analytics snapshots, arcade scores, and movement demo data
 
 Queries and mutations should stay fast and bounded. Provider calls, document extraction, webhook dispatch, email sending, Apify sync, and other external or expensive work belong in actions or scheduled internal actions.

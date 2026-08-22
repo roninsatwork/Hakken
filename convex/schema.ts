@@ -3081,10 +3081,12 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"])
+    .index("by_createdBy_createdAt", ["createdBy", "createdAt"])
     .index("by_spineGoal_createdAt", ["spineGoal", "createdAt"])
+    .index("by_createdBy_spineGoal_createdAt", ["createdBy", "spineGoal", "createdAt"])
     .searchIndex("search_title", {
       searchField: "title",
-      filterFields: ["spineGoal"],
+      filterFields: ["createdBy", "spineGoal"],
     }),
 
   movementDebugSessions: defineTable({
@@ -3104,7 +3106,9 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"])
-    .index("by_movement_createdAt", ["movementId", "createdAt"]),
+    .index("by_createdBy_createdAt", ["createdBy", "createdAt"])
+    .index("by_movement_createdAt", ["movementId", "createdAt"])
+    .index("by_movement_createdBy_createdAt", ["movementId", "createdBy", "createdAt"]),
   // template:remove:end
 
   mockStorageMetadata: defineTable({

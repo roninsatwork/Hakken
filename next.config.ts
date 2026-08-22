@@ -3,6 +3,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';
+import { buildAppContentSecurityPolicy } from './src/lib/securityHeaders';
 
 // The e2e auth bypass must never ship armed. It is correctly gated at every
 // consumer (src/proxy.ts and the fixture routes all check this env var), but
@@ -47,18 +48,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const defaultHeaders = createSecureHeaders({
-      contentSecurityPolicy: {
-        reportOnly: true,
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:", "blob:", "https:"],
-          connectSrc: ["'self'", "https:", "wss:", "ws:"],
-          frameSrc: ["'self'", "https:"],
-          frameAncestors: ["'self'"],
-        },
-      },
+      contentSecurityPolicy: buildAppContentSecurityPolicy(process.env),
     });
 
     // `frameGuard: false` drops X-Frame-Options so the widget can be framed at

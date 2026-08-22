@@ -1,6 +1,6 @@
 # Company And User Management Developer Guide
 
-Company and user management covers tenant workspaces, managed users, invitations, role boundaries, super-admin company assignment, impersonation, login tracking, plan assignment, and destructive cleanup. It is implemented across global admin routes, tenant organization routes, and Convex authorization helpers.
+Company and user management covers tenant workspaces, managed users, invitations, role boundaries, super-admin company assignment, impersonation, login tracking, plan assignment, workspace feature gates, personal assistant notes, and destructive cleanup. It is implemented across global admin routes, tenant organization routes, and Convex authorization helpers.
 
 Read this before changing `convex/companies.ts`, `convex/users.ts`, `convex/userManagementService.ts`, `convex/invites.ts`, `convex/authUserProvisioning.ts`, company/user admin pages, or tenant team settings. For the broader admin route map, see [Administration](./administration.md). For tenant-facing workspace pages, see [Organization And Company Workspaces](./organization-and-company-workspaces.md). For audit log details, see [Audit Log Service](./audit-log-service.md).
 
@@ -11,8 +11,7 @@ Super-admin routes:
 - `/admin/companies` lists and creates companies.
 - `/admin/companies/[id]` redirects into the company detail surface from `src/app/(dashboard)/admin/companies/[id]/page.tsx`.
 - `/admin/companies/[id]/overview` edits profile fields and plan assignment.
-- `/admin/companies/[id]/users` manages users in one company through `src/app/(dashboard)/admin/companies/[id]/users/page.tsx`.
-- `/admin/companies/[id]/invites` manages pending invites for one company through `src/app/(dashboard)/admin/companies/[id]/invites/page.tsx`.
+- `/admin/companies/[id]/features` edits workspace feature gates through `src/app/(dashboard)/admin/companies/[id]/features/page.tsx`.
 - `/admin/companies/[id]/directory` is the company directory section, with `src/app/(dashboard)/admin/companies/[id]/directory/layout.tsx`, `src/app/(dashboard)/admin/companies/[id]/directory/page.tsx`, `src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx`.
 - `/admin/users`, `/admin/users/invite`, and `/admin/users/[id]` manage global users.
 - `/admin/super-admins`, `/admin/super-admins/invite`, and `/admin/super-admins/[id]` manage super-admin users through `src/app/(dashboard)/admin/super-admins/page.tsx`, `src/app/(dashboard)/admin/super-admins/invite/page.tsx`, and `src/app/(dashboard)/admin/super-admins/[id]/page.tsx`.
@@ -23,7 +22,7 @@ Tenant routes:
 
 - `/app/settings` shows the signed-in user's company dashboard.
 - `/app/settings/team` manages tenant-scoped users and pending invites.
-- `/app/profile` edits the signed-in user's profile and shows plan usage.
+- `/app/profile` edits the signed-in user's profile, preferences, Assistant Notes, and plan usage.
 
 Keep these route groups distinct. `/admin` is super-admin-only at the layout level, while `/app/settings/team` uses the same backend user-management mutations under tenant-scoped authorization.
 
@@ -64,6 +63,12 @@ This distinction prevents a super admin who is operating inside a tenant context
 
 `updateMyProfile` is separate from managed-user editing. It only allows the signed-in user to update name, phone, and image. If a storage id is supplied, it validates the upload with the admin image policy before resolving the storage URL.
 
+`convex/userMemories.ts` owns the signed-in user's Assistant Notes. `listMine`
+returns only the caller's active notes, `addMine` creates a manual note for the
+caller, and `deleteMine` removes a note owned by the caller. The profile tab is
+the only current UI for this user-owned memory layer; keep it separate from
+company memories and agent memories.
+
 ## User Queries
 
 `getPaginatedUsers` is the main table query. It:
@@ -94,7 +99,7 @@ Invitations are implemented in `convex/invites.ts` and stored in `invitations`.
 
 `revokeInvite` requires an admin, deletes the invite, and writes `REVOKE_INVITE`. Non-super-admins can only revoke invites for their own company. Because it deletes the row, revoked invites are not retained as status rows.
 
-Invite email templates are stored in `emailTemplates` with `templateType: "INVITE"`. `getActiveTemplate` returns `null` for unauthenticated users, returns the stored invite template when one exists, and otherwise returns the built-in default subject, headline, body, and CTA text. The invite pages under `/admin/users/invite`, `/admin/companies/[id]/invites`, and `/admin/super-admins/invite` all read this same active template, so saving it changes the global invite copy used by those screens. `saveTemplate` requires `requireSuperAdmin`, upserts the single active invite template, and writes `UPDATE_EMAIL_TEMPLATE`.
+Invite email templates are stored in `emailTemplates` with `templateType: "INVITE"`. `getActiveTemplate` returns `null` for unauthenticated users, returns the stored invite template when one exists, and otherwise returns the built-in default subject, headline, body, and CTA text. The invite pages under `/admin/users/invite`, `/admin/companies/[id]/directory/invites`, and `/admin/super-admins/invite` all read this same active template, so saving it changes the global invite copy used by those screens. `saveTemplate` requires `requireSuperAdmin`, upserts the single active invite template, and writes `UPDATE_EMAIL_TEMPLATE`.
 
 `dispatchInviteEmail` is an action because it sends email through Resend. It:
 
@@ -148,6 +153,7 @@ Company mutations:
 - `updateCompanyPrompt` patches the prompt and writes `UPDATE_COMPANY_PROMPT` with prompt length and safety-warning categories.
 - `updateCompanyDescription` patches only description and currently does not write an audit log.
 - `assignPlanToCompany` validates the target company and plan, patches `planId`, and adjusts global inventory plan totals.
+- `setCompanyModules` validates workspace feature keys against `COMPANY_MODULES`, patches `enabledModules`, and writes the workspace-specific section access used by navigation and capability gates.
 - `deleteCompany` schedules company cleanup, deletes the company row, adjusts inventory totals, and writes `DELETE_COMPANY`.
 
 Because company deletion deletes the company row before all scheduled cleanup necessarily finishes, present it as destructive asynchronous cleanup in UI and operator notes.

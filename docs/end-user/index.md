@@ -2,7 +2,7 @@
 
 End-user docs are customer-friendly explanations of the Sonae platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
 
-Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, the company Wiki pages/map/import/review experience, real-time voice, inbound phone calls, the receptionist screen, the connected Gmail mailbox, photo actions, tasks and in-app notifications, safe workflow retries, rehearsal evals, autonomous-memory controls, company-plan widget quota privacy, and the rebuilt settings/retention surfaces.
+Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, the company Wiki pages/map/import/review/diary/unanswered experience, real-time voice, inbound phone calls, the receptionist screen, the connected Gmail mailbox, photo actions, tasks and in-app notifications, safe workflow retries, rehearsal evals, autonomous-memory controls, personal assistant notes, company-plan feature gates, company-plan widget quota privacy, maintenance connection checks, and the rebuilt settings/retention surfaces.
 
 ## Platform
 

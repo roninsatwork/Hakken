@@ -14,8 +14,8 @@ Global routes:
 
 Company routes:
 
-- `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` re-exports the company model-default implementation and passes company context.
-- `src/app/(dashboard)/admin/companies/[id]/models/page.tsx` is the concrete company model-default page used by the `/ai/models` alias.
+- `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` renders the company model-default implementation and passes company context.
+- Older direct company model routes have been removed; keep future company model links under `/admin/companies/[id]/ai/models`.
 
 Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
 

@@ -1,6 +1,6 @@
 # Platform Operations Settings
 
-Platform operations settings are the internal controls for API keys, webhook delivery evidence, maintenance scripts, system health, auth diagnostics, and audit review. These screens help operators run Sonae safely after launch. They are not everyday customer-user workflows.
+Platform operations settings are the internal controls for API keys, maintenance scripts, system health, connection checks, auth diagnostics, and audit review. These screens help operators run Sonae safely after launch. They are not everyday customer-user workflows.
 
 For task-level incident health checks and maintenance scripts, see [System Health And Maintenance](./system-health-and-maintenance.md). For auth diagnostics, audit evidence, analytics health, and retention purges, see [Operational Diagnostics And Retention](./operational-diagnostics-and-retention.md).
 
@@ -12,6 +12,7 @@ For task-level incident health checks and maintenance scripts, see [System Healt
 - `/admin/settings/scripts` lists allowlisted maintenance scripts.
 - `/admin/settings/scripts/[scriptId]` opens one maintenance script and its run history.
 - `/admin/health` shows platform health, budget pressure, analytics health, and operational risk signals.
+- `/admin/connections` shows whether external dependencies and scheduled jobs have been checked recently and whether any need attention.
 - `/admin/auth-diagnostics` opens the admin auth diagnostics surface.
 - `/app/settings/auth-diagnostics` opens the company-admin diagnostics surface.
 - `/admin/audit-logs/[id]` opens an audit log detail view from the settings audit feed.
@@ -72,6 +73,19 @@ System health summarizes recent operational signals. It covers analytics snapsho
 The page presents runbook text for each signal and can download the current health report as JSON. Use it before and after launches, after provider incidents, before customer reviews, and whenever dashboard counts, scheduled jobs, approvals, or agent runs look wrong.
 
 System health is evidence, not an automatic fix. A warning should lead to the relevant run timeline, approval queue, provider health check, schedule page, analytics job, or maintenance script.
+
+## Connections
+
+Connections is the maintenance view for live dependency checks. It has one table
+for external dependencies and one table for scheduled jobs. Each row says
+working, unknown, or needs attention in words, shows the last checked/heard
+time, supports search, and paginates at 15 rows. The Check Now action asks the
+backend to probe configured dependencies immediately.
+
+Use Connections when the app seems healthy internally but an integration,
+provider, or recurring job may have stopped responding. Use System Health when
+the question is about Sonae's own stored data, alerts, budgets, stale runs, or
+analytics.
 
 ## Unified Purges
 
