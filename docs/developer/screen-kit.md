@@ -172,26 +172,90 @@ When all properties are removed or blank, it emits an empty string. When propert
 
 When adding a new screen, under `/admin` or `/app`:
 
-1. Use `TABLE_PAGE_SIZE` for tables and feeds.
-2. Use shared table components for searchable/paginated records.
-3. Use `SonaeModal` or `ConfirmationModal` instead of native dialogs.
-4. Surface backend errors with `SaveError`, `ModalFormError`, or `SaveFeedback`.
-5. Keep row action buttons labelled and stop propagation when the row itself navigates.
-6. Keep destructive actions confirmation-gated.
-7. Keep English and Italian locale dictionaries in parity for user-visible strings.
-8. Add or update component/page tests for loading, empty, error, save, confirmation, and pagination behavior.
+1. Build a list screen in the order set out in [Anatomy Of A List Screen](#anatomy-of-a-list-screen) — header, explanation, search, table, footer, save. The build enforces the header; the rest is the standard the reference screens follow.
+2. Use `TABLE_PAGE_SIZE` for tables and feeds.
+3. Use shared table components for searchable/paginated records.
+4. Use `SonaeModal` or `ConfirmationModal` instead of native dialogs.
+5. Surface backend errors with `SaveError`, `ModalFormError`, or `SaveFeedback`.
+6. Keep row action buttons labelled and stop propagation when the row itself navigates.
+7. Keep destructive actions confirmation-gated.
+8. Keep English and Italian locale dictionaries in parity for user-visible strings.
+9. Add or update component/page tests for loading, empty, error, save, confirmation, and pagination behavior.
 
 Do not put UI cards inside other UI cards unless the component already owns that framing. Avoid page-specific table/modal variants unless the existing shared components cannot express the behavior.
 
-## The Build Enforces Three Of These
+## Headers
 
-`scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.
+Every screen wears one of three headers. Which one is decided by what the page *is*, not by how it looks — settled on 2026-08-22, when the admin section had two headers pretending to be one: the rule under the title appeared on the AI pages and Connections and nowhere else, the main action was white on some pages and orange on others, and forty-three screens drew the title block by hand, each copy having drifted a token at a time.
 
-Three rules:
+**A top-level page** — one that opens from the sidebar. `PageHeader` with `divider`, and at most one brand-orange action.
+
+```tsx
+<PageHeader
+  divider
+  icon={<CreditCard className="w-6 h-6 text-brand" />}
+  title={t("title")}
+  description={t("subtitle")}
+  action={<WriteButton …>{t("newPlan")}</WriteButton>}
+/>
+```
+
+Orange means *this page's action*, and nothing else. Filters, pickers, secondary buttons and anything that only narrows what is on screen stay quiet grey. A page with two orange buttons has no primary action.
+
+**A tabbed section** — companies, agents, System Settings. `DetailLayout`, which draws title, rule, then the tab strip itself. Do not draw the rule separately; the whole company section lost its line once because one element's classes went missing, and moving the rule inside `DetailLayout` is what gave three drifted AI screens theirs back in a single edit.
+
+**A page inside such a section** — a tab's own content. Its own `PageHeader`, with **no** `divider`: the section's `DetailLayout` has already drawn the rule, and a second one reads as two headers stacked. The company Dashboard, Calls and Features tabs are the examples to copy. A tab whose content is a list needs this — the anatomy rule below requires a header above any `DataTable`.
+
+**A record-level page** — one that opens on top of a record: a rule editor, a script, a schedule, a document. `DetailHeader`. It draws a quiet back row on its own line, *then* the standard title block, so the title starts at the left edge exactly like every other page. Status pills go under the description via `pills`, never woven into the title row.
+
+```tsx
+<DetailHeader
+  back={{ label: t("backToScripts"), href: "/admin/settings/scripts" }}
+  icon={<FileCode className="w-6 h-6 text-brand" />}
+  title={script.name}
+  description={script.summary}
+  pills={<><StatusPill …/><StatusPill …/></>}
+/>
+```
+
+**Two things the build refuses**, because a screen missing its line still looks like a screen and no check the repo had could see it:
+
+- A hand-written `<h1>` in a screen. All three components own the title recipe; a fourth copy drifts. Frozen per file and may only fall.
+- `border-b border-border-dim pb-6` written by hand. That is the header components' own line — pass `divider`, or use `DetailHeader`/`DetailLayout`. Ordinary borders are untouched, so a card or a table row costs nothing.
+
+The write gate sits on the action, not the header: `PagePrimaryAction` calls `useCanWriteHere` and removes itself for a read-only viewer rather than greying out, because a greyed-out button invites the reader to work out why it will not press. It is the shared primary action, though most screens still use `WriteButton` with their own classes — match the screen you are in rather than converting it in passing. Each header component has tests asserting its own anatomy: the rule is drawn when asked, pills sit under the description, the back row precedes the title, and `DetailLayout` rules off above its tabs.
+
+## Anatomy Of A List Screen
+
+A list screen is assembled in one order, and the order is the standard:
+
+1. **Title and description** — `PageHeader`, or `DetailHeader` for a page that opens on top of a record, or `DetailLayout` for a section whose tabs live in a layout.
+2. **An explanation box**, when the screen needs one — the bordered `Info` note used by Plans and Scripts.
+3. **The search box** — passed to `DataTable` as `search`, which draws it above the table with the house spacing.
+4. **The table** — `DataTable`.
+5. **The footer** — `DataTable`'s `footer`, which is part of the same card.
+6. **Save controls**, when the screen saves — `SaveAction` and `SaveError`, below the table.
+
+The wrapper is `flex flex-col gap-5`, or `flex w-full flex-col gap-6 pb-12` for a tab inside a section. Reference screens: Subscription Plans (`src/app/(dashboard)/admin/settings/plans/page.tsx`) and Manage Companies (`src/app/(dashboard)/admin/companies/page.tsx`).
+
+**`cardHeader` is not where a screen's title goes.** It names a table that sits inside a page which already has its own header — a usage log on a person's record, say. `TableShell` renders whatever it is given without padding, so a title placed there sits flush against the card edge while the columns stay indented, and the screen reads as broken. The build enforces this: see the anatomy rule below.
+
+This order was a habit copied between screens and written down nowhere until 2026-08-22, when the workspace Features screen was rebuilt onto `DataTable`, drew nothing by hand, passed every check of the day, and still came out wrong — its title inside the table rather than above the search box. Anthony: *"why are you guessing when we have standards and rules — that's the gap we need to close."* This section and the anatomy rule are that gap closed.
+
+## What The Build Enforces
+
+`scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns, or assembles a list screen in the wrong order. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.
+
+Eight rules. The first three ask whether a part was drawn by hand; the next four count parts that cannot reach zero in one sitting; the last asks whether the screen is *assembled* right, which is a different question and the one the others kept missing.
 
 - **A hand-written `<table>`.** Use `TableShell` with `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow` and `TableEmptyRow`. `TableShell` renders the `<table>` element itself — pass it a `<thead>`/`<tbody>`, never another `<table>`. Two governance screens did the latter and shipped a table nested inside an empty one; that defect is the reason this check exists.
 - **A hand-written `<input>` that a person types into.** Use `Field`, or `TableSearchInput` for a table's search box, or `ModalFormField` inside a modal. `Field` ties the label to the input and will not let a caller skip it.
-- **A table assembled from the loose parts instead of `DataTable`.** Added 2026-08-17, and it is the rule the other two kept missing: a screen can import every shared part, write no `<table>` and no `<input>`, pass both rules above, and still be one more assembly that drifts. Triggered by a `<thead>` or by importing `TableShell`, `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow`, `TableEmptyRow`, `PaginationFooter` or `LoadMoreFooter` in a file that does not render `DataTable`. `SearchBar` is deliberately excluded — a screen may legitimately put one above a set of cards. Sixty-one screens are frozen under `assembled`, to be worked down as each moves across.
+- **A table assembled from the loose parts instead of `DataTable`.** Added 2026-08-17. A screen can import every shared part, write no `<table>` and no `<input>`, pass both rules above, and still be one more assembly that drifts. Triggered by a `<thead>` or by importing `TableShell`, `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow` or `TableEmptyRow` in a file that does not render `DataTable`. `SearchBar`, `PaginationFooter` and `LoadMoreFooter` are deliberately excluded — a screen may legitimately page a list of cards.
+- **A hand-written tick box.** Added 2026-08-22. Use `Checkbox` (`src/ui/components/screens/Checkbox.tsx`), with `labelHidden` for a box in a table cell whose row already names it. This rule was deliberately absent until the part existed: flagging a tick box with no shared tick box to move onto would have been a build failure with no correct fix.
+- **More raw `<button>`s than a file's frozen count.** Added 2026-08-19. Use `Button` (`src/ui/atoms/Button.tsx`). Counted per file rather than listed, because a file with eleven raw buttons cannot be asked to reach zero in one sitting — only never to reach twelve. Reads all of `src/app` and `src/ui`, except the movement demos and `Button` itself.
+- **More hand-written page headings than a file's frozen count.** Use `PageHeader`, `DetailHeader` or `DetailLayout`, which own the title recipe.
+- **The header's underline drawn by hand.** `border-b border-border-dim pb-6` is the header components' own line. Pass `divider` to `PageHeader`, or use `DetailHeader`/`DetailLayout`.
+- **A table on a page with no header above it.** Added 2026-08-22, and the first rule about a screen's shape rather than its parts. A file rendering `DataTable` must render `PageHeader`, `DetailHeader` or `DetailLayout` earlier in the file. 46 of the 55 screens rendering `DataTable` already did; the nine frozen are sub-tables whose header lives in the parent page.
 
 A tick box, radio, file picker, colour swatch, slider or hidden input is not covered. The kit has no part for those, so flagging one would be a build failure with no correct fix.
 

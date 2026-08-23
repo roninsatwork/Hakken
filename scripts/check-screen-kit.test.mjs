@@ -74,10 +74,12 @@ describe("the screen kit guard", () => {
     expect(findHandWrittenParts().some((o) => o.rule === "inputs")).toBe(true);
   });
 
-  it("leaves a tick box alone — the kit has no part for one", () => {
+  // Left alone until 2026-08-22, when `Checkbox` gave the rule a correct fix
+  // to point at. Before that a tick box was a build failure with no answer.
+  it("catches a hand-written tick box", () => {
     write('export const Probe = () => <input type="checkbox" checked readOnly />;\n');
 
-    expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
+    expect(findHandWrittenParts().some((o) => o.rule === "checkboxes")).toBe(true);
   });
 
   it("reads the type past an event handler", () => {
@@ -93,7 +95,9 @@ describe("the screen kit guard", () => {
         ");\n"
     );
 
-    expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
+    const found = findHandWrittenParts().filter((o) => o.file === probeRelative);
+    expect(found.some((o) => o.rule === "checkboxes")).toBe(true);
+    expect(found.some((o) => o.rule === "inputs")).toBe(false);
   });
 
   it("leaves a file picker, a colour swatch and a slider alone", () => {
@@ -114,15 +118,72 @@ describe("the screen kit guard", () => {
     write(
       'import { DataTable } from "@/src/ui/components/screens/DataTable";\n' +
         'import { Field } from "@/src/ui/components/screens/Field";\n' +
+        'import { PageHeader } from "@/src/ui/components/screens/PageHeader";\n' +
         "export const Probe = () => (\n" +
-        "  <DataTable\n" +
-        '    columns={[{ key: "name", header: "Name", cell: () => <Field label="Name" value="" onChange={() => {}} /> }]}\n' +
-        "    rows={[]}\n" +
-        "  />\n" +
+        "  <div>\n" +
+        '    <PageHeader title="Probe" description="Built from the kit." />\n' +
+        "    <DataTable\n" +
+        '      columns={[{ key: "name", header: "Name", cell: () => <Field label="Name" value="" onChange={() => {}} /> }]}\n' +
+        "      rows={[]}\n" +
+        "    />\n" +
+        "  </div>\n" +
         ");\n"
     );
 
     expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
+  });
+
+  /*
+    The rule about a screen's shape rather than its parts. Every probe above
+    asks "was this drawn by hand?", and the Features screen answered no to all
+    of them while still being wrong: it took DataTable whole and put its title
+    inside the table instead of above the search box.
+  */
+  it("catches a list screen with no header above its table", () => {
+    write(
+      'import { DataTable } from "@/src/ui/components/screens/DataTable";\n' +
+        "export const Probe = () => (\n" +
+        '  <DataTable columns={[]} rows={[]} cardHeader={<h2>Features</h2>} />\n' +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().some((o) => o.rule === "anatomy")).toBe(true);
+  });
+
+  it("catches a header that sits below the table rather than above it", () => {
+    write(
+      'import { DataTable } from "@/src/ui/components/screens/DataTable";\n' +
+        'import { PageHeader } from "@/src/ui/components/screens/PageHeader";\n' +
+        "export const Probe = () => (\n" +
+        "  <div>\n" +
+        "    <DataTable columns={[]} rows={[]} />\n" +
+        '    <PageHeader title="Probe" />\n' +
+        "  </div>\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().some((o) => o.rule === "anatomy")).toBe(true);
+  });
+
+  it("accepts a record page whose header is DetailHeader", () => {
+    write(
+      'import { DataTable } from "@/src/ui/components/screens/DataTable";\n' +
+        'import { DetailHeader } from "@/src/ui/components/screens/PageHeader";\n' +
+        "export const Probe = () => (\n" +
+        "  <div>\n" +
+        '    <DetailHeader back={{ label: "Back", href: "/" }} title="Probe" />\n' +
+        "    <DataTable columns={[]} rows={[]} />\n" +
+        "  </div>\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().some((o) => o.rule === "anatomy")).toBe(false);
+  });
+
+  it("leaves a screen with no table alone", () => {
+    write('export const Probe = () => <p>No table here.</p>;\n');
+
+    expect(findHandWrittenParts().some((o) => o.rule === "anatomy")).toBe(false);
   });
 
   /*

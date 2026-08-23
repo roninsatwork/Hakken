@@ -47,10 +47,35 @@ import { fileURLToPath } from "node:url";
  *   whole by owner decision, and so is `Button` itself, which draws the one
  *   `<button>` the rest are meant to use.
  *
- * A tick box, a file picker, a colour swatch and a slider are deliberately not
+ * - A tick box written by hand. Added 2026-08-22. It was the one deliberately
+ *   left uncovered, because the kit had no tick box and a rule with no correct
+ *   fix is a rule people route around. That held until Anthony opened the
+ *   workspace Features screen: *"this is not our standard table and looks like
+ *   a new style — I thought we fixed all these."* It was not a table, so no
+ *   rule caught it; it was the gap where no rule was. `Checkbox`
+ *   (src/ui/components/screens/Checkbox.tsx) is the fix that was missing, so
+ *   the rule can exist now. Eighteen files are frozen here at the
+ *   moment it was written — Features itself moved onto the kit rather than
+ *   being frozen.
+ *
+ * - A list screen with no header above its table. Added 2026-08-22, and it is
+ *   the first rule here about how a screen is *assembled* rather than which
+ *   parts it uses. Every rule before it asks "did you draw this by hand?", and
+ *   a screen can answer no to all of them and still be wrong: the Features
+ *   screen took `DataTable` whole, drew nothing by hand, passed every check,
+ *   and put its title and description inside the table instead of above the
+ *   search box. Anthony, twice, with it open: *"this is still not our standard
+ *   table... the table that should be above the search bar."* Then: *"why are
+ *   you guessing when we have standards and rules — that's the gap we need to
+ *   close."* He was right that it was a gap rather than a mistake: the order of
+ *   a list screen was a habit copied between screens and written down nowhere.
+ *   46 of the 55 screens rendering `DataTable` already had the header above it;
+ *   the 9 that did not are sub-tables embedded in a page whose header sits in
+ *   the parent, and they are frozen here.
+ *
+ * A file picker, a colour swatch and a slider are still deliberately not
  * covered. The kit has no replacement for them, so flagging one would be a
- * build failure with no correct fix, and a check with no correct fix is a check
- * people learn to route around.
+ * build failure with no correct fix.
  *
  * The files listed in the allowlist already hand-write one of these. They are
  * frozen, not endorsed: each rule's list may shrink, never grow. Working in one
@@ -133,6 +158,30 @@ const RULES = {
       "no variant may stay raw, but only inside a file's frozen count: the counts may\n" +
       "fall, never rise.",
   },
+  checkboxes: {
+    part: "a tick box",
+    headline: "These draw a tick box by hand instead of using the kit:",
+    fix:
+      "Use Checkbox from src/ui/components/screens/Checkbox.tsx. It ties the label to\n" +
+      "the box by id, which is the part hand-written tick boxes skip: an untied label is\n" +
+      "silent to a screen reader and does not focus the box when clicked. Pass\n" +
+      "`labelHidden` for a box in a table cell whose row already names it — the label\n" +
+      "stays tied, only the visible text goes.",
+  },
+  anatomy: {
+    part: "a table with no header above it",
+    headline: "These put a table on the page with no header above it:",
+    fix:
+      "A list screen reads title, then description, then the search box, then the\n" +
+      "table, then its footer. Draw the first two with PageHeader\n" +
+      "(src/ui/components/screens/PageHeader.tsx), or DetailHeader for a page that opens\n" +
+      "on top of a record, or DetailLayout for a section whose tabs live in a layout —\n" +
+      "above the DataTable, never inside it. `cardHeader` names a table sitting inside a\n" +
+      "page that already has a header; it is not where a screen's own title goes, and a\n" +
+      "title placed there renders flush against the card edge while the columns stay\n" +
+      "indented. If this table is a fragment whose header genuinely lives in its parent,\n" +
+      "that is what the frozen list is for — but check the parent really draws one.",
+  },
   headings: {
     part: "a page heading",
     headline: "These draw more page headings by hand than their frozen count allows:",
@@ -195,6 +244,8 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     tables: new Set(allowlist.tables ?? []),
     inputs: new Set(allowlist.inputs ?? []),
     assembled: new Set(allowlist.assembled ?? []),
+    checkboxes: new Set(allowlist.checkboxes ?? []),
+    anatomy: new Set(allowlist.anatomy ?? []),
     // Unlike the lists above this freezes a count per file, because a file
     // with eleven raw buttons cannot be asked to reach zero in one sitting —
     // it is only asked never to reach twelve.
@@ -220,6 +271,25 @@ function listFiles(dir) {
     if (/\.(tsx|ts)$/.test(entry.name) && !entry.name.includes(".test.")) found.push(full);
   }
   return found;
+}
+
+/**
+ * A file's text, or null when it is no longer there.
+ *
+ * Listing a directory and reading its files are two moments, and a file can go
+ * between them: a build running while a branch is checked out, or — how this
+ * was found — the layering check's test writing a probe into `src/ui` and
+ * deleting it while this check is reading the same folder. A file that has
+ * vanished is not an offender, and crashing the whole check over one is worse
+ * than skipping it.
+ */
+function readIfPresent(fullPath) {
+  try {
+    return fs.readFileSync(fullPath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
 }
 
 /**
@@ -286,6 +356,14 @@ function listButtonFiles() {
   return files;
 }
 
+/**
+ * The three components that draw a screen's own title.
+ *
+ * All three own the same title recipe, which is why the headings rule points at
+ * them too: a heading written by hand is a copy that will drift from it.
+ */
+const HEADER_COMPONENTS = /<(PageHeader|DetailHeader|DetailLayout)\b/;
+
 const TYPE_ATTRIBUTE = /\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^}]*)\})/;
 
 /** True when this `<input>` is a box a person types into. */
@@ -297,6 +375,21 @@ function isTextEntry(openingTag) {
   if (literal === undefined) return true; // computed at runtime — assume text
 
   return !CONTROL_TYPES.has(literal.trim());
+}
+
+/**
+ * True when this `<input>` is a tick box.
+ *
+ * Read as the literal type only — the opposite of `isTextEntry`, which assumes
+ * text when the type is computed. A computed type is not evidence of a tick
+ * box, and guessing one here would fail a screen that has none.
+ */
+function isTickBox(openingTag) {
+  const match = TYPE_ATTRIBUTE.exec(openingTag);
+  if (!match) return false;
+
+  const literal = match[1] ?? match[2];
+  return literal !== undefined && literal.trim() === "checkbox";
 }
 
 /** Every line where a screen draws a part the kit already owns. */
@@ -329,9 +422,24 @@ function findInFile(relative, text) {
     found.push({ rule: "inputs", file: relative, line: lineOf(match.index) });
   }
 
+  const checkboxes = /<input\b/g;
+  while ((match = checkboxes.exec(text))) {
+    if (!isTickBox(readOpeningTag(text, match.index))) continue;
+    found.push({ rule: "checkboxes", file: relative, line: lineOf(match.index) });
+  }
+
   const headerRules = new RegExp(HEADER_RULE_CLASSES.source, "g");
   while ((match = headerRules.exec(text))) {
     found.push({ rule: "headerRule", file: relative, line: lineOf(match.index) });
+  }
+
+  // One hit per file: the fault is the screen's shape, not a line of it.
+  const tableAt = text.search(/<DataTable\b/);
+  if (tableAt >= 0) {
+    const headerAt = text.search(HEADER_COMPONENTS);
+    if (headerAt < 0 || headerAt > tableAt) {
+      found.push({ rule: "anatomy", file: relative, line: lineOf(tableAt) });
+    }
   }
 
   // One hit per file rather than per part: the fault is the assembly, and
@@ -364,7 +472,8 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
 
   for (const file of listFiles(path.join(rootDir, SCAN_DIR))) {
     const relative = path.relative(rootDir, file);
-    const text = fs.readFileSync(file, "utf8");
+    const text = readIfPresent(file);
+    if (text === null) continue;
 
     for (const hit of findInFile(relative, text)) {
       if (frozen[hit.rule].has(relative)) continue;
@@ -375,7 +484,9 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
   // The buttons rule reads wider and counts rather than lists: a file may keep
   // the raw buttons it already had, and fails the moment it draws one more.
   for (const relative of listButtonFiles()) {
-    const count = countRawButtons(fs.readFileSync(path.join(rootDir, relative), "utf8"));
+    const text = readIfPresent(path.join(rootDir, relative));
+    if (text === null) continue;
+    const count = countRawButtons(text);
     if (count === 0) continue;
 
     const ceiling = frozen.buttons.get(relative) ?? 0;
@@ -389,7 +500,9 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
   // in src/ui is the part rather than a copy of it.
   for (const file of listFiles(path.join(rootDir, SCAN_DIR))) {
     const relative = path.relative(rootDir, file);
-    const count = countHandWrittenHeadings(fs.readFileSync(file, "utf8"));
+    const headingText = readIfPresent(file);
+    if (headingText === null) continue;
+    const count = countHandWrittenHeadings(headingText);
     if (count === 0) continue;
 
     const ceiling = frozen.headings.get(relative) ?? 0;
@@ -427,7 +540,7 @@ export function findStaleFreezes(frozen = loadFrozen()) {
     }
   }
 
-  for (const rule of ["tables", "inputs", "assembled", "headerRule"]) {
+  for (const rule of ["tables", "inputs", "assembled", "checkboxes", "anatomy", "headerRule"]) {
     for (const relative of frozen[rule]) {
       const full = path.join(rootDir, relative);
       if (!fs.existsSync(full)) {
@@ -455,6 +568,8 @@ function main() {
     const headingCount = [...frozen.headings.values()].reduce((sum, count) => sum + count, 0);
     console.log(
       `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields, ` +
+        `${frozen.checkboxes.size} tick boxes, ` +
+        `${frozen.anatomy.size} headerless tables, ` +
         `${frozen.assembled.size} hand-assembled tables, ${buttonCount} raw buttons ` +
         `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +
         `(across ${frozen.headings.size} files) and ${frozen.headerRule.size} hand-drawn ` +

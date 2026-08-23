@@ -811,6 +811,11 @@
       "deleteAndWipe": "Delete Company & Wipe Data",
       "planLabel": "Subscription Plan",
       "featuresTitle": "Features",
+      "featuresSearchPlaceholder": "Search features...",
+      "featuresEmptyState": "No features match that search.",
+      "featuresOnColumn": "Switched on",
+      "featuresNameColumn": "Feature",
+      "featuresDescriptionColumn": "What it does",
       "modulesLabel": "Optional Modules",
       "modulesHint": "Extra sections only this workspace can see",
       "modules": {
@@ -850,7 +855,9 @@
       "errors": {
         "saveFailed": "Failed to sync tenant directives.",
         "deleteFailed": "Failed to purge tenant from protocol."
-      }
+      },
+      "featuresIntro": "What this workspace can reach. Switching one off removes it from their menu and closes the section — typing the address will not get them in. Nobody else is affected.",
+      "featuresPlanNote": "Already included in this plan"
     },
     "plans": {
       "title": "Subscription Plans",

@@ -850,7 +850,14 @@
       "errors": {
         "saveFailed": "Impossibile sincronizzare le direttive tenant.",
         "deleteFailed": "Impossibile purgare il tenant dal protocollo."
-      }
+      },
+      "featuresNameColumn": "Funzionalità",
+      "featuresDescriptionColumn": "Cosa fa",
+      "featuresOnColumn": "Attiva",
+      "featuresSearchPlaceholder": "Cerca funzionalità...",
+      "featuresEmptyState": "Nessuna funzionalità corrisponde alla ricerca.",
+      "featuresPlanNote": "Già inclusa in questo piano",
+      "featuresIntro": "Cosa può raggiungere questo workspace. Disattivarne una la rimuove dal loro menu e chiude la sezione: digitare l'indirizzo non permetterà l'accesso. Nessun altro viene coinvolto."
     },
     "plans": {
       "title": "Piani di Abbonamento",

@@ -75,11 +75,36 @@ describe("CompanyFeaturesPage", () => {
     mockQueries();
   });
 
-  it("shows every feature to a super admin", () => {
+  it("shows every feature to a super admin, as a row in the table", () => {
     render(<CompanyFeaturesPage />);
 
     expect(screen.getByRole("heading", { name: "featuresTitle" })).toBeInTheDocument();
-    expect(screen.getByText("modules.salesData.name")).toBeInTheDocument();
+
+    // Twice on purpose: once visibly in the name column, and once as the
+    // tick box's own label, which is hidden but still tied to the box.
+    const named = screen.getAllByText("modules.salesData.name");
+    expect(named).toHaveLength(2);
+    expect(named.some((node) => node.classList.contains("sr-only"))).toBe(true);
+    expect(screen.getByRole("checkbox", { name: "modules.salesData.name" })).toBeInTheDocument();
+  });
+
+  it("carries the house search box and pagination footer", () => {
+    render(<CompanyFeaturesPage />);
+
+    expect(screen.getByPlaceholderText("featuresSearchPlaceholder")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /previous/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
+
+  it("narrows the rows to what was searched for", () => {
+    render(<CompanyFeaturesPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("featuresSearchPlaceholder"), {
+      target: { value: "salesData" },
+    });
+
+    expect(screen.getByRole("checkbox", { name: "modules.salesData.name" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "modules.tasks.name" })).not.toBeInTheDocument();
   });
 
   it("refuses anyone who is not a super admin", () => {
