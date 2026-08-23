@@ -1,3 +1,4 @@
+import { readMovementRecordingPacket } from "./movementRecordingPacketTransport";
 import {
   getFrameLandmarks,
   parseMovementFramePayload,
@@ -186,7 +187,7 @@ export async function loadMovementReplayRecording(
   const payload = recording.poseDataUrl
     ? await fetch(recording.poseDataUrl).then((response) => {
       if (!response.ok) throw new Error(`Could not load pose data (${response.status}).`);
-      return response.json() as Promise<unknown>;
+      return readMovementRecordingPacket(response);
     })
     : recording.poseData;
   const sourceFormat = recording.poseDataFormat ?? (recording.poseDataUrl ? "legacy-storage-json" : "legacy-inline-json");

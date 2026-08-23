@@ -5,6 +5,7 @@ import {
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementDeepCaptureTestFixture";
 import { saveMovementRecording } from "../../src/app/(dashboard)/demos/movements/_lib/saveMovementRecording";
 import { loadMovementReplayRecording } from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordingReplay";
+import { readMovementRecordingPacket } from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordingPacketTransport";
 import { validateCompleteReplayGamePacket } from "./run-replay-mounted-game-packet-proof.mjs";
 
 describe("schema-v3 save to Replay/Game preflight", () => {
@@ -25,12 +26,15 @@ describe("schema-v3 save to Replay/Game preflight", () => {
       requireDeepCapturePacket: true,
     })).resolves.toBe("schema-v3-recording-id");
 
+    // The bytes that actually went up — compressed — read back through the same
+    // reader the studio uses, then handed to the replay loader. This is the
+    // whole guarantee in one line: what save writes, Replay and the Game open.
     const uploadBody = uploadFetch.mock.calls[0]?.[1]?.body;
-    expect(typeof uploadBody).toBe("string");
+    const uploadedPacket = await readMovementRecordingPacket(new Response(uploadBody));
     const replay = await loadMovementReplayRecording({
       _id: "schema-v3-recording-id",
       captureFps: 30,
-      poseData: uploadBody,
+      poseData: JSON.stringify(uploadedPacket),
       poseDataFormat: "storage-json-v3",
       title: "Schema-v3 saved packet",
     });

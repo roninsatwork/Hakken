@@ -6,7 +6,7 @@ import {
   getMovementRecordingDurationMs,
   saveMovementRecording,
 } from "./saveMovementRecording";
-import type { MovementFrame } from "./movementTypes";
+import type { MovementFrame, MovementFrameEnvelope } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
 import {
   validateMovementCommissioningEnvelope,
@@ -54,6 +54,20 @@ function makeCommissioningFrames(count = MIN_MOVEMENT_CAPTURE_FRAMES): MovementF
     timestamp: index * 33,
     worldLandmarks: landmarks,
   }));
+}
+
+/**
+ * The uploaded packet, whatever shape the body took.
+ *
+ * The body is a Blob now — compressed where the browser can, plain where it
+ * cannot — so these read the content rather than assuming a string.
+ */
+async function readUploadedPacket(
+  uploadFetch: { mock: { calls: unknown[] } },
+): Promise<MovementFrameEnvelope> {
+  const body = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
+  const text = typeof body === "string" ? body : await (body as Blob).text();
+  return JSON.parse(text) as MovementFrameEnvelope;
 }
 
 describe("saveMovementRecording", () => {
@@ -142,9 +156,7 @@ describe("saveMovementRecording", () => {
       uploadFetch,
     });
 
-    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
-    expect(typeof uploadBody).toBe("string");
-    expect(JSON.parse(uploadBody as string)).toEqual(
+    expect(await readUploadedPacket(uploadFetch)).toEqual(
       expect.objectContaining({
         captureStartReadiness,
         schemaVersion: 2,
@@ -222,8 +234,7 @@ describe("saveMovementRecording", () => {
       requireDeepCapturePacket: true,
     })).resolves.toBe("deep-capture-recording-id");
 
-    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
-    const envelope = JSON.parse(uploadBody as string);
+    const envelope = await readUploadedPacket(uploadFetch);
     expect(validateMovementDeepCaptureEnvelope(envelope)).toEqual({
       failures: [],
       passed: true,
@@ -247,7 +258,9 @@ describe("saveMovementRecording", () => {
     const replay = await loadMovementReplayRecording({
       _id: "deep-capture-recording-id",
       captureFps: 30,
-      poseData: uploadBody as string,
+      // The packet exactly as it was uploaded, fed back through the loader the
+      // replay studio uses — a real round trip, not a re-serialised copy.
+      poseData: JSON.stringify(envelope),
       poseDataFormat: "storage-json-v3",
       title: "Deep Capture commissioning",
     });
@@ -284,8 +297,7 @@ describe("saveMovementRecording", () => {
       requireCommissioningPacket: true,
     })).resolves.toBe("commissioning-recording-id");
 
-    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
-    const envelope = JSON.parse(uploadBody as string);
+    const envelope = await readUploadedPacket(uploadFetch);
     expect(validateMovementCommissioningEnvelope(envelope)).toEqual({
       failures: [],
       passed: true,

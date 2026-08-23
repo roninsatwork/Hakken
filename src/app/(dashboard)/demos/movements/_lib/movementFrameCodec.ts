@@ -1,3 +1,4 @@
+import { serializeMovementRecordingPacket } from "./movementRecordingPacketTransport";
 import type {
   MovementDataFormat,
   MovementFrame,
@@ -268,7 +269,10 @@ export async function hashMovementFrameEnvelopeSource(
   }
 
   const sourcePacket = { ...envelope, sourcePacketHash: undefined };
-  const encoded = new TextEncoder().encode(JSON.stringify(sourcePacket));
+  // Hashed through the same writer that produces the stored file, so the hash
+  // describes the bytes that were actually saved rather than a fuller-precision
+  // version of them that never left the browser.
+  const encoded = new TextEncoder().encode(serializeMovementRecordingPacket(sourcePacket));
   const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
   const hexadecimal = Array.from(new Uint8Array(digest), (byte) => (
     byte.toString(16).padStart(2, "0")

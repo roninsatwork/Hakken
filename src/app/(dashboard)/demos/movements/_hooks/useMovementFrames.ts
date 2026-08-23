@@ -1,5 +1,6 @@
 "use client";
 
+import { readMovementRecordingPacket } from "../_lib/movementRecordingPacketTransport";
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -58,7 +59,7 @@ export function useMovementFrames(movement: MovementFrameSource | null | undefin
           ? "legacy-storage-json"
           : "legacy-inline-json";
         const payload = shouldFetchStorage
-          ? await fetch(fileUrl as string).then((response) => response.json() as Promise<unknown>)
+          ? await fetch(fileUrl as string).then(readMovementRecordingPacket)
           : poseData;
         const parsed = parseMovementFramePayload(payload, movement.poseDataFormat ?? sourceFormat);
 
