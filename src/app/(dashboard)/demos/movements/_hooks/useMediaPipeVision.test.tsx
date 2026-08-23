@@ -138,4 +138,29 @@ describe("useMediaPipeVision", () => {
     await waitFor(() => expect(result.current.status).toBe("failed"));
     expect(result.current.error).toBe("Tracking had trouble starting. Press Retry Tracking; if it repeats, refresh this page.");
   });
+  it("tries the download again on its own before giving up", async () => {
+    // A dropped fetch surfaces as an Event, not an Error.
+    const downloadFailure = new Event("error");
+    mediaPipeMocks.poseCreate.mockRejectedValueOnce(downloadFailure);
+
+    const { result } = renderHook(() => useMediaPipeVision({ enabled: true }));
+
+    // The first retry waits 1.2s by design, so this waits past that.
+    await waitFor(() => expect(result.current.status).toBe("ready"), { timeout: 5000 });
+    // No failure was ever shown — the studio fixed it before the user saw it.
+    expect(result.current.error).toBeNull();
+    expect(mediaPipeMocks.poseCreate.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("names a failed download instead of reporting [object Event]", async () => {
+    mediaPipeMocks.poseCreate.mockRejectedValue(new Event("error"));
+
+    const { result } = renderHook(() => useMediaPipeVision({ enabled: true }));
+
+    await waitFor(() => expect(result.current.status).toBe("failed"), { timeout: 8000 });
+    expect(result.current.error).toBe(
+      "The tracking engine could not be downloaded. Check the connection, then press Retry Tracking.",
+    );
+    expect(result.current.errorDetail).not.toContain("[object Event]");
+  });
 });

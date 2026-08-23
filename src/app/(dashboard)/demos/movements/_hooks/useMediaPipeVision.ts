@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FilesetResolver, FaceLandmarker, HandLandmarker, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { MOVEMENT_PLAYER_INPUT_CONTRACT } from "../_lib/movementPlayerInputContract";
 
@@ -22,11 +22,52 @@ const EMPTY_VISION_MODELS: MediaPipeVisionModels = {
   handRefiner: null,
 };
 
+/**
+ * How hard the studio tries again when the engine simply did not arrive.
+ *
+ * The engine and its models are fetched from a CDN on first use, and a single
+ * slow or dropped fetch used to leave a dead screen with a small banner on it —
+ * the state Anthony hit: an error, and no skeleton. A dropped download is worth
+ * retrying on its own; a graphics or runtime fault is not, and is left to the
+ * CPU fallback that already handles it.
+ */
+const MOVEMENT_VISION_MAX_DOWNLOAD_RETRIES = 2;
+const MOVEMENT_VISION_DOWNLOAD_RETRY_DELAY_MS = 1200;
+
 type MovementMediaPipeDelegate = "GPU" | "CPU";
 type MovementMediaPipeVisionFileset = Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>;
 
 function mediaPipeErrorText(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) return error.message;
+
+  /*
+   * A failed download arrives as an Event, and `String(event)` is
+   * "[object Event]" — which is what the studio was reporting back. Anthony,
+   * with the capture screen open: *"in chrome it said tracking error ... and no
+   * bones were coming up on the screen"*, and the only detail on offer was that
+   * phrase. The type and the address it failed on are what actually name the
+   * fault, so they are what gets carried out.
+   */
+  if (typeof Event !== "undefined" && error instanceof Event) {
+    const target = error.target as { src?: string; href?: string } | null;
+    const source = target?.src ?? target?.href;
+    return source ? `${error.type} loading ${source}` : `${error.type} event`;
+  }
+
+  return String(error);
+}
+
+export function isMovementMediaPipeDownloadError(error: unknown) {
+  if (typeof Event !== "undefined" && error instanceof Event) return true;
+
+  const message = mediaPipeErrorText(error);
+  return [
+    "Failed to fetch",
+    "NetworkError",
+    "Load failed",
+    "ERR_NAME_NOT_RESOLVED",
+    "ERR_INTERNET_DISCONNECTED",
+  ].some((pattern) => message.includes(pattern));
 }
 
 export function isMovementMediaPipeGpuStartupError(error: unknown) {
@@ -59,6 +100,9 @@ function shouldSuppressMediaPipeConsoleError(args: unknown[]) {
 function getVisionErrorMessage(error: unknown) {
   if (error instanceof Error && error.message.includes("ModuleFactory not set")) {
     return "The browser tracking engine did not finish starting. Press Retry Tracking; if it repeats, refresh this page.";
+  }
+  if (isMovementMediaPipeDownloadError(error)) {
+    return "The tracking engine could not be downloaded. Check the connection, then press Retry Tracking.";
   }
   if (isMovementMediaPipeGpuStartupError(error)) {
     return "Tracking had trouble starting. Press Retry Tracking; if it repeats, refresh this page.";
@@ -160,6 +204,7 @@ export function useMediaPipeVision({
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [loadedDelegate, setLoadedDelegate] = useState<MovementMediaPipeDelegate | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const downloadRetryAttemptsRef = useRef(0);
 
   const retry = useCallback(() => {
     setReloadToken((current) => current + 1);
@@ -186,6 +231,7 @@ export function useMediaPipeVision({
     if (!enabled) return undefined;
 
     let active = true;
+    let downloadRetryTimeoutId: number | null = null;
     let createdModels: MediaPipeVisionModels = { ...EMPTY_VISION_MODELS };
 
     async function initializeModels() {
@@ -234,26 +280,40 @@ export function useMediaPipeVision({
         }
 
         if (active) {
+          downloadRetryAttemptsRef.current = 0;
           setModels(createdModels);
           setLoadedDelegate(selectedDelegate);
           setStatus("ready");
         }
       } catch (loadError) {
         closeMediaPipeVisionModels(createdModels);
+        if (!active) return;
 
-        if (active) {
-          setModels({
-            poseLandmarker: null,
-            faceLandmarker: null,
-            faceRefiner: null,
-            handLandmarker: null,
-            handRefiner: null,
-          });
-          setLoadedDelegate(null);
-          setError(getVisionErrorMessage(loadError));
-          setErrorDetail(mediaPipeErrorText(loadError));
-          setStatus("failed");
+        if (
+          isMovementMediaPipeDownloadError(loadError) &&
+          downloadRetryAttemptsRef.current < MOVEMENT_VISION_MAX_DOWNLOAD_RETRIES
+        ) {
+          downloadRetryAttemptsRef.current += 1;
+          // Stay on "preparing" rather than flashing a failure the studio is
+          // about to fix by itself.
+          downloadRetryTimeoutId = window.setTimeout(
+            () => setReloadToken((current) => current + 1),
+            MOVEMENT_VISION_DOWNLOAD_RETRY_DELAY_MS * downloadRetryAttemptsRef.current,
+          );
+          return;
         }
+
+        setModels({
+          poseLandmarker: null,
+          faceLandmarker: null,
+          faceRefiner: null,
+          handLandmarker: null,
+          handRefiner: null,
+        });
+        setLoadedDelegate(null);
+        setError(getVisionErrorMessage(loadError));
+        setErrorDetail(mediaPipeErrorText(loadError));
+        setStatus("failed");
       }
     }
 
@@ -261,6 +321,7 @@ export function useMediaPipeVision({
 
     return () => {
       active = false;
+      if (downloadRetryTimeoutId !== null) window.clearTimeout(downloadRetryTimeoutId);
       closeMediaPipeVisionModels(createdModels);
     };
   }, [enabled, enableDeepRefinement, enableSegmentation, forceCpu, reloadToken]);

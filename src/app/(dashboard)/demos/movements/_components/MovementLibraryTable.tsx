@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bug, ClipboardList, Play, Trash2 } from "lucide-react";
+import { Activity, Bug, ClipboardList, Pencil, Play, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -22,6 +22,7 @@ type MovementLibraryTableProps = {
   onPlay: (movement: Doc<"movements">) => void;
   onDebugAutoBaseline: (movement: Doc<"movements">) => void;
   onView: (movement: Doc<"movements">) => void;
+  onEdit: (movement: Doc<"movements">) => void;
   onDelete: (movement: Doc<"movements">) => void;
 };
 
@@ -81,6 +82,7 @@ export default function MovementLibraryTable({
   onPlay,
   onDebugAutoBaseline,
   onView,
+  onEdit,
   onDelete,
 }: MovementLibraryTableProps) {
   return (
@@ -173,6 +175,12 @@ export default function MovementLibraryTable({
                   tooltip="Review recording"
                   onClick={() => onView(movement)}
                   icon={<ClipboardList className="w-4 h-4" />}
+                />
+                <MovementActionButton
+                  label={`Edit routine ${routineTitle}`}
+                  tooltip="Edit name and level"
+                  onClick={() => onEdit(movement)}
+                  icon={<Pencil className="w-4 h-4" />}
                 />
                 <MovementActionButton
                   label={`Delete routine ${routineTitle}`}

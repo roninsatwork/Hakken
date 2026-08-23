@@ -9,9 +9,14 @@ import Header from "@/src/ui/components/layout/Header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MovementDeleteDialog from "./_components/MovementDeleteDialog";
+import MovementEditDialog, {
+  toMovementDifficulty,
+  toMovementSpineGoal,
+} from "./_components/MovementEditDialog";
 import MovementLibraryTable from "./_components/MovementLibraryTable";
+import { getStudioRoutineTitle } from "./_lib/movementPresentation";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "./_lib/movementSpineIntent";
-import type { MovementSpineGoal } from "./_lib/movementTypes";
+import type { MovementDifficulty, MovementSpineGoal } from "./_lib/movementTypes";
 import {
   MOVEMENT_SALMON,
 } from "./_lib/movementPalette";
@@ -22,6 +27,14 @@ export default function MovementsLibraryPage() {
   const [spineGoalFilter, setSpineGoalFilter] = useState<MovementSpineGoal | "all">("all");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState<Doc<"movements"> | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [movementToEdit, setMovementToEdit] = useState<Doc<"movements"> | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDifficulty, setEditDifficulty] = useState<MovementDifficulty>("Beginner");
+  const [editSpineGoal, setEditSpineGoal] = useState<MovementSpineGoal | "">("");
+  const [editPrimaryCue, setEditPrimaryCue] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const router = useRouter();
   const itemsPerPage = 15;
   
@@ -39,6 +52,7 @@ export default function MovementsLibraryPage() {
   const canLoadMore = status === "CanLoadMore";
 
   const removeMovement = useMutation(api.movements.remove);
+  const updateMovement = useMutation(api.movements.update);
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -47,6 +61,51 @@ export default function MovementsLibraryPage() {
   const confirmDelete = (m: Doc<"movements">) => {
     setMovementToDelete(m);
     setDeleteModalOpen(true);
+  };
+
+  const openEdit = (m: Doc<"movements">) => {
+    setMovementToEdit(m);
+    // The name the list shows, not the raw one — a legacy capture is listed
+    // under a stand-in title, and the box should open on what was read there.
+    setEditTitle(getStudioRoutineTitle(m.title));
+    setEditDifficulty(toMovementDifficulty(m.difficulty));
+    setEditSpineGoal(toMovementSpineGoal(m.spineGoal));
+    setEditPrimaryCue(m.primaryCue ?? "");
+    setEditError(null);
+    setEditModalOpen(true);
+  };
+
+  const closeEdit = () => {
+    setEditModalOpen(false);
+    setMovementToEdit(null);
+    setEditError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!movementToEdit) return;
+
+    const title = editTitle.trim();
+    if (title.length === 0) {
+      setEditError("A routine needs a name.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateMovement({
+        id: movementToEdit._id,
+        title,
+        difficulty: editDifficulty,
+        spineGoal: editSpineGoal === "" ? undefined : editSpineGoal,
+        primaryCue: editPrimaryCue.trim(),
+      });
+      closeEdit();
+    } catch {
+      setEditError("That did not save. Try again.");
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const executeDelete = async () => {
@@ -141,9 +200,26 @@ export default function MovementsLibraryPage() {
           router.push(`/demos/movements/${movement._id}/play?debugTracking=1&debugAutoBaseline=1`)
         }
         onView={(movement) => router.push(`/demos/movements/${movement._id}`)}
+        onEdit={openEdit}
         onDelete={confirmDelete}
       />
       
+      <MovementEditDialog
+        isOpen={editModalOpen}
+        title={editTitle}
+        difficulty={editDifficulty}
+        spineGoal={editSpineGoal}
+        primaryCue={editPrimaryCue}
+        isSaving={isSavingEdit}
+        saveError={editError}
+        onClose={closeEdit}
+        onTitleChange={setEditTitle}
+        onDifficultyChange={setEditDifficulty}
+        onSpineGoalChange={setEditSpineGoal}
+        onPrimaryCueChange={setEditPrimaryCue}
+        onSave={saveEdit}
+      />
+
       <MovementDeleteDialog
         isOpen={deleteModalOpen}
         movement={movementToDelete}

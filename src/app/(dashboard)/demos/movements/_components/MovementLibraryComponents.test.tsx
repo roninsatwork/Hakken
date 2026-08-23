@@ -6,6 +6,10 @@ import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import MovementDeleteDialog from "./MovementDeleteDialog";
+import MovementEditDialog, {
+  toMovementDifficulty,
+  toMovementSpineGoal,
+} from "./MovementEditDialog";
 import MovementLibraryTable from "./MovementLibraryTable";
 
 const makeMovement = (overrides: Partial<Doc<"movements">> = {}): Doc<"movements"> =>
@@ -31,6 +35,7 @@ describe("movement library components", () => {
       onPlay: vi.fn(),
       onDebugAutoBaseline: vi.fn(),
       onView: vi.fn(),
+      onEdit: vi.fn(),
       onDelete: vi.fn(),
     };
 
@@ -52,6 +57,7 @@ describe("movement library components", () => {
     const onPlay = vi.fn();
     const onDebugAutoBaseline = vi.fn();
     const onView = vi.fn();
+    const onEdit = vi.fn();
     const onDelete = vi.fn();
 
     render(
@@ -66,6 +72,7 @@ describe("movement library components", () => {
         onPlay={onPlay}
         onDebugAutoBaseline={onDebugAutoBaseline}
         onView={onView}
+        onEdit={onEdit}
         onDelete={onDelete}
       />,
     );
@@ -79,17 +86,20 @@ describe("movement library components", () => {
     expect(screen.getByTitle("Start live practice")).toBeInTheDocument();
     expect(screen.getByTitle("Debug auto baseline")).toBeInTheDocument();
     expect(screen.getByTitle("Review recording")).toBeInTheDocument();
+    expect(screen.getByTitle("Edit name and level")).toBeInTheDocument();
     expect(screen.getByTitle("Delete routine")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Start practice Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Debug auto baseline Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Review routine Roll Down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit routine Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete routine Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
 
     expect(onPlay).toHaveBeenCalledWith(movement);
     expect(onDebugAutoBaseline).toHaveBeenCalledWith(movement);
     expect(onView).toHaveBeenCalledWith(movement);
+    expect(onEdit).toHaveBeenCalledWith(movement);
     expect(onDelete).toHaveBeenCalledWith(movement);
     expect(onLoadMore).toHaveBeenCalledWith(15);
   });
@@ -125,5 +135,99 @@ describe("movement library components", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+  it("edits a routine's name and level", () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    const onTitleChange = vi.fn();
+    const onDifficultyChange = vi.fn();
+    const onSpineGoalChange = vi.fn();
+    const onPrimaryCueChange = vi.fn();
+
+    render(
+      <MovementEditDialog
+        isOpen
+        title="Roll Down"
+        difficulty="Beginner"
+        spineGoal="rollDown"
+        primaryCue="Keep ribs over hips"
+        isSaving={false}
+        saveError={null}
+        onClose={onClose}
+        onTitleChange={onTitleChange}
+        onDifficultyChange={onDifficultyChange}
+        onSpineGoalChange={onSpineGoalChange}
+        onPrimaryCueChange={onPrimaryCueChange}
+        onSave={onSave}
+      />,
+    );
+
+    const nameField = screen.getByLabelText("Routine Name");
+    expect(nameField).toHaveValue("Roll Down");
+    expect(screen.getByLabelText("Difficulty")).toHaveValue("Beginner");
+
+    fireEvent.change(nameField, { target: { value: "Tall Spine Flow" } });
+    expect(onTitleChange).toHaveBeenCalledWith("Tall Spine Flow");
+
+    fireEvent.change(screen.getByLabelText("Difficulty"), { target: { value: "Advanced" } });
+    expect(onDifficultyChange).toHaveBeenCalledWith("Advanced");
+
+    expect(screen.getByLabelText("Spine Goal")).toHaveValue("rollDown");
+    // The chosen goal explains itself, the way it does in the save dialog.
+    expect(screen.getByText("Move through the spine with control.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Spine Goal"), { target: { value: "sideBend" } });
+    expect(onSpineGoalChange).toHaveBeenCalledWith("sideBend");
+
+    const cueField = screen.getByLabelText(/Instructor Cue/);
+    expect(cueField).toHaveValue("Keep ribs over hips");
+    fireEvent.change(cueField, { target: { value: "Lengthen through the crown" } });
+    expect(onPrimaryCueChange).toHaveBeenCalledWith("Lengthen through the crown");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a save failure and keeps the way out open while saving", () => {
+    render(
+      <MovementEditDialog
+        isOpen
+        title="Roll Down"
+        difficulty="Beginner"
+        spineGoal=""
+        primaryCue=""
+        isSaving
+        saveError="That did not save. Try again."
+        onClose={vi.fn()}
+        onTitleChange={vi.fn()}
+        onDifficultyChange={vi.fn()}
+        onSpineGoalChange={vi.fn()}
+        onPrimaryCueChange={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("That did not save. Try again.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
+    // A dialog mid-save still has to be leavable, so Cancel is not a write control.
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  });
+
+  it("opens on a real level when the stored one is not one of the three", () => {
+    expect(toMovementDifficulty("Advanced")).toBe("Advanced");
+    expect(toMovementDifficulty("intermediate")).toBe("Intermediate");
+    // Legacy captures stored their own words; a blank dropdown would save as one.
+    expect(toMovementDifficulty("EASY")).toBe("Beginner");
+    expect(toMovementDifficulty(undefined)).toBe("Beginner");
+  });
+
+  it("leaves a routine with no spine goal without one", () => {
+    expect(toMovementSpineGoal("thoracicRotation")).toBe("thoracicRotation");
+    // Unlike the level, having none is a real state — the box must not invent one.
+    expect(toMovementSpineGoal(undefined)).toBe("");
+    expect(toMovementSpineGoal("LENGTHEN")).toBe("");
   });
 });

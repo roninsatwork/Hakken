@@ -209,6 +209,35 @@ export const create = tenantMutation({
   },
 });
 
+export const update = tenantMutation({
+  args: {
+    id: v.id("movements"),
+    title: v.string(),
+    difficulty: movementDifficultyValidator,
+    spineGoal: v.optional(movementSpineGoalValidator),
+    primaryCue: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const movement = await ctx.db.get(args.id);
+    if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Unauthorized");
+
+    const title = args.title.trim();
+    if (title.length === 0) throw new Error("A routine needs a name.");
+
+    const primaryCue = args.primaryCue?.trim();
+
+    // Both of these are allowed to be nothing, and patching a field to
+    // `undefined` clears it rather than leaving the old value behind — so a
+    // goal or a cue removed in the edit box is actually removed.
+    await ctx.db.patch(args.id, {
+      title,
+      difficulty: args.difficulty,
+      spineGoal: args.spineGoal,
+      primaryCue: primaryCue && primaryCue.length > 0 ? primaryCue : undefined,
+    });
+  },
+});
+
 export const remove = tenantMutation({
   args: { id: v.id("movements") },
   handler: async (ctx, args) => {

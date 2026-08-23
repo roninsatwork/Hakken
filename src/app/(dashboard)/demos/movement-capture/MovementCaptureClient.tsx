@@ -11,6 +11,7 @@ import { ArrowLeft } from "lucide-react";
 import MovementCapturePanel from "../movements/_components/MovementCapturePanel";
 import MovementSaveDialog from "../movements/_components/MovementSaveDialog";
 import { useMediaPipeVision } from "../movements/_hooks/useMediaPipeVision";
+import { useMovementCameraDevices } from "../movements/_hooks/useMovementCameraDevices";
 import { useMovementCapture } from "../movements/_hooks/useMovementCapture";
 import type { MovementDenseCaptureAdapter } from "../movements/_lib/movementDenseCapture";
 import {
@@ -149,6 +150,12 @@ export default function MovementCapturePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [cameraError, setCameraError] = useState(false);
+  const {
+    devices: cameras,
+    activeDeviceId: activeCameraId,
+    selectDevice: selectCamera,
+    refreshDevices: refreshCameras,
+  } = useMovementCameraDevices();
   const {
     poseLandmarker,
     faceLandmarker,
@@ -609,6 +616,12 @@ export default function MovementCapturePage() {
           captureReadinessMessage={captureStartGate.message}
           captureReadinessStatus={captureStartGate.status}
           capturePreflight={capturePreflight}
+          cameras={cameras}
+          selectedCameraId={activeCameraId}
+          onSelectCamera={selectCamera}
+          // Camera names are blank until permission is granted, so the list is
+          // read again the moment a picture actually starts.
+          onCameraStreamStart={refreshCameras}
           captureTechnicalError={denseCaptureFailure}
           frameCount={frameCount}
           trackingQuality={trackingQuality}

@@ -1,5 +1,14 @@
+/**
+ * Pinned, deliberately.
+ *
+ * This was `@latest`, which is a redirect the browser has to re-resolve rather
+ * than a file it can simply keep, and which silently becomes a different engine
+ * the day a new one ships. Both matter here: a cold or failed fetch is the
+ * difference between the studio starting and Anthony seeing "tracking error"
+ * with no skeleton. The version tracks the installed @mediapipe/tasks-vision.
+ */
 export const MEDIAPIPE_VISION_WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
 
 export const MEDIAPIPE_POSE_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task";

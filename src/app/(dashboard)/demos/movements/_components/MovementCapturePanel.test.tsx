@@ -216,4 +216,32 @@ describe("MovementCapturePanel", () => {
     expect(screen.getByText("33/33 available")).toBeInTheDocument();
     expect(screen.getByText(/palm normal and wrist swing\/twist are not captured yet/i)).toBeInTheDocument();
   });
+
+  it("lets the studio be pointed at a different camera", () => {
+    const onSelectCamera = vi.fn();
+
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        cameras={[
+          { deviceId: "insta360", label: "Insta360 Link" },
+          { deviceId: "facetime", label: "FaceTime HD Camera" },
+        ]}
+        selectedCameraId="insta360"
+        onSelectCamera={onSelectCamera}
+      />,
+    );
+
+    const picker = screen.getByLabelText("Camera");
+    expect(picker).toHaveValue("insta360");
+
+    fireEvent.change(picker, { target: { value: "facetime" } });
+    expect(onSelectCamera).toHaveBeenCalledWith("facetime");
+  });
+
+  it("offers no camera picker before any camera is known", () => {
+    render(<MovementCapturePanel {...baseProps} onSelectCamera={vi.fn()} />);
+
+    expect(screen.queryByLabelText("Camera")).not.toBeInTheDocument();
+  });
 });

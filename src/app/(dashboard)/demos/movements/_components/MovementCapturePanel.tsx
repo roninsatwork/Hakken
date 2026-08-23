@@ -4,7 +4,9 @@ import React, { type RefObject } from "react";
 import Webcam from "react-webcam";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../_hooks/useMediaPipeVision";
-import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../_lib/movementCameraConstraints";
+import { movementBodyTrackingVideoConstraints } from "../_lib/movementCameraConstraints";
+import type { MovementCameraDevice } from "../_hooks/useMovementCameraDevices";
+import { Select } from "@/src/ui/components/screens/Select";
 import type { MovementCapturePreflight } from "../_lib/movementCapturePreflight";
 import MovementCapturePreflightPanel from "./MovementCapturePreflightPanel";
 import {
@@ -32,6 +34,10 @@ type MovementCapturePanelProps = {
   frameCount: number;
   trackingQuality: number;
   spineQuality: number;
+  cameras?: MovementCameraDevice[];
+  selectedCameraId?: string;
+  onSelectCamera?: (deviceId: string) => void;
+  onCameraStreamStart?: () => void;
   onCameraError: () => void;
   onRetryVision: () => void;
   onToggleRecording: () => void;
@@ -55,6 +61,10 @@ export default function MovementCapturePanel({
   captureReadinessMessage = null,
   captureReadinessStatus = "idle",
   capturePreflight,
+  cameras = [],
+  selectedCameraId = "",
+  onSelectCamera,
+  onCameraStreamStart,
   frameCount,
   trackingQuality,
   spineQuality,
@@ -83,6 +93,10 @@ export default function MovementCapturePanel({
       : captureReadinessStatus === "blocked"
         ? "Recording did not start"
         : "Not recording";
+  const videoConstraints = React.useMemo(
+    () => movementBodyTrackingVideoConstraints(selectedCameraId),
+    [selectedCameraId],
+  );
   const visionLabel =
     visionStatus === "ready"
       ? "Posture Tracking: Ready"
@@ -106,13 +120,37 @@ export default function MovementCapturePanel({
 
   return (
     <div className="flex w-full flex-col gap-3">
+      {cameras.length > 0 && onSelectCamera && (
+        <div className="flex items-center justify-end gap-3">
+          <label
+            className="text-[13px] font-medium text-secondary tracking-wide"
+            htmlFor="movement-capture-camera"
+          >
+            Camera
+          </label>
+          <Select
+            className="w-[min(100%,320px)]"
+            id="movement-capture-camera"
+            value={selectedCameraId}
+            onChange={onSelectCamera}
+          >
+            <option value="">Browser default</option>
+            {cameras.map((camera) => (
+              <option key={camera.deviceId} value={camera.deviceId}>
+                {camera.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
       <div className={`relative w-full aspect-video rounded-3xl overflow-hidden bg-[${MOVEMENT_SCENE_BG}] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]`}>
       <Webcam
         ref={webcamRef}
+        onUserMedia={onCameraStreamStart}
         onUserMediaError={onCameraError}
         className="absolute inset-0 w-full h-full object-contain"
         mirrored={true}
-        videoConstraints={MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS}
+        videoConstraints={videoConstraints}
       />
       <canvas
         ref={canvasRef}
@@ -235,7 +273,16 @@ export default function MovementCapturePanel({
             onClick={onToggleRecording}
             disabled={recordingDisabled}
             aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
-            className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
+            /*
+             * The disabled state is drawn, not dimmed.
+             *
+             * It used to be the live button at half opacity, which over a bright
+             * picture left the words almost gone — Anthony, with the studio open:
+             * *"the start recording button is too weak to see"*. Half opacity is
+             * only ever legible over a known background, and the background here
+             * is whatever the camera is pointed at.
+             */
+            className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:border disabled:border-white/30 disabled:bg-black/75 disabled:text-white disabled:shadow-none disabled:backdrop-blur-md ${
               isRecording
                 ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_#ef4444]"
                 : `bg-[${MOVEMENT_SALMON}] text-[${MOVEMENT_INK}] hover:bg-[${MOVEMENT_CREAM}] shadow-[0_0_20px_rgba(246,204,190,0.34)]`

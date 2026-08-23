@@ -52,6 +52,7 @@ describe("MovementLibraryTable", () => {
             onPlay={vi.fn()}
             onDebugAutoBaseline={vi.fn()}
             onView={vi.fn()}
+            onEdit={vi.fn()}
             onDelete={vi.fn()}
           />
         ),

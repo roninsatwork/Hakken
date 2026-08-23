@@ -6,7 +6,8 @@ import Webcam from "react-webcam";
 import { ArrowLeft, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
-import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../../../_lib/movementCameraConstraints";
+import { movementBodyTrackingVideoConstraints } from "../../../_lib/movementCameraConstraints";
+import { useMovementCameraDevices } from "../../../_hooks/useMovementCameraDevices";
 import {
   MOVEMENT_CREAM,
   MOVEMENT_INK,
@@ -76,6 +77,13 @@ export default function MovementHud({
   onCameraError,
 }: MovementHudProps) {
   const [hasCameraWaitElapsed, setHasCameraWaitElapsed] = useState(false);
+  // No picker here — practice simply honours the camera chosen on the capture
+  // screen, so a student is not looking at the wrong one after setting it once.
+  const { activeDeviceId: activeCameraId } = useMovementCameraDevices();
+  const videoConstraints = React.useMemo(
+    () => movementBodyTrackingVideoConstraints(activeCameraId),
+    [activeCameraId],
+  );
 
   useEffect(() => {
     if (visionStatus !== "ready" || isCameraReady) {
@@ -259,7 +267,7 @@ export default function MovementHud({
           ref={webcamRef}
           audio={false}
           mirrored={true}
-          videoConstraints={MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS}
+          videoConstraints={videoConstraints}
           onUserMedia={onCameraReady}
           onUserMediaError={(error) => {
             const rawMessage = error instanceof Error ? error.message : String(error);
