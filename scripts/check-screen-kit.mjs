@@ -73,6 +73,45 @@ import { fileURLToPath } from "node:url";
  *   the 9 that did not are sub-tables embedded in a page whose header sits in
  *   the parent, and they are frozen here.
  *
+ * - A switch drawn from toggle glyphs. Added 2026-08-23, and it is the tick box
+ *   rule one day older, found in the place the tick box rule did not reach.
+ *   Three system settings screens — masking, developer diagnostics,
+ *   self-improvement — each drew a list of on/off rows as bordered cards with a
+ *   `ToggleLeft`/`ToggleRight` glyph on the right. No rule caught them: they
+ *   wrote no `<table>`, no `<input>`, no tick box, and their raw buttons were
+ *   frozen. Anthony, with the three open: *"there are new tables in the system
+ *   settings that look hand drawn and need to be standardised."* They were
+ *   tables — a name, what it does, and whether it is on — wearing a shape the
+ *   kit has no part for. `Checkbox` in a `DataTable` column is what they are
+ *   now, and what this rule points at. Four files are frozen here at the moment
+ *   it was written: the retention modal's status switch, which is one control in
+ *   a dialog rather than a list, and the three schedule screens.
+ *
+ * - A component declared under a name the kit already exports. Added
+ *   2026-08-23, and it is the first rule here about two screens copying *each
+ *   other* rather than either of them copying the kit. That is why nothing
+ *   caught it: every rule above asks "did this screen redraw a shared part?",
+ *   and a private copy of `SettingSwitch` answers no — it redrew a part the
+ *   screen next door had already redrawn. Two screens held one, identical to the
+ *   kit's character for character except that one used `py-3` where the kit and
+ *   the other copy used `py-4`. A third screen declared its own `StatusPill`,
+ *   which was not a copy at all but something different wearing a familiar name.
+ *   The kit's exported names are read from the kit itself, so adding a component
+ *   protects its name the same day. **This list starts empty**: all three were
+ *   fixed the day the rule was written, and any entry added later is a
+ *   deliberate act rather than inherited debt.
+ *
+ * - A divided list drawn by hand. Added 2026-08-23, alongside the rule above and
+ *   for the same reason: `last:border-0` on a mapped row is a screen saying out
+ *   loud that it is drawing its own list, because "except the last one" is only
+ *   something you say about a repetition. Twelve files carried it when the sweep
+ *   began. Three were the leaderboard rows, which became one shared part; three
+ *   more were panel lists — a script's run history, an audit entry's changes, a
+ *   wiki page's backlinks — that moved onto `CompactList`. The six left are
+ *   frozen. Each hand-drawn copy had got the same three things slightly
+ *   differently: the divider, the row rhythm, and what the list said when it was
+ *   empty.
+ *
  * A file picker, a colour swatch and a slider are still deliberately not
  * covered. The kit has no replacement for them, so flagging one would be a
  * build failure with no correct fix.
@@ -168,6 +207,50 @@ const RULES = {
       "`labelHidden` for a box in a table cell whose row already names it — the label\n" +
       "stays tied, only the visible text goes.",
   },
+  dividers: {
+    part: "a divided list",
+    headline: "These draw their own list of divided rows:",
+    fix:
+      "`last:border-0` on a mapped row means the screen is drawing its own list, because\n" +
+      "\"except the last one\" is only something you say about a repetition. Use CompactList\n" +
+      "(src/ui/components/screens/CompactList.tsx) for a run of rows inside a panel that has\n" +
+      "already introduced itself — a run history, a list of changes, a page's backlinks — or\n" +
+      "DataTable for a screen's own records. Both own the divider, the row rhythm and the\n" +
+      "empty state, which are the three things every hand-drawn copy got slightly differently.",
+  },
+  shadows: {
+    part: "a component the kit already exports",
+    headline: "These declare a component under a name the kit already uses:",
+    fix:
+      "Import it from src/ui/components/screens/ or src/ui/atoms/ instead of declaring\n" +
+      "your own. Two screens each held a private copy of SettingSwitch, identical to the\n" +
+      "kit's character for character except that one used py-3 where the others used\n" +
+      "py-4 — three switches, already a row-height apart, and no rule saw it because\n" +
+      "neither screen had copied the kit. They had copied each other.\n" +
+      "If yours is genuinely a different component, give it a different name: a reader\n" +
+      "who sees a familiar name and gets something else has been misled by the file.\n" +
+      "If it wraps the kit's — a run status turned into a tone, say — name it for what\n" +
+      "it adds (RunStatusPill) and render the kit's part inside it.",
+  },
+  switches: {
+    part: "an on/off switch",
+    headline: "These draw an on/off switch out of toggle glyphs:",
+    fix:
+      "There are two right answers, and which one you want depends on what the screen is.\n" +
+      "\n" +
+      "A LIST of things that are on or off is a table: what it is, what it does, and\n" +
+      "whether it is switched on. Use DataTable (src/ui/components/screens/DataTable.tsx)\n" +
+      "with Checkbox (screens/Checkbox.tsx) in the last column, as System Security and\n" +
+      "Self-Improvement do.\n" +
+      "\n" +
+      "A SINGLE setting inside a form is not a list, and forcing a one-row table on it\n" +
+      "would be its own kind of wrong. Use SettingSwitch (screens/SettingsCard.tsx) inside\n" +
+      "a SettingsCard, as the agent settings and API Keys screens do.\n" +
+      "\n" +
+      "Either way, a ToggleLeft/ToggleRight pair is not a shared part — it is a switch\n" +
+      "redrawn by eye, and it says its state in colour alone, which is unreadable to\n" +
+      "anyone who cannot separate the two colours it picked.",
+  },
   anatomy: {
     part: "a table with no header above it",
     headline: "These put a table on the page with no header above it:",
@@ -245,6 +328,9 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     inputs: new Set(allowlist.inputs ?? []),
     assembled: new Set(allowlist.assembled ?? []),
     checkboxes: new Set(allowlist.checkboxes ?? []),
+    switches: new Set(allowlist.switches ?? []),
+    shadows: new Set(allowlist.shadows ?? []),
+    dividers: new Set(allowlist.dividers ?? []),
     anatomy: new Set(allowlist.anatomy ?? []),
     // Unlike the lists above this freezes a count per file, because a file
     // with eleven raw buttons cannot be asked to reach zero in one sitting —
@@ -341,6 +427,73 @@ export function countHandWrittenHeadings(text) {
  */
 const HEADER_RULE_CLASSES = /border-b border-border-dim pb-6/g;
 
+/**
+ * Where the kit's components live, for the rule about redeclaring one.
+ *
+ * Screens and atoms only. `src/ui/components/feedback` and the rest of `src/ui`
+ * are app chrome rather than the screen kit, and a screen declaring its own
+ * `ChatMessage` is not the fault this is about.
+ */
+const KIT_DIRS = [
+  path.join("src", "ui", "components", "screens"),
+  path.join("src", "ui", "atoms"),
+];
+
+/**
+ * A top-level declaration of a component: `function Name`, `const Name =`,
+ * either exported or not, at any indentation. Uppercase only — a component. A
+ * comment line cannot match, because `//` and `*` sit before the keyword.
+ */
+const COMPONENT_DECLARATION = /^[ \t]*(?:export\s+)?(?:function|const)\s+([A-Z]\w*)\b/gm;
+
+let kitNamesCache = null;
+
+/**
+ * Every component name the kit exports.
+ *
+ * Read from the kit itself rather than listed here, so the rule cannot fall
+ * behind the parts: adding a component to the kit immediately protects its name.
+ */
+function kitComponentNames() {
+  if (kitNamesCache) return kitNamesCache;
+
+  const names = new Set();
+  for (const dir of KIT_DIRS) {
+    const full = path.join(rootDir, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const file of listFiles(full)) {
+      const text = readIfPresent(file);
+      if (text === null) continue;
+      for (const match of text.matchAll(/^export\s+(?:function|const)\s+([A-Z]\w*)\b/gm)) {
+        names.add(match[1]);
+      }
+    }
+  }
+
+  kitNamesCache = names;
+  return names;
+}
+
+/**
+ * A switch drawn by hand, as the glyph pair that always gives it away.
+ *
+ * Matched as the rendered element rather than the import, so a file that pulls
+ * `ToggleRight` in to sit beside a heading as decoration is left alone: it is
+ * the pair used as a control that this is about.
+ */
+const TOGGLE_GLYPHS = /<Toggle(Left|Right)\b/;
+
+/**
+ * A divided list drawn by hand, as the class that always gives it away.
+ *
+ * `last:border-0` and `last:border-b-0` only mean anything on a repeated
+ * element — you do not write "except the last one" about a single box. So the
+ * class is not a style choice, it is a screen saying out loud that it is drawing
+ * its own list of rows. `CompactList` and `DataTable` both own their dividers,
+ * so a screen on the kit never needs to write it.
+ */
+const HAND_DRAWN_DIVIDER = /\blast:border-(?:b-)?0\b/;
+
 /** Every file the buttons rule reads, already relative to the repo root. */
 function listButtonFiles() {
   const files = [];
@@ -426,6 +579,26 @@ function findInFile(relative, text) {
   while ((match = checkboxes.exec(text))) {
     if (!isTickBox(readOpeningTag(text, match.index))) continue;
     found.push({ rule: "checkboxes", file: relative, line: lineOf(match.index) });
+  }
+
+  // One hit per file: a list has many rows and they are one fault.
+  const dividerAt = text.search(HAND_DRAWN_DIVIDER);
+  if (dividerAt >= 0) {
+    found.push({ rule: "dividers", file: relative, line: lineOf(dividerAt) });
+  }
+
+  const kitNames = kitComponentNames();
+  const declarations = new RegExp(COMPONENT_DECLARATION.source, "gm");
+  while ((match = declarations.exec(text))) {
+    if (!kitNames.has(match[1])) continue;
+    found.push({ rule: "shadows", file: relative, line: lineOf(match.index), name: match[1] });
+  }
+
+  // One hit per file: a single switch draws both glyphs, one for each state, so
+  // counting them would report every switch twice.
+  const switchAt = text.search(TOGGLE_GLYPHS);
+  if (switchAt >= 0) {
+    found.push({ rule: "switches", file: relative, line: lineOf(switchAt) });
   }
 
   const headerRules = new RegExp(HEADER_RULE_CLASSES.source, "g");
@@ -540,7 +713,17 @@ export function findStaleFreezes(frozen = loadFrozen()) {
     }
   }
 
-  for (const rule of ["tables", "inputs", "assembled", "checkboxes", "anatomy", "headerRule"]) {
+  for (const rule of [
+    "tables",
+    "inputs",
+    "assembled",
+    "checkboxes",
+    "switches",
+    "shadows",
+    "dividers",
+    "anatomy",
+    "headerRule",
+  ]) {
     for (const relative of frozen[rule]) {
       const full = path.join(rootDir, relative);
       if (!fs.existsSync(full)) {
@@ -568,7 +751,8 @@ function main() {
     const headingCount = [...frozen.headings.values()].reduce((sum, count) => sum + count, 0);
     console.log(
       `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields, ` +
-        `${frozen.checkboxes.size} tick boxes, ` +
+        `${frozen.checkboxes.size} tick boxes, ${frozen.switches.size} switches, ` +
+        `${frozen.shadows.size} shadowed kit names, ${frozen.dividers.size} hand-drawn lists, ` +
         `${frozen.anatomy.size} headerless tables, ` +
         `${frozen.assembled.size} hand-assembled tables, ${buttonCount} raw buttons ` +
         `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +

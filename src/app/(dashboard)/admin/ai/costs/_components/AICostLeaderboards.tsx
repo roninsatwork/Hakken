@@ -1,7 +1,9 @@
-import Image from "next/image";
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Bot, Building2, TrendingUp } from "lucide-react";
+
+import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import type { AgentLeaderboardRow, CompanyLeaderboardRow, Translate, UserLeaderboardRow } from "./types";
 import { formatUsdAmount, getAgentMessageCount } from "./costFormatters";
 
@@ -12,160 +14,140 @@ type AICostLeaderboardsProps = {
   topUsers?: UserLeaderboardRow[];
 };
 
-export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, topUsers }: AICostLeaderboardsProps) {
-  const t = useTranslations("ai.costs.leaderboards");
+/**
+ * The panel each leaderboard sits in.
+ *
+ * Three copies of this card sat inline, differing only in their icon, their
+ * title and their animation delay. The rows inside them are `Leaderboard`'s
+ * job; the card is this.
+ */
+function LeaderboardPanel({
+  icon,
+  title,
+  delay,
+  className = "",
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  delay: number;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-6 mt-2">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.section
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
-        >
-          <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-4 h-4 text-[#10b981] opacity-80" />
-              <h2 className="text-[14px] font-bold text-foreground">{adminOverview("leaderboards.tenants")}</h2>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            {!topCompanies || topCompanies.length === 0 ? (
-              <LeaderboardEmptyState label={adminOverview("leaderboards.empty")} />
-            ) : (
-              topCompanies.map((company, index) => (
-                <div
-                  key={company.id}
-                  className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{index + 1}</span>
-                    <LeaderboardAvatar src={company.logo} name={company.name} radiusClass="rounded-[8px]" />
-                    <span className="text-[13px] font-semibold tracking-wide text-foreground">{company.name}</span>
-                  </div>
-                  <LeaderboardStats cost={company.cost} messages={company.messages} />
-                </div>
-              ))
-            )}
-          </div>
-        </motion.section>
-
-        <motion.section
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
-        >
-          <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-4 h-4 text-brand opacity-80" />
-              <h2 className="text-[14px] font-bold text-foreground">{adminOverview("leaderboards.initiators")}</h2>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            {!topUsers || topUsers.length === 0 ? (
-              <LeaderboardEmptyState label={adminOverview("leaderboards.empty")} />
-            ) : (
-              topUsers.map((user, index) => (
-                <div
-                  key={user.id}
-                  className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors"
-                >
-                  <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                    <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{index + 1}</span>
-                    <LeaderboardAvatar src={user.image} name={user.name} radiusClass="rounded-full" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
-                        {user.name}
-                      </span>
-                      <span className="text-[10px] text-secondary/70 tracking-wide truncate">{user.companyName}</span>
-                    </div>
-                  </div>
-                  <LeaderboardStats cost={user.cost} messages={user.messages} />
-                </div>
-              ))
-            )}
-          </div>
-        </motion.section>
+    <motion.section
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className={`bg-foreground/[0.02] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl ${className}`.trim()}
+    >
+      <div className="px-6 py-5 border-b border-border-dim bg-foreground/[0.03] flex flex-col gap-1.5">
+        <div className="flex items-center gap-3">
+          {icon}
+          <h2 className="text-[14px] font-bold text-foreground">{title}</h2>
+        </div>
       </div>
-
-      <motion.section
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl w-full"
-      >
-        <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
-          <div className="flex items-center gap-3">
-            <Bot className="w-4 h-4 text-brand opacity-80" />
-            <h2 className="text-[14px] font-bold text-foreground">{t("topAgents")}</h2>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          {!topAgents || topAgents.length === 0 ? (
-            <LeaderboardEmptyState label={adminOverview("leaderboards.empty")} />
-          ) : (
-            topAgents.map((agent, index) => (
-              <div
-                key={agent.id}
-                className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors"
-              >
-                <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                  <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{index + 1}</span>
-                  <LeaderboardAvatar src={agent.avatar} name={agent.name} radiusClass="rounded-[6px]" />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
-                      {agent.name}
-                    </span>
-                    <span className="text-[10px] text-secondary/70 tracking-wide truncate">{t("autonomousProcess")}</span>
-                  </div>
-                </div>
-                <LeaderboardStats cost={agent.cost} messages={getAgentMessageCount(agent.interactions, agent.messages)} />
-              </div>
-            ))
-          )}
-        </div>
-      </motion.section>
-    </div>
+      <div className="flex flex-col p-4">{children}</div>
+    </motion.section>
   );
 }
 
-/**
- * A row without a picture is the normal case, not a broken one: agents and
- * users carry an empty avatar string until someone uploads one. Passing that
- * empty string to `src` makes the browser re-request the whole page, so the
- * initials stand in and no image element is rendered at all.
- */
-function LeaderboardAvatar({ src, name, radiusClass }: { src?: string; name: string; radiusClass: string }) {
-  const frame = `w-8 h-8 ${radiusClass} bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0`;
-
-  if (!src) {
-    return (
-      <div className={`${frame} flex items-center justify-center text-[10px] text-foreground font-bold`}>
-        {name.substring(0, 2).toUpperCase()}
-      </div>
-    );
-  }
-
-  return <Image src={src} alt={name} width={32} height={32} unoptimized className={`${frame} object-cover`} />;
-}
-
-function LeaderboardEmptyState({ label }: { label: string }) {
-  return <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{label}</div>;
-}
-
-function LeaderboardStats({ cost, messages }: { cost: number; messages: number }) {
+export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, topUsers }: AICostLeaderboardsProps) {
   const t = useTranslations("ai.costs.leaderboards");
+  const empty = adminOverview("leaderboards.empty");
+
   return (
-    <div className="flex items-center gap-6 shrink-0 pr-2">
-      <div className="flex flex-col items-end min-w-[65px]">
-        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t("messages")}</span>
-        <span className="text-[13px] font-bold text-foreground tracking-tight">{messages.toLocaleString()}</span>
+    <div className="flex flex-col gap-6 mt-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LeaderboardPanel
+          icon={<Building2 className="w-4 h-4 text-brand opacity-80" />}
+          title={adminOverview("leaderboards.tenants")}
+          delay={0.6}
+        >
+          <Leaderboard<CompanyLeaderboardRow>
+            rows={topCompanies ?? []}
+            rowKey={(company) => company.id}
+            nameHeader={t("companyColumn")}
+            name={(company) => company.name}
+            avatar={{ src: (company) => company.logo, shape: "rounded" }}
+            empty={empty}
+            stats={[
+              {
+                key: "messages",
+                header: t("messages"),
+                cell: (company) => company.messages.toLocaleString(),
+              },
+              {
+                key: "cost",
+                header: t("cost"),
+                // The token, not the raw #f43f5e this used to carry: a
+                // hard-coded rose ignores the Aesthetics screen entirely.
+                className: "text-destructive",
+                cell: (company) => formatUsdAmount(company.cost, 4),
+              },
+            ]}
+          />
+        </LeaderboardPanel>
+
+        <LeaderboardPanel
+          icon={<TrendingUp className="w-4 h-4 text-brand opacity-80" />}
+          title={adminOverview("leaderboards.initiators")}
+          delay={0.7}
+        >
+          <Leaderboard<UserLeaderboardRow>
+            rows={topUsers ?? []}
+            rowKey={(user) => user.id}
+            nameHeader={t("personColumn")}
+            name={(user) => user.name}
+            sub={(user) => user.companyName}
+            avatar={{ src: (user) => user.image, shape: "circle" }}
+            empty={empty}
+            stats={[
+              {
+                key: "messages",
+                header: t("messages"),
+                cell: (user) => user.messages.toLocaleString(),
+              },
+              {
+                key: "cost",
+                header: t("cost"),
+                className: "text-destructive",
+                cell: (user) => formatUsdAmount(user.cost, 4),
+              },
+            ]}
+          />
+        </LeaderboardPanel>
       </div>
-      <div className="flex flex-col items-end min-w-[65px]">
-        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t("cost")}</span>
-        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">{formatUsdAmount(cost, 4)}</span>
-      </div>
+
+      <LeaderboardPanel
+        icon={<Bot className="w-4 h-4 text-brand opacity-80" />}
+        title={t("topAgents")}
+        delay={0.8}
+        className="w-full"
+      >
+        <Leaderboard<AgentLeaderboardRow>
+          rows={topAgents ?? []}
+          rowKey={(agent) => agent.id}
+          nameHeader={t("agentColumn")}
+          name={(agent) => agent.name}
+          sub={() => t("autonomousProcess")}
+          avatar={{ src: (agent) => agent.avatar, shape: "rounded" }}
+          empty={empty}
+          stats={[
+            {
+              key: "messages",
+              header: t("messages"),
+              cell: (agent) => getAgentMessageCount(agent.interactions, agent.messages).toLocaleString(),
+            },
+            {
+              key: "cost",
+              header: t("cost"),
+              className: "text-destructive",
+              cell: (agent) => formatUsdAmount(agent.cost, 4),
+            },
+          ]}
+        />
+      </LeaderboardPanel>
     </div>
   );
 }

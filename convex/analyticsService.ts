@@ -31,6 +31,59 @@ export type AiModelCostConfig = Pick<
 >;
 export type ModelCostMap = Map<string, AiModelCostConfig>;
 
+export type ModelBreakdown = Record<string, { name: string; cost: number; calls: number }>;
+export type ProviderBreakdown = Record<string, { providerKey: string; cost: number; calls: number }>;
+
+/**
+ * Fold one stored day's per-model figures into the running breakdowns.
+ *
+ * Both analytics queries read today's messages live and take every older day
+ * from `analyticsDailySnapshots`. The snapshot stores a per-model breakdown and
+ * no per-provider one, and both queries merged the models and quietly skipped
+ * the providers — so `providerDistribution` only ever counted today.
+ *
+ * Anthony found it on 2026-08-23, on a company's AI Usage screen showing a full
+ * thirty-day timeline above an empty Provider Usage panel: *"I think we broke
+ * this, it's empty when there should be data."* Nothing had broken it. It had
+ * never worked beyond today, and it only looked like a new fault because the
+ * panel next to it had just been tidied.
+ *
+ * The provider is derived from the model rather than stored beside it, which is
+ * why this needs no new field and no backfill: every snapshot already written
+ * gains its provider breakdown the moment this ships. A model that has since
+ * left the catalogue falls to "unknown", the same fallback the live path uses,
+ * so a retired model shows as unattributed spend rather than disappearing.
+ */
+export function mergeSnapshotModelMetrics(
+  modelMetrics: Array<{ model: string; cost: number; calls: number }> | undefined,
+  modelMap: ModelCostMap,
+  modelDistribution: ModelBreakdown,
+  providerDistribution: ProviderBreakdown,
+) {
+  if (!modelMetrics) return;
+
+  for (const entry of modelMetrics) {
+    const modelObj = modelMap.get(entry.model);
+
+    if (!modelDistribution[entry.model]) {
+      modelDistribution[entry.model] = {
+        name: modelObj?.friendlyName || modelObj?.displayName || entry.model,
+        cost: 0,
+        calls: 0,
+      };
+    }
+    modelDistribution[entry.model].cost += entry.cost;
+    modelDistribution[entry.model].calls += entry.calls;
+
+    const providerKey = modelObj?.providerKey ?? "unknown";
+    if (!providerDistribution[providerKey]) {
+      providerDistribution[providerKey] = { providerKey, cost: 0, calls: 0 };
+    }
+    providerDistribution[providerKey].cost += entry.cost;
+    providerDistribution[providerKey].calls += entry.calls;
+  }
+}
+
 const dayMs = 24 * 60 * 60 * 1000;
 
 export function resolveTimestampRange(args: {

@@ -3,18 +3,60 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { ToggleLeft, ToggleRight } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+
 import { api } from "@/convex/_generated/api";
-import { SettingBlock } from "../../_components/SettingBlock";
+import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import {
+  TABLE_PAGE_SIZE,
+  matchesSearchTerm,
+  paginateItems,
+} from "@/src/ui/components/screens/pagination";
 import { SettingsScreen } from "../../_components/SettingsScreen";
 import type { PiiConfig } from "../../_components/types";
 
+/** The switches this screen owns, in the order they read. */
+type MaskKey = "enabled" | "maskEmails" | "maskCreditCards" | "maskNinos" | "maskPhones";
+
+type MaskingRow = {
+  key: MaskKey;
+  name: string;
+  description: string;
+  /** The engine itself. The four rows under it do nothing until this is on. */
+  isEngine: boolean;
+};
+
+/**
+ * What gets hidden from a prompt before the model sees it.
+ *
+ * A standard table since 2026-08-23. It was a column of bordered rows with a
+ * toggle glyph on the right of each — the same shape the workspace Features
+ * screen carried until the day before, and the same complaint from Anthony
+ * with the screen open: the system settings tables *"look hand drawn and need
+ * to be standardised"*. The switch-card shape was never a shared part; it was
+ * copied by eye between three settings screens, and every copy was one more
+ * place for the section to stop matching itself.
+ *
+ * The engine is row one rather than a control above the table. It is a switch
+ * like the four below it, and lifting it out would leave a table of four rows
+ * with a fifth switch floating over them — which is how the bespoke shape
+ * started. The dependency survives instead as the thing it always was: with the
+ * engine off the four rows dim and their boxes refuse the click.
+ *
+ * The green-vs-grey toggle glyphs went with the shape. Colour was the only
+ * thing saying whether a field was masked, which is unreadable to anyone who
+ * cannot separate green from grey; the house tick box says it with a tick.
+ */
 export default function SystemSecurityPage() {
   const t = useTranslations("admin.settings");
   const currentPiiConfig = useQuery(api.system.getPiiConfig);
   const updatePiiConfig = useMutation(api.system.updatePiiConfig);
 
   const [piiData, setPiiData] = useState<PiiConfig>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -35,6 +77,50 @@ export default function SystemSecurityPage() {
     }
   };
 
+  // Built here rather than at module scope so every key is a literal the
+  // messages check can follow to the catalogue.
+  const switches: MaskingRow[] = [
+    {
+      key: "enabled",
+      name: t("security.masterToggle"),
+      description: t("security.masterToggleSub"),
+      isEngine: true,
+    },
+    {
+      key: "maskEmails",
+      name: t("security.maskEmails"),
+      description: t("security.maskEmailsSub"),
+      isEngine: false,
+    },
+    {
+      key: "maskCreditCards",
+      name: t("security.maskCreditCards"),
+      description: t("security.maskCreditCardsSub"),
+      isEngine: false,
+    },
+    {
+      key: "maskNinos",
+      name: t("security.maskNi"),
+      description: t("security.maskNiSub"),
+      isEngine: false,
+    },
+    {
+      key: "maskPhones",
+      name: t("security.maskPhones"),
+      description: t("security.maskPhonesSub"),
+      isEngine: false,
+    },
+  ];
+
+  const engineOn = piiData.enabled ?? false;
+  const matching = switches.filter((row) =>
+    matchesSearchTerm(searchTerm, [row.name, row.description])
+  );
+  const paged = paginateItems(matching, page, TABLE_PAGE_SIZE);
+
+  const setSwitch = (key: MaskKey, next: boolean) =>
+    setPiiData((previous): PiiConfig => ({ ...previous, [key]: next }));
+
   return (
     <SettingsScreen
       isLoading={currentPiiConfig === undefined}
@@ -47,78 +133,79 @@ export default function SystemSecurityPage() {
         successLabel: t("success"),
       }}
     >
-      <SettingBlock title={t("security.redaction")} sub={t("security.redactionSub")}>
-        <div className="flex flex-col gap-0 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="flex items-center justify-between p-5 bg-background/50 border-b border-border-dim">
-            <div className="flex flex-col gap-1">
-              <span className="text-[14px] text-foreground font-semibold">{t("security.masterToggle")}</span>
-              <span className="text-[12px] text-muted">{t("security.masterToggleSub")}</span>
-            </div>
-            {/* This switch and the four below stay raw: bare toggle glyphs whose colour is the state — matches no variant. */}
-            <button
-              type="button"
-              aria-pressed={piiData.enabled ?? false}
-              onClick={() => setPiiData({ ...piiData, enabled: !piiData.enabled })}
-              className={`transition-colors flex-shrink-0 ${piiData.enabled ? "text-brand" : "text-muted"}`}
-            >
-              {piiData.enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-            </button>
-          </div>
+      <PageHeader
+        icon={<ShieldCheck className="w-6 h-6 text-brand" />}
+        title={t("security.redaction")}
+        description={t("security.redactionSub")}
+      />
 
-          <div className={`flex flex-col transition-all duration-300 ${piiData.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-            <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
-              <span className="text-[13px] text-foreground/90">{t("security.maskEmails")}</span>
-              <button
-                type="button"
-                aria-pressed={piiData.maskEmails ?? false}
-                onClick={() => setPiiData({ ...piiData, maskEmails: !piiData.maskEmails })}
-                className={`transition-colors flex-shrink-0 ${piiData.maskEmails ? "text-[#10B981]" : "text-border-dim"}`}
-              >
-                {piiData.maskEmails ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
-              <span className="text-[13px] text-foreground/90">{t("security.maskCreditCards")}</span>
-              <button
-                type="button"
-                aria-pressed={piiData.maskCreditCards ?? false}
-                onClick={() => setPiiData({ ...piiData, maskCreditCards: !piiData.maskCreditCards })}
-                className={`transition-colors flex-shrink-0 ${piiData.maskCreditCards ? "text-[#10B981]" : "text-border-dim"}`}
-              >
-                {piiData.maskCreditCards ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
-              <span className="text-[13px] text-foreground/90">{t("security.maskNi")}</span>
-              <button
-                type="button"
-                aria-pressed={piiData.maskNinos ?? false}
-                onClick={() => setPiiData({ ...piiData, maskNinos: !piiData.maskNinos })}
-                className={`transition-colors flex-shrink-0 ${piiData.maskNinos ? "text-[#10B981]" : "text-border-dim"}`}
-              >
-                {piiData.maskNinos ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-5 bg-card/10">
-              <div className="flex flex-col gap-1">
-                <span className="text-[13px] text-foreground/90">{t("security.maskPhones")}</span>
-                <span className="text-[11px] text-muted max-w-[280px]">{t("security.maskPhonesSub")}</span>
-              </div>
-              <button
-                type="button"
-                aria-pressed={piiData.maskPhones ?? false}
-                onClick={() => setPiiData({ ...piiData, maskPhones: !piiData.maskPhones })}
-                className={`transition-colors flex-shrink-0 ${piiData.maskPhones ? "text-[#10B981]" : "text-border-dim"}`}
-              >
-                {piiData.maskPhones ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </SettingBlock>
+      <DataTable
+        rows={paged.items}
+        rowKey={(row) => row.key}
+        minWidthClassName="min-w-[640px]"
+        search={{
+          value: searchTerm,
+          onChange: (next) => {
+            setSearchTerm(next);
+            // Page 3 of a search that now has one page of results is an empty
+            // table, so a new search always starts at the top.
+            setPage(1);
+          },
+          placeholder: t("security.searchPlaceholder"),
+        }}
+        empty={{
+          icon: <ShieldCheck className="w-8 h-8 text-muted/30" />,
+          label: t("security.emptyState"),
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.totalItems,
+          pageSize: paged.pageSize,
+          isLoading: false,
+          onPageChange: setPage,
+          labels: { empty: t("security.emptyState") },
+        }}
+        // What the dimming said before it was a table: these four do nothing
+        // while the engine is off.
+        rowClassName={(row) => (row.isEngine || engineOn ? "" : "opacity-50")}
+        columns={[
+          {
+            key: "switch",
+            header: t("security.nameColumn"),
+            className: "w-[240px]",
+            cell: (row) => (
+              <span className="text-[13px] font-medium text-foreground">{row.name}</span>
+            ),
+          },
+          {
+            key: "description",
+            header: t("security.descriptionColumn"),
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">{row.description}</span>
+            ),
+          },
+          {
+            key: "on",
+            header: t("security.onColumn"),
+            align: "right",
+            className: "w-[150px] whitespace-nowrap",
+            // The first column already names the switch, so the box keeps its
+            // label for whoever is listening and drops it for whoever is
+            // looking.
+            cell: (row) => (
+              <Checkbox
+                label={row.name}
+                labelHidden
+                checked={piiData[row.key] ?? false}
+                disabled={!row.isEngine && !engineOn}
+                onChange={(next) => setSwitch(row.key, next)}
+              />
+            ),
+          },
+        ]}
+      />
     </SettingsScreen>
   );
 }

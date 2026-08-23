@@ -386,6 +386,14 @@ instructions unless they are deliberately reopened.
   and `analyticsCron.ts` grab-bags split into seven modules, the docs
   contradictions removed, plus a ten-finding adversarial review fixed the
   same day. Coverage floor ratcheted 66→69. Pushed to `dev` (cd71774d).
+- [Nothing The Kit Owns Is Drawn Twice](./completed/screen-kit-second-sweep-plan.md) —
+  completed 2026-08-23: the follow-on sweep to the plan below. Where that one
+  asked whether a screen copied the kit, this asked whether two screens copied
+  each other — which passes every rule by construction. The same leaderboard row
+  written nine times across three screens, three screens declaring a component
+  the kit already exports, and twelve files drawing their own divided list. Two
+  new rules came out of it, one starting with an empty frozen list. Read it
+  before adding a part that "the kit doesn't have yet".
 - [Every Screen Is Built From The Same Parts](./completed/shared-screen-kit-plan.md) —
   the base-layer plan, completed 2026-08-18: every admin screen on the shared
   kit, the kit accessible and phone-safe, capabilities withheld per company and

@@ -8,6 +8,7 @@ import { ArrowLeft, History, Loader2, Pencil, Pin, RefreshCw, X } from "lucide-r
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
@@ -350,22 +351,39 @@ export function WikiPageDetailScreen({
           <p className="text-[11px] uppercase tracking-[0.1em] text-muted font-medium mb-1.5">
             {t("read.backlinks", { count: detail.backlinks.length })}
           </p>
-          {detail.backlinks.map((backlink) => (
-            <div
-              key={backlink.pageId}
-              className="flex items-baseline gap-3 py-2 border-b border-border-dim/50 last:border-b-0"
-            >
-              <Link
-                href={`${basePath}/${backlink.pageId}`}
-                className="text-[13.5px] text-brand hover:underline whitespace-nowrap"
-              >
-                {backlink.kind === "SOURCE"
-                  ? backlink.title.replace(/^https?:\/\//, "").slice(0, 42)
-                  : backlink.subjectKey}
-              </Link>
-              <span className="text-[12.5px] text-muted truncate">{backlink.quote}</span>
-            </div>
-          ))}
+          {/* Two columns: which page points here, and the line it points with.
+              The kit owns the divider — this was a hand-drawn divided list. */}
+          <CompactList
+            rows={detail.backlinks}
+            rowKey={(backlink) => backlink.pageId}
+            empty=""
+            dividers="rule"
+            columns={[
+              {
+                key: "page",
+                header: t("read.backlinkPageColumn"),
+                className: "w-[220px] align-baseline",
+                cell: (backlink) => (
+                  <Link
+                    href={`${basePath}/${backlink.pageId}`}
+                    className="text-[13.5px] text-brand hover:underline whitespace-nowrap"
+                  >
+                    {backlink.kind === "SOURCE"
+                      ? backlink.title.replace(/^https?:\/\//, "").slice(0, 42)
+                      : backlink.subjectKey}
+                  </Link>
+                ),
+              },
+              {
+                key: "quote",
+                header: t("read.backlinkQuoteColumn"),
+                className: "align-baseline",
+                cell: (backlink) => (
+                  <span className="text-[12.5px] text-muted">{backlink.quote}</span>
+                ),
+              },
+            ]}
+          />
         </div>
       )}
 

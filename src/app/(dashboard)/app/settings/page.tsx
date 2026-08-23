@@ -20,7 +20,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { useTranslations } from "next-intl";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
-import Image from "next/image";
+import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
@@ -107,26 +107,25 @@ const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["prov
       </div>
       <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Organization spend by provider</span>
     </div>
-    <div className="flex flex-col">
-      {!providers || providers.length === 0 ? (
-        <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Provider Data</div>
-      ) : (
-        providers.map((provider) => (
-          <div key={provider.providerKey} className="flex items-center justify-between px-6 py-4 border-b border-border-dim/50 last:border-0">
-            <div className="flex min-w-0 flex-col">
-              <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
-                {formatProviderName(provider.providerKey)}
-              </span>
-              <span className="text-[10px] text-secondary/70 font-mono tracking-widest uppercase">
-                {provider.calls.toLocaleString()} calls
-              </span>
-            </div>
-            <span className="text-[13px] font-bold text-foreground tracking-tight">
-              ${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-            </span>
-          </div>
-        ))
-      )}
+    <div className="flex flex-col p-4">
+      {/* Unranked: every provider there is, not the leaders of a longer list. */}
+      <Leaderboard
+        rows={providers ?? []}
+        rowKey={(provider) => provider.providerKey}
+        ranked={false}
+        nameHeader="Provider"
+        name={(provider) => formatProviderName(provider.providerKey)}
+        sub={(provider) => `${provider.calls.toLocaleString()} calls`}
+        empty="No Provider Data"
+        stats={[
+          {
+            key: "cost",
+            header: "Cost",
+            cell: (provider) =>
+              `$${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
+          },
+        ]}
+      />
     </div>
   </motion.section>
 );
@@ -300,7 +299,6 @@ export default function CompanySettingsDashboard() {
 
           <ProviderUsageList providers={data.providerDistribution} />
 
-          {/* Leaderboards for Org */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
@@ -312,33 +310,25 @@ export default function CompanySettingsDashboard() {
                   <h2 className="text-[14px] font-bold text-foreground">Top Team Members</h2>
                 </div>
               </div>
-              <div className="flex flex-col">
-                {data.topUsers.length === 0 ? (
-                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
-                ) : (
-                  data.topUsers.map((u, i) => (
-                    <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
-                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <Image src={u.image} alt={u.name} width={32} height={32} unoptimized className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
-                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.email}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6 shrink-0 pr-2">
-                        <div className="flex flex-col items-end w-[65px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">{u.messages.toLocaleString()}</span>
-                        </div>
-                        <div className="flex flex-col items-end w-[65px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">${u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="flex flex-col p-4">
+                <Leaderboard
+                  rows={data.topUsers}
+                  rowKey={(user) => user.id}
+                  nameHeader="Team member"
+                  name={(user) => user.name}
+                  sub={(user) => user.email}
+                  avatar={{ src: (user) => user.image, shape: "circle" }}
+                  empty={t('leaderboards.empty')}
+                  stats={[
+                    { key: "messages", header: "Messages", cell: (user) => user.messages.toLocaleString() },
+                    {
+                      key: "cost",
+                      header: "Cost",
+                      cell: (user) =>
+                        `$${user.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
+                    },
+                  ]}
+                />
               </div>
             </motion.section>
 
@@ -352,33 +342,25 @@ export default function CompanySettingsDashboard() {
                   <h2 className="text-[14px] font-bold text-foreground">Top Active Agents</h2>
                 </div>
               </div>
-              <div className="flex flex-col">
-                {(!data.topAgents || data.topAgents.length === 0) ? (
-                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
-                ) : (
-                  data.topAgents.map((a, i) => (
-                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
-                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <Image src={a.avatar} alt={a.name} width={32} height={32} unoptimized className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
-                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6 shrink-0 pr-2">
-                        <div className="flex flex-col items-end w-[65px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">{a.interactions.toLocaleString()}</span>
-                        </div>
-                        <div className="flex flex-col items-end w-[65px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">${a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="flex flex-col p-4">
+                <Leaderboard
+                  rows={data.topAgents ?? []}
+                  rowKey={(agent) => agent.id}
+                  nameHeader="Agent"
+                  name={(agent) => agent.name}
+                  sub={() => "Autonomous Process"}
+                  avatar={{ src: (agent) => agent.avatar, shape: "rounded" }}
+                  empty={t('leaderboards.empty')}
+                  stats={[
+                    { key: "messages", header: "Messages", cell: (agent) => agent.interactions.toLocaleString() },
+                    {
+                      key: "cost",
+                      header: "Cost",
+                      cell: (agent) =>
+                        `$${agent.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
+                    },
+                  ]}
+                />
               </div>
             </motion.section>
           </div>

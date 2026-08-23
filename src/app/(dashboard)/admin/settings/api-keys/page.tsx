@@ -16,7 +16,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { cn } from "@/src/ui/lib/utils";
+import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
@@ -52,35 +52,6 @@ function defaultExpiry() {
   const inAYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${inAYear.getFullYear()}-${pad(inAYear.getMonth() + 1)}-${pad(inAYear.getDate())}T09:00`;
-}
-
-function SettingSwitch({ label, description, checked, onChange }: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-3">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-[13px] font-medium text-foreground">{label}</span>
-        <p className="text-[12px] leading-relaxed text-muted">{description}</p>
-      </div>
-      {/* Stays raw: an on/off switch drawn as its own control — matches no variant. */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className="mt-0.5 shrink-0"
-      >
-        <span className={cn("relative block h-5 w-9 rounded-full transition-colors", checked ? "bg-brand" : "bg-foreground/15")}>
-          <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", checked ? "left-[18px]" : "left-0.5")} />
-        </span>
-      </button>
-    </div>
-  );
 }
 
 export default function ApiKeysPage() {

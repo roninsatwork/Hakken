@@ -941,7 +941,9 @@
         "empty": "No active users in this period.",
         "actions": "Actions",
         "orchestratorsTitle": "Top Orchestrators",
-        "agentType": "Autonomous Workflow Agent"
+        "agentType": "Autonomous Workflow Agent",
+        "personColumn": "Person",
+        "agentColumn": "Agent"
       },
       "aiUsageTitle": "AI Usage",
       "aiUsageSubtitle": "What this company has used, and what it has cost.",
@@ -1271,7 +1273,9 @@
         "subtitle": "Tenant spend by provider",
         "noData": "No Provider Data",
         "unknownProvider": "Unknown / Legacy",
-        "calls": "{count} calls"
+        "calls": "{count} calls",
+        "costColumn": "Cost",
+        "providerColumn": "Provider"
       },
       "knowledge": {
         "title": "AI Knowledge",
@@ -3403,10 +3407,18 @@
         "masterToggle": "Enable Data Masking Engine",
         "masterToggleSub": "Turn on privacy masking for sensitive fields in incoming user queries.",
         "maskEmails": "Mask Email Addresses",
+        "maskEmailsSub": "Hide email addresses in incoming prompts.",
         "maskCreditCards": "Mask Credit Card Numbers",
+        "maskCreditCardsSub": "Hide card numbers in incoming prompts.",
         "maskNi": "Mask National ID Numbers",
+        "maskNiSub": "Hide National Insurance and other national ID numbers in incoming prompts.",
         "maskPhones": "Mask Phone Numbers",
-        "maskPhonesSub": "Hide mobile and landline numbers in incoming prompts."
+        "maskPhonesSub": "Hide mobile and landline numbers in incoming prompts.",
+        "searchPlaceholder": "Search masking switches...",
+        "emptyState": "No masking switches match that search.",
+        "nameColumn": "Switch",
+        "descriptionColumn": "What it does",
+        "onColumn": "Switched on"
       },
       "audit": {
         "title": "System Audit Logs",
@@ -3422,10 +3434,14 @@
       },
       "options": {
         "title": "Developer options",
+        "subtitle": "Switches that only matter while the platform is being built. There is nothing here a customer needs.",
         "routingMatrix": "Developer diagnostic pages",
         "routingMatrixSub": "Turns on extra debugging pages and cache controls used while building. Leave it off for anything a customer will see.",
-        "routingMatrixOn": "On",
-        "routingMatrixOff": "Off"
+        "searchPlaceholder": "Search developer options...",
+        "emptyState": "No developer options match that search.",
+        "nameColumn": "Option",
+        "descriptionColumn": "What it does",
+        "onColumn": "Switched on"
       },
       "purges": {
         "title": "Log Retention & Purge Policies",
@@ -3599,11 +3615,14 @@
         "endUserFeedbackSub": "Users can mark an answer Helpful or Not right, and that feeds the suggestion queue. Off: the buttons disappear and nothing is collected.",
         "retrievalPriors": "Knowledge search learns from rated answers",
         "retrievalPriorsSub": "Documents that keep producing well-rated answers get a small ranking boost, within a hard cap. Off: pure text relevance.",
-        "autonomyExplainer": "The switch below is different from the ones above. With it on, what the AI learns is saved to its memory straight away — nothing waits for approval. Every self-saved memory is labelled “Saved by the AI” on the Memory screens, is written to the audit trail, and can be removed at any time. Off: suggestions queue for a person to approve, as before.",
+        "autonomyExplainer": "Autonomous memory is different from the switches above it. With it on, what the AI learns is saved to its memory straight away — nothing waits for approval. Every self-saved memory is labelled “Saved by the AI” on the Memory screens, is written to the audit trail, and can be removed at any time. Off: suggestions queue for a person to approve, as before.",
         "autonomousMemory": "Autonomous memory",
         "autonomousMemorySub": "The AI saves what it learns immediately, on its own. Off: every new memory waits for approval.",
-        "on": "on",
-        "off": "off",
+        "searchPlaceholder": "Search switches...",
+        "emptyState": "No switches match that search.",
+        "nameColumn": "Switch",
+        "descriptionColumn": "What it does",
+        "onColumn": "Switched on",
         "saveFailed": "Could not save the learning switches.",
         "save": "Save switches",
         "saving": "Saving...",
@@ -3751,6 +3770,8 @@
         "safetyNotes": "Safety notes",
         "repeatability": "Repeatability",
         "expectedDuration": "Expected duration",
+        "runColumn": "Run",
+        "whenColumn": "When",
         "recentRuns": "Recent runs",
         "noRuns": "No runs recorded yet.",
         "runRecorded": "Run recorded.",
@@ -4080,6 +4101,8 @@
           "noChangeRecorded": "Nothing was recorded beyond the action itself.",
           "noTarget": "Nothing in particular",
           "changesTitle": "What happened",
+        "fieldColumn": "What",
+        "valueColumn": "Value",
           "noChangesDetail": "This entry records that something happened, and nothing further about it.",
           "valuesNotRecorded": "Recorded before before-and-after values were kept, so the values are not known.",
           "nothing": "nothing",
@@ -4733,7 +4756,10 @@
         "topAgents": "Top Agents By Compute",
         "autonomousProcess": "Autonomous Process",
         "messages": "Messages",
-        "cost": "Cost"
+        "cost": "Cost",
+        "companyColumn": "Company",
+        "personColumn": "Person",
+        "agentColumn": "Agent"
       }
     },
     "chatLogs": {
@@ -6068,6 +6094,8 @@
         "meta": "Learned from {documents, plural, =1 {1 document} other {# documents}} and {conversations, plural, =1 {1 conversation} other {# conversations}} · last taught by {source}, {date}",
         "related": "Related pages",
         "backlinks": "{count, plural, =1 {What links here — 1 page} other {What links here — # pages}}",
+      "backlinkPageColumn": "Page",
+      "backlinkQuoteColumn": "What it says",
         "foldSources": "{count, plural, =1 {Where this came from · 1 source} other {Where this came from · # sources}}",
         "foldHistory": "{count, plural, =1 {History · 1 change} other {History · # changes}}",
         "foldPin": "Pin a fact",

@@ -12,6 +12,7 @@ import {
     getAggregationType,
     resolveDateRange,
     resolveTimestampRange,
+  mergeSnapshotModelMetrics,
 } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
@@ -526,16 +527,10 @@ export const getCompanyMetrics = adminQuery({
                 userLeaderboard[u.id].messages += u.messages;
             });
         }
-        if (s.modelMetrics) {
-            s.modelMetrics.forEach((m) => {
-                if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model);
-                    modelDistribution[m.model] = { name: modelObj?.friendlyName || modelObj?.displayName || m.model, cost: 0, calls: 0 };
-                }
-                modelDistribution[m.model].cost += m.cost;
-                modelDistribution[m.model].calls += m.calls;
-            });
-        }
+        // Models and providers together. Merging one and skipping the other
+        // is what left the Provider Usage panel empty on every timeframe
+        // longer than today.
+        mergeSnapshotModelMetrics(s.modelMetrics, modelMap, modelDistribution, providerDistribution);
         if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
     });
 
@@ -874,16 +869,10 @@ export const getGlobalAnalytics = superAdminQuery({
                 userLeaderboard[u.id].messages += u.messages;
             });
         }
-        if (s.modelMetrics) {
-            s.modelMetrics.forEach((m) => {
-                if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model);
-                    modelDistribution[m.model] = { name: modelObj?.friendlyName || modelObj?.displayName || m.model, cost: 0, calls: 0 };
-                }
-                modelDistribution[m.model].cost += m.cost;
-                modelDistribution[m.model].calls += m.calls;
-            });
-        }
+        // Models and providers together. Merging one and skipping the other
+        // is what left the Provider Usage panel empty on every timeframe
+        // longer than today.
+        mergeSnapshotModelMetrics(s.modelMetrics, modelMap, modelDistribution, providerDistribution);
         if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
     });
 

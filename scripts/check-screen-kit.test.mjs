@@ -454,3 +454,242 @@ describe("the header rule rule", () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * The rule added on 2026-08-23, and the reason it took an extra day.
+ *
+ * The tick box rule shipped the day before and caught the shape it was written
+ * for. It did not catch three system settings screens drawing the same idea a
+ * different way: a bordered card per row with a toggle glyph on the right,
+ * saying its state in colour alone. No `<table>`, no `<input>`, no tick box,
+ * and their raw buttons were already frozen — so every rule passed and the
+ * screens still did not match. Anthony found them by opening them.
+ */
+describe("the switches rule", () => {
+  const handSwitch =
+    'import { ToggleLeft, ToggleRight } from "lucide-react";\n' +
+    "export const Probe = ({ on }: { on: boolean }) => (\n" +
+    '  <span aria-pressed={on}>{on ? <ToggleRight /> : <ToggleLeft />}</span>\n' +
+    ");\n";
+
+  it("catches a screen that draws an on/off switch out of toggle glyphs", () => {
+    write(handSwitch);
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "switches",
+      file: probeRelative,
+      line: 3,
+    });
+  });
+
+  it("reports one switch once rather than once per state", () => {
+    write(handSwitch);
+
+    const offenders = findHandWrittenParts().filter(
+      (offender) => offender.rule === "switches" && offender.file === probeRelative
+    );
+
+    expect(offenders).toHaveLength(1);
+  });
+
+  it("leaves a screen whose switch is the kit's tick box alone", () => {
+    write(
+      'import { Checkbox } from "@/src/ui/components/screens/Checkbox";\n' +
+        'export const Probe = () => <Checkbox label="On" checked onChange={() => {}} />;\n'
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "switches")
+    ).toEqual([]);
+  });
+
+  it("reports a freeze whose screen has moved onto the kit", () => {
+    write('export const Probe = () => <p>No switch here.</p>;\n');
+
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], switches: [probeRelative] })
+    );
+
+    expect(stale).toContainEqual({
+      rule: "switches",
+      file: probeRelative,
+      reason: "no longer hand-writes an on/off switch",
+    });
+  });
+});
+
+/**
+ * The rule about two screens copying each other.
+ *
+ * Every rule above asks whether a screen redrew a part the kit owns, and a
+ * private copy of `SettingSwitch` answers no: it redrew a part the screen next
+ * door had already redrawn. Two screens held one, a row-height apart from the
+ * kit's and from each other, and nothing saw them for months.
+ */
+describe("the shadows rule", () => {
+  it("catches a screen declaring a component the kit already exports", () => {
+    write(
+      "function SettingSwitch({ label }: { label: string }) {\n" +
+        "  return <span>{label}</span>;\n" +
+        "}\n" +
+        "export const Probe = () => <SettingSwitch label=\"On\" />;\n"
+    );
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "shadows",
+      file: probeRelative,
+      line: 1,
+      name: "SettingSwitch",
+    });
+  });
+
+  it("catches the arrow form as well as the function form", () => {
+    write('const StatusPill = () => <span />;\nexport const Probe = () => <StatusPill />;\n');
+
+    expect(
+      findHandWrittenParts().some(
+        (offender) => offender.rule === "shadows" && offender.name === "StatusPill"
+      )
+    ).toBe(true);
+  });
+
+  it("leaves a screen that imports the kit's alone", () => {
+    write(
+      'import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";\n' +
+        'export const Probe = () => <SettingSwitch label="On" description="" checked onChange={() => {}} />;\n'
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "shadows")
+    ).toEqual([]);
+  });
+
+  // The fix for a component that genuinely is something else: name it for what
+  // it adds, so a reader who sees a familiar name is not misled.
+  it("leaves a differently-named wrapper alone", () => {
+    write(
+      'import { StatusPill } from "@/src/ui/atoms/StatusPill";\n' +
+        "function RunStatusPill() {\n" +
+        '  return <StatusPill tone="info">Running</StatusPill>;\n' +
+        "}\n" +
+        "export const Probe = () => <RunStatusPill />;\n"
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "shadows")
+    ).toEqual([]);
+  });
+
+  it("reads the kit's names from the kit, so a real export is protected", () => {
+    // Not a name this test invented: DataTable is exported by the kit today, so
+    // the rule must already know about it without anything being listed here.
+    write("function DataTable() {\n  return <div />;\n}\nexport const Probe = () => <DataTable />;\n");
+
+    expect(
+      findHandWrittenParts().some(
+        (offender) => offender.rule === "shadows" && offender.name === "DataTable"
+      )
+    ).toBe(true);
+  });
+
+  it("reports a freeze whose screen has stopped shadowing", () => {
+    write('export const Probe = () => <p>Nothing shadowed here.</p>;\n');
+
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], shadows: [probeRelative] })
+    );
+
+    expect(stale).toContainEqual({
+      rule: "shadows",
+      file: probeRelative,
+      reason: "no longer hand-writes a component the kit already exports",
+    });
+  });
+});
+
+/**
+ * The rule about a list drawn by hand rather than a part drawn by hand.
+ *
+ * `last:border-0` is the tell. Nobody writes "except the last one" about a
+ * single box, so the class only appears when a screen is drawing its own run of
+ * rows — and every hand-drawn run found in the 2026-08-23 sweep had got the same
+ * three things slightly differently: the divider, the row rhythm, and what the
+ * list said when it was empty.
+ */
+describe("the dividers rule", () => {
+  it("catches a screen drawing its own divided list", () => {
+    write(
+      "export const Probe = ({ rows }: { rows: string[] }) => (\n" +
+        "  <div>\n" +
+        '    {rows.map((row) => <p key={row} className="border-b border-border-dim/50 last:border-0">{row}</p>)}\n' +
+        "  </div>\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "dividers",
+      file: probeRelative,
+      line: 3,
+    });
+  });
+
+  it("catches the border-b-0 spelling too", () => {
+    write('export const Probe = () => <p className="border-b last:border-b-0">one</p>;\n');
+
+    expect(
+      findHandWrittenParts().some((offender) => offender.rule === "dividers")
+    ).toBe(true);
+  });
+
+  it("reports one list once rather than once per row", () => {
+    write(
+      "export const Probe = () => (\n" +
+        "  <div>\n" +
+        '    <p className="last:border-0">a</p>\n' +
+        '    <p className="last:border-0">b</p>\n' +
+        "  </div>\n" +
+        ");\n"
+    );
+
+    const offenders = findHandWrittenParts().filter(
+      (offender) => offender.rule === "dividers" && offender.file === probeRelative
+    );
+
+    expect(offenders).toHaveLength(1);
+  });
+
+  it("leaves an ordinary bottom border alone — one box is not a list", () => {
+    write('export const Probe = () => <div className="border-b border-border-dim/50 p-4" />;\n');
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "dividers")
+    ).toEqual([]);
+  });
+
+  it("leaves a screen that takes its list from the kit alone", () => {
+    write(
+      'import { CompactList } from "@/src/ui/components/screens/CompactList";\n' +
+        "export const Probe = () => (\n" +
+        '  <CompactList rows={[]} columns={[]} rowKey={() => "1"} empty="Nothing" />\n' +
+        ");\n"
+    );
+
+    expect(
+      findHandWrittenParts().filter((offender) => offender.rule === "dividers")
+    ).toEqual([]);
+  });
+
+  it("reports a freeze whose screen has moved onto the kit", () => {
+    write('export const Probe = () => <p>No list here.</p>;\n');
+
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], dividers: [probeRelative] })
+    );
+
+    expect(stale).toContainEqual({
+      rule: "dividers",
+      file: probeRelative,
+      reason: "no longer hand-writes a divided list",
+    });
+  });
+});

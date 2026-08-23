@@ -9,12 +9,12 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
 import { Cable, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
-import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/atoms/Button";
 import { formatDateTime } from "@/src/lib/dates";
 import { SaveAction } from "@/src/ui/components/screens/SaveControls";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Field } from "@/src/ui/components/screens/Field";
+import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
 
@@ -29,36 +29,6 @@ type ConnectorDraft = {
 
 function parseSecretRefs(value: string) {
   return Array.from(new Set(value.split(",").map((entry) => entry.trim()).filter(Boolean)));
-}
-
-/** A yes/no setting, stated once, with a sentence saying what the state does. */
-function SettingSwitch({ label, description, checked, onChange }: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-[13px] font-medium text-foreground">{label}</span>
-        <p className="text-[12px] leading-relaxed text-muted">{description}</p>
-      </div>
-      {/* Stays raw: an on/off switch drawn as its own control — matches no variant. */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className="mt-0.5 shrink-0"
-      >
-        <span className={cn("relative block h-5 w-9 rounded-full transition-colors", checked ? "bg-brand" : "bg-foreground/15")}>
-          <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", checked ? "left-[18px]" : "left-0.5")} />
-        </span>
-      </button>
-    </div>
-  );
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {

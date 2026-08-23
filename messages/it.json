@@ -941,7 +941,9 @@
         "empty": "Nessun iniziatore attivo in questo ciclo.",
         "actions": "Azioni",
         "orchestratorsTitle": "Migliori Orchestratori",
-        "agentType": "Agente di Workflow Autonomo"
+        "agentType": "Agente di Workflow Autonomo",
+        "personColumn": "Persona",
+        "agentColumn": "Agente"
       },
       "aiUsageTitle": "Utilizzo AI",
       "aiUsageSubtitle": "Cosa ha usato questa azienda e quanto è costato.",
@@ -1271,7 +1273,9 @@
         "subtitle": "Spesa del tenant per provider",
         "noData": "Nessun dato sui provider",
         "unknownProvider": "Sconosciuto / Legacy",
-        "calls": "{count} chiamate"
+        "calls": "{count} chiamate",
+        "costColumn": "Costo",
+        "providerColumn": "Provider"
       },
       "knowledge": {
         "title": "Conoscenza AI",
@@ -3403,10 +3407,18 @@
         "masterToggle": "Abilita Mascheramento Dati",
         "masterToggleSub": "Attiva il mascheramento per i campi sensibili nelle query degli utenti in entrata.",
         "maskEmails": "Maschera Indirizzi Email",
+        "maskEmailsSub": "Nascondi gli indirizzi email nei prompt in entrata.",
         "maskCreditCards": "Maschera Numeri di Carta di Credito",
+        "maskCreditCardsSub": "Nascondi i numeri di carta nei prompt in entrata.",
         "maskNi": "Maschera Numeri di Identità Nazionale",
+        "maskNiSub": "Nascondi i codici fiscali e gli altri numeri di identità nazionale nei prompt in entrata.",
         "maskPhones": "Maschera Numeri di Telefono",
-        "maskPhonesSub": "Nascondi i numeri di telefono fisso e mobile nei prompt in entrata."
+        "maskPhonesSub": "Nascondi i numeri di telefono fisso e mobile nei prompt in entrata.",
+        "searchPlaceholder": "Cerca interruttori di mascheramento...",
+        "emptyState": "Nessun interruttore di mascheramento corrisponde alla ricerca.",
+        "nameColumn": "Interruttore",
+        "descriptionColumn": "Cosa fa",
+        "onColumn": "Attivo"
       },
       "audit": {
         "title": "Registro Eventi di Sistema",
@@ -3422,10 +3434,14 @@
       },
       "options": {
         "title": "Opzioni per sviluppatori",
+        "subtitle": "Interruttori che contano solo mentre la piattaforma viene costruita. Qui non c'è nulla che serva a un cliente.",
         "routingMatrix": "Pagine diagnostiche per sviluppatori",
         "routingMatrixSub": "Attiva pagine di debug e controlli della cache usati durante lo sviluppo. Lasciale disattivate per qualsiasi cosa vedrà un cliente.",
-        "routingMatrixOn": "Attive",
-        "routingMatrixOff": "Disattivate"
+        "searchPlaceholder": "Cerca opzioni per sviluppatori...",
+        "emptyState": "Nessuna opzione per sviluppatori corrisponde alla ricerca.",
+        "nameColumn": "Opzione",
+        "descriptionColumn": "Cosa fa",
+        "onColumn": "Attiva"
       },
       "purges": {
         "title": "Ritenzione Log & Politiche di Purge",
@@ -3599,11 +3615,14 @@
         "endUserFeedbackSub": "Gli utenti possono segnare una risposta come Utile o Non corretta, e questo alimenta la coda dei suggerimenti. Spento: i pulsanti spariscono e non viene raccolto nulla.",
         "retrievalPriors": "La ricerca nella conoscenza impara dalle risposte valutate",
         "retrievalPriorsSub": "I documenti che continuano a produrre risposte ben valutate ricevono una piccola spinta in classifica, entro un tetto rigido. Spento: pura rilevanza testuale.",
-        "autonomyExplainer": "L'interruttore qui sotto è diverso da quelli sopra. Con esso acceso, ciò che l'AI impara viene salvato subito nella sua memoria — niente aspetta un'approvazione. Ogni memoria auto-salvata è etichettata “Salvata dall'AI” nelle schermate Memoria, viene scritta nel registro di controllo e può essere rimossa in qualsiasi momento. Spento: i suggerimenti si mettono in coda perché una persona li approvi, come prima.",
+        "autonomyExplainer": "La memoria autonoma è diversa dagli interruttori sopra di essa. Con essa accesa, ciò che l'AI impara viene salvato subito nella sua memoria — niente aspetta un'approvazione. Ogni memoria auto-salvata è etichettata “Salvata dall'AI” nelle schermate Memoria, viene scritta nel registro di controllo e può essere rimossa in qualsiasi momento. Spento: i suggerimenti si mettono in coda perché una persona li approvi, come prima.",
         "autonomousMemory": "Memoria autonoma",
         "autonomousMemorySub": "L'AI salva subito ciò che impara, da sola. Spento: ogni nuova memoria aspetta l'approvazione.",
-        "on": "acceso",
-        "off": "spento",
+        "searchPlaceholder": "Cerca interruttori...",
+        "emptyState": "Nessun interruttore corrisponde alla ricerca.",
+        "nameColumn": "Interruttore",
+        "descriptionColumn": "Cosa fa",
+        "onColumn": "Attivo",
         "saveFailed": "Impossibile salvare gli interruttori di apprendimento.",
         "save": "Salva gli interruttori",
         "saving": "Salvataggio...",
@@ -3751,6 +3770,8 @@
         "safetyNotes": "Note di sicurezza",
         "repeatability": "Ripetibilità",
         "expectedDuration": "Durata prevista",
+        "runColumn": "Esecuzione",
+        "whenColumn": "Quando",
         "recentRuns": "Esecuzioni recenti",
         "noRuns": "Nessuna esecuzione ancora registrata.",
         "runRecorded": "Esecuzione registrata.",
@@ -4080,6 +4101,8 @@
           "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa.",
           "noTarget": "Niente in particolare",
           "changesTitle": "Cosa è successo",
+        "fieldColumn": "Cosa",
+        "valueColumn": "Valore",
           "noChangesDetail": "Questa voce registra che qualcosa è accaduto, e nulla di più.",
           "valuesNotRecorded": "Registrata prima che si conservassero i valori precedenti e successivi, quindi i valori non sono noti.",
           "nothing": "niente",
@@ -4733,7 +4756,10 @@
         "topAgents": "Agenti con più calcolo",
         "autonomousProcess": "Processo autonomo",
         "messages": "Messaggi",
-        "cost": "Costo"
+        "cost": "Costo",
+        "companyColumn": "Azienda",
+        "personColumn": "Persona",
+        "agentColumn": "Agente"
       }
     },
     "chatLogs": {
@@ -6068,6 +6094,8 @@
         "meta": "Appresa da {documents, plural, =1 {1 documento} other {# documenti}} e {conversations, plural, =1 {1 conversazione} other {# conversazioni}} · ultimo insegnamento da {source}, {date}",
         "related": "Pagine correlate",
         "backlinks": "{count, plural, =1 {Cosa punta qui — 1 pagina} other {Cosa punta qui — # pagine}}",
+        "backlinkPageColumn": "Pagina",
+        "backlinkQuoteColumn": "Cosa dice",
         "foldSources": "{count, plural, =1 {Da dove viene · 1 fonte} other {Da dove viene · # fonti}}",
         "foldHistory": "{count, plural, =1 {Cronologia · 1 modifica} other {Cronologia · # modifiche}}",
         "foldPin": "Fissa un fatto",

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -22,6 +21,7 @@ import { motion } from "framer-motion";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import type { LucideIcon } from "lucide-react";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
@@ -72,41 +72,41 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: MetricBlockPr
 const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[] }) => {
   const t = useTranslations("admin.companyDetails.providerUsage");
   return (
-  <motion.section
-    initial={{ opacity: 0, y: 15 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.45 }}
-    className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
-  >
-    <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
-      <div className="flex items-center gap-3">
-        <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
-        <h2 className="text-[14px] font-bold text-foreground">{t("title")}</h2>
+    <motion.section
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.45 }}
+      className="bg-foreground/[0.02] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
+    >
+      <div className="px-6 py-5 border-b border-border-dim bg-foreground/[0.03] flex flex-col gap-1.5">
+        <div className="flex items-center gap-3">
+          <Network className="w-4 h-4 text-brand opacity-80" />
+          <h2 className="text-[14px] font-bold text-foreground">{t("title")}</h2>
+        </div>
+        <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">{t("subtitle")}</span>
       </div>
-      <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">{t("subtitle")}</span>
-    </div>
-    <div className="flex flex-col">
-      {!providers || providers.length === 0 ? (
-        <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t("noData")}</div>
-      ) : (
-        providers.map((provider) => (
-          <div key={provider.providerKey} className="flex items-center justify-between px-6 py-4 border-b border-border-dim/50 last:border-0">
-            <div className="flex min-w-0 flex-col">
-              <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
-                {formatProviderName(provider.providerKey, t("unknownProvider"))}
-              </span>
-              <span className="text-[10px] text-secondary/70 font-mono tracking-widest uppercase">
-                {t("calls", { count: (provider.calls ?? 0).toLocaleString() })}
-              </span>
-            </div>
-            <span className="text-[13px] font-bold text-foreground tracking-tight">
-              ${(provider.cost ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-            </span>
-          </div>
-        ))
-      )}
-    </div>
-  </motion.section>
+      <div className="flex flex-col p-4">
+        {/* Unranked: this is every provider there is, not the leaders of a
+            longer list, and numbering it would imply a race it is not in. */}
+        <Leaderboard<ProviderDistributionRow>
+          rows={providers ?? []}
+          rowKey={(provider) => provider.providerKey}
+          ranked={false}
+          nameHeader={t("providerColumn")}
+          name={(provider) => formatProviderName(provider.providerKey, t("unknownProvider"))}
+          sub={(provider) => t("calls", { count: (provider.calls ?? 0).toLocaleString() })}
+          empty={t("noData")}
+          stats={[
+            {
+              key: "cost",
+              header: t("costColumn"),
+              cell: (provider) =>
+                `$${(provider.cost ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
+            },
+          ]}
+        />
+      </div>
+    </motion.section>
   );
 };
 
@@ -286,100 +286,64 @@ export default function CompanyAiUsagePage() {
 
           <ProviderUsageList providers={data.providerDistribution} />
 
-          {/* Deep Dark Leaderboards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
+              className="bg-foreground/[0.02] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-foreground/[0.03] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Users className="w-4 h-4 text-brand opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">{t('leaderboard.title')}</h2>
                 </div>
               </div>
-              <div className="flex flex-col">
-                {data.topUsers.length === 0 ? (
-                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboard.empty')}</div>
-                ) : (
-                  data.topUsers.map((u, i) => (
-                    <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
-                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <Image
-                          src={u.image}
-                          alt={u.name}
-                          width={32}
-                          height={32}
-                          unoptimized
-                          className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
-                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.email}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end shrink-0 pr-2">
-                        <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t('leaderboard.actions')}</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">{(u.messages ?? 0).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="flex flex-col p-4">
+                <Leaderboard
+                  rows={data.topUsers}
+                  rowKey={(user) => user.id}
+                  nameHeader={t('leaderboard.personColumn')}
+                  name={(user) => user.name}
+                  sub={(user) => user.email}
+                  avatar={{ src: (user) => user.image, shape: "circle" }}
+                  empty={t('leaderboard.empty')}
+                  stats={[
+                    {
+                      key: "actions",
+                      header: t('leaderboard.actions'),
+                      cell: (user) => (user.messages ?? 0).toLocaleString(),
+                    },
+                  ]}
+                />
               </div>
             </motion.section>
 
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
+              className="bg-foreground/[0.02] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-foreground/[0.03] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <BrainCircuit className="w-4 h-4 text-brand opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">{t('leaderboard.orchestratorsTitle')}</h2>
                 </div>
               </div>
-              <div className="flex flex-col">
-                {data.topAgents.length === 0 ? (
-                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">NO RAG DATA</div>
-                ) : (
-                  data.topAgents.map((a, i) => (
-                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
-                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
-                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        {a.avatar ? (
-                          <Image
-                            src={a.avatar}
-                            alt={a.name}
-                            width={32}
-                            height={32}
-                            unoptimized
-                            className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
-                          />
-                        ) : (
-                          // Agents with no picture (the wiki's staff, for one)
-                          // get their initial; an empty src makes the browser
-                          // re-fetch the whole page.
-                          <span className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-border-dim/50 shrink-0 flex items-center justify-center text-[13px] font-bold text-secondary">
-                            {a.name?.charAt(0)?.toUpperCase() || "?"}
-                          </span>
-                        )}
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
-                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">{t('leaderboard.agentType')}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end shrink-0 pr-2">
-                        <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">{t('leaderboard.actions')}</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">{(a.interactions ?? 0).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="flex flex-col p-4">
+                <Leaderboard
+                  rows={data.topAgents}
+                  rowKey={(agent) => agent.id}
+                  nameHeader={t('leaderboard.agentColumn')}
+                  name={(agent) => agent.name}
+                  sub={() => t('leaderboard.agentType')}
+                  avatar={{ src: (agent) => agent.avatar, shape: "rounded" }}
+                  empty={t('leaderboard.empty')}
+                  stats={[
+                    {
+                      key: "actions",
+                      header: t('leaderboard.actions'),
+                      cell: (agent) => (agent.interactions ?? 0).toLocaleString(),
+                    },
+                  ]}
+                />
               </div>
             </motion.section>
           </div>

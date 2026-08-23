@@ -20,6 +20,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useLocale, useTranslations } from "next-intl";
 
 // Mirrors the list page's RiskBadge. This was previously hardcoded to the
@@ -213,22 +214,38 @@ export default function MaintenanceScriptDetailPage() {
               <RotateCcw className="w-4 h-4 text-brand" />
               {t("recentRuns")}
             </h2>
-            <div className="flex flex-col gap-3">
-              {script.history.length === 0 ? (
-                <p className="text-[12.5px] text-secondary">{t("noRuns")}</p>
-              ) : (
-                script.history.map((run) => (
-                  <div key={run._id} className="flex flex-col gap-1 border-b border-border-dim/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-2">
+            {/* A narrow column, so two columns rather than four: what the run
+                did on the left, when it happened on the right. The kit owns the
+                divider and the row rhythm; before this it was a hand-drawn
+                divided list, which is how every other one of these drifted. */}
+            <CompactList
+              rows={script.history}
+              rowKey={(run) => run._id}
+              empty={t("noRuns")}
+              columns={[
+                {
+                  key: "run",
+                  header: t("runColumn"),
+                  cell: (run) => (
+                    <span className="flex flex-col gap-1">
                       <StatusBadge status={run.status} />
-                      <span className="text-[11px] text-muted">{formatDate(run.completedAt ?? run.startedAt, locale) ?? t("never")}</span>
-                    </div>
-                    <p className="text-[12px] text-secondary">{run.summary ?? run.error ?? t("runRecorded")}</p>
-                    <span className="text-[11px] text-muted">{run.actorName ?? t("superAdmin")}</span>
-                  </div>
-                ))
-              )}
-            </div>
+                      <span className="text-[12px] text-secondary">
+                        {run.summary ?? run.error ?? t("runRecorded")}
+                      </span>
+                      <span className="text-[11px] text-muted">{run.actorName ?? t("superAdmin")}</span>
+                    </span>
+                  ),
+                },
+                {
+                  key: "when",
+                  header: t("whenColumn"),
+                  align: "right",
+                  className: "w-[110px] align-top whitespace-nowrap text-[11px] text-muted",
+                  cell: (run) =>
+                    formatDate(run.completedAt ?? run.startedAt, locale) ?? t("never"),
+                },
+              ]}
+            />
           </div>
         </aside>
       </div>
