@@ -2,7 +2,7 @@
 
 This is the practical starting point for building a new governed agentic app on Sonae.
 
-Sonae is a developer-led product factory, not a finished end-user SaaS product. Use this guide when you want to understand which parts of the repo are platform core, which parts are app-specific configuration, and where to add custom domain logic, data models, agents, tools, connectors, workflows, UI, or customer setup.
+**For what Sonae is and why it exists, read [PRODUCT.md](../../PRODUCT.md)** — the single source of truth for the product vision and the three strategic lanes it serves. This guide is the builder's view of the same thing: which parts of the repo are platform core, which parts are app-specific configuration, and where to add custom domain logic, data models, agents, tools, connectors, workflows, UI, or customer setup.
 
 ## What Sonae Provides
 

@@ -1,299 +1,299 @@
-# Sonae Product Overview
+# Sonae Platform Overview
 
-## What Sonae Is
+> **What Sonae is, and why it exists, is defined in [PRODUCT.md](../../PRODUCT.md).**
+> That document is the single source of truth. This page is the customer-facing
+> tour of the platform: who uses it, what each area does, and where to find
+> things. Where the two ever disagree, PRODUCT.md is right and this page needs
+> correcting.
 
-Sonae is a multi-tenant AI operations platform for organizations that need controlled, configurable, and auditable AI assistance across teams, companies, workflows, and embedded customer-facing experiences.
+## In Short
 
-At its core, Sonae combines an AI assistant, admin governance, agent configuration, knowledge management, workflow automation, analytics, and tenant management into one platform. It is designed so each company can have its own users, rules, knowledge, prompts, AI settings, and reporting while still being managed from a central super-admin layer.
+Sonae is a multi-tenant AI platform for organisations that need controlled,
+configurable, and auditable AI assistance — across teams, companies, workflows,
+and customer-facing experiences.
 
-The platform is built around three main ideas:
+It brings an AI assistant, admin governance, agent configuration, knowledge
+management, workflow automation, analytics, and tenant management into one
+system. Each company gets its own users, rules, knowledge, prompts, AI settings,
+and reporting, while the whole platform is managed from a central super-admin
+layer.
 
-- Give users an AI assistant that can answer questions, process files, and work with company-specific context.
-- Give admins strong control over users, companies, models, prompts, rules, knowledge, widgets, and usage.
-- Give platform operators visibility into costs, activity, health, audit history, and workflow execution.
+It is built around three ideas:
 
-## Primary Audiences
+- Give users an AI assistant that answers questions, works with uploaded files,
+  and understands company-specific context.
+- Give admins real control over users, companies, models, prompts, rules,
+  knowledge, widgets, and usage.
+- Give platform operators visibility into cost, activity, health, audit history,
+  and workflow execution.
+
+Sonae is **model-agnostic**. It runs across Google Vertex, Anthropic, OpenAI,
+and OpenRouter, so a product built on it is not tied to one AI vendor.
+
+## Who Uses It
 
 ### End Users
 
-End users access the main app workspace. They can use the Sonae assistant, upload files, view reports, use property tools, and access organization-level features depending on their role.
+End users work in the main app workspace. They can use the Sonae assistant,
+upload files, view reports, use the tools their organisation has enabled, and
+access organisation features according to their role.
 
 ### Company Admins
 
-Company admins manage their own organization workspace. They can manage team members, review organization settings, inspect diagnostics, and work inside their company boundary.
+Company admins manage their own organisation workspace: team members,
+organisation settings, diagnostics, and everything inside their company
+boundary.
 
 ### Super Admins
 
-Super admins manage the whole platform. They can manage companies, users, super-admin access, AI settings, agents, workflows, system settings, plans, analytics, maintenance scripts, and platform health.
+Super admins manage the whole platform: companies, users, super-admin access,
+AI settings, agents, workflows, system settings, plans, analytics, maintenance
+scripts, and platform health.
 
 ## Main User Features
 
 ### Dashboard
 
-The user dashboard at `/app` acts as the main entry point after login. It is an authenticated product overview rather than an operational report. It introduces Sonae's platform depth, highlights core capabilities, and routes users toward the assistant or relevant reporting/cost surfaces.
+The dashboard at `/app` is the main entry point after login. It is a product
+overview rather than an operational report — it introduces what the platform
+can do and routes users to the assistant or to the reporting and cost screens.
 
-The current dashboard includes:
+It includes a primary call to open the assistant, feature cards for model
+choice, private knowledge, workflows, widget governance, visibility and cost
+control, and sections covering AI safety, tenant privacy, automated checks,
+observability, and audit history.
 
-- a primary call to open the assistant
-- feature cards for model choice, private knowledge, workflows, widget governance, visibility, and cost control
-- platform-depth sections covering model catalogues, AI safety, tenant privacy, automated checks, observability, costs, workflows, and widgets
-- hosting-positioning cards for Google Cloud, AWS, and Azure customer conversations
-- assurance and governance sections explaining automated checks, tenant separation, roles, sensitive data handling, approved AI actions, audit history, and platform health
-- use-case cards for SaaS portals, internal AI workspaces, and AI automation products
-- an explanatory modal behind the "See what is included" action
-
-For signed-in super admins, the app dashboard is also a convenience handoff point: the frontend redirects them to `/admin` once per browser session. This redirect is not an authorization boundary; admin access is still enforced by the admin layout and backend checks.
+For signed-in super admins, the dashboard also redirects to `/admin` once per
+browser session as a convenience. This is a handoff, not a security boundary —
+admin access is enforced by the admin layout and by backend checks.
 
 ### Ask Sonae Assistant
 
-The assistant is the main AI interaction surface. Users can start chat threads, ask questions, upload files, select available AI models, and choose different thinking levels.
+The assistant is the main AI surface. Users can:
 
-Current assistant capabilities include:
-
-- Chat-based AI conversations.
-- Thread creation and continuation.
-- File upload support for chat context.
-- Voice-to-text input.
-- Model selection from configured active models.
-- Thinking-level selection for different response modes.
-- Company-aware context through the backend knowledge system.
+- hold chat conversations, and start or continue threads;
+- upload files for the assistant to work with;
+- use voice-to-text input;
+- choose from the AI models an administrator has made available;
+- choose a thinking level for quicker or deeper answers;
+- draw on company knowledge automatically through the backend.
 
 ### Reports
 
-Sonae includes a reports area. The currently visible report surface is a sales report section.
+Sonae includes a reports area, currently covering sales reporting.
 
 ### Property Tools
 
-The app includes property-related tools, including:
+For organisations using the property vertical: property search, collected
+property data, data detail pages, and collection logs.
 
-- Property search.
-- Scraped property data.
-- Scraped data detail pages.
-- Property logs.
+### Organisation Settings
 
-These appear to support workflows around collecting, reviewing, and analyzing property information.
-
-### Organization Settings
-
-For company admins, the app includes organization-level settings such as:
-
-- Organization dashboard.
-- Team member management.
-- Auth diagnostics.
+Company admins get an organisation dashboard, team member management, and auth
+diagnostics.
 
 ### Profile
 
-Users have a profile area for account-level information and settings.
+Every user has a profile area for their own account information and settings.
 
 ## Admin Features
 
 ### Admin Dashboard
 
-The admin dashboard gives super admins a business and client-health overview. It shows projected monthly revenue against AI spend, seats in use, clients needing attention, recent activity, AI spend, sign-in bands, plan distribution, a client table, and follow-up items such as pending invitations or clients without a plan. Detailed provider, model, and usage analysis lives in the AI cost and usage screens.
+The admin dashboard gives super admins a business and client-health overview:
+projected monthly revenue against AI spend, seats in use, clients needing
+attention, recent activity, sign-in bands, plan distribution, a client table,
+and follow-up items such as pending invitations or clients without a plan.
+Detailed provider, model, and usage analysis lives in the AI cost and usage
+screens.
 
 ### Company Management
 
-Super admins can manage tenant companies. Company records are the foundation for tenant isolation and company-specific configuration.
-
-Company-level admin areas include:
-
-- Company overview.
-- Company users.
-- Invites.
-- Company knowledge.
-- Company AI models.
-- Company AI rules.
-- Company system prompt.
-- Company chat logs.
-- Company widget configuration.
+Super admins manage tenant companies. The company record is the foundation of
+tenant isolation. Company-level areas cover overview, users, invites,
+knowledge, AI models, AI rules, system prompt, chat logs, and widget
+configuration.
 
 ### User Management
 
-Admins can manage users and invitations. The platform supports role-based access across:
-
-- Super admins.
-- Admins.
-- Users.
-
-The backend is expected to prevent privilege escalation, especially around super-admin permissions.
+Admins manage users and invitations across three roles — super admins, admins,
+and users. The backend prevents privilege escalation, particularly around
+super-admin permissions.
 
 ### Super Admin Management
 
-Super admins can manage other super admins and invite new system administrators.
+Super admins can manage other super admins and invite new system
+administrators.
 
 ### Company Impersonation
 
-Super admins can impersonate a company workspace. This allows platform operators to inspect or troubleshoot a tenant experience while still retaining central admin control.
+Super admins can impersonate a company workspace to inspect or troubleshoot a
+tenant's experience. Impersonation is recorded server-side and written to the
+audit log.
 
 ### Audit Logs
 
-Administrative actions are recorded in an audit ledger. This gives the platform traceability for sensitive changes such as users, companies, agents, rules, and settings.
+Administrative actions are recorded in an audit ledger, giving the platform
+traceability for sensitive changes to users, companies, agents, rules, and
+settings.
 
 ### Auth Diagnostics
 
-Sonae includes auth diagnostics for troubleshooting login, invite, and authentication state issues.
+Diagnostics for troubleshooting login, invite, and authentication state issues.
 
 ## AI Platform Features
 
 ### AI Model Management
 
-Sonae supports model configuration through stored model records rather than hardcoded runtime choices. The codebase includes provider support for model systems such as:
+Models are configured through stored records rather than hardcoded runtime
+choices, across four providers:
 
-- Google Vertex AI.
-- OpenAI.
-- Anthropic.
+- Google Vertex AI
+- Anthropic
+- OpenAI
+- OpenRouter
 
-Admins can manage available models, defaults, and provider-related configuration.
+Admins manage which models are available, which are default, and their
+provider configuration. The OpenRouter catalogue can be synced into the
+platform, which is what turns a handful of configured models into a large
+library.
 
 ### AI Running Costs
 
-The platform tracks AI usage and estimated running costs. Admins can review cost dashboards, usage over time, and cost/activity leaders such as top companies and top users.
+The platform tracks AI usage and estimated running costs. Admins can review
+cost dashboards, usage over time, and cost and activity leaders such as top
+companies and top users.
 
 ### Global AI Rules
 
-Super admins can create and manage global AI rules. These rules help define platform-wide boundaries and behavior for AI responses.
+Super admins create and manage platform-wide rules that define boundaries and
+behaviour for AI responses.
 
 ### System Prompts
 
-The platform supports both global and company-specific system prompts. These prompts shape the behavior of the assistant and agents.
+Both global and company-specific system prompts are supported, shaping how the
+assistant and agents behave.
 
 ### Knowledge Management
 
-Sonae includes a knowledge system for uploaded documents and retrieval-augmented generation.
+Sonae includes a knowledge system for uploaded documents and retrieval. Knowledge
+exists at four scopes:
 
-Knowledge can exist at different scopes, including:
+- global knowledge, available to every tenant;
+- company knowledge, restricted to one workspace;
+- agent knowledge, bound to a specific agent;
+- chat knowledge, belonging to a single conversation.
 
-- Global knowledge.
-- Company knowledge.
-- Agent knowledge.
-- Chat-specific uploaded documents.
-
-The backend stores documents, parses content, creates knowledge chunks, and uses tenant-aware filtering to avoid cross-company data leakage.
+The backend stores documents, extracts their content, creates knowledge chunks,
+and applies tenant-aware filtering so knowledge cannot leak across company
+boundaries.
 
 ### AI Tools And Connectors
 
-Admins can define AI tools/connectors that agents may use. Tools have metadata, schemas, handler mappings, and access controls.
+Admins define the tools and connectors agents may use. Tools carry metadata,
+schemas, handler mappings, and access controls.
 
-Tool execution is guarded so the platform validates the tool, checks permissions, validates inputs, and enforces tenant boundaries before running anything requested by an AI model.
+Tool execution is guarded: the platform validates the tool, checks permissions,
+validates the inputs, and enforces the tenant boundary before anything an AI
+model requested is allowed to run.
 
 ### Agent Management
 
-Sonae includes configurable AI agents. Agents are specialized AI entities with their own configuration.
-
-Agent features include:
-
-- Agent creation and deletion.
-- Agent dashboard.
-- Agent settings.
-- Agent model configuration.
-- Agent system prompt.
-- Agent rules.
-- Agent schemas.
-- Agent knowledge.
-- Agent integrations/tools.
-- Agent logs.
-- Individual log detail pages.
+Agents are configurable AI entities with their own setup — creation and
+deletion, dashboard, settings, model, system prompt, rules, schemas, knowledge,
+tools, run limits, and logs, including individual log detail pages.
 
 ### Chat Logs
 
-Admins can inspect chat logs globally and at the company level. This supports monitoring, debugging, auditability, and cost analysis.
+Admins can inspect chat logs globally and per company, for monitoring,
+debugging, auditability, and cost analysis.
 
-## Workflow And Automation Features
+## Workflow And Automation
 
 ### Workflow Management
 
-Sonae includes workflow management for visual AI orchestration. Workflows appear to be graph-based, with nodes and edges used to define automated processes.
+A visual, graph-based editor for AI orchestration, using nodes and connections
+to define an automated process.
 
 ### Workflow Runtime
 
-The backend includes workflow execution services, runtime helpers, config validation, and execution tracking.
+Each node runs as its own scheduled step, with state saved between steps. That
+means a workflow is not limited by any single function's execution time and
+survives a restart. Approval nodes genuinely pause a run until an administrator
+decides.
 
 ### Workflow Scheduling
 
-Admins can schedule workflows and view schedule details. This allows repeatable AI or operational tasks to run automatically.
+Admins can schedule workflows and review schedule detail, so repeatable AI or
+operational tasks run automatically.
 
-## Embedded Widget Features
+## Embedded Widgets
 
-Sonae supports embeddable AI widgets.
+Sonae supports embeddable AI chat widgets for use outside the main app — on a
+customer website or a tenant-owned page.
 
-Widget-related surfaces include:
+Widget surfaces include the public widget route, a sandbox route, admin widget
+configuration, company widget configuration, and the embed snippet.
 
-- Public widget route.
-- Sandbox widget route.
-- Admin widget configuration.
-- Company widget configuration.
-- Integration snippet support.
-
-This suggests Sonae can expose AI chat or assistant functionality outside the main app, such as on a customer website or tenant-owned page.
+Each widget only loads on domains its owner has approved; a widget with no
+domains configured cannot be embedded anywhere, and blocked attempts are
+audit-logged.
 
 ## Platform Settings And Maintenance
 
-### System Settings
-
-Super admins can manage platform settings such as branding, routing flags, theme-related configuration, and platform-level behavior.
-
-### Plans
-
-The platform includes plan management for subscription tiers and monthly AI quotas.
-
-### Analytics Settings
-
-Admins can manage analytics-related settings and inspect analytics behavior.
-
-### Maintenance Scripts
-
-Sonae includes a maintenance scripts area for controlled operational scripts and repair tasks.
-
-### System Health
-
-The platform includes system health monitoring. This is intended to surface platform issues such as agent failures, schedule failures, stale runs, overdue schedules, and other operational risks.
+- **System settings** — branding, routing flags, theme configuration, and
+  platform behaviour.
+- **Plans** — subscription tiers and monthly AI quotas.
+- **Analytics settings** — analytics configuration and behaviour.
+- **Maintenance scripts** — controlled operational and repair tasks.
+- **System health** — surfaces agent failures, schedule failures, stale runs,
+  overdue schedules, and other operational risks.
 
 ## Security And Governance
 
-Sonae is designed around strict role and tenant boundaries.
+Sonae is built around strict role and tenant boundaries:
 
-Key governance rules include:
-
-- Super admins can manage the whole platform.
+- Super admins manage the whole platform.
 - Admins are scoped to their assigned company.
-- Users are restricted from administrative routes.
-- Convex queries and mutations must verify role and tenant access.
-- Company data must not leak across tenant boundaries.
-- Admin mutations must prevent privilege escalation.
-- AI tools must be validated and authorized before execution.
-- Configuration changes should be auditable.
+- Users cannot reach administrative routes.
+- Convex queries and mutations verify role and tenant access.
+- Company data does not cross tenant boundaries.
+- Admin mutations prevent privilege escalation.
+- AI tools are validated and authorised before execution.
+- Configuration changes are auditable.
+
+The platform also carries personal-data rights handling, retention and purge
+controls, an AI register with risk classification, and exportable evidence
+packs. For the full governance picture, see
+[Governance And Trust](./governance-and-trust.md) and §11 of
+[PRODUCT.md](../../PRODUCT.md).
 
 ## Technical Foundation
 
 Sonae is built with:
 
-- Next.js App Router for the frontend.
-- React for the user interface.
-- Tailwind CSS and Framer Motion for the design system and animation.
-- Convex for backend queries, mutations, actions, storage, scheduling, and realtime data.
-- Convex document storage for the database.
-- Provider-backed AI execution through Convex actions.
+- Next.js App Router for the frontend;
+- React for the user interface;
+- Tailwind CSS and Framer Motion for the design system and animation;
+- Convex for queries, mutations, actions, storage, scheduling, and realtime
+  data;
+- Convex document storage for the database;
+- provider-backed AI execution through Convex actions;
 - Google Cloud Run for production deployment.
 
-The dashboard also presents Google Cloud, AWS, and Azure as customer-facing hosting-positioning options. Those cards are product positioning copy for handoff and sales conversations; the current repository deployment documentation still treats Google Cloud Run as the implemented production deployment path unless a separate hosting migration is built and documented.
+The dashboard presents Google Cloud, AWS, and Azure as hosting-positioning
+options for customer conversations. Those cards are positioning copy — Google
+Cloud Run is the implemented production deployment path unless a separate
+hosting migration is built and documented.
 
-## Temporary Or Diagnostic Areas
+## Temporary And Diagnostic Areas
 
-The codebase includes some routes that appear temporary, diagnostic, or restricted by settings.
+Some routes are temporary, diagnostic, or gated by settings:
 
-These include:
+- movement demo routes;
+- movement capture and playback tools;
+- the arcade route for Ronin's Run;
+- the local test auth route.
 
-- Movement demo routes.
-- Movement capture and playback tools.
-- Arcade route for Ronin's Run.
-- Local test auth route.
-
-The movement demo is currently marked as frozen in the repo handoff and should not be refactored or expanded unless explicitly requested.
-
-## Short Positioning Statement
-
-Sonae is a governed AI platform for companies that need more than a basic chatbot. It gives organizations a configurable assistant, tenant-aware knowledge, AI agents, workflow automation, embedded widgets, cost analytics, audit logs, and admin controls in one system.
-
-## One-Sentence Summary
-
-Sonae helps organizations deploy, manage, monitor, and govern AI assistants and agent workflows across multiple companies, users, knowledge sources, and embedded experiences.
+The movement demo is frozen. Do not refactor or expand it unless explicitly
+asked.

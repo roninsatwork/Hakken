@@ -2,6 +2,11 @@
 
 A Next.js and Convex application for real-time AI orchestration, administration, chat, workflows, and tenant-scoped knowledge.
 
+**What Sonae is, and where it is going, is defined in [PRODUCT.md](./PRODUCT.md).**
+That is the single source of truth for the product vision, the commercial
+strategy, what is built today, and what is not built yet. Every other document
+here defers to it.
+
 ## 📚 Internal Documentation
 
 The **[/docs](./docs/index.md)** folder is the documentation hub. It is organized by audience and lifecycle:

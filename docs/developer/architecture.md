@@ -2,6 +2,8 @@
 
 Sonae is a multi-tenant AI application built with Next.js, React, Convex, and provider-backed AI services. This guide is the high-level map for coding agents before they choose a more specific implementation guide.
 
+For the product vision and what the platform is for, read [PRODUCT.md](../../PRODUCT.md). This guide covers how it is put together, not why it exists.
+
 For local setup and verification, read [Getting Started](./getting-started.md). For route and UI conventions, read [Frontend](./frontend.md). For Convex schema, authorization, jobs, and runtime modules, read [Backend](./backend.md).
 
 ## Core Stack

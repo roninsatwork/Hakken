@@ -6,6 +6,7 @@ Current implementation alignment includes multi-provider assistant streaming and
 
 ## Platform
 
+- [Product Vision And Specification](../../PRODUCT.md) — the single source of truth for what Sonae is
 - [Platform Overview](./platform-overview.md)
 - [Public Website](./public-website.md)
 

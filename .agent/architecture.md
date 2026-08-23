@@ -18,7 +18,6 @@ This project uses a specialized AI agent system to maintain high coding standard
 ```
 .agent/
 ├── architecture.md          # This file
-├── mission.md               # Project goals and source of truth
 ├── agents/                  # Specialist Agents (Frontend, Backend)
 ├── skills/                  # Domain-specific Skills
 └── rules/                   # Model-specific Rules (Gemini)

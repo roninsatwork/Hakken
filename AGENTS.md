@@ -175,6 +175,46 @@ When debugging Game Studio movement, do not ask the user to repeat live motions 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing Sonae modal patterns.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.
+- Read `docs/developer/screen-kit.md` before building or restyling any screen,
+  and copy an existing screen that already does it — Subscription Plans and
+  Manage Companies are the reference list screens. Do not infer a layout from
+  the screen in front of you: a list screen is assembled in one order — title
+  and description, an explanation box if needed, the search box, the table, its
+  footer, then save controls — and the title goes above the search box, never
+  inside the table via `cardHeader`. Take the parts whole: `DataTable` for a
+  list, `PageHeader` / `DetailHeader` / `DetailLayout` for the title,
+  `Checkbox` for a tick box, `Field` for a text field, `Button` for a button,
+  `SaveAction` / `SaveError` for saving. `npm run check:guards` fails on eight
+  kinds of drift here, including a table with no header above it, and the
+  allowlist in `scripts/screen-kit-allowlist.json` may shrink, never grow —
+  adding an entry is not the fix. If the standard genuinely does not cover the
+  case, add the rule and write it down rather than deciding by eye; that gap is
+  what produced the 2026-08-22 Features rebuild.
+- Every screen wears a header, and which one is decided by what the page is, not
+  by how it looks:
+  - **A top-level page** (opens from the sidebar): `PageHeader` with `divider`.
+  - **A tabbed section** (companies, agents, System Settings): `DetailLayout`,
+    which draws title, rule and tab strip itself — never draw that rule
+    separately.
+  - **A page inside such a section** (a tab's own content): its own `PageHeader`
+    with **no** `divider` — the section's `DetailLayout` already drew the rule,
+    and a second one reads as two headers. Company Dashboard, Calls and Features
+    are the examples to copy.
+  - **A record-level page** (a rule editor, a script, a schedule, a document):
+    `DetailHeader`, which puts a quiet back row on its own line above the title
+    block, with status pills under the description via `pills`, never woven into
+    the title row.
+
+  At most one brand-orange action per page: orange means "this page's action" and
+  nothing else, so filters, pickers and secondary buttons stay quiet grey, and a
+  page with two orange buttons has no primary action. `PagePrimaryAction` is the
+  shared one and removes itself for a read-only viewer rather than greying out;
+  most screens still use `WriteButton` with their own classes, so match the
+  screen you are working in rather than converting it in passing. Never
+  hand-write an `<h1>` in a screen and never hand-write
+  `border-b border-border-dim pb-6` — the header components own the title recipe
+  and that line, and the build refuses both. Full detail in
+  `docs/developer/screen-kit.md` under "Headers".
 - Preserve tenant isolation in Convex queries and mutations. Scope non-super-admin access by company.
 - Mutations that manage users must prevent privilege escalation. Admins must not create, edit, or delete super-admin privileges.
 - Resolve AI model choices from stored configuration instead of hardcoding model literals in runtime paths.

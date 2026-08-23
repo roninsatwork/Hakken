@@ -7,6 +7,20 @@ completed work.
 
 ## Active Plans
 
+- [Knowing When It Breaks](./active/monitoring-and-tool-server-plan.md) —
+  nothing tells anyone when Sonae breaks today. Better Stack across both halves:
+  the clickable application out of the box, and the engine — agent runs,
+  workflows, scheduled jobs — reported by our own code so the vendor stays
+  swappable. Then Sonae learns to connect to a published tool server, with
+  Better Stack as the first one. Opens with a proof that can stop the plan.
+  Decided 2026-08-23.
+
+- [The Clean Cut — Turning A Clone Into A Client's Own Product](./active/client-product-cut-plan.md) —
+  how a client-owned build stops shipping with four in ten files belonging to
+  somebody else's demo. Extends the existing vertical-cut script from removing
+  marked lines to removing whole owned folders, after the clone, on the copy.
+  Agreed 2026-08-23.
+
 - [The Governance Screens Read A Summary, Not The Estate](./active/governance-screens-read-a-summary-plan.md) —
   why the governance overview is the one admin screen that is not instant, and
   the fix: count as things happen into day buckets and an estate snapshot, the

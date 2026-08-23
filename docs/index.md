@@ -13,7 +13,8 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 - New coding agents: read [AGENTS.md](../AGENTS.md), then [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md).
 - Local development: read [Getting Started](./developer/getting-started.md), then [Deployment](./developer/deployment.md).
-- Product or customer context: read [Platform Overview](./end-user/platform-overview.md).
+- Product vision and strategy: read [PRODUCT.md](../PRODUCT.md). It is the single source of truth for what Sonae is.
+- Customer-facing product tour: read [Platform Overview](./end-user/platform-overview.md).
 - Planning work: add new plans under [Plans](./plans/index.md), usually in `docs/plans/active/`.
 
 ## Placement Rules
@@ -88,6 +89,8 @@ operator procedures continue to change.
 - [Gmail Inbox Plan](./plans/active/gmail-inbox-plan.md) — active plan for the dedicated Gmail connector, mailbox watcher, and reply/task handling.
 - [Receptionist Kiosk Plan](./plans/active/receptionist-kiosk-plan.md) — active plan for the walk-up kiosk surface and visitor-session handling.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
+- [Knowing When It Breaks](./plans/active/monitoring-and-tool-server-plan.md) — active plan for monitoring both halves of the product with Better Stack, and for connecting Sonae to published tool servers.
+- [The Clean Cut — Turning A Clone Into A Client's Own Product](./plans/active/client-product-cut-plan.md) — active plan for cutting a cloned repository down to the verticals a client actually bought, folders included.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
 
