@@ -28,6 +28,7 @@ import {
 import {
   resolveMovementMatchHudFrame,
   resolveMovementPlayerSpineHudFrame,
+  shouldAnnounceMovementFeedback,
 } from "./useMovementMatchScoring";
 
 function proofPose(mode: Parameters<typeof makeMovementAvatarProofMotionPayload>[0]) {
@@ -285,5 +286,24 @@ describe("scored session result", () => {
 
     expect(long.points).toBeGreaterThan(short.points);
     expect(long.overallPercent).toBe(short.overallPercent);
+  });
+});
+
+describe("shouldAnnounceMovementFeedback", () => {
+  it("says a new message, and does not repeat one already being said", () => {
+    expect(shouldAnnounceMovementFeedback(null, "Great effort!")).toBe(true);
+    // The scoring tick reports the same message ~7 times a second. Saying it
+    // again restarts its dismissal timer, which is how "Great effort!" stayed
+    // on screen for the whole routine.
+    expect(shouldAnnounceMovementFeedback("Great effort!", "Great effort!")).toBe(false);
+  });
+
+  it("announces silence once so the overlay clears", () => {
+    expect(shouldAnnounceMovementFeedback("Great effort!", null)).toBe(true);
+    expect(shouldAnnounceMovementFeedback(null, null)).toBe(false);
+  });
+
+  it("lets a different message interrupt", () => {
+    expect(shouldAnnounceMovementFeedback("Great effort!", "Show your hands.")).toBe(true);
   });
 });

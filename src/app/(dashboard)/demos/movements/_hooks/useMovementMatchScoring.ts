@@ -55,6 +55,8 @@ type UseMovementMatchScoringInput = {
 };
 
 const SCORE_UPDATE_INTERVAL_MS = 140;
+/** How long a piece of encouragement stays on screen before it clears itself. */
+const FEEDBACK_MESSAGE_LIFETIME_MS = 2000;
 const DEFAULT_SPINE_CUE = "Review the spine guide and try one calmer pass.";
 
 const GAMEPLAY_FEEDBACK_TEXT: Record<MovementGameplayMessage, string> = {
@@ -70,6 +72,24 @@ const GAMEPLAY_FEEDBACK_TEXT: Record<MovementGameplayMessage, string> = {
   "tracking-back": "Tracking is back.",
   "streak-celebration": "Brilliant streak!",
 };
+
+/**
+ * Whether a piece of encouragement is new enough to say out loud.
+ *
+ * The scoring tick runs every 140ms and will happily report the same message
+ * on each one. Saying it again resets its dismissal timer, which is how a
+ * two-second message became a permanent one — Anthony, on the practice screen:
+ * *"the messages come on the screen and never disappear"*.
+ *
+ * So a message is only announced when it differs from the one already being
+ * said. Silence is announced too, once, so the overlay clears.
+ */
+export function shouldAnnounceMovementFeedback(
+  currentText: string | null,
+  nextText: string | null,
+) {
+  return currentText !== nextText;
+}
 
 type MovementMatchHudFrame = {
   spineCue: string;
@@ -179,11 +199,24 @@ export function useMovementMatchScoring({
   const lastHudUpdateRef = useRef(0);
   const lastPlayerMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const lastScoreUpdateRef = useRef(0);
+  /**
+   * The encouragement currently being said, so it is only said once.
+   *
+   * The scoring tick re-issued the same message every 140ms with a fresh id,
+   * and the dismissal timer below restarts on every change — so a message that
+   * was meant to show for two seconds never got to leave. Anthony, on the
+   * practice screen: *"the messages come on the screen and never disappear"*.
+   *
+   * Holding the text here means an unchanged message is not re-issued, the
+   * timer runs out, and it goes. The same words can be said again once the game
+   * has said something different, or nothing at all.
+   */
+  const feedbackTextRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!feedbackMsg) return;
 
-    const timeoutId = setTimeout(() => setFeedbackMsg(null), 2000);
+    const timeoutId = setTimeout(() => setFeedbackMsg(null), FEEDBACK_MESSAGE_LIFETIME_MS);
     return () => clearTimeout(timeoutId);
   }, [feedbackMsg]);
 
@@ -235,7 +268,10 @@ export function useMovementMatchScoring({
 
         if (!isScoringEnabled) {
           comboRef.current = 0;
-          setFeedbackMsg(null);
+          if (shouldAnnounceMovementFeedback(feedbackTextRef.current, null)) {
+            feedbackTextRef.current = null;
+            setFeedbackMsg(null);
+          }
         } else if (shouldUpdateScore) {
           lastScoreUpdateRef.current = now;
 
@@ -262,12 +298,16 @@ export function useMovementMatchScoring({
             });
 
             if (!gameplaySummary.feedbackMessage) {
-              setFeedbackMsg(null);
+              if (shouldAnnounceMovementFeedback(feedbackTextRef.current, null)) {
+                feedbackTextRef.current = null;
+                setFeedbackMsg(null);
+              }
             } else {
-              setFeedbackMsg({
-                text: GAMEPLAY_FEEDBACK_TEXT[gameplaySummary.feedbackMessage],
-                id: Date.now(),
-              });
+              const feedbackText = GAMEPLAY_FEEDBACK_TEXT[gameplaySummary.feedbackMessage];
+              if (shouldAnnounceMovementFeedback(feedbackTextRef.current, feedbackText)) {
+                feedbackTextRef.current = feedbackText;
+                setFeedbackMsg({ text: feedbackText, id: Date.now() });
+              }
             }
           }
         }
