@@ -303,6 +303,8 @@ export function useMovementCapture({
   const [denseCaptureQualityTier, setDenseCaptureQualityTier] =
     useState<MovementDenseCaptureQualityTier | null>(null);
   const [denseCaptureFailure, setDenseCaptureFailure] = useState<string | null>(null);
+  const denseCaptureQualityTierRef = useRef<MovementDenseCaptureQualityTier | null>(null);
+  const denseCaptureFailureRef = useRef<string | null>(null);
   const [denseCaptureOperational, setDenseCaptureOperational] = useState(false);
   const [trackingFailure, setTrackingFailure] = useState<string | null>(null);
   const [trackingFailureDetail, setTrackingFailureDetail] = useState<string | null>(null);
@@ -362,6 +364,33 @@ export function useMovementCapture({
         readMovementDenseCaptureDeviceCapabilities(),
       ),
     });
+
+    /*
+     * The tracking loop runs on every animation frame, and these two were
+     * pushed into React state on every one of them — sixty times a second,
+     * whether or not the value had moved. React eventually refused: "Maximum
+     * update depth exceeded", pointing straight at this loop.
+     *
+     * The values themselves are right; publishing them unchanged is what was
+     * wrong. Each is now held alongside the state so the frame only tells React
+     * about a genuine change. The readout on screen is identical.
+     */
+    let publishedDenseCaptureQualityTier = denseCaptureQualityTierRef.current;
+    let publishedDenseCaptureFailure = denseCaptureFailureRef.current;
+
+    const publishDenseCaptureQualityTier = (tier: MovementDenseCaptureQualityTier | null) => {
+      if (publishedDenseCaptureQualityTier === tier) return;
+      publishedDenseCaptureQualityTier = tier;
+      denseCaptureQualityTierRef.current = tier;
+      setDenseCaptureQualityTier(tier);
+    };
+
+    const publishDenseCaptureFailure = (failure: string | null) => {
+      if (publishedDenseCaptureFailure === failure) return;
+      publishedDenseCaptureFailure = failure;
+      denseCaptureFailureRef.current = failure;
+      setDenseCaptureFailure(failure);
+    };
 
     const processVideo = () => {
       if (trackingFailureRef.current) return;
@@ -699,7 +728,7 @@ export function useMovementCapture({
             const segmentation = acquisitionFrame.deepCapture?.denseBody?.segmentation;
             if (enableDeepCapture && denseCaptureAdapter && segmentation) {
               const denseCaptureState = denseCaptureRuntime.getState();
-              setDenseCaptureQualityTier(denseCaptureState.qualityTier);
+              publishDenseCaptureQualityTier(denseCaptureState.qualityTier);
               let currentDenseCaptureFailure = denseCaptureState.lastFailure;
               const carriedDenseEvidence = denseCaptureRuntime.read({
                 currentSegmentation: segmentation,
@@ -722,7 +751,7 @@ export function useMovementCapture({
                   currentDenseCaptureFailure = recordingEvidenceReport.failures.join(" ");
                 }
               }
-              setDenseCaptureFailure(currentDenseCaptureFailure);
+              publishDenseCaptureFailure(currentDenseCaptureFailure);
 
               if (denseCaptureRuntime.schedule(startTimeMs).run) {
                 denseCaptureCanvasRef.current ??= document.createElement("canvas");
@@ -818,10 +847,10 @@ export function useMovementCapture({
             latestStartReadinessRef.current = null;
             setTrackingQuality(0);
             setSpineQuality(0);
-            setDenseCaptureQualityTier(enableDeepCapture && denseCaptureAdapter
+            publishDenseCaptureQualityTier(enableDeepCapture && denseCaptureAdapter
               ? denseCaptureRuntime.getState().qualityTier
               : null);
-            setDenseCaptureFailure(enableDeepCapture && denseCaptureAdapter
+            publishDenseCaptureFailure(enableDeepCapture && denseCaptureAdapter
               ? denseCaptureRuntime.getState().lastFailure
               : null);
             setCaptureStartReadiness(null);
