@@ -8,6 +8,7 @@ import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 import { movementBodyTrackingVideoConstraints } from "../../../_lib/movementCameraConstraints";
 import { useMovementCameraDevices } from "../../../_hooks/useMovementCameraDevices";
+import { Select } from "@/src/ui/components/screens/Select";
 import {
   MOVEMENT_CREAM,
   MOVEMENT_INK,
@@ -79,7 +80,11 @@ export default function MovementHud({
   const [hasCameraWaitElapsed, setHasCameraWaitElapsed] = useState(false);
   // No picker here — practice simply honours the camera chosen on the capture
   // screen, so a student is not looking at the wrong one after setting it once.
-  const { activeDeviceId: activeCameraId } = useMovementCameraDevices();
+  const {
+    activeDeviceId: activeCameraId,
+    devices: cameras,
+    selectDevice: onSelectCamera,
+  } = useMovementCameraDevices();
   const videoConstraints = React.useMemo(
     () => movementBodyTrackingVideoConstraints(activeCameraId),
     [activeCameraId],
@@ -257,6 +262,48 @@ export default function MovementHud({
             </div>
           </div>
         </div>
+
+        {/*
+          * Change camera without leaving practice.
+          *
+          * There was deliberately no picker here: practice honoured whatever the
+          * capture screen had been set to, so a student would not choose twice.
+          * That holds right up until the chosen camera is the wrong one or has
+          * been unplugged — and then the only route to a picture was to leave the
+          * studio, change it elsewhere and come back, while the screen said
+          * "camera unavailable" and offered nothing to do about it.
+          *
+          * It sits opposite the play control rather than over the picture, in the
+          * same panel treatment as everything else floating on this screen, and
+          * appears only when there is a real choice to make or the camera needs
+          * attention. One working camera is not a decision anybody needs to see.
+          */}
+        {(cameras.length > 1 || cameraNeedsAttention) && !isPreviewMode && (
+          <div
+            data-testid="movement-camera-picker"
+            className={`flex items-center gap-3 rounded-full border border-white/10 bg-[${MOVEMENT_PANEL_BG}]/[0.72] py-2 pl-6 pr-2 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl`}
+          >
+            <label
+              className="shrink-0 text-[10px] font-black uppercase tracking-[0.2em] text-white/60"
+              htmlFor="movement-practice-camera"
+            >
+              Camera
+            </label>
+            <Select
+              className="w-[min(42vw,240px)] rounded-full"
+              id="movement-practice-camera"
+              value={activeCameraId}
+              onChange={onSelectCamera}
+            >
+              <option value="">Browser default</option>
+              {cameras.map((camera) => (
+                <option key={camera.deviceId} value={camera.deviceId}>
+                  {camera.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </div>
 
       <div
@@ -278,6 +325,7 @@ export default function MovementHud({
           }}
           className="w-full h-full object-contain"
         />
+
       </div>
     </div>
   );
