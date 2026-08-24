@@ -204,6 +204,40 @@ describe("customer list", () => {
     expect(byTown.page[0]?.town).toBe("Eastbourne");
   });
 
+  test("returns the complete table row without profile-only customer details", async () => {
+    const { t, client, companyId, userId } = await seed();
+    await addDetails(t, companyId, userId, "The Devonshire Hotel Ltd", {
+      town: "Eastbourne",
+      postcode: "BN21 3DX",
+      phone: "01323 410222",
+      email: "hello@devonshire.example",
+      contactName: "Sarah Whitcombe",
+      bedrooms: 96,
+      pupils: 200,
+    });
+
+    const result = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      search: "devonshire",
+    });
+
+    expect(result.page).toEqual([
+      {
+        accountNameKey: key("The Devonshire Hotel Ltd"),
+        accountName: "The Devonshire Hotel Ltd",
+        accountCode: "DEVONS",
+        groupName: "Daish's Hotels",
+        customerType: "HOTELS",
+        totalRevenue: 449.33,
+        town: "Eastbourne",
+        postcode: "BN21 3DX",
+        hasDetails: true,
+        record: "CUSTOMER",
+        origin: null,
+      },
+    ]);
+  });
+
   test("a term from each side has to match the same customer", async () => {
     const { t, client, companyId, userId } = await seed();
     await addDetails(t, companyId, userId, "The Devonshire Hotel Ltd", { town: "Eastbourne" });

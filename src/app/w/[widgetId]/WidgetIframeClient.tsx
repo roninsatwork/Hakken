@@ -535,6 +535,8 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
                                                       <img
                                                           src={image.url}
                                                           alt="Attached photo"
+                                                          loading="lazy"
+                                                          decoding="async"
                                                           className="max-h-40 max-w-[12rem] rounded-[10px] border border-white/20 object-cover"
                                                       />
                                                   </a>

@@ -3,7 +3,6 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader2, Download, AlertTriangle, CheckCircle2, ShieldAlert, Zap, Target, LineChart, TrendingUp, Users } from "lucide-react";
-import html2canvas from "html2canvas";
 import { useRef } from "react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -22,6 +21,7 @@ export default function ReportsPage() {
 
   const handleExport = async () => {
     if (!pdfRef.current) return;
+    const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(pdfRef.current, {
       scale: 2,
       useCORS: true,

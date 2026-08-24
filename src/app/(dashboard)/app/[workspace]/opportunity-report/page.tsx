@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import html2canvas from "html2canvas";
 import {
   BadgePoundSterling,
   Building2,
@@ -119,8 +118,10 @@ export default function OpportunityReportPage() {
   const handleExport = async () => {
     if (!pdfRef.current) return;
     setExporting(true);
+    const html2canvasPromise = import("html2canvas");
     await new Promise((resolve) => setTimeout(resolve, 150));
     try {
+      const { default: html2canvas } = await html2canvasPromise;
       const canvas = await html2canvas(pdfRef.current, {
         scale: 2,
         useCORS: true,

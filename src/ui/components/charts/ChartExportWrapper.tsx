@@ -2,7 +2,6 @@
 
 import React, { useRef } from "react";
 import { Download } from "lucide-react";
-import html2canvas from "html2canvas";
 import { useTheme } from "next-themes";
 
 interface ChartExportWrapperProps {
@@ -17,6 +16,7 @@ export default function ChartExportWrapper({ children, exportName, className = "
 
   const handleExport = async () => {
     if (!chartRef.current) return;
+    const { default: html2canvas } = await import("html2canvas");
     
     // Determine the exact physical background color to render against to prevent transparent PNGs washing out text
     const bgColor = resolvedTheme === "dark" ? "#0d0d0d" : "#ffffff";

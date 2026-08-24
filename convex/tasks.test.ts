@@ -171,6 +171,41 @@ describe("tasks", () => {
     expect(task?.createdByUserId).toBeUndefined();
   });
 
+  test("the task list returns every visible field without internal lifecycle metadata", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+    const dueAt = Date.now() + 86_400_000;
+
+    await t.mutation(internal.tasks.createTaskInternal, {
+      companyId: companyA,
+      title: "Review the call follow-up",
+      detail: "Check the promised delivery date.",
+      assigneeUserId: userA,
+      dueAt,
+      createdBySource: "AGENT",
+      sourceRunId: "run_internal_only",
+      sourceUrl: "/app/calls/example",
+    });
+
+    const listed = await t.withIdentity({ subject: userA }).query(api.tasks.listTasks, {
+      paginationOpts: PAGE,
+    });
+
+    expect(listed.page[0]).toEqual({
+      _id: expect.any(String),
+      title: "Review the call follow-up",
+      detail: "Check the promised delivery date.",
+      assigneeUserId: userA,
+      dueAt,
+      status: "OPEN",
+      createdBySource: "AGENT",
+      sourceUrl: "/app/calls/example",
+    });
+    expect(listed.page[0]).not.toHaveProperty("companyId");
+    expect(listed.page[0]).not.toHaveProperty("createdAt");
+    expect(listed.page[0]).not.toHaveProperty("createdByUserId");
+    expect(listed.page[0]).not.toHaveProperty("sourceRunId");
+  });
+
   test("a machine cannot assign work across the tenant boundary either", async () => {
     const { t, companyA, userB } = await seedWorkspaces();
 

@@ -13,6 +13,27 @@ function getPropertyScope(user: Doc<"users">) {
   };
 }
 
+function toPropertyListRow(property: Doc<"properties">) {
+  return {
+    _id: property._id,
+    _creationTime: property._creationTime,
+    address: property.address,
+    price: property.price,
+    ...(property.bedrooms === undefined ? {} : { bedrooms: property.bedrooms }),
+    ...(property.bathrooms === undefined ? {} : { bathrooms: property.bathrooms }),
+    ...(property.propertyType === undefined ? {} : { propertyType: property.propertyType }),
+    ...(property.imageUrl === undefined ? {} : { imageUrl: property.imageUrl }),
+    ...(property.agentName === undefined ? {} : { agentName: property.agentName }),
+  };
+}
+
+function projectPropertyPage<T extends { page: Doc<"properties">[] }>(result: T) {
+  return {
+    ...result,
+    page: result.page.map(toPropertyListRow),
+  };
+}
+
 export const listProperties = moduleQuery({
   module: PROPERTIES_MODULE_KEY,
   args: {
@@ -25,36 +46,44 @@ export const listProperties = moduleQuery({
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       if (canReadAllCompanies) {
-        return await ctx.db
-          .query("properties")
-          .withSearchIndex("search_address", (q) =>
-            q.search("address", args.searchTerm!)
-          )
-          .paginate(args.paginationOpts);
+        return projectPropertyPage(
+          await ctx.db
+            .query("properties")
+            .withSearchIndex("search_address", (q) =>
+              q.search("address", args.searchTerm!)
+            )
+            .paginate(args.paginationOpts)
+        );
       }
 
       if (!activeCompanyId) throw new Error("Unauthorized");
-      return await ctx.db
-        .query("properties")
-        .withSearchIndex("search_address", (q) =>
-          q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
-        )
-        .paginate(args.paginationOpts);
+      return projectPropertyPage(
+        await ctx.db
+          .query("properties")
+          .withSearchIndex("search_address", (q) =>
+            q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
+          )
+          .paginate(args.paginationOpts)
+      );
     }
 
     if (canReadAllCompanies) {
-      return await ctx.db
-        .query("properties")
-        .order("desc")
-        .paginate(args.paginationOpts);
+      return projectPropertyPage(
+        await ctx.db
+          .query("properties")
+          .order("desc")
+          .paginate(args.paginationOpts)
+      );
     }
 
     if (!activeCompanyId) throw new Error("Unauthorized");
-    return await ctx.db
-      .query("properties")
-      .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
-      .order("desc")
-      .paginate(args.paginationOpts);
+    return projectPropertyPage(
+      await ctx.db
+        .query("properties")
+        .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+        .order("desc")
+        .paginate(args.paginationOpts)
+    );
   },
 });
 

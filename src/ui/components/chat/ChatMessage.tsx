@@ -99,6 +99,8 @@ export default function ChatMessage({
                 <img
                   src={image.url}
                   alt={t("attachedPhoto")}
+                  loading="lazy"
+                  decoding="async"
                   className="max-h-48 max-w-[16rem] rounded-[10px] border border-border-dim object-cover"
                 />
               </a>

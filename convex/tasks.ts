@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { moduleMutation, moduleQuery, publicMutation } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
@@ -41,6 +41,19 @@ export function assertValidTaskFields(args: { title: string; detail?: string }) 
   }
 
   return { title, detail: detail || undefined };
+}
+
+function toTaskListRow(task: Doc<"tasks">) {
+  return {
+    _id: task._id,
+    title: task.title,
+    status: task.status,
+    createdBySource: task.createdBySource,
+    ...(task.detail === undefined ? {} : { detail: task.detail }),
+    ...(task.assigneeUserId === undefined ? {} : { assigneeUserId: task.assigneeUserId }),
+    ...(task.dueAt === undefined ? {} : { dueAt: task.dueAt }),
+    ...(task.sourceUrl === undefined ? {} : { sourceUrl: task.sourceUrl }),
+  };
 }
 
 /**
@@ -149,7 +162,9 @@ export const listTasks = moduleQuery({
       ...results,
       // The assignee index is not tenant-scoped on its own, so the boundary is
       // reasserted here rather than trusted from the index.
-      page: results.page.filter((task) => task.companyId === companyId),
+      page: results.page
+        .filter((task) => task.companyId === companyId)
+        .map(toTaskListRow),
     };
   },
 });

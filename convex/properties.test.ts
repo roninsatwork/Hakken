@@ -31,6 +31,14 @@ describe("Properties", () => {
         rightmoveId: "rm-a",
         address: "10 Orchard Street",
         price: 250000,
+        bedrooms: 3,
+        bathrooms: 2,
+        propertyType: "Detached",
+        imageUrl: "https://example.com/a.jpg",
+        agentName: "Example Estates",
+        description: "A long property description that is only needed by the detail page.",
+        images: ["https://example.com/a-1.jpg", "https://example.com/a-2.jpg"],
+        floorplans: ["https://example.com/a-floorplan.jpg"],
         url: "https://example.com/a",
         companyId: companyAId,
         scrapedAt: 100,
@@ -71,9 +79,25 @@ describe("Properties", () => {
 
     const adminPage = await adminAClient.query(api.properties.listProperties, { paginationOpts });
     expect(adminPage.page.map((property) => property._id)).toEqual([propertyAId]);
+    expect(adminPage.page[0]).toMatchObject({
+      address: "10 Orchard Street",
+      price: 250000,
+      bedrooms: 3,
+      bathrooms: 2,
+      propertyType: "Detached",
+      imageUrl: "https://example.com/a.jpg",
+      agentName: "Example Estates",
+    });
+    expect(adminPage.page[0]).not.toHaveProperty("description");
+    expect(adminPage.page[0]).not.toHaveProperty("images");
+    expect(adminPage.page[0]).not.toHaveProperty("floorplans");
+    expect(adminPage.page[0]).not.toHaveProperty("url");
     expect(await adminAClient.query(api.properties.getPropertiesCount, {})).toBe(1);
     expect(await adminAClient.query(api.properties.getProperty, { id: propertyAId })).toMatchObject({
       address: "10 Orchard Street",
+      description: "A long property description that is only needed by the detail page.",
+      images: ["https://example.com/a-1.jpg", "https://example.com/a-2.jpg"],
+      floorplans: ["https://example.com/a-floorplan.jpg"],
     });
     await expect(adminAClient.query(api.properties.getProperty, { id: propertyBId })).rejects.toThrow("Unauthorized");
     await expect(adminAClient.mutation(api.properties.deleteProperty, { id: propertyBId })).rejects.toThrow(

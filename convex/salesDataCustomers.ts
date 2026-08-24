@@ -203,24 +203,17 @@ function hasMissingDetails(
   });
 }
 
-/** What both the list and the profile show for one customer. */
-function toCustomer(account: Doc<"salesDataAccounts">, details: CustomerDetails) {
+/** The fields the customer directory renders for one imported account. */
+function toCustomerListRow(account: Doc<"salesDataAccounts">, details: CustomerDetails) {
   return {
     accountNameKey: account.accountNameKey,
     accountName: account.accountName,
     accountCode: preferredAccountCode(account.codeTally),
     groupName: account.groupName,
     customerType: account.customerType,
-    customerTypeKey: account.customerTypeKey,
     totalRevenue: account.totalRevenue,
-    productCount: account.productCount,
     town: details?.town ?? null,
     postcode: details?.postcode ?? null,
-    phone: details?.phone ?? null,
-    email: details?.email ?? null,
-    contactName: details?.contactName ?? null,
-    bedrooms: details?.bedrooms ?? null,
-    pupils: details?.pupils ?? null,
     /** Whether anybody has filled anything in yet. Drives the "needs details" hint. */
     hasDetails: details !== undefined,
     /** What this row is. Present on every row, so no row is ever ambiguous. */
@@ -238,23 +231,16 @@ function toCustomer(account: Doc<"salesDataAccounts">, details: CustomerDetails)
  * workspace does not sell to — so the figures are zero and the row says which
  * kind it is.
  */
-function toProspectRow(prospect: Doc<"salesDataProspects">, details: CustomerDetails) {
+function toProspectListRow(prospect: Doc<"salesDataProspects">, details: CustomerDetails) {
   return {
     accountNameKey: prospect.prospectKey,
     accountName: prospect.siteName,
     accountCode: "",
     groupName: prospect.groupName,
     customerType: prospect.customerType,
-    customerTypeKey: prospect.customerTypeKey,
     totalRevenue: 0,
-    productCount: 0,
     town: prospect.town ?? details?.town ?? null,
     postcode: prospect.postcode ?? details?.postcode ?? null,
-    phone: details?.phone ?? null,
-    email: details?.email ?? null,
-    contactName: details?.contactName ?? null,
-    bedrooms: details?.bedrooms ?? null,
-    pupils: details?.pupils ?? null,
     hasDetails: details !== undefined,
     record: "PROSPECT" as const,
     origin: prospect.origin ?? "EXISTING_CHAIN",
@@ -411,7 +397,7 @@ export const listCustomers = tenantQuery({
           cursor: prospectPage.continueCursor,
         }),
         page: prospectPage.page.map((prospect) =>
-          toProspectRow(prospect, details.get(prospect.prospectKey))
+          toProspectListRow(prospect, details.get(prospect.prospectKey))
         ),
       };
     }
@@ -463,14 +449,18 @@ export const listCustomers = tenantQuery({
         ...page,
         isDone: false,
         continueCursor: encodeListStage({ source: "PROSPECTS", cursor: null }),
-        page: page.page.map((account) => toCustomer(account, details.get(account.accountNameKey))),
+        page: page.page.map((account) =>
+          toCustomerListRow(account, details.get(account.accountNameKey))
+        ),
       };
     }
 
     return {
       ...page,
       continueCursor: encodeListStage({ source: "ACCOUNTS", cursor: page.continueCursor }),
-      page: page.page.map((account) => toCustomer(account, details.get(account.accountNameKey))),
+      page: page.page.map((account) =>
+        toCustomerListRow(account, details.get(account.accountNameKey))
+      ),
     };
   },
 });

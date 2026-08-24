@@ -13,12 +13,17 @@ import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import Image from "next/image";
-import type { Doc } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
+
+type DeletingProperty = {
+  _id: Id<"properties">;
+  address: string;
+};
 
 export default function ScrapedDataPage() {
   const t = useTranslations('sidebar');
   const router = useRouter();
-  const [deletingProperty, setDeletingProperty] = useState<Doc<"properties"> | null>(null);
+  const [deletingProperty, setDeletingProperty] = useState<DeletingProperty | null>(null);
   const deleteProperty = useMutation(api.properties.deleteProperty);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);

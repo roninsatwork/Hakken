@@ -8,7 +8,6 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
-import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -206,9 +205,11 @@ export function WikiPagesListScreen({
   const downloadVault = async () => {
     setIsExporting(true);
     try {
+      const fflatePromise = import("fflate");
       const pages = companyId
         ? await convex.query(api.wikiPages.getExportForCompany, { companyId })
         : await convex.query(api.wikiPages.getExportForGlobal, {});
+      const { strToU8, zipSync } = await fflatePromise;
       const folders: Record<string, string> = {
         CUSTOMER: "customers",
         PRODUCT: "products",

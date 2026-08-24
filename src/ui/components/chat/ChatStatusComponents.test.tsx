@@ -103,6 +103,25 @@ describe("chat status components", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("defers offscreen user photo thumbnails until the browser needs them", () => {
+    useQueryMock.mockReturnValue(null);
+
+    render(
+      <ChatMessage
+        message={{
+          ...baseMessage,
+          role: "user",
+          content: "Here is the damage",
+          imageAttachments: [{ url: "https://example.com/photo.jpg" }],
+        } as Doc<"messages">}
+      />
+    );
+
+    const photo = screen.getByAltText("Attached photo");
+    expect(photo).toHaveAttribute("loading", "lazy");
+    expect(photo).toHaveAttribute("decoding", "async");
+  });
+
   it("names the asker instead of saying \"you\" when a log is read back", () => {
     useQueryMock.mockReturnValue(null);
 
