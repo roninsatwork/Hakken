@@ -14,6 +14,8 @@ const DEMO_MODEL_ID = SYSTEM_FAILSAFE_MODEL_ID;
 const DEMO_TEMPLATE_ID = "internal-knowledge-assistant";
 const DEMO_KNOWLEDGE_TITLE = "Demo Knowledge Handbook";
 const DEMO_TOOL_MAPPING = "knowledge.search";
+/** What the demo agent's model is offered this tool as. */
+const DEMO_TOOL_MODEL_NAME = "search_knowledge";
 const DEMO_TOOL_NAME = "Knowledge Search";
 const DEMO_AGENT_NAME = "Demo Knowledge Assistant";
 const DEFAULT_USE_CASES = ["agent", "workflow", "chat", "report", "embedding"];
@@ -461,7 +463,8 @@ export const seed = publicMutation({
       defaults,
       tool: {
         toolId: tool.toolId,
-        handlerMapping: DEMO_TOOL_MAPPING,
+        modelName: DEMO_TOOL_MODEL_NAME,
+      handlerMapping: DEMO_TOOL_MAPPING,
         action: tool.action,
       },
       agent: {

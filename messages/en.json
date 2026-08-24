@@ -577,6 +577,7 @@
     "impersonatingLabel": "Impersonating Workspace",
     "exitWorkspace": "Exit Workspace",
     "tools": "Tools",
+    "toolServers": "Tool servers",
     "health": "Health",
     "connections": "Connections",
     "salesData": "Sales Data",
@@ -1863,6 +1864,77 @@
             "configError": "Configuration Error"
           }
         }
+      }
+    },
+    "toolServers": {
+      "title": "Tool servers",
+      "subtitle": "Systems this workspace has connected, and the tools they offer your agents.",
+      "hint": "A tool server is an address that publishes its own list of tools. Connect one and its tools become available to your agents, without anyone writing an integration. Nothing is switched on by default: connect a server, ask it what it offers, add those tools, then switch it on.",
+      "searchPlaceholder": "Search by name or address",
+      "empty": "No servers connected yet.",
+      "never": "Not checked yet",
+      "working": "Working...",
+      "columns": {
+        "server": "Server",
+        "state": "State",
+        "tools": "Tools offered",
+        "checked": "Last checked"
+      },
+      "state": {
+        "CONNECTED": "On",
+        "DISABLED": "Off",
+        "ERROR": "Needs attention"
+      },
+      "tools": {
+        "unknown": "Not checked yet",
+        "count": "{count, plural, =0 {None} =1 {1 tool} other {# tools}}"
+      },
+      "buttons": {
+        "connect": "Connect a server",
+        "connecting": "Connecting...",
+        "cancel": "Cancel",
+        "check": "Check the connection",
+        "addTools": "Add its tools to the library",
+        "switchOn": "Switch on",
+        "switchOff": "Switch off",
+        "disconnect": "Disconnect",
+        "dismiss": "Dismiss",
+        "close": "Close"
+      },
+      "checked": {
+        "passedTitle": "Connection working",
+        "failedTitle": "Connection failed",
+        "passed": "{name} answered.",
+        "failed": "{name} did not answer properly.",
+        "offers": "{count, plural, =0 {It offers no tools.} =1 {It offers 1 tool} other {It offers # tools}}",
+        "nextStep": "Add these to your library next, then switch the server on. They arrive switched off.",
+        "whatToDo": "Check the address is right and, if the server needs a login, that the credential reference is set on this deployment. Then try again."
+      },
+      "notices": {
+        "connected": "{name} is connected. Check the connection next to see what it offers.",
+        "toolsAdded": "{count, plural, =0 {No tools were added from {name} — check the connection first.} =1 {1 tool added from {name}. It is switched off until you turn it on.} other {# tools added from {name}. They are switched off until you turn them on.}}",
+        "switchedOn": "{name} is switched on.",
+        "switchedOff": "{name} is switched off.",
+        "disconnected": "{name} has been disconnected, along with its tools."
+      },
+      "modal": {
+        "title": "Connect a tool server",
+        "description": "Give the server a name you will recognise and the address it answers on. Connecting it does not contact it — you can do that next.",
+        "name": "Name",
+        "url": "Address",
+        "secretRef": "Credential reference",
+        "secretHint": "Leave this empty if the server needs no login. If it does, enter the reference to the credential — never the credential itself.",
+        "disconnectTitle": "Disconnect this server?",
+        "disconnectConfirm": "{name} will be disconnected.",
+        "disconnectDetail": "Its tools are removed from the library, and any agent using them loses them."
+      },
+      "placeholders": {
+        "name": "For example: Finance system",
+        "url": "https://example.com/mcp",
+        "secretRef": "For example: vault/finance/token"
+      },
+      "errors": {
+        "unknown": "Something went wrong. Please try again."
       }
     },
     "aiTools": {
@@ -6396,7 +6468,8 @@
       "MAILBOX": "Email inbox",
       "PHONE": "Phone line",
       "PROVIDER": "AI provider",
-      "WIDGET": "Chat widget"
+      "WIDGET": "Chat widget",
+      "TOOL_SERVER": "Tool server"
     },
     "jobs": {
       "title": "Scheduled work",

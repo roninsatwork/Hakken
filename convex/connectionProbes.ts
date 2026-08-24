@@ -24,6 +24,9 @@ import { getErrorMessage } from "./utils/lang";
 /** Ceilings, so these reads stay bounded as the platform grows: both tables
  * hold one row per configured connector or provider. */
 const CONNECTOR_CEILING = 500;
+/** Enough for any realistic deployment, and a bound so this cannot sweep. */
+const TOOL_SERVER_CEILING = 200;
+
 const PROVIDER_CEILING = 100;
 
 
@@ -148,7 +151,7 @@ export const probeConnections = internalAction({
 export type ConnectionRow = {
   id: string;
   name: string;
-  kind: "MAILBOX" | "PHONE" | "PROVIDER" | "WIDGET";
+  kind: "MAILBOX" | "PHONE" | "PROVIDER" | "WIDGET" | "TOOL_SERVER";
   /** null when nothing has ever managed a live check of this connection. */
   working: boolean | null;
   detail: string;
@@ -256,6 +259,30 @@ export const listConnections = adminQuery({
         working: provider.status === "healthy" ? true : provider.status === "error" ? false : null,
         detail: detail || "Waiting for the first check.",
         checkedAt: provider.lastHealthCheckAt ?? provider.lastSyncedAt ?? null,
+        lastHeardAt: null,
+      });
+    }
+
+    // Every tool server a workspace has connected. Switched-off ones are
+    // listed too, for the same reason a switched-off mailbox is: "nothing is
+    // connected" must not look identical to "everything is fine".
+    //
+    // The witness here is the last discovery. It is the only moment the
+    // platform genuinely contacts one of these, so it is the only honest
+    // answer to "is this working".
+    const servers = await ctx.db.query("mcpServers").take(TOOL_SERVER_CEILING);
+    for (const server of servers) {
+      const off = server.status === "DISABLED";
+      rows.push({
+        id: server._id,
+        name: server.name,
+        kind: "TOOL_SERVER",
+        working: off ? null : (server.lastDiscoveryOk ?? null),
+        detail: off
+          ? "Switched off, so nothing is being checked."
+          : server.lastDiscoveryMessage
+            ?? "Not checked yet — ask it what it offers to find out.",
+        checkedAt: server.lastDiscoveryAt ?? null,
         lastHeardAt: null,
       });
     }

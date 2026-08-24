@@ -138,7 +138,7 @@ describe("Agent Eval Fixtures", () => {
       await ctx.db.patch(result.fixtureId, {
         expectedToolPlanJson: JSON.stringify([{
           handlerMapping: "company.overview.update",
-          normalizedToolName: "company_overview_update",
+          normalizedToolName: "update_company_profile",
           sideEffectLevel: "WRITE",
           confirmationRequired: true,
           status: "APPROVAL_REQUIRED",
@@ -154,7 +154,7 @@ describe("Agent Eval Fixtures", () => {
       (await t.run(async (ctx) => await ctx.db.get(result.fixtureId)))?.expectedToolPlanJson || "[]"
     )).toEqual([{
       handlerMapping: "company.overview.update",
-      normalizedToolName: "company_overview_update",
+      normalizedToolName: "update_company_profile",
       sideEffectLevel: "WRITE",
       confirmationRequired: true,
       status: "APPROVAL_REQUIRED",
@@ -437,6 +437,7 @@ describe("Agent Eval Fixtures", () => {
         name: "Knowledge Search",
         description: "Search approved knowledge.",
         handlerMapping: "knowledge.search",
+        modelName: "search_knowledge",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,

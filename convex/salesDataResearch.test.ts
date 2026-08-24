@@ -566,7 +566,7 @@ describe("recording what the agent found", () => {
         await ctx.db.insert("agentToolCalls", {
           runId,
           agentId,
-          normalizedToolName: "web_scrape",
+          normalizedToolName: "read_web_page",
           handlerMapping: "web.scrape",
           argumentsJson: JSON.stringify({ url }),
           status: "SUCCESS" as const,

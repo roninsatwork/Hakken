@@ -153,6 +153,7 @@ describe("comax agent provisioning", () => {
         name: "HTTP Request",
         description: "Calls the API you have set up.",
         handlerMapping: "http.request",
+        modelName: "call_api",
         requiredRole: "ADMIN",
         isActive: true,
         version: 1,

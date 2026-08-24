@@ -92,7 +92,30 @@ describe("ai tool execution service", () => {
   });
 
   test("builds provider-neutral tool declarations", () => {
+    // The name offered to a model is the tool's own `modelName` — never its
+    // label, and never its routing key. Until 2026-08-24 it was the routing
+    // key, which meant a tool could not be renamed without being rerouted.
     expect(
+      buildProviderToolDeclaration({
+        name: "CRM Lookup",
+        description: "Look up CRM data.",
+        modelName: "look_up_crm_record",
+        handlerMapping: "crm.lookup-account",
+        requiredRole: "ADMIN",
+        inputSchema: '{"type":"object"}',
+      })
+    ).toEqual({
+      name: "look_up_crm_record",
+      description: "Look up CRM data.",
+      parametersJsonSchema: { type: "object" },
+    });
+  });
+
+  test("refuses to declare a tool with no model name, rather than falling back", () => {
+    // A fallback would be a second answer to the question `modelName` exists to
+    // answer, and the second answer is always the one that rots. The caller
+    // skips a tool it cannot declare, so a nameless tool is never offered.
+    expect(() =>
       buildProviderToolDeclaration({
         name: "CRM Lookup",
         description: "Look up CRM data.",
@@ -100,11 +123,7 @@ describe("ai tool execution service", () => {
         requiredRole: "ADMIN",
         inputSchema: '{"type":"object"}',
       })
-    ).toEqual({
-      name: "crm_lookup_account",
-      description: "Look up CRM data.",
-      parametersJsonSchema: { type: "object" },
-    });
+    ).toThrow("has no model name");
   });
 
   test("guards model tool call payloads", () => {
@@ -362,6 +381,11 @@ describe("ai tool execution service", () => {
       "marketDiscovery.job.next",
       "marketDiscovery.locations.read",
       "marketDiscovery.locations.record",
+      // Every tool on every connected server, through one entry. The allowlist
+      // is still matched exactly — this is one deliberate addition, and which
+      // server and which tool come from the invoked tool's own record rather
+      // than from anything the model produced.
+      "mcp.call",
       "notification.send",
       // The opportunity report's three passes, in their fixed order: price the
       // prospects, find the chain gaps, then save the agent's summary — which

@@ -25,6 +25,7 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [AI Rules And Prompts](./ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./ai-models-providers-and-costs.md)
 - [AI Tools And Connectors](./ai-tools-and-connectors.md)
+- [Tool Servers](./tool-servers.md)
 - [Agents](./agents.md)
 - [Agent Setup And Configuration](./agent-setup-and-configuration.md)
 - [Agent Operations And Review](./agent-operations-and-review.md)

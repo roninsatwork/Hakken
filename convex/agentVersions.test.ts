@@ -38,6 +38,7 @@ describe("Agent Versions", () => {
         name: "Knowledge Search",
         description: "Search knowledge.",
         handlerMapping: "knowledge.search",
+        modelName: "search_knowledge",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,

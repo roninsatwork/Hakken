@@ -14,7 +14,7 @@ import {
 } from "./evidencePackService";
 
 const action = (overrides: Partial<ToolAction> = {}): ToolAction => ({
-  normalizedToolName: "knowledge_search",
+  normalizedToolName: "search_knowledge",
   sideEffectLevel: "READ",
   status: "SUCCESS",
   blocked: false,

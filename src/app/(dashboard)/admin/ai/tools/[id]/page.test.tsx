@@ -49,6 +49,9 @@ const savedTool = {
   _id: TOOL_ID,
   _creationTime: 0,
   name: "check_stock",
+  // The box on screen asks for the name the assistant will use. Since
+  // 2026-08-24 that is its own field rather than the routing key below.
+  modelName: "check_stock",
   description: "Looks up how many of an item are left.",
   handlerMapping: "api.stock.check",
   requiredRole: "ADMIN" as const,
@@ -89,7 +92,7 @@ describe("EditToolPage", () => {
     await waitFor(() => expect(updateToolMock).toHaveBeenCalled());
     expect(updateToolMock.mock.calls[0][0]).toMatchObject({
       id: TOOL_ID,
-      name: "check_stock",
+      modelName: "check_stock",
       handlerMapping: "api.stock.count",
       description: "Looks up how many of an item are left.",
     });

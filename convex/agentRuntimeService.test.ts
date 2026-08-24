@@ -218,7 +218,7 @@ describe("agentRuntimeService", () => {
       // the next turn with "missing a thought_signature in functionCall parts".
       const turns = buildToolInteractionTurns([
         {
-          name: "apify_actor_run",
+          name: "run_scraper_job",
           args: { actorId: "rightmove" },
           responsePayload: { status: "success" },
           thoughtSignature: "signature-one",
@@ -233,7 +233,7 @@ describe("agentRuntimeService", () => {
 
       expect(turns[0].parts).toEqual([
         {
-          functionCall: { name: "apify_actor_run", args: { actorId: "rightmove" } },
+          functionCall: { name: "run_scraper_job", args: { actorId: "rightmove" } },
           thoughtSignature: "signature-one",
         },
         {

@@ -599,7 +599,7 @@ describe("Log Purge safeguards and interactive cancellation", () => {
       });
       const toolCallId = await ctx.db.insert("agentToolCalls", {
         runId, agentId, companyId,
-        normalizedToolName: "knowledge_search", handlerMapping: "knowledge.search",
+        normalizedToolName: "search_knowledge", handlerMapping: "knowledge.search",
         argumentsJson: "{}", status: "SUCCESS", requiredRole: "ADMIN",
         sideEffectLevel: "READ", confirmationRequired: false, startedAt: oldAt,
       });

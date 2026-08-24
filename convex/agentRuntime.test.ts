@@ -294,6 +294,7 @@ async function bindKnowledgeSearchTool(t: TestConvex, agentId: Id<"agents">, use
       name: "Knowledge Search",
       description: "Search knowledge.",
       handlerMapping: "knowledge.search",
+      modelName: "search_knowledge",
       requiredRole: "ADMIN",
       sideEffectLevel: "READ",
       confirmationRequired: false,
@@ -318,7 +319,7 @@ async function bindKnowledgeSearchTool(t: TestConvex, agentId: Id<"agents">, use
  *
  * Reuses the knowledge handler so the call actually executes when it is allowed
  * through — what is under test is the gate, not the tool. Note the model calls it
- * `knowledge_search`: the declared function name comes from `handlerMapping`, not
+ * `search_knowledge`: the declared function name comes from `handlerMapping`, not
  * from `name` (see `buildProviderToolDeclaration`), so the display name here is
  * cosmetic.
  */
@@ -328,6 +329,7 @@ async function bindWriteTool(t: TestConvex, agentId: Id<"agents">, userId: Id<"u
       name: "Record Note",
       description: "Write a note.",
       handlerMapping: "knowledge.search",
+      modelName: "search_knowledge",
       requiredRole: "ADMIN",
       sideEffectLevel: "WRITE",
       confirmationRequired: false,
@@ -413,7 +415,7 @@ describe("agent runtime", () => {
     // text generation with no tool declarations at all, so an agent could read
     // its instructions, understand them, and have no way to act.
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Filed what I found."));
 
@@ -540,8 +542,8 @@ describe("agent runtime", () => {
     generateMock
       .mockResolvedValueOnce(
         toolCallResponse([
-          { name: "knowledge_search", args: { query: "refunds" } },
-          { name: "knowledge_search", args: { query: "returns" } },
+          { name: "search_knowledge", args: { query: "refunds" } },
+          { name: "search_knowledge", args: { query: "returns" } },
         ]),
       )
       .mockResolvedValueOnce(textResponse("Both looked up."));
@@ -562,7 +564,7 @@ describe("agent runtime", () => {
     await bindKnowledgeSearchTool(t, agentId, userId);
 
     // Always ask for another tool call; the runtime must stop itself.
-    generateMock.mockResolvedValue(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]));
+    generateMock.mockResolvedValue(toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
       threadId,
@@ -591,7 +593,7 @@ describe("agent runtime", () => {
     });
 
     // Never answers; every turn asks for another tool call.
-    generateMock.mockResolvedValue(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]));
+    generateMock.mockResolvedValue(toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
       threadId,
@@ -705,7 +707,7 @@ describe("agent runtime", () => {
     });
 
     generateMock.mockResolvedValue(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]),
+      toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]),
     );
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -812,7 +814,7 @@ describe("agent runtime", () => {
     // into a second turn — which throws while a partial reply is on screen.
     generateMock
       .mockResolvedValueOnce({
-        ...toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]),
+        ...toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]),
         text: "Let me look that up for you before answering.",
       })
       .mockRejectedValueOnce(new Error("provider exploded mid-run"));
@@ -854,7 +856,7 @@ describe("agent runtime", () => {
 
     generateMock
       .mockResolvedValueOnce({
-        ...toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]),
+        ...toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]),
         // Long enough to exceed STREAM_FLUSH_CHARS, so this turn's narration
         // really does reach the database and could contaminate the answer.
         text: NARRATION,
@@ -910,7 +912,7 @@ describe("cancelling a run", () => {
     generateMock.mockImplementationOnce(async () => {
       await cancelSeededRun(t, "Agent run cancelled: costing too much.");
       return {
-        ...toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]),
+        ...toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]),
         text: NARRATION,
       };
     });
@@ -941,7 +943,7 @@ describe("cancelling a run", () => {
 
     generateMock.mockImplementationOnce(async () => {
       await cancelSeededRun(t, "Agent run cancelled.");
-      return toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]);
+      return toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]);
     });
     generateMock.mockResolvedValue(textResponse("This answer should never be produced."));
 
@@ -966,7 +968,7 @@ describe("cancelling a run", () => {
     await bindKnowledgeSearchTool(t, agentId, userId);
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]))
       .mockResolvedValue(textResponse("This answer should never be produced."));
 
     toolExecutionProbe.afterExecute = async () => {
@@ -996,7 +998,7 @@ describe("cancelling a run", () => {
 
     generateMock.mockImplementationOnce(async () => {
       await cancelSeededRun(t, "Agent run cancelled.");
-      return toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]);
+      return toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]);
     });
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -1020,7 +1022,7 @@ describe("durable runs", () => {
     await bindKnowledgeSearchTool(t, agentId, userId);
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]))
       .mockResolvedValueOnce(textResponse("All done."));
 
     const midRunCheckpoints: number[] = [];
@@ -1047,7 +1049,7 @@ describe("durable runs", () => {
     await bindKnowledgeSearchTool(t, agentId, userId);
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]))
       .mockResolvedValueOnce(textResponse("Answered."));
 
     const captured: Array<{ loopIndex: number; toolCallCount: number; transcriptTurns: number }> = [];
@@ -1104,8 +1106,8 @@ describe("durable runs", () => {
         status: "ACTIVE",
         transcriptJson: JSON.stringify([
           { role: "user", parts: [{ text: "Look it up then answer" }] },
-          { role: "model", parts: [{ functionCall: { name: "knowledge_search", args: { query: "x" } } }] },
-          { role: "function", parts: [{ functionResponse: { name: "knowledge_search", response: {} } }] },
+          { role: "model", parts: [{ functionCall: { name: "search_knowledge", args: { query: "x" } } }] },
+          { role: "function", parts: [{ functionResponse: { name: "search_knowledge", response: {} } }] },
         ]),
         stepIndex: 3,
         loopIndex: 1,
@@ -1168,8 +1170,8 @@ describe("durable runs", () => {
         status: "ACTIVE",
         transcriptJson: JSON.stringify([
           { role: "user", parts: [{ text: "Work the research queue" }] },
-          { role: "model", parts: [{ functionCall: { name: "knowledge_search", args: { query: "x" } } }] },
-          { role: "function", parts: [{ functionResponse: { name: "knowledge_search", response: {} } }] },
+          { role: "model", parts: [{ functionCall: { name: "search_knowledge", args: { query: "x" } } }] },
+          { role: "function", parts: [{ functionResponse: { name: "search_knowledge", response: {} } }] },
         ]),
         stepIndex: 3,
         loopIndex: 1,
@@ -1188,7 +1190,7 @@ describe("durable runs", () => {
     // are rebuilt from the run's owner, since there is no thread to read one
     // from.
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "next item" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "next item" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Queue worked."));
 
@@ -1434,7 +1436,7 @@ describe("action segment handover", () => {
     generateMock.mockImplementation(async () => {
       // Burn most of a segment on every model turn.
       vi.setSystemTime(Date.now() + AGENT_RUN_SEGMENT_BUDGET_MS + 1000);
-      return toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]);
+      return toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]);
     });
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -1467,7 +1469,7 @@ describe("action segment handover", () => {
       .mockImplementationOnce(async () => {
         vi.setSystemTime(Date.now() + AGENT_RUN_SEGMENT_BUDGET_MS + 1000);
         return {
-          ...toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]),
+          ...toolCallResponse([{ name: "search_knowledge", args: { query: "x" } }]),
           text: NARRATION,
         };
       })
@@ -1533,7 +1535,7 @@ describe("human-in-the-loop approval", () => {
     });
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]))
       .mockResolvedValue(textResponse("Refunds take 14 days."));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -1625,7 +1627,7 @@ describe("human-in-the-loop approval", () => {
     // Stored on the row while a person decides, because nothing in memory
     // survives the wait.
     const { toolCalls: parked } = await runSteps(t);
-    expect(parked[0].thoughtSignature).toBe("signature-knowledge_search-0");
+    expect(parked[0].thoughtSignature).toBe("signature-search_knowledge-0");
 
     const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
     await reviewer.mutation(api.agentRunApprovals.decideApproval, {
@@ -1640,8 +1642,8 @@ describe("human-in-the-loop approval", () => {
     const modelTurn = transcript.contents.findLast((turn) => turn.role === "model");
     expect(modelTurn?.parts).toEqual([
       {
-        functionCall: { name: "knowledge_search", args: { query: "refunds" } },
-        thoughtSignature: "signature-knowledge_search-0",
+        functionCall: { name: "search_knowledge", args: { query: "refunds" } },
+        thoughtSignature: "signature-search_knowledge-0",
       },
     ]);
   });
@@ -1693,7 +1695,7 @@ describe("human-in-the-loop approval", () => {
     // On resume the model asks for exactly the same thing again, then gives up.
     generateMock
       .mockReset()
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]))
       .mockResolvedValue(textResponse("Understood, I cannot look that up."));
 
     await reviewer.mutation(api.agentRunApprovals.decideApproval, {
@@ -1721,7 +1723,7 @@ describe("human-in-the-loop approval", () => {
     const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
     generateMock
       .mockReset()
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "cancellations" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "cancellations" } }]))
       .mockResolvedValue(textResponse("Waiting on approval."));
 
     await reviewer.mutation(api.agentRunApprovals.decideApproval, {
@@ -1751,7 +1753,7 @@ describe("a batch of approvals", () => {
   /**
    * A write tool and a read tool, both real handlers so the calls actually
    * execute. Declaration names come from `handlerMapping`, so these are
-   * `company_overview_update` and `knowledge_search`.
+   * `update_company_profile` and `search_knowledge`.
    */
   async function bindTwoTools(
     t: TestConvex,
@@ -1768,6 +1770,7 @@ describe("a batch of approvals", () => {
         name: "Update Company Overview",
         description: "Write the company overview.",
         handlerMapping: "company.overview.update",
+        modelName: "update_company_profile",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -1781,6 +1784,7 @@ describe("a batch of approvals", () => {
         name: "Knowledge Search",
         description: "Search knowledge.",
         handlerMapping: "knowledge.search",
+        modelName: "search_knowledge",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         // A read only gates when its own tool says so, which is how a batch can
@@ -1804,8 +1808,8 @@ describe("a batch of approvals", () => {
 
     generateMock
       .mockResolvedValueOnce(toolCallResponse([
-        { name: "company_overview_update", args: { overview: "Renewals focus" } },
-        { name: "knowledge_search", args: { query: "refunds" } },
+        { name: "update_company_profile", args: { overview: "Renewals focus" } },
+        { name: "search_knowledge", args: { query: "refunds" } },
       ]))
       .mockResolvedValue(textResponse("Both done."));
 
@@ -1934,7 +1938,7 @@ describe("a batch of approvals", () => {
     });
     // The model asked for the write first. Answering in decision order would line
     // each response up against the wrong call.
-    expect(answeredNames).toEqual(["company_overview_update", "knowledge_search"]);
+    expect(answeredNames).toEqual(["update_company_profile", "search_knowledge"]);
   });
 
   test("a mixed batch answers the call that ran and the call that waited together", async () => {
@@ -1988,7 +1992,7 @@ describe("autonomous tool execution", () => {
     }
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]))
       .mockResolvedValue(textResponse("Note recorded."));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -2067,7 +2071,7 @@ describe("autonomous tool execution", () => {
     });
 
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]))
       .mockResolvedValue(textResponse("Refunds take 14 days."));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -2107,7 +2111,7 @@ describe("prompt caching", () => {
   function scriptToolTurns(turns: number, answer: string) {
     for (let index = 0; index < turns; index += 1) {
       generateMock.mockResolvedValueOnce(
-        toolCallResponse([{ name: "knowledge_search", args: { query: `q${index}` } }]),
+        toolCallResponse([{ name: "search_knowledge", args: { query: `q${index}` } }]),
       );
     }
     generateMock.mockResolvedValue(textResponse(answer));
@@ -2213,9 +2217,9 @@ describe("prompt caching", () => {
     const t = makeTest();
     const { agentId, threadId } = await seedCacheableAgent(t);
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "a" } }]))
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "b" } }]))
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "c" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "a" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "b" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "c" } }]))
       .mockImplementationOnce(async (
         _ai: unknown,
         _params: unknown,
@@ -2275,8 +2279,8 @@ describe("prompt caching", () => {
     });
     // Burn two turns first so a cache exists by the third.
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "a" } }]))
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "b" } }]));
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "a" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "b" } }]));
 
     await t.action(internal.agentRuntime.runAgentObjective, {
       threadId,
@@ -2361,7 +2365,7 @@ describe("prompt caching across segments", () => {
       // turn would instead run the whole run past its runtime budget.
       if (turn === 3) vi.setSystemTime(Date.now() + AGENT_RUN_SEGMENT_BUDGET_MS + 1000);
       if (turn >= 5) return textResponse("Finished across two segments.");
-      return toolCallResponse([{ name: "knowledge_search", args: { query: `q${turn}` } }]);
+      return toolCallResponse([{ name: "search_knowledge", args: { query: `q${turn}` } }]);
     });
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -2394,6 +2398,7 @@ describe("connectors that do not exist", () => {
         description: "Send a Slack message.",
         // Declared in the built-in connector catalogue; nothing implements it.
         handlerMapping: "slack.message.send",
+        modelName: "slack_message_send",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -2476,6 +2481,7 @@ describe("connectors that do not exist", () => {
         name: "Typo Tool",
         description: "Configured wrongly.",
         handlerMapping: "not.a.real.connector",
+        modelName: "not_a_real_connector",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -2561,7 +2567,7 @@ describe("evals run the agent that ships", () => {
 
     // Turn 1 uses a tool, turn 2 answers, turn 3 is the grader's verdict.
     generateMock
-      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValueOnce(toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }]))
       .mockResolvedValueOnce(textResponse("Refunds are processed within 14 days."))
       .mockResolvedValueOnce(textResponse('{"pass": true, "reason": "States the window."}'));
 
@@ -2717,7 +2723,7 @@ describe("rehearsal runs", () => {
     };
 
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "delete everything" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "delete everything" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Drill complete."));
 
@@ -2766,7 +2772,7 @@ describe("rehearsal runs", () => {
     };
 
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "refunds" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Grounded answer."));
 
@@ -2792,7 +2798,7 @@ describe("rehearsal runs", () => {
     await bindWriteTool(t, agentId, userId);
 
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "as usual" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "as usual" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Done."));
 
@@ -2860,7 +2866,7 @@ describe("rehearsal evals", () => {
     });
 
     generateMock.mockResolvedValueOnce(
-      toolCallResponse([{ name: "knowledge_search", args: { query: "note it down" } }])
+      toolCallResponse([{ name: "search_knowledge", args: { query: "note it down" } }])
     );
     generateMock.mockResolvedValueOnce(textResponse("Drill done."));
 
@@ -3020,5 +3026,440 @@ describe("a photo through the agent path", () => {
     // Nothing image-shaped was sent to a provider that would refuse it.
     expect(blindProviderProbe.requests.length).toBeGreaterThan(0);
     expect(JSON.stringify(blindProviderProbe.requests)).not.toContain("inlineData");
+  });
+});
+
+/**
+ * The company boundary on tools (tool-server plan, phase 3).
+ *
+ * Agents are global by design — a shared capability any workspace can use — so
+ * separation cannot come from an agent belonging to a company. Every tool used
+ * to be global too, which was safe while every tool was curated here. A
+ * connected tool server breaks that: one company's tool is reached with one
+ * company's credential.
+ *
+ * So the check is on the **run**, not the agent, and it is applied at the last
+ * moment before a model sees the tool. These tests exist because a rule proven
+ * only as a pure function is a rule nobody has shown is actually applied.
+ */
+describe("tools that belong to a company", () => {
+  /** The tool names the model was actually offered on the most recent turn. */
+  function offeredToolNames(): string[] {
+    const params = generateMock.mock.calls.at(-1)?.[1] as {
+      config?: { tools?: Array<{ functionDeclarations?: Array<{ name?: string }> }> };
+    };
+    return (params?.config?.tools ?? [])
+      .flatMap((entry) => entry.functionDeclarations ?? [])
+      .map((declaration) => declaration.name ?? "");
+  }
+
+  /**
+   * An active, well-formed tool, optionally owned by a company.
+   *
+   * The handler mapping is what the model is offered as a function name — not
+   * the tool's own name — so each fixture needs its own or they all arrive under
+   * one word and the assertions below mean nothing.
+   */
+  async function seedTool(
+    t: TestConvex,
+    name: string,
+    companyId?: Id<"companies">,
+  ): Promise<Id<"aiTools">> {
+    return await t.run(async (ctx) => await ctx.db.insert("aiTools", {
+      name,
+      description: "Does a thing.",
+      // Since phase 4 this is what the model is offered, and the routing key
+      // below is only where the call goes.
+      modelName: name,
+      handlerMapping: `knowledge.${name}`,
+      requiredRole: "ADMIN",
+      sideEffectLevel: "READ",
+      confirmationRequired: false,
+      companyId,
+      inputSchema: JSON.stringify({
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      }),
+      isActive: true,
+      createdAt: Date.now(),
+    }));
+  }
+
+  async function bind(t: TestConvex, agentId: Id<"agents">, toolId: Id<"aiTools">) {
+    await t.run(async (ctx) =>
+      await ctx.db.insert("agentTools", { agentId, toolId, assignedAt: Date.now() }));
+  }
+
+  test("a shared agent running for one company is not offered another company's tool", async () => {
+    // The leak this phase exists to prevent. The binding exists; the run is for
+    // somebody else; the tool must not reach the model.
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+
+    const otherCompanyId = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Northwind", createdAt: Date.now() }));
+    await bind(t, agentId, await seedTool(t, "northwind_invoices", otherCompanyId));
+
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Do the overnight tidy-up.",
+      triggerType: "SCHEDULE",
+      companyId,
+      userId,
+    });
+
+    expect(offeredToolNames()).not.toContain(("northwind_invoices"));
+  });
+
+  test("the same agent running for the owning company is offered it", async () => {
+    // The other half. A filter that hides everything is not a boundary, it is a
+    // broken feature, and only this test tells the two apart.
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bind(t, agentId, await seedTool(t, "acme_invoices", companyId));
+
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Do the overnight tidy-up.",
+      triggerType: "SCHEDULE",
+      companyId,
+      userId,
+    });
+
+    expect(offeredToolNames()).toContain(("acme_invoices"));
+  });
+
+  test("a tool with no owner stays global, as every existing tool is", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bind(t, agentId, await seedTool(t, "platform_search"));
+
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Do the overnight tidy-up.",
+      triggerType: "SCHEDULE",
+      companyId,
+      userId,
+    });
+
+    expect(offeredToolNames()).toContain(("platform_search"));
+  });
+
+  test("a run with no company is offered no owned tools at all", async () => {
+    // A schedule or workflow node can run an agent with no conversation behind
+    // it. Failing open there would make the one path that skips the check the
+    // one nobody was looking at.
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bind(t, agentId, await seedTool(t, "acme_invoices", companyId));
+    await bind(t, agentId, await seedTool(t, "platform_search"));
+
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Do the overnight tidy-up.",
+      triggerType: "SCHEDULE",
+      userId,
+    });
+
+    const offered = offeredToolNames();
+    expect(offered).not.toContain(("acme_invoices"));
+    expect(offered).toContain(("platform_search"));
+  });
+});
+
+/**
+ * A tool nobody wrote (tool-server plan, phase 5 acceptance).
+ *
+ * The whole point of the feature in one test: a company connects a server, the
+ * tools it publishes become tools, an agent is given one, and it completes a
+ * task using code that was never written here.
+ *
+ * The run is driven through the real runtime — the same loop, the same
+ * approval rules, the same dispatcher — with only the model and the far end of
+ * the socket scripted.
+ */
+describe("an agent using a tool nobody wrote", () => {
+  test("completes a task through a connected server", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+
+    // A connected server, switched on, offering one tool.
+    const serverId = await t.run(async (ctx) => await ctx.db.insert("mcpServers", {
+      companyId,
+      name: "Finance",
+      url: "https://finance.example.com/mcp",
+      authMode: "NONE",
+      status: "CONNECTED",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+    await t.run(async (ctx) => await ctx.db.insert("mcpServerTools", {
+      serverId,
+      companyId,
+      name: "get_invoice",
+      description: "Fetch one invoice by its number.",
+      inputSchemaJson: JSON.stringify({
+        type: "object", properties: { id: { type: "string" } }, required: ["id"],
+      }),
+      discoveredAt: Date.now(),
+    }));
+
+    const admin = t.withIdentity({ subject: userId });
+    await admin.mutation(api.mcpToolPromotion.importServerTools, { serverId });
+
+    // Imported tools arrive switched off and always-ask, because a server
+    // saying its tool is harmless is not evidence. An administrator who knows
+    // this one only reads turns it on and says so — the intended path, and the
+    // one being exercised here.
+    const toolId = await t.run(async (ctx) => {
+      const [tool] = await ctx.db.query("aiTools")
+        .withIndex("by_mcp_server", (q) => q.eq("mcpServerId", serverId)).collect();
+      await ctx.db.patch(tool._id, {
+        isActive: true, sideEffectLevel: "READ", confirmationRequired: false,
+      });
+      await ctx.db.insert("agentTools", { agentId, toolId: tool._id, assignedAt: Date.now() });
+      return tool._id;
+    });
+
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body ?? "{}"));
+      if (body.method === "initialize") {
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0", id: 1,
+          result: { protocolVersion: "2025-06-18", capabilities: { tools: {} } },
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (!body.id) return new Response("", { status: 202 });
+      return new Response(JSON.stringify({
+        jsonrpc: "2.0", id: body.id,
+        result: { content: [{ type: "text", text: "Invoice INV-1 is for £240, unpaid." }] },
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+
+    try {
+      generateMock.mockResolvedValueOnce(
+        toolCallResponse([{ name: "finance_get_invoice", args: { id: "INV-1" } }])
+      );
+      generateMock.mockResolvedValueOnce(textResponse("INV-1 is £240 and unpaid."));
+
+      const result = await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+        agentId,
+        objective: "Find out what invoice INV-1 is for.",
+        triggerType: "SCHEDULE",
+        companyId,
+        userId,
+      });
+
+      const { run, steps } = await runSteps(t);
+      expect(run?.status).toBe("SUCCESS");
+      expect(result.output).toBe("INV-1 is £240 and unpaid.");
+      expect(steps.some((step) => step.kind === "TOOL_CALL")).toBe(true);
+
+      // The call is recorded against the tool that ran, like any other.
+      const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+      expect(toolCalls).toHaveLength(1);
+      expect(toolCalls[0].toolId).toBe(toolId);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+/**
+ * Writing through a connected server (tool-server plan, phase 6).
+ *
+ * Everything imported from a server arrives as EXTERNAL and switched off. An
+ * administrator who knows a tool only reads may lower it to READ; anything else
+ * stays gated, and — unlike every other tool on the platform — autonomy does not
+ * lift that gate.
+ *
+ * The reason is narrow and specific. An autonomous agent is safe because the
+ * tools it was given were chosen by somebody accountable *and the tools are
+ * ours*. A tool on somebody else's server is neither: the third party can change
+ * what it does tomorrow without its name or description changing, so "look at
+ * which tools it has" stops being a way to see the consequences.
+ */
+describe("a tool that changes something on a connected server", () => {
+  // Resuming a parked run happens on a scheduled function, so the clock has to
+  // be ours to advance — the same setup the other approval tests use.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  /** A connected server with one tool, imported and switched on at the given level. */
+  async function seedServerTool(
+    t: TestConvex,
+    companyId: Id<"companies">,
+    userId: Id<"users">,
+    agentId: Id<"agents">,
+    sideEffectLevel: "READ" | "WRITE",
+  ) {
+    const serverId = await t.run(async (ctx) => await ctx.db.insert("mcpServers", {
+      companyId,
+      name: "Finance",
+      url: "https://finance.example.com/mcp",
+      authMode: "NONE",
+      status: "CONNECTED",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+    await t.run(async (ctx) => await ctx.db.insert("mcpServerTools", {
+      serverId,
+      companyId,
+      name: "raise_credit_note",
+      description: "Raise a credit note against an invoice.",
+      inputSchemaJson: JSON.stringify({
+        type: "object", properties: { id: { type: "string" } }, required: ["id"],
+      }),
+      discoveredAt: Date.now(),
+    }));
+
+    await t.withIdentity({ subject: userId })
+      .mutation(api.mcpToolPromotion.importServerTools, { serverId });
+
+    return await t.run(async (ctx) => {
+      const [tool] = await ctx.db.query("aiTools")
+        .withIndex("by_mcp_server", (q) => q.eq("mcpServerId", serverId)).collect();
+      await ctx.db.patch(tool._id, {
+        isActive: true, sideEffectLevel, confirmationRequired: false,
+      });
+      await ctx.db.insert("agentTools", { agentId, toolId: tool._id, assignedAt: Date.now() });
+      return tool._id;
+    });
+  }
+
+  function stubServer() {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body ?? "{}"));
+      if (body.method === "initialize") {
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0", id: 1,
+          result: { protocolVersion: "2025-06-18", capabilities: { tools: {} } },
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (!body.id) return new Response("", { status: 202 });
+      return new Response(JSON.stringify({
+        jsonrpc: "2.0", id: body.id,
+        result: { content: [{ type: "text", text: "Credit note CN-9 raised." }] },
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+  }
+
+  /** Run an agent that asks for the write tool, and hand back its approval. */
+  async function runUntilServerWriteParks(t: TestConvex, autonomous: boolean) {
+    const seeded = await seedAgentRun(t);
+    await seedServerTool(t, seeded.companyId, seeded.userId, seeded.agentId, "WRITE");
+    await t.run(async (ctx) =>
+      await ctx.db.patch(seeded.agentId, { autonomousToolExecution: autonomous }));
+
+    generateMock
+      .mockResolvedValueOnce(toolCallResponse([{ name: "finance_raise_credit_note", args: { id: "INV-1" } }]))
+      .mockResolvedValue(textResponse("Done."));
+
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId: seeded.agentId,
+      objective: "Raise a credit note against INV-1.",
+      triggerType: "SCHEDULE",
+      companyId: seeded.companyId,
+      userId: seeded.userId,
+    });
+
+    const approval = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").first());
+    return { ...seeded, approval };
+  }
+
+  test("parks for a human, and says the request leaves the platform", async () => {
+    const t = makeTest();
+    stubServer();
+    const { approval } = await runUntilServerWriteParks(t, false);
+
+    expect(approval?.status).toBe("PENDING");
+    // Everything else an agent asks to do happens inside this platform. A
+    // reviewer deciding this one needs to know it does not.
+    expect(approval?.message).toContain("outside the platform");
+  });
+
+  test("an autonomous agent still has to ask", async () => {
+    // The one thing autonomy does not buy. The third party behind this tool can
+    // change what it does without changing its name.
+    const t = makeTest();
+    stubServer();
+    const { approval } = await runUntilServerWriteParks(t, true);
+
+    expect(approval?.status).toBe("PENDING");
+  });
+
+  test("approving runs it, and the answer goes back to the model", async () => {
+    const t = makeTest();
+    stubServer();
+    const { approval } = await runUntilServerWriteParks(t, false);
+
+    const reviewer = t.withIdentity({ subject: await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "reviewer@sonae.test", role: "SUPER_ADMIN" })) });
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
+      approvalId: approval!._id,
+      decision: "APPROVED",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls).toHaveLength(1);
+    expect(toolCalls[0].status).toBe("SUCCESS");
+    expect(toolCalls[0].resultJson).toContain("CN-9");
+  });
+
+  test("rejecting means nothing is sent, and the agent is told", async () => {
+    const t = makeTest();
+    stubServer();
+    const { approval } = await runUntilServerWriteParks(t, false);
+
+    const reviewer = t.withIdentity({ subject: await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "reviewer@sonae.test", role: "SUPER_ADMIN" })) });
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
+      approvalId: approval!._id,
+      decision: "REJECTED",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls[0].status).toBe("DENIED");
+    expect(toolCalls[0].resultJson ?? "").not.toContain("CN-9");
+  });
+
+  test("a read-only tool from the same server still runs unattended for an autonomous agent", async () => {
+    // The gate is narrow on purpose. Looking things up is most of what an
+    // autonomous agent is for, and a read cannot change anything.
+    const t = makeTest();
+    stubServer();
+    const seeded = await seedAgentRun(t);
+    await seedServerTool(t, seeded.companyId, seeded.userId, seeded.agentId, "READ");
+    await t.run(async (ctx) =>
+      await ctx.db.patch(seeded.agentId, { autonomousToolExecution: true }));
+
+    generateMock
+      .mockResolvedValueOnce(toolCallResponse([{ name: "finance_raise_credit_note", args: { id: "INV-1" } }]))
+      .mockResolvedValue(textResponse("Done."));
+
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId: seeded.agentId,
+      objective: "Look up INV-1.",
+      triggerType: "SCHEDULE",
+      companyId: seeded.companyId,
+      userId: seeded.userId,
+    });
+
+    expect(await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect())).toHaveLength(0);
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls[0].status).toBe("SUCCESS");
   });
 });

@@ -100,6 +100,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "scripts -> /admin/settings/scripts",
     "systemAdmins -> /admin/super-admins",
     "systemSettings -> /admin/settings",
+    "toolServers -> /admin/ai/tool-servers",
     "tools -> /admin/ai/tools",
     "workflowRuns -> /admin/workflows/executions",
   ],

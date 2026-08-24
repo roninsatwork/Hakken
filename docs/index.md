@@ -89,7 +89,8 @@ operator procedures continue to change.
 - [Gmail Inbox Plan](./plans/active/gmail-inbox-plan.md) — active plan for the dedicated Gmail connector, mailbox watcher, and reply/task handling.
 - [Receptionist Kiosk Plan](./plans/active/receptionist-kiosk-plan.md) — active plan for the walk-up kiosk surface and visitor-session handling.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
-- [Knowing When It Breaks](./plans/active/monitoring-and-tool-server-plan.md) — active plan for monitoring both halves of the product with Better Stack, and for connecting Sonae to published tool servers.
+- [Sonae Speaks The Standard Tool Plug](./plans/active/tool-server-plan.md) — active plan for connecting Sonae to a service's own published tool server, so its tools arrive without an integration being written.
+- [Knowing When It Breaks — PARKED](./plans/active/monitoring-plan.md) — parked plan for real error monitoring across both halves of the product.
 - [The Clean Cut — Turning A Clone Into A Client's Own Product](./plans/active/client-product-cut-plan.md) — active plan for cutting a cloned repository down to the verticals a client actually bought, folders included.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
@@ -129,6 +130,7 @@ operator procedures continue to change.
 - [AI Rules And Prompts](./developer/ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./developer/ai-models-providers-and-costs.md)
 - [AI Tools And Connectors](./developer/ai-tools-and-connectors.md)
+- [Tool Servers](./developer/tool-servers.md)
 - [Analytics Rollups](./developer/analytics-rollups.md)
 - [Audit Log Service](./developer/audit-log-service.md)
 - [Agents](./developer/agents.md)
@@ -208,6 +210,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [AI Rules And Prompts](./end-user/ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./end-user/ai-models-providers-and-costs.md)
 - [AI Tools And Connectors](./end-user/ai-tools-and-connectors.md)
+- [Tool Servers](./end-user/tool-servers.md)
 - [Agents](./end-user/agents.md)
 - [Agent Setup And Configuration](./end-user/agent-setup-and-configuration.md)
 - [Agent Operations And Review](./end-user/agent-operations-and-review.md)

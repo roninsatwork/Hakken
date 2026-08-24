@@ -94,7 +94,7 @@ describe("the OpenAI agent adapter", () => {
               tool_calls: [{
                 index: 0,
                 id: "call_1",
-                function: { name: "knowledge_search", arguments: "{\"query\":" },
+                function: { name: "search_knowledge", arguments: "{\"query\":" },
               }],
             },
           }],
@@ -111,14 +111,14 @@ describe("the OpenAI agent adapter", () => {
 
     const response = await provider.streamTurn(
       baseRequest({
-        tools: [{ name: "knowledge_search", description: "Search.", parametersJsonSchema: { type: "object" } }],
+        tools: [{ name: "search_knowledge", description: "Search.", parametersJsonSchema: { type: "object" } }],
       }),
       {},
     );
 
     expect(response.outcome).toBe("RUN_TOOLS");
     expect(response.toolCalls).toEqual([
-      { name: "knowledge_search", args: { query: "refunds" } },
+      { name: "search_knowledge", args: { query: "refunds" } },
     ]);
   });
 
@@ -141,7 +141,7 @@ describe("the OpenAI agent adapter", () => {
     await provider.streamTurn(
       baseRequest({
         reasoningEffort: "HIGH",
-        tools: [{ name: "knowledge_search", description: "Search.", parametersJsonSchema: { type: "object" } }],
+        tools: [{ name: "search_knowledge", description: "Search.", parametersJsonSchema: { type: "object" } }],
       }),
       {},
     );

@@ -15,7 +15,8 @@ type ToolRole = "ADMIN" | "SUPER_ADMIN";
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
 type ToolDraft = {
-  name: string;
+  /** What the assistant is offered this tool as. The box on screen asks for this. */
+  modelName: string;
   description: string;
   handlerMapping: string;
   requiredRole: ToolRole;
@@ -28,7 +29,7 @@ type ToolDraft = {
 
 function createToolDraft(tool: Doc<"aiTools">): ToolDraft {
   return {
-    name: tool.name,
+    modelName: tool.modelName ?? "",
     description: tool.description,
     handlerMapping: tool.handlerMapping,
     requiredRole: tool.requiredRole,
@@ -62,13 +63,18 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
     e.preventDefault();
     if (!tool) return;
     const form = draft ?? createToolDraft(tool);
-    if (!form.name.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting) return;
+    if (!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       await updateTool({
         id: toolId,
-        name: form.name.trim(),
+        // One box on screen, two fields behind it: the assistant's name for
+        // this tool, and the label shown in lists. An administrator should not
+        // have to type the same words twice; a friendlier label can be edited
+        // later without touching what the assistant calls it.
+        modelName: form.modelName.trim(),
+        name: form.modelName.trim(),
         description: form.description.trim(),
         handlerMapping: form.handlerMapping.trim(),
         requiredRole: form.requiredRole,
@@ -138,8 +144,8 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
              <Field
                label={tFields("name.label")}
                hint={tFields("name.help")}
-               value={form.name}
-               onChange={(e) => updateDraft({ name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+               value={form.modelName}
+               onChange={(e) => updateDraft({ modelName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
                placeholder={tFields("name.placeholder")}
              />
            </div>
@@ -274,7 +280,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
           <WriteButton
             type="submit"
-	            disabled={!form.name.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting}
+	            disabled={!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

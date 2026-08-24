@@ -1,12 +1,19 @@
-# Knowing When It Breaks
+# Knowing When It Breaks — PARKED
 
-**Decided 2026-08-23.** Sonae will use **Better Stack** to find out when things
-go wrong, across the whole product. Once that is in, Sonae gains the ability to
-connect to a service's own tool server, and Better Stack is the first thing it
-connects to — so an admin can ask *"did anything break today?"* in plain English
-instead of learning a dashboard.
+**Decided 2026-08-23, then parked the same day at Anthony's request.** Not
+started. Nothing in this plan has been built.
 
-Serves the vision in [PRODUCT.md](../../PRODUCT.md).
+The decision recorded here still stands if and when it is picked up: **Better
+Stack**, across both halves of the product. It is parked, not reversed — the
+research below cost real effort and the alternatives were genuinely weighed, so
+it is kept intact rather than rewritten from memory later.
+
+**The problem it was going to solve is still open.** Nothing tells anyone when
+Sonae breaks. That was true before this plan and remains true now.
+
+The tool-server work that used to live in this document has moved to
+[Sonae Speaks The Standard Tool Plug](./tool-server-plan.md), which does not
+depend on any of this.
 
 ---
 
@@ -159,9 +166,8 @@ words rather than colour, with when it was last genuinely contacted. Error
 monitoring and each uptime check become rows there, through
 `convex/connectionProbes.ts`. No new screen is invented.
 
-**Tool servers are the opposite case** and do need a screen — connected at
-runtime, per company, stored in the database. See Phase 4. Each connected server
-also appears as a Connections row.
+**Tool servers are the opposite case** and do need a screen. That is covered in
+[the tool plug plan](./tool-server-plan.md).
 
 ---
 
@@ -218,36 +224,22 @@ somewhere Anthony will actually see. Ten checks are free.
 
 Ends when stopping the deployed service produces an alert.
 
-### Phase 4 — Sonae speaks the standard tool plug
+---
 
-The general capability, not a Better Stack special case. Five parts:
+## Effort
 
-1. **A screen to connect one.** An admin pastes an address, names it, supplies
-   whatever login it needs. Stored per company.
-2. **Ask what it can do.** Fetch and read the server's tool list.
-3. **Write it into the tools Sonae already has**, so agent binding, permission
-   checks, the approval gate and the audit trail all apply without rebuilding.
-4. **Carry out the calls**, through the existing deny-by-default dispatcher.
-5. **Keep it inside the company wall.** One company's connection is invisible to
-   every other, and the tenant a tool acts on comes from the conversation, never
-   from anything the model produced.
+Estimated 2026-08-23. Working days, one developer.
 
-**Start read-only.** Tools that only read need no approval gate. Tools that change
-something must land behind the existing approval step first.
+| Phase | Days |
+|---|---|
+| 0 — Prove it | 0.5 |
+| 1 — Build the seam, one vendor behind it | 2 |
+| 2 — Cover the engine | 2.5 |
+| 3 — Uptime checks | 0.5 |
+| **Total** | **5.5** |
 
-### Phase 5 — Connect Better Stack as the first one
-
-Point the new capability at Better Stack's tool server. Everything it offers is
-read-only, which is why it is the right first target.
-
-Ends when an admin can ask Ask Sonae "did anything break today?" and get a real
-answer from live data.
-
-### Phase 6 — Decide what may leave the building, and write it down
-
-Logs can contain customer information, so pulling them into an assistant's context
-is a decision, not an accident. Set what an admin may retrieve, enforce it, and
-document both the monitoring setup and how to connect a tool server.
+**Phase 0 can make all of this moot** — if error reports cannot be made readable,
+the plan stops and the vendor choice reopens.
 
 ---
 
@@ -264,13 +256,8 @@ document both the monitoring setup and how to connect a tool server.
    unknown value fails immediately with a message naming it.
 6. A cloned product can be built with no monitoring, or a different vendor from
    Sonae's own, without editing source.
-7. An admin can connect a tool server from a screen, without a developer.
-8. Tools from a connected server obey the existing permission, tenant and approval
-   rules — proven by a test, not by inspection.
-9. One company cannot see or use another company's connected server.
-10. The Connections screen shows whether monitoring is on and working here, and a
-    row per connected tool server.
-11. Ask Sonae answers a plain-English question about live monitoring data.
+7. The Connections screen shows whether monitoring is on and working here.
+
 
 ---
 
@@ -309,10 +296,6 @@ dashboards. Worth revisiting only if a client insists on self-hosting.
 ## Out of scope
 
 - **Paid monitoring tiers.** Free allowances until something forces otherwise.
-- **Publishing Sonae's own tool server** so outside AI tools can reach a
-  workspace. Valuable and largely the same machinery, but a separate decision.
-- **Hand-built connectors for individual services.** Decided 2026-08-23: built per
-  clone as a client needs them, not stocked in advance.
 - **Writing a second monitoring adapter speculatively.** The seam exists from day
   one; the next adapter is written when a client asks.
 - **Tracing and performance monitoring.** This is about knowing what broke.

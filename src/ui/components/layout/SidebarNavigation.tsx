@@ -340,6 +340,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
   if (pathname.startsWith('/admin/users')) return 'Manage Users';
+  if (pathname.startsWith('/admin/ai/tool-servers')) return 'Tool Servers';
   if (pathname.startsWith('/admin/ai/tools')) return 'Tools';
   if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
   if (pathname.startsWith('/admin/governance')) return 'Governance';
@@ -598,12 +599,13 @@ export default function SidebarNavigation() {
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools'))} onClick={() => setActiveItem('Artificial Intelligence')} />
+                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools') && !pathname.startsWith('/admin/ai/tool-servers'))} onClick={() => setActiveItem('Artificial Intelligence')} />
                       {/* Nothing linked here. The tool catalogue was reachable
                           only by typing the URL, which is why the one screen
                           deciding what an agent can actually do had never been
                           opened. */}
-                      <SubNavItem label={t('tools')} href="/admin/ai/tools" isActive={pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Tools')} />
+                      <SubNavItem label={t('tools')} href="/admin/ai/tools" isActive={pathname === '/admin/ai/tools' || (pathname.startsWith('/admin/ai/tools/') && !pathname.startsWith('/admin/ai/tool-servers'))} onClick={() => setActiveItem('Tools')} />
+                      <SubNavItem label={t('toolServers')} href="/admin/ai/tool-servers" isActive={pathname.startsWith('/admin/ai/tool-servers')} onClick={() => setActiveItem('Tool Servers')} />
                     </NavItem>
 
                     {canSeeAdminSections && (

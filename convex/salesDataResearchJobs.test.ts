@@ -620,6 +620,7 @@ describe("two workers", () => {
         name: "file a site",
         description: "Files a site in a group.",
         handlerMapping: "salesCustomers.prospects.record",
+        modelName: "record_prospect_site",
         connectorKey: "sales-customer-research",
         requiredRole: "ADMIN" as const,
         createdAt: Date.now(),

@@ -35,6 +35,11 @@ export default function RegisterToolPage() {
     setIsSubmitting(true);
     try {
       await createTool({
+        // One box on screen, two fields behind it: the assistant's name for
+        // this tool, and the label shown in lists. An administrator should not
+        // have to type the same words twice; a friendlier label can be edited
+        // later without touching what the assistant calls it.
+        modelName: name.trim(),
         name: name.trim(),
         description: description.trim(),
         handlerMapping: handlerMapping.trim(),

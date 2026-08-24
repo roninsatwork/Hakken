@@ -6,6 +6,15 @@ export type ConnectorToolDefinition = {
   name: string;
   description: string;
   handlerMapping: string;
+  /**
+   * What the model is offered this tool as.
+   *
+   * Chosen, not derived. Lower-case snake_case, a verb and a noun — the model
+   * reads this to decide whether the tool is the one it wants, so
+   * `read_mailbox` earns its place where `gmail_read` merely described the
+   * plumbing. See `toolModelName.ts`.
+   */
+  modelName: string;
   requiredRole: "ADMIN" | "SUPER_ADMIN";
   sideEffectLevel: ToolSideEffectLevel;
   confirmationRequired: boolean;
@@ -65,6 +74,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "— to see what jobs exist, or give it a job id to see exactly what settings that job "
           + "needs. Use this before running a job rather than guessing its settings.",
         handlerMapping: "apify.actor.describe",
+        modelName: "describe_scraper_job",
         requiredRole: "ADMIN",
         // Reads the public catalogue. Nothing runs and nothing is charged.
         sideEffectLevel: "READ",
@@ -91,6 +101,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "straight away — the results arrive a few minutes later, so do not expect them in "
           + "the same answer.",
         handlerMapping: "apify.actor.run",
+        modelName: "run_scraper_job",
         requiredRole: "ADMIN",
         // It leaves the platform and it costs money per item collected.
         sideEffectLevel: "EXTERNAL",
@@ -135,6 +146,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           "Fetches a web page and returns its readable text. Use it to look something up on a "
           + "site rather than answering from memory. Give it the full address of one page.",
         handlerMapping: "web.scrape",
+        modelName: "read_web_page",
         requiredRole: "ADMIN",
         // Nothing is written, but it leaves the platform and it costs money,
         // which is not the same as reading our own data.
@@ -171,6 +183,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         name: "Knowledge Search",
         description: "Searches your approved documents and returns short quotes with their source.",
         handlerMapping: "knowledge.search",
+        modelName: "search_knowledge",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -199,6 +212,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         name: "Update Company Overview",
         description: "Updates the company overview, once a person has approved it.",
         handlerMapping: "company.overview.update",
+        modelName: "update_company_profile",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: true,
@@ -227,6 +241,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         description:
           "Creates a task for someone in this workspace. Give the person's email address to assign it; leave it out and the task waits for whoever picks it up.",
         handlerMapping: "task.create",
+        modelName: "create_task",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: true,
@@ -260,6 +275,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         name: "HTTP Request",
         description: "Calls the API you have set up. The address and credentials come from your settings, never from the agent.",
         handlerMapping: "http.request",
+        modelName: "call_api",
         requiredRole: "SUPER_ADMIN",
         sideEffectLevel: "EXTERNAL",
         confirmationRequired: true,
@@ -290,6 +306,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         name: "Send Notification",
         description: "Sends an email or notification to approved recipients.",
         handlerMapping: "notification.send",
+        modelName: "send_notification",
         requiredRole: "ADMIN",
         sideEffectLevel: "EXTERNAL",
         confirmationRequired: true,
@@ -330,6 +347,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "on the Reports page. Give it a focus when this run should pay particular attention "
           + "to something — a deal, a rep, a question from the board.",
         handlerMapping: "salesReports.generate",
+        modelName: "write_board_report",
         requiredRole: "ADMIN",
         // Writes a report into the tenant's own workspace; nothing external.
         sideEffectLevel: "WRITE",
@@ -381,6 +399,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "still has gaps. A prospect needs the same details as a customer — it is a site "
           + "somebody has to be able to ring — so both kinds come back from this.",
         handlerMapping: "salesCustomers.research.read",
+        modelName: "read_customer_record",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -405,6 +424,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "a person to check. Set notFound when the detail is not published anywhere you "
           + "looked — that is a useful answer and stops the customer being searched again.",
         handlerMapping: "salesCustomers.research.record",
+        modelName: "record_customer_detail",
         requiredRole: "ADMIN",
         // Writes into the workspace's own customer records, and only into
         // fields that are empty. Nothing external, and nothing overwritten.
@@ -469,6 +489,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "it already supplied, and the sites an earlier run already found. Give it a group "
           + "name, or call it with nothing to get the next group nobody has looked through yet.",
         handlerMapping: "salesCustomers.prospects.read",
+        modelName: "read_prospect_group",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -490,6 +511,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "are, and that is how the count stays honest. A site that is already a customer is "
           + "refused and named back to you, so you can stop offering it.",
         handlerMapping: "salesCustomers.prospects.record",
+        modelName: "record_prospect_site",
         requiredRole: "ADMIN",
         // Writes a prospect into the workspace's own records. It cannot touch a
         // customer: a site that matches one is refused rather than merged.
@@ -536,6 +558,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "given to another run rather than lost, and saying so is better than moving on "
           + "quietly.",
         handlerMapping: "salesCustomers.job.next",
+        modelName: "next_research_task",
         requiredRole: "ADMIN",
         // Writes only to the job's own queue — which item is in hand, which is
         // finished. It cannot touch a customer, a prospect or a finding.
@@ -579,6 +602,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "more parent groups or locations for an accepted group. Call it first, then call it "
           + "again after each group or group-location pass until it says the job is complete.",
         handlerMapping: "marketDiscovery.job.next",
+        modelName: "next_market_discovery_task",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -606,6 +630,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "that customer type. High-confidence groups are accepted; lower confidence is parked "
           + "for review.",
         handlerMapping: "marketDiscovery.groups.record",
+        modelName: "record_market_group",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -645,6 +670,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           "Changes a discovered parent group's outcome: accepted, needs check, duplicate or "
           + "rejected. Use this only when later evidence changes the first outcome.",
         handlerMapping: "marketDiscovery.groups.review",
+        modelName: "review_market_group",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -666,6 +692,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           "Returns the accepted parent group currently being expanded, plus the customers and "
           + "prospects already on file so duplicate locations are not re-filed.",
         handlerMapping: "marketDiscovery.locations.read",
+        modelName: "read_market_group_locations",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -687,6 +714,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "postcode — Comax delivers from England, so sites abroad are refused. Existing "
           + "customers and existing prospects are skipped and counted as duplicates.",
         handlerMapping: "marketDiscovery.locations.record",
+        modelName: "record_market_location",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -745,6 +773,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "report's first section. Returns every priced row with the customers it was "
           + "compared to, so you can read the results. Call this first; it opens the report.",
         handlerMapping: "opportunityReport.matchProspects",
+        modelName: "price_prospects",
         requiredRole: "ADMIN",
         // Writes the computed section onto the workspace's own report row.
         sideEffectLevel: "WRITE",
@@ -758,6 +787,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "each gap from what the siblings spend, and writes the report's second section and "
           + "its headline totals. Call it after the prospects are priced.",
         handlerMapping: "opportunityReport.findGroupGaps",
+        modelName: "find_chain_gaps",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -771,6 +801,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "report does not hold is refused, with the offending figures listed so you can "
           + "correct it. List anything that could not be priced as an exception.",
         handlerMapping: "opportunityReport.saveSummary",
+        modelName: "save_report_summary",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
@@ -826,6 +857,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           "Reads mail from the connected Gmail mailbox: new messages, or one message in full. "
           + "Reads only — nothing is sent, marked, or deleted.",
         handlerMapping: "gmail.read",
+        modelName: "read_mailbox",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
         confirmationRequired: false,
@@ -848,6 +880,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           + "reply faster than a person could type. The reply lands in the mailbox's Sent folder "
           + "like any colleague's mail.",
         handlerMapping: "gmail.reply",
+        modelName: "reply_to_email",
         requiredRole: "ADMIN",
         // WRITE, with the rails in the handler beyond the model's reach:
         // reply-to-sender-only, no no-reply addresses, per-thread hourly

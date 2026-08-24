@@ -234,9 +234,11 @@ describe("describeStepKind", () => {
 
 describe("humaniseToolName", () => {
   it("turns a runtime tool name into something readable", () => {
-    expect(humaniseToolName("apify_actor_run")).toBe("Apify actor run");
+    // Chosen tool names read better here than the routing keys they replaced:
+    // "Run scraper job" rather than "Apify actor run".
+    expect(humaniseToolName("run_scraper_job")).toBe("Run scraper job");
     expect(humaniseToolName("apify.actor.describe")).toBe("Apify actor describe");
-    expect(humaniseToolName("knowledge_search")).toBe("Knowledge search");
+    expect(humaniseToolName("search_knowledge")).toBe("Search knowledge");
   });
 
   it("gives back nothing when there is no name to read", () => {

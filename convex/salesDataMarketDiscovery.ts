@@ -355,6 +355,7 @@ async function ensureAgentBindings(
         const toolId = await ctx.db.insert("aiTools", {
           name: builtIn.definition.name,
           description: builtIn.definition.description,
+          modelName: builtIn.definition.modelName,
           handlerMapping: builtIn.definition.handlerMapping,
           connectorKey: builtIn.connector.key,
           secretRefKeys: builtIn.definition.secretRefKeys ?? [],

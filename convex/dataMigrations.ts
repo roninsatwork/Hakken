@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { normalizeToolFunctionName } from "./aiToolExecutionService";
+import { BUILT_IN_TOOL_CONNECTORS } from "./toolConnectorDefinitions";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -204,6 +206,52 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       isDone: date >= today,
       processed: runs.length + calls.length,
       updated: buckets.length,
+    };
+  },
+
+  /**
+   * Gives every existing tool the name a model should know it by.
+   *
+   * Until this landed there was no such field: a tool reached the model as its
+   * *routing key* with the punctuation swapped for underscores. That was an
+   * accident which read well for some (`knowledge_search`) and badly for others
+   * (`salesCustomers_research_read`), and it meant a tool could not be renamed
+   * without being rerouted.
+   *
+   * Where the tool came from a built-in connector, the chosen name comes from
+   * that connector's definition — a real name, picked by a person. Where it did
+   * not, the tool was hand-made by a super-admin and nobody has expressed an
+   * intent beyond what it already presents as, so the old derived name is
+   * carried across rather than invented. Those are the only two sources, and
+   * neither guesses.
+   *
+   * Idempotent: a tool that already has one is skipped, so a resumed or
+   * re-triggered run is safe.
+   */
+  "2026-08-24-tool-model-names": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("aiTools").paginate({ cursor, numItems: batchSize });
+    const chosenByMapping = new Map(
+      BUILT_IN_TOOL_CONNECTORS.flatMap((connector) =>
+        connector.toolDefinitions.map((definition) =>
+          [definition.handlerMapping, definition.modelName] as const)),
+    );
+    let updated = 0;
+
+    for (const tool of page.page) {
+      if (tool.modelName) continue;
+
+      const modelName = chosenByMapping.get(tool.handlerMapping)
+        ?? normalizeToolFunctionName(tool.handlerMapping);
+
+      await ctx.db.patch(tool._id, { modelName });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
     };
   },
 

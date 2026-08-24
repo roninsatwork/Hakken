@@ -14,6 +14,7 @@ import {
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
 import { assertSafeSecretRefs } from "./connectorSecretPolicy";
 import { appError } from "./utils/appError";
+import { normaliseToolModelName } from "./toolModelName";
 import { internal } from "./_generated/api";
 import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 
@@ -128,6 +129,8 @@ async function syncConnectorTools(ctx: MutationCtx, args: {
     const toolPatch = {
       name: toolDefinition.name,
       description: toolDefinition.description,
+      // Chosen in the definition, never derived from the routing key.
+      modelName: toolDefinition.modelName,
       handlerMapping: toolDefinition.handlerMapping,
       connectorId: args.connector._id,
       connectorKey: args.connector.key,
@@ -793,10 +796,40 @@ export const getToolById = superAdminQuery({
   },
 });
 
+/**
+ * Check a model-facing name and prove nothing else is using it.
+ *
+ * Uniqueness has never been enforced on any tool name, so two tools could
+ * already have presented to a model under one word — at which point whichever
+ * the runtime matched first won, silently. Two tools are not required to be
+ * bound to the same agent for this to bite: an agent's tools change, and a name
+ * that is ambiguous anywhere is ambiguous eventually.
+ */
+async function claimToolModelName(
+  ctx: MutationCtx,
+  raw: string,
+  ignoreId?: Id<"aiTools">,
+): Promise<string> {
+  const modelName = normaliseToolModelName(raw);
+
+  const clash = await ctx.db
+    .query("aiTools")
+    .withIndex("by_model_name", (q) => q.eq("modelName", modelName))
+    .take(2);
+
+  if (clash.some((tool) => tool._id !== ignoreId)) {
+    throw appError("INVALID_INPUT", `Another tool is already offered to models as "${modelName}".`);
+  }
+
+  return modelName;
+}
+
 export const createTool = superAdminMutation({
   args: {
     name: v.string(),
     description: v.string(),
+    /** What the model is offered. Chosen, validated, and unique across tools. */
+    modelName: v.string(),
     handlerMapping: v.string(),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     inputSchema: v.optional(v.string()),
@@ -811,9 +844,12 @@ export const createTool = superAdminMutation({
     const now = Date.now();
     const contract = buildToolContractPatch(args);
 
+    const modelName = await claimToolModelName(ctx, args.modelName);
+
     return await ctx.db.insert("aiTools", {
       name: args.name,
       description: args.description,
+      modelName,
       handlerMapping: args.handlerMapping,
       requiredRole: args.requiredRole,
       ...contract,
@@ -831,6 +867,8 @@ export const updateTool = superAdminMutation({
     id: v.id("aiTools"),
     name: v.string(),
     description: v.string(),
+    /** What the model is offered. Chosen, validated, and unique across tools. */
+    modelName: v.string(),
     handlerMapping: v.string(),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     inputSchema: v.optional(v.string()),
@@ -843,10 +881,12 @@ export const updateTool = superAdminMutation({
     const existing = await ctx.db.get(args.id);
     if (!existing) throw appError("NOT_FOUND", "Tool not found.");
     const contract = buildToolContractPatch(args);
+    const modelName = await claimToolModelName(ctx, args.modelName, args.id);
 
     await ctx.db.patch(args.id, {
       name: args.name,
       description: args.description,
+      modelName,
       handlerMapping: args.handlerMapping,
       requiredRole: args.requiredRole,
       ...contract,

@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { AgentProviderAdapter, AgentToolDeclaration } from "./agentProviderTypes";
 import { getAgentProviderAdapter } from "./agentProviderRegistry";
+import { isToolVisibleToCompany } from "./mcpToolPolicy";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { v } from "convex/values";
 import type { Content, FunctionDeclaration, GenerateContentConfig, Tool } from "@google/genai";
@@ -92,6 +93,13 @@ type RuntimeToolMetadata = {
     inputSchema?: string;
     sideEffectLevel: ToolSideEffectLevel;
     confirmationRequired: boolean;
+    /**
+     * Whether this tool lives on a server the workspace connected.
+     *
+     * Carried so the person asked to approve a call is told it leaves the
+     * platform, and so autonomy cannot wave through a third party's write.
+     */
+    fromConnectedServer?: boolean;
 };
 
 type BatchSettlement = {
@@ -242,13 +250,47 @@ function parseToolResult(resultJson: string | undefined): unknown {
  * admin UI but never read here, so switching it on changed nothing. A control
  * that appears to restrict an agent and does not is worse than no control.
  */
+/**
+ * Whether an agent's autonomy applies to this particular tool.
+ *
+ * **The one thing autonomy does not buy** (tool-server plan, phase 6).
+ *
+ * The argument above holds because an autonomous agent's tools were chosen by
+ * somebody accountable *and the tools themselves are ours*. A tool on a
+ * connected server is neither: it was written by a third party, and that party
+ * can change what it does tomorrow without its name or its description
+ * changing. "Look at which tools it was given" stops being a way to see the
+ * consequences.
+ *
+ * So a tool on somebody else's server that is not a plain read always asks,
+ * whatever the agent's autonomy says. Reads are untouched — looking things up
+ * unattended is most of what an autonomous agent is for, and a read cannot
+ * change anything.
+ *
+ * **This is the only place that decides it.** Two functions used to: this one,
+ * and `canExecuteTool`, which re-derived the requirement and was handed the raw
+ * autonomy flag to stop it overruling the first. Two answers to one question is
+ * the fault, not the fix — so the answer is computed here and both are given it.
+ */
+function autonomyAppliesToTool(args: {
+    sideEffectLevel: ToolSideEffectLevel;
+    fromConnectedServer?: boolean;
+    agentRunsAutonomously?: boolean;
+}) {
+    if (args.agentRunsAutonomously !== true) return false;
+    return !(args.fromConnectedServer === true && args.sideEffectLevel !== "READ");
+}
+
 function getToolConfirmationRequired(
     sideEffectLevel: ToolSideEffectLevel,
     configured?: boolean,
     agentRequiresApproval?: boolean,
     agentRunsAutonomously?: boolean,
+    fromConnectedServer?: boolean,
 ) {
-    if (agentRunsAutonomously === true) return false;
+    if (autonomyAppliesToTool({ sideEffectLevel, fromConnectedServer, agentRunsAutonomously })) {
+        return false;
+    }
     if (agentRequiresApproval === true) return true;
     return sideEffectLevel === "READ" ? (configured ?? false) : true;
 }
@@ -274,8 +316,14 @@ function calculateModelCostGBP(args: {
     });
 }
 
-function getApprovalRequiredMessage(toolName: string) {
-    return `Approval required before continuing. The agent requested "${toolName}", and an administrator must approve or reject that tool call.`;
+function getApprovalRequiredMessage(toolName: string, fromConnectedServer?: boolean) {
+    const destination = fromConnectedServer
+        // Worth saying plainly. Everything else an agent asks to do happens
+        // inside this platform; this one leaves it, carrying the workspace's
+        // own credential to somebody else's system.
+        ? ` That tool runs on a server this workspace has connected, so approving it sends the request outside the platform.`
+        : "";
+    return `Approval required before continuing. The agent requested "${toolName}", and an administrator must approve or reject that tool call.${destination}`;
 }
 
 function getApprovedToolCompletionMessage(args: {
@@ -407,6 +455,12 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   for (const junction of agentTools) {
     const toolDef = await ctx.runQuery(internal.aiTools.getToolInternal, { id: junction.toolId });
     if (toolDef?.isActive === false) continue;
+    // Agents are global; tools are not always. A tool that arrived from a
+    // company's own connected server is reached with that company's credential,
+    // so a shared agent running for anyone else must not be offered it — even if
+    // a binding exists. This is the boundary, and it is here rather than at the
+    // binding screen because this is the last place before a model sees the tool.
+    if (toolDef && !isToolVisibleToCompany(toolDef, owner.companyId)) continue;
     const schemaStr = toolDef && "inputSchema" in toolDef && typeof toolDef.inputSchema === "string"
       ? toolDef.inputSchema
       : undefined;
@@ -415,6 +469,7 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
         const declaration = buildProviderToolDeclaration({
           name: toolDef.name,
           description: toolDef.description,
+          modelName: toolDef.modelName,
           handlerMapping: toolDef.handlerMapping,
           requiredRole: toolDef.requiredRole,
           inputSchema: schemaStr,
@@ -432,7 +487,9 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
             toolDef.confirmationRequired,
             agent.humanApprovalRequired,
             agent.autonomousToolExecution,
+            Boolean(toolDef.mcpServerId),
           ),
+          fromConnectedServer: Boolean(toolDef.mcpServerId),
         });
       } catch (error) {
         console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error, "Unknown Engine Exception"));
@@ -1494,7 +1551,16 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     // because canExecuteTool re-derives the confirmation
                     // requirement from the side-effect level and would otherwise
                     // overrule it — parking an autonomous agent on every write.
-                    autonomous: execution.agent.autonomousToolExecution === true,
+                    //
+                    // Not the raw flag: whether autonomy applies to *this* tool,
+                    // from the one function that decides it. Handing over the raw
+                    // flag is what let an autonomous agent write to a connected
+                    // server without anyone being asked.
+                    autonomous: autonomyAppliesToTool({
+                        sideEffectLevel: (toolMetadata?.sideEffectLevel ?? "READ"),
+                        fromConnectedServer: toolMetadata?.fromConnectedServer,
+                        agentRunsAutonomously: execution.agent.autonomousToolExecution === true,
+                    }),
                 });
 
                 // Already refused, so do not ask again. A refusal is fed back to the
@@ -1516,7 +1582,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     })
                 ) {
                     toolCallCount += 1;
-                    const approvalMessage = getApprovalRequiredMessage(toolCall.name);
+                    const approvalMessage = getApprovalRequiredMessage(toolCall.name, toolMetadata.fromConnectedServer);
                     stepIndex += 1;
                     const toolStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                         runId,
@@ -2539,6 +2605,16 @@ export const resumeApprovedToolCall = internalAction({
         userId: context.approval.reviewedBy,
         runId: context.approval.runId,
         toolCallId: context.toolCall._id,
+        // Which catalogue row the agent actually invoked.
+        //
+        // **This was missing**, and the inline path a thousand lines above has
+        // always passed it. Any handler that resolves its connector through the
+        // invoked tool — every Gmail call, every tool on a connected server —
+        // therefore lost track of which install it belonged to the moment a
+        // human approved it. It worked unapproved and failed approved, which is
+        // the hardest kind of fault to notice. Found 2026-08-24 by the first
+        // tool-server write to go through this path.
+        ...(context.toolCall.toolId ? { toolId: context.toolCall.toolId } : {}),
         fallbackQuery: context.run.objective,
       });
       status = "SUCCESS";

@@ -39,6 +39,7 @@ describe("Agent Runs", () => {
         name: "Knowledge Search",
         description: "Search scoped knowledge.",
         handlerMapping: "knowledge.search",
+        modelName: "search_knowledge",
         requiredRole: "ADMIN",
         createdAt: Date.now(),
         createdBy: superAdminId,
@@ -75,7 +76,7 @@ describe("Agent Runs", () => {
       stepId,
       agentId,
       toolId,
-      normalizedToolName: "knowledge_search",
+      normalizedToolName: "search_knowledge",
       handlerMapping: "knowledge.search",
       argumentsJson: '{"query":"policy"}',
       redactedArgumentsJson: '{"query":"policy"}',
@@ -97,7 +98,7 @@ describe("Agent Runs", () => {
       requestedBy: userId,
       status: "PENDING",
       message: "Approve knowledge lookup?",
-      previewJson: '{"tool":"knowledge_search"}',
+      previewJson: '{"tool":"search_knowledge"}',
     });
 
     await t.mutation(internal.agentRuns.recordRunUsageInternal, {
@@ -140,7 +141,7 @@ describe("Agent Runs", () => {
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({ kind: "PLAN", status: "SUCCESS", stepIndex: 1 });
     expect(toolCalls).toHaveLength(1);
-    expect(toolCalls[0]).toMatchObject({ normalizedToolName: "knowledge_search", status: "SUCCESS" });
+    expect(toolCalls[0]).toMatchObject({ normalizedToolName: "search_knowledge", status: "SUCCESS" });
     expect(approvals).toHaveLength(1);
     expect(approvals[0]).toMatchObject({ status: "PENDING", message: "Approve knowledge lookup?" });
   });
@@ -747,7 +748,7 @@ describe("Agent Runs", () => {
       await ctx.db.insert("agentToolCalls", {
         runId: successRunAId,
         agentId,
-        normalizedToolName: "knowledge_search",
+        normalizedToolName: "search_knowledge",
         handlerMapping: "knowledge.search",
         argumentsJson: "{}",
         resultJson: "{}",
@@ -981,7 +982,7 @@ describe("Agent Runs", () => {
       await ctx.db.insert("agentToolCalls", {
         runId: successRunId,
         agentId: supportAgentId,
-        normalizedToolName: "knowledge_search",
+        normalizedToolName: "search_knowledge",
         handlerMapping: "knowledge.search",
         argumentsJson: "{}",
         resultJson: "{}",
@@ -1481,7 +1482,7 @@ describe("what an agent did on its own account", () => {
     // agents do. All of it on the trail is a trail nobody can read.
     await t.mutation(internal.agentRuns.insertToolCallInternal, {
       ...call,
-      normalizedToolName: "knowledge_search",
+      normalizedToolName: "search_knowledge",
       sideEffectLevel: "READ",
     });
 

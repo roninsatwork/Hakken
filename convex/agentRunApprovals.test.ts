@@ -66,7 +66,7 @@ describe("Agent Run Approvals", () => {
         runId: runAId,
         stepId: stepAId,
         agentId,
-        normalizedToolName: "knowledge_search",
+        normalizedToolName: "search_knowledge",
         handlerMapping: "knowledge.search",
         argumentsJson: '{"query":"policy"}',
         status: "APPROVAL_REQUIRED",

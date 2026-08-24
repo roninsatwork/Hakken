@@ -35,7 +35,7 @@ describe("translating turns", () => {
   test("turns a tool request into an assistant tool_use block", () => {
     const messages = toAnthropicMessages([
       { role: "user", parts: [{ text: "Look it up" }] },
-      { role: "model", parts: [{ functionCall: { name: "knowledge_search", args: { query: "refunds" } } }] },
+      { role: "model", parts: [{ functionCall: { name: "search_knowledge", args: { query: "refunds" } } }] },
     ]);
 
     expect(messages[1]).toEqual({
@@ -43,7 +43,7 @@ describe("translating turns", () => {
       content: [{
         type: "tool_use",
         id: buildToolUseId(1, 0),
-        name: "knowledge_search",
+        name: "search_knowledge",
         input: { query: "refunds" },
       }],
     });
@@ -55,10 +55,10 @@ describe("translating turns", () => {
     // as an assistant turn is rejected outright.
     const messages = toAnthropicMessages([
       { role: "user", parts: [{ text: "Look it up" }] },
-      { role: "model", parts: [{ functionCall: { name: "knowledge_search", args: {} } }] },
+      { role: "model", parts: [{ functionCall: { name: "search_knowledge", args: {} } }] },
       {
         role: "function",
-        parts: [{ functionResponse: { name: "knowledge_search", response: { content: { status: "success", data: [] } } } }],
+        parts: [{ functionResponse: { name: "search_knowledge", response: { content: { status: "success", data: [] } } } }],
       },
     ]);
 
@@ -165,11 +165,11 @@ describe("serialising tool results", () => {
 describe("tool declarations", () => {
   test("converts to Anthropic's shape", () => {
     expect(toAnthropicTools([{
-      name: "knowledge_search",
+      name: "search_knowledge",
       description: "Search knowledge.",
       parametersJsonSchema: { type: "object", properties: { query: { type: "string" } } },
     }])).toEqual([{
-      name: "knowledge_search",
+      name: "search_knowledge",
       description: "Search knowledge.",
       input_schema: { type: "object", properties: { query: { type: "string" } } },
     }]);

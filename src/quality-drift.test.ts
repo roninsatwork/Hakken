@@ -1172,6 +1172,63 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
   }, 15_000);
 
+  /**
+   * A tool's model-facing name is written down in exactly one place.
+   *
+   * Until 2026-08-24 a tool reached the model as its routing key with the
+   * punctuation swapped for underscores, so "what is this tool called" had two
+   * answers and neither field was honest. The fix gave a tool an explicit
+   * `modelName`, chosen per tool.
+   *
+   * The fix only holds if nothing copies that name somewhere else. A tool name
+   * written into a prompt, a fixture, a document or a screen goes stale the
+   * moment the tool is renamed — and goes stale silently, because nothing
+   * checks a string against a database. So the names live in the connector
+   * definitions, and everywhere else reads them.
+   *
+   * This is deliberately a name-by-name check rather than a pattern: a pattern
+   * for "looks like a tool name" would match half the codebase.
+   */
+  test('a tool model name is not hardcoded outside its definition', () => {
+    const allowedFiles = new Set([
+      // Where the names are chosen. The single source.
+      'convex/toolConnectorDefinitions.ts',
+      // The backfill that gave existing rows their name, which must name them.
+      'convex/dataMigrations.ts',
+      // The demo seed builds one tool directly and names it from a constant.
+      'convex/localDemoSeed.ts',
+      'src/quality-drift.test.ts',
+    ]);
+
+    const chosenNames = [
+      'describe_scraper_job', 'run_scraper_job', 'read_web_page', 'search_knowledge',
+      'update_company_profile', 'create_task', 'call_api', 'send_notification',
+      'write_board_report', 'read_customer_record', 'record_customer_detail',
+      'read_prospect_group', 'record_prospect_site', 'next_research_task',
+      'next_market_discovery_task', 'record_market_group', 'review_market_group',
+      'read_market_group_locations', 'record_market_location', 'price_prospects',
+      'find_chain_gaps', 'save_report_summary', 'read_mailbox', 'reply_to_email',
+    ];
+
+    const files = walkRepoFiles(repoRoot, repoTextExtensions);
+    const offenders = files.flatMap((filePath) => {
+      const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+      // Tests may name a tool: that is what a fixture is for, and a renamed
+      // tool breaking its own test is the system working.
+      if (allowedFiles.has(normalizedPath) || /\.test\.[jt]sx?$/.test(normalizedPath)) return [];
+
+      const contents = fs.readFileSync(filePath, 'utf8');
+      return chosenNames
+        .filter((name) => contents.includes(`"${name}"`) || contents.includes(`'${name}'`))
+        .map((name) => `${normalizedPath}: "${name}"`);
+    });
+
+    expect(
+      offenders,
+      `A tool's model-facing name is hardcoded outside its definition. It will go stale silently the next time that tool is renamed — read it from the tool instead:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  }, 15_000);
+
   test('provider SDK imports remain classified while adapters mature', () => {
     const allowedProviderSdkImportFiles = new Set([
       'convex/agentRuntime.ts',

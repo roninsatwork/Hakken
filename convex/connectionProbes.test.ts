@@ -354,3 +354,112 @@ describe("the connections screen", () => {
     ).rejects.toThrow("Unauthorized access to platform maintenance");
   });
 });
+
+/**
+ * Tool servers on the Connections screen (tool-server plan, phase 7).
+ *
+ * A workspace's connected servers belong here for the same reason a mailbox
+ * does: this is where a person looks when something has stopped working, and a
+ * server that has gone quiet must not be discoverable only on its own page.
+ *
+ * The witness is the last discovery, because that is the only moment the
+ * platform genuinely contacts one — the same distinction the connector rows
+ * draw between "configured" and "answering".
+ */
+describe("tool servers on the connections list", () => {
+  async function seedServer(
+    t: ReturnType<typeof setup>,
+    overrides: Partial<{
+      name: string;
+      status: "CONNECTED" | "DISABLED" | "ERROR";
+      lastDiscoveryOk: boolean;
+      lastDiscoveryMessage: string;
+      lastDiscoveryAt: number;
+    }> = {},
+  ) {
+    const companyId = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() }));
+
+    return await t.run(async (ctx) => await ctx.db.insert("mcpServers", {
+      companyId,
+      name: overrides.name ?? "Finance",
+      url: "https://finance.example.com/mcp",
+      authMode: "NONE",
+      status: overrides.status ?? "CONNECTED",
+      ...(overrides.lastDiscoveryOk !== undefined ? { lastDiscoveryOk: overrides.lastDiscoveryOk } : {}),
+      ...(overrides.lastDiscoveryMessage ? { lastDiscoveryMessage: overrides.lastDiscoveryMessage } : {}),
+      ...(overrides.lastDiscoveryAt ? { lastDiscoveryAt: overrides.lastDiscoveryAt } : {}),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+  }
+
+  const listAs = async (t: ReturnType<typeof setup>) => {
+    const superAdminId = await seedSuperAdmin(t, "servers@probes.test");
+    return await t.withIdentity({ subject: superAdminId })
+      .query(api.connectionProbes.listConnections, {});
+  };
+
+  test("a working server is listed with what the last check found", async () => {
+    const t = setup();
+    await seedServer(t, {
+      lastDiscoveryOk: true,
+      lastDiscoveryMessage: "Found 3 tools.",
+      lastDiscoveryAt: 1_700_000_000_000,
+    });
+
+    const row = (await listAs(t)).find((entry) => entry.kind === "TOOL_SERVER");
+    expect(row).toMatchObject({
+      name: "Finance",
+      working: true,
+      detail: "Found 3 tools.",
+      checkedAt: 1_700_000_000_000,
+    });
+  });
+
+  test("a server that failed its last check needs attention, with the reason", async () => {
+    const t = setup();
+    await seedServer(t, {
+      status: "ERROR",
+      lastDiscoveryOk: false,
+      lastDiscoveryMessage: "The server did not answer within 15 seconds.",
+    });
+
+    const row = (await listAs(t)).find((entry) => entry.kind === "TOOL_SERVER");
+    expect(row?.working).toBe(false);
+    expect(row?.detail).toContain("did not answer");
+  });
+
+  test("a server nothing has checked never wears a light it has not earned", async () => {
+    const t = setup();
+    await seedServer(t);
+
+    const row = (await listAs(t)).find((entry) => entry.kind === "TOOL_SERVER");
+    expect(row?.working).toBeNull();
+    expect(row?.checkedAt).toBeNull();
+  });
+
+  test("a switched-off server is listed, and says why nothing is being checked", async () => {
+    // Hiding it would make "no server is connected" look exactly like
+    // "the server is fine", which is the failure this screen exists to prevent.
+    const t = setup();
+    await seedServer(t, { status: "DISABLED", lastDiscoveryOk: true });
+
+    const row = (await listAs(t)).find((entry) => entry.kind === "TOOL_SERVER");
+    expect(row?.working).toBeNull();
+    expect(row?.detail).toContain("Switched off");
+  });
+
+  test("a broken server sorts above a working one", async () => {
+    // This screen is scanned in a hurry. Rows that need a person must never be
+    // below the fold.
+    const t = setup();
+    await seedServer(t, { name: "Warehouse", lastDiscoveryOk: true });
+    await seedServer(t, { name: "Finance", status: "ERROR", lastDiscoveryOk: false });
+
+    const names = (await listAs(t))
+      .filter((entry) => entry.kind === "TOOL_SERVER")
+      .map((entry) => entry.name);
+    expect(names).toEqual(["Finance", "Warehouse"]);
+  });
+});

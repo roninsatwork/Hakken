@@ -83,6 +83,7 @@ async function seed(args: { installTools?: boolean } = {}) {
         name: "web.scrape",
         description: "Read a page.",
         handlerMapping: "web.scrape",
+        modelName: "read_web_page",
         connectorKey: "sonae-firecrawl",
         requiredRole: "ADMIN",
         sideEffectLevel: "EXTERNAL",
@@ -116,7 +117,7 @@ async function markPageRead(
     await ctx.db.insert("agentToolCalls", {
       runId: args.runId,
       agentId: args.agentId,
-      normalizedToolName: "web_scrape",
+      normalizedToolName: "read_web_page",
       handlerMapping: "web.scrape",
       argumentsJson: JSON.stringify({ url: args.url }),
       resultJson: "{}",

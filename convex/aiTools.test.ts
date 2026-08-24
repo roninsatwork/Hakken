@@ -6,6 +6,9 @@ import schema from "./schema";
 const toolInput = {
   name: "CRM Lookup",
   description: "Look up CRM data for an agent.",
+  // Three names, three jobs: the label above, what the model is offered here,
+  // and where the call is routed below.
+  modelName: "look_up_crm_record",
   handlerMapping: "crm.lookup",
   requiredRole: "ADMIN" as const,
   inputSchema: '{"type":"object","required":["accountId"],"properties":{"accountId":{"type":"string"}}}',
@@ -464,6 +467,7 @@ describe("AI Tools Authorization", () => {
     await superAdminClient.mutation(api.aiTools.createTool, {
       name: "Calendar Connector",
       description: "Book meetings.",
+      modelName: "book_meeting",
       handlerMapping: "calendar.book",
       requiredRole: "ADMIN",
     });
@@ -510,6 +514,7 @@ describe("AI Tools Authorization", () => {
         id: toolId,
         name: "Blocked Update",
         description: "Should fail",
+        modelName: "blocked_update",
         handlerMapping: "blocked.update",
         requiredRole: "ADMIN",
       })
@@ -520,6 +525,7 @@ describe("AI Tools Authorization", () => {
         id: toolId,
         name: "Updated CRM Lookup",
         description: "Updated description.",
+        modelName: "look_up_crm_record",
         handlerMapping: "crm.updatedLookup",
         requiredRole: "SUPER_ADMIN",
         inputSchema: '{"type":"object","properties":{"id":{"type":"string"}}}',

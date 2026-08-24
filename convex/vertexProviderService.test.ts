@@ -128,7 +128,7 @@ describe("vertex provider service", () => {
         candidates: [{
           content: {
             parts: [{
-              functionCall: { name: "apify_actor_run", args: { actorId: "rightmove" } },
+              functionCall: { name: "run_scraper_job", args: { actorId: "rightmove" } },
               thoughtSignature: "signature-one",
             }],
           },
@@ -154,7 +154,7 @@ describe("vertex provider service", () => {
 
     expect(response.functionCalls).toEqual([
       {
-        name: "apify_actor_run",
+        name: "run_scraper_job",
         args: { actorId: "rightmove" },
         thoughtSignature: "signature-one",
       },

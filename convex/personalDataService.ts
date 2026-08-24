@@ -136,6 +136,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     ["toolConnectorSecretRefs", ["updatedBy"]],
     ["toolConnectorOAuthConnections", ["initiatedBy"]],
     ["aiTools", ["createdBy"]],
+    ["mcpServers", ["createdBy"]],
     ["workflows", ["createdBy"]],
     ["workflowExecutions", ["startedBy"]],
     ["schedules", ["createdBy"]],

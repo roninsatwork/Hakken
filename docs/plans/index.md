@@ -7,13 +7,15 @@ completed work.
 
 ## Active Plans
 
-- [Knowing When It Breaks](./active/monitoring-and-tool-server-plan.md) —
-  nothing tells anyone when Sonae breaks today. Better Stack across both halves:
-  the clickable application out of the box, and the engine — agent runs,
-  workflows, scheduled jobs — reported by our own code so the vendor stays
-  swappable. Then Sonae learns to connect to a published tool server, with
-  Better Stack as the first one. Opens with a proof that can stop the plan.
-  Decided 2026-08-23.
+- [Sonae Speaks The Standard Tool Plug](./active/tool-server-plan.md) — connect
+  to a service's own published tool server and get its tools without writing an
+  integration. Read-only first; the real work is that tools become tenant-shaped
+  for the first time. Agreed 2026-08-23, **delivered 2026-08-24**; all eight phases built, verified and documented.
+
+- [Knowing When It Breaks — PARKED](./active/monitoring-plan.md) — nothing tells
+  anyone when Sonae breaks. Better Stack across both halves, with the engine
+  reported by our own code so the vendor stays swappable. **Decided then parked
+  2026-08-23, not started.** The problem it solves is still open. ~5.5 days.
 
 - [The Clean Cut — Turning A Clone Into A Client's Own Product](./active/client-product-cut-plan.md) —
   how a client-owned build stops shipping with four in ten files belonging to

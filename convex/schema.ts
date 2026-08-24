@@ -2623,14 +2623,141 @@ export default defineSchema({
       filterFields: ["companyId"],
     }),
 
+  /**
+   * A tool server a company has connected.
+   *
+   * The platform's own connectors are a curated catalogue: a fixed key, a known
+   * shape, installed per workspace. A tool server is the opposite — an address
+   * an administrator supplies, offering whatever tools it chooses to offer.
+   * Putting arbitrary customer-created rows into the connector catalogue would
+   * make every catalogue screen a mixture of platform capability and one
+   * client's private plumbing, so they are separate tables that happen to feed
+   * the same tool library.
+   *
+   * `companyId` is **required**, deliberately. Elsewhere an absent company means
+   * "global", and `aiToolExecutionService` carries an explicit warning about a
+   * global and a tenant install being confused. There is no global tool server
+   * and there should not be one: a server is somebody's account, reached with
+   * somebody's credential.
+   *
+   * Agents stay global (see `docs/plans/active/tool-server-plan.md`). What a
+   * shared agent may reach is decided by the company the run belongs to, never
+   * by narrowing the agent.
+   */
+  mcpServers: defineTable({
+    companyId: v.id("companies"),
+    /** What the administrator called it. Unique within a company. */
+    name: v.string(),
+    /** Checked by `validateHttpConnectorBaseUrl` before it is ever stored. */
+    url: v.string(),
+    authMode: v.union(v.literal("NONE"), v.literal("SECRET_REF")),
+    /** A pointer into the vault, never a credential. See `connectorSecretPolicy`. */
+    secretRef: v.optional(v.string()),
+    status: v.union(
+      v.literal("CONNECTED"),
+      v.literal("DISABLED"),
+      v.literal("ERROR")
+    ),
+    // What the last attempt to contact this server actually found. These only
+    // ever move when a real request was made and answered — the same
+    // distinction `toolConnectors` draws between a configuration check and a
+    // probe, and for the same reason: "configured" and "reachable" are
+    // different questions and conflating them hides the one that matters.
+    lastDiscoveryAt: v.optional(v.number()),
+    lastDiscoveryOk: v.optional(v.boolean()),
+    lastDiscoveryMessage: v.optional(v.string()),
+    discoveredToolCount: v.optional(v.number()),
+    /** What the server called itself, for a screen that would otherwise show only a URL. */
+    serverLabel: v.optional(v.string()),
+    /** The version the server agreed to speak, which may be older than ours. */
+    protocolVersion: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.id("users")),
+  })
+    .index("by_company", ["companyId"])
+    .index("by_company_name", ["companyId", "name"]),
+
+  /**
+   * What a connected server said it offers, exactly as discovered.
+   *
+   * Deliberately **not** `aiTools`. Discovering what a server can do and letting
+   * an agent do it are different decisions, and collapsing them would mean
+   * connecting a server silently armed it. These rows are a record of what was
+   * found; phase 3 of the tool-server plan is what promotes them into tools an
+   * agent may be given, under the company boundary.
+   *
+   * `companyId` is carried here as well as on the server, denormalised on
+   * purpose: every read of this table is scoped by company, and a scoped read
+   * that has to join through another table to learn its scope is one refactor
+   * away from being an unscoped read.
+   *
+   * **The contents are untrusted.** Names and descriptions are written by
+   * whoever runs the server. `mcpProtocol` bounds and cleans them on the way in;
+   * anything rendering a description into a prompt owes it the same treatment
+   * retrieved documents already get.
+   */
+  mcpServerTools: defineTable({
+    serverId: v.id("mcpServers"),
+    companyId: v.id("companies"),
+    name: v.string(),
+    title: v.optional(v.string()),
+    description: v.string(),
+    /** JSON Schema for the arguments, as a string. Validated before any call is made. */
+    inputSchemaJson: v.string(),
+    outputSchemaJson: v.optional(v.string()),
+    discoveredAt: v.number(),
+  })
+    .index("by_server", ["serverId"])
+    .index("by_company", ["companyId"])
+    .index("by_server_name", ["serverId", "name"]),
+
   // Global Tool Library
   aiTools: defineTable({
-    name: v.string(), // "search_web", "query_database"
+    /** The label an administrator types. Shown on screens; never reaches a model. */
+    name: v.string(),
     description: v.string(), // Provide clear instructions on what the tool does
-    handlerMapping: v.string(), // Points to internal mutation/action route (e.g., "internalActions.executeDatabaseQuery")
+    /**
+     * **What the model is offered this tool as.** Chosen per tool, never derived.
+     *
+     * Until 2026-08-24 there was no such field: the model was shown the routing
+     * key with its punctuation swapped for underscores. That was an accident
+     * that read well for some tools (`knowledge_search`) and badly for others
+     * (`salesCustomers_research_read`), and it welded the name to the routing so
+     * neither could move without the other.
+     *
+     * Optional here only because Convex cannot express "required once
+     * backfilled". It is required at every write path, and
+     * `toolModelName.test.ts` fails the build if a row is missing one. There is
+     * no fallback: a tool without this is not offered to a model at all.
+     */
+    modelName: v.optional(v.string()),
+    handlerMapping: v.string(), // Where the call is routed. Internal; never reaches a model.
     connectorId: v.optional(v.id("toolConnectors")),
     connectorKey: v.optional(v.string()),
     secretRefKeys: v.optional(v.array(v.string())),
+    /**
+     * Who owns this tool. **Absent means global** — every tool that predates
+     * connected servers, unchanged.
+     *
+     * A tool acquired an owner when companies gained the ability to connect
+     * their own servers: one company's tool is reached with one company's
+     * credential, so a shared agent running for another company must not see
+     * it. `isToolVisibleToCompany` in `mcpToolPolicy.ts` is the single rule,
+     * applied where tools are resolved for a run.
+     */
+    companyId: v.optional(v.id("companies")),
+    /** The server this tool was discovered from, so deleting it takes them too. */
+    mcpServerId: v.optional(v.id("mcpServers")),
+    /**
+     * What the server itself calls this tool.
+     *
+     * Distinct from `modelName`, which carries a prefix so two servers offering
+     * `search` stay apart. The server only knows its own name, so this is what
+     * is sent back when the tool is called — stored rather than re-derived,
+     * because reversing a prefix is a guess and this is not a place to guess.
+     */
+    mcpToolName: v.optional(v.string()),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     inputSchema: v.optional(v.string()),
     outputSchema: v.optional(v.string()),
@@ -2650,6 +2777,9 @@ export default defineSchema({
     .index("by_name", ["name"])
     .index("by_connector", ["connectorId"])
     .index("by_connector_key", ["connectorKey"])
+    .index("by_company", ["companyId"])
+    .index("by_mcp_server", ["mcpServerId"])
+    .index("by_model_name", ["modelName"])
     .index("by_createdAt", ["createdAt"])
     .searchIndex("search_name", { searchField: "name" }),
 

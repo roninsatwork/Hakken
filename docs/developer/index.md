@@ -43,6 +43,7 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [AI Rules And Prompts](./ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./ai-models-providers-and-costs.md)
 - [AI Tools And Connectors](./ai-tools-and-connectors.md)
+- [Tool Servers](./tool-servers.md)
 - [Analytics Rollups](./analytics-rollups.md)
 - [Audit Log Service](./audit-log-service.md)
 - [Agents](./agents.md)

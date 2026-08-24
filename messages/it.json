@@ -577,6 +577,7 @@
     "impersonatingLabel": "Workspace in Impersonificazione",
     "exitWorkspace": "Esci da Workspace",
     "tools": "Strumenti",
+    "toolServers": "Server di strumenti",
     "health": "Salute",
     "connections": "Connessioni",
     "salesData": "Dati di vendita",
@@ -1863,6 +1864,77 @@
             "configError": "Errore di Configurazione"
           }
         }
+      }
+    },
+    "toolServers": {
+      "title": "Server di strumenti",
+      "subtitle": "Sistemi collegati a questo spazio di lavoro e gli strumenti che offrono ai tuoi agenti.",
+      "hint": "Un server di strumenti \u00e8 un indirizzo che pubblica il proprio elenco di strumenti. Collegane uno e i suoi strumenti diventano disponibili per i tuoi agenti, senza che nessuno debba scrivere un'integrazione. Nulla viene attivato in automatico: collega un server, chiedigli cosa offre, aggiungi quegli strumenti e poi attivalo.",
+      "searchPlaceholder": "Cerca per nome o indirizzo",
+      "empty": "Nessun server collegato.",
+      "never": "Non ancora verificato",
+      "working": "In corso...",
+      "columns": {
+        "server": "Server",
+        "state": "Stato",
+        "tools": "Strumenti offerti",
+        "checked": "Ultima verifica"
+      },
+      "state": {
+        "CONNECTED": "Attivo",
+        "DISABLED": "Disattivato",
+        "ERROR": "Richiede attenzione"
+      },
+      "tools": {
+        "unknown": "Non ancora verificato",
+        "count": "{count, plural, =0 {Nessuno} =1 {1 strumento} other {# strumenti}}"
+      },
+      "buttons": {
+        "connect": "Collega un server",
+        "connecting": "Collegamento...",
+        "cancel": "Annulla",
+        "check": "Verifica la connessione",
+        "addTools": "Aggiungi i suoi strumenti alla libreria",
+        "switchOn": "Attiva",
+        "switchOff": "Disattiva",
+        "disconnect": "Scollega",
+        "dismiss": "Chiudi",
+        "close": "Chiudi"
+      },
+      "checked": {
+        "passedTitle": "Connessione funzionante",
+        "failedTitle": "Connessione non riuscita",
+        "passed": "{name} ha risposto.",
+        "failed": "{name} non ha risposto correttamente.",
+        "offers": "{count, plural, =0 {Non offre strumenti.} =1 {Offre 1 strumento} other {Offre # strumenti}}",
+        "nextStep": "Aggiungili alla libreria e poi attiva il server. Arrivano disattivati.",
+        "whatToDo": "Verifica che l'indirizzo sia corretto e, se il server richiede un accesso, che il riferimento alla credenziale sia configurato su questo ambiente. Poi riprova."
+      },
+      "notices": {
+        "connected": "{name} \u00e8 collegato. Verifica la connessione per vedere cosa offre.",
+        "toolsAdded": "{count, plural, =0 {Nessuno strumento aggiunto da {name}: verifica prima la connessione.} =1 {1 strumento aggiunto da {name}. Resta disattivato finch\u00e9 non lo attivi.} other {# strumenti aggiunti da {name}. Restano disattivati finch\u00e9 non li attivi.}}",
+        "switchedOn": "{name} \u00e8 attivo.",
+        "switchedOff": "{name} \u00e8 disattivato.",
+        "disconnected": "{name} \u00e8 stato scollegato, insieme ai suoi strumenti."
+      },
+      "modal": {
+        "title": "Collega un server di strumenti",
+        "description": "Assegna al server un nome riconoscibile e l'indirizzo a cui risponde. Il collegamento non lo contatta: potrai farlo subito dopo.",
+        "name": "Nome",
+        "url": "Indirizzo",
+        "secretRef": "Riferimento alla credenziale",
+        "secretHint": "Lascia vuoto se il server non richiede accesso. Se lo richiede, inserisci il riferimento alla credenziale, mai la credenziale stessa.",
+        "disconnectTitle": "Scollegare questo server?",
+        "disconnectConfirm": "{name} verr\u00e0 scollegato.",
+        "disconnectDetail": "I suoi strumenti vengono rimossi dalla libreria e gli agenti che li usano li perdono."
+      },
+      "placeholders": {
+        "name": "Ad esempio: Sistema contabile",
+        "url": "https://example.com/mcp",
+        "secretRef": "Ad esempio: vault/finance/token"
+      },
+      "errors": {
+        "unknown": "Qualcosa \u00e8 andato storto. Riprova."
       }
     },
     "aiTools": {
@@ -6396,7 +6468,8 @@
       "MAILBOX": "Casella email",
       "PHONE": "Linea telefonica",
       "PROVIDER": "Fornitore AI",
-      "WIDGET": "Widget di chat"
+      "WIDGET": "Widget di chat",
+      "TOOL_SERVER": "Server di strumenti"
     },
     "jobs": {
       "title": "Lavori pianificati",

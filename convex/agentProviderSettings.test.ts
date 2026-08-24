@@ -39,12 +39,12 @@ describe("agent provider settings reach the model", () => {
     it("offers search alongside the agent's own tools rather than instead of them", () => {
       const config = buildGoogleAgentConfig({
         ...base,
-        tools: [{ functionDeclarations: [{ name: "knowledge_search" }] }],
+        tools: [{ functionDeclarations: [{ name: "search_knowledge" }] }],
         webSearch: true,
       });
 
       expect(config.tools).toEqual([
-        { functionDeclarations: [{ name: "knowledge_search" }] },
+        { functionDeclarations: [{ name: "search_knowledge" }] },
         { googleSearch: {} },
       ]);
     });
@@ -66,7 +66,7 @@ describe("agent provider settings reach the model", () => {
         usingCache: true,
         cacheName: "cachedContents/abc",
         reasoningEffort: "LOW",
-        tools: [{ functionDeclarations: [{ name: "knowledge_search" }] }],
+        tools: [{ functionDeclarations: [{ name: "search_knowledge" }] }],
       });
 
       expect(config.cachedContent).toBe("cachedContents/abc");

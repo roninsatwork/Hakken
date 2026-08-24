@@ -70,8 +70,12 @@ export type ToolHandlerExecutionInput = {
 };
 
 export type ToolDefinitionInput = {
+  /** The administrator's label. Shown on screens; never offered to a model. */
   name: string;
   description: string;
+  /** What the model is offered. Chosen per tool — see `toolModelName.ts`. */
+  modelName?: string;
+  /** Where the call is routed. Internal; never offered to a model. */
   handlerMapping: string;
   requiredRole: ToolAccessRole;
   inputSchema?: unknown;
@@ -239,9 +243,27 @@ export function validateToolCallArgsAgainstSchema(args: {
   return { ok: errors.length === 0, errors };
 }
 
+/**
+ * What a model is told about one tool.
+ *
+ * The name comes from the tool's own `modelName` and from nowhere else. It used
+ * to be derived from the routing key, which welded together where a call goes
+ * and what the model calls it — so a tool could not be renamed without being
+ * rerouted, and every tool's name was really a plumbing decision.
+ *
+ * **A tool with no `modelName` throws rather than falling back.** A fallback
+ * would be a second answer to the question this field exists to answer, and the
+ * caller skips a tool it cannot declare — so a nameless tool is simply never
+ * offered. `toolModelName.test.ts` makes sure none exists to begin with.
+ */
 export function buildProviderToolDeclaration(tool: ToolDefinitionInput): ProviderToolDeclaration {
+  const modelName = tool.modelName?.trim();
+  if (!modelName) {
+    throw new Error(`Tool "${tool.name}" has no model name, so it cannot be offered to a model.`);
+  }
+
   return {
-    name: normalizeToolFunctionName(tool.handlerMapping),
+    name: modelName,
     description: tool.description,
     parametersJsonSchema: parseToolInputSchema(tool.inputSchema),
   };
@@ -421,6 +443,31 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    * every handler here follows. The connector resolves through the invoked
    * tool's own install, so a global and a tenant install cannot be confused.
    */
+  /**
+   * Any tool on any server a company has connected.
+   *
+   * **One entry for all of them, and deny-by-default is untouched.** The
+   * allowlist is still matched exactly; this is one deliberate addition, and
+   * anything not on the list still refuses. Which tool and which server are read
+   * from the invoked tool's own record — never from an argument, so an injected
+   * instruction has no field to set.
+   *
+   * Briefly, during phase 3, each imported tool needed its own entry here:
+   * the name a model was offered came from the handler mapping, so distinct
+   * names meant distinct mappings, which would have forced this allowlist to
+   * grow prefix matching. Phase 4 gave tools their own `modelName` and the need
+   * went away.
+   */
+  "mcp.call": async (input) => {
+    if (!input.toolId) {
+      return { ok: false, error: "This tool cannot be identified, so it was not run." };
+    }
+    return await input.ctx.runAction(internal.mcpToolCall.callServerTool, {
+      toolId: input.toolId,
+      ...(input.companyId ? { companyId: input.companyId } : {}),
+      args: input.args,
+    });
+  },
   "gmail.read": async (input) => {
     const messageId = getOptionalStringToolArg(input.args, "messageId");
     return await input.ctx.runAction(internal.gmailConnector.readMailbox, {

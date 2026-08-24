@@ -114,7 +114,7 @@ describe("assembling a reply", () => {
     // Arguments arrive as JSON fragments that are not parseable until the block
     // closes. Emitting on each delta would hand the runtime a broken object.
     const result = await accumulate([
-      sse({ type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "toolu_1", name: "knowledge_search" } }),
+      sse({ type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "toolu_1", name: "search_knowledge" } }),
       sse({ type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"query":' } }),
       sse({ type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '"refunds"}' } }),
       sse({ type: "content_block_stop", index: 0 }),
@@ -122,7 +122,7 @@ describe("assembling a reply", () => {
     ]);
 
     expect(result.toolCalls).toEqual([
-      { id: "toolu_1", name: "knowledge_search", args: { query: "refunds" } },
+      { id: "toolu_1", name: "search_knowledge", args: { query: "refunds" } },
     ]);
     expect(result.stopReason).toBe("tool_use");
   });
