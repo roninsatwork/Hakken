@@ -24,6 +24,21 @@ export function buildAppContentSecurityPolicy(env: SecurityHeaderEnvironment) {
   const development = env.NODE_ENV !== "production";
   const connectSources = new Set([
     "'self'",
+    // Textures inside a 3D model are unpacked into `blob:` URLs by the loader
+    // and then fetched back. Without this the model's shape loads and the
+    // pictures painted on it do not, so a character renders as a white
+    // silhouette with correct outlines — which is exactly how this was found,
+    // in Safari, on 2026-08-24. Chrome did not enforce it and the fault was
+    // invisible there.
+    //
+    // A `blob:` URL is minted by this page and readable only by it, so allowing
+    // it grants nothing an attacker could reach.
+    "blob:",
+    // The pose, face and hand tracking engine: its WebAssembly loader, and the
+    // three model files it downloads. Both were being refused, which is why the
+    // studio could not start tracking.
+    "https://cdn.jsdelivr.net",
+    "https://storage.googleapis.com",
     "https://api.openai.com",
     "https://ipapi.co",
     "https://www.google-analytics.com",
@@ -52,7 +67,14 @@ export function buildAppContentSecurityPolicy(env: SecurityHeaderEnvironment) {
         ...(development ? ["'unsafe-eval'"] : []),
         "https://www.googletagmanager.com",
         "https://www.google-analytics.com",
+        // The tracking engine loads its own WebAssembly bootstrap script from
+        // here, pinned to an exact version in `mediaPipeConfig.ts`.
+        "https://cdn.jsdelivr.net",
       ],
+      // The same engine runs its work off the main thread, from a worker it
+      // creates itself as a `blob:`. Without this the studio has no tracking at
+      // all, and says so only in the console.
+      workerSrc: ["'self'", "blob:"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
       connectSrc: [...connectSources],
