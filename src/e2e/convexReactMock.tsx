@@ -743,8 +743,28 @@ function pageData<T>(data: T[], page = 1, pageSize = 15) {
   };
 }
 
+/**
+ * The thread's messages, from the browser store that stands in for the database.
+ *
+ * **Returns `undefined` on the server, not `[]`.** The two mean different things
+ * to every screen that reads a query: `undefined` is "still loading" and `[]` is
+ * "there is nothing here". This lived on the wrong side of that line and it made
+ * the chat smoke test flaky.
+ *
+ * The store is `localStorage`, which the server cannot see. Returning `[]` there
+ * made the server render "Awaiting Instructions...", while the browser rendered
+ * the actual conversation — a hydration mismatch React resolves by *sometimes*
+ * keeping its own markup and sometimes keeping the server's. When it kept the
+ * server's, the message a person had just typed never appeared, the test timed
+ * out, and it looked like the chat was broken. Locally it usually passed; on CI,
+ * slower and single-worker, it did not.
+ *
+ * Saying "still loading" is both honest and identical on both sides: the spinner
+ * renders, hydration matches, and the real answer arrives once there is a window
+ * to read it from.
+ */
 function readThreadMessages(threadId: string) {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return undefined;
   const raw = window.localStorage.getItem(`sonae:e2e:thread:${threadId}`);
   if (!raw) return [];
   try {
@@ -785,6 +805,7 @@ type E2EFeedbackEntry = {
 
 const FEEDBACK_STORAGE_KEY = "sonae:e2e:feedback";
 
+/** As above: absent on the server means "not loaded", not "nothing recorded". */
 function readFeedbackStore(): Record<string, E2EFeedbackEntry> {
   if (typeof window === "undefined") return {};
   const raw = window.localStorage.getItem(FEEDBACK_STORAGE_KEY);
@@ -1249,8 +1270,18 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "movements:getFileUrl") {
     return null;
   }
-  if (path === "chat:getMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
-  if (path === "chatAdmin:getAdminThreadMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
+  // Gated on hydration, like `users:getMe` above. These read `localStorage`,
+  // which the server cannot see, so answering before the browser has taken over
+  // means the server and the first client render disagree — and React resolves
+  // that by regenerating the tree, sometimes keeping the server's markup. When
+  // it did, a message a person had just typed never appeared. That is what made
+  // the chat smoke test fail on CI and pass locally.
+  if (path === "chat:getMessages") {
+    return hasHydrated ? readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed")) : undefined;
+  }
+  if (path === "chatAdmin:getAdminThreadMessages") {
+    return hasHydrated ? readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed")) : undefined;
+  }
   if (path === "knowledge:getThreadDocuments") return [];
   // The Activity screen reads this before it can render anything. The generic
   // empty-array fall-through gave it no `totals`, so the whole screen crashed
