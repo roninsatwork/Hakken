@@ -79,6 +79,18 @@ describe("what the app is allowed to do", () => {
     expect(policy.directives.connectSrc).toContain("https://storage.googleapis.com");
   });
 
+  test("the tracking engine's WebAssembly can compile in production", () => {
+    // The one that only showed up on live. Compiling WebAssembly needs its own
+    // permission; locally it rode in on `'unsafe-eval'`, which production
+    // deliberately withholds. The studio said "camera unavailable" and the real
+    // reason sat in a console nobody was reading.
+    const policy = production();
+    expect(policy.directives.scriptSrc).toContain("'wasm-unsafe-eval'");
+    // And it is the narrow one: this must not become a licence to eval
+    // ordinary JavaScript in production.
+    expect(policy.directives.scriptSrc).not.toContain("'unsafe-eval'");
+  });
+
   test("the tracking engine can run off the main thread", () => {
     // It creates its own worker from a blob. Refused, there is no tracking at
     // all and the studio says nothing about why.

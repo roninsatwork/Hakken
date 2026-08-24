@@ -65,6 +65,16 @@ export function buildAppContentSecurityPolicy(env: SecurityHeaderEnvironment) {
         "'self'",
         "'unsafe-inline'",
         ...(development ? ["'unsafe-eval'"] : []),
+        // WebAssembly will not compile without an explicit allowance, and
+        // production deliberately does not grant `'unsafe-eval'`. Locally it
+        // worked only because development does — which is why movement tracking
+        // ran on a laptop and refused on live, saying only "camera unavailable"
+        // while the console explained itself to nobody.
+        //
+        // This permits compiling WebAssembly and nothing else. It does not
+        // reopen `eval` for ordinary JavaScript, which is what `'unsafe-eval'`
+        // would do and is exactly why production withholds it.
+        "'wasm-unsafe-eval'",
         "https://www.googletagmanager.com",
         "https://www.google-analytics.com",
         // The tracking engine loads its own WebAssembly bootstrap script from
