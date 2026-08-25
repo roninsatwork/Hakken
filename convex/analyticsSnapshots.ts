@@ -556,13 +556,24 @@ export const seedHistoricalSnapshots = internalAction({
     }
 });
 
+const SNAPSHOT_WIPE_BATCH_SIZE = 500;
+
 export const wipeSnapshots = internalMutation({
-    args: {},
-    handler: async (ctx) => {
-        const snaps = await ctx.db.query("analyticsDailySnapshots").take(10000);
+    args: { deletedSoFar: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const snaps = await ctx.db
+            .query("analyticsDailySnapshots")
+            .take(SNAPSHOT_WIPE_BATCH_SIZE);
         for (const s of snaps) {
             await ctx.db.delete(s._id);
         }
-        return snaps.length;
+
+        const deleted = (args.deletedSoFar ?? 0) + snaps.length;
+        if (snaps.length === SNAPSHOT_WIPE_BATCH_SIZE) {
+            await ctx.scheduler.runAfter(0, internal.analyticsSnapshots.wipeSnapshots, {
+                deletedSoFar: deleted,
+            });
+        }
+        return deleted;
     }
 });
