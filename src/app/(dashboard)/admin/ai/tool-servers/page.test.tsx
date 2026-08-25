@@ -100,13 +100,18 @@ describe("ToolServersPage", () => {
     show();
 
     fireEvent.click(screen.getByRole("button", { name: `${T}.buttons.connect` }));
-    fireEvent.change(screen.getByPlaceholderText(`${T}.placeholders.name`), {
+    const nameInput = await screen.findByPlaceholderText(
+      `${T}.placeholders.name`,
+      {},
+      { timeout: 5_000 },
+    );
+    fireEvent.change(nameInput, {
       target: { value: "  Warehouse  " },
     });
     fireEvent.change(screen.getByPlaceholderText(`${T}.placeholders.url`), {
       target: { value: "  https://warehouse.example.com/mcp  " },
     });
-    fireEvent.submit(screen.getByPlaceholderText(`${T}.placeholders.name`).closest("form")!);
+    fireEvent.submit(nameInput.closest("form")!);
 
     await waitFor(() => expect(createServer).toHaveBeenCalled());
     expect(createServer.mock.calls[0][0]).toMatchObject({
@@ -121,7 +126,12 @@ describe("ToolServersPage", () => {
     show();
 
     fireEvent.click(screen.getByRole("button", { name: `${T}.buttons.connect` }));
-    fireEvent.change(screen.getByPlaceholderText(`${T}.placeholders.name`), {
+    const nameInput = await screen.findByPlaceholderText(
+      `${T}.placeholders.name`,
+      {},
+      { timeout: 5_000 },
+    );
+    fireEvent.change(nameInput, {
       target: { value: "Warehouse" },
     });
     fireEvent.change(screen.getByPlaceholderText(`${T}.placeholders.url`), {
@@ -130,7 +140,7 @@ describe("ToolServersPage", () => {
     fireEvent.change(screen.getByPlaceholderText(`${T}.placeholders.secretRef`), {
       target: { value: "vault/warehouse/token" },
     });
-    fireEvent.submit(screen.getByPlaceholderText(`${T}.placeholders.name`).closest("form")!);
+    fireEvent.submit(nameInput.closest("form")!);
 
     await waitFor(() => expect(createServer).toHaveBeenCalled());
     expect(createServer.mock.calls[0][0]).toMatchObject({
@@ -177,7 +187,11 @@ describe("ToolServersPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: `${T}.buttons.disconnect` }));
 
-    expect(screen.getByText(`${T}.modal.disconnectDetail`)).toBeInTheDocument();
+    expect(await screen.findByText(
+      `${T}.modal.disconnectDetail`,
+      {},
+      { timeout: 5_000 },
+    )).toBeInTheDocument();
     expect(deleteServer).not.toHaveBeenCalled();
   });
 

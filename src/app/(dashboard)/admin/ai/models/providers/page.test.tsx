@@ -129,7 +129,7 @@ describe("AIModelProvidersPage", () => {
 
     // Nothing written yet — the click opened a confirmation.
     expect(setProviderEnabled).not.toHaveBeenCalled();
-    expect(screen.getByText(/stops that work/i)).toBeInTheDocument();
+    expect(await screen.findByText(/stops that work/i)).toBeInTheDocument();
     expect(screen.getByText(/Platform jobs: Chat, Title\./)).toBeInTheDocument();
     expect(screen.getByText(/Also chosen by 2 companies\./)).toBeInTheDocument();
 

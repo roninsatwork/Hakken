@@ -1,5 +1,3 @@
-"use client";
-
 import { WikiDiaryScreen } from "@/src/app/(dashboard)/admin/_features/wiki/WikiDiaryScreen";
 
 /** The global brain's diary — what the Platform Wiki learned, newest

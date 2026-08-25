@@ -26,7 +26,6 @@ import {
   parseAllowedDomains,
   WIDGET_CONFIG_TABS,
 } from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
@@ -141,6 +140,7 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const { validateUploadFile } = await import("@/src/lib/constants/uploads");
     const validation = validateUploadFile(file, "adminImage");
     if (!validation.allowed) {
       setFeedbackMessage(validation.reason);

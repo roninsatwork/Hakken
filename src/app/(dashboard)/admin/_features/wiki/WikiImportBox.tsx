@@ -9,12 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
-import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import {
-  buildUploadTitle,
-  collectPickedFiles,
-} from "@/src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils";
 
 /**
  * The one import (wiki-replaces-knowledge plan, screen 1): a website, a
@@ -84,6 +79,11 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
 
   const importFiles = (fileList: FileList | null) =>
     run(async () => {
+      const [{ resolveUploadContentType, validateUploadFile }, { buildUploadTitle, collectPickedFiles }] =
+        await Promise.all([
+          import("@/src/lib/constants/uploads"),
+          import("@/src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils"),
+        ]);
       const collected = collectPickedFiles(fileList);
       if (collected.length === 0) throw new Error(t("errors.missingFile"));
       for (const item of collected) {

@@ -65,7 +65,6 @@ export default function CompanyUsersPage() {
   const addUser = useMutation(api.users.addUser);
   const updateUser = useMutation(api.users.updateUser);
 
-  const unassignedSuperAdmins = useQuery(api.users.getUnassignedSuperAdmins, { companyId }) || [];
   const assignSuperAdmin = useMutation(api.users.assignSuperAdminToCompany);
   const detachSuperAdmin = useMutation(api.users.detachSuperAdminFromCompany);
 
@@ -77,6 +76,11 @@ export default function CompanyUsersPage() {
   const [deletingUser, setDeletingUser] = useState<CompanyUser | null>(null);
   const [detachingAdmin, setDetachingAdmin] = useState<CompanyUser | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<PendingInvite | null>(null);
+
+  const unassignedSuperAdmins = useQuery(
+    api.users.getUnassignedSuperAdmins,
+    isSuperAdmin && isAssignModalOpen ? { companyId } : "skip"
+  ) || [];
 
   const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);

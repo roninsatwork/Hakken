@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { KeyRound, Loader2, ChevronRight } from "lucide-react";
+import { ChevronRight, KeyRound, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -30,7 +30,7 @@ import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
  * of this arms race but the typed one-time code, which is immune by
  * construction because nothing in the email can spend it.
  */
-function VerifyContent() {
+export default function VerifyPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { signIn } = useAuthActions();
@@ -117,23 +117,5 @@ function VerifyContent() {
         )}
       </button>
     </div>
-  );
-}
-
-export default function VerifyPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-[16px] border border-border-dim bg-background p-8">
-        <Suspense
-          fallback={
-            <div className="flex justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-secondary" />
-            </div>
-          }
-        >
-          <VerifyContent />
-        </Suspense>
-      </div>
-    </main>
   );
 }

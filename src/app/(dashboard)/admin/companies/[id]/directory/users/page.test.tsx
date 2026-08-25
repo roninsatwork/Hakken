@@ -162,6 +162,20 @@ describe("CompanyUsersPage", () => {
     expect(screen.getByText("pending@acme.com")).toBeInTheDocument();
   });
 
+  it("subscribes to unassigned admins only after a system admin opens the assignment modal", () => {
+    render(<CompanyUsersPage />);
+
+    const unassignedAdminCalls = () => vi.mocked(useQuery).mock.calls.filter(([queryFn]) =>
+      getFunctionName(queryFn as never).includes("getUnassignedSuperAdmins")
+    );
+
+    expect(unassignedAdminCalls().at(-1)?.[1]).toBe("skip");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add System Admin" }));
+
+    expect(unassignedAdminCalls().at(-1)?.[1]).toEqual({ companyId: "company123" });
+  });
+
   it("filters users and invites via search input", () => {
     render(<CompanyUsersPage />);
     

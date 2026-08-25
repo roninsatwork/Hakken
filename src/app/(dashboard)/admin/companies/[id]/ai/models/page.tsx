@@ -44,27 +44,32 @@ type ModelDefaultRow = {
   } | null;
 };
 
+type ModelPickerOption = {
+  modelId: string;
+  providerKey: string;
+  displayName: string;
+  supportedUseCases: string[];
+  standardInputCostBelow200k?: number;
+  outputResponseCost?: number;
+};
+
 export default function CompanyModelDefaultsPage() {
   const t = useTranslations("admin.companyDetails.models");
   const tShared = useTranslations("ai.models.shared");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
 
-  const defaultsData = useQuery(api.aiModels.getCompanyModelDefaults, { companyId }) as {
+  const pageData = useQuery(api.aiModels.getCompanyModelDefaults, { companyId }) as {
     defaults: ModelDefaultRow[];
+    modelPickerOptions: ModelPickerOption[];
+    providerNames: Array<{ providerKey: string; displayName: string }>;
   } | undefined;
-  // Enabled models, narrowed in the database. This used to read the whole
-  // catalogue and filter here, which held up at twenty models and would not at
-  // four hundred.
-  const modelsData = useQuery(api.aiModels.getModelPickerOptions, {});
-  const providersData = useQuery(api.aiModels.getProviders);
+  const modelsData = pageData?.modelPickerOptions;
+  const providersData = pageData?.providerNames;
   const setCompanyDefault = useMutation(api.aiModels.setCompanyModelDefault);
   const clearCompanyDefault = useMutation(api.aiModels.clearCompanyModelDefault);
 
-  const activeModels = useMemo(
-    () => (modelsData ?? []).filter((model) => model.isEnabled),
-    [modelsData]
-  );
+  const activeModels = modelsData ?? [];
   const providerNameByKey = useMemo(
     () => new Map((providersData ?? []).map((provider) => [provider.providerKey, provider.displayName])),
     [providersData]
@@ -73,8 +78,8 @@ export default function CompanyModelDefaultsPage() {
   const [savingUseCase, setSavingUseCase] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
 
-  const rows = defaultsData?.defaults ?? [];
-  const isLoading = defaultsData === undefined || modelsData === undefined || providersData === undefined;
+  const rows = pageData?.defaults ?? [];
+  const isLoading = pageData === undefined;
 
   /**
    * A model's name as a person would write it, from whatever the row carries.

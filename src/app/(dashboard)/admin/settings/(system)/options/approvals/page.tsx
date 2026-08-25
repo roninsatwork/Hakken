@@ -1,5 +1,3 @@
-"use client";
-
 import { ApprovalExpirySection } from "../../../_components/ApprovalExpirySection";
 import { SettingsScreen } from "../../../_components/SettingsScreen";
 

@@ -67,9 +67,10 @@ describe("NewChatEvalPage", () => {
     });
   });
 
-  it("gives every box a label that addresses it", () => {
+  it("gives every box a label that addresses it", async () => {
     render(<NewChatEvalPage />);
 
+    await screen.findByLabelText("Name");
     expectStandardFormScreen({ minBoxes: 4 });
   });
 
@@ -78,6 +79,7 @@ describe("NewChatEvalPage", () => {
 
     render(<NewChatEvalPage />);
 
+    await screen.findByLabelText("Name");
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Never says the plan is free" } });
     fireEvent.change(screen.getByLabelText("What would someone ask?"), {
       target: { value: "How much is the enterprise plan?" },

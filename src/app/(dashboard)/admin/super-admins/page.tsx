@@ -3,6 +3,7 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Image from "next/image";
 import type { FormEvent } from "react";
@@ -15,27 +16,21 @@ import {
   Edit2,
   Loader2
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
 import Link from "next/link";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
-import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
-import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
+import type { SuperAdminFormData } from "./SuperAdminDialogs";
 
-type SuperAdminFormData = {
-  name: string;
-  email: string;
-  role: "SUPER_ADMIN";
-  image: string;
-};
+const loadSuperAdminDialogs = () => import("./SuperAdminDialogs");
+const SuperAdminDialogs = dynamic(
+  () => loadSuperAdminDialogs().then((module) => module.SuperAdminDialogs),
+);
 
 /**
  * The directory lists two things in one table: people, and invitations nobody
@@ -50,6 +45,7 @@ function buildDirectoryColumns(actions: {
   onEdit: (user: Doc<"users">) => void;
   onDelete: (user: Doc<"users">) => void;
   onRevoke: (invite: Doc<"invitations">) => void;
+  onPrepareDialogs: () => void;
   t: (key: string, values?: Record<string, string | number>) => string;
 }): DataTableColumn<DirectoryRow>[] {
   const { t } = actions;
@@ -125,26 +121,32 @@ function buildDirectoryColumns(actions: {
             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
               {t("awaitingLogin")}
             </span>
-            <RowIconButton
-              label={t("revokeInvitation")}
-              tone="danger"
-              onClick={() => actions.onRevoke(row.invite)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </RowIconButton>
+            <span onPointerEnter={actions.onPrepareDialogs} onFocus={actions.onPrepareDialogs}>
+              <RowIconButton
+                label={t("revokeInvitation")}
+                tone="danger"
+                onClick={() => actions.onRevoke(row.invite)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </RowIconButton>
+            </span>
           </RowActions>
         ) : (
           <RowActions>
-            <RowIconButton label={t("editAdmin")} onClick={() => actions.onEdit(row.user)}>
-              <Edit2 className="w-4 h-4" />
-            </RowIconButton>
-            <RowIconButton
-              label={t("deleteAdmin")}
-              tone="danger"
-              onClick={() => actions.onDelete(row.user)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </RowIconButton>
+            <span onPointerEnter={actions.onPrepareDialogs} onFocus={actions.onPrepareDialogs}>
+              <RowIconButton label={t("editAdmin")} onClick={() => actions.onEdit(row.user)}>
+                <Edit2 className="w-4 h-4" />
+              </RowIconButton>
+            </span>
+            <span onPointerEnter={actions.onPrepareDialogs} onFocus={actions.onPrepareDialogs}>
+              <RowIconButton
+                label={t("deleteAdmin")}
+                tone="danger"
+                onClick={() => actions.onDelete(row.user)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </RowIconButton>
+            </span>
           </RowActions>
         ),
     },
@@ -174,6 +176,7 @@ export default function ManageSuperAdminsPage() {
   const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
   const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<SuperAdminFormData>({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -222,11 +225,27 @@ export default function ManageSuperAdminsPage() {
     return <div className="p-8 text-secondary">{t("unauthorized")}</div>;
   }
 
+  const prepareSuperAdminDialogs = () => {
+    setDialogsRequested(true);
+    void loadSuperAdminDialogs();
+  };
+
   const handleOpenEdit = (user: Doc<"users">) => {
+    prepareSuperAdminDialogs();
     setFormData({ name: user.name ?? "", email: user.email ?? "", role: "SUPER_ADMIN", image: user.image || "" });
     setEditingUser(user);
     setSubmitError("");
     setIsAddModalOpen(true);
+  };
+
+  const handleOpenDelete = (user: Doc<"users">) => {
+    prepareSuperAdminDialogs();
+    setDeletingUser(user);
+  };
+
+  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+    prepareSuperAdminDialogs();
+    setDeletingInvite(invite);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -293,7 +312,13 @@ export default function ManageSuperAdminsPage() {
       <DataTable<DirectoryRow>
         rows={isLoadingFirstPage ? undefined : paged.pageRows}
         rowKey={(row) => (row.kind === "invite" ? `inv-${row.invite._id}` : `user-${row.user._id}`)}
-        columns={buildDirectoryColumns({ onEdit: handleOpenEdit, onDelete: setDeletingUser, onRevoke: setDeletingInvite, t })}
+        columns={buildDirectoryColumns({
+          onEdit: handleOpenEdit,
+          onDelete: handleOpenDelete,
+          onRevoke: handleOpenRevoke,
+          onPrepareDialogs: prepareSuperAdminDialogs,
+          t,
+        })}
         search={{
           value: searchTerm,
           onChange: handleSearch,
@@ -323,119 +348,30 @@ export default function ManageSuperAdminsPage() {
           labels: { empty: t("footerEmpty") },
         }}
       />
-
-
-      {/* Add/Edit Modal */}
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? t("editTitle") : t("inviteTitle")}
-      >
-        <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px]">{editingUser ? t("editSubtitle") : t("inviteSubtitle")}</p>
-           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalField
-            label={t("nameLabel")}
-            type="text"
-            required
-            value={formData.name}
-            onChange={e => setFormData({...formData, name: e.target.value})}
-            placeholder={t("namePlaceholder")}
-          />
-
-          <ModalField
-            label={t("emailLabel")}
-            type="email"
-            required
-            value={formData.email}
-            onChange={e => setFormData({...formData, email: e.target.value})}
-            placeholder={t("emailPlaceholder")}
-          />
-
-          <ModalFormField label={t("roleLabel")} htmlFor="super-admin-role">
-            <select
-              id="super-admin-role"
-              value={formData.role}
-              disabled
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground outline-none text-sm appearance-none opacity-50 cursor-not-allowed"
-            >
-              <option value="SUPER_ADMIN">{t("systemSuperAdmin")}</option>
-            </select>
-          </ModalFormField>
-
-          <ModalField
-            label={t("avatarLabel")}
-            type="url"
-            value={formData.image}
-            onChange={e => setFormData({...formData, image: e.target.value})}
-            placeholder="https://example.com/avatar.jpg"
-          >
-            <p className="text-[11px] text-muted">{t("avatarHint")}</p>
-          </ModalField>
-
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddModalOpen(false)}
-              className="rounded-[10px] text-sm hover:bg-foreground/5"
-            >
-              {t("cancel")}
-            </Button>
-            <WriteButton
-
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? t("saving") : (editingUser ? t("updateUser") : t("sendInvite"))}
-            </WriteButton>
-          </div>
-        </form>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingUser}
-        onClose={() => {
-          setDeletingUser(null);
-          setSubmitError("");
-        }}
-        title={t("deleteTitle")}
-        cancelLabel={t("cancel")}
-        confirmLabel={isSubmitting ? t("deleting") : t("deleteTitle")}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-      >
-        <p>
-          {t.rich("deleteBody", {
-            name: deletingUser?.name ?? "",
-            b: (chunks) => <strong className="text-foreground font-semibold">{chunks}</strong>,
-          })}
-        </p>
-      </ConfirmationModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingInvite}
-        onClose={() => {
-          setDeletingInvite(null);
-          setSubmitError("");
-        }}
-        title={t("revokeTitle")}
-        cancelLabel={t("cancel")}
-        confirmLabel={isSubmitting ? t("revoking") : t("revokeTitle")}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmRevoke}
-        error={submitError}
-      >
-        <p>
-          {t.rich("revokeBody", {
-            email: deletingInvite?.email ?? "",
-            b: (chunks) => <strong className="text-foreground font-semibold">{chunks}</strong>,
-          })}
-        </p>
-      </ConfirmationModal>
+      {dialogsRequested && (
+        <SuperAdminDialogs
+          isEditOpen={isAddModalOpen}
+          editingUser={editingUser}
+          deletingUser={deletingUser}
+          deletingInvite={deletingInvite}
+          formData={formData}
+          setFormData={setFormData}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          onSubmit={handleSubmit}
+          onCloseEdit={() => setIsAddModalOpen(false)}
+          onCloseDelete={() => {
+            setDeletingUser(null);
+            setSubmitError("");
+          }}
+          onCloseRevoke={() => {
+            setDeletingInvite(null);
+            setSubmitError("");
+          }}
+          onConfirmDelete={confirmDelete}
+          onConfirmRevoke={confirmRevoke}
+        />
+      )}
     </div>
   );
 }

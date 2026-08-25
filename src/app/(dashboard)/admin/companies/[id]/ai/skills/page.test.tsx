@@ -1,5 +1,6 @@
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { pagedResult } from "@/src/test/screenMocks";
@@ -48,5 +49,30 @@ describe("CompanyAiSkillsPage", () => {
       emptyText: "No skills yet — add one from the Skill Center",
       searchPlaceholder: "Search skills by name",
     });
+  });
+
+  it("loads the import dialog only after the existing add action", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue(
+      pagedResult(skills.slice(0, 1)) as unknown as ReturnType<typeof usePaginatedQuery>,
+    );
+
+    render(<CompanyAiSkillsPage />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add from Skill Center" }));
+
+    expect(await screen.findByRole("dialog", { name: "Add skills" })).toBeInTheDocument();
+  });
+
+  it("loads the archive dialog only after the existing remove action", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue(
+      pagedResult(skills) as unknown as ReturnType<typeof usePaginatedQuery>,
+    );
+
+    render(<CompanyAiSkillsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Research Briefing" }));
+
+    expect(await screen.findByRole("dialog", { name: "Remove skill" })).toBeInTheDocument();
   });
 });

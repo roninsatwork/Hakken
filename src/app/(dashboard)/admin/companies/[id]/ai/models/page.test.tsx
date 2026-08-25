@@ -112,11 +112,12 @@ describe("CompanyModelDefaultsPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockImplementation((...args: Parameters<typeof useQuery>) => {
-      const path = getConvexPath(args[0]);
-      if (path.includes("getModelPickerOptions")) return models as unknown as ReturnType<typeof useQuery>;
-      if (path.includes("getProviders")) return providers as unknown as ReturnType<typeof useQuery>;
-      return defaults as unknown as ReturnType<typeof useQuery>;
+    vi.mocked(useQuery).mockImplementation(() => {
+      return {
+        ...defaults,
+        modelPickerOptions: models,
+        providerNames: providers,
+      } as unknown as ReturnType<typeof useQuery>;
     });
     vi.mocked(useMutation).mockImplementation((mutationFn: Parameters<typeof useMutation>[0]) => {
       const path = getConvexPath(mutationFn);
@@ -127,6 +128,13 @@ describe("CompanyModelDefaultsPage", () => {
     });
     setCompanyModelDefault.mockResolvedValue(undefined);
     clearCompanyModelDefault.mockResolvedValue(undefined);
+  });
+
+  it("loads the table through one page subscription", () => {
+    render(<CompanyModelDefaultsPage />);
+
+    expect(useQuery).toHaveBeenCalledTimes(1);
+    expect(getConvexPath(vi.mocked(useQuery).mock.calls[0][0])).toContain("getCompanyModelDefaults");
   });
 
   it("says what each job is, and names models the way a person would", () => {

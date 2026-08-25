@@ -16,10 +16,14 @@ import {
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
-import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { LAYER } from "@/src/ui/lib/layers";
+import dynamic from "next/dynamic";
+
+const SonaeMarkdown = dynamic(() =>
+  import("@/src/ui/components/chat/SonaeMarkdown").then((module) => module.SonaeMarkdown)
+);
 
 /**
  * The opportunity report: what converting the prospects and closing the chain

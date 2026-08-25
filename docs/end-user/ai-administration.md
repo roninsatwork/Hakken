@@ -54,7 +54,7 @@ When troubleshooting AI behavior, review the layers in this order: user or compa
 
 ## Models, Providers, And Defaults
 
-The model screen manages available AI models. It includes provider controls for Google Vertex AI, OpenAI, and Anthropic. Operators can sync supported model catalogs from those providers, test provider connectivity, enable or disable a provider, search and filter models, and enable or disable individual models.
+The model screen manages available AI models. It includes provider controls for Google Vertex AI, OpenAI, Anthropic, and OpenRouter. Operators can sync supported model catalogs from those providers, test provider connectivity, enable or disable a provider, search and filter models, and enable or disable individual models.
 
 Models can be filtered by active or inactive status, provider, capability, and supported use case. Capabilities include text, reasoning, vision, audio, tool calling, JSON mode, streaming, embeddings, and transcription. Use cases include chat, agent, workflow, report, router, title, embedding, transcription, real-time voice, vision, and tool calling.
 
@@ -64,7 +64,7 @@ Some provider-backed helper actions also use these configured defaults. Voice tr
 
 Opening a model detail page lets an operator set a friendly name and pricing values. Friendly names are shown in user-facing selectors. Pricing values feed analytics and estimated cost displays. Treat pricing as operational reporting data, not invoice-grade billing unless the surrounding billing process explicitly validates it.
 
-Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, transcription, live voice, and phone-call behavior. Current agent and workflow-agent execution paths still require Google Vertex-compatible resolved models, even though the model catalog can list other providers for supported surfaces. Real-time voice additionally needs a compatible live-audio model and the voice relay/provider credentials described in [Spoken Channels](./spoken-channels.md). After changing defaults or provider state, test a normal assistant prompt and any affected agent, workflow, voice, or phone path.
+Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, transcription, live voice, and phone-call behavior. Agent runs can use models from providers that have an agent adapter; the current supported provider set includes Google Vertex AI, Anthropic, OpenAI, and OpenRouter. Some specific capabilities still narrow the choice: a workflow agent that uses internet access relies on Google Search grounding and therefore still needs a compatible Vertex model. Real-time voice additionally needs a compatible live-audio model and the voice relay/provider credentials described in [Spoken Channels](./spoken-channels.md). After changing defaults or provider state, test a normal assistant prompt and any affected agent, workflow, voice, or phone path.
 
 ## Spoken Voice
 

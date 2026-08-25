@@ -3,12 +3,11 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Cpu, Wrench } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import JsonSchemaBuilder from "@/src/ui/components/settings/JsonSchemaBuilder";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
@@ -17,6 +16,8 @@ import {
   SaveError,
 } from "@/src/ui/components/screens/SaveControls";
 import { cn } from "@/src/ui/lib/utils";
+
+const JsonSchemaBuilder = lazy(() => import("@/src/ui/components/settings/JsonSchemaBuilder"));
 
 type AgentTool = Doc<"aiTools"> & { bindingId: Id<"agentTools"> };
 
@@ -94,7 +95,8 @@ export default function AgentInterfacesPage() {
   if (agent === null) return <div className="p-8 text-red-500">{t("notFound")}</div>;
 
   return (
-    <div className="flex w-full flex-col gap-8 pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Suspense fallback={<div className="p-8 text-secondary">{t("loading")}</div>}>
+      <div className="flex w-full flex-col gap-8 pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         icon={<Cpu className="h-6 w-6 text-brand" />}
         title={t("title")}
@@ -246,6 +248,7 @@ export default function AgentInterfacesPage() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </Suspense>
   );
 }

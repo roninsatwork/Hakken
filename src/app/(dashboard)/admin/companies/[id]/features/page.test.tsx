@@ -75,10 +75,12 @@ describe("CompanyFeaturesPage", () => {
     mockQueries();
   });
 
-  it("shows every feature to a super admin, as a row in the table", () => {
+  it("shows every feature to a super admin, as a row in the table", async () => {
     render(<CompanyFeaturesPage />);
 
-    expect(screen.getByRole("heading", { name: "featuresTitle" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "featuresTitle" }, { timeout: 5000 })
+    ).toBeInTheDocument();
 
     // Twice on purpose: once visibly in the name column, and once as the
     // tick box's own label, which is hidden but still tied to the box.
@@ -88,18 +90,20 @@ describe("CompanyFeaturesPage", () => {
     expect(screen.getByRole("checkbox", { name: "modules.salesData.name" })).toBeInTheDocument();
   });
 
-  it("carries the house search box and pagination footer", () => {
+  it("carries the house search box and pagination footer", async () => {
     render(<CompanyFeaturesPage />);
 
-    expect(screen.getByPlaceholderText("featuresSearchPlaceholder")).toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText("featuresSearchPlaceholder")
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /previous/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
   });
 
-  it("narrows the rows to what was searched for", () => {
+  it("narrows the rows to what was searched for", async () => {
     render(<CompanyFeaturesPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("featuresSearchPlaceholder"), {
+    fireEvent.change(await screen.findByPlaceholderText("featuresSearchPlaceholder"), {
       target: { value: "salesData" },
     });
 
@@ -128,20 +132,20 @@ describe("CompanyFeaturesPage", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("reflects what the company already has switched on", () => {
+  it("reflects what the company already has switched on", async () => {
     mockQueries({ enabledModules: ["salesData"] });
     render(<CompanyFeaturesPage />);
 
-    expect(screen.getByRole("checkbox", { name: /salesData/ })).toBeChecked();
+    expect(await screen.findByRole("checkbox", { name: /salesData/ })).toBeChecked();
   });
 
   it("saves through its own mutation, not the profile save", async () => {
     render(<CompanyFeaturesPage />);
 
-    const save = screen.getByRole("button", { name: /Save Features/i });
+    const save = await screen.findByRole("button", { name: /Save Features/i });
     expect(save).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
     expect(save).toBeEnabled();
     fireEvent.click(save);
 
@@ -160,7 +164,7 @@ describe("CompanyFeaturesPage", () => {
     mockQueries({ enabledModules: ["salesData"] });
     render(<CompanyFeaturesPage />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {
@@ -175,7 +179,7 @@ describe("CompanyFeaturesPage", () => {
     setCompanyModules.mockRejectedValue(new Error("Unauthorized"));
     render(<CompanyFeaturesPage />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {

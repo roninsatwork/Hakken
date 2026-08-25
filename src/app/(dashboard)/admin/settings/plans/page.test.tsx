@@ -142,7 +142,7 @@ describe("SubscriptionPlansPage", () => {
     render(<SubscriptionPlansPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /New Plan/i }));
-    fireEvent.change(screen.getByPlaceholderText("Enter plan name"), { target: { value: "Starter" } });
+    fireEvent.change(await screen.findByPlaceholderText("Enter plan name"), { target: { value: "Starter" } });
     fireEvent.change(screen.getByPlaceholderText("Describe the plan"), { target: { value: "Small teams" } });
     fireEvent.change(screen.getByPlaceholderText("1000"), { target: { value: "250" } });
     fireEvent.change(screen.getByPlaceholderText("49"), { target: { value: "19" } });
@@ -172,10 +172,19 @@ describe("SubscriptionPlansPage", () => {
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Delete plan" })[0]);
-    fireEvent.click(screen.getByRole("button", { name: "actions.delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "actions.delete" }));
 
     await waitFor(() => {
       expect(deletePlan).toHaveBeenCalledWith({ id: "plan_1" });
     });
+  });
+
+  it("loads the delete confirmation when it is the first dialog used", async () => {
+    render(<SubscriptionPlansPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete plan" })[0]);
+
+    expect(await screen.findByRole("button", { name: "actions.delete" })).toBeInTheDocument();
+    expect(screen.getAllByText("Growth")).toHaveLength(2);
   });
 });

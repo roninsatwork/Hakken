@@ -106,6 +106,45 @@ describe("ConnectorSetupPage", () => {
     expect(screen.getByRole("switch", { name: "Knowledge Search" })).toHaveAttribute("aria-checked", "true");
   });
 
+  it("preloads company options from availability intent while skipping an untouched global connector", () => {
+    render(<ConnectorSetupPage />);
+
+    const companyOptionsCalls = () => vi.mocked(useQuery).mock.calls.filter(([queryFn]) =>
+      getFunctionName(queryFn) === "companies:getCompanyOptions"
+    );
+
+    expect(companyOptionsCalls().at(-1)?.[1]).toBe("skip");
+
+    fireEvent.focus(screen.getByLabelText("Who can use it"));
+
+    expect(companyOptionsCalls().at(-1)?.[1]).toEqual({});
+
+    fireEvent.change(screen.getByLabelText("Who can use it"), {
+      target: { value: "TENANT_RESTRICTED" },
+    });
+
+    expect(companyOptionsCalls().at(-1)?.[1]).toEqual({});
+  });
+
+  it("loads company options immediately for an existing tenant-restricted connector", () => {
+    details = {
+      ...baseDetails,
+      connector: {
+        ...baseDetails.connector,
+        tenantAvailability: "TENANT_RESTRICTED",
+        companyId: "company_1",
+      },
+    };
+
+    render(<ConnectorSetupPage />);
+
+    const companyOptionsCall = vi.mocked(useQuery).mock.calls.find(([queryFn]) =>
+      getFunctionName(queryFn) === "companies:getCompanyOptions"
+    );
+
+    expect(companyOptionsCall?.[1]).toEqual({});
+  });
+
   it("saves what was changed", async () => {
     render(<ConnectorSetupPage />);
 

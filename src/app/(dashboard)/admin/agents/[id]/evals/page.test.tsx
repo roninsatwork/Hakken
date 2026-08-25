@@ -231,4 +231,22 @@ describe("AgentEvalsPage", () => {
 
     expect(screen.getByText(/No eval has to pass before this agent goes live/)).toBeInTheDocument();
   });
+
+  it("loads the unchanged eval form from its existing action", async () => {
+    render(<AgentEvalsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "New eval" }));
+
+    expect(await screen.findByPlaceholderText("Find this month's overdue invoices and summarise who owes what.")).toBeInTheDocument();
+    expect(screen.getByText("This must pass before the agent goes live")).toBeInTheDocument();
+  });
+
+  it("loads the unchanged removal confirmation from its row action", async () => {
+    render(<AgentEvalsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Assess whether a new adverse event should be escalated." }));
+
+    expect(await screen.findByText("This stops the check counting towards going live. Its past results stay in the audit record.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
 });

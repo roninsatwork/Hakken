@@ -178,7 +178,7 @@ describe("ApiKeysPage", () => {
     renderWithProviders(<ApiKeysPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Turn off Production agent trigger" }));
-    expect(screen.getByText(/stops working straight away/)).toBeInTheDocument();
+    expect(await screen.findByText(/stops working straight away/)).toBeInTheDocument();
     expect(revokeApiKey).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByPlaceholderText("No longer needed"), {

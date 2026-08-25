@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { getErrorMessage } from "@/src/lib/errors";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -12,18 +13,12 @@ import {
   Trash2,
   Settings,
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
   PageHeader,
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
-import {
-  ModalField,
-  ModalFormActions,
-} from "@/src/ui/components/screens/ModalForm";
 import {
   RowActions,
   RowIconButton,
@@ -31,6 +26,11 @@ import {
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+
+const loadWorkflowDialogs = () => import("./WorkflowDialogs");
+const WorkflowDialogs = dynamic(() =>
+  loadWorkflowDialogs().then((module) => module.WorkflowDialogs),
+);
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -41,6 +41,7 @@ export default function WorkflowsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deletingWorkflow, setDeletingWorkflow] = useState<Doc<"workflows"> | null>(null);
+  const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +58,13 @@ export default function WorkflowsPage() {
     setSearchTerm(v);
   };
 
+  const prepareWorkflowDialogs = () => {
+    setDialogsRequested(true);
+    void loadWorkflowDialogs();
+  };
+
   const handleOpenAdd = () => {
+    prepareWorkflowDialogs();
     setFormData({ name: "", description: "" });
     setSubmitError("");
     setIsAddModalOpen(true);
@@ -178,7 +185,14 @@ export default function WorkflowsPage() {
                 <RowIconButton navigates label={t('table.visualBuilder')} onClick={() => router.push(`/admin/workflows/${workflow._id}`)}>
                   <Settings className="w-4 h-4" />
                 </RowIconButton>
-                <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingWorkflow(workflow)}>
+                <RowIconButton
+                  label={t('buttons.delete')}
+                  tone="danger"
+                  onClick={() => {
+                    prepareWorkflowDialogs();
+                    setDeletingWorkflow(workflow);
+                  }}
+                >
                   <Trash2 className="w-4 h-4" />
                 </RowIconButton>
               </RowActions>
@@ -187,58 +201,23 @@ export default function WorkflowsPage() {
         ]}
       />
 
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={t('modal.initTitle')}
-      >
-        <div className="flex flex-col gap-2 mb-6">
-          <p className="text-secondary text-[15px]">{t('modal.initDesc')}</p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalField
-            label={t('modal.name')}
-            required
-            value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
-            placeholder={t('placeholders.name')}
-          />
-
-          <ModalField
-            label={t('modal.description')}
-            value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
-            placeholder={t('placeholders.description')}
-          />
-
-          <ModalFormActions
-            cancelLabel={t('buttons.cancel')}
-            submitLabel={isSubmitting ? t('buttons.creating') : t('buttons.create')}
-            isSubmitting={isSubmitting}
-            onCancel={() => setIsAddModalOpen(false)}
-          />
-        </form>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingWorkflow}
-        onClose={() => {
-          setDeletingWorkflow(null);
-          setSubmitError("");
-        }}
-        title={t('modal.deleteTitle')}
-        cancelLabel={t('buttons.cancel')}
-        confirmLabel={isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-      >
-        <p>
-          {t('modal.deleteConfirm', { name: deletingWorkflow?.name ?? "" })}
-        </p>
-        <p className="text-[13px] text-muted">{t('modal.undone')}</p>
-      </ConfirmationModal>
+      {dialogsRequested ? (
+        <WorkflowDialogs
+          editorOpen={isAddModalOpen}
+          formData={formData}
+          setFormData={setFormData}
+          submitError={submitError}
+          isSubmitting={isSubmitting}
+          onEditorClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleSubmit}
+          deletingWorkflowName={deletingWorkflow?.name ?? null}
+          onDeleteClose={() => {
+            setDeletingWorkflow(null);
+            setSubmitError("");
+          }}
+          onDeleteConfirm={confirmDelete}
+        />
+      ) : null}
     </div>
   );
 }

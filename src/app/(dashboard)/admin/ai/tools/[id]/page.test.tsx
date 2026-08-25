@@ -2,11 +2,12 @@ import React from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { routeParams } from "@/src/test/routeParams";
 import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
-import EditToolPage from "./page";
+import EditToolContent from "./EditToolContent";
+import EditToolPage, { ToolRuleCheckboxes } from "./page";
 
 /**
  * Written before the screen moved onto the shared field, so that it pins what
@@ -72,7 +73,25 @@ describe("EditToolPage", () => {
     vi.mocked(useQuery).mockReturnValue(savedTool as unknown as ReturnType<typeof useQuery>);
   });
 
-  const show = () => renderWithProviders(<EditToolPage params={routeParams({ id: TOOL_ID })} />);
+  const show = () =>
+    renderWithProviders(
+      <EditToolContent
+        RuleCheckboxes={ToolRuleCheckboxes}
+        tool={savedTool as unknown as Doc<"aiTools">}
+        toolId={TOOL_ID}
+      />,
+    );
+
+  it("keeps the tool query and exact loading state immediate", () => {
+    vi.mocked(useQuery).mockReturnValue(undefined);
+
+    const { container } = renderWithProviders(
+      <EditToolPage params={routeParams({ id: TOOL_ID })} />,
+    );
+
+    expect(useQuery).toHaveBeenCalledWith(expect.anything(), { id: TOOL_ID });
+    expect(container.querySelector("svg.animate-spin")).not.toBeNull();
+  });
 
   it("opens with the saved tool already in the boxes", () => {
     show();

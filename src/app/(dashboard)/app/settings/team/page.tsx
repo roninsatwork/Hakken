@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   Users,
   Plus,
@@ -13,14 +14,13 @@ import {
   Trash2,
   Edit2
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
-import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
+import { ModalFormField } from "@/src/ui/components/screens/ModalForm";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 
 type TeamUserRole = "USER" | "ADMIN";
@@ -32,6 +32,9 @@ type TeamUserFormData = {
   image: string;
   companyId: string;
 };
+
+const loadTeamDialogs = () => import("./TeamDialogs");
+const TeamDialogs = dynamic(() => loadTeamDialogs().then((module) => module.TeamDialogs));
 
 export default function CompanyTeamPage() {
   const currentUser = useQuery(api.users.getMe);
@@ -59,6 +62,7 @@ export default function CompanyTeamPage() {
   const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
   const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [hasOpenedDialogs, setHasOpenedDialogs] = useState(false);
 
   const [formData, setFormData] = useState<TeamUserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
 
@@ -81,12 +85,16 @@ export default function CompanyTeamPage() {
   });
 
   const handleOpenAdd = () => {
+    void loadTeamDialogs();
+    setHasOpenedDialogs(true);
     setFormData({ name: "", email: "", role: "USER", image: "", companyId: currentUser?.companyId || "" });
     setEditingUser(null);
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (user: Doc<"users">) => {
+    void loadTeamDialogs();
+    setHasOpenedDialogs(true);
     setFormData({
       name: user.name ?? "",
       email: user.email ?? "",
@@ -96,6 +104,18 @@ export default function CompanyTeamPage() {
     });
     setEditingUser(user);
     setIsAddModalOpen(true);
+  };
+
+  const handleOpenDelete = (user: Doc<"users">) => {
+    void loadTeamDialogs();
+    setHasOpenedDialogs(true);
+    setDeletingUser(user);
+  };
+
+  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+    void loadTeamDialogs();
+    setHasOpenedDialogs(true);
+    setDeletingInvite(invite);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -247,7 +267,7 @@ export default function CompanyTeamPage() {
                   <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
                     {t('table.awaiting')}
                   </span>
-                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label={t('buttons.revoke')}>
+                  <RowIconButton onClick={() => handleOpenRevoke(row.invite)} tone="danger" label={t('buttons.revoke')}>
                     <Trash2 className="w-4 h-4" />
                   </RowIconButton>
                 </RowActions>
@@ -261,7 +281,7 @@ export default function CompanyTeamPage() {
                       <RowIconButton onClick={() => handleOpenEdit(row.user)} label={tCommon('actions.edit')}>
                         <Edit2 className="w-4 h-4" />
                       </RowIconButton>
-                      <RowIconButton onClick={() => setDeletingUser(row.user)} tone="danger" label={t('buttons.delete')}>
+                      <RowIconButton onClick={() => handleOpenDelete(row.user)} tone="danger" label={t('buttons.delete')}>
                         <Trash2 className="w-4 h-4" />
                       </RowIconButton>
                     </>
@@ -272,125 +292,63 @@ export default function CompanyTeamPage() {
         ]}
       />
 
-      {/* Add/Edit Modal */}
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? t('modal.editTitle') : t('modal.inviteTitle')}
-      >
-        <p className="text-secondary mb-6 text-[15px]">{editingUser ? t('modal.editDesc') : t('modal.inviteDesc')}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalField
-            label={t('modal.fullName')}
-            type="text"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder={t('modal.namePlaceholder')}
-          />
-
-          <ModalField
-            label={t('modal.email')}
-            type="email"
-            required
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder={t('modal.emailPlaceholder')}
-          />
-
-          <ModalFormField label={t('modal.role')} htmlFor="team-member-role">
-            <select
-              id="team-member-role"
-              value={formData.role}
-              onChange={e => setFormData({ ...formData, role: e.target.value as TeamUserRole })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
-            >
-              <option value="USER">{t('roles.user')}</option>
-              <option value="ADMIN">{t('roles.admin')}</option>
-            </select>
-          </ModalFormField>
-
-          <ModalField
-            label={t('modal.avatar')}
-            type="url"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-            placeholder={t('modal.avatarPlaceholder')}
-          >
-            <p className="text-[11px] text-muted">{t('modal.avatarHint')}</p>
-          </ModalField>
-
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-            >
-              {t('buttons.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm"
-            >
-              {editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
-            </button>
-          </div>
-        </form>
-      </SonaeModal>
-
-      {/* Delete Confirmation Modal */}
-      <SonaeModal
-        isOpen={!!deletingUser}
-        onClose={() => setDeletingUser(null)}
-        title={t('modal.deleteTitle')}
-      >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
-        </p>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingUser(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            {t('buttons.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
-          >
-            {t('buttons.delete')}
-          </button>
-        </div>
-      </SonaeModal>
-
-      {/* Revoke Invitation Modal */}
-      <SonaeModal
-        isOpen={!!deletingInvite}
-        onClose={() => setDeletingInvite(null)}
-        title={t('modal.revokeTitle')}
-      >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
-        </p>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingInvite(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            {t('buttons.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmRevoke}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
-          >
-            {t('buttons.revoke')}
-          </button>
-        </div>
-      </SonaeModal>
+      {hasOpenedDialogs && (
+        <TeamDialogs
+          isAddModalOpen={isAddModalOpen}
+          editingUser={editingUser}
+          deletingUser={deletingUser}
+          deletingInvite={deletingInvite}
+          formData={formData}
+          onFormDataChange={setFormData}
+          onCloseEditor={() => setIsAddModalOpen(false)}
+          onSubmit={handleSubmit}
+          onCloseDelete={() => setDeletingUser(null)}
+          onCloseRevoke={() => setDeletingInvite(null)}
+          editorRoleField={
+            <ModalFormField label={t('modal.role')} htmlFor="team-member-role">
+              <select
+                id="team-member-role"
+                value={formData.role}
+                onChange={e => setFormData({ ...formData, role: e.target.value as TeamUserRole })}
+                className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
+              >
+                <option value="USER">{t('roles.user')}</option>
+                <option value="ADMIN">{t('roles.admin')}</option>
+              </select>
+            </ModalFormField>
+          }
+          editorActions={
+            <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
+              <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium">
+                {t('buttons.cancel')}
+              </button>
+              <button type="submit" className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm">
+                {editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
+              </button>
+            </div>
+          }
+          deleteActions={
+            <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
+              <button type="button" onClick={() => setDeletingUser(null)} className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium">
+                {t('buttons.cancel')}
+              </button>
+              <button type="button" onClick={confirmDelete} className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20">
+                {t('buttons.delete')}
+              </button>
+            </div>
+          }
+          revokeActions={
+            <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
+              <button type="button" onClick={() => setDeletingInvite(null)} className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium">
+                {t('buttons.cancel')}
+              </button>
+              <button type="button" onClick={confirmRevoke} className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20">
+                {t('buttons.revoke')}
+              </button>
+            </div>
+          }
+        />
+      )}
     </div>
   );
 }

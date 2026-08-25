@@ -1,13 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Mail, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Loader2, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { InviteDispatchScreen } from "@/src/app/(dashboard)/admin/_features/invites/InviteDispatchScreen";
+
+const InviteDispatchScreen = lazy(() =>
+  import("@/src/app/(dashboard)/admin/_features/invites/InviteDispatchScreen").then(
+    ({ InviteDispatchScreen }) => ({ default: InviteDispatchScreen })
+  )
+);
+
+function InviteLoading() {
+  return (
+    <div className="w-full flex items-center justify-center py-20">
+      <Loader2 className="w-6 h-6 animate-spin text-muted" />
+    </div>
+  );
+}
 
 /**
  * Inviting anyone from the admin desk: the shared screen with this page's
@@ -27,8 +40,13 @@ export default function InviteUsersPage() {
   const [inviteRole, setInviteRole] = useState<"USER" | "ADMIN" | "SUPER_ADMIN">("USER");
   const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
 
+  if (user === undefined) {
+    return <InviteLoading />;
+  }
+
   return (
-    <InviteDispatchScreen
+    <Suspense fallback={<InviteLoading />}>
+      <InviteDispatchScreen
       companyId={isSuperAdmin && inviteCompanyId ? (inviteCompanyId as Id<"companies">) : undefined}
       role={inviteRole}
       header={
@@ -105,6 +123,7 @@ export default function InviteUsersPage() {
         sendSuccess: t('messages.sendSuccess'),
         sendError: t('messages.sendError'),
       }}
-    />
+      />
+    </Suspense>
   );
 }

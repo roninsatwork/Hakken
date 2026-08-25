@@ -2,32 +2,21 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import {
   Building2,
   Plus,
   Trash2,
   Edit2,
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import {
   PageHeader,
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
-import {
-  ModalField,
-  ModalFormActions,
-  ModalFormError,
-  ModalFormField,
-  modalInputClassName,
-  modalTextareaClassName,
-} from "@/src/ui/components/screens/ModalForm";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
@@ -36,6 +25,11 @@ import {
 import { formatDate } from "@/src/lib/dates";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
+
+const loadCompanyDialogs = () => import("./CompanyDialogs");
+const CompanyDialogs = lazy(() =>
+  loadCompanyDialogs().then((module) => ({ default: module.CompanyDialogs })),
+);
 
 type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean };
 type CompanyFormData = {
@@ -48,7 +42,6 @@ type CompanyFormData = {
 export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
-  const tCommon = useTranslations('common');
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
@@ -63,6 +56,7 @@ export default function CompaniesPage() {
   const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [dialogsActivated, setDialogsActivated] = useState(false);
 
   const itemsPerPage = TABLE_PAGE_SIZE;
   // The house footer — Previous, Page X of Y, Next — over a query that still
@@ -79,7 +73,13 @@ export default function CompaniesPage() {
     setSearchTerm(v);
   };
 
+  const activateDialogs = () => {
+    void loadCompanyDialogs();
+    setDialogsActivated(true);
+  };
+
   const handleOpenAdd = () => {
+    activateDialogs();
     setFormData({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
     setEditingCompany(null);
     setSubmitError("");
@@ -87,6 +87,7 @@ export default function CompaniesPage() {
   };
 
   const handleOpenEdit = (company: CompanyRow) => {
+    activateDialogs();
     setFormData({
       name: company.name,
       systemPrompt: company.systemPrompt || "",
@@ -224,7 +225,10 @@ export default function CompaniesPage() {
                 <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
                   <Edit2 className="w-4 h-4" />
                 </RowIconButton>
-                <RowIconButton label={t('deleteAndWipe')} tone="danger" onClick={() => setDeletingCompany(company)}>
+                <RowIconButton label={t('deleteAndWipe')} tone="danger" onClick={() => {
+                  activateDialogs();
+                  setDeletingCompany(company);
+                }}>
                   <Trash2 className="w-4 h-4" />
                 </RowIconButton>
               </RowActions>
@@ -233,64 +237,17 @@ export default function CompaniesPage() {
         ]}
       />
 
-      {/* Add/Edit Modal */}
-      {/*
-        Wide, and the fields laid out across it. As a single narrow column
-        the seven module cards ran far past the fold: a form of four short
-        fields that needed scrolling to reach its own Save button (Anthony,
-        2026-08-20). The name, directives and plan take one column; the
-        modules take the other and wrap into two of their own on a wide
-        screen.
-      */}
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={editingCompany ? t('editTitle') : t('createTitle')}
-        size="lg"
-      >
-        <div className="flex flex-col gap-2 mb-6">
-          <p className="text-secondary text-[15px]">{editingCompany ? t('editSubtitle') : t('createSubtitle')}</p>
-          <ModalFormError>{submitError}</ModalFormError>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="grid gap-5 md:grid-cols-2 md:items-start">
-          <div className="flex flex-col gap-5">
-          <ModalField
-            label={t('nameLabel')}
-            type="text"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder={t('namePlaceholder')}
-          />
-
-          <ModalFormField label={t('promptLabel')} hint={t('promptOptional')}>
-            <textarea
-              value={formData.systemPrompt}
-              onChange={e => setFormData({ ...formData, systemPrompt: e.target.value })}
-              className={modalTextareaClassName}
-              placeholder={t('promptPlaceholder')}
-            />
-          </ModalFormField>
-
-          <ModalFormField label={t('planLabel')}>
-             <select
-                 value={formData.planId}
-                 onChange={e => setFormData({ ...formData, planId: e.target.value })}
-                 className={modalInputClassName}
-              >
-                  <option value="">No Plan (Unlimited / System Default)</option>
-                  {activePlans.map(plan => (
-                     <option key={plan._id} value={plan._id}>
-                         {plan.name} {plan.messageLimit === -1 ? '(Unlimited)' : `(${plan.messageLimit} msgs)`} - £{plan.priceGBP}/mo
-                     </option>
-                  ))}
-             </select>
-          </ModalFormField>
-          </div>
-
-          {COMPANY_MODULES.length > 0 && (
-            <ModalFormField label={t('modulesLabel')} hint={t('modulesHint')}>
+      {dialogsActivated ? (
+        <Suspense fallback={null}>
+          <CompanyDialogs
+            isFormOpen={isAddModalOpen}
+            onCloseForm={() => setIsAddModalOpen(false)}
+            isEditing={editingCompany !== null}
+            formData={formData}
+            onFormDataChange={setFormData}
+            onSubmit={handleSubmit}
+            activePlans={activePlans}
+            renderModuleOptions={() => COMPANY_MODULES.length > 0 ? (
               <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
                 {COMPANY_MODULES.map((module) => (
                   <label
@@ -314,37 +271,18 @@ export default function CompaniesPage() {
                   </label>
                 ))}
               </div>
-            </ModalFormField>
-          )}
-          </div>
-
-          <ModalFormActions
-            cancelLabel={tCommon('cancel')}
-            submitLabel={isSubmitting ? tCommon('saving') : (editingCompany ? t('editTitle') : t('provisionTenant'))}
+            ) : null}
             isSubmitting={isSubmitting}
-            onCancel={() => setIsAddModalOpen(false)}
+            submitError={submitError}
+            deletingCompanyName={deletingCompany?.name ?? null}
+            onCloseDelete={() => {
+              setDeletingCompany(null);
+              setSubmitError("");
+            }}
+            onConfirmDelete={confirmDelete}
           />
-        </form>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingCompany}
-        onClose={() => { setDeletingCompany(null); setSubmitError(""); }}
-        title={t('deleteTitle')}
-        cancelLabel={tCommon('cancel')}
-        confirmLabel={isSubmitting ? tCommon('deleting') : t('deleteTenant')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-        warning={{
-          title: t('warningCascade'),
-          description: t('warningDesc'),
-        }}
-      >
-        <p>
-          {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
-        </p>
-      </ConfirmationModal>
+        </Suspense>
+      ) : null}
     </div>
   );
 }

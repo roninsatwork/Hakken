@@ -74,10 +74,10 @@ describe("EditRulePage", () => {
     vi.mocked(useQuery).mockReturnValue(savedRule as unknown as ReturnType<typeof useQuery>);
   });
 
-  const show = () => renderWithProviders(<EditRulePage params={routeParams({ id: RULE_ID })} />);
+  const show = async () => renderWithProviders(await EditRulePage({ params: routeParams({ id: RULE_ID }) }));
 
-  it("opens with the saved rule already in the boxes", () => {
-    show();
+  it("opens with the saved rule already in the boxes", async () => {
+    await show();
 
     expect(screen.getByPlaceholderText(NAME)).toHaveValue("Geography Extraction");
     expect(screen.getByPlaceholderText(TRIGGER)).toHaveValue("where are you based");
@@ -85,7 +85,7 @@ describe("EditRulePage", () => {
   });
 
   it("saves an edit against the rule it opened, trimmed", async () => {
-    show();
+    await show();
 
     fireEvent.change(screen.getByPlaceholderText(NAME), { target: { value: "  Office location  " } });
     fireEvent.click(screen.getByRole("button", { name: "CRITICAL" }));
@@ -107,7 +107,7 @@ describe("EditRulePage", () => {
    * is the failure mode of a draft rebuilt from the record on every keystroke.
    */
   it("keeps earlier edits when a second box is changed", async () => {
-    show();
+    await show();
 
     fireEvent.change(screen.getByPlaceholderText(NAME), { target: { value: "Office location" } });
     fireEvent.change(screen.getByPlaceholderText(TRIGGER), { target: { value: "where is your office" } });
@@ -120,8 +120,8 @@ describe("EditRulePage", () => {
     });
   });
 
-  it("will not save once a box has been emptied", () => {
-    show();
+  it("will not save once a box has been emptied", async () => {
+    await show();
 
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
     fireEvent.change(screen.getByPlaceholderText(TRIGGER), { target: { value: "   " } });
@@ -133,8 +133,8 @@ describe("EditRulePage", () => {
    * were loose text before, so clicking one focused nothing and a screen reader
    * announced three unlabelled boxes.
    */
-  it("gives every box a label that addresses it", () => {
-    show();
+  it("gives every box a label that addresses it", async () => {
+    await show();
 
     expect(screen.getByLabelText("What to call this rule")).toBe(screen.getByPlaceholderText(NAME));
     expect(screen.getByLabelText("Words or phrases that set it off")).toBe(screen.getByPlaceholderText(TRIGGER));
@@ -142,7 +142,7 @@ describe("EditRulePage", () => {
   });
 
   it("returns to the rules list once the edit is saved", async () => {
-    show();
+    await show();
 
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 

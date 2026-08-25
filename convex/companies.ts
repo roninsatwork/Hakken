@@ -25,9 +25,16 @@ const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
 const COMPANY_OPTIONS_MAX_LIMIT = 200;
 
 export const getCompanies = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: { mode: v.optional(v.literal("directoryOptions")) },
+  handler: async (ctx, args) => {
     const companies = await ctx.db.query("companies").order("desc").take(10000);
+
+    if (args.mode === "directoryOptions") {
+      return companies.map((company) => ({
+        _id: company._id,
+        name: company.name,
+      }));
+    }
     
     // Attach basic stats dynamically
     const enrichedCompanies = await Promise.all(

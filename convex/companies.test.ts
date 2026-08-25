@@ -214,6 +214,46 @@ describe("OWASP: Broken Access Control - Companies", () => {
     await expect(adminClient.query(api.companies.getCompanyOptions, {})).rejects.toThrow("Unauthorized");
   });
 
+  test("SUPER_ADMIN can read complete newest-first directory company options without inventory fields", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, superAdminId, olderId, newerId } = await t.run(async (ctx) => {
+      const olderId = await ctx.db.insert("companies", {
+        name: "Older Workspace",
+        description: "Not needed by the filter",
+        createdAt: 1,
+      });
+      const newerId = await ctx.db.insert("companies", {
+        name: "Newer Workspace",
+        description: "Also not needed by the filter",
+        createdAt: 2,
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-directory@test.com",
+        role: "ADMIN",
+        companyId: olderId,
+        createdAt: Date.now(),
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super-directory@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+
+      return { adminId, superAdminId, olderId, newerId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const options = await superAdminClient.query(api.companies.getCompanies, { mode: "directoryOptions" });
+
+    expect(options).toEqual([
+      { _id: newerId, name: "Newer Workspace" },
+      { _id: olderId, name: "Older Workspace" },
+    ]);
+    await expect(adminClient.query(api.companies.getCompanies, { mode: "directoryOptions" })).rejects.toThrow("Unauthorized");
+  });
+
   test("SUPER_ADMIN company updates patch profile fields, plan assignment, and audit logs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

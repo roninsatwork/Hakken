@@ -14,8 +14,10 @@ import {
   RefreshCcw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import Header from "@/src/ui/components/layout/Header";
+import dynamic from "next/dynamic";
+
+const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
 
 const HOLLYWOOD_PHASES = [
   "Initializing Secure Sandbox...",

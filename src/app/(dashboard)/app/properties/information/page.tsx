@@ -1,5 +1,3 @@
-"use client";
-
 import Header from "@/src/ui/components/layout/Header";
 import Link from "next/link";
 import {

@@ -7,11 +7,13 @@ import { api } from "@/convex/_generated/api";
 import { Trophy, Gamepad2, Play, Crown, Clock, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
-import RoninCanvas from "./RoninCanvas";
+import dynamic from "next/dynamic";
 import { AudioEngine } from "./engine/AudioEngine";
 import Image from "next/image";
 
 const pressStart = Press_Start_2P({ weight: '400', subsets: ['latin'] });
+const loadRoninCanvas = () => import("./RoninCanvas");
+const RoninCanvas = dynamic(loadRoninCanvas, { ssr: false });
 
 export default function RoninArcadePage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -349,6 +351,7 @@ export default function RoninArcadePage() {
                  
                  <button 
                     onClick={() => {
+                      void loadRoninCanvas();
                       if (audioEngine) {
                         audioEngine.playCoinInsert();
                         audioEngine.stopMenuAmbience();

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { Database, Trash2 } from "lucide-react";
@@ -8,17 +9,14 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useRouter } from "next/navigation";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import Image from "next/image";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { DeletingProperty } from "./ScrapedDataDeleteDialog";
 
-type DeletingProperty = {
-  _id: Id<"properties">;
-  address: string;
-};
+const loadDeleteDialog = () => import("./ScrapedDataDeleteDialog");
+const ScrapedDataDeleteDialog = dynamic(loadDeleteDialog);
 
 export default function ScrapedDataPage() {
   const t = useTranslations('sidebar');
@@ -174,7 +172,10 @@ export default function ScrapedDataPage() {
                     View Details
                   </button>
                   <RowIconButton
-                    onClick={() => setDeletingProperty(property)}
+                    onClick={() => {
+                      void loadDeleteDialog();
+                      setDeletingProperty(property);
+                    }}
                     tone="danger"
                     label={`Delete ${property.address}`}
                   >
@@ -187,32 +188,13 @@ export default function ScrapedDataPage() {
         />
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <SonaeModal
-        isOpen={!!deletingProperty}
-        onClose={() => setDeletingProperty(null)}
-        title="Delete Property"
-      >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to delete <strong className="text-foreground">{deletingProperty?.address}</strong>? This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingProperty(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
-          >
-            Delete
-          </button>
-        </div>
-      </SonaeModal>
+      {deletingProperty ? (
+        <ScrapedDataDeleteDialog
+          property={deletingProperty}
+          onClose={() => setDeletingProperty(null)}
+          onConfirm={confirmDelete}
+        />
+      ) : null}
     </>
   );
 }

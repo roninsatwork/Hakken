@@ -59,10 +59,10 @@ describe("WorkflowExecutionsPage", () => {
    * There has been no screen for workflow runs since the log pages were deleted
    * in cc5bc9558, so pressing "run" in the builder led nowhere.
    */
-  it("lists runs and links each to its detail", () => {
+  it("lists runs and links each to its detail", async () => {
     render(<WorkflowExecutionsPage />);
 
-    expect(screen.getByRole("link", { name: "Renewal Chase" }))
+    expect(await screen.findByRole("link", { name: "Renewal Chase" }))
       .toHaveAttribute("href", "/admin/workflows/executions/exec_halted");
     expect(screen.getByRole("link", { name: "Nightly Sync" }))
       .toHaveAttribute("href", "/admin/workflows/executions/exec_done");
@@ -72,10 +72,10 @@ describe("WorkflowExecutionsPage", () => {
    * The one thing on this list that needs acting on rather than reading, so it is
    * on the row rather than behind a click.
    */
-  it("flags the run that is waiting on a person, and only that one", () => {
+  it("flags the run that is waiting on a person, and only that one", async () => {
     render(<WorkflowExecutionsPage />);
 
-    expect(screen.getAllByText("awaitingApproval")).toHaveLength(1);
+    expect(await screen.findAllByText("awaitingApproval")).toHaveLength(1);
   });
 
   it("renders an empty state when nothing has run", () => {

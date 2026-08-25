@@ -36,12 +36,12 @@ describe("system security screen", () => {
     expect(screen.queryByText("Enable Data Masking Engine")).not.toBeInTheDocument();
   });
 
-  it("saves the masking switches on its own, without touching platform settings", () => {
+  it("saves the masking switches on its own, without touching platform settings", async () => {
     vi.mocked(useQuery).mockReturnValue({ enabled: false });
 
     render(<SystemSecurityPage />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Enable Data Masking Engine" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Enable Data Masking Engine" }));
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
     return waitFor(() => {
@@ -51,12 +51,12 @@ describe("system security screen", () => {
     });
   });
 
-  it("is the standard table: search above it, pagination footer under it", () => {
+  it("is the standard table: search above it, pagination footer under it", async () => {
     vi.mocked(useQuery).mockReturnValue({ enabled: true });
 
     render(<SystemSecurityPage />);
 
-    expect(screen.getByLabelText("Search masking switches...")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Search masking switches...")).toBeInTheDocument();
     expect(screen.getByText("Showing 1-5 of 5")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Switch" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "What it does" })).toBeInTheDocument();
@@ -65,12 +65,12 @@ describe("system security screen", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(5);
   });
 
-  it("searches the switches by name and by what they do", () => {
+  it("searches the switches by name and by what they do", async () => {
     vi.mocked(useQuery).mockReturnValue({ enabled: true });
 
     render(<SystemSecurityPage />);
 
-    fireEvent.change(screen.getByLabelText("Search masking switches..."), {
+    fireEvent.change(await screen.findByLabelText("Search masking switches..."), {
       target: { value: "landline" },
     });
 
@@ -80,12 +80,12 @@ describe("system security screen", () => {
     expect(screen.queryByRole("checkbox", { name: "Mask Email Addresses" })).not.toBeInTheDocument();
   });
 
-  it("refuses the four field switches while the engine is off", () => {
+  it("refuses the four field switches while the engine is off", async () => {
     vi.mocked(useQuery).mockReturnValue({ enabled: false });
 
     render(<SystemSecurityPage />);
 
-    expect(screen.getByRole("checkbox", { name: "Enable Data Masking Engine" })).toBeEnabled();
+    expect(await screen.findByRole("checkbox", { name: "Enable Data Masking Engine" })).toBeEnabled();
     for (const name of [
       "Mask Email Addresses",
       "Mask Credit Card Numbers",
@@ -96,13 +96,14 @@ describe("system security screen", () => {
     }
   });
 
-  it("no longer carries a second retention engine", () => {
+  it("no longer carries a second retention engine", async () => {
     // Audit records were purged by this screen on one schedule and by the
     // retention screen on another, with neither able to see the other.
     vi.mocked(useQuery).mockReturnValue({ enabled: true });
 
     render(<SystemSecurityPage />);
 
+    await screen.findByLabelText("Search masking switches...");
     expect(screen.queryByText(/retention/i)).not.toBeInTheDocument();
   });
 });

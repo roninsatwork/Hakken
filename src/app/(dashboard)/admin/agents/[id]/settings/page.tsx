@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -24,11 +25,16 @@ import {
   SettingSwitch,
   SettingsCard,
 } from "@/src/ui/components/screens/SettingsCard";
-import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import {
   formatModelDisplayName,
   formatTokenCost,
 } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+
+const AdminAvatarPicker = dynamic(() =>
+  import("@/src/app/(dashboard)/admin/_components/AdminAvatarPicker").then(
+    (module) => module.AdminAvatarPicker,
+  ),
+);
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";

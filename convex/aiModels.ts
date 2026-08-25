@@ -872,48 +872,85 @@ export const getCompanyModelDefaults = superAdminQuery({
     const company = await ctx.db.get(args.companyId);
     if (!company) throw appError("NOT_FOUND", "Company not found");
 
-    const defaults = await Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
-      const [companyDefault, globalDefault] = await Promise.all([
-        ctx.db
-          .query("aiModelDefaults")
-          .withIndex("by_company_use_case", (q) => q.eq("companyId", args.companyId).eq("useCase", useCase))
-          .first(),
-        ctx.db
-          .query("aiModelDefaults")
-          .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
-          .first(),
-      ]);
+    const [defaults, models, disabledProviders, providers] = await Promise.all([
+      Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
+        const [companyDefault, globalDefault] = await Promise.all([
+          ctx.db
+            .query("aiModelDefaults")
+            .withIndex("by_company_use_case", (q) => q.eq("companyId", args.companyId).eq("useCase", useCase))
+            .first(),
+          ctx.db
+            .query("aiModelDefaults")
+            .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
+            .first(),
+        ]);
 
-      const [companyModel, globalModel] = await Promise.all([
-        companyDefault ? getModelByStableId(ctx, companyDefault.modelId) : Promise.resolve(null),
-        globalDefault ? getModelByStableId(ctx, globalDefault.modelId) : Promise.resolve(null),
-      ]);
+        const [companyModel, globalModel] = await Promise.all([
+          companyDefault ? getModelByStableId(ctx, companyDefault.modelId) : Promise.resolve(null),
+          globalDefault ? getModelByStableId(ctx, globalDefault.modelId) : Promise.resolve(null),
+        ]);
 
-      return {
-        useCase,
-        companyDefault: companyDefault ? {
-          _id: companyDefault._id,
-          modelId: companyDefault.modelId,
-          providerKey: companyDefault.providerKey,
-          fallbackModelId: companyDefault.fallbackModelId,
-          updatedAt: companyDefault.updatedAt,
-          model: summarizeDefaultModel(companyModel),
-        } : null,
-        globalDefault: globalDefault ? {
-          _id: globalDefault._id,
-          modelId: globalDefault.modelId,
-          providerKey: globalDefault.providerKey,
-          fallbackModelId: globalDefault.fallbackModelId,
-          updatedAt: globalDefault.updatedAt,
-          model: summarizeDefaultModel(globalModel),
-        } : null,
-      };
-    }));
+        return {
+          useCase,
+          companyDefault: companyDefault ? {
+            _id: companyDefault._id,
+            modelId: companyDefault.modelId,
+            providerKey: companyDefault.providerKey,
+            fallbackModelId: companyDefault.fallbackModelId,
+            updatedAt: companyDefault.updatedAt,
+            model: summarizeDefaultModel(companyModel),
+          } : null,
+          globalDefault: globalDefault ? {
+            _id: globalDefault._id,
+            modelId: globalDefault.modelId,
+            providerKey: globalDefault.providerKey,
+            fallbackModelId: globalDefault.fallbackModelId,
+            updatedAt: globalDefault.updatedAt,
+            model: summarizeDefaultModel(globalModel),
+          } : null,
+        };
+      })),
+      ctx.db
+        .query("aiModels")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+        .take(MODEL_CATALOG_LIMIT),
+      ctx.db
+        .query("aiProviders")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", false))
+        .take(PROVIDER_LIMIT),
+      ctx.db.query("aiProviders").withIndex("by_provider_key").take(PROVIDER_LIMIT),
+    ]);
+
+    const disabledProviderKeys = new Set(disabledProviders.map((provider) => provider.providerKey));
+    const modelPickerOptions = models
+      .filter((model) => !model.providerKey || !disabledProviderKeys.has(model.providerKey))
+      .map((model) => ({
+        modelId: model.modelId,
+        displayName: model.displayName,
+        providerKey: model.providerKey ?? "",
+        supportedUseCases: model.supportedUseCases ?? [],
+        standardInputCostBelow200k: model.standardInputCostBelow200k,
+        outputResponseCost: model.outputResponseCost,
+      }));
+    const providersByKey = new Map(providers.map((provider) => [provider.providerKey, provider]));
+    const providerNames = [
+      ...PLATFORM_PROVIDER_KEYS.map((providerKey) => ({
+        providerKey,
+        displayName: providersByKey.get(providerKey)?.displayName
+          ?? PROVIDER_DISPLAY_NAMES[providerKey]
+          ?? providerKey,
+      })),
+      ...providers
+        .filter((provider) => !PLATFORM_PROVIDER_KEYS.includes(provider.providerKey))
+        .map((provider) => ({ providerKey: provider.providerKey, displayName: provider.displayName })),
+    ];
 
     return {
       companyId: args.companyId,
       useCases: DEFAULT_MODEL_USE_CASES,
       defaults,
+      modelPickerOptions,
+      providerNames,
     };
   },
 });

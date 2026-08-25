@@ -74,27 +74,27 @@ describe("HealthPage", () => {
    * six-box status grid on the other — every one of which read zero on a
    * healthy platform. The answer comes first now.
    */
-  it("says plainly that nothing needs attention, without a wall of zeros", () => {
+  it("says plainly that nothing needs attention, without a wall of zeros", async () => {
     render(<HealthPage />);
 
-    expect(screen.getByText("Nothing needs attention")).toBeInTheDocument();
+    expect(await screen.findByText("Nothing needs attention")).toBeInTheDocument();
     expect(screen.queryByText("Fix these first")).not.toBeInTheDocument();
   });
 
-  it("names what needs attention, with somewhere to go about it", () => {
+  it("names what needs attention, with somewhere to go about it", async () => {
     healthFixture = {
       ...health,
       operations: { ...health.operations, pendingApprovals: { count: 3, examples: [] } },
     };
     render(<HealthPage />);
 
-    expect(screen.getByText("1 thing needs attention")).toBeInTheDocument();
+    expect(await screen.findByText("1 thing needs attention")).toBeInTheDocument();
     expect(screen.getByText("Approvals waiting on a person")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Approvals waiting on a person/ }))
       .toHaveAttribute("href", "/admin/governance/approvals");
   });
 
-  it("counts every separate thing that needs attention", () => {
+  it("counts every separate thing that needs attention", async () => {
     healthFixture = {
       ...health,
       operations: {
@@ -105,29 +105,29 @@ describe("HealthPage", () => {
     };
     render(<HealthPage />);
 
-    expect(screen.getByText("2 things need attention")).toBeInTheDocument();
+    expect(await screen.findByText("2 things need attention")).toBeInTheDocument();
   });
 
   /** The old screens printed £0.0000 — in the wrong currency — and 0ms. */
-  it("shows money to the penny and time in seconds", () => {
+  it("shows money to the penny and time in seconds", async () => {
     render(<HealthPage />);
 
-    expect(screen.getByText(/1 run, 0 failed, \$0.02 spent, 4.2s on average/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 run, 0 failed, \$0.02 spent, 4.2s on average/)).toBeInTheDocument();
   });
 
-  it("lists recent runs in words, linking each to its timeline", () => {
+  it("lists recent runs in words, linking each to its timeline", async () => {
     render(<HealthPage />);
 
-    expect(screen.getByText("Worked")).toBeInTheDocument();
+    expect(await screen.findByText("Worked")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Skill setup: Document Extraction" }))
       .toHaveAttribute("href", "/admin/agents/agent_1/runs/run_1");
   });
 
-  it("says so when nothing has run, rather than showing a bare table", () => {
+  it("says so when nothing has run, rather than showing a bare table", async () => {
     runsFixture = { ...runs, totals: { ...runs.totals, runs: 0 }, recentRuns: [] };
     render(<HealthPage />);
 
-    expect(screen.getByText("No agent has run in the last 7 days.")).toBeInTheDocument();
+    expect(await screen.findByText("No agent has run in the last 7 days.")).toBeInTheDocument();
     // Said twice on purpose since the screen gained page numbers: once in the
     // table and once in the footer's count slot.
     expect(screen.getAllByText("Nothing has run yet").length).toBeGreaterThan(0);
@@ -137,11 +137,20 @@ describe("HealthPage", () => {
    * A health screen that white-screens because one field is absent is worse
    * than no health screen. It reads through to `.count` on eleven buckets.
    */
-  it("survives a report that is missing sections", () => {
+  it("survives a report that is missing sections", async () => {
     healthFixture = { checkedAt: Date.UTC(2026, 6, 27) };
     render(<HealthPage />);
 
-    expect(screen.getByText("Nothing needs attention")).toBeInTheDocument();
+    expect(await screen.findByText("Nothing needs attention")).toBeInTheDocument();
+  });
+
+  it("keeps the existing counting table visible while the reports load", () => {
+    healthFixture = undefined;
+    runsFixture = undefined;
+    render(<HealthPage />);
+
+    expect(screen.getByText("Counting recent runs.")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing needs attention")).not.toBeInTheDocument();
   });
 
 });

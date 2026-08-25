@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { lazy, Suspense, use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -11,7 +11,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/atoms/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import {
@@ -19,6 +18,8 @@ import {
   formatModelTag,
   getProviderDisplayName,
 } from "../_components/modelAdminUtils";
+
+const DefaultModelConfirmation = lazy(() => import("./DefaultModelConfirmation"));
 
 function formatDate(value: number | undefined, locale: string, neverLabel: string) {
   if (!value) return neverLabel;
@@ -85,6 +86,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const [saveError, setSaveError] = useState("");
   const [showMorePrices, setShowMorePrices] = useState(false);
   const [isDefaultConfirmOpen, setIsDefaultConfirmOpen] = useState(false);
+  const [hasDefaultModalActivated, setHasDefaultModalActivated] = useState(false);
   const [isMakingDefault, setIsMakingDefault] = useState(false);
 
   const [friendlyName, setFriendlyName] = useState("");
@@ -143,6 +145,11 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const allJobs = globalDefaultsResult?.useCases ?? [];
   // Nothing left to make default if it already handles everything.
   const handlesEveryJob = allJobs.length > 0 && defaultJobs.length === allJobs.length;
+
+  const openDefaultConfirmation = () => {
+    setHasDefaultModalActivated(true);
+    setIsDefaultConfirmOpen(true);
+  };
 
   /**
    * Point every job at this model.
@@ -224,7 +231,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         {!handlesEveryJob && (
           <WriteButton
             type="button"
-            onClick={() => setIsDefaultConfirmOpen(true)}
+            onClick={openDefaultConfirmation}
             className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground"
           >
             {t("makeDefaultButton")}
@@ -316,46 +323,19 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         })}
       </p>
 
-      <SonaeModal
-        isOpen={isDefaultConfirmOpen}
-        onClose={() => setIsDefaultConfirmOpen(false)}
-        title={t("modalTitle")}
-        size="sm"
-      >
-        <div className="flex flex-col gap-5 px-1 pb-2">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t.rich("modalWillHandle", {
-              model: model.friendlyName || model.displayName || model.modelId,
-              b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
-            })}
-          </p>
-          <p className="text-[12px] leading-relaxed text-muted">
-            {t("modalJobs", { jobs: allJobs.map(formatModelTag).join(", ") })}
-          </p>
-          <p className="text-[12px] leading-relaxed text-secondary">
-            {t("modalEmbedding")}
-            {!model.isEnabled && t("modalAlsoEnable")}
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="quiet"
-              onClick={() => setIsDefaultConfirmOpen(false)}
-              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              variant="brand"
-              onClick={makeDefault}
-              disabled={isMakingDefault}
-              className="h-10 rounded-[8px] disabled:opacity-50 flex items-center gap-2"
-            >
-              {isMakingDefault && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t("makeItDefault")}
-            </Button>
-          </div>
-        </div>
-      </SonaeModal>
+      {hasDefaultModalActivated ? (
+        <Suspense fallback={null}>
+          <DefaultModelConfirmation
+            allJobs={allJobs}
+            isEnabled={model.isEnabled}
+            isOpen={isDefaultConfirmOpen}
+            isSubmitting={isMakingDefault}
+            modelName={model.friendlyName || model.displayName || model.modelId}
+            onClose={() => setIsDefaultConfirmOpen(false)}
+            onConfirm={makeDefault}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

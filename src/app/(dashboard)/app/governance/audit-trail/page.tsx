@@ -1,12 +1,28 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { History } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { AuditLogsTable } from "@/src/app/(dashboard)/admin/settings/_components/AuditLogsTable";
+
+const loadAuditLogsTable = () =>
+  import("@/src/app/(dashboard)/admin/settings/_components/AuditLogsTable");
+
+function AuditTrailLoading() {
+  return (
+    <div className="p-8 flex justify-center">
+      <Loader2 className="w-5 h-5 animate-spin text-brand" />
+    </div>
+  );
+}
+
+const AuditLogsTable = dynamic(
+  () => loadAuditLogsTable().then((module) => module.AuditLogsTable),
+  { loading: AuditTrailLoading },
+);
 
 /**
  * The customer's own view of audit trail.
@@ -31,7 +47,7 @@ export default function AuditTrailPage() {
         description={t("description")}
       />
 
-      <AuditLogsTable logs={logs} />
+      {logs === undefined ? <AuditTrailLoading /> : <AuditLogsTable logs={logs} />}
     </div>
   );
 }

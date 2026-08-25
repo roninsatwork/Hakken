@@ -1,16 +1,20 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { EvalCaseDetailScreen } from "@/src/app/(dashboard)/admin/_features/evals/EvalCaseDetailScreen";
 
 /** One of this company's checks. */
-export default function CompanyEvalCaseDetailPage() {
-  const params = useParams();
+export default async function CompanyEvalCaseDetailPage({
+  params,
+}: {
+  params: Promise<{
+    id: Id<"companies">;
+    evalCaseId: Id<"companyEvalCases">;
+  }>;
+}) {
+  const { id, evalCaseId } = await params;
   return (
     <EvalCaseDetailScreen
-      companyId={params.id as Id<"companies">}
-      evalCaseId={params.evalCaseId as Id<"companyEvalCases">}
+      companyId={id}
+      evalCaseId={evalCaseId}
     />
   );
 }

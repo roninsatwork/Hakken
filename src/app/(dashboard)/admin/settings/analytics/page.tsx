@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { 
   Activity,
   AlertTriangle,
@@ -15,11 +15,15 @@ import {
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
-import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
+
+const DeferredSaveFeedback = lazy(async () => {
+  const { SaveFeedback: Component } = await import("@/src/ui/components/screens/SaveControls");
+  return { default: Component };
+});
 
 function formatCount(value: number) {
   return new Intl.NumberFormat("en-GB").format(value);
@@ -122,13 +126,17 @@ export default function AnalyticsPage() {
         }
       />
 
-      <SaveFeedback
-        status={saveStatus}
-        successTitle={t("savedTitle")}
-        successMessage={t("savedMessage")}
-        errorTitle={t("saveFailedTitle")}
-        errorMessage={errorMessage}
-      />
+      {saveStatus !== "idle" ? (
+        <Suspense fallback={null}>
+          <DeferredSaveFeedback
+            status={saveStatus}
+            successTitle={t("savedTitle")}
+            successMessage={t("savedMessage")}
+            errorTitle={t("saveFailedTitle")}
+            errorMessage={errorMessage}
+          />
+        </Suspense>
+      ) : null}
 
       {/* Flat Content Flow Section */}
       <div className="w-full h-[1px] bg-border-dim my-2" />

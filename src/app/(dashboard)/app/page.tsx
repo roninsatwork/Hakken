@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -9,7 +9,6 @@ import { useTranslations } from "next-intl";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { ArrowRight } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type Item = { title: string; body: string };
 type Capability = Item & { tags: string[] };
@@ -276,8 +275,6 @@ function LedgerTagTone(tone: string) {
 export default function AppDashboardPage() {
   const t = useTranslations("dashboard");
   const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   const user = useQuery(api.users.getMe);
 
   useEffect(() => {
@@ -307,7 +304,7 @@ export default function AppDashboardPage() {
 
   return (
     <div className="flex flex-col pb-16">
-      <Header onOpenModal={() => setIsModalOpen(true)} />
+      <Header />
 
       {/* ---------------- Hero: the pitch beside the picture of it ----------
           Copy on the left, the stack on the right. The stack IS the argument,
@@ -707,9 +704,6 @@ export default function AppDashboardPage() {
         </div>
       </section>
 
-      <SonaeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Sonae">
-        <p className="text-[15px] leading-relaxed text-secondary">{t("hero.body")}</p>
-      </SonaeModal>
     </div>
   );
 }

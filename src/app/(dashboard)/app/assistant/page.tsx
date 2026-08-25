@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,6 @@ import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AssistantComposer } from "./_components/AssistantComposer";
 import { AssistantHero } from "./_components/AssistantHero";
-import { AssistantModals } from "./_components/AssistantModals";
 import {
   appendTranscript,
   buildUnsupportedFileMessage,
@@ -27,6 +26,11 @@ import {
   resolveThinkingLevelForModel,
   type ThinkingLevelId,
 } from "@/src/lib/composerPreferences";
+
+const loadAssistantModals = () => import("./_components/AssistantModals");
+const AssistantModals = lazy(() =>
+  loadAssistantModals().then(({ AssistantModals: Component }) => ({ default: Component })),
+);
 
 export default function AssistantWelcomePage() {
   const t = useTranslations("ai.assistant");
@@ -43,6 +47,7 @@ export default function AssistantWelcomePage() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
+  const [modalsActivated, setModalsActivated] = useState(false);
   // Restored after mount so the server and first client render agree; the
   // choice is a preference and survives the page.
   const [selectedThinkingId, setSelectedThinkingId] = useState<ThinkingLevelId>("NONE");
@@ -99,6 +104,9 @@ export default function AssistantWelcomePage() {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
+
+    setModalsActivated(true);
+    void loadAssistantModals();
 
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
@@ -186,6 +194,12 @@ export default function AssistantWelcomePage() {
       console.error(error);
       setIsSubmitting(false);
     }
+  };
+
+  const handleToggleRecording = () => {
+    setModalsActivated(true);
+    void loadAssistantModals();
+    toggleRecording();
   };
 
   const handleStart = async (event: FormEvent) => {
@@ -299,7 +313,7 @@ export default function AssistantWelcomePage() {
         onSelectThinking={handleSelectThinking}
         onStart={handleStart}
         onThinkingDropdownChange={handleThinkingDropdownChange}
-        onToggleRecording={toggleRecording}
+        onToggleRecording={handleToggleRecording}
         onStartVoice={handleStartVoice}
         pendingFiles={pendingFiles}
         selectedModelData={selectedModelData}
@@ -313,15 +327,19 @@ export default function AssistantWelcomePage() {
 
       </div>
 
-      <AssistantModals
-        onClearUploadError={() => setUploadError(null)}
-        onPermissionErrorClose={() => setPermissionError(false)}
-        permissionError={permissionError}
-        platformName={settings.platformName}
-        t={t}
-        tCommon={tCommon}
-        uploadError={uploadError}
-      />
+      {modalsActivated || permissionError || uploadError ? (
+        <Suspense fallback={null}>
+          <AssistantModals
+            onClearUploadError={() => setUploadError(null)}
+            onPermissionErrorClose={() => setPermissionError(false)}
+            permissionError={permissionError}
+            platformName={settings.platformName}
+            t={t}
+            tCommon={tCommon}
+            uploadError={uploadError}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

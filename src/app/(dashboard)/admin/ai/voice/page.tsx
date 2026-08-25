@@ -10,8 +10,6 @@ import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControl
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
-import { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage } from "@/src/lib/googleLiveVoice";
-import { decodePcm16Base64 } from "@/src/lib/voiceSession";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -70,7 +68,12 @@ export default function SpokenVoicePage() {
     setPreviewVoice(voice);
     setPreviewPhase("connecting");
     try {
-      const session = await mintPreview({ voice });
+      const [session, { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage }, { decodePcm16Base64 }] =
+        await Promise.all([
+          mintPreview({ voice }),
+          import("@/src/lib/googleLiveVoice"),
+          import("@/src/lib/voiceSession"),
+        ]);
       const context = new AudioContext();
       const socket = new WebSocket(session.relayUrl);
       const playingSources = new Set<AudioBufferSourceNode>();

@@ -4,7 +4,6 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -13,7 +12,12 @@ import { ArrowLeft, CheckCircle2, History, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+
+const loadConfirmationModal = () => import("@/src/ui/components/screens/ConfirmationModal");
+const DeferredConfirmationModal = lazy(() =>
+  loadConfirmationModal().then((module) => ({ default: module.ConfirmationModal })),
+);
 
 
 function safeFormatJson(value?: string) {
@@ -50,6 +54,7 @@ export default function WorkflowExecutionDetailPage() {
   const action = useAdminAction({ scope: "admin-workflow-executions" });
 
   const [pendingRejection, setPendingRejection] = useState<{ nodeId: string } | null>(null);
+  const [confirmationActivated, setConfirmationActivated] = useState(false);
 
   const decide = async (nodeId: string, decision: "APPROVED" | "REJECTED") => {
     await action.run(
@@ -187,7 +192,13 @@ export default function WorkflowExecutionDetailPage() {
                   {/* Stays raw: a compact red row chip — destructive's confirm recipe is a big uppercase pill. */}
                   <button
                     type="button"
-                    onClick={() => setPendingRejection({ nodeId: step.nodeId })}
+                    onPointerEnter={() => void loadConfirmationModal()}
+                    onPointerDown={() => void loadConfirmationModal()}
+                    onFocus={() => void loadConfirmationModal()}
+                    onClick={() => {
+                      setConfirmationActivated(true);
+                      setPendingRejection({ nodeId: step.nodeId });
+                    }}
                     disabled={action.isBusy(step.nodeId)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] border border-red-500/30 bg-red-500/10 text-red-500 text-[12px] font-semibold hover:bg-red-500/15 disabled:opacity-50"
                   >
@@ -200,23 +211,27 @@ export default function WorkflowExecutionDetailPage() {
         ]}
       />
 
-      <ConfirmationModal
-        isOpen={pendingRejection !== null}
-        onClose={() => setPendingRejection(null)}
-        title={t("detail.confirm.title")}
-        cancelLabel={t("detail.confirm.cancel")}
-        confirmLabel={t("detail.confirm.confirm")}
-        isSubmitting={pendingRejection ? action.isBusy(pendingRejection.nodeId) : false}
-        onConfirm={() => {
-          if (pendingRejection) void decide(pendingRejection.nodeId, "REJECTED");
-        }}
-        warning={{
-          title: t("detail.confirm.warningTitle"),
-          description: t("detail.confirm.warningBody"),
-        }}
-      >
-        <p>{t("detail.confirm.body", { node: pendingRejection?.nodeId ?? "" })}</p>
-      </ConfirmationModal>
+      {confirmationActivated ? (
+        <Suspense fallback={null}>
+          <DeferredConfirmationModal
+            isOpen={pendingRejection !== null}
+            onClose={() => setPendingRejection(null)}
+            title={t("detail.confirm.title")}
+            cancelLabel={t("detail.confirm.cancel")}
+            confirmLabel={t("detail.confirm.confirm")}
+            isSubmitting={pendingRejection ? action.isBusy(pendingRejection.nodeId) : false}
+            onConfirm={() => {
+              if (pendingRejection) void decide(pendingRejection.nodeId, "REJECTED");
+            }}
+            warning={{
+              title: t("detail.confirm.warningTitle"),
+              description: t("detail.confirm.warningBody"),
+            }}
+          >
+            <p>{t("detail.confirm.body", { node: pendingRejection?.nodeId ?? "" })}</p>
+          </DeferredConfirmationModal>
+        </Suspense>
+      ) : null}
     </div>
   );
 }

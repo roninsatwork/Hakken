@@ -11,7 +11,6 @@ import { cn } from "@/src/ui/lib/utils";
 import { Button } from "@/src/ui/atoms/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 /**
  * Picking an agent's picture.
@@ -50,6 +49,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processUpload = async (file: File) => {
+    const { validateUploadFile } = await import("@/src/lib/constants/uploads");
     const validation = validateUploadFile(file, "adminImage");
     if (!validation.allowed) {
       setUploadError(validation.reason);

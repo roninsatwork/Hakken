@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMutation } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
@@ -13,15 +14,11 @@ import {
   XCircle,
   Info
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { useTranslations } from "next-intl";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
@@ -30,10 +27,12 @@ import {
 
 type Plan = Doc<"plans">;
 
+const loadPlanDialogs = () => import("./PlanDialogs");
+const PlanDialogs = dynamic(() => loadPlanDialogs().then((module) => module.PlanDialogs));
+
 export default function SubscriptionPlansPage() {
   const t = useTranslations('admin.plans');
   const tModules = useTranslations('admin.companies.modules');
-  const tCommon = useTranslations('common');
   
   const createPlan = useMutation(api.plans.createPlan);
   const updatePlan = useMutation(api.plans.updatePlan);
@@ -43,6 +42,7 @@ export default function SubscriptionPlansPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null);
+  const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState({ 
     name: "", 
@@ -65,7 +65,13 @@ export default function SubscriptionPlansPage() {
     setSearchTerm(v);
   };
 
+  const preparePlanDialogs = () => {
+    setDialogsRequested(true);
+    void loadPlanDialogs();
+  };
+
   const handleOpenAdd = () => {
+    preparePlanDialogs();
     setFormData({ name: "", description: "", messageLimit: 1000, priceGBP: 0, grantedModules: [], isActive: true });
     setEditingPlan(null);
     setSubmitError("");
@@ -73,6 +79,7 @@ export default function SubscriptionPlansPage() {
   };
 
   const handleOpenEdit = (plan: Plan) => {
+    preparePlanDialogs();
     setFormData({ 
         name: plan.name, 
         description: plan.description || "", 
@@ -242,7 +249,14 @@ export default function SubscriptionPlansPage() {
                 <RowIconButton onClick={() => handleOpenEdit(plan)} label={t('table.editPlan')}>
                   <Edit2 className="w-4 h-4" />
                 </RowIconButton>
-                <RowIconButton onClick={() => setDeletingPlan(plan)} tone="danger" label={t('table.deletePlan')}>
+                <RowIconButton
+                  onClick={() => {
+                    preparePlanDialogs();
+                    setDeletingPlan(plan);
+                  }}
+                  tone="danger"
+                  label={t('table.deletePlan')}
+                >
                   <Trash2 className="w-4 h-4" />
                 </RowIconButton>
               </RowActions>
@@ -251,59 +265,17 @@ export default function SubscriptionPlansPage() {
         ]}
       />
 
-      {/* Add/Edit Modal */}
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={editingPlan ? t('editTitle') : t('createTitle')}
-      >
-        <div className="flex flex-col gap-2 mb-6">
-          <p className="text-secondary text-[15px]">{editingPlan ? t('editSubtitle') : t('createSubtitle')}</p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <Field
-            label={t('nameLabel')}
-            required
-            value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
-            placeholder={t('namePlaceholder')}
-          />
-
-          <TextAreaField
-            label={t('descLabel')}
-            value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
-            placeholder={t('descPlaceholder')}
-            className="min-h-[80px] resize-y"
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-              <Field
-                label={t('limitLabel')}
-                type="number"
-                required
-                value={formData.messageLimit}
-                onChange={e => setFormData({ ...formData, messageLimit: Number(e.target.value) })}
-                placeholder={t('limitPlaceholder')}
-                className="font-mono"
-              />
-
-              <Field
-                label={t('priceLabel')}
-                type="number"
-                step="0.01"
-                required
-                value={formData.priceGBP}
-                onChange={e => setFormData({ ...formData, priceGBP: Number(e.target.value) })}
-                placeholder={t('pricePlaceholder')}
-                className="font-mono"
-              />
-          </div>
-
-          <div className="flex flex-col gap-2 pt-2">
-            <span className="text-[13px] font-medium text-secondary tracking-wide">{t('grantsLabel')}</span>
-            <p className="text-[12px] text-muted">{t('grantsHint')}</p>
+      {dialogsRequested ? (
+        <PlanDialogs
+          editorOpen={isAddModalOpen}
+          editing={Boolean(editingPlan)}
+          formData={formData}
+          setFormData={setFormData}
+          submitError={submitError}
+          isSubmitting={isSubmitting}
+          onEditorClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleSubmit}
+          grantsControl={
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_MODULES.map((module) => {
                 const isOn = formData.grantedModules.includes(module.key);
@@ -327,57 +299,29 @@ export default function SubscriptionPlansPage() {
                 );
               })}
             </div>
-          </div>
-
-          <div className="flex items-center gap-3 pt-2">
+          }
+          activeControl={
+            <div className="flex items-center gap-3 pt-2">
               <input
-                 type="checkbox"
-                 id="isActive"
-                 checked={formData.isActive}
-                 onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
-                 className="w-4 h-4 rounded border-border-dim text-brand focus:ring-brand"
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })}
+                className="w-4 h-4 rounded border-border-dim text-brand focus:ring-brand"
               />
-              <label htmlFor="isActive" className="text-[13px] font-medium text-foreground tracking-wide cursor-pointer">{t('activeLabel')}</label>
-          </div>
-
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddModalOpen(false)}
-              className="rounded-[10px] text-sm hover:bg-foreground/5"
-              disabled={isSubmitting}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <WriteButton
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? tCommon('saving') : (editingPlan ? t('savePlan') : t('newPlan'))}
-            </WriteButton>
-          </div>
-        </form>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingPlan}
-        onClose={() => {
-          setDeletingPlan(null);
-          setSubmitError("");
-        }}
-        title={t('deleteTitle')}
-        cancelLabel={tCommon('cancel')}
-        confirmLabel={tCommon('actions.delete')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-        warning={{ description: t('deleteWarning') }}
-      >
-        <p>
-          {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingPlan?.name}</strong> })}
-        </p>
-      </ConfirmationModal>
+              <label htmlFor="isActive" className="text-[13px] font-medium text-foreground tracking-wide cursor-pointer">
+                {t('activeLabel')}
+              </label>
+            </div>
+          }
+          deletingPlanName={deletingPlan?.name ?? null}
+          onDeleteClose={() => {
+            setDeletingPlan(null);
+            setSubmitError("");
+          }}
+          onDeleteConfirm={confirmDelete}
+        />
+      ) : null}
     </div>
   );
 }

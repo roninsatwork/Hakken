@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2 } from "lucide-react";
+
+const LocalTestAuthError = lazy(() => import("./LocalTestAuthError"));
 
 type LocalTestAuthClientProps = {
   enabled: boolean;
@@ -83,19 +85,16 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
-        <div
-          data-testid="local-test-auth-error"
-          className="max-w-md rounded-[24px] border border-border-dim bg-card/60 p-8 shadow-xl flex flex-col gap-4"
-        >
-          <ShieldAlert className="w-8 h-8 text-[#f43f5e]" />
-          <h1 className="text-xl font-semibold tracking-wide">Local test auth unavailable</h1>
-          <p className="text-[14px] text-secondary leading-relaxed">{error}</p>
-        </div>
-      </main>
+      <Suspense fallback={<LocalTestAuthLoading />}>
+        <LocalTestAuthError message={error} />
+      </Suspense>
     );
   }
 
+  return <LocalTestAuthLoading />;
+}
+
+function LocalTestAuthLoading() {
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
       <div

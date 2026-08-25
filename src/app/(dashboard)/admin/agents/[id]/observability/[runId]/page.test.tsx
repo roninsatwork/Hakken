@@ -17,7 +17,8 @@ function render(ui: React.ReactElement) {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentJobDetailPage from "./page";
+import AgentJobDetailPage, { RawButton } from "./page";
+import { AgentJobDetailContent } from "./AgentJobDetailContent";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn(), useMutation: () => vi.fn() }));
 
@@ -96,7 +97,16 @@ describe("AgentJobDetailPage", () => {
   let detailFixture: unknown;
   let logsFixture: unknown;
 
-  const renderPage = () => render(<AgentJobDetailPage />);
+  const renderPage = () =>
+    render(
+      <AgentJobDetailContent
+        agentId={"agent_1" as React.ComponentProps<typeof AgentJobDetailContent>["agentId"]}
+        runId={"run_1" as React.ComponentProps<typeof AgentJobDetailContent>["runId"]}
+        detail={detailFixture as React.ComponentProps<typeof AgentJobDetailContent>["detail"]}
+        logs={logsFixture as React.ComponentProps<typeof AgentJobDetailContent>["logs"]}
+        RawButton={RawButton}
+      />,
+    );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -256,8 +266,9 @@ describe("AgentJobDetailPage", () => {
 
   it("waits rather than rendering a half-built screen", () => {
     detailFixture = undefined;
-    renderPage();
+    const { container } = render(<AgentJobDetailPage />);
 
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
     expect(screen.queryByText("Where the time went")).not.toBeInTheDocument();
     expect(screen.queryByText("This job could not be found")).not.toBeInTheDocument();
   });

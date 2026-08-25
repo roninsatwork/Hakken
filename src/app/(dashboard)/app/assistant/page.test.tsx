@@ -10,6 +10,7 @@ type HookMock = {
 };
 
 const pushMock = vi.hoisted(() => vi.fn());
+const voiceState = vi.hoisted(() => ({ permissionError: false }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -32,7 +33,7 @@ vi.mock("@/src/hooks/useVoiceToText", () => ({
   useVoiceToText: () => ({
     isRecording: false,
     isTranscribing: false,
-    permissionError: false,
+    permissionError: voiceState.permissionError,
     setPermissionError: vi.fn(),
     toggleRecording: vi.fn(),
   }),
@@ -51,12 +52,14 @@ vi.mock("./_components/AssistantComposer", () => ({
     activeModels,
     content,
     footerText,
+    onToggleRecording,
     onStart,
     setContent,
   }: {
     activeModels: unknown[];
     content: string;
     footerText: string;
+    onToggleRecording: () => void;
     onStart: (event: React.FormEvent) => void;
     setContent: (value: string) => void;
   }) => (
@@ -64,13 +67,10 @@ vi.mock("./_components/AssistantComposer", () => ({
       <div>models:{activeModels.length}</div>
       <div>{footerText}</div>
       <textarea aria-label="Message" value={content} onChange={(event) => setContent(event.target.value)} />
+      <button type="button" onClick={onToggleRecording}>Record</button>
       <button type="submit">Send</button>
     </form>
   ),
-}));
-
-vi.mock("./_components/AssistantModals", () => ({
-  AssistantModals: ({ uploadError }: { uploadError: string | null }) => <div>{uploadError}</div>,
 }));
 
 const models = [
@@ -95,6 +95,7 @@ describe("AssistantWelcomePage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    voiceState.permissionError = false;
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
       if (path.includes("getMe")) return { _id: "user_1", name: "Ada Lovelace" };
@@ -132,6 +133,26 @@ describe("AssistantWelcomePage", () => {
         fileIds: undefined,
       });
       expect(pushMock).toHaveBeenCalledWith("/app/assistant/thread_1");
+    });
+  });
+
+  it("loads error modals only when needed and keeps them mounted after first use", async () => {
+    const { rerender } = render(<AssistantWelcomePage />);
+
+    expect(screen.queryByText("errors.mic.title")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Record" }));
+    expect(screen.queryByText("errors.mic.title")).not.toBeInTheDocument();
+
+    voiceState.permissionError = true;
+    rerender(<AssistantWelcomePage />);
+    expect(await screen.findByText("errors.mic.title")).toBeInTheDocument();
+
+    voiceState.permissionError = false;
+    rerender(<AssistantWelcomePage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("errors.mic.title")).not.toBeInTheDocument();
     });
   });
 });

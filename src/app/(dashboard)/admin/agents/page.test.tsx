@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -125,6 +125,15 @@ describe("AgentsPage model column", () => {
     render(<AgentsPage />);
 
     expect(screen.getByText("Pinned Agent Model")).toBeInTheDocument();
+  });
+
+  it("loads the unchanged delete confirmation from the row action", async () => {
+    render(<AgentsPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "buttons.delete" })[0]);
+
+    expect(await screen.findByText("modal.deleteConfirm", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(screen.getByText("modal.undone")).toBeInTheDocument();
   });
 
 });

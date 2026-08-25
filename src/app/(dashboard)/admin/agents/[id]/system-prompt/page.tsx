@@ -1,17 +1,20 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
-import { useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SquareTerminal, RefreshCcw, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
+const DeferredSaveFeedback = lazy(async () => {
+  const { SaveFeedback: Component } = await import("@/src/ui/components/screens/SaveControls");
+  return { default: Component };
+});
 
 export default function AgentSystemPromptPage() {
   const t = useTranslations("admin.agents.details.systemPrompt");
@@ -114,13 +117,17 @@ export default function AgentSystemPromptPage() {
         </div>
       </header>
 
-      <SaveFeedback
-        status={saveStatus}
-        successTitle={t("feedback.success.title")}
-        successMessage={t("feedback.success.subtitle")}
-        errorTitle={t("feedback.error.title")}
-        errorMessage={errorMessage}
-      />
+      {saveStatus !== "idle" ? (
+        <Suspense fallback={null}>
+          <DeferredSaveFeedback
+            status={saveStatus}
+            successTitle={t("feedback.success.title")}
+            successMessage={t("feedback.success.subtitle")}
+            errorTitle={t("feedback.error.title")}
+            errorMessage={errorMessage}
+          />
+        </Suspense>
+      ) : null}
 
       {/* Flat Content Flow Section */}
       <div className="w-full h-[1px] bg-border-dim my-2" />

@@ -59,14 +59,22 @@ export default function ConnectorSetupPage() {
 
   const searchParams = useSearchParams();
 
+  const [draft, setDraft] = useState<ConnectorDraft | null>(null);
+  const [companyOptionsRequested, setCompanyOptionsRequested] = useState(false);
+
   const details = useQuery(api.aiTools.getConnectorInstallDetails, { connectorId: id });
-  const companyOptions = useQuery(api.companies.getCompanyOptions, details?.canManageTenantScope ? {} : "skip") || [];
+  const tenantAvailability = draft?.tenantAvailability ?? details?.connector?.tenantAvailability;
+  const companyOptions = useQuery(
+    api.companies.getCompanyOptions,
+    details?.canManageTenantScope && (companyOptionsRequested || tenantAvailability === "TENANT_RESTRICTED")
+      ? {}
+      : "skip"
+  ) || [];
   const updateConnectorInstall = useMutation(api.aiTools.updateConnectorInstall);
   const validateConnectorConfiguration = useMutation(api.aiTools.validateConnectorConfiguration);
   const beginConnectorOAuth = useMutation(api.aiTools.beginConnectorOAuth);
   const disconnectConnectorOAuth = useMutation(api.aiTools.disconnectConnectorOAuth);
 
-  const [draft, setDraft] = useState<ConnectorDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -220,6 +228,8 @@ export default function ConnectorSetupPage() {
                   <select
                     aria-label={t("whoCanUse")}
                     value={form.tenantAvailability}
+                    onFocus={() => setCompanyOptionsRequested(true)}
+                    onPointerEnter={() => setCompanyOptionsRequested(true)}
                     onChange={(event) => updateDraft({
                       tenantAvailability: event.target.value as "GLOBAL" | "TENANT_RESTRICTED",
                       companyId: event.target.value === "GLOBAL" ? "" : form.companyId,

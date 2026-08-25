@@ -3,7 +3,7 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { MouseEvent } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -14,11 +14,8 @@ import {
   ToggleRight,
   Play
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -30,6 +27,11 @@ import {
   hydrateScheduleDraft,
   normalizeTimes,
 } from "./_lib/scheduleConfig";
+
+const loadScheduleDialogs = () => import("./ScheduleDialogs");
+const ScheduleDialogs = lazy(() =>
+  loadScheduleDialogs().then((module) => ({ default: module.ScheduleDialogs })),
+);
 
 type ScheduleRow = Doc<"schedules"> & {
   workflowName?: string;
@@ -52,6 +54,7 @@ export default function SchedulesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingSchedule, setDeletingSchedule] = useState<ScheduleRow | null>(null);
   const [messageModal, setMessageModal] = useState<{ title: string; body: string } | null>(null);
+  const [dialogsActivated, setDialogsActivated] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,6 +80,16 @@ export default function SchedulesPage() {
     router.push("/admin/workflows/schedules/new");
   };
 
+  const activateDialogs = () => {
+    void loadScheduleDialogs();
+    setDialogsActivated(true);
+  };
+
+  const showMessage = (message: { title: string; body: string }) => {
+    activateDialogs();
+    setMessageModal(message);
+  };
+
   const confirmDelete = async () => {
     if (deletingSchedule) {
       setIsSubmitting(true);
@@ -84,7 +97,7 @@ export default function SchedulesPage() {
         await deleteSchedule({ scheduleId: deletingSchedule._id });
         setDeletingSchedule(null);
       } catch (err: unknown) {
-        setMessageModal({ title: t('modals.error.deleteFailed'), body: getErrorMessage(err, tCommon('errors.default')) });
+        showMessage({ title: t('modals.error.deleteFailed'), body: getErrorMessage(err, tCommon('errors.default')) });
       } finally {
         setIsSubmitting(false);
       }
@@ -98,9 +111,9 @@ export default function SchedulesPage() {
     e.stopPropagation();
     try {
       await manualRunSchedule(target);
-      setMessageModal({ title: t('modals.execution.title'), body: t('modals.execution.body') });
+      showMessage({ title: t('modals.execution.title'), body: t('modals.execution.body') });
     } catch (e: unknown) {
-      setMessageModal({ title: t('modals.error.executionFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
+      showMessage({ title: t('modals.error.executionFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
     }
   };
 
@@ -109,7 +122,7 @@ export default function SchedulesPage() {
     try {
       await toggleSchedule({ scheduleId, isActive: !current });
     } catch (e: unknown) {
-      setMessageModal({ title: t('modals.error.statusFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
+      showMessage({ title: t('modals.error.statusFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
     }
   };
 
@@ -226,7 +239,10 @@ export default function SchedulesPage() {
           <RowIconButton
             label={t('actions.delete')}
             tone="danger"
-            onClick={() => setDeletingSchedule(schedule)}
+            onClick={() => {
+              activateDialogs();
+              setDeletingSchedule(schedule);
+            }}
           >
             <Trash2 className="w-4 h-4" />
           </RowIconButton>
@@ -277,42 +293,18 @@ export default function SchedulesPage() {
           labels: { empty: t('table.noSchedules') },
         }}
       />
-
-
-
-      <ConfirmationModal
-        isOpen={!!deletingSchedule}
-        onClose={() => setDeletingSchedule(null)}
-        title={t('modals.delete.title')}
-        cancelLabel={t('modals.delete.cancel')}
-        confirmLabel={isSubmitting ? t('modals.delete.submitting') : t('modals.delete.submit')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-      >
-        <p>
-          {t('modals.delete.confirm', { name: deletingSchedule?.name ?? "" })}
-        </p>
-      </ConfirmationModal>
-
-      {/* Generic Message Modal */}
-      <SonaeModal
-        isOpen={!!messageModal}
-        onClose={() => setMessageModal(null)}
-        title={messageModal?.title || ""}
-      >
-        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
-          <p>{messageModal?.body}</p>
-        </div>
-        <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
-          <Button
-            variant="primary"
-            onClick={() => setMessageModal(null)}
-            className="px-8 py-3 font-bold tracking-widest uppercase shadow-none"
-          >
-            {t('modals.error.dismiss')}
-          </Button>
-        </div>
-      </SonaeModal>
+      {dialogsActivated ? (
+        <Suspense fallback={null}>
+          <ScheduleDialogs
+            deletingSchedule={deletingSchedule}
+            isSubmitting={isSubmitting}
+            onCloseDelete={() => setDeletingSchedule(null)}
+            onConfirmDelete={confirmDelete}
+            messageModal={messageModal}
+            onCloseMessage={() => setMessageModal(null)}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

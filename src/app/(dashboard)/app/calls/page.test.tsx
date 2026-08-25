@@ -4,6 +4,9 @@ import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import type { FunctionReference } from "convex/server";
 import CallsPage from "./page";
+// Preload the deferred module so presentation assertions are not sensitive to
+// module-fetch latency when the full repository suite is running in parallel.
+import "./CallsContent";
 
 vi.mock("@/src/ui/components/layout/Header", () => ({
   default: () => <div data-testid="header" />,
@@ -44,28 +47,37 @@ describe("CallsPage", () => {
     }) as unknown as typeof useQuery);
   });
 
-  it("leads with the dialable number, large, when one is connected", () => {
+  it("starts both live queries immediately while preserving the unresolved shells", () => {
+    const { container } = render(<CallsPage />);
+
+    expect(vi.mocked(useQuery)).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "recent" })).toBeInTheDocument();
+    expect(container.querySelector("section")).toBeEmptyDOMElement();
+  });
+
+  it("leads with the dialable number, large, when one is connected", async () => {
     queries.set("number", "+441234567890");
     queries.set("calls", []);
 
     render(<CallsPage />);
 
     // Spaced for reading off a wall; the compact form is what the query returns.
-    expect(screen.getByText("+44 1234 567890")).toBeInTheDocument();
-    expect(screen.getByText("dialUs")).toBeInTheDocument();
-    expect(screen.getByText("idle")).toBeInTheDocument();
+    expect(await screen.findByText("+44 1234 567890")).toBeInTheDocument();
+    expect(await screen.findByText("dialUs")).toBeInTheDocument();
+    expect(await screen.findByText("idle")).toBeInTheDocument();
   });
 
-  it("says no number is connected rather than showing an empty headline", () => {
+  it("says no number is connected rather than showing an empty headline", async () => {
     queries.set("number", null);
     queries.set("calls", []);
 
     render(<CallsPage />);
 
-    expect(screen.getByText("noNumber")).toBeInTheDocument();
+    expect(await screen.findByText("noNumber")).toBeInTheDocument();
   });
 
-  it("shows a live badge the moment any call is in progress", () => {
+  it("shows a live badge the moment any call is in progress", async () => {
     queries.set("number", "+441234567890");
     queries.set("calls", [
       {
@@ -79,11 +91,11 @@ describe("CallsPage", () => {
 
     render(<CallsPage />);
 
-    expect(screen.getByText("live")).toBeInTheDocument();
-    expect(screen.getByText("status.IN_PROGRESS")).toBeInTheDocument();
+    expect(await screen.findByText("live")).toBeInTheDocument();
+    expect(await screen.findByText("status.IN_PROGRESS")).toBeInTheDocument();
   });
 
-  it("lists calls masked, with their summaries, linking to the detail", () => {
+  it("lists calls masked, with their summaries, linking to the detail", async () => {
     queries.set("number", "+441234567890");
     queries.set("calls", [
       {
@@ -101,9 +113,9 @@ describe("CallsPage", () => {
 
     render(<CallsPage />);
 
-    expect(screen.getByText("***123")).toBeInTheDocument();
-    expect(screen.getByText(/Sunday delivery/)).toBeInTheDocument();
-    expect(screen.getByText(/harbour-hotel/)).toBeInTheDocument();
+    expect(await screen.findByText("***123")).toBeInTheDocument();
+    expect(await screen.findByText(/Sunday delivery/)).toBeInTheDocument();
+    expect(await screen.findByText(/harbour-hotel/)).toBeInTheDocument();
     // The full number appears exactly once on this page: as the company's own
     // dialable headline, never as a caller.
     expect(screen.getAllByText(/\+44/)).toHaveLength(1);

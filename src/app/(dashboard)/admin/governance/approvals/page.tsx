@@ -1,12 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
   RowActions,
   RowIconButton,
@@ -20,6 +20,11 @@ import { CheckCircle2, ChevronDown, Clock, ShieldCheck, XCircle } from "lucide-r
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+
+const loadApprovalDecisionDialog = () => import("./ApprovalDecisionDialog");
+const ApprovalDecisionDialog = dynamic(
+  () => loadApprovalDecisionDialog().then((module) => module.ApprovalDecisionDialog),
+);
 
 /** Reject and Cancel both end a run and cannot be undone, so both are confirmed. */
 type Decision = "APPROVED" | "REJECTED" | "CANCELLED";
@@ -55,6 +60,7 @@ export default function AgentApprovalsPage() {
     decision: ConfirmableDecision;
     toolName: string;
   } | null>(null);
+  const [decisionDialogLoaded, setDecisionDialogLoaded] = useState(false);
 
   const paged = useServerPagedTable(
     api.agentRunApprovals.getPendingApprovals,
@@ -68,6 +74,11 @@ export default function AgentApprovalsPage() {
   const action = useAdminAction({ scope: "admin-agent-approvals" });
 
   const isLoading = paged.isLoading;
+
+  const prepareDecisionDialog = () => {
+    setDecisionDialogLoaded(true);
+    void loadApprovalDecisionDialog();
+  };
 
   const submitDecision = async (approvalId: Id<"agentRunApprovals">, decision: Decision) => {
     await action.run(
@@ -235,13 +246,18 @@ export default function AgentApprovalsPage() {
                   >
                     <CheckCircle2 className={`w-4 h-4 ${action.isBusy(approvalId) ? "opacity-40" : ""}`} />
                   </RowIconButton>
-                  <RowIconButton
-                    label={t("actions.reject")}
-                    tone="danger"
-                    onClick={() => setPendingConfirmation({ approvalId, decision: "REJECTED", toolName })}
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </RowIconButton>
+                  <span onPointerEnter={prepareDecisionDialog} onFocus={prepareDecisionDialog}>
+                    <RowIconButton
+                      label={t("actions.reject")}
+                      tone="danger"
+                      onClick={() => {
+                        prepareDecisionDialog();
+                        setPendingConfirmation({ approvalId, decision: "REJECTED", toolName });
+                      }}
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </RowIconButton>
+                  </span>
                 </RowActions>
               );
             },
@@ -249,25 +265,24 @@ export default function AgentApprovalsPage() {
         ]}
       />
 
-      <ConfirmationModal
-        isOpen={pendingConfirmation !== null}
-        onClose={() => setPendingConfirmation(null)}
-        title={t("confirm.title")}
-        cancelLabel={t("confirm.cancel")}
-        confirmLabel={t("confirm.confirm")}
-        isSubmitting={pendingConfirmation ? action.isBusy(pendingConfirmation.approvalId) : false}
-        onConfirm={() => {
-          if (pendingConfirmation) {
-            void submitDecision(pendingConfirmation.approvalId, pendingConfirmation.decision);
-          }
-        }}
-        warning={{
-          title: t("confirm.warningTitle"),
-          description: t("confirm.warningBody"),
-        }}
-      >
-        <p>{t("confirm.body", { tool: pendingConfirmation?.toolName ?? "" })}</p>
-      </ConfirmationModal>
+      {decisionDialogLoaded ? (
+        <ApprovalDecisionDialog
+          isOpen={pendingConfirmation !== null}
+          onClose={() => setPendingConfirmation(null)}
+          title={t("confirm.title")}
+          cancelLabel={t("confirm.cancel")}
+          confirmLabel={t("confirm.confirm")}
+          isSubmitting={pendingConfirmation ? action.isBusy(pendingConfirmation.approvalId) : false}
+          onConfirm={() => {
+            if (pendingConfirmation) {
+              void submitDecision(pendingConfirmation.approvalId, pendingConfirmation.decision);
+            }
+          }}
+          warningTitle={t("confirm.warningTitle")}
+          warningBody={t("confirm.warningBody")}
+          body={t("confirm.body", { tool: pendingConfirmation?.toolName ?? "" })}
+        />
+      ) : null}
     </div>
   );
 }

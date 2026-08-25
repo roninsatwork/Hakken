@@ -25,11 +25,11 @@ Related monitoring:
 
 ## Providers
 
-The model admin page shows platform providers for Google Vertex AI, OpenAI, and Anthropic. Operators can enable or disable providers, test provider connectivity, and sync model catalogs for supported providers.
+The model admin page shows platform providers for Google Vertex AI, OpenAI, Anthropic, and OpenRouter. Operators can enable or disable providers, test provider connectivity, and sync model catalogs for supported providers.
 
 Provider status matters. If a provider is disabled, its models are hidden from active model selectors and cannot be selected as valid defaults. If a provider test fails, treat that as an operational warning before enabling new models or changing defaults.
 
-Provider sync updates model metadata such as provider model id, display name, capabilities, supported use cases, context limits, output limits, and pricing metadata where available.
+Provider sync updates model metadata such as provider model id, display name, capabilities, supported use cases, context limits, output limits, and pricing metadata where available. OpenRouter can supply prices during sync; other providers may still need prices entered manually for cost reporting.
 
 ## Model Catalog
 
@@ -64,7 +64,7 @@ Embedding defaults need special care because the current vector index expects Go
 
 The model detail page shows read-only provider metadata and editable operational pricing fields. Operators can set a friendly name and pricing values for standard input, cached input, response output, and reasoning output.
 
-Friendly names appear in user-facing selectors and toolbars. The current cost analytics calculation uses the standard input and response output pricing fields. Cached input and reasoning output prices are stored as model metadata for operator visibility and future reporting work, but they are not part of the implemented dashboard cost calculation yet. Treat all pricing values as operational reporting inputs unless a separate billing process validates them.
+Friendly names appear in user-facing selectors and toolbars. The current cost analytics calculation uses the standard input and response output pricing fields. Cached input and reasoning output prices are stored as model metadata for operator visibility and future reporting work, but they are not part of the implemented dashboard cost calculation yet. If a model has no positive standard-input or response-output price, Sonae treats its cost as not measurable rather than assuming it is free. Treat all pricing values as operational reporting inputs unless a separate billing process validates them.
 
 The detail page also shows capabilities, supported use cases, context window, max output, provider model id, internal model id, sync date, pricing source, units, currency, and pricing effective date where recorded.
 

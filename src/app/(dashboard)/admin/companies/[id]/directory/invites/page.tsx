@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { use, useState } from "react";
 import { ShieldCheck, User as UserIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { InviteDispatchScreen } from "@/src/app/(dashboard)/admin/_features/invites/InviteDispatchScreen";
 
 /** Inviting people into this company's workspace. */
-export default function InviteUsersPage() {
+export default function InviteUsersPage({
+  params,
+}: {
+  params: Promise<{ id: Id<"companies"> }>;
+}) {
   const t = useTranslations("admin.invites");
-  const params = useParams();
-  const companyId = params.id as Id<"companies">;
+  const { id: companyId } = use(params);
   const [inviteRole, setInviteRole] = useState<"USER" | "ADMIN" | "SUPER_ADMIN">("USER");
 
   return (

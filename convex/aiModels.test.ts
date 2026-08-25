@@ -1253,6 +1253,14 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const initialDefaults = await client.query(api.aiModels.getCompanyModelDefaults, { companyId });
     expect(initialDefaults.useCases).toEqual(DEFAULT_MODEL_USE_CASES);
+    expect(initialDefaults.modelPickerOptions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ modelId: "global-chat-model", providerKey: "google" }),
+      expect.objectContaining({ modelId: "openai:gpt-company", providerKey: "openai" }),
+    ]));
+    expect(initialDefaults.providerNames).toEqual(expect.arrayContaining([
+      { providerKey: "google", displayName: "Google Vertex AI" },
+      { providerKey: "openai", displayName: "OpenAI" },
+    ]));
     expect(initialDefaults.defaults.find((row) => row.useCase === "chat")).toMatchObject({
       companyDefault: null,
       globalDefault: {

@@ -4,7 +4,7 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import Image from "next/image";
 import type { Doc } from "@/convex/_generated/dataModel";
 import {
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
   PageHeader,
   PagePrimaryAction,
@@ -26,6 +25,11 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 type Agent = Doc<"agents">;
+
+const loadAgentDeleteDialog = () => import("./AgentDeleteDialog");
+const AgentDeleteDialog = lazy(() =>
+  loadAgentDeleteDialog().then((module) => ({ default: module.AgentDeleteDialog })),
+);
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -63,6 +67,7 @@ export default function AgentsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingAgent, setDeletingAgent] = useState<Agent | null>(null);
+  const [deleteDialogActivated, setDeleteDialogActivated] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -92,6 +97,12 @@ export default function AgentsPage() {
         setIsSubmitting(false);
       }
     }
+  };
+
+  const openDelete = (agent: Agent) => {
+    void loadAgentDeleteDialog();
+    setDeleteDialogActivated(true);
+    setDeletingAgent(agent);
   };
 
   return (
@@ -201,7 +212,7 @@ export default function AgentsPage() {
                 <RowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
                   <Settings className="w-4 h-4" />
                 </RowIconButton>
-                <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
+                <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => openDelete(agent)}>
                   <Trash2 className="w-4 h-4" />
                 </RowIconButton>
               </RowActions>
@@ -210,24 +221,21 @@ export default function AgentsPage() {
         ]}
       />
 
-      <ConfirmationModal
-        isOpen={!!deletingAgent}
-        onClose={() => {
-          setDeletingAgent(null);
-          setSubmitError("");
-        }}
-        title={t('modal.deleteTitle')}
-        cancelLabel={t('buttons.cancel')}
-        confirmLabel={isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-      >
-        <p>
-          {t('modal.deleteConfirm', { name: deletingAgent?.name ?? "" })}
-        </p>
-        <p className="text-[13px] text-muted">{t('modal.undone')}</p>
-      </ConfirmationModal>
+      {deleteDialogActivated && (
+        <Suspense fallback={null}>
+          <AgentDeleteDialog
+            agentName={deletingAgent?.name ?? ""}
+            isOpen={Boolean(deletingAgent)}
+            isSubmitting={isSubmitting}
+            error={submitError}
+            onClose={() => {
+              setDeletingAgent(null);
+              setSubmitError("");
+            }}
+            onConfirm={confirmDelete}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -176,6 +176,9 @@ Current implemented redirects include:
 
 - `/app` redirects super admins to `/admin` once per session.
 - `/admin` routes redirect non-super-admin users to `/app` through the admin layout.
+- `/admin/agents/skills` redirects exactly to `/admin/ai/skills` through
+  `src/lib/legacyAdminRedirect.ts`; nested paths under the old address are not
+  redirected.
 - `/admin/companies/[id]/directory` redirects to `/admin/companies/[id]/directory/users`.
 - `/admin/companies/[id]/ai` opens the company AI readiness overview.
 - `/verify` requires a user click before redeeming a magic-link consent code.

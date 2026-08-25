@@ -63,17 +63,23 @@ describe("AgentInterfacesPage", () => {
     mutationMock.mockResolvedValue(undefined);
   });
 
-  it("lists every tool with a switch showing whether this agent has it", () => {
+  it("keeps the existing loading state while the answer builder loads", () => {
     renderPage();
 
-    expect(screen.getByText("Knowledge Search")).toBeInTheDocument();
+    expect(screen.getByText("loading")).toBeInTheDocument();
+  });
+
+  it("lists every tool with a switch showing whether this agent has it", async () => {
+    renderPage();
+
+    expect(await screen.findByText("Knowledge Search")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Knowledge Search" })).toHaveAttribute("aria-checked", "false");
   });
 
   it("binds a tool the switch is turned on for", async () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole("switch", { name: "Knowledge Search" }));
+    fireEvent.click(await screen.findByRole("switch", { name: "Knowledge Search" }));
 
     await waitFor(() => {
       expect(mutationMock).toHaveBeenCalledWith({
@@ -88,8 +94,9 @@ describe("AgentInterfacesPage", () => {
     boundFixture = [{ ...tool, bindingId: "binding_1" }];
     renderPage();
 
-    expect(screen.getByRole("switch", { name: "Knowledge Search" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("switch", { name: "Knowledge Search" }));
+    const toolSwitch = await screen.findByRole("switch", { name: "Knowledge Search" });
+    expect(toolSwitch).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(toolSwitch);
 
     await waitFor(() => {
       expect(mutationMock).toHaveBeenCalledWith({
@@ -105,13 +112,13 @@ describe("AgentInterfacesPage", () => {
    * which says this agent has none. In fact none existed anywhere, and the
    * reader was given nowhere to go about it.
    */
-  it("says no tools exist yet, and links to where one is made", () => {
+  it("says no tools exist yet, and links to where one is made", async () => {
     toolsFixture = [];
     renderPage();
 
     // Said twice on purpose since the screen gained page numbers: once in the
     // table and once in the footer's count slot.
-    expect(screen.getAllByText("tools.empty").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("tools.empty")).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /tools.emptyAction/ }))
       .toHaveAttribute("href", "/admin/ai/tools/new");
   });
@@ -120,24 +127,25 @@ describe("AgentInterfacesPage", () => {
    * The warning used to sit on screen permanently, beside an empty builder,
    * describing something that was not happening.
    */
-  it("warns about losing plain English only once fields are actually asked for", () => {
+  it("warns about losing plain English only once fields are actually asked for", async () => {
     renderPage();
 
+    await screen.findByText("tools.title");
     expect(screen.queryByText("answer.warning")).not.toBeInTheDocument();
   });
 
-  it("shows the warning when the agent already has an answer shape", () => {
+  it("shows the warning when the agent already has an answer shape", async () => {
     agentFixture = { ...agent, outputSchema: JSON.stringify({ type: "object", properties: { total: { type: "number" } } }) };
     renderPage();
 
-    expect(screen.getByText("answer.warning")).toBeInTheDocument();
+    expect(await screen.findByText("answer.warning")).toBeInTheDocument();
   });
 
   it("saves the answer shape without touching anything else on the agent", async () => {
     agentFixture = { ...agent, outputSchema: JSON.stringify({ type: "object", properties: { total: { type: "number" } } }) };
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /answer.saveButton/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /answer.saveButton/ }));
 
     await waitFor(() => {
       const payload = mutationMock.mock.calls.map(([p]) => p).find((p) => p && "outputSchema" in p);

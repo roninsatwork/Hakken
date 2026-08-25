@@ -36,18 +36,8 @@ import { InlineSearchInput, PaginationFooter } from "@/src/ui/components/screens
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
-import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
-import {
-  MAX_BULK_UPLOAD_FILES,
-  UPLOAD_CONCURRENCY,
-  buildUploadTitle,
-  collectDroppedFiles,
-  collectPickedFiles,
-  mapWithConcurrency,
-  partitionReservedBundleFiles,
-  type CollectedFile,
-} from "./knowledgeUploadUtils";
+import { MAX_BULK_UPLOAD_FILES, type CollectedFile } from "./knowledgeUploadUtils";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
@@ -81,6 +71,16 @@ const UPLOAD_STATUS_KEYS: Record<UploadQueueEntry["status"], string> = {
   queued: "uploadStatus.queued",
   failed: "uploadStatus.failed",
 };
+
+async function loadKnowledgeFileHelpers() {
+  const [uploadPolicy, uploadUtils] = await Promise.all([
+    import("@/src/lib/constants/uploads"),
+    import("./knowledgeUploadUtils"),
+  ]);
+  return { uploadPolicy, uploadUtils };
+}
+
+type KnowledgeFileHelpers = Awaited<ReturnType<typeof loadKnowledgeFileHelpers>>;
 
 function buildScopeArgs(scope: KnowledgeScope) {
   if (scope.type === "agent") return { agentId: scope.agentId };
@@ -175,10 +175,15 @@ export function KnowledgeManager({
     setUploadQueue((entries) => entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
   };
 
-  const uploadOneFile = async (collected: CollectedFile, key: string, deferIngestion: boolean) => {
+  const uploadOneFile = async (
+    collected: CollectedFile,
+    key: string,
+    deferIngestion: boolean,
+    helpers: KnowledgeFileHelpers,
+  ) => {
     updateQueueEntry(key, { status: "uploading" });
 
-    const contentType = resolveUploadContentType(collected.file);
+    const contentType = helpers.uploadPolicy.resolveUploadContentType(collected.file);
     const uploadUrl = await generateUploadUrl();
     const result = await fetch(uploadUrl, {
       method: "POST",
@@ -190,7 +195,7 @@ export function KnowledgeManager({
     await saveDocument({
       ...scopeArgs,
       storageId,
-      title: buildUploadTitle(collected),
+      title: helpers.uploadUtils.buildUploadTitle(collected),
       format: contentType,
       ...(deferIngestion ? { deferIngestion: true } : {}),
     });
@@ -201,10 +206,16 @@ export function KnowledgeManager({
    * each document as pending and starts the drain queue once at the end, rather
    * than firing an ingestion action per file.
    */
-  const processFiles = async (collected: CollectedFile[]) => {
+  const processFiles = async (
+    collected: CollectedFile[],
+    loadedHelpers?: KnowledgeFileHelpers,
+  ) => {
     if (collected.length === 0) return;
 
-    const { uploadable, skipped } = partitionReservedBundleFiles(collected);
+    const helpers = loadedHelpers ?? await loadKnowledgeFileHelpers();
+    const { uploadPolicy, uploadUtils } = helpers;
+
+    const { uploadable, skipped } = uploadUtils.partitionReservedBundleFiles(collected);
     setSkippedBundleFileCount(skipped);
 
     if (uploadable.length === 0) {
@@ -224,8 +235,8 @@ export function KnowledgeManager({
 
     capped.forEach((item, index) => {
       const key = `${index}-${item.path}`;
-      const title = buildUploadTitle(item);
-      const validation = validateUploadFile(item.file, "knowledgeDocument");
+      const title = uploadUtils.buildUploadTitle(item);
+      const validation = uploadPolicy.validateUploadFile(item.file, "knowledgeDocument");
       uploadSourcesRef.current.set(key, item);
 
       if (validation.allowed) {
@@ -246,17 +257,21 @@ export function KnowledgeManager({
     setIsUploading(true);
     const deferIngestion = accepted.length > 1;
 
-    const outcomes = await mapWithConcurrency(accepted, UPLOAD_CONCURRENCY, async ({ collected: item, key }) => {
-      try {
-        await uploadOneFile(item, key, deferIngestion);
-        updateQueueEntry(key, { status: "queued" });
-        return true;
-      } catch (err: unknown) {
-        console.error(err);
-        updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, t("errors.uploadFailed")) });
-        return false;
-      }
-    });
+    const outcomes = await uploadUtils.mapWithConcurrency(
+      accepted,
+      uploadUtils.UPLOAD_CONCURRENCY,
+      async ({ collected: item, key }) => {
+        try {
+          await uploadOneFile(item, key, deferIngestion, helpers);
+          updateQueueEntry(key, { status: "queued" });
+          return true;
+        } catch (err: unknown) {
+          console.error(err);
+          updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, t("errors.uploadFailed")) });
+          return false;
+        }
+      },
+    );
 
     const uploaded = outcomes.filter(Boolean).length;
 
@@ -317,16 +332,18 @@ export function KnowledgeManager({
     event.preventDefault();
     event.stopPropagation();
     setDragActive(false);
-    const collected = await collectDroppedFiles(event.dataTransfer);
-    await processFiles(collected);
+    const helpers = await loadKnowledgeFileHelpers();
+    const collected = await helpers.uploadUtils.collectDroppedFiles(event.dataTransfer);
+    await processFiles(collected, helpers);
   };
 
   const handleChange = async (event: ChangeEvent<HTMLInputElement>) => {
     event.preventDefault();
-    const collected = collectPickedFiles(event.target.files);
+    const helpers = await loadKnowledgeFileHelpers();
+    const collected = helpers.uploadUtils.collectPickedFiles(event.target.files);
     // Clear the input so re-picking the same folder fires a fresh change event.
     event.target.value = "";
-    await processFiles(collected);
+    await processFiles(collected, helpers);
   };
 
   const handleSaveText = async () => {

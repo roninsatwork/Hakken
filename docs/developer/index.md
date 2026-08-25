@@ -4,7 +4,7 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 
 For the product vision and strategy behind the work, read [PRODUCT.md](../../PRODUCT.md). It is the single source of truth for what Sonae is.
 
-The current cross-cutting implementation notes cover provider-neutral assistant streaming, real-time spoken channels, inbound phone calls, the receptionist screen, the connected Gmail mailbox, photo actions, tasks and in-app notifications, hybrid knowledge retrieval and bulk ingestion, the company Wiki page layer, diary, unanswered-demand queue and staff agents, workflow retry safety, rehearsal evals, personal/company/agent memory, self-improvement switches, widget quota privacy, widget embed-pass enforcement, maintenance connection probes, Sentry integration, screen-kit enforcement, theme-token enforcement, and retention/purge ownership.
+The current cross-cutting implementation notes cover provider-neutral assistant streaming, real-time spoken channels, inbound phone calls, the receptionist screen, the connected Gmail mailbox, tool-server connection/discovery/import/execution boundaries, photo actions, tasks and in-app notifications, hybrid knowledge retrieval and bulk ingestion, the company Wiki page layer, diary, unanswered-demand queue and staff agents, workflow retry safety, rehearsal evals, personal/company/agent memory, self-improvement switches, widget quota privacy, widget embed-pass enforcement, maintenance connection probes, Sentry integration, screen-kit enforcement, theme-token enforcement, and retention/purge ownership.
 
 ## Core Guides
 

@@ -1,29 +1,22 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import dynamic from "next/dynamic";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowRight, ChevronDown, DatabaseZap, FileText, Loader2 } from "lucide-react";
+import { ArrowRight, ChevronDown, FileText, Loader2 } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import useDebounce from "@/src/hooks/useDebounce";
-import {
-  describeInteractionType,
-  describeRunStatus,
-  describeTrigger,
-  formatCount,
-  formatDuration,
-  formatMoney,
-  formatRelativeTime,
-  summariseLogContent,
-  type LabelRef,
-} from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
-import { classifyLogEntry, type LogCategory } from "@/convex/agentLogGroupingService";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
+
+const AgentLogsResults = dynamic(
+  () => import("./AgentLogsResults").then((module) => module.AgentLogsResults),
+  { loading: LogsLoading }
+);
 
 const FILTERS = [
   { key: "ALL", labelKey: "filters.everything" },
@@ -33,6 +26,14 @@ const FILTERS = [
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
+
+function LogsLoading() {
+  return (
+    <div className="py-20 flex items-center justify-center text-muted">
+      <Loader2 className="w-6 h-6 animate-spin" />
+    </div>
+  );
+}
 
 export default function AgentLogsDashboard() {
   const t = useTranslations("admin.agents.details.logs.raw");
@@ -57,9 +58,6 @@ export default function AgentLogsDashboard() {
     page,
     pageSize: TABLE_PAGE_SIZE,
   });
-
-  const isLoading = data === undefined;
-  const groups = data?.groups ?? [];
 
   const reset = (apply: () => void) => {
     apply();
@@ -124,287 +122,58 @@ export default function AgentLogsDashboard() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="py-20 flex items-center justify-center text-muted">
-          <Loader2 className="w-6 h-6 animate-spin" />
-        </div>
-      ) : groups.length === 0 ? (
-        <EmptyLogs hasSearch={Boolean(debouncedSearch)} filter={filter} />
+      {data === undefined ? (
+        <LogsLoading />
       ) : (
-        <div className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <JobGroup
-              key={group.runId ?? `${group.startedAt}-${group.entries[0]?._id}`}
-              group={group}
-              now={now}
-              failureCounts={data.failureCounts}
-              openEntryId={openEntryId}
-              onToggleEntry={(entryId) => setOpenEntryId(openEntryId === entryId ? null : entryId)}
-              onOpenJob={(runId) => router.push(`/admin/agents/${agentId}/observability/${runId}`)}
-              onFocusFailure={failureKey ? undefined : (key) => reset(() => setFailureKey(key))}
-            />
-          ))}
-        </div>
-      )}
-
-      {!isLoading && groups.length > 0 && (
-        <PaginationFooter
+        <AgentLogsResults
+          data={data}
+          hasSearch={Boolean(debouncedSearch)}
+          filter={filter}
           page={page}
-          totalPages={data.totalPages}
-          totalCount={data.totalGroups}
-          pageSize={TABLE_PAGE_SIZE}
-          isLoading={isLoading}
+          now={now}
+          openEntryId={openEntryId}
+          onToggleEntry={(entryId) => setOpenEntryId(openEntryId === entryId ? null : entryId)}
+          onOpenJob={(runId) => router.push(`/admin/agents/${agentId}/observability/${runId}`)}
+          onFocusFailure={failureKey ? undefined : (key) => reset(() => setFailureKey(key))}
           onPageChange={setPage}
-          labels={{
-            previous: t("footer.previous"),
-            next: t("footer.next"),
-            empty: t("footer.empty"),
-            page: (current, total) => t("footer.page", { current, total }),
-            showing: (start, end, total) => t("footer.showing", { start, end, total }),
-          }}
+          renderOpenJob={({ onClick, children }) => (
+            /* Raw: an inline text link, not a button shape — no kit variant is a bare link. */
+            <button
+              type="button"
+              onClick={onClick}
+              className="text-[11.5px] text-brand hover:underline whitespace-nowrap shrink-0 flex items-center gap-1"
+            >
+              {children}
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+          renderEntryToggle={({ isOpen, onClick, children }) => (
+            /* Raw: a whole list row is the hit target — a layout, not a button recipe. */
+            <button
+              type="button"
+              onClick={onClick}
+              className={`w-full flex items-center gap-3 px-5 py-2.5 text-left min-w-0 transition-colors ${
+                isOpen ? "bg-rose-500/[0.04]" : "hover:bg-white/[0.02]"
+              }`}
+            >
+              {children}
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+          renderSeeOthers={({ onClick, children }) => (
+            /* Raw: an inline text link, not a button shape — no kit variant is a bare link. */
+            <button
+              type="button"
+              onClick={onClick}
+              className="text-brand hover:underline"
+            >
+              {children}
+            </button>
+          )}
         />
       )}
-
-      {data?.windowTruncated && (
-        <p className="text-[12px] text-muted">
-          {t("truncated")}
-        </p>
-      )}
     </div>
   );
-}
-
-function EmptyLogs({ hasSearch, filter }: { hasSearch: boolean; filter: FilterKey }) {
-  const t = useTranslations("admin.agents.details.logs.raw");
-  const message = hasSearch
-    ? { title: t("empty.searchTitle"), body: t("empty.searchBody") }
-    : filter === "PROBLEMS"
-      ? { title: t("empty.problemsTitle"), body: t("empty.problemsBody") }
-      : filter !== "ALL"
-        ? { title: t("empty.kindTitle"), body: t("empty.kindBody") }
-        : {
-            title: t("empty.allTitle"),
-            body: t("empty.allBody"),
-          };
-
-  return (
-    <div className="w-full min-h-[280px] border border-border-dim bg-card rounded-[14px] flex flex-col items-center justify-center gap-4 px-6 text-center">
-      <DatabaseZap className="w-9 h-9 text-muted/40" />
-      <div className="flex flex-col gap-1.5 items-center">
-        <span className="text-[15px] font-semibold text-foreground tracking-tight">{message.title}</span>
-        <span className="text-secondary text-[13px] max-w-md">{message.body}</span>
-      </div>
-    </div>
-  );
-}
-
-type Group = {
-  runId?: string;
-  startedAt: number;
-  lastAt: number;
-  job: {
-    objective: string;
-    status: string;
-    startedAt: number;
-    completedAt?: number;
-    costGBP?: number;
-    triggerType: string;
-  } | null;
-  entries: Array<{
-    _id: string;
-    interactionType: string;
-    promptContent: string;
-    responseContent: string;
-    outcome?: string;
-    durationMs?: number;
-    failureKey?: string;
-    createdAt: number;
-  }>;
-};
-
-function JobGroup({
-  group,
-  now,
-  failureCounts,
-  openEntryId,
-  onToggleEntry,
-  onOpenJob,
-  onFocusFailure,
-}: {
-  group: Group;
-  now: number;
-  failureCounts: Record<string, number>;
-  openEntryId: string | null;
-  onToggleEntry: (entryId: string) => void;
-  onOpenJob: (runId: Id<"agentRuns">) => void;
-  onFocusFailure?: (failureKey: string) => void;
-}) {
-  const t = useTranslations("admin.agents.details.logs.raw");
-  const tLabels = useTranslations("admin.agents.labels");
-  // The pure formatters return catalogue keys, not words; this says them.
-  const label = (ref: LabelRef) => tLabels(ref.key, ref.params);
-  const { job } = group;
-  const durationMs = job?.completedAt ? job.completedAt - job.startedAt : undefined;
-
-  return (
-    <div className="border border-border-dim rounded-[14px] bg-card overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3.5 bg-white/[0.02] border-b border-border-dim min-w-0">
-        <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 w-[86px] text-center ${statusTone(job?.status)}`}>
-          {job ? label(describeRunStatus(job.status)) : t("noJob")}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13.5px] text-foreground truncate">
-            {job?.objective ?? t("outsideJob")}
-          </p>
-          <p className="text-[11.5px] text-muted truncate">
-            {job ? `${label(describeTrigger(job.triggerType))} · ` : ""}
-            {label(formatRelativeTime(group.startedAt, now))} · {t("entries", { formatted: formatCount(group.entries.length), count: group.entries.length })}
-            {durationMs !== undefined ? ` · ${formatDuration(durationMs)}` : ""}
-            {job?.costGBP !== undefined ? ` · ${formatMoney(job.costGBP)}` : ""}
-          </p>
-        </div>
-        {group.runId && (
-          /* Raw: an inline text link, not a button shape — no kit variant is a bare link. */
-          <button
-            type="button"
-            onClick={() => onOpenJob(group.runId as Id<"agentRuns">)}
-            className="text-[11.5px] text-brand hover:underline whitespace-nowrap shrink-0 flex items-center gap-1"
-          >
-            {t("openJob")}
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      <div className="flex flex-col">
-        {group.entries.map((entry) => {
-          const isOpen = openEntryId === entry._id;
-          const repeats = entry.failureKey ? failureCounts[entry.failureKey] ?? 0 : 0;
-
-          return (
-            <div key={entry._id} className="border-t border-border-dim/40 first:border-t-0">
-              {/* Raw: a whole list row is the hit target — a layout, not a button recipe. */}
-              <button
-                type="button"
-                onClick={() => onToggleEntry(entry._id)}
-                className={`w-full flex items-center gap-3 px-5 py-2.5 text-left min-w-0 transition-colors ${
-                  isOpen ? "bg-rose-500/[0.04]" : "hover:bg-white/[0.02]"
-                }`}
-              >
-                <span className="text-[11px] font-mono text-muted tabular-nums shrink-0 w-[68px]">
-                  {new Date(entry.createdAt).toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
-                {/* What kind of entry this is, matching the filters above it —
-                    so picking "Tools" and seeing rows chipped "Tool" is one
-                    idea rather than two. */}
-                <span className={`text-[10.5px] px-2 py-1 rounded-[6px] whitespace-nowrap shrink-0 w-[74px] text-center ${categoryTone(classifyLogEntry(entry))}`}>
-                  {t(categoryKey(classifyLogEntry(entry)))}
-                </span>
-                {/* What the entry was, and then what it was about. The type
-                    alone made every property search on the page identical. */}
-                <span className="flex-1 min-w-0 text-[12.5px] truncate">
-                  <span className="text-foreground">{label(describeInteractionType(entry.interactionType))}</span>
-                  <span className="text-muted"> — {summariseLogContent(entry.promptContent) ?? tLabels("log.nothingRecorded")}</span>
-                </span>
-                {/* The outcome stays on the row in words. The chip says what
-                    the entry was; this says how it went, including when that
-                    was never recorded — which is the whole point of the
-                    outcome field and must not be quietly implied. */}
-                <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0 hidden sm:flex items-center gap-1">
-                  {entry.durationMs !== undefined && (
-                    <span className="text-muted">{formatDuration(entry.durationMs)} ·</span>
-                  )}
-                  <span className={outcomeTone(entry.outcome)}>{t(outcomeKey(entry.outcome))}</span>
-                </span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isOpen && (
-                <div className="px-5 pb-4 pt-1 flex flex-col gap-3">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <Pane title={t("whatWeSent")} body={entry.promptContent} />
-                    <Pane
-                      title={t("whatCameBack")}
-                      body={entry.responseContent}
-                      isError={entry.outcome === "FAILED"}
-                    />
-                  </div>
-                  {repeats > 1 && (
-                    <p className="text-[12px] text-muted">
-                      {t("repeats", { count: formatCount(repeats) })}{" "}
-                      {onFocusFailure && entry.failureKey && (
-                        /* Raw: an inline text link, not a button shape — no kit variant is a bare link. */
-                        <button
-                          type="button"
-                          onClick={() => onFocusFailure(entry.failureKey as string)}
-                          className="text-brand hover:underline"
-                        >
-                          {t("seeOthers", { count: formatCount(repeats - 1) })}
-                        </button>
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function Pane({ title, body, isError }: { title: string; body: string; isError?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[11px] text-muted mb-1.5">{title}</div>
-      <pre
-        className={`text-[11.5px] leading-relaxed font-mono m-0 px-3 py-2.5 rounded-[10px] border border-border-dim bg-sidebar/60 overflow-x-auto whitespace-pre-wrap break-words max-h-[280px] ${
-          isError ? "text-rose-400" : "text-secondary"
-        }`}
-      >
-        {body}
-      </pre>
-    </div>
-  );
-}
-
-function statusTone(status: string | undefined) {
-  if (status === "SUCCESS") return "bg-emerald-500/10 text-emerald-500";
-  if (status === "FAILED") return "bg-rose-500/10 text-rose-500";
-  if (status === "PENDING_APPROVAL") return "bg-amber-500/10 text-amber-500";
-  if (status === "RUNNING" || status === "QUEUED") return "bg-brand/10 text-brand";
-  return "bg-foreground/5 text-secondary";
-}
-
-function outcomeKey(outcome: string | undefined) {
-  if (outcome === "SUCCESS") return "outcome.worked";
-  if (outcome === "FAILED") return "outcome.failed";
-  return "outcome.notRecorded";
-}
-
-function outcomeTone(outcome: string | undefined) {
-  if (outcome === "SUCCESS") return "text-emerald-500";
-  if (outcome === "FAILED") return "text-rose-500";
-  return "text-muted";
-}
-
-/** The chip, using the same four words as the filters above the list. */
-function categoryKey(category: LogCategory) {
-  if (category === "THINKING") return "category.thinking";
-  if (category === "TOOL") return "category.tool";
-  if (category === "PROBLEM") return "category.problem";
-  return "category.other";
-}
-
-function categoryTone(category: LogCategory) {
-  if (category === "TOOL") return "bg-brand/10 text-brand";
-  if (category === "PROBLEM") return "bg-rose-500/10 text-rose-500";
-  return "bg-foreground/5 text-secondary";
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { useParams } from "next/navigation";
@@ -17,7 +17,6 @@ import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { Button } from "@/src/ui/atoms/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -28,13 +27,8 @@ type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: 
 type GlobalSkill = Doc<"agentSkills">;
 type SkillStatus = CompanySkill["status"];
 
-
-
-
-
-
-
-
+const loadSonaeModal = () => import("@/src/ui/components/feedback/SonaeModal");
+const DeferredSonaeModal = lazy(loadSonaeModal);
 
 export default function CompanyAiSkillsPage() {
   const t = useTranslations("admin.companyDetails.skills");
@@ -55,6 +49,7 @@ export default function CompanyAiSkillsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [globalSkillSearchTerm, setGlobalSkillSearchTerm] = useState("");
   const [selectedGlobalSkillIds, setSelectedGlobalSkillIds] = useState<Array<Id<"agentSkills">>>([]);
+  const [dialogsActivated, setDialogsActivated] = useState(false);
 
   // Searched and paged in the database. The previous picker read the first 250
   // active skills and filtered them in the browser, so in a library of hundreds
@@ -146,7 +141,11 @@ export default function CompanyAiSkillsPage() {
             <Button
               variant="brand"
               disabled={skills.results.length >= MAX_SKILLS_PER_COMPANY}
+              onPointerEnter={() => void loadSonaeModal()}
+              onPointerDown={() => void loadSonaeModal()}
+              onFocus={() => void loadSonaeModal()}
               onClick={() => {
+                setDialogsActivated(true);
                 setIsImportOpen(true);
                 action.clearError();
                 setGlobalSkillSearchTerm("");
@@ -248,7 +247,13 @@ export default function CompanyAiSkillsPage() {
               <WriteButton
                 type="button"
                 aria-label={t("removeAria", { name: skill.name })}
-                onClick={() => setArchiveTarget(skill)}
+                onPointerEnter={() => void loadSonaeModal()}
+                onPointerDown={() => void loadSonaeModal()}
+                onFocus={() => void loadSonaeModal()}
+                onClick={() => {
+                  setDialogsActivated(true);
+                  setArchiveTarget(skill);
+                }}
                 className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
@@ -258,7 +263,9 @@ export default function CompanyAiSkillsPage() {
         ]}
       />
 
-      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title={t("addModalTitle")} size="lg">
+      {dialogsActivated ? (
+        <Suspense fallback={null}>
+          <DeferredSonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title={t("addModalTitle")} size="lg">
         {/* Tick what you want and add it. The previous version made the reader
             select one skill, read a preview of its instructions, confirm, and
             start again for the next one. */}
@@ -335,10 +342,10 @@ export default function CompanyAiSkillsPage() {
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+          </DeferredSonaeModal>
 
 
-      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModalTitle")} size="sm">
+          <DeferredSonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModalTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
             {t.rich("removeBody", {
@@ -356,7 +363,9 @@ export default function CompanyAiSkillsPage() {
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+          </DeferredSonaeModal>
+        </Suspense>
+      ) : null}
     </div>
   );
 }

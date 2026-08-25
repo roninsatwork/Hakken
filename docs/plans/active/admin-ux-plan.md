@@ -529,11 +529,10 @@ arrive from. `outputReasoningCost` was removed from the form **and** from
 `updatePricingConfig` — a field that only ever travelled one way looks like it
 means something.
 
-*Not done, and worth knowing:* the sort inside `getOffsetPaginatedModels` still
-floats the legacy `isDefault` row to the top of the list. It is one row and it is
-harmless, but it now sorts on something the screen no longer shows. Sorting on
-the real defaults would mean reading `aiModelDefaults` inside the paginated
-query.
+**Superseded by the OpenRouter/model-scale work.** The later
+`getPaginatedModels` path removed the full-scan default-row float and pages in
+the database through indexed search/provider/status paths. Do not reopen the old
+`getOffsetPaginatedModels` note as current debt.
 
 ### Phase G — asked for while Phase F was on screen (done)
 

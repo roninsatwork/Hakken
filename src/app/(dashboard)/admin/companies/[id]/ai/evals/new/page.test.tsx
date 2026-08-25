@@ -12,6 +12,10 @@ function render(ui: React.ReactElement) {
     </NextIntlClientProvider>
   );
 }
+
+async function renderPage() {
+  return render(await NewCompanyEvalPage({ params: Promise.resolve({ id: "company123" }) }));
+}
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -28,7 +32,6 @@ vi.mock("convex/react", () => ({
 const push = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "company123" }),
   useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -96,7 +99,7 @@ describe("NewCompanyEvalPage", () => {
   it("creates an eval from plain-English answers and a typed phrase list", async () => {
     createCase.mockResolvedValue({ evalCaseId: "eval_1" });
 
-    render(<NewCompanyEvalPage />);
+    await renderPage();
 
     fireEvent.change(screen.getByPlaceholderText("Doesn't invent pricing"), { target: { value: "Doesn't invent pricing" } });
     fireEvent.change(
@@ -132,8 +135,8 @@ describe("NewCompanyEvalPage", () => {
     expect(push).toHaveBeenCalledWith("/admin/companies/company123/ai/evals");
   });
 
-  it("asks for no JSON and shows no machine constants", () => {
-    render(<NewCompanyEvalPage />);
+  it("asks for no JSON and shows no machine constants", async () => {
+    await renderPage();
 
     const body = document.body.textContent ?? "";
     for (const jargon of ["BLOCKER", "NO_HALLUCINATION", "COMPANY_CHAT", "JSON", "rubric", "fixture"]) {
@@ -146,7 +149,7 @@ describe("NewCompanyEvalPage", () => {
   it("keeps the skill requirement behind Advanced", async () => {
     createCase.mockResolvedValue({ evalCaseId: "eval_1" });
 
-    render(<NewCompanyEvalPage />);
+    await renderPage();
 
     expect(screen.getByText("Advanced")).toBeInTheDocument();
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();

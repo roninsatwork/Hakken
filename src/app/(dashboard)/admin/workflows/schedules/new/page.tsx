@@ -1,6 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -12,7 +13,6 @@ import {
   ToggleRight,
   ToggleLeft
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/atoms/Button";
 import { useTranslations } from "next-intl";
@@ -29,6 +29,10 @@ import {
 type PayloadType = "workflow" | "agent";
 type WorkflowRow = Doc<"workflows">;
 type AgentRow = Doc<"agents">;
+
+const loadScheduleErrorDialog = () =>
+  import("./ScheduleErrorDialog").then((module) => module.ScheduleErrorDialog);
+const ScheduleErrorDialog = dynamic(loadScheduleErrorDialog);
 
 type ScheduleFormData = {
   name: string;
@@ -60,6 +64,11 @@ export default function NewSchedulePage() {
   const [isActive, setIsActive] = useState(true);
   const [errorModal, setErrorModal] = useState("");
 
+  const showError = (message: string) => {
+    void loadScheduleErrorDialog();
+    setErrorModal(message);
+  };
+
   const filteredWorkflows = workflows.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (w.description || "").toLowerCase().includes(searchQuery.toLowerCase())
@@ -73,17 +82,17 @@ export default function NewSchedulePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (payloadType === "workflow" && !formData.workflowId) {
-      setErrorModal(t('errors.noWorkflow'));
+      showError(t('errors.noWorkflow'));
       return;
     }
     if (payloadType === "agent" && !formData.agentId) {
-      setErrorModal(t('errors.noWorkflow')); // Maps to generic no payload text
+      showError(t('errors.noWorkflow')); // Maps to generic no payload text
       return;
     }
 
     const scheduleError = validateScheduleDraft(scheduleDraft);
     if (scheduleError) {
-      setErrorModal(t(`errors.${scheduleError}`));
+      showError(t(`errors.${scheduleError}`));
       return;
     }
 
@@ -99,7 +108,7 @@ export default function NewSchedulePage() {
       });
       router.push("/admin/workflows/schedules");
     } catch (err: unknown) {
-      setErrorModal(getErrorMessage(err, "Failed to create schedule."));
+      showError(getErrorMessage(err, "Failed to create schedule."));
       setIsSubmitting(false);
     }
   };
@@ -321,26 +330,14 @@ export default function NewSchedulePage() {
 
       </form>
 
-      {/* Error Modal */}
-      <SonaeModal
-        isOpen={!!errorModal}
-        onClose={() => setErrorModal("")}
-        title={t('errors.configError')}
-      >
-        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
-          <p>{errorModal}</p>
-        </div>
-        <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
-          {/* Stays raw: a dismiss that floods solid red on hover — destructive keeps its tint, so no variant matches. */}
-          <button
-            type="button"
-            onClick={() => setErrorModal("")}
-            className="px-8 py-3 rounded-[10px] bg-red-500/10 text-red-500 transition-all text-sm font-bold tracking-widest uppercase hover:bg-red-500 hover:text-white"
-          >
-            {tCommon('actions.dismiss')}
-          </button>
-        </div>
-      </SonaeModal>
+      {errorModal && (
+        <ScheduleErrorDialog
+          dismissLabel={tCommon('actions.dismiss')}
+          message={errorModal}
+          onClose={() => setErrorModal("")}
+          title={t('errors.configError')}
+        />
+      )}
     </div>
   );
 }

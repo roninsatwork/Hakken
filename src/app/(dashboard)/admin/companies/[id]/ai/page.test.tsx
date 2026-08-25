@@ -57,11 +57,11 @@ describe("CompanyAiOverviewPage", () => {
    * that was working perfectly read 60% and listed things to "fix" that were
    * never missing.
    */
-  it("reads ready when a company inherits everything", () => {
+  it("reads ready when a company inherits everything", async () => {
     mockReadiness(inheritedAreas);
     render(<CompanyAiOverviewPage />);
 
-    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(await screen.findByText("Ready")).toBeInTheDocument();
     expect(screen.getByText("· nothing needs attention")).toBeInTheDocument();
 
     // Absence is never ranked as something to fix.
@@ -76,7 +76,7 @@ describe("CompanyAiOverviewPage", () => {
    * percentage from five areas and its reasons from nine, so it could rank
    * something first that had no effect on the number beside it.
    */
-  it("counts exactly the areas the table shows as needing attention", () => {
+  it("counts exactly the areas the table shows as needing attention", async () => {
     mockReadiness([
       {
         key: "skills",
@@ -90,7 +90,7 @@ describe("CompanyAiOverviewPage", () => {
     ] as typeof inheritedAreas);
     render(<CompanyAiOverviewPage />);
 
-    expect(screen.getByText("· 1 of 8 areas")).toBeInTheDocument();
+    expect(await screen.findByText("· 1 of 8 areas")).toBeInTheDocument();
 
     const table = screen.getByRole("table");
     expect(within(table).getAllByText("Needs attention")).toHaveLength(1);
@@ -100,11 +100,11 @@ describe("CompanyAiOverviewPage", () => {
     expect(screen.getByText("Finish setting them up")).toBeInTheDocument();
   });
 
-  it("sends each area to the screen that fixes it", () => {
+  it("sends each area to the screen that fixes it", async () => {
     mockReadiness(inheritedAreas);
     render(<CompanyAiOverviewPage />);
 
-    expect(screen.getByRole("link", { name: "Model routing" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Model routing" })).toHaveAttribute(
       "href",
       "/admin/companies/company_1/ai/models"
     );

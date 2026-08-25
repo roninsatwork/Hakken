@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -74,20 +74,24 @@ describe("EditAgentRulePage", () => {
     vi.mocked(useQuery).mockReturnValue(savedRule as unknown as ReturnType<typeof useQuery>);
   });
 
-  const show = () =>
-    renderWithProviders(<EditAgentRulePage params={routeParams({ id: AGENT_ID, ruleId: RULE_ID })} />);
+  const show = async () => {
+    await act(async () => {
+      renderWithProviders(<EditAgentRulePage params={routeParams({ id: AGENT_ID, ruleId: RULE_ID })} />);
+    });
+  };
 
-  it("opens with the saved rule already in the boxes", () => {
-    show();
+  it("opens with the saved rule already in the boxes", async () => {
+    await show();
 
-    expect(screen.getByPlaceholderText(NAME)).toHaveValue("Geography Extraction");
+    expect(await screen.findByPlaceholderText(NAME)).toHaveValue("Geography Extraction");
     expect(screen.getByPlaceholderText(TRIGGER)).toHaveValue("where are you based");
     expect(screen.getByPlaceholderText(INSTRUCTION)).toHaveValue("Answer with the London office address.");
   });
 
   it("saves an edit against the rule it opened, trimmed", async () => {
-    show();
+    await show();
 
+    await screen.findByPlaceholderText(NAME);
     fireEvent.change(screen.getByPlaceholderText(NAME), { target: { value: "  Office location  " } });
     fireEvent.click(screen.getByRole("button", { name: `${FORM}.priority.levels.CRITICAL` }));
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
@@ -108,8 +112,9 @@ describe("EditAgentRulePage", () => {
    * is the failure mode of a draft rebuilt from the record on every keystroke.
    */
   it("keeps earlier edits when a second box is changed", async () => {
-    show();
+    await show();
 
+    await screen.findByPlaceholderText(NAME);
     fireEvent.change(screen.getByPlaceholderText(NAME), { target: { value: "Office location" } });
     fireEvent.change(screen.getByPlaceholderText(TRIGGER), { target: { value: "where is your office" } });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
@@ -121,9 +126,10 @@ describe("EditAgentRulePage", () => {
     });
   });
 
-  it("will not save once a box has been emptied", () => {
-    show();
+  it("will not save once a box has been emptied", async () => {
+    await show();
 
+    await screen.findByPlaceholderText(TRIGGER);
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
     fireEvent.change(screen.getByPlaceholderText(TRIGGER), { target: { value: "   " } });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeDisabled();
@@ -134,17 +140,19 @@ describe("EditAgentRulePage", () => {
    * were loose text before, so clicking one focused nothing and a screen reader
    * announced three unlabelled boxes.
    */
-  it("gives every box a label that addresses it", () => {
-    show();
+  it("gives every box a label that addresses it", async () => {
+    await show();
 
+    await screen.findByPlaceholderText(NAME);
     expect(screen.getByLabelText("admin.agents.details.rules.form.name.label")).toBe(screen.getByPlaceholderText(NAME));
     expect(screen.getByLabelText(`${FORM}.trigger.entity`)).toBe(screen.getByPlaceholderText(TRIGGER));
     expect(screen.getByLabelText(`${FORM}.instruction.context`)).toBe(screen.getByPlaceholderText(INSTRUCTION));
   });
 
   it("returns to the agent's rules once the edit is saved", async () => {
-    show();
+    await show();
 
+    await screen.findByRole("button", { name: SUBMIT });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/admin/agents/${AGENT_ID}/rules`));

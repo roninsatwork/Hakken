@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { BrainCircuit, Loader2 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
@@ -12,12 +12,12 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 
-export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
+export default function NewAgentRulePage() {
   const t = useTranslations("admin.agents.details.rules.form");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const unwrappedParams = use(params);
-  const agentId = unwrappedParams.id;
+  const params = useParams<{ id: string }>();
+  const agentId = params.id as Id<"agents">;
 
   const createRule = useMutation(api.aiRules.createRule);
 

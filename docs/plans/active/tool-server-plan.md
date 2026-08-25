@@ -11,7 +11,7 @@ Give Sonae the ability to connect to a service's own published tool server, so
 the tools that service offers become available to agents without anyone writing
 an integration for it.
 
-Serves the rapid-POC and client-owned lanes in [PRODUCT.md](../../PRODUCT.md).
+Serves the rapid-POC and client-owned lanes in [PRODUCT.md](../../../PRODUCT.md).
 
 ---
 

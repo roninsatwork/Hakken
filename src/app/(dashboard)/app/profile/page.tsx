@@ -9,7 +9,6 @@ import ProfileTabs from "./ProfileTabs";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { Field } from "@/src/ui/components/screens/Field";
 
 type ProfileFormData = {
@@ -58,6 +57,7 @@ export default function MyProfilePage() {
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const { validateUploadFile } = await import("@/src/lib/constants/uploads");
     const validation = validateUploadFile(file, "adminImage");
     if (!validation.allowed) return;
 

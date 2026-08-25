@@ -180,7 +180,7 @@ describe("ManageUsersPage", () => {
     const { container } = render(<ManageUsersPage />);
 
     fireEvent.click(container.querySelector(".lucide-pen")?.closest("button") as HTMLButtonElement);
-    fireEvent.change(screen.getByDisplayValue("Ada Lovelace"), { target: { value: "Ada Byron" } });
+    fireEvent.change(await screen.findByDisplayValue("Ada Lovelace"), { target: { value: "Ada Byron" } });
     fireEvent.click(screen.getByRole("button", { name: "Update User" }));
 
     await waitFor(() => {
@@ -202,6 +202,21 @@ describe("ManageUsersPage", () => {
 
     await waitFor(() => {
       expect(revokeInvite).toHaveBeenCalledWith({ id: "invite_1" });
+    });
+  });
+
+  it("opens delete confirmation when it is the first requested dialog", async () => {
+    const { container } = render(<ManageUsersPage />);
+
+    fireEvent.click(container.querySelectorAll(".lucide-trash-2")[1].closest("button") as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: "Delete" })).toHaveLength(3);
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" }).at(-1) as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(deleteUser).toHaveBeenCalledWith({ id: "user_1" });
     });
   });
 });

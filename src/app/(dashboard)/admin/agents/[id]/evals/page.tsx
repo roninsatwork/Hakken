@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -21,15 +21,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
-import {
-  ModalFormError,
-  ModalField,
-  ModalFormField,
-  modalInputClassName,
-  modalTextareaClassName,
-} from "@/src/ui/components/screens/ModalForm";
 import { formatDateTime } from "@/src/lib/dates";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -74,6 +66,11 @@ const DEFAULT_FORM = {
   sampleCount: 1,
 };
 
+const loadAgentEvalDialogs = () => import("./AgentEvalDialogs");
+const AgentEvalDialogs = lazy(() =>
+  loadAgentEvalDialogs().then((module) => ({ default: module.AgentEvalDialogs })),
+);
+
 export default function AgentEvalsPage() {
   const t = useTranslations("admin.agents.details.evals");
   const params = useParams();
@@ -92,6 +89,7 @@ export default function AgentEvalsPage() {
   const [editingId, setEditingId] = useState<Id<"agentEvalFixtures"> | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<AgentEvalFixture | null>(null);
+  const [dialogsActivated, setDialogsActivated] = useState(false);
   const [notice, setNotice] = useState("");
 
   // Separate runners, keyed per row, so running one check does not disable every
@@ -132,12 +130,16 @@ export default function AgentEvalsPage() {
   const gate = readiness?.releaseGatePolicy;
 
   const openCreate = () => {
+    void loadAgentEvalDialogs();
+    setDialogsActivated(true);
     setEditingId(null);
     setForm(DEFAULT_FORM);
     setIsFormOpen(true);
   };
 
   const openEdit = (fixture: AgentEvalFixture) => {
+    void loadAgentEvalDialogs();
+    setDialogsActivated(true);
     setEditingId(fixture._id);
     setForm({
       objective: fixture.objective,
@@ -237,6 +239,12 @@ export default function AgentEvalsPage() {
       fallbackMessage: t("removeFailed"),
     });
     if (outcome.ok) setArchiveTarget(null);
+  };
+
+  const openArchive = (fixture: AgentEvalFixture) => {
+    void loadAgentEvalDialogs();
+    setDialogsActivated(true);
+    setArchiveTarget(fixture);
   };
 
   return (
@@ -424,7 +432,7 @@ export default function AgentEvalsPage() {
                   <RowIconButton
                     label={t("removeAria", { name: fixture.objective })}
                     tone="danger"
-                    onClick={() => setArchiveTarget(fixture)}
+                    onClick={() => openArchive(fixture)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </RowIconButton>
@@ -435,107 +443,38 @@ export default function AgentEvalsPage() {
         ]}
       />
 
-      {/* Two questions and a toggle, where there were six fields including a nested
-          JSON blob whose required keys were documented nowhere and which the shipped
-          starter evals got wrong. */}
-      <SonaeModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        title={editingId ? t("form.editTitle") : t("form.newTitle")}
-        size="lg"
-      >
-        <div className="flex flex-col gap-5 pt-2">
-          <ModalFormError>{formAction.error}</ModalFormError>
-
-          <ModalFormField label={t("form.objectiveLabel")}>
-            <textarea
-              className={`${modalTextareaClassName} min-h-[110px]`}
-              value={form.objective}
-              onChange={(event) => setForm((current) => ({ ...current, objective: event.target.value }))}
-              placeholder={t("form.objectivePlaceholder")}
-            />
-          </ModalFormField>
-
-          <ModalFormField
-            label={t("form.rubricLabel")}
-            hint={t("form.rubricHint")}
-          >
-            <textarea
-              className={`${modalTextareaClassName} min-h-[130px]`}
-              value={form.rubric}
-              onChange={(event) => setForm((current) => ({ ...current, rubric: event.target.value }))}
-              placeholder={t("form.rubricPlaceholder")}
-            />
-          </ModalFormField>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
-            <input
-              type="checkbox"
-              checked={form.mustPass}
-              onChange={(event) => setForm((current) => ({ ...current, mustPass: event.target.checked }))}
-              className="mt-0.5 accent-brand"
-            />
-            <span>
-              <span className="block text-[13px] font-semibold text-foreground">{t("form.mustPassLabel")}</span>
-              <span className="block text-[12px] text-secondary">{t("form.mustPassHint")}</span>
-            </span>
-          </label>
-
-          <details className="rounded-[8px] border border-border-dim px-3 py-2.5">
-            <summary className="cursor-pointer text-[13px] font-semibold text-foreground">{t("form.advanced")}</summary>
-            <div className="mt-4 flex flex-col gap-5">
-              <ModalFormField
-                label={t("form.sampleLabel")}
-                hint={t("form.sampleHint")}
-              >
-                <select
-                  className={modalInputClassName}
-                  value={String(form.sampleCount)}
-                  onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
-                >
-                  <option value="1">{t("form.once")}</option>
-                  <option value="3">{t("form.three")}</option>
-                  <option value="5">{t("form.five")}</option>
-                </select>
-              </ModalFormField>
-              <ModalField
-                label={t("form.toolsLabel")}
-                hint={t("form.toolsHint")}
-                value={form.tools}
-                onChange={(event) => setForm((current) => ({ ...current, tools: event.target.value }))}
-                placeholder={t("form.toolsPlaceholder")}
-              />
-            </div>
-          </details>
-
-          <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <Button variant="ghost" onClick={() => setIsFormOpen(false)} disabled={formAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
-              {t("form.cancel")}
-            </Button>
-            <WriteButton type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
-              {formAction.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editingId ? t("form.saveCheck") : t("form.createCheck")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
-
-      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModal.title")} size="sm">
-        <div className="flex flex-col gap-6">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t("removeModal.body")}
-          </p>
-          <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <Button variant="ghost" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
-              {t("removeModal.cancel")}
-            </Button>
-            <WriteButton type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
-              {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              {t("removeModal.confirm")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+      {dialogsActivated && (
+        <Suspense fallback={null}>
+          <AgentEvalDialogs
+            form={form}
+            setForm={setForm}
+            mustPassControl={
+              <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
+                <input
+                  type="checkbox"
+                  checked={form.mustPass}
+                  onChange={(event) => setForm((current) => ({ ...current, mustPass: event.target.checked }))}
+                  className="mt-0.5 accent-brand"
+                />
+                <span>
+                  <span className="block text-[13px] font-semibold text-foreground">{t("form.mustPassLabel")}</span>
+                  <span className="block text-[12px] text-secondary">{t("form.mustPassHint")}</span>
+                </span>
+              </label>
+            }
+            isFormOpen={isFormOpen}
+            isEditing={Boolean(editingId)}
+            formError={formAction.error}
+            formBusy={formAction.isBusy()}
+            archiveOpen={Boolean(archiveTarget)}
+            archiveBusy={archiveAction.isBusy()}
+            onCloseForm={() => setIsFormOpen(false)}
+            onSave={handleSave}
+            onCloseArchive={() => setArchiveTarget(null)}
+            onArchive={handleArchive}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

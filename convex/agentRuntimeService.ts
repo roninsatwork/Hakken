@@ -7,6 +7,8 @@ import {
   type ToolSideEffectLevel,
 } from "./aiToolExecutionService";
 
+export { isModelCostMeasurable } from "./utils/modelPricing";
+
 /**
  * Default budget for a run.
  *
@@ -179,24 +181,6 @@ export function clampAgentLimitOverride(
   const ceiling = AGENT_OBJECTIVE_LIMIT_CEILINGS[field];
   const bounded = Math.min(value, ceiling);
   return field === "maxCostGBP" ? bounded : Math.floor(bounded);
-}
-
-/**
- * Whether spend can actually be measured for a model.
- *
- * `calculateModelCostGBP` multiplies token counts by the rates on the model
- * record. When those rates are absent it returns 0, so the cost budget can
- * never trigger — the run is effectively uncapped on spend, silently.
- *
- * This matters because the cost ceiling is what makes a generous step budget
- * safe. Without it, step and tool counts are the only thing bounding spend.
- */
-export function isModelCostMeasurable(
-  model: { standardInputCostBelow200k?: number; outputResponseCost?: number } | null | undefined,
-) {
-  const input = model?.standardInputCostBelow200k ?? 0;
-  const output = model?.outputResponseCost ?? 0;
-  return input > 0 || output > 0;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { pagedResult } from "@/src/test/screenMocks";
@@ -54,5 +55,18 @@ describe("CompanyTeamPage", () => {
 
     expect(document.body.textContent).not.toContain("Nessun");
     expect(document.body.textContent).not.toContain("La query di ricerca");
+  });
+
+  it("opens the delete confirmation when delete is the first dialog action", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue(
+      pagedResult(team) as unknown as ReturnType<typeof usePaginatedQuery>,
+    );
+
+    render(<CompanyTeamPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "admin.users.buttons.delete" })[0]);
+
+    expect(await screen.findByText("admin.users.modal.deleteTitle")).toBeInTheDocument();
+    expect(screen.getByText("admin.users.modal.deleteConfirm")).toBeInTheDocument();
   });
 });

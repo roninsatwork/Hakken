@@ -81,7 +81,7 @@ export default function UserDirectoryPage() {
   const [activity, setActivity] = useState<ActivityFilter>("any");
   const [sortBy, setSortBy] = useState<SortBy>("lastLogin");
 
-  const companies = useQuery(api.companies.getCompanies, {});
+  const companies = useQuery(api.companies.getCompanies, { mode: "directoryOptions" });
 
   const searching = searchTerm.trim() !== "";
 

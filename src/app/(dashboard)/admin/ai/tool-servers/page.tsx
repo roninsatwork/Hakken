@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, DownloadCloud, Loader2, PlugZap, Power, Server, Trash2, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/atoms/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
-import { ModalField, ModalFormActions } from "@/src/ui/components/screens/ModalForm";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+
+const loadToolServerDialogs = () => import("./ToolServerDialogs");
+const ToolServerDialogs = lazy(() =>
+  loadToolServerDialogs().then((module) => ({ default: module.ToolServerDialogs })),
+);
 
 /**
  * Tool servers a workspace has connected.
@@ -74,6 +76,7 @@ export default function ToolServersPage() {
     { serverId: Id<"mcpServers">; name: string; ok: boolean; message: string; toolCount: number } | null
   >(null);
   const [deleting, setDeleting] = useState<{ _id: Id<"mcpServers">; name: string } | null>(null);
+  const [dialogsActivated, setDialogsActivated] = useState(false);
 
   const checkedTools = useQuery(
     api.mcpDiscovery.listServerTools,
@@ -110,7 +113,7 @@ export default function ToolServersPage() {
     }
   };
 
-  const handleAdd = async (event: React.FormEvent) => {
+  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.name.trim() || !form.url.trim() || isSubmitting) return;
 
@@ -135,6 +138,11 @@ export default function ToolServersPage() {
     }
   };
 
+  const activateDialogs = () => {
+    void loadToolServerDialogs();
+    setDialogsActivated(true);
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
       <PageHeader
@@ -142,7 +150,12 @@ export default function ToolServersPage() {
         title={t("title")}
         description={t("subtitle")}
         action={
-          <Button variant="primary" onClick={() => { setIsAddOpen(true); setError(""); setNotice(null); }}>
+          <Button variant="primary" onClick={() => {
+            activateDialogs();
+            setIsAddOpen(true);
+            setError("");
+            setNotice(null);
+          }}>
             {t("buttons.connect")}
           </Button>
         }
@@ -269,22 +282,25 @@ export default function ToolServersPage() {
                   <>
                     <RowIconButton
                       label={t("buttons.check")}
-                      onClick={() => run(
-                        row._id,
-                        () => discover({ serverId: row._id }),
-                        (result) => {
-                          setChecked({
-                            serverId: row._id,
-                            name: row.name,
-                            ok: result.ok,
-                            message: result.message,
-                            toolCount: result.toolCount,
-                          });
-                          // The modal is the answer. A banner as well would be
-                          // the same news twice.
-                          return null;
-                        },
-                      )}
+                      onClick={() => {
+                        activateDialogs();
+                        return run(
+                          row._id,
+                          () => discover({ serverId: row._id }),
+                          (result) => {
+                            setChecked({
+                              serverId: row._id,
+                              name: row.name,
+                              ok: result.ok,
+                              message: result.message,
+                              toolCount: result.toolCount,
+                            });
+                            // The modal is the answer. A banner as well would be
+                            // the same news twice.
+                            return null;
+                          },
+                        );
+                      }}
                     >
                       <PlugZap className="w-4 h-4" />
                     </RowIconButton>
@@ -321,7 +337,10 @@ export default function ToolServersPage() {
                     <RowIconButton
                       label={t("buttons.disconnect")}
                       tone="danger"
-                      onClick={() => setDeleting({ _id: row._id, name: row.name })}
+                      onClick={() => {
+                        activateDialogs();
+                        setDeleting({ _id: row._id, name: row.name });
+                      }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </RowIconButton>
@@ -333,131 +352,34 @@ export default function ToolServersPage() {
         ]}
       />
 
-      <SonaeModal
-        isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        title={t("modal.title")}
-      >
-        <div className="flex flex-col gap-2 mb-6">
-          <p className="text-secondary text-[15px]">{t("modal.description")}</p>
-          {error ? <p className="text-warning text-[13px] font-medium">{error}</p> : null}
-        </div>
-        <form onSubmit={handleAdd} className="flex flex-col gap-5">
-          <ModalField
-            label={t("modal.name")}
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t("placeholders.name")}
-          />
-          <ModalField
-            label={t("modal.url")}
-            required
-            value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
-            placeholder={t("placeholders.url")}
-          />
-          <ModalField
-            label={t("modal.secretRef")}
-            value={form.secretRef}
-            onChange={(e) => setForm({ ...form, secretRef: e.target.value })}
-            placeholder={t("placeholders.secretRef")}
-          />
-          <p className="text-[12px] text-muted">{t("modal.secretHint")}</p>
-
-          <ModalFormActions
-            cancelLabel={t("buttons.cancel")}
-            submitLabel={isSubmitting ? t("buttons.connecting") : t("buttons.connect")}
+      {dialogsActivated ? (
+        <Suspense fallback={null}>
+          <ToolServerDialogs
+            isAddOpen={isAddOpen}
+            onCloseAdd={() => setIsAddOpen(false)}
+            form={form}
+            onFormChange={setForm}
+            onAdd={handleAdd}
             isSubmitting={isSubmitting}
-            onCancel={() => setIsAddOpen(false)}
+            error={error}
+            checked={checked}
+            checkedTools={checkedTools}
+            onCloseChecked={() => setChecked(null)}
+            deleting={deleting}
+            onCloseDeleting={() => setDeleting(null)}
+            isDeleting={busyId !== null}
+            onConfirmDelete={async () => {
+              if (!deleting) return;
+              await run(
+                deleting._id,
+                () => deleteServer({ id: deleting._id }),
+                () => ({ ok: true, text: t("notices.disconnected", { name: deleting.name }) }),
+              );
+              setDeleting(null);
+            }}
           />
-        </form>
-      </SonaeModal>
-
-      {/*
-        * The answer to "did that work".
-        *
-        * Deliberately a modal rather than a line at the top of the page: a
-        * person pressed a button and is waiting. It says pass or fail in a
-        * heading, gives the reason when it failed, and — when it worked — lists
-        * what the server actually offers, because a count is not an answer to
-        * whether the connection is worth having.
-        */}
-      <SonaeModal
-        isOpen={!!checked}
-        onClose={() => setChecked(null)}
-        title={checked?.ok ? t("checked.passedTitle") : t("checked.failedTitle")}
-      >
-        <div className="flex flex-col gap-4">
-          <div
-            className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 ${
-              checked?.ok ? "bg-info/10 text-info" : "bg-warning/10 text-warning"
-            }`}
-          >
-            {checked?.ok
-              ? <CircleCheck className="w-4 h-4 mt-0.5 shrink-0" />
-              : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
-            <div className="flex flex-col gap-1">
-              <span className="text-[14px] font-medium">
-                {checked?.ok
-                  ? t("checked.passed", { name: checked?.name ?? "" })
-                  : t("checked.failed", { name: checked?.name ?? "" })}
-              </span>
-              <span className="text-[13px] opacity-90">{checked?.message}</span>
-            </div>
-          </div>
-
-          {checked?.ok ? (
-            <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-medium text-secondary">
-                {t("checked.offers", { count: checked?.toolCount ?? 0 })}
-              </span>
-              {checkedTools === undefined ? (
-                <Loader2 className="w-4 h-4 animate-spin text-muted" />
-              ) : (
-                <ul className="flex flex-col gap-2 max-h-[280px] overflow-y-auto">
-                  {checkedTools.map((tool) => (
-                    <li key={tool.name} className="flex flex-col gap-0.5 border-l-2 border-border-dim pl-3">
-                      <span className="text-[13px] text-foreground font-mono">{tool.title || tool.name}</span>
-                      <span className="text-[12px] text-muted">{tool.description}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-[12px] text-muted">{t("checked.nextStep")}</p>
-            </div>
-          ) : (
-            <p className="text-[13px] text-muted">{t("checked.whatToDo")}</p>
-          )}
-
-          <div className="flex justify-end">
-            <Button variant="primary" onClick={() => setChecked(null)}>
-              {t("buttons.close")}
-            </Button>
-          </div>
-        </div>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deleting}
-        onClose={() => setDeleting(null)}
-        title={t("modal.disconnectTitle")}
-        cancelLabel={t("buttons.cancel")}
-        confirmLabel={t("buttons.disconnect")}
-        isSubmitting={busyId !== null}
-        onConfirm={async () => {
-          if (!deleting) return;
-          await run(
-            deleting._id,
-            () => deleteServer({ id: deleting._id }),
-            () => ({ ok: true, text: t("notices.disconnected", { name: deleting.name }) }),
-          );
-          setDeleting(null);
-        }}
-      >
-        <p>{t("modal.disconnectConfirm", { name: deleting?.name ?? "" })}</p>
-        <p className="text-[13px] text-muted">{t("modal.disconnectDetail")}</p>
-      </ConfirmationModal>
+        </Suspense>
+      ) : null}
     </div>
   );
 }

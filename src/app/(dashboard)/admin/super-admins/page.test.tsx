@@ -6,6 +6,11 @@ import ManageSuperAdminsPage from "./page";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 
+vi.mock("next/dynamic", async () => {
+  const { SuperAdminDialogs } = await import("./SuperAdminDialogs");
+  return { default: () => SuperAdminDialogs };
+});
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({
@@ -146,6 +151,21 @@ describe("ManageSuperAdminsPage", () => {
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
     expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument(); // pending@ doesn't match jane
+  });
+
+  it("opens edit, delete, and revoke dialogs from their existing row actions", () => {
+    render(<ManageSuperAdminsPage />);
+
+    fireEvent.click(screen.getAllByLabelText("Edit administrator")[0]);
+    expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getAllByLabelText("Delete administrator")[0]);
+    expect(screen.getByRole("heading", { name: "Delete User" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByLabelText("Revoke invitation"));
+    expect(screen.getByRole("heading", { name: "Revoke Access" })).toBeInTheDocument();
   });
 
   it("wears the house paginated footer, and fetches when the reader walks past what is loaded", () => {

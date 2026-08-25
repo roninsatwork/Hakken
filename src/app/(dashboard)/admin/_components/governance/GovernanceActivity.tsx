@@ -3,13 +3,17 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { RiskMix } from "@/convex/governanceActivityService";
 
-import { GovernanceRunsChart } from "./GovernanceRunsChart";
 import { RISK_COLOURS, RUN_OUTCOME_COLOURS, SIDE_EFFECT_COLOURS } from "./governanceColours";
+
+const GovernanceRunsChart = dynamic(() =>
+  import("./GovernanceRunsChart").then((module) => module.GovernanceRunsChart),
+);
 
 /**
  * What the AI has been doing, above the checks that say whether anything is wrong.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,8 +14,14 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useToast } from "@/src/context/ToastContext";
 import { RunsTable, type RunFeedbackSource, type StatusFilter } from "./_components/RunsTable";
 import { EvalHealthPanel } from "./_components/EvalHealthPanel";
-import { RunDetailModal } from "./_components/RunDetailModal";
-import { FeedbackModal, type FeedbackDraft } from "./_components/FeedbackModal";
+import type { FeedbackDraft } from "./_components/FeedbackModal";
+
+const RunDetailModal = dynamic(() =>
+  import("./_components/RunDetailModal").then((module) => module.RunDetailModal)
+);
+const FeedbackModal = dynamic(() =>
+  import("./_components/FeedbackModal").then((module) => module.FeedbackModal)
+);
 
 // Ordered by what a reader is looking for, not by the lifecycle: the things
 // that need a person come first, then the things that went wrong.
@@ -156,23 +163,27 @@ export default function AgentRunsPage() {
         />
       </div>
 
-      <RunDetailModal
-        agentId={agentId}
-        detailRunId={detailRunId}
-        onClose={() => setDetailRunId(null)}
-        onInspectRun={setDetailRunId}
-        action={action}
-        onReplay={handleReplay}
-        onReflect={handleReflect}
-        onCreateEvalFixture={handleCreateEvalFixture}
-      />
+      {detailRunId && (
+        <RunDetailModal
+          agentId={agentId}
+          detailRunId={detailRunId}
+          onClose={() => setDetailRunId(null)}
+          onInspectRun={setDetailRunId}
+          action={action}
+          onReplay={handleReplay}
+          onReflect={handleReflect}
+          onCreateEvalFixture={handleCreateEvalFixture}
+        />
+      )}
 
-      <FeedbackModal
-        draft={feedbackDraft}
-        onDraftChange={setFeedbackDraft}
-        onClose={() => setFeedbackDraft(null)}
-        action={action}
-      />
+      {feedbackDraft && (
+        <FeedbackModal
+          draft={feedbackDraft}
+          onDraftChange={setFeedbackDraft}
+          onClose={() => setFeedbackDraft(null)}
+          action={action}
+        />
+      )}
     </>
   );
 }

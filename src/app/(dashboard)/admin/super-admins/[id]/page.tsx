@@ -27,7 +27,7 @@ export default function UserProfilePage() {
 
   const { results: logins, status, loadMore } = usePaginatedQuery(
     api.users.getUserLogins,
-    { userId, searchTerm },
+    activeTab === "logins" ? { userId, searchTerm } : "skip",
     { initialNumItems: TABLE_PAGE_SIZE }
   );
 

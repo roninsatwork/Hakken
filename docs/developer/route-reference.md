@@ -1,6 +1,6 @@
 # Route Reference
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-08-25
 Status: current route inventory
 Audience: engineers and agents changing Sonae routing, navigation, page ownership, or documentation coverage.
 
@@ -152,7 +152,8 @@ in the same documentation pass.
 | `/admin/ai/tools/new` | New AI tool. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
 | `/admin/ai/tools/[id]` | AI tool detail/edit. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
 | `/admin/ai/tools/connectors/[id]` | Tool connector detail. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
-| `/admin/ai/skills` | Skill Center alias/surface. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
+| `/admin/ai/tool-servers` | Connected tool-server management, discovery, import, status, and disconnect surface. | [Tool Servers](../end-user/tool-servers.md), [Tool Servers Developer Guide](./tool-servers.md) |
+| `/admin/ai/skills` | Canonical Skill Center surface for reusable agent skills. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
 
 ## Governance Routes
 
@@ -171,7 +172,7 @@ in the same documentation pass.
 | --- | --- | --- |
 | `/admin/agents` | Agent list and creation. | [Agents](../end-user/agents.md), [Agents Developer Guide](./agents.md) |
 | `/admin/agents/new` | New agent creation screen. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `/admin/agents/skills` | Skill Center. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
+| `/admin/agents/skills` | Legacy exact-match Skill Center address; middleware redirects it to `/admin/ai/skills`. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
 | `/admin/agents/[id]` | Agent detail overview. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agents Developer Guide](./agents.md) |
 | `/admin/agents/[id]/settings` | Agent settings. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
 | `/admin/agents/[id]/interfaces` | Agent interfaces. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |

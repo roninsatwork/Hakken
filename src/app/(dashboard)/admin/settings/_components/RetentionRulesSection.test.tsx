@@ -53,4 +53,13 @@ describe("RetentionRulesSection", () => {
     expect(screen.getAllByText("admin.settings.purges.table.noMatches").length).toBeGreaterThan(0);
     expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   });
+
+  it("loads the existing configuration dialog from the configure action", async () => {
+    render(<RetentionRulesSection />);
+
+    fireEvent.click(screen.getAllByTitle("admin.settings.purges.table.configure")[0]);
+
+    expect(await screen.findByText("admin.settings.purges.modals.config.title")).toBeInTheDocument();
+    expect(screen.getByText("admin.settings.purges.modals.config.save")).toBeInTheDocument();
+  });
 });

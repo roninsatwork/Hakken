@@ -1,5 +1,3 @@
-"use client";
-
 import { PurgeHistorySection } from "../../../_components/PurgeHistorySection";
 import { SettingsScreen } from "../../../_components/SettingsScreen";
 

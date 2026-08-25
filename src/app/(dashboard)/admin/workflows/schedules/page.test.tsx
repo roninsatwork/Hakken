@@ -123,9 +123,10 @@ describe("SchedulesPage", () => {
 
     fireEvent.click(screen.getAllByTitle("Force Run")[0]);
     await waitFor(() => expect(manualRunSchedule).toHaveBeenCalledWith({ workflowId: "workflow_1", agentId: undefined }));
-    expect(screen.getByText("Execution queued")).toBeInTheDocument();
+    expect(await screen.findByText("Execution queued")).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByTitle("Delete")[0]);
+    expect(await screen.findByText("Delete Schedule")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" }).at(-1) as HTMLButtonElement);
     await waitFor(() => expect(deleteSchedule).toHaveBeenCalledWith({ scheduleId: "schedule_1" }));
   });

@@ -42,6 +42,11 @@ describe("admin user directory is read-only", () => {
     expect(source).toContain("listDirectoryUsers");
   });
 
+  test("loads only the company fields needed by the filter", () => {
+    expect(source).toContain("api.companies.getCompanies");
+    expect(source).toContain('mode: "directoryOptions"');
+  });
+
   test("sends every filter to the server rather than filtering a page", () => {
     // Accepts shorthand (`activity,`) as well as explicit (`activity: …`).
     const queryArgs = source.slice(source.indexOf("listDirectoryUsers"));

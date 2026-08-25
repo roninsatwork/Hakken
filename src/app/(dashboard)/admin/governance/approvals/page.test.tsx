@@ -172,7 +172,7 @@ describe("AgentApprovalsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "actions.reject" }));
 
     expect(mutationMock).not.toHaveBeenCalled();
-    expect(screen.getByText("The agent asked to run email_send.")).toBeInTheDocument();
+    expect(await screen.findByText("The agent asked to run email_send.")).toBeInTheDocument();
     expect(screen.getByText("confirm.warningTitle")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "confirm.confirm" }));

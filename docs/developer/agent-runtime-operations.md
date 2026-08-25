@@ -51,11 +51,26 @@ It also centralizes stop checks and stop messages for tool-call, runtime, token,
 
 `runAgentObjective` can receive chat attachment `fileIds` from `api.chat.sendMessage`. The chat mutation validates stored upload metadata before scheduling the agent runtime. The runtime then parses supported document blobs through `convex/utils/fileParser.ts`, appends extracted text as untrusted context for the current prompt, caps each parsed document to 50,000 characters, and caps the final prompt plus attachment context to 10,000 characters before provider execution. Do not treat attached document text as system instructions or bypass chat upload validation when adding new agent entry points.
 
-## Model Resolution Caveat
+## Model Resolution And Provider Adapters
 
-Agent runtime paths resolve model configuration from stored `aiModels` and `aiModelDefaults`, but the active execution calls still require Google Vertex-compatible models before provider execution. `runAgentObjective`, `runTriggeredAgentObjective`, and `executeAgentNode` call `getGoogleVertexProviderModelId` after model resolution and then use Vertex generation helpers. This means provider-neutral catalog entries can be configured and recorded, but these runtime paths will fail if the resolved agent or workflow model is not backed by Google Vertex until provider-adapter execution is extended for agent runtime.
+Agent runtime paths resolve model configuration from stored `aiModels` and
+`aiModelDefaults`. `runAgentObjective` and `runTriggeredAgentObjective` then
+route through `getAgentProviderAdapter`, whose current adapter set is Google
+Vertex, Anthropic, OpenAI, and OpenRouter. The model picker and default
+validation use the same provider-capability list through
+`canProviderServeUseCase`, so the screen should not offer an agent or workflow
+model that the runtime cannot call.
 
-Keep this distinction visible when changing model defaults, replay behavior, workflow agent nodes, or provider support. Do not document agent runtime as fully provider-agnostic until these paths use the shared provider registry or equivalent adapter layer.
+There is still a narrower Google-only boundary: Google Search grounding is a
+Vertex capability in the current implementation. A workflow agent with
+`allowInternetAccess` still calls `getGoogleVertexProviderModelId` and must use
+a compatible Vertex model for that run. A workflow agent without that internet
+tool uses the resolved provider model id.
+
+Keep this distinction visible when changing model defaults, replay behavior,
+workflow agent nodes, or provider support. Do not describe agent runtime as
+unrestricted across all providers; describe the providers with adapters and the
+feature-specific constraints that still apply.
 
 ## Tool Calls And Approvals
 

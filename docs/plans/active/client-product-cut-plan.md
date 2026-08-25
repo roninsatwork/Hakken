@@ -5,7 +5,7 @@ client should receive *their* product — not a copy of everything Ronins has ev
 built with a few menu items hidden. This plan closes the gap between those two
 things.
 
-It serves the client-owned lane described in [PRODUCT.md](../../PRODUCT.md).
+It serves the client-owned lane described in [PRODUCT.md](../../../PRODUCT.md).
 
 ---
 

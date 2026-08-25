@@ -33,8 +33,9 @@ Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
 `convex/aiModels.ts` is the central model catalog and default module:
 
 - `getModels` and `getActiveModels` are authenticated queries used by model selectors.
-- `getOffsetPaginatedModels` is the super-admin model catalog query with search, status, provider, capability, use-case filters, and pagination.
-- `getProviders` returns stored providers plus inferred platform providers for Google Vertex AI, OpenAI, and Anthropic.
+- `getModelPickerOptions` is the lightweight authenticated picker query; it returns only the display, provider, use-case, capability, enabled, and headline pricing fields the browser needs.
+- `getPaginatedModels` is the super-admin model catalog query. Search, status, and provider filters are applied through database search/index paths so the OpenRouter-scale catalogue is not scanned and sliced in memory.
+- `getProviders` returns stored providers plus inferred platform providers for Google Vertex AI, OpenAI, Anthropic, and OpenRouter.
 - `setProviderEnabled` upserts provider status and writes audit metadata.
 - `getGlobalModelDefaults`, `setGlobalModelDefault`, and `clearGlobalModelDefault` manage platform defaults.
 - `getCompanyModelDefaults`, `setCompanyModelDefault`, and `clearCompanyModelDefault` manage tenant overrides.
@@ -48,7 +49,7 @@ Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
 - provider connection tests
 - internal health updates through model/provider services
 
-`convex/aiModelService.ts` contains runtime model resolution helpers, provider constants, default use cases, provider-qualified model ids, and cost context helpers.
+`convex/aiModelService.ts` contains runtime model resolution helpers, provider constants, default use cases, provider-qualified model ids, and cost context helpers. `convex/utils/modelPricing.ts` exposes `isModelCostMeasurable`, the shared rule used by runtime and catalogue UI to decide whether a model has enough pricing metadata for cost budgets or cost labels to mean anything.
 
 `convex/analytics.ts` and `convex/analyticsService.ts` compute global and company cost analytics from messages, daily snapshots, model metadata, provider metadata, token counts, and model pricing fields.
 
@@ -66,9 +67,15 @@ Do not add runtime hardcoded model literals. Use the stored model catalog and de
 
 ## Provider Handling
 
-The platform provider keys are Google Vertex AI, OpenAI, and Anthropic. `getProviders` returns inferred provider rows when a provider has not yet been stored so the admin UI can still show the expected platform controls.
+The platform provider keys are Google Vertex AI, OpenAI, Anthropic, and OpenRouter. `getProviders` returns inferred provider rows when a provider has not yet been stored so the admin UI can still show the expected platform controls.
 
 Provider enablement is independent from model enablement. A model can be enabled but hidden from active selectors if its provider is disabled. `getActiveModels` filters disabled providers before returning selectable models.
+
+The model catalogue is built for gateway-provider scale. `MODEL_CATALOG_LIMIT`
+is currently 2,000 for full-catalogue reads that genuinely need every row, while
+the visible catalogue uses `getPaginatedModels` and indexed pagination. If a
+rollup reaches the full-catalogue limit it reports `isPartial` rather than
+presenting a truncated count as complete.
 
 Provider sync and test actions should keep provider-specific API details in provider services and actions. Runtime callers should consume normalized model metadata and resolved model config.
 
@@ -101,6 +108,11 @@ The model detail page writes pricing fields through `updatePricingConfig`. The e
 - output reasoning cost
 
 Pricing metadata is used by analytics cost estimates through `buildModelCostContext` and `computeCostFromMap`. The implemented calculation currently reads `standardInputCostBelow200k`, `standardInputCostAbove200k`, and `outputResponseCost`; cached-input and reasoning-output pricing fields are stored on the model row and shown in admin tooling but are not consumed by the dashboard cost calculation yet. Analytics currently convert computed USD cost to GBP with the implemented conversion used in `convex/analytics.ts`.
+
+OpenRouter provider sync can populate provider-supplied prices. Other providers
+may leave prices unset, and `isModelCostMeasurable` treats a model with no
+positive standard-input or response-output price as not measurable. A missing
+price should not be interpreted as a free model.
 
 Treat these values as operational analytics inputs. Do not reuse them for customer billing unless billing-specific validation, currency, exchange-rate, and reconciliation controls are added.
 

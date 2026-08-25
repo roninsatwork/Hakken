@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import type { FormEvent, ReactNode } from "react";
 import { redirect, useSearchParams } from "next/navigation";
@@ -10,19 +11,16 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Trash2 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/atoms/Button";
-import {
-  ModalField,
-  ModalFormField,
-  ModalTextAreaField,
-} from "@/src/ui/components/screens/ModalForm";
+
+const SkillCatalogDialogs = dynamic(() =>
+  import("./SkillCatalogDialogs").then((module) => module.SkillCatalogDialogs)
+);
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
@@ -403,114 +401,33 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         ]}
       />
 
-      <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title={t("editTitle")} size="lg">
-        <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">
-          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <ModalField
-            label={t("nameLabel")}
-            value={editName}
-            onChange={(event) => setEditName(event.target.value)}
-          />
-          <ModalTextAreaField
-            label={t("descriptionLabel")}
-            value={editDescription}
-            onChange={(event) => setEditDescription(event.target.value)}
-            rows={3}
-            placeholder={t("descriptionPlaceholder")}
-          />
-          {/* A file picker is the browser's own control, so it keeps its own
-              styling; the kit's wrapper is here for the label tie and the
-              sentence underneath. */}
-          <ModalFormField label={t("replaceFile")} htmlFor="skill-edit-file">
-            <input
-              id="skill-edit-file"
-              type="file"
-              accept=".md,.markdown,text/markdown"
-              onChange={(event) => setEditFile(event.target.files?.[0] ?? null)}
-              className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
-            />
-            <span className="text-[11px] text-muted">
-              {editTarget?.sourceFilename
-                ? t("currently", { filename: editTarget.sourceFilename })
-                : t("noFile")}
-            </span>
-          </ModalFormField>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => setEditTarget(null)} className="h-10 rounded-[8px]">
-              {t("cancel")}
-            </Button>
-            <WriteButton type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
-              {action.isBusy(EDIT_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t("save")}
-            </WriteButton>
-          </div>
-        </form>
-      </SonaeModal>
-
-      <SonaeModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t("deleteTitle")} size="sm">
-        <div className="flex flex-col gap-5 px-1 pb-2">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t.rich("deleteBody", {
-              name: () => <span className="text-foreground font-semibold">{deleteTarget?.name}</span>,
-            })}
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="h-10 rounded-[8px]">
-              {t("cancel")}
-            </Button>
-            <WriteButton
-              type="button"
-              onClick={confirmDelete}
-              disabled={action.isBusy(DELETE_KEY)}
-              className="h-10 px-4 rounded-[8px] bg-red-500 text-white text-[13px] font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
-            >
-              {action.isBusy(DELETE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {t("deleteConfirm")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
-
-      <SonaeModal isOpen={isMarkdownOpen} onClose={() => setIsMarkdownOpen(false)} title={t("addTitle")} size="lg">
-        {/* A skill is a name and a file. The previous version of this dialog
-            parsed the file, showed a readiness panel, a tool-mapping picker and
-            a list of validation warnings before it would let anyone finish. */}
-        <form onSubmit={addSkill} className="flex flex-col gap-4 px-1 pb-2">
-          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <ModalField
-            label={t("nameLabel")}
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            placeholder={t("newNamePlaceholder")}
-          />
-          <ModalTextAreaField
-            label={t("descriptionLabel")}
-            value={newDescription}
-            onChange={(event) => setNewDescription(event.target.value)}
-            rows={3}
-            placeholder={t("descriptionPlaceholder")}
-          />
-          <ModalFormField label={t("fileLabel")} htmlFor="skill-new-file">
-            <input
-              id="skill-new-file"
-              type="file"
-              accept=".md,.markdown,text/markdown"
-              onChange={(event) => setNewFile(event.target.files?.[0] ?? null)}
-              className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
-            />
-            <span className="text-[11px] text-muted">{t("fileHint")}</span>
-          </ModalFormField>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => setIsMarkdownOpen(false)} className="h-10 rounded-[8px]">
-              {t("cancel")}
-            </Button>
-            <WriteButton type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
-              {action.isBusy(ADD_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t("addSkill")}
-            </WriteButton>
-          </div>
-        </form>
-      </SonaeModal>
+      {(editTarget || deleteTarget || isMarkdownOpen) && (
+        <SkillCatalogDialogs
+          editTarget={editTarget}
+          editName={editName}
+          editDescription={editDescription}
+          onEditNameChange={setEditName}
+          onEditDescriptionChange={setEditDescription}
+          onEditFileChange={setEditFile}
+          onCloseEdit={() => setEditTarget(null)}
+          onSaveEdit={saveEdit}
+          isEditBusy={action.isBusy(EDIT_KEY)}
+          deleteTarget={deleteTarget}
+          onCloseDelete={() => setDeleteTarget(null)}
+          onConfirmDelete={confirmDelete}
+          isDeleteBusy={action.isBusy(DELETE_KEY)}
+          isMarkdownOpen={isMarkdownOpen}
+          newName={newName}
+          newDescription={newDescription}
+          onNewNameChange={setNewName}
+          onNewDescriptionChange={setNewDescription}
+          onNewFileChange={setNewFile}
+          onCloseMarkdown={() => setIsMarkdownOpen(false)}
+          onAddSkill={addSkill}
+          isAddBusy={action.isBusy(ADD_KEY)}
+          error={error}
+        />
+      )}
 
     </div>
   );

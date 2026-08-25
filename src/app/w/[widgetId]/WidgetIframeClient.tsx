@@ -9,12 +9,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
 import { useSmoothStreamText } from "@/src/hooks/useSmoothStreamText";
-import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { widgetMessageDisplayText } from "@/src/lib/widgetSystemMessages";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { PhotoActionChip } from "@/src/ui/components/chat/PhotoActionChip";
+
+const SonaeMarkdown = dynamic(() =>
+  import("@/src/ui/components/chat/SonaeMarkdown").then((module) => module.SonaeMarkdown)
+);
 
 
 /**

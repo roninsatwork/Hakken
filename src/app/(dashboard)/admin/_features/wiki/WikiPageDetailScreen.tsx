@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -12,11 +13,12 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
-import { WikiProse } from "./WikiProse";
 import { Button } from "@/src/ui/atoms/Button";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiLocalGraph } from "./WikiLocalGraph";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+
+const WikiProse = dynamic(() => import("./WikiProse").then((module) => module.WikiProse));
 
 /**
  * One page of the wiki, READ FIRST (Anthony's ruling, 2026-08-17: "an

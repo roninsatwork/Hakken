@@ -1,6 +1,7 @@
 import React from "react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import AiRegisterPage from "./page";
@@ -24,6 +25,11 @@ vi.mock("next-intl", () => ({
   NextIntlClientProvider: ({ children }: { children?: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
 }));
+
+vi.mock("next/dynamic", async () => {
+  const { RegisterEntryPanel } = await import("./RegisterEntryPanel");
+  return { default: () => RegisterEntryPanel };
+});
 
 const entries = [
   {
@@ -79,5 +85,17 @@ describe("AiRegisterPage (platform)", () => {
       emptyText: "admin.governance.register.empty",
       searchPlaceholder: "admin.governance.register.searchPlaceholder",
     });
+  });
+
+  it("opens a register entry when the panel is first requested", async () => {
+    vi.mocked(useQuery).mockReturnValue({ entries, summary } as ReturnType<typeof useQuery>);
+
+    render(<AiRegisterPage />);
+
+    fireEvent.click(screen.getByText("The Examiner").closest("tr")!);
+
+    expect(
+      await screen.findByText("admin.governance.register.panel.notEditable"),
+    ).toBeInTheDocument();
   });
 });

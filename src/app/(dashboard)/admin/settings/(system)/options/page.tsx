@@ -1,28 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { TerminalSquare } from "lucide-react";
-
-import { Checkbox } from "@/src/ui/components/screens/Checkbox";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TABLE_PAGE_SIZE,
-  matchesSearchTerm,
-  paginateItems,
-} from "@/src/ui/components/screens/pagination";
-import { SettingsScreen } from "../../_components/SettingsScreen";
+import dynamic from "next/dynamic";
+import { Loader2 } from "lucide-react";
 import {
   DIAGNOSTICS_SETTINGS_FIELDS,
   useSystemSettingsForm,
 } from "../../_components/useSystemSettingsForm";
 
-type OptionRow = {
-  key: "diagnosticRoutingEnabled";
-  name: string;
-  description: string;
-};
+const DeveloperDiagnosticsContent = dynamic(
+  () =>
+    import("./DeveloperDiagnosticsContent").then(
+      (module) => module.DeveloperDiagnosticsContent,
+    ),
+  { loading: SettingsLoading },
+);
+
+function SettingsLoading() {
+  return (
+    <div className="w-full h-[50vh] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-brand opacity-80" />
+    </div>
+  );
+}
 
 /**
  * The developer switches, which today is one of them.
@@ -39,102 +38,18 @@ type OptionRow = {
  * row's name and its sentence word for word, one wrapped inside the other.
  */
 export default function DeveloperDiagnosticsPage() {
-  const t = useTranslations("admin.settings");
   const { formData, setFormData, isLoading, isSaving, saveSuccess, save } =
     useSystemSettingsForm(DIAGNOSTICS_SETTINGS_FIELDS);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
-
-  const options: OptionRow[] = [
-    {
-      key: "diagnosticRoutingEnabled",
-      name: t("options.routingMatrix"),
-      description: t("options.routingMatrixSub"),
-    },
-  ];
-
-  const matching = options.filter((row) =>
-    matchesSearchTerm(searchTerm, [row.name, row.description])
-  );
-  const paged = paginateItems(matching, page, TABLE_PAGE_SIZE);
+  if (isLoading) return <SettingsLoading />;
 
   return (
-    <SettingsScreen
-      isLoading={isLoading}
-      save={{
-        onSave: save,
-        isSaving,
-        saveSuccess,
-        label: t("save"),
-        savingLabel: t("saving"),
-        successLabel: t("success"),
-      }}
-    >
-      <PageHeader
-        icon={<TerminalSquare className="w-6 h-6 text-brand" />}
-        title={t("options.title")}
-        description={t("options.subtitle")}
-      />
-
-      <DataTable
-        rows={paged.items}
-        rowKey={(row) => row.key}
-        minWidthClassName="min-w-[640px]"
-        search={{
-          value: searchTerm,
-          onChange: (next) => {
-            setSearchTerm(next);
-            setPage(1);
-          },
-          placeholder: t("options.searchPlaceholder"),
-        }}
-        empty={{
-          icon: <TerminalSquare className="w-8 h-8 text-muted/30" />,
-          label: t("options.emptyState"),
-        }}
-        footer={{
-          mode: "paged",
-          page: paged.page,
-          totalPages: paged.totalPages,
-          totalCount: paged.totalItems,
-          pageSize: paged.pageSize,
-          isLoading: false,
-          onPageChange: setPage,
-          labels: { empty: t("options.emptyState") },
-        }}
-        columns={[
-          {
-            key: "option",
-            header: t("options.nameColumn"),
-            className: "w-[240px]",
-            cell: (row) => (
-              <span className="text-[13px] font-medium text-foreground">{row.name}</span>
-            ),
-          },
-          {
-            key: "description",
-            header: t("options.descriptionColumn"),
-            cell: (row) => (
-              <span className="text-[12px] text-secondary">{row.description}</span>
-            ),
-          },
-          {
-            key: "on",
-            header: t("options.onColumn"),
-            align: "right",
-            className: "w-[150px] whitespace-nowrap",
-            cell: (row) => (
-              <Checkbox
-                label={row.name}
-                labelHidden
-                checked={Boolean(formData[row.key])}
-                onChange={(next) => setFormData({ ...formData, [row.key]: next })}
-              />
-            ),
-          },
-        ]}
-      />
-    </SettingsScreen>
+    <DeveloperDiagnosticsContent
+      formData={formData}
+      setFormData={setFormData}
+      isSaving={isSaving}
+      saveSuccess={saveSuccess}
+      save={save}
+    />
   );
 }

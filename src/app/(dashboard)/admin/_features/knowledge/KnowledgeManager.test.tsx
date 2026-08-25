@@ -317,10 +317,10 @@ describe("KnowledgeManager bulk upload", () => {
       });
     });
 
+    expect(await screen.findByText("3 files sent for processing")).toBeInTheDocument();
     expect(saveDocument).toHaveBeenCalledTimes(3);
     expect(saveDocument.mock.calls.every(([args]) => args.deferIngestion === true)).toBe(true);
     expect(startQueue).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("3 files sent for processing")).toBeInTheDocument();
   });
 
   it("ingests a lone file immediately without touching the queue", async () => {

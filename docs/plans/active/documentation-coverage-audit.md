@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-08-25
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -286,6 +286,66 @@ Continue to refresh Company AI, Sales Data, active-plan lifecycle, and operator
 coverage only when their implementation changes or a real new operating
 procedure appears. Do not create speculative runbooks or mark roadmap work
 complete from documentation evidence alone.
+
+## 2026-08-25 Refresh
+
+This pass re-audited the implementation and working tree after the tool-server
+feature, app data-access hardening, admin screen-kit sweeps, and current
+dialog/content extraction work. It respected the existing non-documentation
+working-tree changes and made documentation-only updates.
+
+The queue item processed in this pass was another stale-map refresh rather than
+a new feature-pair creation. The tool-server guide pair already existed, but
+the durable coverage matrix and route reference did not yet make the new route,
+Convex modules, schema tables, and follow-up boundary discoverable. This pass
+corrected that by adding `/admin/ai/tool-servers`, the `mcp*.ts` backend module
+family, `mcpServers`, `mcpServerTools`, and the imported-tool fields on
+`aiTools` to the coverage matrix.
+
+It also corrected Skill Center routing documentation: `/admin/ai/skills` is the
+canonical Skill Center surface, and `/admin/agents/skills` is now an exact-match
+legacy redirect implemented by `src/lib/legacyAdminRedirect.ts` and called from
+`src/proxy.ts`. Nested paths under the old address are not redirected.
+
+The screen-kit guide was refreshed for the current shared component inventory,
+including `CompactList`, `Leaderboard`, `Field`, `Checkbox`,
+`TableControls`, and cursor-pagination support. This documents the current
+admin/app extraction direction without changing app behavior.
+
+The loop then re-entered after broader stale scans found current guide drift in
+model/provider and backend inventory docs. This second slice refreshed:
+
+- AI model/provider docs for OpenRouter as a platform provider,
+  `getPaginatedModels`, lightweight model-picker rows, indexed catalogue
+  paging, and the shared `isModelCostMeasurable` pricing rule.
+- AI administration, Agents, and Agent Runtime Operations docs for the current
+  provider-adapter runtime: Google Vertex, Anthropic, OpenAI, and OpenRouter can
+  run agents when their model supports the job, while Google Search grounding
+  remains a Vertex-only workflow-agent constraint.
+- Frontend docs for the shared chart tooltip/cursor helpers.
+- Convex API and feature coverage references for current internal modules:
+  `agentObjectiveService.ts`, `agentRunApprovals.ts`, `modelTurnService.ts`,
+  `messageEvidence.ts`, `memoryMigration.ts`, `memoryMigrationActions.ts`,
+  `wikiExamGrowth.ts`, `wikiExamGrowthActions.ts`, `wikiFeedbackService.ts`,
+  `wikiRewriteEval.ts`, and `wikiStaffRunActions.ts`.
+
+### Remaining Follow-Up From This Refresh
+
+1. Tool servers: refresh the guide pair again when the active plan settles,
+   when live-server proof changes the support/operator boundary, or when
+   imported tools gain a different approval policy.
+2. Screen-kit extraction: continue refreshing `docs/developer/screen-kit.md`
+   when the guard rules or shared components change, but do not document
+   worktree-only implementation splits as product features.
+3. Agent/model runtime: refresh the model and agent guides again if the adapter
+   set changes, if Google Search grounding stops being Vertex-only, or if cost
+   measurability starts using cached-input or reasoning-output prices.
+4. Active route inventory: re-check `/admin/agents/skills` after the current
+   working-tree route split settles; keep it as legacy-only if the middleware
+   redirect remains the source of truth.
+5. Company AI, Sales Data, active-plan lifecycle, and operator coverage remain
+   audit targets only when implementation changes or a real recurring
+   operating procedure appears.
 
 ## Validation Notes
 

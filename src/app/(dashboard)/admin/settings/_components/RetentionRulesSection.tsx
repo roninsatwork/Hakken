@@ -1,26 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
-import { WriteButton, useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
-import { Field } from "@/src/ui/components/screens/Field";
-import {
-  AlertTriangle,
-  Clock,
-  Database,
-  Loader2,
-  Play,
-  Settings2,
-  Square,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
+import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
+import { Database, Play, Settings2, Square, ToggleLeft, ToggleRight } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import {
   purgePipelineKeys,
@@ -28,7 +17,15 @@ import {
   type PurgePipelineConfig,
   type PurgePipelineKey,
 } from "./types";
-import { EXPECTED_RETENTION_DAYS } from "@/convex/governanceDashboardService";
+
+const loadRetentionRuleDialogs = () => import("./RetentionRuleDialogs");
+const RetentionRuleDialogs = dynamic(() =>
+  loadRetentionRuleDialogs().then((module) => module.RetentionRuleDialogs)
+);
+
+function getPurgeCutoffDate(retentionDays: number): string {
+  return new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toLocaleDateString();
+}
 
 export function RetentionRulesSection() {
   const t = useTranslations('admin.settings');
@@ -72,6 +69,7 @@ export function RetentionRulesSection() {
   const totalPages = Math.max(1, Math.ceil(filteredKeys.length / TABLE_PAGE_SIZE));
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [dialogsRequested, setDialogsRequested] = useState(false);
   const [configModalPipeline, setConfigModalPipeline] = useState<PurgePipelineKey | null>(null);
   const [configModalData, setConfigModalData] = useState<PurgePipelineConfig>({});
 
@@ -86,6 +84,11 @@ export function RetentionRulesSection() {
   const [isManualRunning, setIsManualRunning] = useState(false);
 
   const configs = (purgeConfigs || {}) as Partial<PurgeConfigMap>;
+
+  const prepareRetentionRuleDialogs = () => {
+    setDialogsRequested(true);
+    void loadRetentionRuleDialogs();
+  };
 
   const columns: DataTableColumn<PurgePipelineKey>[] = [
     {
@@ -176,6 +179,7 @@ export function RetentionRulesSection() {
             <Button
               variant="icon"
               onClick={() => {
+                prepareRetentionRuleDialogs();
                 setConfigModalPipeline(key);
                 setConfigModalData({ ...conf });
                 setIsConfigModalOpen(true);
@@ -189,6 +193,7 @@ export function RetentionRulesSection() {
               <Button
                 variant="icon"
                 onClick={() => {
+                  prepareRetentionRuleDialogs();
                   setCancelModalHistoryId(runningLog._id);
                   setCancelModalPipeline(key);
                   setIsCancelModalOpen(true);
@@ -202,6 +207,7 @@ export function RetentionRulesSection() {
               <Button
                 variant="icon"
                 onClick={() => {
+                  prepareRetentionRuleDialogs();
                   setConfirmModalPipeline(key);
                   setIsConfirmModalOpen(true);
                 }}
@@ -284,294 +290,80 @@ export function RetentionRulesSection() {
 
           </section>
 
-      {/* Purges Configuration Modal */}
-      <SonaeModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-        title={configModalPipeline ? t('purges.modals.config.title', { category: t(`purges.categories.${configModalPipeline}.title`) }) : ""}
-      >
-        <div className="flex flex-col gap-8">
-          <div className="flex items-center justify-between p-5 bg-background border border-border-dim rounded-[16px]">
-            <div className="flex flex-col gap-1">
-              <span className="text-[14px] text-foreground font-semibold">{t('purges.modals.config.status')}</span>
-            </div>
-            {/* Stays raw: a bare toggle glyph whose colour is the state — matches no variant. */}
+      {dialogsRequested ? (
+        <RetentionRuleDialogs
+          purgeConfigs={configs}
+          configModalOpen={isConfigModalOpen}
+          configModalPipeline={configModalPipeline}
+          configModalData={configModalData}
+          setConfigModalData={setConfigModalData}
+          renderConfigToggle={() => (
+            // Stays raw: a bare toggle glyph whose colour is the state — matches no variant.
             <button
               onClick={() => setConfigModalData({ ...configModalData, enabled: !configModalData.enabled })}
               className={`transition-colors flex-shrink-0 ${configModalData.enabled ? "text-brand" : "text-muted"}`}
             >
               {configModalData.enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
             </button>
-          </div>
-
-          <div className={`flex flex-col gap-6 transition-all duration-300 ${configModalData.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-            <div className="flex flex-col gap-2 relative">
-              <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.retention')}</span>
-              <select
-                value={[30, 60, 90, 180, 365].includes(configModalData.retentionDays ?? 90) ? (configModalData.retentionDays ?? 90) : "custom"}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "custom") {
-                    setConfigModalData({ ...configModalData, retentionDays: 90, isCustom: true });
-                  } else {
-                    setConfigModalData({ ...configModalData, retentionDays: parseInt(val), isCustom: false });
-                  }
-                }}
-                className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-              >
-                {[30, 60, 90, 180, 365].map(d => (
-                  <option key={d} value={d}>{t('purges.modals.config.days', { days: d })}</option>
-                ))}
-                <option value="custom">{t('purges.modals.config.custom')}</option>
-              </select>
-            </div>
-
-            {(configModalData.isCustom || (![30, 60, 90, 180, 365].includes(configModalData.retentionDays ?? 90) && (configModalData.retentionDays ?? 0) > 0)) && (
-              <div className="flex flex-col gap-2 relative">
-                <Field
-                  label={t('purges.modals.config.customLabel')}
-                  type="number"
-                  min="30"
-                  value={configModalData.retentionDays || ""}
-                  onChange={(e) => {
-                    const parsed = parseInt(e.target.value);
-                    setConfigModalData({ ...configModalData, retentionDays: isNaN(parsed) ? 30 : parsed });
-                  }}
-                  onBlur={() => {
-                    if ((configModalData.retentionDays ?? 30) < 30) {
-                      setConfigModalData({ ...configModalData, retentionDays: 30 });
-                    }
-                  }}
-                  placeholder={t('purges.modals.config.customPlaceholder')}
-                />
-              </div>
-            )}
-
-            {/*
-              Said where the choice is made, not only on a dashboard afterwards.
-              A number chosen here quietly destroys records someone is expected
-              to still have, and the person choosing it is the one who can
-              change their mind.
-            */}
-            {configModalData.enabled && (configModalData.retentionDays ?? 0) > 0
-              && (configModalData.retentionDays ?? 0) < EXPECTED_RETENTION_DAYS ? (
-              <p className="rounded-[10px] bg-warning/10 px-4 py-3 text-[13px] leading-relaxed text-warning">
-                {t('purges.modals.config.tooShort', { days: EXPECTED_RETENTION_DAYS })}
-              </p>
-            ) : null}
-
-            <div className="flex flex-col gap-2 relative">
-              <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.interval')}</span>
-              <select
-                value={configModalData.interval || "Daily"}
-                onChange={(e) => setConfigModalData({ ...configModalData, interval: e.target.value as PurgePipelineConfig["interval"] })}
-                className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-              >
-                {['Hourly', 'Daily', 'Weekly', 'Monthly'].map(int => (
-                  <option key={int} value={int}>{t(`purges.intervals.${int}`)}</option>
-                ))}
-              </select>
-            </div>
-
-            {configModalData.interval === "Weekly" && (
-              <div className="flex flex-col gap-2 relative">
-                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.dayOfWeek')}</span>
-                <select
-                  value={configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0}
-                  onChange={(e) => setConfigModalData({ ...configModalData, dayOfWeek: parseInt(e.target.value) })}
-                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-                >
-                  {Array.from({ length: 7 }, (_, i) => i).map(day => (
-                    <option key={day} value={day}>{t(`purges.daysOfWeek.${day}`)}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {configModalData.interval === "Monthly" && (
-              <div className="flex flex-col gap-2 relative">
-                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.dayOfMonth')}</span>
-                <select
-                  value={configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1}
-                  onChange={(e) => setConfigModalData({ ...configModalData, dayOfMonth: parseInt(e.target.value) })}
-                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-                >
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map(date => (
-                    <option key={date} value={date}>{getOrdinalSuffix(date)}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {configModalData.interval !== "Hourly" && (
-              <div className="flex flex-col gap-2 relative">
-                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.hour')}</span>
-                <select
-                  value={configModalData.hourUtc || 0}
-                  onChange={(e) => setConfigModalData({ ...configModalData, hourUtc: parseInt(e.target.value) })}
-                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-                >
-                  {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                    const hh = hour.toString().padStart(2, '0');
-                    return <option key={hour} value={hour}>{hh}:00 UTC</option>;
-                  })}
-                </select>
-                <div className="mt-1 ml-1 text-[12px] text-secondary/80 font-medium flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-brand/70" />
-                  <span>
-                    {t('purges.modals.config.ukTimeDual', {
-                      gmt: String(configModalData.hourUtc || 0).padStart(2, '0') + ":00",
-                      bst: String(((configModalData.hourUtc || 0) + 1) % 24).padStart(2, '0') + ":00"
-                    })}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsConfigModalOpen(false)}
-              className="rounded-[10px] hover:bg-foreground/5"
-            >
-              {t('purges.modals.config.cancel')}
-            </Button>
-            <WriteButton
-              onClick={async () => {
-                if (configModalPipeline) {
-                  // Write exactly what the select displays. The old fallback
-                  // pair disagreed (display ?? 90, save || 30), so a modal
-                  // opened before the server sent a value showed "90 Days"
-                  // and silently saved 30.
-                  const retentionDays = Math.max(30, configModalData.retentionDays ?? 90);
-                  const updated = { ...((purgeConfigs || {}) as Partial<PurgeConfigMap>), [configModalPipeline]: {
-                    enabled: configModalData.enabled,
-                    retentionDays,
-                    interval: configModalData.interval,
-                    hourUtc: configModalData.hourUtc,
-                    dayOfWeek: configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0,
-                    dayOfMonth: configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1
-                  }};
-                  await updatePurgeConfigs({ configStr: JSON.stringify(updated) });
-                  setIsConfigModalOpen(false);
-                }
-              }}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-[13px]"
-            >
-              {t('purges.modals.config.save')}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
-
-      {/* Manual Purge Confirmation Modal */}
-      <SonaeModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        title={t('purges.modals.confirm.title')}
-      >
-        <div className="flex flex-col gap-6">
-          <div className="flex items-start gap-4 p-5 bg-destructive/10 border border-destructive/20 rounded-[16px]">
-            <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-2">
-              <p className="text-[14px] text-destructive font-medium">
-                {confirmModalPipeline ? t('purges.modals.confirm.body', {
-                  category: t(`purges.categories.${confirmModalPipeline}.title`),
-                  cutoffDate: new Date(Date.now() - (((purgeConfigs || {}) as Partial<PurgeConfigMap>)[confirmModalPipeline]?.retentionDays || 90) * 24 * 60 * 60 * 1000).toLocaleDateString(),
-                  days: ((purgeConfigs || {}) as Partial<PurgeConfigMap>)[confirmModalPipeline]?.retentionDays || 90
-                }) : ""}
-              </p>
-              <p className="text-[13px] text-destructive/80">
-                {t('purges.modals.confirm.warning')}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsConfirmModalOpen(false)}
-              className="rounded-[10px] hover:bg-foreground/5"
-            >
-              {t('purges.modals.confirm.cancel')}
-            </Button>
-            <WriteButton
-              onClick={async () => {
-                if (confirmModalPipeline) {
-                  setIsManualRunning(true);
-                  try {
-                    await manualPurgeMutation({ 
-                      pipelineKey: confirmModalPipeline
-                    });
-                    setIsConfirmModalOpen(false);
-                  } finally {
-                    setIsManualRunning(false);
-                  }
-                }
-              }}
-              disabled={isManualRunning}
-              className="px-6 py-2.5 rounded-[10px] bg-destructive text-white font-medium hover:bg-destructive/90 transition-all shadow-xl shadow-destructive/20 text-[13px] flex items-center gap-2 disabled:opacity-50"
-            >
-              {isManualRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {t('purges.modals.confirm.confirm')}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
-
-      {/* Cancel Purge Confirmation Modal */}
-      <SonaeModal
-        isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
-        title={t('purges.modals.cancelConfirm.title')}
-      >
-        <div className="flex flex-col gap-6">
-          <div className="flex items-start gap-4 p-5 bg-destructive/10 border border-destructive/20 rounded-[16px]">
-            <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-2">
-              <p className="text-[14px] text-destructive font-medium">
-                {cancelModalPipeline ? t('purges.modals.cancelConfirm.body', {
-                  category: t(`purges.categories.${cancelModalPipeline}.title`),
-                }) : ""}
-              </p>
-              <p className="text-[13px] text-destructive/80">
-                {t('purges.modals.cancelConfirm.warning')}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsCancelModalOpen(false)}
-              className="rounded-[10px] hover:bg-foreground/5"
-            >
-              {t('purges.modals.cancelConfirm.cancel')}
-            </Button>
-            <WriteButton
-              onClick={async () => {
-                if (cancelModalHistoryId) {
-                  setIsCancelRunning(true);
-                  try {
-                    await cancelPurgeMutation({ historyId: cancelModalHistoryId });
-                    setIsCancelModalOpen(false);
-                  } catch (err) {
-                    console.error("Failed to cancel active purge execution:", err);
-                  } finally {
-                    setIsCancelRunning(false);
-                  }
-                }
-              }}
-              disabled={isCancelRunning}
-              className="px-6 py-2.5 rounded-[10px] bg-destructive text-white font-medium hover:bg-destructive/90 transition-all shadow-xl shadow-destructive/20 text-[13px] flex items-center gap-2 disabled:opacity-50"
-            >
-              {isCancelRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-white" />}
-              {t('purges.modals.cancelConfirm.confirm')}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+          )}
+          closeConfigModal={() => setIsConfigModalOpen(false)}
+          saveConfig={async () => {
+            if (!configModalPipeline) return;
+            // Write exactly what the select displays. The old fallback pair
+            // disagreed (display ?? 90, save || 30), so a modal opened before
+            // the server sent a value showed "90 Days" and silently saved 30.
+            const retentionDays = Math.max(30, configModalData.retentionDays ?? 90);
+            const updated = {
+              ...configs,
+              [configModalPipeline]: {
+                enabled: configModalData.enabled,
+                retentionDays,
+                interval: configModalData.interval,
+                hourUtc: configModalData.hourUtc,
+                dayOfWeek: configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0,
+                dayOfMonth: configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1,
+              },
+            };
+            await updatePurgeConfigs({ configStr: JSON.stringify(updated) });
+            setIsConfigModalOpen(false);
+          }}
+          confirmModalOpen={isConfirmModalOpen}
+          confirmModalPipeline={confirmModalPipeline}
+          getConfirmCutoffDate={() =>
+            getPurgeCutoffDate(
+              confirmModalPipeline ? configs[confirmModalPipeline]?.retentionDays || 90 : 90
+            )
+          }
+          closeConfirmModal={() => setIsConfirmModalOpen(false)}
+          confirmManualPurge={async () => {
+            if (!confirmModalPipeline) return;
+            setIsManualRunning(true);
+            try {
+              await manualPurgeMutation({ pipelineKey: confirmModalPipeline });
+              setIsConfirmModalOpen(false);
+            } finally {
+              setIsManualRunning(false);
+            }
+          }}
+          isManualRunning={isManualRunning}
+          cancelModalOpen={isCancelModalOpen}
+          cancelModalPipeline={cancelModalPipeline}
+          closeCancelModal={() => setIsCancelModalOpen(false)}
+          confirmCancelPurge={async () => {
+            if (!cancelModalHistoryId) return;
+            setIsCancelRunning(true);
+            try {
+              await cancelPurgeMutation({ historyId: cancelModalHistoryId });
+              setIsCancelModalOpen(false);
+            } catch (error) {
+              console.error("Failed to cancel active purge execution:", error);
+            } finally {
+              setIsCancelRunning(false);
+            }
+          }}
+          isCancelRunning={isCancelRunning}
+        />
+      ) : null}
     </>
   );
 }

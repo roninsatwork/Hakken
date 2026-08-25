@@ -1,18 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { getErrorMessage } from "@/src/lib/errors";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { cn } from "@/src/ui/lib/utils";
@@ -27,6 +26,11 @@ import {
   type GlobalDefaultRow,
 } from "../_components/modelAdminUtils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+
+const loadEveryJobDialog = () => import("./ModelDefaultsEveryJobDialog");
+const ModelDefaultsEveryJobDialog = dynamic(() =>
+  loadEveryJobDialog().then((module) => module.ModelDefaultsEveryJobDialog),
+);
 
 export default function AIModelDefaultsPage() {
   const t = useTranslations("ai.models.defaults");
@@ -298,7 +302,10 @@ export default function AIModelDefaultsPage() {
             <WriteButton
               type="button"
               disabled={!everyJobModel}
-              onClick={() => setIsEveryJobConfirmOpen(true)}
+              onClick={() => {
+                void loadEveryJobDialog();
+                setIsEveryJobConfirmOpen(true);
+              }}
               className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
             >
               {t("apply")}
@@ -307,52 +314,19 @@ export default function AIModelDefaultsPage() {
         </div>
       )}
 
-      <SonaeModal
-        isOpen={isEveryJobConfirmOpen}
-        onClose={() => setIsEveryJobConfirmOpen(false)}
-        title={t("everyJobTitle")}
-        size="sm"
-      >
-        <div className="flex flex-col gap-5 px-1 pb-2">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t.rich("modalTakeOver", {
-              model: everyJobModel ? formatModelDisplayName(everyJobModel) : "",
-              can: everyJobSplit.can.length,
-              total: globalDefaults.length,
-              b: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
-            })}
-          </p>
-          <p className="text-[12px] leading-relaxed text-muted">
-            {t("jobsList", { jobs: everyJobSplit.can.map(formatModelTag).join(", ") })}
-          </p>
-          {everyJobSplit.cannot.length > 0 && (
-            // Named rather than silently skipped. "Apply to every job" used to
-            // write all ten rows without checking, which is how a model ended up
-            // set for a job it cannot do.
-            <p className="text-[12px] leading-relaxed text-[#f59e0b]">
-              {t("cannotDoList", { jobs: everyJobSplit.cannot.map(formatModelTag).join(", "), count: everyJobSplit.cannot.length })}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="quiet"
-              onClick={() => setIsEveryJobConfirmOpen(false)}
-              className="h-10 px-4 text-[13px] font-normal bg-transparent hover:bg-transparent"
-            >
-              {t("cancel")}
-            </Button>
-            <WriteButton
-              type="button"
-              onClick={applyToEveryJob}
-              disabled={isApplyingEveryJob}
-              className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-            >
-              {isApplyingEveryJob && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t("applyToEveryJob")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+      {isEveryJobConfirmOpen && (
+        <ModelDefaultsEveryJobDialog
+          modelName={everyJobModel ? formatModelDisplayName(everyJobModel) : ""}
+          canCount={everyJobSplit.can.length}
+          totalCount={globalDefaults.length}
+          jobs={everyJobSplit.can.map(formatModelTag).join(", ")}
+          cannotJobs={everyJobSplit.cannot.map(formatModelTag).join(", ")}
+          cannotCount={everyJobSplit.cannot.length}
+          isApplying={isApplyingEveryJob}
+          onClose={() => setIsEveryJobConfirmOpen(false)}
+          onApply={applyToEveryJob}
+        />
+      )}
     </div>
   );
 }

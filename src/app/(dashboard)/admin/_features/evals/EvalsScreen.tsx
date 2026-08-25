@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -23,10 +24,8 @@ import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWor
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { Button } from "@/src/ui/atoms/Button";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 
@@ -37,6 +36,10 @@ const RESULT_FILTERS: Array<{ value: "ALL" | "PASSED" | "FAILED" | "NOT_RUN"; la
   { value: "NOT_RUN", labelKey: "filters.notRun" },
 ];
 type CompanyEvalRun = Doc<"companyEvalRuns">;
+
+const loadEvalDialogs = () =>
+  import("./EvalDialogs").then((module) => module.EvalDialogs);
+const EvalDialogs = dynamic(loadEvalDialogs);
 
 /**
  * The stored result of a run, in the words an admin would use.
@@ -182,6 +185,16 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
   const runnableCount = batchEstimate?.selectedCount ?? 0;
   const hasEvals = cases.rows.length > 0;
 
+  const openBatchDialog = () => {
+    void loadEvalDialogs();
+    setConfirmBatch(true);
+  };
+
+  const openDeleteDialog = (evalCase: CompanyEvalCase) => {
+    void loadEvalDialogs();
+    setDeleteTarget(evalCase);
+  };
+
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
@@ -203,7 +216,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
             {hasEvals && (
               <WriteButton
                 type="button"
-                onClick={() => setConfirmBatch(true)}
+                onClick={openBatchDialog}
                 disabled={batchAction.isBusy() || runnableCount === 0}
                 className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -412,7 +425,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                   <RowIconButton
                     label={t("deleteRow", { name: evalCase.name })}
                     tone="danger"
-                    onClick={() => setDeleteTarget(evalCase)}
+                    onClick={() => openDeleteDialog(evalCase)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </RowIconButton>
@@ -423,54 +436,41 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
         ]}
       />
 
-      {/* Running is real provider work, so it says what it will do before it does
-          it. The old batch button spent nothing, which is why it proved nothing. */}
-      <SonaeModal isOpen={confirmBatch} onClose={() => setConfirmBatch(false)} title={t("batchModal.title")} size="sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 text-[13px] leading-relaxed text-secondary">
-            <p>
-              {t(companyId ? "batchModal.bodyCompany" : "batchModal.bodyGlobal", {
-                count: runnableCount,
-                calls: batchEstimate?.providerCallCount ?? 0,
-              })}
-            </p>
-            <p>{t("batchModal.stay")}</p>
-            {batchEstimate?.isCapped && (
-              <p className="text-amber-200">
-                {t("batchModal.capped", { cap: batchEstimate.cap })}
-              </p>
-            )}
-          </div>
-          <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <Button variant="ghost" onClick={() => setConfirmBatch(false)} disabled={batchAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
-              {t("batchModal.cancel")}
-            </Button>
-            <Button variant="brand" onClick={handleRunBatch} disabled={batchAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] py-2 font-semibold disabled:opacity-50">
-              {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              {t("runEvals")}
-            </Button>
-          </div>
-        </div>
-      </SonaeModal>
-
-      <SonaeModal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title={t("deleteModal.title")} size="sm">
-        <div className="flex flex-col gap-6">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t.rich("deleteModal.body", {
-              name: () => <span className="font-semibold text-foreground">{deleteTarget?.name}</span>,
-            })}
-          </p>
-          <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteAction.isBusy()} className="px-4 py-2 font-semibold hover:bg-foreground/5">
-              {t("deleteModal.cancel")}
-            </Button>
-            <WriteButton type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
-              {deleteAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              {t("deleteModal.confirm")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+      {confirmBatch || deleteTarget ? (
+        <EvalDialogs
+          batch={{
+            body: t(companyId ? "batchModal.bodyCompany" : "batchModal.bodyGlobal", {
+              count: runnableCount,
+              calls: batchEstimate?.providerCallCount ?? 0,
+            }),
+            busy: batchAction.isBusy(),
+            cancelLabel: t("batchModal.cancel"),
+            cappedMessage: batchEstimate?.isCapped
+              ? t("batchModal.capped", { cap: batchEstimate.cap })
+              : undefined,
+            confirmLabel: t("runEvals"),
+            open: confirmBatch,
+            stayMessage: t("batchModal.stay"),
+            title: t("batchModal.title"),
+          }}
+          deletion={{
+            body: t.rich("deleteModal.body", {
+              name: () => (
+                <span className="font-semibold text-foreground">{deleteTarget?.name}</span>
+              ),
+            }),
+            busy: deleteAction.isBusy(),
+            cancelLabel: t("deleteModal.cancel"),
+            confirmLabel: t("deleteModal.confirm"),
+            open: Boolean(deleteTarget),
+            title: t("deleteModal.title"),
+          }}
+          onBatchClose={() => setConfirmBatch(false)}
+          onBatchConfirm={handleRunBatch}
+          onDeleteClose={() => setDeleteTarget(null)}
+          onDeleteConfirm={handleDeleteCase}
+        />
+      ) : null}
     </div>
   );
 }

@@ -126,7 +126,7 @@ describe("WorkflowsPage", () => {
     render(<WorkflowsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /New Workflow/i }));
-    fireEvent.change(screen.getByPlaceholderText("Workflow name"), { target: { value: "New Flow" } });
+    fireEvent.change(await screen.findByPlaceholderText("Workflow name"), { target: { value: "New Flow" } });
     fireEvent.change(screen.getByPlaceholderText("Describe workflow"), { target: { value: "A routed workflow" } });
     fireEvent.click(screen.getByRole("button", { name: "Create Workflow" }));
 

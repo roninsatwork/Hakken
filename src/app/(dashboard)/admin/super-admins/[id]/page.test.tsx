@@ -82,4 +82,18 @@ describe("Super-admin UserProfilePage", () => {
     // table and once in the footer's count slot.
     expect(screen.getAllByText("No login records found for this user.").length).toBeGreaterThan(0);
   });
+
+  it("waits to subscribe to login history until its hidden tab is selected", () => {
+    const loginArgs: unknown[] = [];
+    vi.mocked(usePaginatedQuery).mockImplementation((queryFn, args) => {
+      if (getFunctionName(queryFn) === "users:getUserLogins") loginArgs.push(args);
+      return pagedResult([]) as unknown as ReturnType<typeof usePaginatedQuery>;
+    });
+
+    render(<UserProfilePage />);
+    expect(loginArgs).toEqual(["skip"]);
+
+    fireEvent.click(screen.getByText("Security & Logins"));
+    expect(loginArgs.at(-1)).toEqual({ userId: "user123", searchTerm: "" });
+  });
 });

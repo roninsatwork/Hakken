@@ -12,14 +12,20 @@ Core components live under `src/ui/components/screens/`:
 
 - `src/ui/components/screens/Table.tsx`: search bar, table shell, header rows/cells, loading row, empty row, row action wrapper, icon action button, pagination footer, and load-more footer.
 - `src/ui/components/screens/ConfirmationModal.tsx`: destructive confirmation wrapper around `SonaeModal`.
+- `src/ui/components/screens/CompactList.tsx`: compact table-semantic row lists that live inside a panel that already introduced itself.
 - `src/ui/components/screens/ModalForm.tsx`: modal form field, error, action, input, and textarea helpers.
 - `src/ui/components/screens/DetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
 - `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
 - `src/ui/components/screens/PageHeader.tsx`: list-page title/description/action header and primary action button.
 - `src/ui/components/screens/Select.tsx`: styled select control.
+- `src/ui/components/screens/Field.tsx`: labelled field wrapper for typed form controls that must carry an accessible label.
+- `src/ui/components/screens/Checkbox.tsx`: shared checkbox/tick-box control, including hidden-label table-cell use.
+- `src/ui/components/screens/Leaderboard.tsx`: ranked or unranked compact lists for repeated "who used the most" panels.
 - `src/ui/components/screens/SettingsCard.tsx`: settings card, field label, field hint, segmented choice, and setting switch.
 - `src/ui/components/screens/AccessLevel.tsx`: the read/write context, `useCanWriteHere`, and the write-gated button. Table, page header, modal form and save controls all consult it, so a read-only viewer loses write affordances without each screen checking.
 - `src/ui/components/screens/SaveControls.tsx`: save button, inline error, animated success/error feedback, and feedback pill.
+- `src/ui/components/screens/TableControls.tsx`: table-search controls used where a page needs the kit's input styling without a full `DataTable`.
+- `src/ui/components/screens/CursorPagination.tsx`: cursor-based pagination helper for lists that page by cursor rather than count.
 
 Genuinely admin-specific parts stay under `src/app/(dashboard)/admin/_components/`:
 
@@ -77,6 +83,10 @@ Use `PaginationFooter` for offset-style pages. It clamps stale page values, show
 
 Use `LoadMoreFooter` for Convex `usePaginatedQuery` flows. It displays visible row counts and a load-more action when more results can be fetched.
 
+Use `CursorFooter` or the `CursorPagination` helper for lists that can step
+forward and backward but cannot cheaply count total rows. Do not fake a total
+page count for cursor data.
+
 ## Modals And Forms
 
 Use `SonaeModal` for custom modal surfaces. It renders through a `document.body` portal, uses a black blurred backdrop, Framer Motion entrance/exit animation, and size classes:
@@ -130,6 +140,24 @@ Empty states should explain the current result, not speculate. For example, dist
 - the backend returned an error
 
 Keep empty-state copy localized when it is user-visible. Existing docs and tests note some older inline strings; reduce drift when touching those pages.
+
+## Compact Lists And Leaderboards
+
+Use `CompactList` for a short run of rows inside a larger panel: run history,
+tool breakdowns, nested line items, widget settings rows, and similar embedded
+records. It owns the row rhythm, divider, optional heading row, loading line,
+and real table semantics without forcing a full `DataTable` card inside another
+panel.
+
+Use `Leaderboard` when the embedded rows have the repeated ranked-list shape:
+rank, optional avatar, name/subtitle, and one or more right-aligned measures. It
+is built on `CompactList` so repeated AI cost, company usage, provider
+breakdown, and settings panels do not each invent avatar fallback, headings,
+empty copy, or divider styling.
+
+Do not use `CompactList` as a shortcut for a screen's primary records. If the
+screen is the list, use `DataTable` with `PageHeader` or the correct detail
+header above it.
 
 ## Settings Sections
 
@@ -273,6 +301,11 @@ The scan is brace- and quote-aware because an input's `type` often sits after an
 Focused tests include:
 
 - `src/ui/components/screens/Table.test.tsx`
+- `src/ui/components/screens/DataTable.test.tsx`
+- `src/ui/components/screens/CompactList.test.tsx`
+- `src/ui/components/screens/Leaderboard.test.tsx`
+- `src/ui/components/screens/Checkbox.test.tsx`
+- `src/ui/components/screens/Field.test.tsx`
 - `src/ui/components/screens/ConfirmationModal.test.tsx`
 - `src/ui/components/screens/ModalForm.test.tsx`
 - `src/ui/components/screens/DetailLayout.test.tsx`

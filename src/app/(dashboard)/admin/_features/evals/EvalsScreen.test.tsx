@@ -1,6 +1,7 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
+import { fireEvent, screen } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
@@ -84,5 +85,25 @@ describe("EvalsScreen", () => {
       emptyText: "ai.evals.list.empty.label",
       searchPlaceholder: "ai.evals.list.searchPlaceholder",
     });
+  });
+
+  it("opens the deferred delete confirmation from the existing row action", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: cases,
+      status: "Exhausted",
+      isLoading: false,
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
+
+    render(<EvalsScreen companyId={"company123" as Id<"companies">} />);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "ai.evals.list.deleteRow" })[0],
+    );
+
+    expect(
+      await screen.findByRole("dialog", { name: "ai.evals.list.deleteModal.title" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("ai.evals.list.deleteModal.body")).toBeInTheDocument();
   });
 });

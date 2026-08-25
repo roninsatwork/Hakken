@@ -20,6 +20,10 @@ import { getFunctionName } from "convex/server";
 import AgentLogsDashboard from "./page";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
+vi.mock("next/dynamic", async () => {
+  const { AgentLogsResults } = await import("./AgentLogsResults");
+  return { default: () => AgentLogsResults };
+});
 
 const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -111,19 +115,19 @@ describe("AgentLogsDashboard", () => {
    * The old screen was a flat list of entries in time order, interleaved across
    * jobs — a chain of work shown as unrelated rows.
    */
-  it("gathers entries under the job they belonged to", () => {
+  it("gathers entries under the job they belonged to", async () => {
     renderPage();
 
-    expect(screen.getByText("Find new three-bed listings in Bristol under £400k")).toBeInTheDocument();
+    expect(await screen.findByText("Find new three-bed listings in Bristol under £400k")).toBeInTheDocument();
     expect(screen.getByText(/2 entries/)).toBeInTheDocument();
   });
 
-  it("puts the job's real outcome, duration and cost on its header", () => {
+  it("puts the job's real outcome, duration and cost on its header", async () => {
     renderPage();
 
     // The header line carries all three, so asserting it together also proves
     // they belong to the job rather than to one of its entries.
-    const header = screen.getByText(/Scheduled ·/);
+    const header = await screen.findByText(/Scheduled ·/);
     expect(header).toHaveTextContent("31.4s");
     expect(header).toHaveTextContent("$0.021");
 
@@ -131,69 +135,69 @@ describe("AgentLogsDashboard", () => {
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
 
-  it("reports each entry's recorded outcome rather than reading its name", () => {
+  it("reports each entry's recorded outcome rather than reading its name", async () => {
     renderPage();
 
     // "TOOL DISPATCH" contains neither "error" nor "fail": under the old screen
     // this entry showed a green tick. Now the row says what was recorded, and
     // is chipped as a problem alongside it.
-    expect(screen.getByText(/Used property search/)).toBeInTheDocument();
+    expect(await screen.findByText(/Used property search/)).toBeInTheDocument();
     expect(screen.getAllByText("worked")).toHaveLength(1);
     expect(screen.getAllByText("failed")).toHaveLength(1);
     expect(screen.getAllByText("Problem")).toHaveLength(1);
   });
 
-  it("says what each entry was about, not only what kind of entry it was", () => {
+  it("says what each entry was about, not only what kind of entry it was", async () => {
     renderPage();
 
     // Without this every property search on the page reads identically and the
     // only way to find the one that matters is to open all of them.
     expect(
-      screen.getAllByText(/— Find three-bed listings in Bristol/).length
+      (await screen.findAllByText(/— Find three-bed listings in Bristol/)).length
     ).toBeGreaterThan(0);
   });
 
-  it("translates entries out of the runtime's vocabulary", () => {
+  it("translates entries out of the runtime's vocabulary", async () => {
     renderPage();
 
-    expect(screen.getByText("Worked out what to say")).toBeInTheDocument();
+    expect(await screen.findByText("Worked out what to say")).toBeInTheDocument();
     expect(screen.queryByText("LLM SYNTHESIS")).not.toBeInTheDocument();
     expect(screen.queryByText(/TOOL DISPATCH/)).not.toBeInTheDocument();
   });
 
-  it("opens what was sent and what came back in place, side by side", () => {
+  it("opens what was sent and what came back in place, side by side", async () => {
     renderPage();
 
     expect(screen.queryByText("What we sent")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Worked out what to say"));
+    fireEvent.click(await screen.findByText("Worked out what to say"));
 
     expect(screen.getByText("What we sent")).toBeInTheDocument();
     expect(screen.getByText("What came back")).toBeInTheDocument();
     expect(screen.getByText("I will search Bristol.")).toBeInTheDocument();
   });
 
-  it("says how often a repeated failure has happened", () => {
+  it("says how often a repeated failure has happened", async () => {
     renderPage();
 
-    fireEvent.click(screen.getByText("Used property search"));
+    fireEvent.click(await screen.findByText("Used property search"));
 
     expect(screen.getByText("This has happened 42 times recently.")).toBeInTheDocument();
   });
 
-  it("does not claim a one-off failure is a pattern", () => {
+  it("does not claim a one-off failure is a pattern", async () => {
     dataFixture = payload({ failureCounts: { "the property search timed out": 1 } });
     renderPage();
 
-    fireEvent.click(screen.getByText("Used property search"));
+    fireEvent.click(await screen.findByText("Used property search"));
 
     expect(screen.queryByText(/This has happened/)).not.toBeInTheDocument();
   });
 
-  it("links a job's entries back to the job itself", () => {
+  it("links a job's entries back to the job itself", async () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /Open this job/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Open this job/ }));
     expect(pushMock).toHaveBeenCalledWith("/admin/agents/agent_1/observability/run_1");
   });
 
@@ -205,20 +209,20 @@ describe("AgentLogsDashboard", () => {
     }
   });
 
-  it("says nothing has gone wrong rather than looking broken when Problems is empty", () => {
+  it("says nothing has gone wrong rather than looking broken when Problems is empty", async () => {
     dataFixture = payload({ groups: [], totalGroups: 0 });
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Problems" }));
 
-    expect(screen.getByText("Nothing has gone wrong")).toBeInTheDocument();
+    expect(await screen.findByText("Nothing has gone wrong")).toBeInTheDocument();
   });
 
   it("distinguishes an empty search from an agent that has never spoken", async () => {
     dataFixture = payload({ groups: [], totalGroups: 0 });
     renderPage();
 
-    expect(screen.getByText("This agent has not said anything yet")).toBeInTheDocument();
+    expect(await screen.findByText("This agent has not said anything yet")).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText(/Search everything/), {
       target: { value: "needle" },
@@ -232,14 +236,14 @@ describe("AgentLogsDashboard", () => {
     );
   });
 
-  it("says outright when the history is longer than the screen can hold", () => {
+  it("says outright when the history is longer than the screen can hold", async () => {
     dataFixture = payload({ windowTruncated: true });
     renderPage();
 
-    expect(screen.getByText(/covers its most recent activity/)).toBeInTheDocument();
+    expect(await screen.findByText(/covers its most recent activity/)).toBeInTheDocument();
   });
 
-  it("labels work that never belonged to a job rather than inventing one", () => {
+  it("labels work that never belonged to a job rather than inventing one", async () => {
     dataFixture = payload({
       groups: [
         {
@@ -253,7 +257,7 @@ describe("AgentLogsDashboard", () => {
     });
     renderPage();
 
-    expect(screen.getByText("Work done outside a job")).toBeInTheDocument();
+    expect(await screen.findByText("Work done outside a job")).toBeInTheDocument();
     expect(screen.getByText("No job")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Open this job/ })).not.toBeInTheDocument();
   });
@@ -265,10 +269,10 @@ describe("AgentLogsDashboard", () => {
     expect(screen.queryByText("This agent has not said anything yet")).not.toBeInTheDocument();
   });
 
-  it("keeps the entry rows readable as a list", () => {
+  it("keeps the entry rows readable as a list", async () => {
     renderPage();
 
-    const jobCard = screen.getByText("Find new three-bed listings in Bristol under £400k").closest("div")!
+    const jobCard = (await screen.findByText("Find new three-bed listings in Bristol under £400k")).closest("div")!
       .parentElement!.parentElement!;
     expect(within(jobCard).getAllByRole("button").length).toBeGreaterThanOrEqual(2);
   });

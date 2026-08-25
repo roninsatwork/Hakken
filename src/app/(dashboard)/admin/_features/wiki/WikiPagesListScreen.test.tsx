@@ -1,7 +1,9 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import React from "react";
-import { beforeEach, describe, vi } from "vitest";
-import { usePaginatedQuery } from "convex/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useMutation, usePaginatedQuery } from "convex/react";
+import { getFunctionName } from "convex/server";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { WikiPagesListScreen } from "./WikiPagesListScreen";
 
@@ -80,6 +82,10 @@ describe("WikiPagesListScreen", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   describe("as a standard table screen", () => {
     itBehavesLikeAStandardTableScreen({
       renderScreen: () => render(<WikiPagesListScreen basePath="/admin/ai/pages" />),
@@ -96,5 +102,40 @@ describe("WikiPagesListScreen", () => {
       emptyText: "aiPages.globalEmptyState",
       searchPlaceholder: "aiPages.searchPlaceholder",
     });
+  });
+
+  it("keeps file upload working when its helpers load on demand", async () => {
+    const generateUploadUrl = vi.fn().mockResolvedValue("https://upload.test/put");
+    const saveDocument = vi.fn().mockResolvedValue("document_1");
+    vi.mocked(useMutation).mockImplementation((mutationFn) => {
+      const functionName = getFunctionName(mutationFn);
+      if (functionName === "knowledge:generateUploadUrl") return generateUploadUrl as never;
+      if (functionName === "knowledge:saveDocument") return saveDocument as never;
+      return vi.fn() as never;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ json: async () => ({ storageId: "storage_1" }) }),
+    );
+
+    render(<WikiPagesListScreen basePath="/admin/ai/pages" />);
+    fireEvent.click(screen.getByRole("button", { name: "aiPages.import.tabs.file" }));
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(fileInput).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.change(fileInput!, {
+        target: { files: [new File(["# Returns"], "returns.md", { type: "text/markdown" })] },
+      });
+    });
+
+    await waitFor(() => expect(generateUploadUrl).toHaveBeenCalledOnce());
+    expect(saveDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageId: "storage_1",
+        title: "returns.md",
+        format: "text/markdown",
+      }),
+    );
   });
 });

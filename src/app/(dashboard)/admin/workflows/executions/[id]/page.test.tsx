@@ -115,10 +115,12 @@ describe("WorkflowExecutionDetailPage", () => {
   it("does not reject until the confirmation is confirmed", async () => {
     render(<WorkflowExecutionDetailPage />);
 
+    expect(screen.queryByText("The workflow is waiting at approval.")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: /detail.reject/ }));
 
     expect(actionMock).not.toHaveBeenCalled();
-    expect(screen.getByText("The workflow is waiting at approval.")).toBeInTheDocument();
+    expect(await screen.findByText("The workflow is waiting at approval.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "detail.confirm.confirm" }));
 

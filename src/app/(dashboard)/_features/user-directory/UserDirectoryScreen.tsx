@@ -6,6 +6,7 @@ import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { Users } from "lucide-react";
 import {
   DirectoryInviteAwaitingActions,
@@ -15,17 +16,15 @@ import {
   DirectoryUserIdentityCell,
   DirectoryUserRolePill,
 } from "./DirectoryTableCells";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
-import { ModalField } from "@/src/ui/components/screens/ModalForm";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import type { UserRole } from "@/src/lib/userRoles";
-import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+
+const loadUserDirectoryDialogs = () => import("./UserDirectoryDialogs");
+const UserDirectoryDialogs = dynamic(() => loadUserDirectoryDialogs().then((module) => module.default));
 
 /**
  * The people directory whole, shared the same way its cells already were:
@@ -71,7 +70,12 @@ export type UserDirectoryRow =
   | { kind: "user"; user: DirectoryUser };
 
 /** A page's translator, passed in so the screen owns no namespace of its own. */
-type Translator = (key: string, values?: Record<string, string | number>) => string;
+export type Translator = (key: string, values?: Record<string, string | number>) => string;
+
+export type UserDirectoryRoleFields = (form: {
+  data: UserDirectoryFormData;
+  update: (patch: Partial<UserDirectoryFormData>) => void;
+}) => ReactNode;
 
 const EMPTY_FORM: UserDirectoryFormData = { name: "", email: "", role: "USER", image: "", companyId: "" };
 
@@ -111,10 +115,7 @@ export function UserDirectoryScreen({
   /** A person's row buttons; `edit` and `remove` open the shared modals. */
   userActions: (user: DirectoryUser, controls: { edit: () => void; remove: () => void }) => ReactNode;
   /** The modal's role control (and whatever targeting rides with it). */
-  roleFields: (form: {
-    data: UserDirectoryFormData;
-    update: (patch: Partial<UserDirectoryFormData>) => void;
-  }) => ReactNode;
+  roleFields: UserDirectoryRoleFields;
   /** What an opened person puts back into the form. */
   editFormData: (user: DirectoryUser) => UserDirectoryFormData;
   /** What a saved form sends — companyId resolution is the page's scope rule. */
@@ -142,6 +143,7 @@ export function UserDirectoryScreen({
   const [editingUser, setEditingUser] = useState<DirectoryUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<DirectoryUser | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<UserDirectoryFormData>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -170,7 +172,13 @@ export function UserDirectoryScreen({
   const updateForm = (patch: Partial<UserDirectoryFormData>) =>
     setFormData((previous) => ({ ...previous, ...patch }));
 
+  const requestDialogs = () => {
+    setDialogsRequested(true);
+    void loadUserDirectoryDialogs();
+  };
+
   const handleOpenAdd = () => {
+    requestDialogs();
     setFormData(EMPTY_FORM);
     setEditingUser(null);
     setSubmitError("");
@@ -178,10 +186,21 @@ export function UserDirectoryScreen({
   };
 
   const handleOpenEdit = (user: DirectoryUser) => {
+    requestDialogs();
     setFormData(editFormData(user));
     setEditingUser(user);
     setSubmitError("");
     setIsAddModalOpen(true);
+  };
+
+  const handleOpenDelete = (user: DirectoryUser) => {
+    requestDialogs();
+    setDeletingUser(user);
+  };
+
+  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+    requestDialogs();
+    setDeletingInvite(invite);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -325,112 +344,46 @@ export function UserDirectoryScreen({
                 <DirectoryInviteAwaitingActions
                   awaitingLabel={t('table.awaiting')}
                   revokeLabel={t('buttons.revoke')}
-                  onRevoke={() => setDeletingInvite(row.invite)}
+                  onRevoke={() => handleOpenRevoke(row.invite)}
                 />
               ) : (
                 userActions(row.user, {
                   edit: () => handleOpenEdit(row.user),
-                  remove: () => setDeletingUser(row.user),
+                  remove: () => handleOpenDelete(row.user),
                 })
               ),
           },
         ]}
       />
 
-      {/* Add/Edit Modal */}
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => !isSubmitting && setIsAddModalOpen(false)}
-        title={editingUser ? t('modal.editTitle') : t('modal.inviteTitle')}
-      >
-        <p className="text-secondary mb-6 text-[15px]">{editingUser ? t('modal.editDesc') : t('modal.inviteDesc', { platformName })}</p>
-        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalField
-            label={t('modal.fullName')}
-            type="text"
-            required
-            value={formData.name}
-            onChange={e => updateForm({ name: e.target.value })}
-            placeholder={t('modal.namePlaceholder')}
-          />
-
-          <ModalField
-            label={t('modal.email')}
-            type="email"
-            required
-            value={formData.email}
-            onChange={e => updateForm({ email: e.target.value })}
-            placeholder={t('modal.emailPlaceholder')}
-          />
-
-          {roleFields({ data: formData, update: updateForm })}
-
-          <ModalField
-            label={t('modal.avatar')}
-            type="url"
-            value={formData.image}
-            onChange={e => updateForm({ image: e.target.value })}
-            placeholder={t('modal.avatarPlaceholder')}
-          >
-            <p className="text-[11px] text-muted">{t('modal.avatarHint')}</p>
-          </ModalField>
-
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddModalOpen(false)}
-              disabled={isSubmitting}
-              className="rounded-[10px] text-sm hover:bg-foreground/5"
-            >
-              {t('buttons.cancel')}
-            </Button>
-            <WriteButton
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? tCommon('saving') : editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
-            </WriteButton>
-          </div>
-        </form>
-      </SonaeModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingUser}
-        onClose={() => {
-          setDeletingUser(null);
-          setSubmitError("");
-        }}
-        title={t('modal.deleteTitle')}
-        cancelLabel={t('buttons.cancel')}
-        confirmLabel={isSubmitting ? tCommon('deleting') : t('buttons.delete')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmDelete}
-        error={submitError}
-      >
-        <p>
-          {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
-        </p>
-      </ConfirmationModal>
-
-      <ConfirmationModal
-        isOpen={!!deletingInvite}
-        onClose={() => {
-          setDeletingInvite(null);
-          setSubmitError("");
-        }}
-        title={t('modal.revokeTitle')}
-        cancelLabel={t('buttons.cancel')}
-        confirmLabel={isSubmitting ? tCommon('deleting') : t('buttons.revoke')}
-        isSubmitting={isSubmitting}
-        onConfirm={confirmRevoke}
-        error={submitError}
-      >
-        <p>
-          {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
-        </p>
-      </ConfirmationModal>
+      {dialogsRequested && (
+        <UserDirectoryDialogs
+          t={t}
+          tCommon={tCommon}
+          platformName={platformName}
+          isAddModalOpen={isAddModalOpen}
+          editingUser={editingUser}
+          deletingUser={deletingUser}
+          deletingInvite={deletingInvite}
+          formData={formData}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          roleFields={roleFields}
+          onSubmit={handleSubmit}
+          onUpdateForm={updateForm}
+          onCloseAdd={() => !isSubmitting && setIsAddModalOpen(false)}
+          onCloseDelete={() => {
+            setDeletingUser(null);
+            setSubmitError("");
+          }}
+          onCloseRevoke={() => {
+            setDeletingInvite(null);
+            setSubmitError("");
+          }}
+          onConfirmDelete={confirmDelete}
+          onConfirmRevoke={confirmRevoke}
+        />
+      )}
     </div>
   );
 }

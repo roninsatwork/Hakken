@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,7 +18,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -26,6 +26,8 @@ import { buildChatTranscript } from "@/src/lib/chatTranscript";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { LAYER } from "@/src/ui/lib/layers";
+
+const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
 
 /**
  * The chat-logs screen, shared between the platform view and the per-company

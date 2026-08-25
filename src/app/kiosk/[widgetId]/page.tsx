@@ -7,12 +7,6 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { VoiceSessionState } from "@/src/lib/voiceSession";
-import { decodePcm16Base64 } from "@/src/lib/voiceSession";
-import {
-  downsampleTo16k,
-  LIVE_OUTPUT_SAMPLE_RATE,
-  readLiveServerMessage,
-} from "@/src/lib/googleLiveVoice";
 import { SpeakingCharacter } from "@/src/ui/components/chat/SpeakingCharacter";
 
 /**
@@ -198,11 +192,16 @@ export default function KioskPage() {
       }
       sessionRef.current = minted;
 
-      const voiceSession = await createVoiceSession({
-        widgetId,
-        threadId: minted.threadId,
-        widgetAccessToken: minted.accessToken,
-      });
+      const [voiceSession, { downsampleTo16k, LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage }, { decodePcm16Base64 }] =
+        await Promise.all([
+          createVoiceSession({
+            widgetId,
+            threadId: minted.threadId,
+            widgetAccessToken: minted.accessToken,
+          }),
+          import("@/src/lib/googleLiveVoice"),
+          import("@/src/lib/voiceSession"),
+        ]);
       if (!voiceSession.ok) {
         resetToIdle(voiceSession.reason);
         return;

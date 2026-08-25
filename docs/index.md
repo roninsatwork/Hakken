@@ -32,15 +32,15 @@ This is the front door for Sonae documentation. Use the audience sections below 
 The latest implementation audit refreshed every active-plan link and aligned
 the knowledge, workflow, task, notification, agent, assistant, widget,
 reception, settings, governance, company AI, profile, screen-kit, maintenance
-connections, deployment, connector, and coverage guides with the implementation
-through 2026-08-22. It also added dedicated Company Wiki, spoken-channel, Gmail
+connections, deployment, connector, tool-server, and coverage guides with the
+implementation through 2026-08-25. It also added dedicated Company Wiki,
+spoken-channel, Gmail
 mailbox, photo-action, receptionist-screen, and task/notification guide pairs
 for the newly routed page/map/import/review experience, live voice/phone
 surfaces, connected inbound mailbox backend, and image-to-task/walk-up
-kiosk/task-routing behavior. Future upkeep
-should still treat broad guides and newly changed implementation areas as
-active audit targets because routes, Convex modules, workflows, scripts, and
-operator procedures continue to change.
+kiosk/task-routing behavior. Future upkeep should still treat broad guides and
+newly changed implementation areas as active audit targets because routes,
+Convex modules, workflows, scripts, and operator procedures continue to change.
 
 ### Plans
 

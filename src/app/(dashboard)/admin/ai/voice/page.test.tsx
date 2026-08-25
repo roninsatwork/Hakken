@@ -1,6 +1,7 @@
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 
 import SpokenVoicePage from "./page";
 
@@ -65,5 +66,16 @@ describe("SpokenVoicePage", () => {
     render(<SpokenVoicePage />);
 
     expect(document.body.textContent).toContain("Aoede");
+  });
+
+  it("starts the production preview for the selected voice", () => {
+    vi.mocked(useQuery).mockReturnValue(setting);
+    const mintPreview = vi.fn(() => new Promise<never>(() => {}));
+    vi.mocked(useAction).mockReturnValue(mintPreview);
+
+    render(<SpokenVoicePage />);
+    fireEvent.click(screen.getAllByText("aiVoice.listen")[0]);
+
+    expect(mintPreview).toHaveBeenCalledWith({ voice: "Aoede" });
   });
 });

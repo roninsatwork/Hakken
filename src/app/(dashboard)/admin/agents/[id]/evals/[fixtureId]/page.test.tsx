@@ -66,12 +66,12 @@ describe("AgentCheckDetailPage", () => {
 
   // The output and the reason it was marked down were reachable only from a stream of
   // every run the agent had ever had, clamped to two lines.
-  it("shows the full output and why it was marked down", () => {
+  it("shows the full output and why it was marked down", async () => {
     vi.mocked(useQuery).mockReturnValue({ check, history: [gradedRun] } as unknown as ReturnType<typeof useQuery>);
 
     render(<AgentCheckDetailPage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: /Summarise this month's overdue invoices/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /Summarise this month's overdue invoices/ })).toBeInTheDocument();
     expect(screen.getByText("Failing")).toBeInTheDocument();
     expect(screen.getByText(/It invented an invoice for £4,000/)).toBeInTheDocument();
     expect(screen.getByText(/Lists each invoice with the customer and amount/)).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("AgentCheckDetailPage", () => {
 
   // A setup run calls no model, so the page must not let its output read as evidence
   // that the agent works.
-  it("says plainly when the last run was only a setup check", () => {
+  it("says plainly when the last run was only a setup check", async () => {
     vi.mocked(useQuery).mockReturnValue({
       check,
       history: [{ ...gradedRun, gradingMode: "CONTRACT_ONLY", status: "SUCCESS" }],
@@ -88,17 +88,26 @@ describe("AgentCheckDetailPage", () => {
 
     render(<AgentCheckDetailPage />);
 
-    expect(screen.getByText("Setup only")).toBeInTheDocument();
+    expect(await screen.findByText("Setup only")).toBeInTheDocument();
     expect(screen.getByText(/asks it nothing, so it is not evidence the agent works/)).toBeInTheDocument();
     expect(screen.queryByText("Passing")).not.toBeInTheDocument();
   });
 
-  it("tells you it has never run rather than showing an empty panel", () => {
+  it("tells you it has never run rather than showing an empty panel", async () => {
     vi.mocked(useQuery).mockReturnValue({ check, history: [] } as unknown as ReturnType<typeof useQuery>);
 
     render(<AgentCheckDetailPage />);
 
-    expect(screen.getByText("Not run yet")).toBeInTheDocument();
+    expect(await screen.findByText("Not run yet")).toBeInTheDocument();
     expect(screen.getByText(/This check has never been run/)).toBeInTheDocument();
+  });
+
+  it("keeps the existing full-screen spinner while the detail query is loading", () => {
+    vi.mocked(useQuery).mockReturnValue(undefined);
+
+    const { container } = render(<AgentCheckDetailPage />);
+
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   });
 });

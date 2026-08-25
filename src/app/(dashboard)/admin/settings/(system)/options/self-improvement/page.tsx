@@ -1,5 +1,3 @@
-"use client";
-
 import { SelfImprovementSection } from "../../../_components/SelfImprovementSection";
 import { SettingsScreen } from "../../../_components/SettingsScreen";
 

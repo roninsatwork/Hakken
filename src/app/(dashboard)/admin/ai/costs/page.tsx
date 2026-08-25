@@ -4,16 +4,22 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { AICostDistributionCharts } from "./_components/AICostDistributionCharts";
 import { AICostLeaderboards } from "./_components/AICostLeaderboards";
 import { AICostsHeader } from "./_components/AICostsHeader";
 import { AICostsMetricGrid } from "./_components/AICostsMetricGrid";
-import { AICostTimelineChart } from "./_components/AICostTimelineChart";
 import type { AICostsData, TimeframeOption } from "./_components/types";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
+
+const AICostDistributionCharts = dynamic(() =>
+  import("./_components/AICostDistributionCharts").then((module) => module.AICostDistributionCharts),
+);
+const AICostTimelineChart = dynamic(() =>
+  import("./_components/AICostTimelineChart").then((module) => module.AICostTimelineChart),
+);
 
 export default function AICostsDashboard() {
   const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");

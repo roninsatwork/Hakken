@@ -158,7 +158,8 @@ describe("CompaniesPage", () => {
     render(<CompaniesPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /New Company/i }));
-    fireEvent.change(screen.getByPlaceholderText("Enter company name"), { target: { value: "Comax" } });
+    const companyNameInput = await screen.findByPlaceholderText("Enter company name");
+    fireEvent.change(companyNameInput, { target: { value: "Comax" } });
 
     // By name, not by position: the card lists every capability now, and the
     // first checkbox is no longer the bespoke one this test is about.
@@ -181,7 +182,8 @@ describe("CompaniesPage", () => {
     render(<CompaniesPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /New Company/i }));
-    fireEvent.change(screen.getByPlaceholderText("Enter company name"), { target: { value: "Delta" } });
+    const companyNameInput = await screen.findByPlaceholderText("Enter company name");
+    fireEvent.change(companyNameInput, { target: { value: "Delta" } });
     fireEvent.change(screen.getByPlaceholderText("Prompt"), { target: { value: "Be useful" } });
     fireEvent.click(screen.getByRole("button", { name: "Provision Tenant" }));
 

@@ -172,7 +172,7 @@ describe("AIModelDefaultsPage", () => {
 
     // Nothing has been written yet — the click opened a confirmation.
     expect(setDefaultModel).not.toHaveBeenCalled();
-    expect(screen.getByText(/will take over/i)).toBeInTheDocument();
+    expect(await screen.findByText(/will take over/i)).toBeInTheDocument();
     // The fixture model supports chat only, so the dialog must say it takes one
     // of the two rows and names the one it cannot do — rather than claiming
     // "every job" and quietly skipping it.

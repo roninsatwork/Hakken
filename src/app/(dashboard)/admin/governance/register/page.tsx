@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { ArrowDown, Bolt, ClipboardList, Globe, UserCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 
 import { api } from "@/convex/_generated/api";
 import {
@@ -13,7 +14,6 @@ import {
   type AiSystemKind,
   type RegisterSort,
 } from "@/convex/governanceRegisterService";
-import { RegisterEntryPanel } from "./RegisterEntryPanel";
 import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -41,6 +41,11 @@ import { formatDate } from "@/src/lib/dates";
 
 const KINDS: Array<AiSystemKind | "ALL"> = ["ALL", "ASSISTANT", "WIDGET", "WORKFLOW"];
 
+const loadRegisterEntryPanel = () => import("./RegisterEntryPanel");
+const RegisterEntryPanel = dynamic(() =>
+  loadRegisterEntryPanel().then((module) => module.RegisterEntryPanel),
+);
+
 /**
  * The counts, and what each one narrows the list to.
  *
@@ -67,6 +72,7 @@ export default function AiRegisterPage() {
   const [sort, setSort] = useState<RegisterSort>("ATTENTION");
   const [page, setPage] = useState(1);
   const [opened, setOpened] = useState<AiSystemEntry | null>(null);
+  const [hasOpenedPanel, setHasOpenedPanel] = useState(false);
 
   const entries = register?.entries;
   const summary = register?.summary;
@@ -118,6 +124,12 @@ export default function AiRegisterPage() {
   const paged = paginateItems(visible, page, TABLE_PAGE_SIZE);
   const filtering = search.trim() !== "" || chip !== "total" || kind !== "ALL";
 
+  const openEntry = (entry: AiSystemEntry) => {
+    void loadRegisterEntryPanel();
+    setHasOpenedPanel(true);
+    setOpened(entry);
+  };
+
 
   /** A heading that reorders the list, with the one in force saying so. */
   // Returns the button alone: DataTable owns the header cell around it.
@@ -149,7 +161,7 @@ export default function AiRegisterPage() {
         rows={entries === undefined ? undefined : paged.items}
         rowKey={(entry) => entry.id}
         minWidthClassName="min-w-[900px]"
-        onRowClick={(entry) => setOpened(entry)}
+        onRowClick={openEntry}
         search={{
           value: search,
           onChange: (value) => narrow(() => setSearch(value)),
@@ -348,7 +360,9 @@ export default function AiRegisterPage() {
         ]}
       />
 
-      <RegisterEntryPanel entry={opened} onClose={() => setOpened(null)} />
+      {hasOpenedPanel ? (
+        <RegisterEntryPanel entry={opened} onClose={() => setOpened(null)} />
+      ) : null}
     </div>
   );
 }

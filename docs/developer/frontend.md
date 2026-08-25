@@ -59,7 +59,8 @@ Prefer existing shared components before creating page-local variants:
 - Feedback: `SonaeModal`, `SonaeEmptyState`, admin modal and confirmation wrappers.
 - Admin tables and layouts: `src/app/(dashboard)/admin/_components/**`.
 - Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/SonaeMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
-- Charts: `src/ui/components/charts/ChartExportWrapper.tsx`.
+- Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
+  `src/ui/components/charts/ChartTooltip.tsx`.
 - Workflows: `WorkflowSidebar`, `ConfigDrawer`, `AgentEditorModal`, node components, and workflow types.
 - Settings: `JsonSchemaBuilder`, settings sections, white-label components.
 - Navigation: `Header`, `SidebarNavigation`, `src/ui/components/layout/ThemeToggle.tsx`, and `src/ui/components/TimeframeDropdown.tsx`.
@@ -75,6 +76,23 @@ Use Lucide icons for recognizable commands and keep icon buttons labelled with `
 `ChartExportWrapper` (`src/ui/components/charts/ChartExportWrapper.tsx`) exports charts by rasterizing the DOM node to a PNG with `html2canvas`. That library parses computed CSS itself, and it cannot parse `color-mix(in oklab, ...)` values. Tailwind v4 compiles opacity shorthands on custom-variable colors — `bg-card/20`, `text-primary/50`, and similar — into exactly those `color-mix(in oklab, ...)` expressions, so a single such class inside an exported node crashes the export.
 
 The rule: anything rendered inside an exported boundary must avoid custom-variable opacity shorthands. Use a standard opacity utility (`opacity-60`) or an explicit hex-with-alpha color instead. Grep for `ChartExportWrapper` usages before restyling chart panels to know whether a component sits inside an export boundary.
+
+## Chart Tooltips
+
+Use `ChartTooltip` for Recharts hover readouts unless a chart needs a custom row
+layout. It leads with the formatted number, follows with a human series label,
+can hide empty stacked rows, and avoids leaking raw data keys such as
+`companies : 6` into the UI. Use `ChartTooltipSurface` when the row layout is
+custom but the panel surface should stay consistent.
+
+Use the exported cursor constants instead of page-local hover styling:
+
+- `CHART_CURSOR` for bar cursor bands.
+- `CHART_CROSSHAIR` for line and area chart crosshairs.
+- `CHART_ACTIVE_BAR` for the active bar outline.
+
+These constants use theme variables, so they remain legible in both light and
+dark modes.
 
 ## Data And State
 

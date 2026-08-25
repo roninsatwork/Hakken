@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
-import { routeParams } from "@/src/test/routeParams";
 import NewAgentRulePage from "./page";
 
 /**
@@ -23,6 +22,7 @@ vi.mock("convex/react", () => ({
 
 const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
+  useParams: () => ({ id: AGENT_ID }),
   useRouter: () => ({ push: pushMock }),
 }));
 
@@ -58,7 +58,7 @@ describe("NewAgentRulePage", () => {
     vi.mocked(useMutation).mockReturnValue(createRuleMock as unknown as ReturnType<typeof useMutation>);
   });
 
-  const show = () => renderWithProviders(<NewAgentRulePage params={routeParams({ id: AGENT_ID })} />);
+  const show = () => renderWithProviders(<NewAgentRulePage />);
 
   const fillIn = () => {
     fireEvent.change(screen.getByPlaceholderText(NAME), { target: { value: "  Geography Extraction  " } });

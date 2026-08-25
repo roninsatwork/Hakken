@@ -15,7 +15,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import useDebounce from "@/src/hooks/useDebounce";
-import { isModelCostMeasurable } from "@/convex/agentRuntimeService";
+import { isModelCostMeasurable } from "@/convex/utils/modelPricing";
 import { cn } from "@/src/ui/lib/utils";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import {

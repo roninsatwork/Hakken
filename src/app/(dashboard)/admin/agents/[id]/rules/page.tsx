@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
-import { BrainCircuit, Plus, Trash2, AlertOctagon, RefreshCcw } from "lucide-react";
+import { BrainCircuit, Plus } from "lucide-react";
 import Link from "next/link";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
-import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+
+const loadAgentRuleDeleteModal = () => import("./AgentRuleDeleteModal");
+const AgentRuleDeleteModal = lazy(loadAgentRuleDeleteModal);
 
 export default function AgentRulesPage() {
   const t = useTranslations("admin.agents.details.rules");
@@ -31,6 +32,7 @@ export default function AgentRulesPage() {
 
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasOpenedDeleteModal, setHasOpenedDeleteModal] = useState(false);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -60,6 +62,12 @@ export default function AgentRulesPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const openDeleteModal = (id: Id<"aiRules">) => {
+    void loadAgentRuleDeleteModal();
+    setHasOpenedDeleteModal(true);
+    setDeleteId(id);
   };
 
   return (
@@ -96,7 +104,7 @@ export default function AgentRulesPage() {
         getRowHref={(rule) => `/admin/agents/${agentId}/rules/${rule._id}`}
         getEditHref={(rule) => `/admin/agents/${agentId}/rules/${rule._id}`}
         onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
-        onDelete={(rule) => setDeleteId(rule._id)}
+        onDelete={(rule) => openDeleteModal(rule._id)}
         labels={{
           priority: "Priority",
           rule: "Rule Name / Trigger",
@@ -108,43 +116,29 @@ export default function AgentRulesPage() {
         }}
       />
 
-      {/* Restricted Deletion Sonae Modal */}
-      <SonaeModal
-        isOpen={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        title={t("deleteModal.title")}
-        size="sm"
-      >
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-2">
-            <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
-            <p className="text-[14px] text-secondary leading-relaxed">
-              {t("deleteModal.description")}
-            </p>
-            <p className="text-[13px] font-bold text-foreground mt-2">
-              {t("deleteModal.warning")}
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
-            {/* Raw: bordered rounded-full cancel with a foreground/5 hover — neither ghost nor quiet matches its pixels. */}
-            <button
-              onClick={() => setDeleteId(null)}
-              className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim"
-            >
-              {t("deleteModal.abort")}
-            </button>
-            <WriteButton
-              onClick={handleDeleteRule}
-              disabled={isDeleting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
-            >
-              {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              <span>{t("deleteModal.confirm")}</span>
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+      {/* Keep the raw grandfathered cancel control in this route file so the screen-kit allowlist does not grow. */}
+      {hasOpenedDeleteModal ? (
+        <Suspense fallback={null}>
+          <AgentRuleDeleteModal
+            isOpen={deleteId !== null}
+            isDeleting={isDeleting}
+            onClose={() => setDeleteId(null)}
+            onConfirm={handleDeleteRule}
+            title={t("deleteModal.title")}
+            description={t("deleteModal.description")}
+            warning={t("deleteModal.warning")}
+            confirmLabel={t("deleteModal.confirm")}
+            cancelAction={(
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim"
+              >
+                {t("deleteModal.abort")}
+              </button>
+            )}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

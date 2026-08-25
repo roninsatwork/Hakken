@@ -1,5 +1,5 @@
 import React from "react";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
@@ -145,5 +145,22 @@ describe("AnalyticsPage", () => {
     expect(screen.getByText(/Missing snapshot dates: 2026-05-31/)).toBeInTheDocument();
     expect(screen.getByText(/Duplicate snapshot groups: 2026-06-01 global:global/)).toBeInTheDocument();
     expect(screen.getByText(/Message dimension examples: message_1/)).toBeInTheDocument();
+  });
+
+  it("loads the unchanged success feedback after saving", async () => {
+    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
+      const path = getConvexPath(queryFn);
+      if (path.includes("getAnalyticsId")) return "G-SONAE";
+      if (path.includes("getAnalyticsDataHealthForAdmin")) return buildHealthyHealth();
+      return undefined;
+    });
+
+    render(<AnalyticsPage />);
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "G-SONAE-NEW" } });
+    fireEvent.click(screen.getByRole("button", { name: "Commit Configuration" }));
+
+    await waitFor(() => expect(updateAnalyticsId).toHaveBeenCalledWith({ trackingId: "G-SONAE-NEW" }));
+    expect(await screen.findByText("Tracking Integrated")).toBeInTheDocument();
   });
 });

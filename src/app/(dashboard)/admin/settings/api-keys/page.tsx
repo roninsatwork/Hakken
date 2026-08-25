@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -7,7 +8,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { Copy, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/atoms/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
@@ -46,6 +46,10 @@ const SCOPE_LABEL_KEYS: Record<string, string> = {
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE = 60;
+
+const loadApiKeyRevokeDialog = () =>
+  import("./ApiKeyRevokeDialog").then((module) => module.ApiKeyRevokeDialog);
+const ApiKeyRevokeDialog = dynamic(loadApiKeyRevokeDialog);
 
 /** A year out. The field used to open empty, so the obvious key never expired. */
 function defaultExpiry() {
@@ -139,6 +143,11 @@ export default function ApiKeysPage() {
     if (!outcome.ok) return;
     setRevokeTarget(null);
     setRevokeReason("");
+  };
+
+  const openRevokeDialog = (target: { id: Id<"apiKeys">; name: string }) => {
+    void loadApiKeyRevokeDialog();
+    setRevokeTarget(target);
   };
 
   return (
@@ -350,7 +359,7 @@ export default function ApiKeysPage() {
                 apiKey.status === "ACTIVE" ? (
                   <WriteButton
                     type="button"
-                    onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
+                    onClick={() => openRevokeDialog({ id: apiKey._id, name: apiKey.name })}
                     aria-label={t("turnOffAria", { name: apiKey.name })}
                     className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                   >
@@ -362,47 +371,25 @@ export default function ApiKeysPage() {
         />
       </section>
 
-      <SonaeModal
-        isOpen={Boolean(revokeTarget)}
-        onClose={() => setRevokeTarget(null)}
-        title={t("revokeTitle")}
-        size="sm"
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-[13px] leading-relaxed text-secondary">
-            {t.rich("revokeBody", {
-              name: revokeTarget?.name ?? "",
-              b: (chunks) => <span className="text-foreground">{chunks}</span>,
-            })}
-          </p>
-          <Field
-            id="api-key-revoke-reason"
-            label={t("reasonLabel")}
-            value={revokeReason}
-            onChange={(event) => setRevokeReason(event.target.value)}
-            placeholder={t("reasonPlaceholder")}
-          />
-          {revokeAction.error ? <p className="text-[13px] text-rose-300">{revokeAction.error}</p> : null}
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="quiet"
-              onClick={() => setRevokeTarget(null)}
-              className="inline-flex h-9 items-center px-4 text-[13px] text-foreground bg-transparent hover:bg-foreground/5"
-            >
-              {t("keepIt")}
-            </Button>
-            <WriteButton
-              type="button"
-              onClick={handleRevoke}
-              disabled={revokeAction.isBusy()}
-              className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-rose-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
-            >
-              {revokeAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {t("turnItOff")}
-            </WriteButton>
-          </div>
-        </div>
-      </SonaeModal>
+      {revokeTarget ? (
+        <ApiKeyRevokeDialog
+          body={t.rich("revokeBody", {
+            name: revokeTarget.name,
+            b: (chunks) => <span className="text-foreground">{chunks}</span>,
+          })}
+          busy={revokeAction.isBusy()}
+          cancelLabel={t("keepIt")}
+          confirmLabel={t("turnItOff")}
+          error={revokeAction.error}
+          onClose={() => setRevokeTarget(null)}
+          onConfirm={handleRevoke}
+          onReasonChange={setRevokeReason}
+          reason={revokeReason}
+          reasonLabel={t("reasonLabel")}
+          reasonPlaceholder={t("reasonPlaceholder")}
+          title={t("revokeTitle")}
+        />
+      ) : null}
     </div>
   );
 }

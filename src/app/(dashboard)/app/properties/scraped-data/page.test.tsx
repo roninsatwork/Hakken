@@ -1,5 +1,6 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { pagedResult } from "@/src/test/screenMocks";
@@ -54,5 +55,17 @@ describe("ScrapedDataPage", () => {
       // The footer is hidden when there is nothing to page through, which is a
       // decision this screen made before the numbered footer became standard.
     });
+  });
+
+  it("opens the property delete confirmation from its row action", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue(
+      pagedResult(properties) as unknown as ReturnType<typeof usePaginatedQuery>
+    );
+
+    render(<ScrapedDataPage />);
+    fireEvent.click(screen.getByLabelText("Delete 12 Ash Road, Guildford"));
+
+    expect(await screen.findByText("Delete Property")).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 });

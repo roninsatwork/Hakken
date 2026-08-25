@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
+import { legacyAdminRedirect } from "@/src/lib/legacyAdminRedirect";
 import { decideWidgetEmbed, widgetIdFromPathname } from "@/src/lib/widgetEmbedPolicy";
 
 const isSignInPage = createRouteMatcher(["/login"]);
@@ -106,6 +107,10 @@ export default convexAuthNextjsMiddleware(async (request) => {
       if (isAdminRoute(request) && !E2E_ADMIN_ROLES.has(e2eRole)) {
         return nextjsMiddlewareRedirect(request, "/app");
       }
+      const legacyRedirect = legacyAdminRedirect(request.nextUrl.pathname);
+      if (legacyRedirect) {
+        return nextjsMiddlewareRedirect(request, legacyRedirect);
+      }
       return;
     }
   }
@@ -119,6 +124,11 @@ export default convexAuthNextjsMiddleware(async (request) => {
   if (isProtectedRoute(request) && !isAuth) {
     const redirectTo = encodeURIComponent(requestedProtectedRoute(request));
     return nextjsMiddlewareRedirect(request, `/login?redirectTo=${redirectTo}`);
+  }
+
+  const legacyRedirect = legacyAdminRedirect(request.nextUrl.pathname);
+  if (legacyRedirect) {
+    return nextjsMiddlewareRedirect(request, legacyRedirect);
   }
 });
 

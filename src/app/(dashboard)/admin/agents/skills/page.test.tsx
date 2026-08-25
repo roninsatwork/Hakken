@@ -247,7 +247,8 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.queryByRole("button", { name: "Parse file" })).not.toBeInTheDocument();
     expect(screen.queryByText("Production readiness")).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Browser QA Review" } });
+    const nameField = await screen.findByLabelText("Name");
+    fireEvent.change(nameField, { target: { value: "Browser QA Review" } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Checks the UI." } });
     fireEvent.change(screen.getByLabelText(/Skill file/), { target: { files: [file] } });
     fireEvent.click(screen.getByRole("button", { name: "Add skill" }));
