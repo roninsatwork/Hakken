@@ -137,7 +137,7 @@ Relevant tests include:
 - `convex/workflowRetryService.test.ts` and `convex/workflowRetryEndToEnd.test.ts` for transient classification, attempt budgets, delay policy, safe-node restrictions, and the real claim/requeue path.
 - `convex/workflowScheduleService.test.ts` for legacy and v2 schedule calculations.
 - `convex/scheduler.test.ts` for schedule authorization, CRUD, bounded lists, force run behavior, due agent schedules, and due workflow schedule dispatch.
-- `src/quality-drift.test.ts` for drift checks that include demo seed files such as `convex/seedWorkflows.ts`.
+- `src/analytics-read-drift.test.ts` for drift checks that include demo seed files such as `convex/seedWorkflows.ts`.
 - `src/app/(dashboard)/admin/workflows/page.test.tsx` and `src/app/(dashboard)/admin/workflows/schedules/page.test.tsx` for the admin list and schedule list interactions.
 - `src/app/(dashboard)/admin/workflows/schedules/_lib/scheduleConfig.test.ts` for schedule draft serialization and hydration.
 - `src/ui/components/workflows/WorkflowComponents.test.tsx` for workflow UI components.

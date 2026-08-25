@@ -67,7 +67,7 @@ Generation logs a `BATCH_GENERATION_START` agent log before the provider call, a
 
 The properties table stores snapshots from Rightmove via Apify; there is no retention policy, bulk delete, or CSV export implemented for property data. Deleting a property removes only the selected stored row, not the Apify run and not the external Rightmove listing. Duplicate handling is scoped by `rightmoveId` and company, so the same Rightmove listing can exist once per tenant.
 
-`getPropertiesCount` uses `.take(10000)` for counts. `src/quality-drift.test.ts` flags this and `listProperties` as future scaling concerns if the inventory grows. Do not document the count as an unbounded accurate total beyond that practical limit. The UI uses a 15-row local page size and requests more Convex pages as the user advances.
+`getPropertiesCount` uses `.take(10000)` for counts. `src/analytics-read-drift.test.ts` flags this and `listProperties` as future scaling concerns if the inventory grows. Do not document the count as an unbounded accurate total beyond that practical limit. The UI uses a 15-row local page size and requests more Convex pages as the user advances.
 
 The property list has a View Details route for `/app/properties/scraped-data/${property._id}`, and the detail page exists. If `getProperty` throws for unauthorized access, the page's explicit `null` empty state may not be the only failure mode; Convex errors can surface through the framework. Keep that distinction in mind when changing error handling.
 

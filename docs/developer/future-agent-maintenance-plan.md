@@ -49,7 +49,7 @@ Acceptance:
 Status:
 
 - English and Italian message parity is covered by `src/i18n.test.ts`.
-- Native browser dialog usage and admin 15-row pagination are covered by `src/quality-drift.test.ts`.
+- Native browser dialog usage is covered by `src/ui-runtime-contract-drift.test.ts` and admin 15-row pagination by `src/pagination-drift.test.ts`.
 
 ## Phase 2: Tighten Lint Baselines
 
@@ -152,7 +152,7 @@ Targets:
 
 Acceptance:
 
-- `src/quality-drift.test.ts` continues to classify Gemini-era references before they spread.
+- `src/provider-classification-drift.test.ts` continues to classify Gemini-era references before they spread.
 - Any newly allowed provider-specific reference is added to the drift test allowlist with a clear reason.
 - Generic tests use neutral model IDs such as `model-fast`, `safe-model`, or `sonae-test-model` unless testing a provider adapter.
 - Runtime model selection remains configuration-driven.
@@ -162,7 +162,7 @@ Status:
 
 - `GEMINI.md` is now a compatibility pointer to `AGENTS.md`, not an active source of development instructions.
 - `docs/developer/ai-provider-tool-extension.md` documents provider adapter boundaries.
-- `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
+- `src/provider-classification-drift.test.ts` blocks unclassified Gemini-era references.
 - The retired `docs/plans/completed/model-provider-agnostic-plan.md` records the completed sitewide Gemini/OpenAI/Anthropic model selection, provider adapter, default, telemetry, and analytics dashboard work. Use it for background only; current non-movement follow-up belongs in `docs/plans/active/OUTSTANDING-TASKS.md` unless a new active plan is opened.
 
 ## Phase 5B: Analytics Scale Optimization

@@ -69,7 +69,7 @@ Important caveats:
 - The demo-agent lookup depends on named global agents such as `Market Sourcing Agent`, `Internal Platform Architect`, `Verification Agent`, `Financial Modeler`, and `Executive Synthesis Agent`.
 - If no demo agents are present, the user-facing assistant message says the swarm failed and asks for the seed command.
 - The swarm path resolves model configuration through stored model records for the `workflow` use case, but it still uses Google Vertex provider helpers directly.
-- `getSwarmLogs` currently reads up to 10,000 logs for a thread, and the quality-drift test tracks that as a bounded-runtime-log item to revisit.
+- `getSwarmLogs` currently reads up to 10,000 logs for a thread, and `src/analytics-read-drift.test.ts` tracks that as a bounded-runtime-log item to revisit.
 - Thread purges cascade related swarm logs; keep that relationship aligned with `docs/developer/data-retention-and-purges.md`.
 
 ## Authorization, Tenancy, and Safety Boundaries
