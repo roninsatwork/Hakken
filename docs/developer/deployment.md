@@ -60,6 +60,56 @@ instead of running beside it.
 Coverage is enforced on `dev` too, not just on the way to `main`, because `dev`
 previously accumulated changes with no coverage enforcement at all.
 
+**Real Auth Smoke** — only on PRs into `main`, against a real Convex deployment:
+
+1. `npx convex env set` (enable local test auth on the test deployment)
+2. `npx convex deploy` (push the PR's functions to the test deployment)
+3. `npm run auth:local:seed`
+4. `npm run test:e2e:real-auth -- --grep @real-auth-smoke`
+5. `npm run auth:local:cleanup` (runs even when the tests fail)
+
+Every other browser job runs against a mocked backend: `next.config.ts` aliases
+`convex/react` to `src/e2e/convexReactMock.tsx` whenever
+`NEXT_PUBLIC_E2E_AUTH_ENABLED=1`, so those jobs prove the screens render but
+never prove the wiring between the screens and Convex. This job is the only one
+that signs in through real Convex Auth, writes through real mutations, and reads
+back through real reactive queries. The mocked suite stays as the fast
+deterministic layer; this one is the honesty check on top of it.
+
+The tagged subset is deliberately small — an unauthenticated redirect, a
+super-admin sign-in, a standard-user sign-in, one real admin table, and one
+assistant round trip. Adding `@real-auth-smoke` to a spec in
+`e2e/local-real-auth-smoke.spec.ts` is what puts it in CI; specs in that file
+without the tag stay local-only.
+
+The assistant round trip asserts that a reply *arrives*, not what it says. With
+no AI provider configured on the test deployment the runtime writes its own
+"Core Offline" notice into the thread, which still proves the whole loop —
+browser to mutation, mutation to scheduled action, action back to a mutation,
+and the reactive query back to the browser — without spending provider credit on
+every pull request.
+
+#### Its deployment and secrets
+
+The job needs a **dedicated Convex test deployment**. Never production, never the
+staging deployment: the job deploys the pull request's functions to it, seeds
+identities into it, and clears data out of it.
+
+Two repository secrets, added under Settings → Secrets and variables → Actions:
+
+| Secret | What it is |
+|---|---|
+| `CONVEX_TEST_DEPLOYMENT_URL` | The test deployment's URL, used as `NEXT_PUBLIC_CONVEX_URL` |
+| `CONVEX_TEST_DEPLOY_KEY` | That deployment's deploy key, used as `CONVEX_DEPLOY_KEY` |
+
+There is no third secret for `LOCAL_TEST_AUTH_SECRET`. The job mints a fresh
+random one per run, masks it, and sets it on the deployment, so no long-lived
+test credential exists to leak or to rotate.
+
+The job fails when those secrets are absent rather than skipping. A gate that
+quietly passes when it is unconfigured is the problem this job was added to fix,
+so until both secrets exist, PRs into `main` will be blocked by it.
+
 Failed Playwright runs upload `playwright-report/`. Coverage runs upload `coverage/`.
 
 ### Coverage Scope

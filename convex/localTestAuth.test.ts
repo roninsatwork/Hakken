@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -83,6 +83,59 @@ describe("local test auth", () => {
 
     await expect(
       t.query(internal.localTestAuth.authorize, { role: "user", secret: "wrong-secret" })
+    ).rejects.toThrow("Invalid local test auth secret");
+  });
+
+  test("cleanup clears the seeded users' threads and keeps the identities", async () => {
+    const t = setup();
+    const seed = await t.mutation(api.localTestAuth.seed, { secret: "test-secret" });
+    const seededUser = seed.users.find((user) => user.email === "local-user@sonae.test");
+
+    await t.run(async (ctx) => {
+      const threadId = await ctx.db.insert("threads", {
+        userId: seededUser!.userId,
+        title: "Real auth smoke",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "user",
+        content: "Real auth smoke",
+        createdAt: Date.now(),
+      });
+    });
+
+    vi.useFakeTimers();
+    const result = await t.mutation(api.localTestAuth.cleanup, { secret: "test-secret" });
+    expect(result.cleared).toEqual(
+      expect.arrayContaining([
+        "local-super-admin@sonae.test",
+        "local-company-admin@sonae.test",
+        "local-user@sonae.test",
+      ])
+    );
+
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    vi.useRealTimers();
+
+    const after = await t.run(async (ctx) => ({
+      threads: await ctx.db.query("threads").collect(),
+      messages: await ctx.db.query("messages").collect(),
+      users: await ctx.db.query("users").collect(),
+    }));
+
+    expect(after.threads).toHaveLength(0);
+    expect(after.messages).toHaveLength(0);
+    expect(after.users).toHaveLength(3);
+  });
+
+  test("cleanup fails closed on a wrong secret", async () => {
+    const t = setup();
+    await t.mutation(api.localTestAuth.seed, { secret: "test-secret" });
+
+    await expect(
+      t.mutation(api.localTestAuth.cleanup, { secret: "wrong-secret" })
     ).rejects.toThrow("Invalid local test auth secret");
   });
 

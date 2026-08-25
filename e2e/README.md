@@ -93,6 +93,16 @@ LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth
 
 The focused smoke tests in `e2e/local-real-auth-smoke.spec.ts` sign in dynamically through `/local-test-auth` at test start. They do not require pre-generated storage states.
 
+Tests tagged `@real-auth-smoke` are the curated subset CI runs on pull requests
+into `main`, against a real Convex deployment:
+
+```bash
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth -- --grep @real-auth-smoke
+```
+
+Adding the tag to a spec in that file is what puts it in CI; untagged specs stay
+local-only. Clear the data a run leaves behind with `npm run auth:local:cleanup`.
+
 For tests that need a reusable Playwright storage state, start the app locally and run:
 
 ```bash

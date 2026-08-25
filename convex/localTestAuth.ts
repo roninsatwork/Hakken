@@ -1,5 +1,6 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { publicMutation } from "./tenantFunctions";
@@ -140,6 +141,34 @@ async function seedLocalTestAuth(ctx: MutationCtx, secret: string) {
     users,
   };
 }
+
+export const cleanup = publicMutation({
+  reason: "Local sign-in helper for development. Gated on LOCAL_TEST_AUTH_ENABLED, refuses to run in production, and requires a shared secret.",
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertLocalTestAuthEnabled(args.secret);
+
+    const emails = (Object.keys(LOCAL_TEST_USERS) as LocalTestRole[]).map(
+      (role) => LOCAL_TEST_USERS[role].email
+    );
+
+    const cleared: string[] = [];
+    for (const email of emails) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", email))
+        .first();
+      if (!user) continue;
+
+      await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, {
+        userId: user._id,
+      });
+      cleared.push(email);
+    }
+
+    return { companyName: LOCAL_TEST_COMPANY_NAME, cleared };
+  },
+});
 
 export const authorize = internalQuery({
   args: {

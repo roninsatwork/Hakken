@@ -71,6 +71,20 @@ LOCAL_TEST_AUTH_CONVEX_URL=http://127.0.0.1:3210 LOCAL_TEST_AUTH_SECRET=replace-
 ```
 
 The seed creates or updates one deterministic company and three deterministic users.
+## Clear The Seeded Data
+
+The seeded identities are fixtures and are meant to persist; the threads,
+messages and login rows a test run leaves behind are not. To clear that data
+without removing the identities:
+
+```bash
+LOCAL_TEST_AUTH_SECRET=replace-with-local-secret npm run auth:local:cleanup
+```
+
+It queues the same purge the platform runs when a user is deleted, so the three
+users and `Local Test Company` survive and stay signed-in-able. CI runs this
+after every real-auth job, passing or failing.
+
 
 Seeded company:
 

@@ -45,6 +45,7 @@
     "pretest:e2e:real-auth": "npm run verify:env",
     "auth:local:seed": "node scripts/local-test-auth.mjs seed",
     "auth:local:state": "node scripts/local-test-auth.mjs state",
+    "auth:local:cleanup": "node scripts/local-test-auth.mjs cleanup",
     "demo:local:seed": "node scripts/local-demo-seed.mjs",
     "movement:replay:analyze": "node scripts/movement-debug/analyze-sessions.mjs",
     "movement:replay:compare": "node scripts/movement-debug/compare-replay-analysis.mjs",

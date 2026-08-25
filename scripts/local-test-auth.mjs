@@ -70,6 +70,22 @@ async function seed() {
   }
 }
 
+async function cleanup() {
+  const secret = requireSecret();
+  const convexUrl = await getConvexUrl();
+  const client = new ConvexHttpClient(convexUrl);
+
+  const result = await client.mutation(api.localTestAuth.cleanup, { secret });
+  if (result.cleared.length === 0) {
+    console.log(`No local test users found in ${result.companyName}; nothing to clear.`);
+    return;
+  }
+  console.log(`Clearing data for ${result.cleared.length} local test users in ${result.companyName}.`);
+  for (const email of result.cleared) {
+    console.log(`- ${email}: queued`);
+  }
+}
+
 async function state() {
   const secret = requireSecret();
   const baseUrl = getBaseUrl();
@@ -113,8 +129,10 @@ try {
     await seed();
   } else if (command === "state") {
     await state();
+  } else if (command === "cleanup") {
+    await cleanup();
   } else {
-    console.error("Usage: node scripts/local-test-auth.mjs <seed|state>");
+    console.error("Usage: node scripts/local-test-auth.mjs <seed|state|cleanup>");
     process.exitCode = 1;
   }
 } catch (error) {

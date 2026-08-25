@@ -150,6 +150,105 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
+  real-auth-smoke:
+    # The mocked e2e suite proves the screens; nothing proved the wiring between
+    # them and Convex, because `next.config.ts` aliases `convex/react` to a mock
+    # whenever the e2e flag is on. This job is the only one that signs in through
+    # real Convex Auth against a real deployment.
+    #
+    # PRs into main only. It deploys to a real deployment and CI minutes are
+    # metered — see "What A Push Costs" in AGENTS.md.
+    #
+    # It fails loudly when its two secrets are absent rather than skipping: a
+    # gate that quietly passes when unconfigured is the exact honesty gap this
+    # job exists to close.
+    name: Real Auth Smoke (real Convex)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      LOCAL_TEST_AUTH_ENABLED: '1'
+      NEXT_PUBLIC_CONVEX_URL: ${{ secrets.CONVEX_TEST_DEPLOYMENT_URL }}
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_TEST_DEPLOY_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node environment
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24.18.0'
+          cache: 'npm'
+
+      - name: Restore installed packages
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.packages.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Workaround NPM Optional Dependency Bug
+        if: steps.packages.outputs.cache-hit != 'true'
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+
+      - name: Restore Playwright browser
+        id: playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        if: steps.playwright.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system libraries
+        if: steps.playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Minted per run and masked, so no long-lived test credential exists to
+      # leak or to rotate. It has to match in three places — the deployment, the
+      # seeding script and the specs — which it does by living in the job env.
+      - name: Mint the run's local test auth secret
+        run: |
+          secret="$(openssl rand -hex 24)"
+          echo "::add-mask::$secret"
+          echo "LOCAL_TEST_AUTH_SECRET=$secret" >> "$GITHUB_ENV"
+
+      - name: Configure the test deployment
+        run: |
+          npx convex env set LOCAL_TEST_AUTH_ENABLED 1
+          npx convex env set LOCAL_TEST_AUTH_SECRET "$LOCAL_TEST_AUTH_SECRET"
+
+      - name: Deploy Convex functions to the test deployment
+        run: npx convex deploy
+
+      - name: Seed the deterministic test identities
+        run: npm run auth:local:seed
+
+      - name: Run the real-auth smoke subset
+        run: npm run test:e2e:real-auth -- --grep @real-auth-smoke
+
+      # Always: a failed run leaves the same threads and messages behind as a
+      # passing one, and this deployment is long-lived.
+      - name: Clear the test identities' data
+        if: always()
+        run: npm run auth:local:cleanup
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-real-auth
+          path: playwright-report/
+          if-no-files-found: ignore
+
   full-gate:
     # Full rigor only when changes head for main: the complete browser-test
     # suite (dev-mode server on purpose — the movement debug routes are not
