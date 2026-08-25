@@ -28,6 +28,7 @@ export const STREAM_STALE_CHECK_INTERVAL_MS = Math.round(STREAM_STALE_AFTER_MS /
 export function useStreamPresentation(message: {
   isStreaming?: boolean;
   streamStartedAt?: number;
+  streamUpdatedAt?: number;
 }): StreamPresentation {
   // Zero until the first effect runs. `getStreamPresentation` reads that as
   // "not yet stale", which is the correct first impression for a live reply.
@@ -57,6 +58,7 @@ export function useStreamPresentation(message: {
   return getStreamPresentation({
     isStreaming: message.isStreaming,
     streamStartedAt: message.streamStartedAt,
+    streamUpdatedAt: message.streamUpdatedAt,
     now,
   });
 }

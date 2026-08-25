@@ -98,6 +98,7 @@ const clientMessageValidator = v.object({
   photoActionTaskId: v.optional(v.id("tasks")),
   isStreaming: v.optional(v.boolean()),
   streamStartedAt: v.optional(v.number()),
+  streamUpdatedAt: v.optional(v.number()),
   imageAttachments: v.optional(v.array(v.object({ url: v.string() }))),
 });
 
@@ -122,6 +123,9 @@ function toClientMessage(
     ...(message.isStreaming !== undefined ? { isStreaming: message.isStreaming } : {}),
     ...(message.streamStartedAt !== undefined
       ? { streamStartedAt: message.streamStartedAt }
+      : {}),
+    ...(message.streamUpdatedAt !== undefined
+      ? { streamUpdatedAt: message.streamUpdatedAt }
       : {}),
     ...(imageAttachments && imageAttachments.length > 0 ? { imageAttachments } : {}),
   };
@@ -478,6 +482,7 @@ export const startStreamingAssistantMessage = internalMutation({
       content: args.content,
       createdAt: Date.now(),
       isStreaming: true,
+      streamUpdatedAt: Date.now(),
       streamStartedAt: Date.now(),
       modelUsed: args.modelUsed,
       providerKey: args.providerKey,
@@ -501,7 +506,10 @@ export const appendStreamingAssistantMessage = internalMutation({
     // The row can legitimately be gone if the thread was deleted mid-run.
     if (!message || !message.isStreaming) return;
 
-    await ctx.db.patch(args.messageId, { content: args.content });
+    await ctx.db.patch(args.messageId, {
+      content: args.content,
+      streamUpdatedAt: Date.now(),
+    });
   },
 });
 

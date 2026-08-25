@@ -28,7 +28,7 @@ export type ChatMessageView = Pick<
   "_id" | "threadId" | "role" | "content" | "createdAt"
 > &
   Partial<
-    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt">
+    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt">
   > & { imageAttachments?: Array<{ url: string }> };
 
 interface ChatMessageProps {

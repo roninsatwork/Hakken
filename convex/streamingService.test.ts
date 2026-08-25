@@ -6,6 +6,7 @@ import {
   getPresentableAssistantStage,
   getStreamPresentation,
   isStreamStale,
+  STREAM_SILENT_AFTER_MS,
   shouldFlushStreamedText,
 } from "./streamingService";
 
@@ -41,6 +42,28 @@ describe("streamed reply flush policy", () => {
 
 describe("abandoned replies", () => {
   test("treats a reply older than the longest possible run as stale", () => {
+    expect(isStreamStale({ startedAt: 0, now: STREAM_STALE_AFTER_MS - 1 })).toBe(false);
+    expect(isStreamStale({ startedAt: 0, now: STREAM_STALE_AFTER_MS })).toBe(true);
+  });
+
+  test("a reply that has gone quiet is stale long before it is old", () => {
+    // The gap that matters is since the last fragment, not since the run began.
+    expect(
+      isStreamStale({ startedAt: 0, updatedAt: 0, now: STREAM_SILENT_AFTER_MS - 1 })
+    ).toBe(false);
+    expect(isStreamStale({ startedAt: 0, updatedAt: 0, now: STREAM_SILENT_AFTER_MS })).toBe(true);
+  });
+
+  test("a long run still writing is never called stale", () => {
+    // Half an hour in, well past the age ceiling, but a fragment landed a
+    // second ago: this run is alive and the reader must keep seeing the caret.
+    const halfAnHour = 30 * 60 * 1000;
+    expect(
+      isStreamStale({ startedAt: 0, updatedAt: halfAnHour - 1000, now: halfAnHour })
+    ).toBe(false);
+  });
+
+  test("a reply written before replies recorded their fragments keeps the age rule", () => {
     expect(isStreamStale({ startedAt: 0, now: STREAM_STALE_AFTER_MS - 1 })).toBe(false);
     expect(isStreamStale({ startedAt: 0, now: STREAM_STALE_AFTER_MS })).toBe(true);
   });

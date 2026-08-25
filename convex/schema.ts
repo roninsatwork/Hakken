@@ -2251,6 +2251,7 @@ export default defineSchema({
     // When the stream opened, so a reply orphaned by a killed run can be told
     // apart from one that is genuinely still arriving.
     streamStartedAt: v.optional(v.number()),
+    streamUpdatedAt: v.optional(v.number()),
   })
     .index("by_thread", ["threadId", "createdAt"])
     .index("by_createdAt", ["createdAt"])

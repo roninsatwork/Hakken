@@ -42,7 +42,33 @@ export function shouldFlushStreamedText(args: {
  */
 export const STREAM_STALE_AFTER_MS = 10 * 60 * 1000;
 
-export function isStreamStale(args: { startedAt: number; now: number }): boolean {
+/**
+ * How long a streamed reply may go silent before it is treated as abandoned.
+ *
+ * Judging by age alone forced the threshold above to the longest a run may take,
+ * so a reply whose run died in its first seconds still showed a caret for ten
+ * minutes. Ten minutes of a blinking cursor is indistinguishable from broken,
+ * and everything gated on the reply having finished — the rating controls, the
+ * answer's workings, its timestamp — stays hidden for all of it.
+ *
+ * Silence is the better signal because a live stream is never quiet: fragments
+ * land every `STREAM_FLUSH_INTERVAL_MS`, and the longest legitimate gap is a
+ * tool call, capped at `HTTP_CONNECTOR_TIMEOUT_MS` of 15 seconds. Ninety seconds
+ * is six times that and three hundred times the flush interval, so it cannot
+ * catch a healthy run, however long that run goes on for.
+ */
+export const STREAM_SILENT_AFTER_MS = 90 * 1000;
+
+export function isStreamStale(args: {
+  startedAt: number;
+  now: number;
+  updatedAt?: number;
+}): boolean {
+  // Rows written before replies recorded their last fragment have no silence to
+  // measure, so they keep the original age rule.
+  if (args.updatedAt !== undefined) {
+    return args.now - args.updatedAt >= STREAM_SILENT_AFTER_MS;
+  }
   return args.now - args.startedAt >= STREAM_STALE_AFTER_MS;
 }
 
@@ -58,11 +84,18 @@ export type StreamPresentation = "complete" | "streaming" | "stalled";
 export function getStreamPresentation(args: {
   isStreaming?: boolean;
   streamStartedAt?: number;
+  streamUpdatedAt?: number;
   now: number;
 }): StreamPresentation {
   if (!args.isStreaming) return "complete";
   if (args.streamStartedAt === undefined) return "streaming";
-  return isStreamStale({ startedAt: args.streamStartedAt, now: args.now }) ? "stalled" : "streaming";
+  return isStreamStale({
+    startedAt: args.streamStartedAt,
+    updatedAt: args.streamUpdatedAt,
+    now: args.now,
+  })
+    ? "stalled"
+    : "streaming";
 }
 
 /** Shown in place of an abandoned reply so the reader is never left hanging. */
