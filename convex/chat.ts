@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -74,9 +75,62 @@ export const getThreads = tenantQuery({
   },
 });
 
+/**
+ * The message fields a chat client actually renders.
+ *
+ * The thread surfaces used to receive whole message documents, which carried
+ * token counts, the model and provider that answered, and the runtime's own
+ * evidence JSON out to every reader — including anonymous widget visitors. This
+ * names what leaves instead, so a field added to the table later has to be added
+ * here deliberately before any client can see it.
+ */
+const clientMessageValidator = v.object({
+  _id: v.id("messages"),
+  _creationTime: v.number(),
+  threadId: v.id("threads"),
+  role: v.union(v.literal("user"), v.literal("assistant")),
+  content: v.string(),
+  createdAt: v.number(),
+  systemKey: v.optional(v.string()),
+  photoActionProposal: v.optional(
+    v.object({ title: v.string(), detail: v.string(), reasoning: v.string() })
+  ),
+  photoActionTaskId: v.optional(v.id("tasks")),
+  isStreaming: v.optional(v.boolean()),
+  streamStartedAt: v.optional(v.number()),
+  imageAttachments: v.optional(v.array(v.object({ url: v.string() }))),
+});
+
+function toClientMessage(
+  message: Doc<"messages">,
+  imageAttachments?: Array<{ url: string }>
+) {
+  return {
+    _id: message._id,
+    _creationTime: message._creationTime,
+    threadId: message.threadId,
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+    ...(message.systemKey !== undefined ? { systemKey: message.systemKey } : {}),
+    ...(message.photoActionProposal !== undefined
+      ? { photoActionProposal: message.photoActionProposal }
+      : {}),
+    ...(message.photoActionTaskId !== undefined
+      ? { photoActionTaskId: message.photoActionTaskId }
+      : {}),
+    ...(message.isStreaming !== undefined ? { isStreaming: message.isStreaming } : {}),
+    ...(message.streamStartedAt !== undefined
+      ? { streamStartedAt: message.streamStartedAt }
+      : {}),
+    ...(imageAttachments && imageAttachments.length > 0 ? { imageAttachments } : {}),
+  };
+}
+
 export const getMessages = publicQuery({
   reason: "Anonymous widget visitors read their own thread; gated on the hashed widget session token.",
   args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
+  returns: v.union(v.null(), v.array(clientMessageValidator)),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
@@ -95,7 +149,7 @@ export const getMessages = publicQuery({
     // their existing life as parsed knowledge, no URL exposed.
     return await Promise.all(
       messages.map(async (message) => {
-        if (!message.attachments?.length) return message;
+        if (!message.attachments?.length) return toClientMessage(message);
         const images = await Promise.all(
           message.attachments.map(async (fileId) => {
             const metadata = await ctx.db.system.get(fileId);
@@ -105,7 +159,7 @@ export const getMessages = publicQuery({
           })
         );
         const imageAttachments = images.filter((image): image is { url: string } => image !== null);
-        return imageAttachments.length > 0 ? { ...message, imageAttachments } : message;
+        return toClientMessage(message, imageAttachments);
       })
     );
   },
@@ -136,6 +190,7 @@ export const setAssistantStage = internalMutation({
 export const getAssistantStage = publicQuery({
   reason: "Anonymous widget visitors read their own thread's status pill; gated on the hashed widget session token, same as getMessages.",
   args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
+  returns: v.union(v.null(), v.object({ stage: v.optional(v.string()), stageAt: v.optional(v.number()) })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
@@ -230,6 +285,7 @@ export const sendMessage = publicMutation({
     fileIds: v.optional(v.array(v.id("_storage"))),
     widgetAccessToken: v.optional(v.string()),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     if (args.content.length > 10000) {
       throw appError("INVALID_INPUT", "Payload size limit exceeded: Message cannot exceed 10000 characters.");

@@ -38,6 +38,7 @@ export const getKioskConfig = publicQuery({
   reason:
     "The kiosk page is an anonymous surface, like the widget it reuses; it renders nothing unless the widget has opted in to kiosk duty.",
   args: { widgetId: v.id("widgets") },
+  returns: v.union(v.null(), v.object({ widgetId: v.id("widgets"), name: v.string(), themePrimaryColor: v.string(), themeLogoUrl: v.union(v.string(), v.null()), companyName: v.string() })),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;
@@ -71,6 +72,7 @@ export const recordKioskVoiceTurn = publicMutation({
     assistantText: v.string(),
     modelUsed: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw appError("NOT_FOUND", "Thread not found");
@@ -135,6 +137,7 @@ export const createKioskThread = publicMutation({
   reason:
     "Anonymous kiosk visitors start conversations on an opted-in kiosk widget; the kiosk flag is the gate, and the minted token is the session credential.",
   args: { widgetId: v.id("widgets") },
+  returns: v.union(v.null(), v.object({ threadId: v.id("threads"), accessToken: v.string() })),
   handler: async (
     ctx,
     args
@@ -272,6 +275,7 @@ export const recordKioskHeartbeat = publicMutation({
   reason:
     "The kiosk idle screen pings so staff can see the tablet is alive; it writes one timestamp on an opted-in widget and nothing else.",
   args: { widgetId: v.id("widgets") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;

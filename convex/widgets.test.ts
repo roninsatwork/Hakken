@@ -505,7 +505,20 @@ describe("a photo from the widget", () => {
 
     const messages = await t.query(api.chat.getMessages, { threadId, widgetAccessToken: accessToken });
     const userMessage = messages?.find((message) => message.role === "user");
-    expect(userMessage).toMatchObject({ content: "What is this?", attachments: [storageId] });
+    expect(userMessage).toMatchObject({ content: "What is this?" });
+
+    // The storage id is stored but never sent: an anonymous visitor gets the
+    // viewable url and nothing else about the file.
+    const storedUserMessage = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("messages")
+        .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+        .collect();
+      return rows.find((row) => row.role === "user");
+    });
+    expect(storedUserMessage?.attachments).toEqual([storageId]);
+    expect(userMessage && "attachments" in userMessage).toBe(false);
+
     // The viewable URL rides on the row, so the widget can render the thumbnail.
     expect(userMessage && "imageAttachments" in userMessage ? userMessage.imageAttachments : undefined)
       .toEqual([{ url: expect.stringContaining("http") }]);

@@ -23,7 +23,7 @@ const NEGATIVE_LABELS = [
  * platform notice, or when the platform switch is off — the query says so
  * and the buttons simply are not there.
  */
-export function MessageFeedbackControls({ message }: { message: Doc<"messages"> }) {
+export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messages">, "_id" | "threadId"> }) {
   const settings = useSystemSettings();
   const tAnswer = useTranslations("ai.assistant.answer");
   const feedback = useQuery(api.messageFeedback.getMineForThread, { threadId: message.threadId });

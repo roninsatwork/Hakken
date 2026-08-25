@@ -15,10 +15,26 @@ import { MessageFeedbackControls } from "./MessageFeedbackControls";
 import { AnswerEvidence } from "./AnswerEvidence";
 import { PhotoActionChip } from "./PhotoActionChip";
 
+/**
+ * What this component reads off a message, and nothing more.
+ *
+ * It used to ask for a whole `Doc<"messages">`, which meant the thread queries
+ * had to hand out token counts, the answering model and the runtime's evidence
+ * JSON to satisfy a type — including to anonymous widget readers. The admin
+ * chat logs still pass whole rows and satisfy this structurally.
+ */
+export type ChatMessageView = Pick<
+  Doc<"messages">,
+  "_id" | "threadId" | "role" | "content" | "createdAt"
+> &
+  Partial<
+    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt">
+  > & { imageAttachments?: Array<{ url: string }> };
+
 interface ChatMessageProps {
   // The list query attaches viewable URLs for image attachments; older
   // callers pass plain rows and simply render no thumbnails.
-  message: Doc<"messages"> & { imageAttachments?: Array<{ url: string }> };
+  message: ChatMessageView;
   /**
    * Who asked, for a reader who is not the asker. The admin chat logs read
    * other people's conversations — sometimes an anonymous website visitor's —

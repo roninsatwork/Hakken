@@ -22,7 +22,8 @@ export function PhotoActionChip({
   labels,
   accentColor,
 }: {
-  message: Doc<"messages">;
+  message: Pick<Doc<"messages">, "_id"> &
+    Partial<Pick<Doc<"messages">, "photoActionProposal" | "photoActionTaskId">>;
   widgetAccessToken?: string;
   labels: {
     heading: string;

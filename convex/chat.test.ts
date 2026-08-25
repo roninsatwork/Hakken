@@ -72,15 +72,19 @@ describe("Message Quotas Enforcements", () => {
     expect(finalMessages?.length).toBe(2);
     expect(finalMessages?.[0].role).toBe("user");
     expect(finalMessages?.[0].content).toBe("Hello, this is a test message.");
-    expect(finalMessages?.[0].companyId).toBe(companyId);
-    expect(finalMessages?.[0].userId).toBe(userId);
-    expect(finalMessages?.[0].analyticsDimensionsVersion).toBe(1);
-    
     expect(finalMessages?.[1].role).toBe("assistant");
     expect(finalMessages?.[1].content).toContain("exhausted its AI allocation");
-    expect(finalMessages?.[1].companyId).toBe(companyId);
-    expect(finalMessages?.[1].userId).toBe(userId);
-    expect(finalMessages?.[1].analyticsDimensionsVersion).toBe(1);
+
+    // The analytics dimensions are stored, not shown: read the rows rather than
+    // the client view, which deliberately does not carry them.
+    const storedMessages = await t.run(async (ctx) =>
+      ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+    );
+    for (const stored of storedMessages) {
+      expect(stored.companyId).toBe(companyId);
+      expect(stored.userId).toBe(userId);
+      expect(stored.analyticsDimensionsVersion).toBe(1);
+    }
 
     // Re-verify the company messages haven't gone beyond 10 to drain billing logic
     const companyRecords = await t.run(async (ctx) => {

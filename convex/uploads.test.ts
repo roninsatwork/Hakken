@@ -78,7 +78,13 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const messages = await authedClient.query(api.chat.getMessages, { threadId });
     expect(messages?.length).toBe(1);
-    expect(messages?.[0].attachments).toEqual([storageId]);
+
+    // The storage ids are stored, not shown: the client view carries viewable
+    // image urls and nothing else about the attachment.
+    const stored = await t.run(async (ctx) =>
+      ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+    );
+    expect(stored[0].attachments).toEqual([storageId]);
   });
 
   test("Message with valid document attachment succeeds", async () => {
@@ -121,7 +127,13 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const messages = await authedClient.query(api.chat.getMessages, { threadId });
     expect(messages?.length).toBe(1);
-    expect(messages?.[0].attachments).toEqual([storageId]);
+
+    // The storage ids are stored, not shown: the client view carries viewable
+    // image urls and nothing else about the attachment.
+    const stored = await t.run(async (ctx) =>
+      ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+    );
+    expect(stored[0].attachments).toEqual([storageId]);
   });
 
   test("Message with non-existent storage ID is strictly rejected", async () => {
