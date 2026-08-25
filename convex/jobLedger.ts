@@ -58,7 +58,7 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runMutation(internal.knowledge.garbageCollectThreadVectors, {}),
   "reset-billing-cycles": (ctx) => ctx.runMutation(internal.plans.resetBillingCycle, {}),
   "generate-daily-analytics-snapshots": (ctx) =>
-    ctx.runMutation(internal.analyticsSnapshots.generateDailySnapshots, {}),
+    ctx.runAction(internal.analyticsSnapshots.generateDailySnapshots, {}),
   "user-login-count-rollup": (ctx) => ctx.runMutation(internal.users.recomputeLoginCounts, {}),
   // The one job that carries an argument: its seven-day window is the
   // schedule's, not the function's default, so it travels with the entry.

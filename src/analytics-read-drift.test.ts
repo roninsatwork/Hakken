@@ -289,18 +289,21 @@ describe('Analytics And Platform Read Drift', () => {
   });
 
 
-  test('the daily snapshot refuses a day it cannot total accurately', () => {
+  test('the daily snapshot reads the day in pages and still refuses what it cannot total', () => {
     const body = extractExportBody('convex/analyticsSnapshots.ts', 'generateDailySnapshots');
-    const dayReads = body.match(/\.take\(SNAPSHOT_DAY_INTERACTION_LIMIT \+ 1\)/g) ?? [];
 
     expect(
-      dayReads.length,
-      'Both day reads must take one past the ceiling. Taking exactly the ceiling cannot tell a full page from a truncated one, which is how a busy day came to be recorded short and stayed that way.'
-    ).toBe(2);
+      body,
+      'The generator must page the day rather than take a fixed slice of it. A single take cannot tell a full read from a truncated one, which is how a busy day came to be recorded short and stayed that way.'
+    ).toMatch(/readDayInteractionsPage[\s\S]*?continueCursor/);
     expect(
       body,
-      'The generator must refuse a day above the ceiling rather than aggregate a short read. A missing snapshot is reported by the analytics health check; a wrong one is invisible for ever.'
-    ).toMatch(/>\s*SNAPSHOT_DAY_INTERACTION_LIMIT[\s\S]*?throw appError/);
+      'Paging must not remove the refusal. Above the hard ceiling the day is left without a snapshot — which the analytics health check reports — rather than totalled from part of itself.'
+    ).toMatch(/>\s*SNAPSHOT_DAY_HARD_CEILING[\s\S]*?throw appError/);
+    expect(
+      body,
+      'The generator must not go back to a fixed take.'
+    ).not.toMatch(/\.take\(/);
   });
 
   test('platform broad reads stay classified by scale-hardening phase', () => {

@@ -10,8 +10,8 @@ describe("analytics cron snapshots", () => {
   test("empty days create one global zero snapshot and duplicate generation is skipped", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
-    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
+    await t.action(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
+    await t.action(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
 
     const snapshots = await t.run(async (ctx) => ctx.db.query("analyticsDailySnapshots").collect());
     expect(snapshots).toHaveLength(1);
@@ -116,7 +116,7 @@ describe("analytics cron snapshots", () => {
       return { companyId, userId, agentId };
     });
 
-    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-02" });
+    await t.action(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-02" });
 
     const snapshots = await t.run(async (ctx) =>
       ctx.db.query("analyticsDailySnapshots").withIndex("by_date", (q) => q.eq("date", "2026-05-02")).collect()
@@ -169,6 +169,60 @@ describe("analytics cron snapshots", () => {
       },
       uniqueUserIds: [userId],
     });
+  });
+
+  test("a day larger than one page is totalled whole, not to the first page", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const dayStart = Date.UTC(2026, 4, 3);
+    const MESSAGES = 1100;
+
+    const { userId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Busy Co", createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", {
+        email: "busy@example.com",
+        name: "Busy User",
+        image: "https://example.com/busy.png",
+        role: "USER",
+        companyId,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId,
+        title: "Busy day",
+        createdAt: dayStart,
+        updatedAt: dayStart,
+      });
+      for (let i = 0; i < MESSAGES; i++) {
+        await ctx.db.insert("messages", {
+          threadId,
+          role: "assistant",
+          content: `reply ${i}`,
+          createdAt: dayStart + i,
+          userId,
+          companyId,
+          inputTokens: 2,
+          outputTokens: 3,
+          modelUsed: "model-test",
+        });
+      }
+      return { userId };
+    });
+
+    await t.action(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-03" });
+
+    const snapshots = await t.run(async (ctx) =>
+      ctx.db
+        .query("analyticsDailySnapshots")
+        .withIndex("by_date", (q) => q.eq("date", "2026-05-03"))
+        .collect()
+    );
+    const globalSnapshot = snapshots.find((snapshot) => snapshot.type === "global");
+
+    expect(globalSnapshot?.metrics.totalMessages).toBe(MESSAGES);
+    expect(globalSnapshot?.metrics.totalInputTokens).toBe(MESSAGES * 2);
+    expect(globalSnapshot?.metrics.totalOutputTokens).toBe(MESSAGES * 3);
+    expect(globalSnapshot?.uniqueUserIds).toEqual([userId]);
+    expect(globalSnapshot?.modelMetrics?.[0]).toMatchObject({ model: "model-test", calls: MESSAGES });
   });
 
   test("message analytics dimension backfill is paginated, idempotent, and non-destructive", async () => {

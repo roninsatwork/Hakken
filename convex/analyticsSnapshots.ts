@@ -12,33 +12,12 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext } from "./analyticsService";
 import { internal } from "./_generated/api";
+import schema from "./schema";
 import { aggregateDailySnapshots } from "./analyticsSnapshotAggregation";
 import type { Doc, Id } from "./_generated/dataModel";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
 
-/**
- * The most interactions one day's snapshot will read in a single pass.
- *
- * Reading exactly this many and aggregating whatever came back is what made a
- * busy day record a permanently wrong total: the snapshot is written once,
- * nothing recomputes it, and no screen can tell a truncated total from a real
- * one. So the generator reads one past the ceiling and refuses the day rather
- * than writing a number it knows is short. A missing snapshot is visible —
- * the analytics health check counts snapshots per date and reports the gap —
- * which a wrong one never is.
- */
-const SNAPSHOT_DAY_INTERACTION_LIMIT = 10000;
-
 type SystemAgentId = "system_assistant";
-type SnapshotInteraction = {
-  userId?: Id<"users">;
-  widgetId?: Id<"widgets">;
-  companyId?: Id<"companies">;
-  agentId?: Id<"agents"> | SystemAgentId;
-  inputTokens: number;
-  outputTokens: number;
-  modelUsed: string;
-};
 export type MessageAnalyticsPatch = {
   companyId?: Id<"companies">;
   userId?: Id<"users">;
@@ -175,166 +154,258 @@ export const validateMessageAnalyticsDimensions = internalQuery({
   },
 });
 
-export const generateDailySnapshots = internalMutation({
-  args: { 
-    targetDateStr: v.optional(v.string()), // "YYYY-MM-DD", defaults to yesterday
+/**
+ * How many of the day's interactions one page carries.
+ *
+ * Small enough that a page is a cheap query, large enough that an ordinary day
+ * is a handful of round trips rather than hundreds.
+ */
+const SNAPSHOT_DAY_PAGE_SIZE = 500;
+
+/**
+ * The point at which the generator gives up rather than exhaust the action.
+ *
+ * Paging removed the old 10,000 ceiling that silently recorded a busy day short.
+ * This one is different in kind: it is far above any plausible day, and reaching
+ * it refuses the day loudly rather than writing a number known to be incomplete.
+ * A missing snapshot is reported by the analytics health check; a wrong one is
+ * invisible for ever.
+ */
+const SNAPSHOT_DAY_HARD_CEILING = 250000;
+
+function resolveSnapshotWindow(targetDateStr: string | undefined) {
+  if (targetDateStr) {
+    const parts = targetDateStr.split("-");
+    const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+    const startTs = d.getTime();
+    return { startTs, endTs: startTs + 24 * 60 * 60 * 1000 - 1, dateString: targetDateStr };
+  }
+  const now = new Date();
+  const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+  const startTs = yesterday.getTime();
+  return {
+    startTs,
+    endTs: startTs + 24 * 60 * 60 * 1000 - 1,
+    dateString: yesterday.toISOString().split("T")[0],
+  };
+}
+
+export const snapshotDateAlreadyGenerated = internalQuery({
+  args: { dateString: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("analyticsDailySnapshots")
+      .withIndex("by_date", (q) => q.eq("date", args.dateString))
+      .first();
+    return existing !== null;
+  },
+});
+
+export const readSnapshotModelCatalogue = internalQuery({
+  args: {},
+  handler: async (ctx) => await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT),
+});
+
+export const readDayInteractionsPage = internalQuery({
+  args: {
+    startTs: v.number(),
+    endTs: v.number(),
+    source: v.union(v.literal("messages"), v.literal("transactions")),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const now = new Date();
-    
-    // Determine the target bounds. Default: Yesterday 00:00:00 to 23:59:59 UTC
-    let startTs: number;
-    let endTs: number;
-    let dateString: string;
+    if (args.source === "messages") {
+      const page = await ctx.db
+        .query("messages")
+        .withIndex("by_role_created", (q) => q.eq("role", "assistant").gte("createdAt", args.startTs))
+        .filter((q) => q.lte(q.field("createdAt"), args.endTs))
+        .paginate(args.paginationOpts);
 
-    if (args.targetDateStr) {
-      const parts = args.targetDateStr.split("-");
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const d = new Date(Date.UTC(year, month, day));
-      startTs = d.getTime();
-      endTs = startTs + (24 * 60 * 60 * 1000) - 1;
-      dateString = args.targetDateStr;
-    } else {
-      const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
-      startTs = yesterday.getTime();
-      endTs = startTs + (24 * 60 * 60 * 1000) - 1;
-      dateString = yesterday.toISOString().split("T")[0];
-    }
-
-    // Guard: Prevent duplicate snapshot generation for the same date
-    const existing = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_date", q => q.eq("date", dateString))
-        .first();
-    if (existing) {
-        console.log(`[Analytics] Snapshots for ${dateString} already exist. Skipping.`);
-        return;
-    }
-
-    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
-    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-
-    // Fetch all interaction data for the 24h window
-    const rawMessages = await ctx.db.query("messages")
-      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTs))
-      .filter(q => q.lte(q.field("createdAt"), endTs))
-      .take(SNAPSHOT_DAY_INTERACTION_LIMIT + 1);
-
-    const agentTxs = await ctx.db.query("agentTransactions")
-      .withIndex("by_createdAt", q => q.gte("createdAt", startTs))
-      .filter(q => q.lte(q.field("createdAt"), endTs))
-      .take(SNAPSHOT_DAY_INTERACTION_LIMIT + 1);
-
-    if (
-      rawMessages.length > SNAPSHOT_DAY_INTERACTION_LIMIT ||
-      agentTxs.length > SNAPSHOT_DAY_INTERACTION_LIMIT
-    ) {
-      throw appError(
-        "INVALID_INPUT",
-        `Analytics for ${dateString} were not written: the day holds more than ${SNAPSHOT_DAY_INTERACTION_LIMIT} interactions, which is more than one pass can total accurately. The day is left without a snapshot, which the analytics health check reports, rather than recorded short.`
+      const interactions = await Promise.all(
+        page.page.map(async (m) => {
+          const thread = await ctx.db.get(m.threadId);
+          return {
+            userId: m.userId ?? thread?.userId,
+            widgetId: m.widgetId ?? thread?.widgetId,
+            companyId: m.companyId ?? thread?.companyId,
+            agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
+            inputTokens: m.inputTokens || 0,
+            outputTokens: m.outputTokens || 0,
+            modelUsed: m.modelUsed,
+          };
+        })
       );
+      return { interactions, isDone: page.isDone, continueCursor: page.continueCursor };
     }
 
-    if (rawMessages.length === 0 && agentTxs.length === 0) {
-       console.log(`[Analytics] No activity on ${dateString}. Creating empty global snapshot.`);
-       await ctx.db.insert("analyticsDailySnapshots", {
-           date: dateString,
-           type: "global",
-           metrics: { totalMessages: 0, totalInputTokens: 0, totalOutputTokens: 0, costGBP: 0, activeUsersCount: 0 },
-           uniqueUserIds: [],
-       });
-       return;
+    const page = await ctx.db
+      .query("agentTransactions")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", args.startTs))
+      .filter((q) => q.lte(q.field("createdAt"), args.endTs))
+      .paginate(args.paginationOpts);
+
+    const interactions = page.page.map((t) => ({
+      userId: t.userId,
+      widgetId: undefined,
+      companyId: t.companyId,
+      agentId: t.agentId,
+      inputTokens: t.inputTokens || 0,
+      outputTokens: t.outputTokens || 0,
+      modelUsed: t.modelUsed,
+    }));
+    return { interactions, isDone: page.isDone, continueCursor: page.continueCursor };
+  },
+});
+
+export const readSnapshotJoins = internalQuery({
+  args: {
+    userIds: v.array(v.id("users")),
+    companyIds: v.array(v.id("companies")),
+    agentIds: v.array(v.id("agents")),
+  },
+  handler: async (ctx, args) => {
+    const users = (await Promise.all(args.userIds.map((id) => ctx.db.get(id)))).filter(
+      (user): user is Doc<"users"> => user !== null
+    );
+
+    const companyIds = new Set<Id<"companies">>(args.companyIds);
+    for (const user of users) {
+      if (user.companyId) companyIds.add(user.companyId);
     }
 
-    const threadMap = new Map<Id<"threads">, Doc<"threads"> | null>();
-    for (const threadId of new Set(rawMessages.map((message) => message.threadId))) {
-      threadMap.set(threadId, await ctx.db.get(threadId));
+    const companies = (await Promise.all([...companyIds].map((id) => ctx.db.get(id)))).filter(
+      (company): company is Doc<"companies"> => company !== null
+    );
+    const agents = (await Promise.all(args.agentIds.map((id) => ctx.db.get(id)))).filter(
+      (agent): agent is Doc<"agents"> => agent !== null
+    );
+
+    return { users, companies, agents };
+  },
+});
+
+export const writeDailySnapshots = internalMutation({
+  args: { rows: v.array(schema.tables.analyticsDailySnapshots.validator) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const row of args.rows) {
+      await ctx.db.insert("analyticsDailySnapshots", row);
+    }
+    return null;
+  },
+});
+
+export const generateDailySnapshots = internalAction({
+  args: {
+    targetDateStr: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { startTs, endTs, dateString } = resolveSnapshotWindow(args.targetDateStr);
+
+    const alreadyGenerated = await ctx.runQuery(
+      internal.analyticsSnapshots.snapshotDateAlreadyGenerated,
+      { dateString }
+    );
+    if (alreadyGenerated) {
+      console.log(`[Analytics] Snapshots for ${dateString} already exist. Skipping.`);
+      return;
     }
 
-    const observedUserIds = new Set<Id<"users">>();
-    const observedCompanyIds = new Set<Id<"companies">>();
-    const observedAgentIds = new Set<Id<"agents">>();
+    const catalogue = await ctx.runQuery(internal.analyticsSnapshots.readSnapshotModelCatalogue, {});
+    const { modelMap, defaultModelId } = buildModelCostContext(catalogue);
 
-    rawMessages.forEach((message) => {
-      const thread = threadMap.get(message.threadId);
-      const userId = message.userId ?? thread?.userId;
-      const companyId = message.companyId ?? thread?.companyId;
-      const agentId = message.agentId ?? thread?.agentId;
+    const rawInteractions: Array<{
+      userId?: Id<"users">;
+      widgetId?: Id<"widgets">;
+      companyId?: Id<"companies">;
+      agentId?: Id<"agents"> | SystemAgentId;
+      inputTokens: number;
+      outputTokens: number;
+      modelUsed?: string;
+    }> = [];
 
-      if (userId) observedUserIds.add(userId);
-      if (companyId) observedCompanyIds.add(companyId);
-      if (agentId) observedAgentIds.add(agentId);
-    });
+    for (const source of ["messages", "transactions"] as const) {
+      let cursor: string | null = null;
+      for (;;) {
+        const page: {
+          interactions: typeof rawInteractions;
+          isDone: boolean;
+          continueCursor: string;
+        } = await ctx.runQuery(internal.analyticsSnapshots.readDayInteractionsPage, {
+          startTs,
+          endTs,
+          source,
+          paginationOpts: { numItems: SNAPSHOT_DAY_PAGE_SIZE, cursor },
+        });
+        rawInteractions.push(...page.interactions);
 
-    agentTxs.forEach((transaction) => {
-      if (transaction.userId) observedUserIds.add(transaction.userId);
-      if (transaction.companyId) observedCompanyIds.add(transaction.companyId);
-      if (transaction.agentId) observedAgentIds.add(transaction.agentId);
-    });
+        if (rawInteractions.length > SNAPSHOT_DAY_HARD_CEILING) {
+          throw appError(
+            "INVALID_INPUT",
+            `Analytics for ${dateString} were not written: the day holds more than ${SNAPSHOT_DAY_HARD_CEILING} interactions, which is more than one run can total. The day is left without a snapshot, which the analytics health check reports, rather than recorded short.`
+          );
+        }
 
-    const userMap = new Map<Id<"users">, Doc<"users">>();
-    for (const userId of observedUserIds) {
-      const user = await ctx.db.get(userId);
-      if (user) {
-        userMap.set(userId, user);
-        if (user.companyId) observedCompanyIds.add(user.companyId);
+        if (page.isDone) break;
+        cursor = page.continueCursor;
       }
     }
 
-    const companyMap = new Map<Id<"companies">, Doc<"companies">>();
-    for (const companyId of observedCompanyIds) {
-      const company = await ctx.db.get(companyId);
-      if (company) companyMap.set(companyId, company);
+    if (rawInteractions.length === 0) {
+      console.log(`[Analytics] No activity on ${dateString}. Creating empty global snapshot.`);
+      await ctx.runMutation(internal.analyticsSnapshots.writeDailySnapshots, {
+        rows: [
+          {
+            date: dateString,
+            type: "global" as const,
+            metrics: { totalMessages: 0, totalInputTokens: 0, totalOutputTokens: 0, costGBP: 0, activeUsersCount: 0 },
+            uniqueUserIds: [],
+          },
+        ],
+      });
+      return;
     }
 
-    const agentMap = new Map<Id<"agents">, Doc<"agents">>();
-    for (const agentId of observedAgentIds) {
-      const agent = await ctx.db.get(agentId);
-      if (agent) agentMap.set(agentId, agent);
+    const userIds = new Set<Id<"users">>();
+    const companyIds = new Set<Id<"companies">>();
+    const agentIds = new Set<Id<"agents">>();
+    for (const interaction of rawInteractions) {
+      if (interaction.userId) userIds.add(interaction.userId);
+      if (interaction.companyId) companyIds.add(interaction.companyId);
+      if (interaction.agentId && interaction.agentId !== SYSTEM_AGENT_ID) {
+        agentIds.add(interaction.agentId as Id<"agents">);
+      }
     }
 
-    const unifiedInteractions: SnapshotInteraction[] = [
-       ...rawMessages.map(m => {
-          const thread = threadMap.get(m.threadId);
-          return {
-          userId: m.userId ?? thread?.userId,
-          widgetId: m.widgetId ?? thread?.widgetId,
-          companyId: m.companyId ?? thread?.companyId,
-          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
-          inputTokens: m.inputTokens || 0,
-          outputTokens: m.outputTokens || 0,
-          modelUsed: m.modelUsed || defaultModelId,
-       };
-       }),
-       ...agentTxs.map(t => ({
-          userId: t.userId,
-          widgetId: undefined,
-          companyId: t.companyId,
-          agentId: t.agentId,
-          inputTokens: t.inputTokens || 0,
-          outputTokens: t.outputTokens || 0,
-          modelUsed: t.modelUsed || defaultModelId,
-       }))
-    ];
+    const joins = await ctx.runQuery(internal.analyticsSnapshots.readSnapshotJoins, {
+      userIds: [...userIds],
+      companyIds: [...companyIds],
+      agentIds: [...agentIds],
+    });
+
+    const unifiedInteractions = rawInteractions.map((interaction) => ({
+      ...interaction,
+      modelUsed: interaction.modelUsed || defaultModelId,
+    }));
 
     const { globalRow, companyRows, userRows } = aggregateDailySnapshots(
       unifiedInteractions,
-      { userMap, companyMap, agentMap },
+      {
+        userMap: new Map(joins.users.map((user) => [user._id, user])),
+        companyMap: new Map(joins.companies.map((company) => [company._id, company])),
+        agentMap: new Map(joins.agents.map((agent) => [agent._id, agent])),
+      },
       modelMap,
       dateString
     );
 
-    await ctx.db.insert("analyticsDailySnapshots", globalRow);
-    for (const row of companyRows) {
-      await ctx.db.insert("analyticsDailySnapshots", row);
-    }
-    for (const row of userRows) {
-      await ctx.db.insert("analyticsDailySnapshots", row);
-    }
+    await ctx.runMutation(internal.analyticsSnapshots.writeDailySnapshots, {
+      rows: [globalRow, ...companyRows, ...userRows],
+    });
 
     console.log(`[Analytics] Successfully generated snapshots for ${dateString}`);
-  }
+  },
 });
 
 // Migration helper to seed past data
@@ -345,7 +416,7 @@ export const seedHistoricalSnapshots = internalAction({
         for (let i = args.daysBack; i >= 1; i--) {
             const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
             const dateStr = target.toISOString().split("T")[0];
-            await ctx.runMutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: dateStr });
+            await ctx.runAction(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: dateStr });
             console.log(`Dispatched snapshot job for ${dateStr}`);
         }
     }
