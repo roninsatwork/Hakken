@@ -15,6 +15,7 @@ import {
 } from "./agentEvalGradingService";
 import { calculateModelCostGBP } from "./aiCostService";
 import { gradeRehearsalToolPlan } from "./rehearsalEvalService";
+import { appError } from "./utils/appError";
 
 /** More than this is a runaway, not a confidence interval. */
 const MAX_SAMPLE_COUNT = 5;
@@ -85,7 +86,7 @@ export const gradeSmokeEvalWithModel = internalAction({
       fixtureId: args.fixtureId,
     });
     if (!context) {
-      throw new Error("Smoke eval grading context not found.");
+      throw appError("NOT_FOUND", "Smoke eval grading context not found.");
     }
 
     let modelId: string | undefined;
@@ -281,7 +282,7 @@ export const runRehearsalEvalInternal = internalAction({
       fixtureId: args.fixtureId,
     });
     if (!fixture || fixture.status !== "ACTIVE") {
-      throw new Error("Rehearsal fixture is missing or no longer active.");
+      throw appError("NOT_FOUND", "Rehearsal fixture is missing or no longer active.");
     }
 
     const { runId } = await ctx.runAction(internal.agentRuntime.runTriggeredAgentObjective, {

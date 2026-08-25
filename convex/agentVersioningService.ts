@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { stableStringify } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 const VERSION_SNAPSHOT_LIMIT = 200;
 
@@ -25,7 +26,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
   companyId?: Id<"companies">;
 }) {
   const agent = await ctx.db.get(args.agentId);
-  if (!agent) throw new Error("Agent not found");
+  if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
   const [bindings, rules, memories] = await Promise.all([
     ctx.db

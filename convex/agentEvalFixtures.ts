@@ -8,6 +8,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import type { AgentTemplate } from "./agentTemplates";
+import { appError, appErrorMessage } from "./utils/appError";
 
 const EVAL_FIXTURE_DETAIL_LIMIT = 200;
 const EVAL_FIXTURE_TEXT_LIMIT = 2000;
@@ -156,14 +157,14 @@ function normalizeOptionalJsonObject(value: string | undefined, fieldLabel: stri
   try {
     const parsed = JSON.parse(trimmed) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`${fieldLabel} must be a JSON object.`);
+      throw appError("INVALID_INPUT", `${fieldLabel} must be a JSON object.`);
     }
     return JSON.stringify(parsed);
   } catch (error) {
-    if (error instanceof Error && error.message === `${fieldLabel} must be a JSON object.`) {
+    if (appErrorMessage(error, "") === `${fieldLabel} must be a JSON object.`) {
       throw error;
     }
-    throw new Error(`${fieldLabel} JSON is invalid.`);
+    throw appError("INVALID_INPUT", `${fieldLabel} JSON is invalid.`);
   }
 }
 
@@ -487,7 +488,7 @@ export const createFromRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     const [steps, toolCalls, approvals, feedback, reflections, memoryCandidates] = await Promise.all([
@@ -652,20 +653,20 @@ export const createManual = adminMutation({
   ): Promise<{ fixtureId: Id<"agentEvalFixtures">; sourceRunId: Id<"agentRuns"> }> => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     const companyId = user.role === "ADMIN" ? getActiveCompanyId(user) : undefined;
     if (user.role === "ADMIN" && !companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const objective = truncateText(args.objective);
     const expectedFinalOutputRubric = truncateText(args.expectedFinalOutputRubric);
     if (objective.length === 0) {
-      throw new Error("Eval objective is required.");
+      throw appError("INVALID_INPUT", "Eval objective is required.");
     }
     if (expectedFinalOutputRubric.length === 0) {
-      throw new Error("Eval rubric is required.");
+      throw appError("INVALID_INPUT", "Eval rubric is required.");
     }
 
     const now = Date.now();
@@ -749,7 +750,7 @@ export const updateFixture = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("Eval fixture not found");
+    if (!fixture) throw appError("NOT_FOUND", "Eval fixture not found");
     assertAdminCanAccessCompany(user, fixture.companyId);
 
     const nextType = args.type ?? fixture.type;
@@ -758,10 +759,10 @@ export const updateFixture = adminMutation({
       ? truncateText(args.expectedFinalOutputRubric)
       : undefined;
     if (objective !== undefined && objective.length === 0) {
-      throw new Error("Eval objective is required.");
+      throw appError("INVALID_INPUT", "Eval objective is required.");
     }
     if (expectedFinalOutputRubric !== undefined && expectedFinalOutputRubric.length === 0) {
-      throw new Error("Eval rubric is required.");
+      throw appError("INVALID_INPUT", "Eval rubric is required.");
     }
 
     const now = Date.now();
@@ -813,7 +814,7 @@ export const archiveFixture = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("Eval fixture not found");
+    if (!fixture) throw appError("NOT_FOUND", "Eval fixture not found");
     assertAdminCanAccessCompany(user, fixture.companyId);
     if (fixture.status === "ARCHIVED") return args.fixtureId;
 
@@ -1042,11 +1043,11 @@ export const runSmokeEval = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     let fixture = args.fixtureId ? await ctx.db.get(args.fixtureId) : null;
     if (fixture && fixture.agentId !== args.agentId) {
-      throw new Error("Eval fixture does not belong to this agent");
+      throw appError("UNAUTHORIZED", "Eval fixture does not belong to this agent");
     }
     if (!fixture) {
       fixture = await ctx.db
@@ -1056,7 +1057,7 @@ export const runSmokeEval = adminMutation({
         .first();
     }
     if (!fixture || fixture.status !== "ACTIVE") {
-      throw new Error("Add an active eval fixture before running a smoke eval.");
+      throw appError("INVALID_INPUT", "Add an active eval fixture before running a smoke eval.");
     }
     assertAdminCanAccessCompany(user, fixture.companyId);
 
@@ -1081,17 +1082,17 @@ export const runEvalSuite = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     const suitePreset = args.suitePresetId ? await ctx.db.get(args.suitePresetId) : null;
     if (args.suitePresetId && !suitePreset) {
-      throw new Error("Eval suite preset not found.");
+      throw appError("NOT_FOUND", "Eval suite preset not found.");
     }
     if (suitePreset && suitePreset.status !== "ACTIVE") {
-      throw new Error("Eval suite preset is archived.");
+      throw appError("CONFLICT", "Eval suite preset is archived.");
     }
     if (suitePreset && suitePreset.agentId !== args.agentId) {
-      throw new Error("Eval suite preset does not belong to this agent.");
+      throw appError("UNAUTHORIZED", "Eval suite preset does not belong to this agent.");
     }
     if (suitePreset) {
       assertAdminCanAccessCompany(user, suitePreset.companyId);
@@ -1100,7 +1101,7 @@ export const runEvalSuite = adminMutation({
     const requestedFixtureIds = Array.from(new Set(args.fixtureIds || suitePreset?.fixtureIds || []));
     const suiteTag = normalizeSuiteTag(args.suiteTag ?? suitePreset?.suiteTag);
     if (requestedFixtureIds.length > EVAL_SUITE_FIXTURE_LIMIT) {
-      throw new Error(`Eval suites can run up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures at a time.`);
+      throw appError("INVALID_INPUT", `Eval suites can run up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures at a time.`);
     }
 
     const fixtures: Doc<"agentEvalFixtures">[] = [];
@@ -1108,13 +1109,13 @@ export const runEvalSuite = adminMutation({
       for (const fixtureId of requestedFixtureIds) {
         const fixture = await ctx.db.get(fixtureId);
         if (!fixture || fixture.status !== "ACTIVE") {
-          throw new Error("Eval fixture not found or inactive");
+          throw appError("NOT_FOUND", "Eval fixture not found or inactive");
         }
         if (fixture.agentId !== args.agentId) {
-          throw new Error("Eval fixture does not belong to this agent");
+          throw appError("UNAUTHORIZED", "Eval fixture does not belong to this agent");
         }
         if (suiteTag && !fixture.tags.includes(suiteTag)) {
-          throw new Error(`Eval fixture does not belong to the ${suiteTag} suite.`);
+          throw appError("INVALID_INPUT", `Eval fixture does not belong to the ${suiteTag} suite.`);
         }
         assertAdminCanAccessCompany(user, fixture.companyId);
         fixtures.push(fixture);
@@ -1129,7 +1130,7 @@ export const runEvalSuite = adminMutation({
         ? activeFixtures.filter((fixture) => fixture.tags.includes(suiteTag))
         : activeFixtures;
       if (suiteFixtures.length > EVAL_SUITE_FIXTURE_LIMIT) {
-        throw new Error(`Eval suites can run up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures at a time.`);
+        throw appError("INVALID_INPUT", `Eval suites can run up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures at a time.`);
       }
       for (const fixture of suiteFixtures) {
         assertAdminCanAccessCompany(user, fixture.companyId);
@@ -1138,7 +1139,7 @@ export const runEvalSuite = adminMutation({
     }
 
     if (fixtures.length === 0) {
-      throw new Error("Add an active eval fixture before running an eval suite.");
+      throw appError("INVALID_INPUT", "Add an active eval fixture before running an eval suite.");
     }
 
     const gradingMode = args.gradingMode ?? (suitePreset?.requiresModelGrading ? "MODEL_GRADED" : "CONTRACT_ONLY");
@@ -1205,7 +1206,7 @@ export const listSuitePresets = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const presets = await ctx.db
@@ -1228,11 +1229,11 @@ export const getReleaseCandidateComparison = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
     const activeFixtures = await ctx.db
       .query("agentEvalFixtures")
       .withIndex("by_agent_status_created", (q) => q.eq("agentId", args.agentId).eq("status", "ACTIVE"))
@@ -1405,34 +1406,34 @@ export const saveSuitePreset = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     const name = truncateText(args.name, EVAL_SUITE_PRESET_NAME_LIMIT);
     if (name.length === 0) {
-      throw new Error("Eval suite preset name is required.");
+      throw appError("INVALID_INPUT", "Eval suite preset name is required.");
     }
     const description = args.description ? truncateText(args.description, EVAL_SUITE_PRESET_DESCRIPTION_LIMIT) : undefined;
     const suiteTag = normalizeSuiteTag(args.suiteTag);
     const fixtureIds = Array.from(new Set(args.fixtureIds || []));
     if (!suiteTag && fixtureIds.length === 0) {
-      throw new Error("Eval suite preset needs a tag or fixture selection.");
+      throw appError("INVALID_INPUT", "Eval suite preset needs a tag or fixture selection.");
     }
     if (fixtureIds.length > EVAL_SUITE_FIXTURE_LIMIT) {
-      throw new Error(`Eval suite presets can include up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures.`);
+      throw appError("INVALID_INPUT", `Eval suite presets can include up to ${EVAL_SUITE_FIXTURE_LIMIT} fixtures.`);
     }
 
     let companyId: Id<"companies"> | undefined;
     for (const fixtureId of fixtureIds) {
       const fixture = await ctx.db.get(fixtureId);
       if (!fixture || fixture.agentId !== args.agentId || fixture.status !== "ACTIVE") {
-        throw new Error("Eval fixture not found or inactive.");
+        throw appError("NOT_FOUND", "Eval fixture not found or inactive.");
       }
       assertAdminCanAccessCompany(user, fixture.companyId);
       companyId = companyId ?? fixture.companyId;
     }
     if (user.role === "ADMIN") {
       companyId = getActiveCompanyId(user);
-      if (!companyId) throw new Error("Unauthorized");
+      if (!companyId) throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const now = Date.now();
@@ -1450,10 +1451,10 @@ export const saveSuitePreset = adminMutation({
 
     if (args.presetId) {
       const existing = await ctx.db.get(args.presetId);
-      if (!existing) throw new Error("Eval suite preset not found.");
-      if (existing.status !== "ACTIVE") throw new Error("Eval suite preset is archived.");
+      if (!existing) throw appError("NOT_FOUND", "Eval suite preset not found.");
+      if (existing.status !== "ACTIVE") throw appError("CONFLICT", "Eval suite preset is archived.");
       if (existing.agentId !== args.agentId) {
-        throw new Error("Eval suite preset does not belong to this agent.");
+        throw appError("UNAUTHORIZED", "Eval suite preset does not belong to this agent.");
       }
       assertAdminCanAccessCompany(user, existing.companyId);
       await ctx.db.patch(args.presetId, payload);
@@ -1508,7 +1509,7 @@ export const archiveSuitePreset = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const preset = await ctx.db.get(args.presetId);
-    if (!preset) throw new Error("Eval suite preset not found.");
+    if (!preset) throw appError("NOT_FOUND", "Eval suite preset not found.");
     assertAdminCanAccessCompany(user, preset.companyId);
     if (preset.status === "ARCHIVED") return args.presetId;
 
@@ -1601,14 +1602,14 @@ export const runRehearsalEval = adminMutation({
   handler: async (ctx, args): Promise<{ scheduled: boolean }> => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture || fixture.agentId !== args.agentId) {
-      throw new Error("Eval fixture does not belong to this agent");
+      throw appError("UNAUTHORIZED", "Eval fixture does not belong to this agent");
     }
     if (fixture.status !== "ACTIVE") {
-      throw new Error("Only an active fixture can be rehearsed.");
+      throw appError("CONFLICT", "Only an active fixture can be rehearsed.");
     }
     assertAdminCanAccessCompany(user, fixture.companyId);
 
@@ -1787,7 +1788,7 @@ export const getForRun = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     return await ctx.db
@@ -1818,7 +1819,7 @@ export const getCheckDetail = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("Check not found");
+    if (!fixture) throw appError("NOT_FOUND", "Check not found");
     assertAdminCanAccessCompany(user, fixture.companyId);
 
     const limit = Math.min(Math.max(args.limit ?? 10, 1), SMOKE_EVAL_HISTORY_LIMIT);
@@ -1877,7 +1878,7 @@ export const getSmokeEvalHistory = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const historyLimit = Math.min(Math.max(args.limit ?? 8, 1), SMOKE_EVAL_HISTORY_LIMIT);
@@ -1978,7 +1979,7 @@ export const getRecentForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     if (user.role === "SUPER_ADMIN") {

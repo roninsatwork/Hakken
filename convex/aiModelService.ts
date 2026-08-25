@@ -1,4 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 
 /**
  * Last-resort model identifier, used only when the catalogue holds nothing
@@ -356,7 +357,7 @@ export function getGoogleVertexProviderModelId(
   runtimeLabel = "runtime"
 ) {
   if (config.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
-    throw new Error(`AI provider '${config.providerKey}' is configured but ${runtimeLabel} requires a Google Vertex model.`);
+    throw appError("NOT_CONFIGURED", `AI provider '${config.providerKey}' is configured but ${runtimeLabel} requires a Google Vertex model.`);
   }
 
   return config.providerModelId;

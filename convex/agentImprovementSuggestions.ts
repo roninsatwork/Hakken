@@ -8,6 +8,7 @@ import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import {
   ensureAgentSkillVersionSnapshot,
 } from "./agentSkills";
+import { appError } from "./utils/appError";
 
 const SUGGESTION_LIMIT = 200;
 const SUGGESTION_TEXT_LIMIT = 1400;
@@ -496,19 +497,19 @@ async function applySuggestion(ctx: Parameters<typeof ensureAgentVersionSnapshot
   now: number;
 }) {
   const agent = await ctx.db.get(args.suggestion.agentId);
-  if (!agent) throw new Error("Agent not found");
+  if (!agent) throw appError("NOT_FOUND", "Agent not found");
   const patch = parseJsonObject(args.suggestion.proposedPatchJson);
 
   if (args.suggestion.type === "SKILL_INSTRUCTION_CHANGE") {
-    if (!args.canManageSkills) throw new Error("Only super admins can apply shared skill suggestions.");
+    if (!args.canManageSkills) throw appError("UNAUTHORIZED", "Only super admins can apply shared skill suggestions.");
     const skillId = args.suggestion.sourceSkillId;
-    if (!skillId) throw new Error("Skill suggestion is missing a source skill.");
+    if (!skillId) throw appError("INVALID_INPUT", "Skill suggestion is missing a source skill.");
     const skill = await ctx.db.get(skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
     const appendSkillInstruction = typeof patch.appendSkillInstruction === "string"
       ? patch.appendSkillInstruction.trim()
       : "";
-    if (!appendSkillInstruction) throw new Error("Skill suggestion is missing instruction text.");
+    if (!appendSkillInstruction) throw appError("INVALID_INPUT", "Skill suggestion is missing instruction text.");
     await ctx.db.patch(skillId, {
       instruction: `${skill.instruction}${skill.instruction ? "\n\n" : ""}Approved learning note ${args.now}: ${appendSkillInstruction}`,
       updatedAt: args.now,
@@ -519,7 +520,7 @@ async function applySuggestion(ctx: Parameters<typeof ensureAgentVersionSnapshot
 
   if (args.suggestion.type === "PROMPT_CHANGE") {
     const appendSystemPrompt = typeof patch.appendSystemPrompt === "string" ? patch.appendSystemPrompt.trim() : "";
-    if (!appendSystemPrompt) throw new Error("Prompt suggestion is missing text");
+    if (!appendSystemPrompt) throw appError("INVALID_INPUT", "Prompt suggestion is missing text");
     const currentPrompt = agent.systemPrompt || "";
     await ctx.db.patch(agent._id, {
       systemPrompt: `${currentPrompt}${currentPrompt ? "\n\n" : ""}Approved learning note ${args.now}: ${appendSystemPrompt}`,
@@ -564,7 +565,7 @@ export const generateForRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     const [reflections, fixtures, existing, feedback] = await Promise.all([
@@ -655,10 +656,10 @@ export const decideSuggestion = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const suggestion = await ctx.db.get(args.suggestionId);
-    if (!suggestion) throw new Error("Improvement suggestion not found");
+    if (!suggestion) throw appError("NOT_FOUND", "Improvement suggestion not found");
     assertAdminCanAccessCompany(user, suggestion.companyId);
     if (suggestion.status !== "PROPOSED" && suggestion.status !== "APPROVED") {
-      throw new Error("Improvement suggestion has already been reviewed");
+      throw appError("CONFLICT", "Improvement suggestion has already been reviewed");
     }
 
     const now = Date.now();
@@ -695,7 +696,7 @@ export const decideSuggestion = adminMutation({
     if (args.apply !== true) return { appliedAgentVersionId: null, appliedSkillVersionId: null };
 
     const approvedSuggestion = await ctx.db.get(args.suggestionId);
-    if (!approvedSuggestion) throw new Error("Improvement suggestion not found");
+    if (!approvedSuggestion) throw appError("NOT_FOUND", "Improvement suggestion not found");
     const appliedResult = await applySuggestion(ctx, {
       suggestion: approvedSuggestion,
       userId,
@@ -734,7 +735,7 @@ export const getRecentForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     if (user.role === "SUPER_ADMIN") {
@@ -762,7 +763,7 @@ export const getForRun = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     return await ctx.db

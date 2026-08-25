@@ -4,6 +4,7 @@ import { paginationOptsValidator } from "convex/server";
 import { adminQuery } from "./tenantFunctions";
 import { requireAdmin } from "./authz";
 import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
+import { appError } from "./utils/appError";
 
 const AGENT_TRANSACTION_STATS_LIMIT = 1000;
 const MODEL_SEED_CATALOG_LIMIT = 500;
@@ -20,7 +21,7 @@ export const getForAgent = adminQuery({
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
       
     if (user.role === "ADMIN") {
-      if (!user.companyId) throw new Error("Unauthorized");
+      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
       return await baseQuery
         .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
         .order("desc")
@@ -41,7 +42,7 @@ export const getStatsForAgent = adminQuery({
       
     const txs = await (user.role === "ADMIN"
       ? (() => {
-      if (!user.companyId) throw new Error("Unauthorized");
+      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
       return baseQuery
         .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
         .take(AGENT_TRANSACTION_STATS_LIMIT);

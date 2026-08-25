@@ -12,6 +12,7 @@ import { createGoogleAgentProvider } from "./googleAgentProvider";
 import { createOpenAIAgentProvider } from "./openaiAgentProvider";
 import { createOpenRouterAgentProvider } from "./openrouterAgentProvider";
 import type { AgentProviderAdapter } from "./agentProviderTypes";
+import { appError } from "./utils/appError";
 
 /**
  * Which adapter runs an agent on a given provider.
@@ -37,7 +38,8 @@ export function getAgentProviderAdapter(providerKey: string): AgentProviderAdapt
     case OPENROUTER_PROVIDER_KEY:
       return createOpenRouterAgentProvider();
     default:
-      throw new Error(
+      throw appError(
+        "INVALID_INPUT",
         `The agent runtime cannot run models from provider '${providerKey}'. `
         + "Choose a model from a supported provider, or add an adapter for this one.",
       );

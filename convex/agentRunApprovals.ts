@@ -25,6 +25,7 @@ import {
   resolveApprovalExpiryHours,
 } from "./approvalExpiryService";
 import { AGENT_RUN_DETAIL_LIMIT } from "./agentRuns";
+import { appError } from "./utils/appError";
 
 /**
  * The human-in-the-loop approvals subsystem.
@@ -150,16 +151,16 @@ export const decideApproval = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const approval = await ctx.db.get(args.approvalId);
-    if (!approval) throw new Error("Approval not found");
+    if (!approval) throw appError("NOT_FOUND", "Approval not found");
     // Covers EXPIRED as well, so a stale browser tab cannot approve something the
     // platform has already closed and whose run has been cancelled underneath it.
     if (approval.status === "EXPIRED") {
-      throw new Error("This request expired before it was answered, and its run has stopped.");
+      throw appError("CONFLICT", "This request expired before it was answered, and its run has stopped.");
     }
-    if (approval.status !== "PENDING") throw new Error("Approval has already been reviewed");
+    if (approval.status !== "PENDING") throw appError("CONFLICT", "Approval has already been reviewed");
 
     const run = await ctx.db.get(approval.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
 
     const now = Date.now();
     await ctx.db.patch(args.approvalId, {
@@ -438,7 +439,7 @@ export const recordApprovedToolResultInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
-    if (!approval) throw new Error("Approval not found");
+    if (!approval) throw appError("NOT_FOUND", "Approval not found");
 
     const now = Date.now();
     const resultStepIndex = await getNextStepIndex(ctx, approval.runId);
@@ -746,10 +747,10 @@ export const continueRunAfterApprovalInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
-    if (!approval) throw new Error("Approval not found");
+    if (!approval) throw appError("NOT_FOUND", "Approval not found");
 
     const run = await ctx.db.get(approval.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
 
     const checkpoint = await ctx.db
       .query("agentRunCheckpoints")
@@ -796,10 +797,10 @@ export const completeApprovalResumeInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
-    if (!approval) throw new Error("Approval not found");
+    if (!approval) throw appError("NOT_FOUND", "Approval not found");
 
     const run = await ctx.db.get(approval.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
 
     const now = Date.now();
     const finalStepIndex = await getNextStepIndex(ctx, approval.runId);

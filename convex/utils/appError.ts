@@ -52,6 +52,14 @@ export const APP_ERROR_CODES = {
    * is a deliberate per-workspace switch.
    */
   NOT_CONFIGURED: "NOT_CONFIGURED",
+  /**
+   * The record exists and the caller may touch it, but its current state
+   * refuses this operation — an approval already answered, a run already
+   * finished, a request that expired while it waited. Distinct from
+   * INVALID_INPUT, where the request itself was wrong: here the same request
+   * would have worked a moment earlier.
+   */
+  CONFLICT: "CONFLICT",
 } as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[keyof typeof APP_ERROR_CODES];

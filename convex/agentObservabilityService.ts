@@ -19,6 +19,7 @@
 import type { TenantQueryCtx } from "./tenantFunctions";
 import type { Doc, Id } from "./_generated/dataModel";
 import { buildFailureKey } from "./agentFailureKeyService";
+import { appError } from "./utils/appError";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -315,7 +316,7 @@ export async function readAgentAnalytics(
 ) {
   const { user } = ctx;
   if (user.role === "ADMIN" && !user.companyId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
   const visibleCompanyId = user.role === "ADMIN" ? user.companyId : undefined;
   const lookbackDays = Math.min(Math.max(args.lookbackDays ?? 7, 1), 90);
@@ -645,7 +646,7 @@ export async function readRunObservatory(
 ) {
   const { user } = ctx;
   if (user.role === "ADMIN" && !user.companyId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 
   const limit = Math.min(Math.max(args.limit ?? RUN_OBSERVATORY_LIMIT, 1), RUN_OBSERVATORY_LIMIT);

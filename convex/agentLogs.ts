@@ -10,6 +10,7 @@ import {
   matchesLogFilter,
 } from "./agentLogGroupingService";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /** A single job's exchange. Far above any real run, low enough to bound the read. */
 const AGENT_RUN_LOG_LIMIT = 500;
@@ -43,7 +44,7 @@ export const getJobGroups = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const searchTerm = normalizeSearchTerm(args.searchTerm);
@@ -237,7 +238,7 @@ export const getLogById = adminQuery({
     
     if (user.role === "ADMIN") {
       if (!user.companyId || log.companyId !== user.companyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
     return log;
@@ -249,11 +250,11 @@ export const deleteLog = adminMutation({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const log = await ctx.db.get(args.id);
-    if (!log) throw new Error("Log not found");
+    if (!log) throw appError("NOT_FOUND", "Log not found");
     
     if (user.role === "ADMIN") {
       if (!user.companyId || log.companyId !== user.companyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
     return await ctx.db.delete(args.id);

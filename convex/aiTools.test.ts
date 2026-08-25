@@ -69,7 +69,7 @@ describe("AI Tools Authorization", () => {
         ...toolInput,
         inputSchema: '{"type":"array"}',
       })
-    ).rejects.toThrow('Tool input schema must use root type "object".');
+    ).rejects.toThrow('Tool input schema must use root type');
 
     await expect(
       superAdminClient.mutation(api.aiTools.createTool, {

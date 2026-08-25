@@ -10,6 +10,7 @@ import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQ
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
 import { publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();
@@ -219,7 +220,7 @@ export const seedPricingRule = internalMutation({
     // Acquire a valid admin ID to satisfy schema constraints
     const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "SUPER_ADMIN")).first();
 
-    if (!adminUser) throw new Error("No super administrators found in system.");
+    if (!adminUser) throw appError("NOT_FOUND", "No super administrators found in system.");
 
     const settings = await ctx.db.query("systemSettings").first();
 
@@ -249,18 +250,18 @@ export const getRuleById = tenantQuery({
 
     if (user.role !== "SUPER_ADMIN") {
         if (rule.companyId && !canAccessCompany(user, rule.companyId)) {
-            throw new Error("Unauthorized");
+            throw appError("UNAUTHORIZED", "Unauthorized");
         }
         // If it's a global rule (no companyId), only SUPER_ADMIN can view it in the admin panel
         if (!rule.companyId && !rule.agentId) {
-             throw new Error("Unauthorized");
+             throw appError("UNAUTHORIZED", "Unauthorized");
         }
         // If it's an agent rule, we must ensure the agent belongs to the user's company
         if (rule.agentId) {
              // Agents are global, but if the rule is scoped to an agent AND a company, we verified company above.
              // If the rule is scoped to an agent but NOT a company, it's a global agent rule, so throw.
              if (!rule.companyId) {
-                 throw new Error("Unauthorized");
+                 throw appError("UNAUTHORIZED", "Unauthorized");
              }
         }
     }
@@ -329,7 +330,7 @@ export const updateRule = tenantMutation({
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
     
-    if (!existingRule) throw new Error("Entities not found");
+    if (!existingRule) throw appError("NOT_FOUND", "Entities not found");
     assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: System Protocol modification requires valid permissions.");
 
     await ctx.db.patch(args.id, {
@@ -364,7 +365,7 @@ export const toggleRuleActive = tenantMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
-    if (!existingRule) throw new Error("Entities not found");
+    if (!existingRule) throw appError("NOT_FOUND", "Entities not found");
     assertAdminCanAccessCompany(user, existingRule.companyId);
 
     await ctx.db.patch(args.id, { isActive: args.isActive });
@@ -387,7 +388,7 @@ export const deleteRule = tenantMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
-    if (!existingRule) throw new Error("Entities not found");
+    if (!existingRule) throw appError("NOT_FOUND", "Entities not found");
     assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: architectural deletion prevented.");
 
     await ctx.db.delete(args.id);

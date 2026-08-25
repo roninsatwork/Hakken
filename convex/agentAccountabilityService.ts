@@ -12,6 +12,8 @@
  * See docs/plans/active/governance-and-trust-plan.md.
  */
 
+import { appError } from "./utils/appError";
+
 /** Long enough to say what a thing is for, short enough to be one sentence. */
 export const MINIMUM_PURPOSE_LENGTH = 10;
 
@@ -52,6 +54,6 @@ export function assertPurposeAndOwner(args: {
 }): void {
   const problems = describePurposeAndOwnerProblems(args);
   if (problems.length > 0) {
-    throw new Error(problems.join(" "));
+    throw appError("INVALID_INPUT", problems.join(" "));
   }
 }

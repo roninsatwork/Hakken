@@ -17,6 +17,7 @@ import { listOpenRouterModels } from "./openrouterProviderService";
 import { buildVertexProviderConfig, createVertexGenAIClient, isVertexTextGenerationModel, listVertexModels } from "./vertexProviderService";
 import { superAdminAction } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 
 function getProviderDisplayName(providerKey: string) {
@@ -132,7 +133,7 @@ export async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
   const listed = await listVertexModels(ai);
 
   if (listed.length === 0) {
-    throw new Error("Vertex AI returned no models.");
+    throw appError("UPSTREAM_FAILURE", "Vertex AI returned no models.");
   }
 
   const formattedModels = listed.map((model) => {
@@ -212,7 +213,7 @@ export async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
   const modelIds = await listOpenAIModels();
 
   if (modelIds.length === 0) {
-    throw new Error("OpenAI returned no models.");
+    throw appError("UPSTREAM_FAILURE", "OpenAI returned no models.");
   }
 
   const formattedModels = modelIds.map((modelId) => {
@@ -282,7 +283,7 @@ export async function syncOpenRouterModelCatalogue(ctx: ActionCtx) {
   const listed = await listOpenRouterModels();
 
   if (listed.length === 0) {
-    throw new Error("OpenRouter returned no models.");
+    throw appError("UPSTREAM_FAILURE", "OpenRouter returned no models.");
   }
 
   const formattedModels = listed.map((model) => ({
@@ -346,7 +347,7 @@ export const syncGoogleModels = superAdminAction({
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Google Vertex AI models: ${getErrorMessage(e, "Unknown error")}`);
+      throw appError("UPSTREAM_FAILURE", `Failed to sync Google Vertex AI models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -357,7 +358,7 @@ export const syncOpenAIModels = superAdminAction({
     try {
       return await syncOpenAIModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync OpenAI models: ${getErrorMessage(e, "Unknown error")}`);
+      throw appError("UPSTREAM_FAILURE", `Failed to sync OpenAI models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -368,7 +369,7 @@ export const syncOpenRouterModels = superAdminAction({
     try {
       return await syncOpenRouterModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync OpenRouter models: ${getErrorMessage(e, "Unknown error")}`);
+      throw appError("UPSTREAM_FAILURE", `Failed to sync OpenRouter models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -379,7 +380,7 @@ export const syncAnthropicModels = superAdminAction({
     try {
       return await syncAnthropicModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Anthropic models: ${getErrorMessage(e, "Unknown error")}`);
+      throw appError("UPSTREAM_FAILURE", `Failed to sync Anthropic models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -390,7 +391,7 @@ export const syncVertexModels = superAdminAction({
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Vertex Models: ${getErrorMessage(e, "Unknown error")}`);
+      throw appError("UPSTREAM_FAILURE", `Failed to sync Vertex Models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -436,7 +437,7 @@ export const probeProviderInternal = internalAction({
         const models = await listOpenRouterModels();
         detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
       } else {
-        throw new Error(`Unsupported provider '${args.providerKey}'.`);
+        throw appError("INVALID_INPUT", `Unsupported provider '${args.providerKey}'.`);
       }
 
       await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, {

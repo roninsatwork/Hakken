@@ -6,6 +6,7 @@ import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter, Reso
 import { createAnthropicProviderAdapter } from "./anthropicProviderService";
 import { createGoogleProviderAdapter } from "./googleProviderAdapter";
 import { createOpenAIProviderAdapter } from "./openaiProviderService";
+import { appError } from "./utils/appError";
 
 export function getProviderAdapter(providerKey: string): AiProviderAdapter {
   switch (providerKey) {
@@ -18,7 +19,7 @@ export function getProviderAdapter(providerKey: string): AiProviderAdapter {
     case OPENROUTER_PROVIDER_KEY:
       return createOpenRouterProviderAdapter();
     default:
-      throw new Error(`AI provider '${providerKey}' is not supported by the runtime registry.`);
+      throw appError("INVALID_INPUT", `AI provider '${providerKey}' is not supported by the runtime registry.`);
   }
 }
 

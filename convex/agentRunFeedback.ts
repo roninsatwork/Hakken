@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { adminMutation, adminQuery, tenantMutation } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
+import { appError } from "./utils/appError";
 
 const FEEDBACK_COMMENT_LIMIT = 2000;
 const FEEDBACK_PAGE_LIMIT = 500;
@@ -58,7 +59,7 @@ export const upsertForRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     const now = Date.now();
@@ -148,17 +149,17 @@ export const upsertForRunAsEndUser = tenantMutation({
     // collection stops, not just the buttons — a stale client that still
     // shows them must not keep writing.
     const config = await getSelfImprovementConfig(ctx.db);
-    if (!config.endUserFeedback) throw new Error("Feedback is switched off");
+    if (!config.endUserFeedback) throw appError("MODULE_DISABLED", "Feedback is switched off");
 
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
 
     // Ownership, not role: the run was answering this person's conversation.
     const thread = run.threadId ? await ctx.db.get(run.threadId) : null;
     const ownsRun = run.userId === userId || (thread !== null && thread.userId === userId);
-    if (!ownsRun) throw new Error("Unauthorized");
+    if (!ownsRun) throw appError("UNAUTHORIZED", "Unauthorized");
     if (user.role !== "SUPER_ADMIN" && run.companyId && run.companyId !== ctx.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const now = Date.now();
@@ -233,7 +234,7 @@ export const getForRun = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     return await ctx.db
@@ -251,7 +252,7 @@ export const getMineForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const feedback = await ctx.db

@@ -6,6 +6,7 @@ import {
   normalizeIdempotencyKey,
   recordCompletedToolCall,
 } from "./aiToolIdempotencyService";
+import { appError } from "./utils/appError";
 
 const COMPANY_OVERVIEW_MAX_CHARS = 5000;
 const COMPANY_OVERVIEW_HANDLER_MAPPING = "company.overview.update";
@@ -14,11 +15,11 @@ const IDEMPOTENCY_PURGE_BATCH_SIZE = 500;
 function normalizeOverview(value: string) {
   const overview = value.trim();
   if (overview.length === 0) {
-    throw new Error("Company overview cannot be empty.");
+    throw appError("INVALID_INPUT", "Company overview cannot be empty.");
   }
 
   if (overview.length > COMPANY_OVERVIEW_MAX_CHARS) {
-    throw new Error(`Company overview cannot exceed ${COMPANY_OVERVIEW_MAX_CHARS} characters.`);
+    throw appError("INVALID_INPUT", `Company overview cannot exceed ${COMPANY_OVERVIEW_MAX_CHARS} characters.`);
   }
 
   return overview;
@@ -36,7 +37,7 @@ export const updateCompanyOverview = internalMutation({
   handler: async (ctx, args) => {
     const overview = normalizeOverview(args.overview);
     const company = await ctx.db.get(args.companyId);
-    if (!company) throw new Error("Company not found.");
+    if (!company) throw appError("NOT_FOUND", "Company not found.");
 
     const now = Date.now();
     const idempotencyKey = normalizeIdempotencyKey(args.idempotencyKey);

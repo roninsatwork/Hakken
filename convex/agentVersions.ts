@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { appError } from "./utils/appError";
 
 export const createSnapshot = adminMutation({
   args: {
@@ -13,12 +14,12 @@ export const createSnapshot = adminMutation({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
     let companyId = args.companyId;
     if (companyId) {
       assertAdminCanAccessCompany(user, companyId);
     } else if (user.role === "ADMIN") {
-      if (!user.companyId) throw new Error("Unauthorized");
+      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
       companyId = user.companyId;
     }
 
@@ -37,7 +38,7 @@ export const getForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN") {
-      if (!user.companyId) throw new Error("Unauthorized");
+      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
       return await ctx.db
         .query("agentVersions")
         .withIndex("by_agent_company_created", (q) =>

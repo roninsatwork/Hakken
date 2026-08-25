@@ -25,6 +25,7 @@ import {
   resolveNotificationRecipients,
 } from "./aiToolNotificationService";
 import { getErrorMessage, isRecord } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -177,7 +178,7 @@ export function parseToolInputSchema(value: unknown): JsonSchema | undefined {
 
   const parsed = typeof value === "string" ? JSON.parse(value) as unknown : value;
   if (!isRecord(parsed)) {
-    throw new Error("Tool input schema must be a JSON object.");
+    throw appError("INVALID_INPUT", "Tool input schema must be a JSON object.");
   }
 
   return parsed;
@@ -188,16 +189,16 @@ export function validateToolJsonSchemaString(value: unknown, label = "Tool schem
   if (!parsed) return undefined;
 
   if (parsed.type !== undefined && parsed.type !== "object") {
-    throw new Error(`${label} must use root type "object".`);
+    throw appError("INVALID_INPUT", `${label} must use root type "object".`);
   }
 
   if (parsed.properties !== undefined && !isRecord(parsed.properties)) {
-    throw new Error(`${label} properties must be a JSON object.`);
+    throw appError("INVALID_INPUT", `${label} properties must be a JSON object.`);
   }
 
   if (parsed.required !== undefined) {
     if (!Array.isArray(parsed.required) || !parsed.required.every((entry) => typeof entry === "string")) {
-      throw new Error(`${label} required must be an array of strings.`);
+      throw appError("INVALID_INPUT", `${label} required must be an array of strings.`);
     }
   }
 
@@ -259,7 +260,7 @@ export function validateToolCallArgsAgainstSchema(args: {
 export function buildProviderToolDeclaration(tool: ToolDefinitionInput): ProviderToolDeclaration {
   const modelName = tool.modelName?.trim();
   if (!modelName) {
-    throw new Error(`Tool "${tool.name}" has no model name, so it cannot be offered to a model.`);
+    throw appError("INVALID_INPUT", `Tool "${tool.name}" has no model name, so it cannot be offered to a model.`);
   }
 
   return {
@@ -271,7 +272,7 @@ export function buildProviderToolDeclaration(tool: ToolDefinitionInput): Provide
 
 export function parseToolCallPayload(args: { name?: unknown; callArgs?: unknown }): ToolCallPayload {
   if (typeof args.name !== "string" || args.name.trim().length === 0) {
-    throw new Error("Tool call payload must include a non-empty string name.");
+    throw appError("INVALID_INPUT", "Tool call payload must include a non-empty string name.");
   }
 
   if (typeof args.callArgs === "undefined" || args.callArgs === null) {
@@ -279,7 +280,7 @@ export function parseToolCallPayload(args: { name?: unknown; callArgs?: unknown 
   }
 
   if (!isRecord(args.callArgs)) {
-    throw new Error("Tool call payload args must be a JSON object.");
+    throw appError("INVALID_INPUT", "Tool call payload args must be a JSON object.");
   }
 
   return {
@@ -390,7 +391,7 @@ export function canExecuteTool(args: {
 export function assertCanExecuteTool(args: Parameters<typeof canExecuteTool>[0]) {
   const decision = canExecuteTool(args);
   if (!decision.allowed) {
-    throw new Error(decision.reason || "Tool execution denied.");
+    throw appError("UNAUTHORIZED", decision.reason || "Tool execution denied.");
   }
 }
 
@@ -541,7 +542,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "apify.actor.run": async (input) => {
     if (!input.userId) {
-      throw new Error("An Apify job has to be started by a person, so it can be traced back to one.");
+      throw appError("UNAUTHORIZED", "An Apify job has to be started by a person, so it can be traced back to one.");
     }
 
     const actorId = getStringToolArg(input.args, "job");
@@ -574,7 +575,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesReports.generate": async (input) => {
     if (!input.agentId) {
-      throw new Error("The board report is written from an agent's knowledge, so the run needs an agent.");
+      throw appError("INVALID_INPUT", "The board report is written from an agent's knowledge, so the run needs an agent.");
     }
 
     const focus = getOptionalStringToolArg(input.args, "focus");
@@ -609,7 +610,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesCustomers.research.read": async (input) => {
     if (!input.companyId) {
-      throw new Error("Customer research needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Customer research needs a workspace, and this run has none.");
     }
 
     const accountNameKey = getOptionalStringToolArg(input.args, "accountNameKey");
@@ -629,7 +630,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesCustomers.research.record": async (input) => {
     if (!input.companyId) {
-      throw new Error("Customer research needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Customer research needs a workspace, and this run has none.");
     }
 
     const notFound = input.args.notFound === true || input.args.notFound === "true";
@@ -658,7 +659,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesCustomers.prospects.read": async (input) => {
     if (!input.companyId) {
-      throw new Error("Customer research needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Customer research needs a workspace, and this run has none.");
     }
 
     const groupName = getOptionalStringToolArg(input.args, "groupName");
@@ -680,7 +681,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesCustomers.prospects.record": async (input) => {
     if (!input.companyId) {
-      throw new Error("Customer research needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Customer research needs a workspace, and this run has none.");
     }
 
     const siteName = getStringToolArg(input.args, "siteName");
@@ -722,7 +723,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "salesCustomers.job.next": async (input) => {
     if (!input.companyId) {
-      throw new Error("Customer research needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Customer research needs a workspace, and this run has none.");
     }
 
     const couldNot = input.args.couldNot === true || input.args.couldNot === "true";
@@ -736,7 +737,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "marketDiscovery.job.next": async (input) => {
     if (!input.companyId) {
-      throw new Error("Market discovery needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Market discovery needs a workspace, and this run has none.");
     }
 
     const couldNot = input.args.couldNot === true || input.args.couldNot === "true";
@@ -750,7 +751,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "marketDiscovery.groups.record": async (input) => {
     if (!input.companyId) {
-      throw new Error("Market discovery needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Market discovery needs a workspace, and this run has none.");
     }
 
     return await input.ctx.runMutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
@@ -768,7 +769,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "marketDiscovery.groups.review": async (input) => {
     if (!input.companyId) {
-      throw new Error("Market discovery needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Market discovery needs a workspace, and this run has none.");
     }
 
     return await input.ctx.runMutation(internal.salesDataMarketDiscovery.reviewGroupInternal, {
@@ -779,7 +780,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "marketDiscovery.locations.read": async (input) => {
     if (!input.companyId) {
-      throw new Error("Market discovery needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Market discovery needs a workspace, and this run has none.");
     }
 
     const groupName = getOptionalStringToolArg(input.args, "groupName");
@@ -790,7 +791,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "marketDiscovery.locations.record": async (input) => {
     if (!input.companyId) {
-      throw new Error("Market discovery needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "Market discovery needs a workspace, and this run has none.");
     }
 
     return await input.ctx.runMutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
@@ -816,7 +817,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "opportunityReport.matchProspects": async (input) => {
     if (!input.companyId) {
-      throw new Error("The opportunity report needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "The opportunity report needs a workspace, and this run has none.");
     }
     return await input.ctx.runMutation(internal.salesOpportunityReports.runMatchingPassInternal, {
       companyId: input.companyId,
@@ -826,7 +827,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "opportunityReport.findGroupGaps": async (input) => {
     if (!input.companyId) {
-      throw new Error("The opportunity report needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "The opportunity report needs a workspace, and this run has none.");
     }
     return await input.ctx.runMutation(internal.salesOpportunityReports.runGapsPassInternal, {
       companyId: input.companyId,
@@ -835,7 +836,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "opportunityReport.saveSummary": async (input) => {
     if (!input.companyId) {
-      throw new Error("The opportunity report needs a workspace, and this run has none.");
+      throw appError("NO_ACTIVE_COMPANY", "The opportunity report needs a workspace, and this run has none.");
     }
     return await input.ctx.runMutation(internal.salesOpportunityReports.saveSummaryInternal, {
       companyId: input.companyId,
@@ -858,10 +859,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "company.overview.update": async (input) => {
     if (!input.companyId) {
-      throw new Error("Company overview updates require a tenant context.");
+      throw appError("NO_ACTIVE_COMPANY", "Company overview updates require a tenant context.");
     }
     if (!input.userId) {
-      throw new Error("Company overview updates require an authenticated actor.");
+      throw appError("UNAUTHENTICATED", "Company overview updates require an authenticated actor.");
     }
 
     const overview = getStringToolArg(input.args, "overview");
@@ -890,7 +891,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "task.create": async (input) => {
     if (!input.companyId) {
-      throw new Error("Creating a task requires a tenant context.");
+      throw appError("NO_ACTIVE_COMPANY", "Creating a task requires a tenant context.");
     }
 
     const title = getStringToolArg(input.args, "title");
@@ -904,7 +905,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     if (dueDate) {
       const parsed = Date.parse(`${dueDate}T12:00:00`);
       if (Number.isNaN(parsed)) {
-        throw new Error("dueDate must be a calendar date, formatted YYYY-MM-DD.");
+        throw appError("INVALID_INPUT", "dueDate must be a calendar date, formatted YYYY-MM-DD.");
       }
       dueAt = parsed;
     }
@@ -920,10 +921,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "notification.send": async (input) => {
     if (!input.companyId) {
-      throw new Error("Notifications require a tenant context.");
+      throw appError("NO_ACTIVE_COMPANY", "Notifications require a tenant context.");
     }
     if (!input.userId) {
-      throw new Error("Notifications require an authenticated actor.");
+      throw appError("UNAUTHENTICATED", "Notifications require an authenticated actor.");
     }
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -932,7 +933,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       // the alternative used elsewhere in this codebase is to log a simulated
       // dispatch and report success, which would tell an agent it had notified
       // someone when nothing was sent.
-      throw new Error("Email delivery is not configured for this deployment.");
+      throw appError("NOT_CONFIGURED", "Email delivery is not configured for this deployment.");
     }
 
     const decision = resolveNotificationRecipients({
@@ -942,13 +943,13 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
         { companyId: input.companyId },
       ),
     });
-    if (!decision.allowed) throw new Error(decision.reason);
+    if (!decision.allowed) throw appError("UNAUTHORIZED", decision.reason);
 
     const content = resolveNotificationContent({
       subject: getStringToolArg(input.args, "subject"),
       body: getStringToolArg(input.args, "body"),
     });
-    if (!content.ok) throw new Error(content.reason);
+    if (!content.ok) throw appError("INVALID_INPUT", content.reason);
 
     const emailBranding = await input.ctx.runQuery(internal.settings.getEmailBranding, {});
     const fromAddress = buildEmailFromAddress({
@@ -959,7 +960,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       // The placeholder sender exists so misconfigured deployments fail loudly
       // rather than sending from someone else's domain. Sending to it would be
       // an immediate bounce reported to the agent as a success.
-      throw new Error("No sender address is configured for this deployment.");
+      throw appError("NOT_CONFIGURED", "No sender address is configured for this deployment.");
     }
 
     const notification = buildAgentNotificationEmail(content, {
@@ -1002,7 +1003,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   "http.request": async (input) => {
     if (!input.toolId) {
-      throw new Error("Outbound requests require a configured connector tool.");
+      throw appError("NOT_CONFIGURED", "Outbound requests require a configured connector tool.");
     }
 
     // The base URL and credential come from the connector's configuration, not
@@ -1014,27 +1015,27 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       { toolId: input.toolId },
     );
     if (!refs || refs.length === 0) {
-      throw new Error("This connector has no configured credentials on this deployment.");
+      throw appError("NOT_CONFIGURED", "This connector has no configured credentials on this deployment.");
     }
 
     const secrets = resolveConnectorSecrets({ refs, env: process.env });
-    if (!secrets.ok) throw new Error(secrets.reason);
+    if (!secrets.ok) throw appError("NOT_CONFIGURED", secrets.reason);
 
     const baseUrl = secrets.values.base_url;
-    if (!baseUrl) throw new Error("This connector has no base URL configured.");
+    if (!baseUrl) throw appError("NOT_CONFIGURED", "This connector has no base URL configured.");
 
     const target = resolveHttpConnectorTarget({
       baseUrl,
       path: getStringToolArg(input.args, "path"),
       method: getStringToolArg(input.args, "method"),
     });
-    if (!target.ok) throw new Error(target.reason);
+    if (!target.ok) throw appError("INVALID_INPUT", target.reason);
 
     const body = resolveHttpConnectorBody({
       method: target.method,
       bodyJson: getOptionalStringToolArg(input.args, "bodyJson"),
     });
-    if (!body.ok) throw new Error(body.reason);
+    if (!body.ok) throw appError("INVALID_INPUT", body.reason);
 
     const headers: Record<string, string> = { Accept: "application/json" };
     if (secrets.values.auth_header) headers.Authorization = secrets.values.auth_header;
@@ -1058,7 +1059,8 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     } catch (error) {
       // The URL is safe to report — it is the administrator's own base plus the
       // agent's path. The headers are not, and are never included.
-      throw new Error(
+      throw appError(
+        "UPSTREAM_FAILURE",
         `The request to ${target.url} failed: `
         + `${error instanceof Error ? error.message : "unknown transport error"}`,
       );
@@ -1071,7 +1073,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       status: response.status,
       contentLength: Number.isFinite(contentLength) ? contentLength : undefined,
     });
-    if (!check.ok) throw new Error(check.reason);
+    if (!check.ok) throw appError("INVALID_INPUT", check.reason);
 
     const raw = await response.text();
     const { body: responseBody, truncated } = truncateHttpConnectorBody(raw);

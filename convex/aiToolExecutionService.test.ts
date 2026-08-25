@@ -44,7 +44,7 @@ describe("ai tool execution service", () => {
     });
     expect(validateToolJsonSchemaString(undefined)).toBeUndefined();
 
-    expect(() => validateToolJsonSchemaString('{"type":"array"}')).toThrow('root type "object"');
+    expect(() => validateToolJsonSchemaString('{"type":"array"}')).toThrow('must use root type');
     expect(() => validateToolJsonSchemaString('{"type":"object","properties":[]}')).toThrow("properties must be a JSON object");
     expect(() => validateToolJsonSchemaString('{"type":"object","required":[1]}')).toThrow("required must be an array of strings");
   });
