@@ -95,6 +95,7 @@ export const updateSystemPrompt = superAdminMutation({
 export const getAnalyticsId = publicQuery({
   reason: "Analytics id is read by the client on every page, including before sign-in.",
   args: {},
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx) => {
     /* intentionally public: required for frontend analytics mounting */
     const config = await ctx.db

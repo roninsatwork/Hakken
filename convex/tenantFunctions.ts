@@ -344,23 +344,41 @@ export function moduleMutation<ArgsValidator extends PropertyValidators, Output>
 export function publicQuery<ArgsValidator extends PropertyValidators, Output>(config: {
   reason: string;
   args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
   handler: (ctx: QueryCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
-  return query({ args: config.args, handler: config.handler });
+  return query({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: config.handler,
+  });
 }
 
 export function publicMutation<ArgsValidator extends PropertyValidators, Output>(config: {
   reason: string;
   args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
   handler: (ctx: MutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
-  return mutation({ args: config.args, handler: config.handler });
+  return mutation({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: config.handler,
+  });
 }
 
 export function publicAction<ArgsValidator extends PropertyValidators, Output>(config: {
   reason: string;
   args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
   handler: (ctx: ActionCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
-  return action({ args: config.args, handler: config.handler });
+  return action({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: config.handler,
+  });
 }

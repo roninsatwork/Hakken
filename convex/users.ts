@@ -642,6 +642,7 @@ export const getUserLogins = tenantQuery({
 export const getMyLoginsCount = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { searchTerm: v.optional(v.string()) },
+  returns: v.number(),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     if (!current || current.user.role !== "SUPER_ADMIN") return 0;

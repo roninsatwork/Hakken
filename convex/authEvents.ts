@@ -76,6 +76,7 @@ export const recordMagicLinkRequestAttempt = publicMutation({
     email: v.string(),
     provider: v.optional(v.string()),
   },
+  returns: v.object({ logged: v.boolean(), allowed: v.boolean() }),
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
     const now = Date.now();
