@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminQuery, moduleQuery } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The distiller's default-runtime half (wiki-replaces-knowledge plan, stage
@@ -310,7 +311,7 @@ export const getDistillProgressForGlobal = adminQuery({
   args: {},
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     return await distillProgressFor(ctx, undefined);
   },

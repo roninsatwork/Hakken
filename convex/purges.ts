@@ -17,6 +17,7 @@ import {
   type PurgePipelineKey,
 } from "./purgeScheduleService";
 import { AUDIT_PURGE_ACTION, isAuditPurgeRecord } from "./auditLogService";
+import { appError } from "./utils/appError";
 
 export const purgePipelineKeyValidator = v.union(
   v.literal("agentLogs"),
@@ -259,7 +260,7 @@ export const runPurgeProofInternal = internalMutation({
   handler: async (ctx, args) => {
     const alreadyRunning = await findRunningPurge(ctx, args.pipelineKey);
     if (alreadyRunning) {
-      throw new Error(`A purge for '${args.pipelineKey}' is already running.`);
+      throw appError("CONFLICT", `A purge for '${args.pipelineKey}' is already running.`);
     }
 
     const configDoc = await ctx.db
@@ -314,7 +315,7 @@ export const runManualPurge = superAdminMutation({
     // double-count; the client hiding the button is not a guard.
     const alreadyRunning = await findRunningPurge(ctx, args.pipelineKey);
     if (alreadyRunning) {
-      throw new Error(`A purge for '${args.pipelineKey}' is already running.`);
+      throw appError("CONFLICT", `A purge for '${args.pipelineKey}' is already running.`);
     }
 
     const configDoc = await ctx.db
@@ -987,11 +988,11 @@ export const cancelPurge = superAdminMutation({
 
     const history = await ctx.db.get(args.historyId);
     if (!history) {
-      throw new Error("Purge execution history record not found.");
+      throw appError("NOT_FOUND", "Purge execution history record not found.");
     }
 
     if (history.status !== "RUNNING") {
-      throw new Error(`Purge run ${args.historyId} is not actively running (status: ${history.status}).`);
+      throw appError("CONFLICT", `Purge run ${args.historyId} is not actively running (status: ${history.status}).`);
     }
 
     const now = Date.now();

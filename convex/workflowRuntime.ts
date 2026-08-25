@@ -31,6 +31,7 @@ import {
   getRuntimeErrorMessage,
 } from "./workflowRuntimeService";
 import { decideStepFailure } from "./workflowRetryService";
+import { appError } from "./utils/appError";
 
 async function executeAgentRuntimeNode(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
@@ -173,7 +174,7 @@ async function executeTaskRuntimeNode(ctx: ActionCtx, args: {
     : null;
   const companyId = creator?.companyId;
   if (!companyId) {
-    throw new Error("This workflow has no workspace, so it cannot raise a task for anyone.");
+    throw appError("NO_ACTIVE_COMPANY", "This workflow has no workspace, so it cannot raise a task for anyone.");
   }
 
   const wanted = buildWorkflowTask({
@@ -264,11 +265,11 @@ export const executeNode = internalAction({
       }
       
       const workflow = await ctx.runQuery(internal.workflows.internalGet, { id: args.workflowId });
-      if (!workflow) throw new Error("Workflow not found");
+      if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
 
       const nodes = parseWorkflowNodes(workflow.nodes);
       const node = nodes.find((candidate) => candidate.id === args.nodeId);
-      if (!node) throw new Error(`Node ${args.nodeId} not found in graph topology`);
+      if (!node) throw appError("NOT_FOUND", `Node ${args.nodeId} not found in graph topology`);
       failedNodeType = node.type;
 
       // Safely claim a PENDING execution step (prevents collision in iterator fan-outs)
@@ -315,7 +316,7 @@ export const executeNode = internalAction({
         try {
           outputPayload = await executeApiActionRuntimeNode({ currentNodeData, globalStatePayload });
         } catch (error: unknown) {
-          throw new Error('API Action request failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'API Action request failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "codeNode") {
@@ -326,7 +327,7 @@ export const executeNode = internalAction({
             executionState: execution.state,
           });
         } catch (error: unknown) {
-          throw new Error("Safe code transformation failed: " + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", "Safe code transformation failed: " + getRuntimeErrorMessage(error));
         }
       }
 
@@ -334,7 +335,7 @@ export const executeNode = internalAction({
         try {
           outputPayload = executeLogicNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Logic routing failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Logic routing failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "databaseNode") {
@@ -345,28 +346,28 @@ export const executeNode = internalAction({
             workflowId: args.workflowId,
           });
         } catch (error: unknown) {
-          throw new Error('Database Action failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Database Action failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "waitNode") {
         try {
           outputPayload = executeWaitNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Wait config failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Wait config failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "approvalNode") {
         try {
           outputPayload = executeApprovalNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Approval execution failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Approval execution failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "iteratorNode") {
         try {
           outputPayload = executeIteratorNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Iterator logic failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Iterator logic failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "mergeNode") {
@@ -377,7 +378,7 @@ export const executeNode = internalAction({
             workflowEdges: workflow.edges,
           });
         } catch(error: unknown) {
-          throw new Error('Merge / Sync processing failed: ' + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", 'Merge / Sync processing failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "emailNode") {
@@ -389,7 +390,7 @@ export const executeNode = internalAction({
             globalStatePayload,
           });
         } catch(error: unknown) {
-             throw new Error("Email dispatch failed: " + getRuntimeErrorMessage(error));
+             throw appError("UPSTREAM_FAILURE", "Email dispatch failed: " + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "taskNode") {
@@ -400,7 +401,7 @@ export const executeNode = internalAction({
             globalStatePayload,
           });
         } catch (error: unknown) {
-          throw new Error("Raising a task failed: " + getRuntimeErrorMessage(error));
+          throw appError("UPSTREAM_FAILURE", "Raising a task failed: " + getRuntimeErrorMessage(error));
         }
       }
       else {
@@ -501,8 +502,8 @@ export const resumeApprovalStep = superAdminAction({
     const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, {
       id: args.executionId,
     });
-    if (!execution) throw new Error("Workflow execution not found");
-    if (!execution.workflowId) throw new Error("Workflow execution has no workflow");
+    if (!execution) throw appError("NOT_FOUND", "Workflow execution not found");
+    if (!execution.workflowId) throw appError("NOT_FOUND", "Workflow execution has no workflow");
 
     if (args.action === "REJECTED") {
         await ctx.runMutation(internal.workflowEngine.rejectNodeApproval, {

@@ -4,6 +4,7 @@ import {
   withProviderRetry,
   type ProviderRetryPolicy,
 } from "./aiProviderRetryService";
+import { appError } from "./utils/appError";
 
 export type ProviderFetch = typeof fetch;
 
@@ -62,7 +63,7 @@ export async function readProviderSseStream(
 ) {
   if (!response.ok || !response.body) {
     const detail = response.ok ? "no response body" : await response.text();
-    throw new Error(`${providerName} request failed (${response.status}): ${detail.slice(0, 500)}`);
+    throw appError("UPSTREAM_FAILURE", `${providerName} request failed (${response.status}): ${detail.slice(0, 500)}`);
   }
 
   const reader = response.body.getReader();
@@ -85,7 +86,7 @@ export async function readProviderSseStream(
 export function assertTextOnlyContents(contents: Array<{ type: string }>, providerName: string) {
   const unsupported = contents.find((part) => part.type !== "text");
   if (unsupported) {
-    throw new Error(`${providerName} adapter currently supports text-only generation for this runtime path.`);
+    throw appError("INVALID_INPUT", `${providerName} adapter currently supports text-only generation for this runtime path.`);
   }
 }
 

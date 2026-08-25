@@ -3,6 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery, superAdminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The money view (Anthony's pick, 2026-08-17): what the AI handled, and
@@ -176,7 +177,7 @@ export const setAssumptionsForGlobal = adminMutation({
   args: assumptionArgs,
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to platform settings");
+      throw appError("UNAUTHORIZED", "Unauthorized access to platform settings");
     }
     const now = Date.now();
     for (const [key, value] of [

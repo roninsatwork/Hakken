@@ -8,6 +8,7 @@ import {
   paginateItems,
   threadMatchesSearch,
 } from "./chatAdminService";
+import { appError } from "./utils/appError";
 
 const CHAT_LOG_SEARCH_CANDIDATE_LIMIT = 500;
 const ADMIN_THREAD_MESSAGE_LIMIT = 500;
@@ -64,7 +65,7 @@ export const getOffsetPaginatedCompanyThreads = adminQuery({
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const allThreads = await ctx.db
@@ -156,7 +157,7 @@ export const getPaginatedCompanyThreads = adminQuery({
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const term = normalizeSearchTerm(args.searchTerm);
@@ -209,12 +210,12 @@ export const getCompanyThreadById = adminQuery({
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.companyId !== args.companyId) {
-      throw new Error("Thread not found");
+      throw appError("NOT_FOUND", "Thread not found");
     }
 
     const user = thread.userId ? await ctx.db.get(thread.userId) : null;
@@ -233,7 +234,7 @@ export const getAdminThreadMessages = adminQuery({
     const thread = await ctx.db.get(args.threadId);
     
     if (admin.role !== "SUPER_ADMIN" && (!thread?.companyId || !canReadCompanyThreads(admin, thread.companyId))) {
-      throw new Error("Unauthorized: Cross-boundary access denied.");
+      throw appError("UNAUTHORIZED", "Unauthorized: Cross-boundary access denied.");
     }
 
     return await ctx.db

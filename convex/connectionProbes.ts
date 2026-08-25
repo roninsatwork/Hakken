@@ -5,6 +5,7 @@ import { adminQuery, superAdminAction } from "./tenantFunctions";
 import { resolveConnectorSecret } from "./connectorSecretResolver";
 import { TWILIO_AUTH_TOKEN_SECRET_REF } from "./toolConnectorDefinitions";
 import { getErrorMessage } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 /**
  * Connections that are really checked (seven-gaps plan, phase 2).
@@ -170,7 +171,7 @@ export const listConnections = adminQuery({
   args: {},
   handler: async (ctx): Promise<ConnectionRow[]> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to platform maintenance");
+      throw appError("UNAUTHORIZED", "Unauthorized access to platform maintenance");
     }
     const rows: ConnectionRow[] = [];
 

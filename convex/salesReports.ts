@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { moduleQuery } from "./tenantFunctions";
 import { REPORTS_MODULE_KEY } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 
 export const getLatestReport = moduleQuery({
   module: REPORTS_MODULE_KEY,
@@ -14,7 +15,7 @@ export const getLatestReport = moduleQuery({
       let reports;
       if (user.role !== "SUPER_ADMIN") {
           const companyId = getActiveCompanyId(user);
-          if (!companyId) throw new Error("Unauthorized: Orphaned administrator account.");
+          if (!companyId) throw appError("UNAUTHORIZED", "Unauthorized: Orphaned administrator account.");
           reports = await ctx.db.query("salesReports")
             .withIndex("by_company", q => q.eq("companyId", companyId))
             .order("desc")

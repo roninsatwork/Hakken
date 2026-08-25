@@ -13,6 +13,7 @@ import {
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 import { publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 const PLAN_CATALOG_LIMIT = 100;
 const BILLING_RESET_BATCH_SIZE = 500;
@@ -162,7 +163,7 @@ export const deletePlan = superAdminMutation({
       .take(101);
 
     if (companiesAssigned.length > 0) {
-      throw new Error(getAssignedPlanDeleteErrorMessage(Math.min(companiesAssigned.length, 100)));
+      throw appError("CONFLICT", getAssignedPlanDeleteErrorMessage(Math.min(companiesAssigned.length, 100)));
     }
 
     await ctx.db.delete(args.id);

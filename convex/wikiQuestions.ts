@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * Open questions (wiki-agents plan, phases 1-2): the staff's findings, for
@@ -156,7 +157,7 @@ export const listOpenQuestionsForGlobal = adminQuery({
   args: {},
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     const rows = await ctx.db
       .query("wikiOpenQuestions")
@@ -173,7 +174,7 @@ export const dismissOpenQuestionForGlobal = adminMutation({
   args: { questionId: v.id("wikiOpenQuestions") },
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     await dismissCore(ctx, { companyId: undefined, userId: ctx.userId, ...args });
   },
@@ -188,7 +189,7 @@ async function dismissCore(
   }
 ): Promise<void> {
   const question = await ctx.db.get(args.questionId);
-  if (!question || question.companyId !== args.companyId) throw new Error("Question not found.");
+  if (!question || question.companyId !== args.companyId) throw appError("NOT_FOUND", "Question not found.");
   if (question.status !== "OPEN") return;
   await ctx.db.patch(question._id, {
     status: "DISMISSED",
@@ -210,7 +211,7 @@ export const dismissOpenQuestion = adminMutation({
   args: { questionId: v.id("wikiOpenQuestions") },
   handler: async (ctx, args) => {
     const companyId = getActiveCompanyId(ctx.user);
-    if (!companyId) throw new Error("No workspace selected.");
+    if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No workspace selected.");
     await dismissCore(ctx, { companyId, userId: ctx.userId, ...args });
   },
 });

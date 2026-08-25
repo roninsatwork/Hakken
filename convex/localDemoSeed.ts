@@ -6,6 +6,7 @@ import { getAgentTemplateById } from "./agentTemplates";
 import { buildGlobalAgentRecord, buildCreateAgentFromTemplateAuditMetadata } from "./agentService";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { publicMutation } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 const DEMO_COMPANY_NAME = "Sonae Demo Company";
 const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@sonae.test";
@@ -22,20 +23,20 @@ const DEFAULT_USE_CASES = ["agent", "workflow", "chat", "report", "embedding"];
 
 function assertLocalDemoSeedEnabled(secret: string) {
   if (process.env.LOCAL_DEMO_SEED_ENVIRONMENT === "production") {
-    throw new Error("Local demo seed is not available in production.");
+    throw appError("UNAUTHORIZED", "Local demo seed is not available in production.");
   }
 
   if (process.env.LOCAL_DEMO_SEED_ENABLED !== "1") {
-    throw new Error("Local demo seed is disabled.");
+    throw appError("MODULE_DISABLED", "Local demo seed is disabled.");
   }
 
   const expectedSecret = process.env.LOCAL_DEMO_SEED_SECRET;
   if (!expectedSecret) {
-    throw new Error("Local demo seed secret is not configured.");
+    throw appError("NOT_CONFIGURED", "Local demo seed secret is not configured.");
   }
 
   if (secret !== expectedSecret) {
-    throw new Error("Invalid local demo seed secret.");
+    throw appError("INVALID_INPUT", "Invalid local demo seed secret.");
   }
 }
 
@@ -220,7 +221,7 @@ async function upsertKnowledgeTool(ctx: MutationCtx, createdBy: Id<"users">) {
 
 async function upsertDemoAgent(ctx: MutationCtx, createdBy: Id<"users">) {
   const template = getAgentTemplateById(DEMO_TEMPLATE_ID);
-  if (!template) throw new Error("Demo agent template is missing.");
+  if (!template) throw appError("INVALID_INPUT", "Demo agent template is missing.");
 
   const existing = await ctx.db
     .query("agents")

@@ -10,6 +10,7 @@ import {
   requestProviderJson,
   type ProviderFetch,
 } from "./providerHttpService";
+import { appError } from "./utils/appError";
 
 type OpenAIResponsesPayload = {
   output_text?: string;
@@ -53,7 +54,7 @@ export function buildOpenAIProviderConfig(args: { env: OpenAIProviderEnv }) {
   const apiKey = getOpenAIApiKey(args.env);
 
   if (!apiKey) {
-    throw new Error("OpenAI credentials are missing OPENAI_API_KEY.");
+    throw appError("NOT_CONFIGURED", "OpenAI credentials are missing OPENAI_API_KEY.");
   }
 
   return {

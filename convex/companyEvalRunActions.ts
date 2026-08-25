@@ -13,6 +13,7 @@ import {
   type GradeVerdict,
 } from "./agentEvalGradingService";
 import { calculateModelCostGBP } from "./aiCostService";
+import { appError } from "./utils/appError";
 
 /**
  * Run one company check for real.
@@ -101,7 +102,7 @@ export const runCompanyCheck = internalAction({
     const evalCase = await ctx.runQuery(internal.companyEvals.getCaseForRunInternal, {
       evalCaseId: args.evalCaseId,
     });
-    if (!evalCase) throw new Error("Eval case not found");
+    if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");
 
     // Opt-in repeat sampling. One ask cannot tell a check that always passes from one
     // that passes two times in three, and the second is a check that fails one

@@ -7,6 +7,7 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
 import { WIKI_STAFF } from "./wikiStaff";
+import { appError } from "./utils/appError";
 
 const SCHEDULE_LIST_LIMIT = 100;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
@@ -61,7 +62,7 @@ export const createSchedule = superAdminMutation({
     const { userId } = ctx;
     
     if (!args.workflowId && !args.agentId) {
-      throw new Error("Must select a target payload (Workflow or Agent).");
+      throw appError("INVALID_INPUT", "Must select a target payload (Workflow or Agent).");
     }
 
     return await ctx.db.insert("schedules", {
@@ -97,7 +98,7 @@ export const updateSchedule = superAdminMutation({
   },
   handler: async (ctx, args) => {
     if (!args.workflowId && !args.agentId) {
-      throw new Error("Must select a target payload (Workflow or Agent).");
+      throw appError("INVALID_INPUT", "Must select a target payload (Workflow or Agent).");
     }
 
     await ctx.db.patch(args.scheduleId, {
@@ -162,7 +163,7 @@ export const manualRunSchedule = superAdminMutation({
     const { userId } = ctx;
     
     if (!args.workflowId && !args.agentId) {
-      throw new Error("Cannot run: no target specified.");
+      throw appError("INVALID_INPUT", "Cannot run: no target specified.");
     }
 
     const now = Date.now();
@@ -187,7 +188,7 @@ export const manualRunSchedule = superAdminMutation({
 
     if (args.agentId) {
       const agent = await ctx.db.get(args.agentId);
-      if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
+      if (!agent || agent.isActive === false) throw appError("NOT_FOUND", "Agent not found or inactive.");
 
       // What the caller asked for wins, then the agent's own standing job,
       // then what it says it is for. Never a refusal: pressing Run runs the

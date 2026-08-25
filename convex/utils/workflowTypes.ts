@@ -1,5 +1,6 @@
 import type { Id } from "../_generated/dataModel";
 import { isRecord } from "./lang";
+import { appError } from "./appError";
 
 export type JsonValue =
   | string
@@ -108,7 +109,7 @@ function toWorkflowEdge(value: unknown): WorkflowEdge | null {
 
 function assertJsonArray(value: unknown, label: string): unknown[] {
   if (!Array.isArray(value)) {
-    throw new Error(`${label} must be a JSON array.`);
+    throw appError("INVALID_INPUT", `${label} must be a JSON array.`);
   }
 
   return value;
@@ -138,7 +139,7 @@ export function validateWorkflowNodesJson(json: string | undefined): WorkflowNod
   return parsed.map((value, index) => {
     const node = toWorkflowNode(value);
     if (!node) {
-      throw new Error(`Workflow node at index ${index} must include a string id, optional string type, and valid data object.`);
+      throw appError("INVALID_INPUT", `Workflow node at index ${index} must include a string id, optional string type, and valid data object.`);
     }
     return node;
   });
@@ -150,7 +151,7 @@ export function validateWorkflowEdgesJson(json: string | undefined): WorkflowEdg
   return parsed.map((value, index) => {
     const edge = toWorkflowEdge(value);
     if (!edge) {
-      throw new Error(`Workflow edge at index ${index} must include string source and target node ids.`);
+      throw appError("INVALID_INPUT", `Workflow edge at index ${index} must include string source and target node ids.`);
     }
     return edge;
   });

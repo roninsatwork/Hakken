@@ -11,6 +11,7 @@ import {
   REPORT_KNOWLEDGE_MAX_CHARS,
 } from "./salesReportContextService";
 import { getErrorMessage } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 
 export const generateReport = internalAction({
@@ -25,7 +26,7 @@ export const generateReport = internalAction({
   handler: async (ctx, args) => {
     // 1. Fetch the Agent to get System Prompt and Document IDs
     const agent = await ctx.runQuery(internal.salesReports.getAgentQuery, { agentId: args.agentId });
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     const systemPrompt = agent.systemPrompt || "You are a Sales Data Analyst.";
     
@@ -53,7 +54,7 @@ export const generateReport = internalAction({
     }
 
     if (!rawCsvContext || rawCsvContext.trim() === "") {
-        throw new Error("Could not extract any CSV data from the knowledge base.");
+        throw appError("INVALID_INPUT", "Could not extract any CSV data from the knowledge base.");
     }
 
     const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -309,7 +310,7 @@ Total length: 600-900 words. Never pad.
         });
 
         const jsonText = modelResponse.text;
-        if (!jsonText) throw new Error("Model returned empty response");
+        if (!jsonText) throw appError("UPSTREAM_FAILURE", "Model returned empty response");
 
         // Log the successful completion
         await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {

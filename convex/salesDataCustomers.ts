@@ -17,6 +17,7 @@ import {
 import { extraFieldForType } from "./salesDataCustomerFields";
 import { supersedeResearchForFields } from "./salesDataResearch";
 import { RESEARCHABLE_FIELDS, type ResearchField } from "./salesDataResearchService";
+import { appError } from "./utils/appError";
 
 /**
  * The customer side of the workspace section.
@@ -643,12 +644,12 @@ export const saveCustomerDetails = tenantMutation({
     const companyId = await requireSalesDataCompany(ctx);
     const userId = ctx.userId;
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw new Error("There is no imported data to attach details to.");
+    if (!currentImport) throw appError("INVALID_INPUT", "There is no imported data to attach details to.");
 
     // A prospect has the same record as a customer and the same form, so the
     // save has to accept its key too — it simply has no account behind it.
     const subject = await resolveSubject(ctx, companyId, currentImport._id, args.accountNameKey);
-    if (!subject) throw new Error("That customer is not in the current import.");
+    if (!subject) throw appError("NOT_FOUND", "That customer is not in the current import.");
 
     const { accountNameKey, bedrooms, pupils, ...text } = args;
 

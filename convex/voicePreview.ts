@@ -10,6 +10,7 @@ import {
   REALTIME_MODEL_USE_CASE,
 } from "./aiModelService";
 import { SPEECH_VOICE_KEYS, type SpeechVoiceKey } from "./voiceSettings";
+import { appError } from "./utils/appError";
 
 /**
  * Hearing a voice before choosing it.
@@ -45,10 +46,10 @@ export const mintVoicePreviewTicket = tenantAction({
   handler: async (ctx, args): Promise<{ relayUrl: string; ticket: string }> => {
     const { user, userId } = ctx;
     if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-      throw new Error("Only an administrator can preview voices.");
+      throw appError("UNAUTHORIZED", "Only an administrator can preview voices.");
     }
     if (!SPEECH_VOICE_KEYS.includes(args.voice as SpeechVoiceKey)) {
-      throw new Error("That voice is not one the platform can speak with.");
+      throw appError("INVALID_INPUT", "That voice is not one the platform can speak with.");
     }
 
     await ctx.runMutation(internal.aiActionRequests.reserve, {
@@ -62,7 +63,8 @@ export const mintVoicePreviewTicket = tenantAction({
     const relayUrl = process.env.VOICE_RELAY_URL?.trim();
     const relaySecret = process.env.VOICE_RELAY_SECRET?.trim();
     if (!relayUrl || !relaySecret) {
-      throw new Error(
+      throw appError(
+        "NOT_CONFIGURED",
         "The live voice relay is not configured. Set VOICE_RELAY_URL and VOICE_RELAY_SECRET on this deployment."
       );
     }
@@ -76,7 +78,8 @@ export const mintVoicePreviewTicket = tenantAction({
       modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY ||
       !isSpeechToSpeechModelId(modelConfig.providerModelId)
     ) {
-      throw new Error(
+      throw appError(
+        "NOT_CONFIGURED",
         "Previewing a voice needs a Google live-audio model. In Model Defaults, set the Real-time voice job to one."
       );
     }

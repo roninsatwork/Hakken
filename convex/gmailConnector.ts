@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 
 /**
  * The Gmail connector's working half: reading the connected mailbox and
@@ -183,7 +184,7 @@ async function gmailFetch(accessToken: string, path: string, init?: RequestInit)
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
-    throw new Error(`Gmail request failed (${response.status}): ${detail}`);
+    throw appError("UPSTREAM_FAILURE", `Gmail request failed (${response.status}): ${detail}`);
   }
   return await response.json();
 }

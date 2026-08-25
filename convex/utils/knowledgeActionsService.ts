@@ -4,6 +4,8 @@
  * add anything else and consumers must tolerate it.
  * https://github.com/GoogleCloudPlatform/knowledge-catalog — okf/SPEC.md
  */
+import { appError } from "./appError";
+
 export type OkfFrontmatter = {
   type?: string;
   title?: string;
@@ -139,7 +141,7 @@ export function prepareKnowledgeMarkdown(rawText: string) {
 export function chunkKnowledgeText(text: string, chunkSize = 1000, overlap = 200): string[] {
   const cleanedText = text.replace(/\s+/g, " ").trim();
   if (!cleanedText) return [];
-  if (chunkSize <= 0) throw new Error("chunkSize must be greater than 0");
+  if (chunkSize <= 0) throw appError("INVALID_INPUT", "chunkSize must be greater than 0");
 
   const safeOverlap = Math.max(0, Math.min(overlap, chunkSize - 1));
   const chunks: string[] = [];

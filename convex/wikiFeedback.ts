@@ -9,6 +9,7 @@ import {
   isSubstantiveQuestion,
   questionKey,
 } from "./wikiFeedbackService";
+import { appError } from "./utils/appError";
 
 /**
  * The loop's bookkeeping (closing-the-loop-plan.md, phases 1–2): one
@@ -285,7 +286,7 @@ export const listUnansweredForGlobal = adminQuery({
   args: {},
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     const rows = await ctx.db
       .query("wikiUnansweredQuestions")
@@ -310,10 +311,10 @@ export const dismissUnansweredForGlobal = adminMutation({
   args: { unansweredId: v.id("wikiUnansweredQuestions") },
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     const row = await ctx.db.get(args.unansweredId);
-    if (!row || row.companyId !== undefined) throw new Error("Question not found.");
+    if (!row || row.companyId !== undefined) throw appError("NOT_FOUND", "Question not found.");
     if (row.status !== "OPEN") return;
     await ctx.db.patch(row._id, { status: "DISMISSED" });
     await ctx.db.insert("auditLogs", {
@@ -333,7 +334,7 @@ export const dismissUnansweredForCompany = adminMutation({
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const row = await ctx.db.get(args.unansweredId);
-    if (!row || row.companyId !== args.companyId) throw new Error("Question not found.");
+    if (!row || row.companyId !== args.companyId) throw appError("NOT_FOUND", "Question not found.");
     if (row.status !== "OPEN") return;
     const now = Date.now();
     await ctx.db.patch(row._id, { status: "DISMISSED" });

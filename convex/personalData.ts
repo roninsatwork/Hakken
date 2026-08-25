@@ -16,6 +16,7 @@ import {
   type PersonalDataSection,
   type SubjectAccessResult,
 } from "./personalDataService";
+import { appError } from "./utils/appError";
 
 /**
  * Answering the two questions a person can ask about their own data: what do
@@ -169,7 +170,7 @@ export const produceSubjectAccess = governanceAction({
       // The same answer whether or not the address exists would be pointless
       // here: the person asking is an administrator answering a legal request,
       // not an anonymous caller probing for accounts.
-      throw new Error("No account was found for that email address.");
+      throw appError("NOT_FOUND", "No account was found for that email address.");
     }
 
     const person = { ...found, userId: found.userId as Id<"users"> };
@@ -302,13 +303,13 @@ export const erase = superAdminAction({
   args: { email: v.string() },
   handler: async (ctx, args): Promise<ErasureResult> => {
     const found = await ctx.runQuery(internal.personalData.findByEmail, { email: args.email });
-    if (!found) throw new Error("No account was found for that email address.");
+    if (!found) throw appError("NOT_FOUND", "No account was found for that email address.");
     const person = { ...found, userId: found.userId as Id<"users"> };
 
     if (person.userId === ctx.userId) {
       // Erasing yourself mid-request would end the session that is performing
       // the erasure, leaving it half done and nobody signed in to finish it.
-      throw new Error("You cannot erase your own account from here. Ask another administrator.");
+      throw appError("UNAUTHORIZED", "You cannot erase your own account from here. Ask another administrator.");
     }
 
     const tallies: ErasureTally[] = [];

@@ -13,6 +13,7 @@ import {
 import { effectiveModulesFor } from "./tenantFunctions";
 import { SALES_DATA_MODULE_KEY } from "./utils/salesDataModule";
 import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * Reading and writing the imported workbook.
@@ -48,7 +49,7 @@ export async function requireSalesDataCompany(
   const company = await ctx.db.get(companyId);
 
   if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
-    throw new Error(MODULE_DISABLED_MESSAGE);
+    throw appError("MODULE_DISABLED", MODULE_DISABLED_MESSAGE);
   }
 
   return companyId;
@@ -695,13 +696,13 @@ export const startImportInternal = internalMutation({
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
     if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
-      throw new Error(MODULE_DISABLED_MESSAGE);
+      throw appError("MODULE_DISABLED", MODULE_DISABLED_MESSAGE);
     }
 
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw appError("UNAUTHORIZED", "Unauthorized");
     if (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     return await ctx.db.insert("salesDataImports", {
@@ -1046,7 +1047,7 @@ export const completeImportInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const record = await ctx.db.get(args.importId);
-    if (!record) throw new Error("Import not found");
+    if (!record) throw appError("NOT_FOUND", "Import not found");
 
     const now = Date.now();
 

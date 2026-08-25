@@ -22,9 +22,10 @@ import { ConvexError } from "convex/values";
  *     green across the conversion.
  *
  * The request-path and admin tiers converted on 2026-08-21 (foundation-quality
- * plan, phase 2): ~340 call sites now, with ~450 plain throws left in the
- * internal/vertical tail. `src/app-error-conversion.test.ts` holds the line —
- * every file off its shrink-only NOT_YET_CONVERTED list must stay clean.
+ * plan, phase 2); the internal and vertical tail followed on 2026-08-25, which
+ * left the frozen movement demo as the only backend file still throwing plainly.
+ * `src/app-error-conversion.test.ts` holds the line — every file off its
+ * shrink-only NOT_YET_CONVERTED list must stay clean.
  */
 
 /**

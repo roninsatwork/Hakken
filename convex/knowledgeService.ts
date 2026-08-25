@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 
 export type KnowledgeScope = {
   companyId?: Id<"companies">;
@@ -41,14 +42,14 @@ export function assertCanAccessKnowledgeScope(
 ) {
   if (!companyId) {
     if (user.role !== "SUPER_ADMIN") {
-      throw new Error(globalMessage);
+      throw appError("UNAUTHORIZED", globalMessage);
     }
     return;
   }
 
   const activeCompanyId = getActiveCompanyId(user);
   if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || activeCompanyId !== companyId)) {
-    throw new Error(companyMessage);
+    throw appError("UNAUTHORIZED", companyMessage);
   }
 }
 

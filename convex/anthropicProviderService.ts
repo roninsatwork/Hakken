@@ -10,6 +10,7 @@ import {
   requestProviderJson,
   type ProviderFetch,
 } from "./providerHttpService";
+import { appError } from "./utils/appError";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
 const DEFAULT_MAX_TOKENS = 1024;
@@ -41,7 +42,7 @@ export type AnthropicProviderEnv = {
 
 export function buildAnthropicProviderConfig(args: { env: AnthropicProviderEnv }) {
   if (!args.env.ANTHROPIC_API_KEY) {
-    throw new Error("Anthropic credentials are missing ANTHROPIC_API_KEY.");
+    throw appError("NOT_CONFIGURED", "Anthropic credentials are missing ANTHROPIC_API_KEY.");
   }
 
   return {

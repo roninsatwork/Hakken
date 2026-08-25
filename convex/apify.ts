@@ -16,20 +16,21 @@ import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantAction } from "./tenantFunctions";
 import { RIGHTMOVE_ACTOR_ID, collectUrls } from "./apifyActors";
+import { appError } from "./utils/appError";
 
 type ApifyRun = Doc<"apifyRuns">;
 
 async function requireApifyRunAccess(ctx: ActionCtx, runId: string) {
   const user = await ctx.runQuery(api.users.getMe);
-  if (!user) throw new Error("Unauthenticated");
+  if (!user) throw appError("UNAUTHENTICATED", "Unauthenticated");
 
   const run: ApifyRun | null = await ctx.runQuery(internal.webhooks.getRunByRunIdInternal, { runId });
-  if (!run) throw new Error("Run not found");
+  if (!run) throw appError("NOT_FOUND", "Run not found");
 
   if (user.role !== "SUPER_ADMIN") {
     const activeCompanyId = user.impersonatingCompanyId || user.companyId;
     if (!activeCompanyId || run.companyId !== activeCompanyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
   }
 
@@ -38,10 +39,10 @@ async function requireApifyRunAccess(ctx: ActionCtx, runId: string) {
 
 async function syncApifyRunStatus(runId: string) {
   const apifyToken = process.env.APIFY_API_TOKEN;
-  if (!apifyToken) throw new Error("Apify token not configured");
+  if (!apifyToken) throw appError("NOT_CONFIGURED", "Apify token not configured");
 
   const run = await getRun(apifyToken, runId);
-  if (!run) throw new Error("Run not found on Apify");
+  if (!run) throw appError("NOT_FOUND", "Run not found on Apify");
 
   return { token: apifyToken, run };
 }
@@ -69,10 +70,10 @@ export const startApifyActorInternal = internalAction({
     try {
       input = JSON.parse(args.inputJson);
     } catch {
-      throw new Error("The settings for this Apify job were not valid JSON.");
+      throw appError("INVALID_INPUT", "The settings for this Apify job were not valid JSON.");
     }
     if (input === null || typeof input !== "object" || Array.isArray(input)) {
-      throw new Error("The settings for this Apify job must be a set of named values.");
+      throw appError("INVALID_INPUT", "The settings for this Apify job must be a set of named values.");
     }
 
     // Every address the actor is pointed at is checked, wherever it appears in
@@ -113,10 +114,10 @@ export const describeApifyActorInternal = internalAction({
   },
   handler: async (_ctx, args): Promise<unknown> => {
     const apifyToken = process.env.APIFY_API_TOKEN;
-    if (!apifyToken) throw new Error("Apify API Token not configured.");
+    if (!apifyToken) throw appError("NOT_CONFIGURED", "Apify API Token not configured.");
     if (!args.actorId) {
       const term = (args.search ?? "").trim();
-      if (!term) throw new Error("Give either something to search for, or a job id.");
+      if (!term) throw appError("INVALID_INPUT", "Give either something to search for, or a job id.");
 
       const items = await searchStore(apifyToken, term, APIFY_SEARCH_LIMIT);
       return {
@@ -130,7 +131,7 @@ export const describeApifyActorInternal = internalAction({
     }
 
     const actor = await getActor(apifyToken, args.actorId);
-    if (!actor) throw new Error(`No Apify job found with the id "${args.actorId}".`);
+    if (!actor) throw appError("NOT_FOUND", `No Apify job found with the id "${args.actorId}".`);
 
     // The settings live on the build, not the job record. Older builds expose
     // them on a deprecated field, so both are read rather than assuming which
@@ -181,13 +182,13 @@ async function startApifyActor(
   }
 ): Promise<string> {
     const apifyToken = process.env.APIFY_API_TOKEN;
-    if (!apifyToken) throw new Error("Apify API Token not configured.");
+    if (!apifyToken) throw appError("NOT_CONFIGURED", "Apify API Token not configured.");
 
     const siteUrl = process.env.CONVEX_SITE_URL;
-    if (!siteUrl) throw new Error("Convex Site URL not configured.");
+    if (!siteUrl) throw appError("NOT_CONFIGURED", "Convex Site URL not configured.");
 
     const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
-    if (!webhookSecret) throw new Error("APIFY_WEBHOOK_SECRET environment variable is missing.");
+    if (!webhookSecret) throw appError("NOT_CONFIGURED", "APIFY_WEBHOOK_SECRET environment variable is missing.");
 
     const webhookUrl = `${siteUrl}/apify-webhook`;
 
@@ -230,7 +231,7 @@ export const startRightmoveScrape = tenantAction({
   },
   handler: async (ctx, args): Promise<string> => {
     const user = await ctx.runQuery(api.users.getMe);
-    if (!user) throw new Error("Unauthenticated");
+    if (!user) throw appError("UNAUTHENTICATED", "Unauthenticated");
 
     for (const url of args.listUrls) {
       validateSafeUrl(url, "Rightmove Scraper");
@@ -291,7 +292,7 @@ export const fetchDatasetAndStore = internalAction({
   },
   handler: async (ctx, args) => {
     const apifyToken = process.env.APIFY_API_TOKEN;
-    if (!apifyToken) throw new Error("Apify API Token not configured.");
+    if (!apifyToken) throw appError("NOT_CONFIGURED", "Apify API Token not configured.");
 
     const items = await listDatasetItems(apifyToken, args.datasetId);
 
@@ -331,7 +332,7 @@ async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
     return run.status;
   }
 
-  if (!run.defaultDatasetId) throw new Error("Apify run has no results to read.");
+  if (!run.defaultDatasetId) throw appError("NOT_FOUND", "Apify run has no results to read.");
   const items = await listDatasetItems(token, run.defaultDatasetId);
 
   await ctx.runMutation(internal.webhooks.storeRightmoveData, {
@@ -347,15 +348,15 @@ export const debugDatasetItem = tenantAction({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
     const { user } = await requireApifyRunAccess(ctx, args.runId);
-    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    if (user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized");
 
     const apifyToken = process.env.APIFY_API_TOKEN;
-    if (!apifyToken) throw new Error("Apify token not configured");
+    if (!apifyToken) throw appError("NOT_CONFIGURED", "Apify token not configured");
 
     const run = await getRun(apifyToken, args.runId);
     
-    if (!run) throw new Error("Run not found");
-    if (!run.defaultDatasetId) throw new Error("Run has no results to read.");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
+    if (!run.defaultDatasetId) throw appError("NOT_FOUND", "Run has no results to read.");
     const items = await listDatasetItems(apifyToken, run.defaultDatasetId, 1);
     return items[0];
   }

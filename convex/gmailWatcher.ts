@@ -8,6 +8,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { isNoReplyAddress, parseAddress } from "./gmailConnector";
 import { resolvePlatformName } from "./settingsService";
+import { appError } from "./utils/appError";
 
 /**
  * The mailbox that answers itself: Phase C of the Gmail plan.
@@ -305,7 +306,7 @@ async function processMessage(
     messages?: Array<{ id: string; from: string; fromMailbox: boolean; body: string }>;
   };
   if (!threadResult.ok || !threadResult.messages?.length) {
-    throw new Error("Conversation could not be read.");
+    throw appError("UPSTREAM_FAILURE", "Conversation could not be read.");
   }
 
   const senderTexts = threadResult.messages

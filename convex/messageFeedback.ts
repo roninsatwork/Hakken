@@ -17,6 +17,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
+import { appError } from "./utils/appError";
 
 const COMMENT_LIMIT = 500;
 /**
@@ -134,19 +135,19 @@ export const upsertForMessage = tenantMutation({
     // The switch stops collection, not just the buttons — a stale client
     // that still shows them must not keep writing.
     const config = await getSelfImprovementConfig(ctx.db);
-    if (!config.endUserFeedback) throw new Error("Feedback is switched off");
+    if (!config.endUserFeedback) throw appError("MODULE_DISABLED", "Feedback is switched off");
 
     const message = await ctx.db.get(args.messageId);
-    if (!message) throw new Error("Message not found");
-    if (message.role !== "assistant") throw new Error("Only assistant messages can be rated");
+    if (!message) throw appError("NOT_FOUND", "Message not found");
+    if (message.role !== "assistant") throw appError("UNAUTHORIZED", "Only assistant messages can be rated");
 
     const thread = await ctx.db.get(message.threadId);
-    if (!thread) throw new Error("Thread not found");
+    if (!thread) throw appError("NOT_FOUND", "Thread not found");
     // Ownership, not role: you rate the answers you were given. Admins have
     // the observability screens for everything else.
-    if (thread.userId !== userId) throw new Error("Unauthorized");
+    if (thread.userId !== userId) throw appError("UNAUTHORIZED", "Unauthorized");
     if (user.role !== "SUPER_ADMIN" && message.companyId && message.companyId !== ctx.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const now = Date.now();

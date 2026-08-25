@@ -9,6 +9,7 @@ import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";
 import { getPlatformName } from "./settings";
 import { adminAction, adminMutation, adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
@@ -140,7 +141,7 @@ export const getInvitesByCompany = adminQuery({
     const { user } = ctx;
 
     if (!canAccessCompany(user, args.companyId)) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     return await ctx.db
@@ -158,10 +159,10 @@ export const revokeInvite = adminMutation({
     const { userId, user } = ctx;
 
     const invite = await ctx.db.get(args.id);
-    if (!invite) throw new Error("Invite not found");
+    if (!invite) throw appError("NOT_FOUND", "Invite not found");
 
     if (user.role !== "SUPER_ADMIN" && invite.companyId !== user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     await ctx.db.delete(args.id);
@@ -308,18 +309,18 @@ export const dispatchInviteEmail = adminAction({
   },
   handler: async (ctx, args): Promise<InviteDispatchResult> => {
     const { userId: callerId, user: caller } = await requireActionUser(ctx);
-    if (!caller.role) throw new Error("Unauthorized");
+    if (!caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
 
     if (caller.role !== "SUPER_ADMIN") {
       const activeCompanyId = getActiveCompanyId(caller);
       if (caller.role !== "ADMIN" || activeCompanyId !== args.companyId) {
-        throw new Error("Unauthorized: Insufficient privileges to dispatch invites");
+        throw appError("UNAUTHORIZED", "Unauthorized: Insufficient privileges to dispatch invites");
       }
       // The third door. Adding a person and changing a person's role were both
       // guarded; inviting one was not, and an invitation ends in exactly the
       // same account.
       if (isPlatformRole(args.role) || (args.companyId && args.companyId !== activeCompanyId)) {
-        throw new Error("Unauthorized: Cannot invite external or elevated roles");
+        throw appError("UNAUTHORIZED", "Unauthorized: Cannot invite external or elevated roles");
       }
     }
 
@@ -384,7 +385,7 @@ export const dispatchInviteEmail = adminAction({
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : "Unknown error";
-      throw new Error(`System exception during dispatch: ${message}`);
+      throw appError("UPSTREAM_FAILURE", `System exception during dispatch: ${message}`);
     }
   }
 });

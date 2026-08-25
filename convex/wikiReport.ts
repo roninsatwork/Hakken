@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The weekly brain report (closing-the-loop-plan.md, phase 3): one plain
@@ -132,7 +133,7 @@ export const getWeeklyReportForGlobal = adminQuery({
   args: {},
   handler: async (ctx): Promise<WeeklyReport> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     return await buildReport(ctx, undefined, Date.now() - WEEK_MS);
   },

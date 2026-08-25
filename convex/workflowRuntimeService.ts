@@ -9,6 +9,7 @@ import {
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
 import { isRecord } from "./utils/lang";
+import { appError, appErrorMessage } from "./utils/appError";
 
 export type HeaderConfig = {
   key?: string;
@@ -250,7 +251,7 @@ function parseJsonValue(value: string): unknown {
 }
 
 export function getRuntimeErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown error";
+  return appErrorMessage(error, "Unknown error");
 }
 
 export function createWorkflowRuntimeContext(args: {
@@ -287,10 +288,10 @@ export function parseRuntimeJson(value: string, fallback: unknown = value) {
 export function getActionConfig(nodeData: WorkflowNodeData): ActionConfig {
   const config = nodeData._actionConfig;
   if (typeof config === "undefined") {
-    throw new Error("API Node is missing configuration");
+    throw appError("INVALID_INPUT", "API Node is missing configuration");
   }
   if (!isActionConfig(config)) {
-    throw new Error("API node config must include optional string method/url values and valid headers.");
+    throw appError("INVALID_INPUT", "API node config must include optional string method/url values and valid headers.");
   }
   return config;
 }
@@ -298,10 +299,10 @@ export function getActionConfig(nodeData: WorkflowNodeData): ActionConfig {
 export function getDatabaseConfig(nodeData: WorkflowNodeData): DatabaseConfig {
   const config = nodeData._dbConfig;
   if (typeof config === "undefined") {
-    throw new Error("Database Node is missing configuration");
+    throw appError("INVALID_INPUT", "Database Node is missing configuration");
   }
   if (!isDatabaseConfig(config)) {
-    throw new Error("Database node config must include a valid operation, optional tableName, optional docId, and optional indexed query.");
+    throw appError("INVALID_INPUT", "Database node config must include a valid operation, optional tableName, optional docId, and optional indexed query.");
   }
   return config;
 }
@@ -309,7 +310,7 @@ export function getDatabaseConfig(nodeData: WorkflowNodeData): DatabaseConfig {
 export function getEmailConfig(nodeData: WorkflowNodeData): EmailConfig {
   const config = nodeData._emailConfig ?? {};
   if (!isEmailConfig(config)) {
-    throw new Error("Email node config must include optional string to/from/subject/body values.");
+    throw appError("INVALID_INPUT", "Email node config must include optional string to/from/subject/body values.");
   }
   return config;
 }
@@ -317,7 +318,7 @@ export function getEmailConfig(nodeData: WorkflowNodeData): EmailConfig {
 export function getTaskConfig(nodeData: WorkflowNodeData): TaskConfig {
   const config = nodeData._taskConfig ?? {};
   if (!isTaskConfig(config)) {
-    throw new Error("Task node config must include optional string title/detail/assigneeEmail/dueDate values.");
+    throw appError("INVALID_INPUT", "Task node config must include optional string title/detail/assigneeEmail/dueDate values.");
   }
   return config;
 }
@@ -325,7 +326,7 @@ export function getTaskConfig(nodeData: WorkflowNodeData): TaskConfig {
 export function getLogicConfig(nodeData: WorkflowNodeData): LogicConfig {
   const config = nodeData._logicConfig ?? { rules: [], fallbackBranch: "default" };
   if (!isLogicConfig(config)) {
-    throw new Error("Logic node config must include an optional fallbackBranch and rules array.");
+    throw appError("INVALID_INPUT", "Logic node config must include an optional fallbackBranch and rules array.");
   }
   return config;
 }
@@ -333,7 +334,7 @@ export function getLogicConfig(nodeData: WorkflowNodeData): LogicConfig {
 export function getWaitConfig(nodeData: WorkflowNodeData): WaitConfig {
   const config = nodeData._waitConfig ?? { delaySeconds: 5 };
   if (!isWaitConfig(config)) {
-    throw new Error("Wait node config must include a numeric or string delaySeconds value.");
+    throw appError("INVALID_INPUT", "Wait node config must include a numeric or string delaySeconds value.");
   }
   return config;
 }
@@ -341,7 +342,7 @@ export function getWaitConfig(nodeData: WorkflowNodeData): WaitConfig {
 export function getApprovalConfig(nodeData: WorkflowNodeData): ApprovalConfig {
   const config = nodeData._approvalConfig ?? { message: "Action requires manual sign-off" };
   if (!isApprovalConfig(config)) {
-    throw new Error("Approval node config must include optional string message and previewTarget values.");
+    throw appError("INVALID_INPUT", "Approval node config must include optional string message and previewTarget values.");
   }
   return config;
 }
@@ -349,7 +350,7 @@ export function getApprovalConfig(nodeData: WorkflowNodeData): ApprovalConfig {
 export function getIteratorConfig(nodeData: WorkflowNodeData): IteratorConfig {
   const config = nodeData._iteratorConfig ?? {};
   if (!isIteratorConfig(config)) {
-    throw new Error("Iterator node config must include an optional string listVariable value.");
+    throw appError("INVALID_INPUT", "Iterator node config must include an optional string listVariable value.");
   }
   return config;
 }
@@ -358,7 +359,7 @@ export function buildActionRequest(nodeData: WorkflowNodeData, globalStatePayloa
   const config = resolveTemplate(getActionConfig(nodeData), globalStatePayload);
   const method = config.method || "GET";
   const url = config.url;
-  if (!url) throw new Error("Missing URL for Action Node");
+  if (!url) throw appError("INVALID_INPUT", "Missing URL for Action Node");
 
   validateSafeUrl(url, "Action Node");
 
@@ -408,14 +409,14 @@ export function buildDatabaseOperationInput(
 ): DatabaseOperationInput {
   const config = getDatabaseConfig(nodeData);
   const { tableName, operation, docId, query } = config;
-  if (!tableName) throw new Error("Database table not specified");
-  if (!operation) throw new Error("Database operation not specified");
+  if (!tableName) throw appError("INVALID_INPUT", "Database table not specified");
+  if (!operation) throw appError("INVALID_INPUT", "Database operation not specified");
 
   const resolvedDocId = docId ? resolveTemplate(docId, globalStatePayload) : undefined;
   const resolvedQuery = query ? buildDatabaseQueryInput(query, globalStatePayload) : undefined;
 
   if (operation === "SELECT" && !resolvedDocId && !resolvedQuery) {
-    throw new Error("Database SELECT requires a target document ID or an indexed query contract.");
+    throw appError("INVALID_INPUT", "Database SELECT requires a target document ID or an indexed query contract.");
   }
 
   let resolvedData: unknown = {};
@@ -436,17 +437,17 @@ export function buildDatabaseOperationInput(
 
 function buildDatabaseQueryInput(query: DatabaseQueryConfig, globalStatePayload: WorkflowStatePayload) {
   const indexName = query.indexName?.trim();
-  if (!indexName) throw new Error("Database SELECT query requires an indexName.");
+  if (!indexName) throw appError("INVALID_INPUT", "Database SELECT query requires an indexName.");
 
   const limit = Number(resolveTemplate(String(query.limit ?? 15), globalStatePayload));
   if (!Number.isFinite(limit) || limit < 1 || limit > 100) {
-    throw new Error("Database SELECT query limit must be between 1 and 100.");
+    throw appError("INVALID_INPUT", "Database SELECT query limit must be between 1 and 100.");
   }
 
   const equals = (query.equals ?? [])
     .map((filter) => {
       const field = filter.field?.trim();
-      if (!field) throw new Error("Database SELECT query filters require a field.");
+      if (!field) throw appError("INVALID_INPUT", "Database SELECT query filters require a field.");
       const value =
         typeof filter.value === "string"
           ? resolveTemplate(filter.value, globalStatePayload)
@@ -498,7 +499,7 @@ export function buildWorkflowTask(args: {
 }) {
   const config = getTaskConfig(args.nodeData);
   const title = resolveTemplate(config.title || "", args.globalStatePayload).trim();
-  if (!title) throw new Error("Task node config must include a title.");
+  if (!title) throw appError("INVALID_INPUT", "Task node config must include a title.");
 
   const detail = resolveTemplate(config.detail || "", args.globalStatePayload).trim();
   const assigneeEmail = resolveTemplate(config.assigneeEmail || "", args.globalStatePayload).trim();

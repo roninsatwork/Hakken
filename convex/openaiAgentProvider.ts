@@ -42,6 +42,7 @@ import type {
   AgentTurnRequest,
   AgentTurnResponse,
 } from "./agentProviderTypes";
+import { appError } from "./utils/appError";
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
@@ -104,7 +105,7 @@ export function createOpenAIAgentProvider(args: {
 
     async streamTurn(request: AgentTurnRequest, options: AgentStreamOptions): Promise<AgentTurnResponse> {
       if (!apiKey) {
-        throw new Error("OpenAI credentials are missing OPENAI_API_KEY.");
+        throw appError("NOT_CONFIGURED", "OpenAI credentials are missing OPENAI_API_KEY.");
       }
 
       const messages: OpenRouterMessage[] = [
@@ -161,7 +162,7 @@ export function createOpenAIAgentProvider(args: {
 
         if (!response.ok || !response.body) {
           const detail = response.ok ? "no response body" : await response.text();
-          throw new Error(`OpenAI request failed (${response.status}): ${detail.slice(0, 500)}`);
+          throw appError("UPSTREAM_FAILURE", `OpenAI request failed (${response.status}): ${detail.slice(0, 500)}`);
         }
 
         const reader = response.body.getReader();

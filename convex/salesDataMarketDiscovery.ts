@@ -21,6 +21,7 @@ import {
 } from "./salesDataResearchService";
 import { getBuiltInToolConnector } from "./toolConnectorDefinitions";
 import { SALES_DATA_MODULE_KEY } from "./utils/salesDataModule";
+import { appError } from "./utils/appError";
 
 const MARKET_DISCOVERY_CONNECTOR_KEY = "sales-market-discovery";
 const WEB_READER_MAPPING = "web.scrape";
@@ -82,7 +83,7 @@ async function assertSalesDataCompany(
 ) {
   const company = await ctx.db.get(companyId);
   if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
-    throw new Error("Sales Data is not enabled for this workspace.");
+    throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
   }
 }
 

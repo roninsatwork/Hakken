@@ -16,6 +16,8 @@
  * surfaces as "reconnect", never as silent failure).
  */
 
+import { appError } from "./utils/appError";
+
 const ENCRYPTION_KEY_ENV = "CONNECTOR_TOKEN_ENCRYPTION_KEY";
 const IV_BYTES = 12;
 
@@ -42,7 +44,7 @@ function readKeyBytes(): Uint8Array | null {
 async function importKey() {
   const keyBytes = readKeyBytes();
   if (!keyBytes) {
-    throw new Error(CONNECTOR_TOKEN_ENCRYPTION_UNCONFIGURED_MESSAGE);
+    throw appError("NOT_CONFIGURED", CONNECTOR_TOKEN_ENCRYPTION_UNCONFIGURED_MESSAGE);
   }
   return await crypto.subtle.importKey(
     "raw",
@@ -91,7 +93,7 @@ export async function decryptConnectorToken(stored: string): Promise<string> {
   const key = await importKey();
   const combined = base64ToBytes(stored);
   if (combined.length <= IV_BYTES) {
-    throw new Error("Stored connector token is malformed.");
+    throw appError("INVALID_INPUT", "Stored connector token is malformed.");
   }
   const iv = combined.slice(0, IV_BYTES);
   const ciphertext = combined.slice(IV_BYTES);

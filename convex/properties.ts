@@ -4,6 +4,7 @@ import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { moduleMutation, moduleQuery, publicQuery, superAdminQuery } from "./tenantFunctions";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
+import { appError } from "./utils/appError";
 
 function getPropertyScope(user: Doc<"users">) {
   const activeCompanyId = getActiveCompanyId(user);
@@ -56,7 +57,7 @@ export const listProperties = moduleQuery({
         );
       }
 
-      if (!activeCompanyId) throw new Error("Unauthorized");
+      if (!activeCompanyId) throw appError("UNAUTHORIZED", "Unauthorized");
       return projectPropertyPage(
         await ctx.db
           .query("properties")
@@ -76,7 +77,7 @@ export const listProperties = moduleQuery({
       );
     }
 
-    if (!activeCompanyId) throw new Error("Unauthorized");
+    if (!activeCompanyId) throw appError("UNAUTHORIZED", "Unauthorized");
     return projectPropertyPage(
       await ctx.db
         .query("properties")
@@ -145,7 +146,7 @@ export const getProperty = moduleQuery({
     const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
     if (!canReadAllCompanies) {
       if (property.companyId !== activeCompanyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
 
@@ -160,12 +161,12 @@ export const deleteProperty = moduleMutation({
     const { user } = ctx;
 
     const property = await ctx.db.get(args.id);
-    if (!property) throw new Error("Property not found");
+    if (!property) throw appError("NOT_FOUND", "Property not found");
 
     const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
     if (!canReadAllCompanies) {
       if (property.companyId !== activeCompanyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
 

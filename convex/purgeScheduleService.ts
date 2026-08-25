@@ -1,3 +1,5 @@
+import { appError } from "./utils/appError";
+
 export type PurgeScheduleInterval = "Hourly" | "Daily" | "Weekly" | "Monthly";
 export type PurgePipelineKey =
   | "agentLogs"
@@ -131,7 +133,7 @@ export function normalizePurgePipelineConfigForUpdate(configStr: string) {
   try {
     parsed = JSON.parse(configStr) as Partial<Record<PurgePipelineKey, PipelineConfig>>;
   } catch {
-    throw new Error("Invalid configuration JSON payload");
+    throw appError("INVALID_INPUT", "Invalid configuration JSON payload");
   }
 
   for (const key of PURGE_PIPELINE_KEYS) {
@@ -139,7 +141,7 @@ export function normalizePurgePipelineConfigForUpdate(configStr: string) {
     if (!conf) continue;
 
     if (typeof conf.retentionDays !== "number" || conf.retentionDays < MIN_PURGE_RETENTION_DAYS) {
-      throw new Error(`Retention policy for category '${key}' must be at least ${MIN_PURGE_RETENTION_DAYS} days.`);
+      throw appError("INVALID_INPUT", `Retention policy for category '${key}' must be at least ${MIN_PURGE_RETENTION_DAYS} days.`);
     }
     // The scheduler trusts these; unvalidated they could produce an hourly
     // hot loop (bad interval) or a month-skipping run (dayOfMonth 29-31).
@@ -148,18 +150,18 @@ export function normalizePurgePipelineConfigForUpdate(configStr: string) {
     if (conf.interval === undefined) {
       conf.interval = DEFAULT_PURGE_CONFIGS[key].interval;
     } else if (!isValidInterval(conf.interval)) {
-      throw new Error(`Execution interval for category '${key}' must be one of ${VALID_INTERVALS.join(", ")}.`);
+      throw appError("INVALID_INPUT", `Execution interval for category '${key}' must be one of ${VALID_INTERVALS.join(", ")}.`);
     }
     if (conf.hourUtc === undefined) {
       conf.hourUtc = DEFAULT_PURGE_CONFIGS[key].hourUtc;
     } else if (!isIntInRange(conf.hourUtc, 0, 23)) {
-      throw new Error(`Execution hour for category '${key}' must be an integer between 0 and 23.`);
+      throw appError("INVALID_INPUT", `Execution hour for category '${key}' must be an integer between 0 and 23.`);
     }
     if (conf.dayOfWeek !== undefined && !isIntInRange(conf.dayOfWeek, 0, 6)) {
-      throw new Error(`Execution day of week for category '${key}' must be an integer between 0 and 6.`);
+      throw appError("INVALID_INPUT", `Execution day of week for category '${key}' must be an integer between 0 and 6.`);
     }
     if (conf.dayOfMonth !== undefined && !isIntInRange(conf.dayOfMonth, 1, 28)) {
-      throw new Error(`Execution day of month for category '${key}' must be between the 1st and the 28th.`);
+      throw appError("INVALID_INPUT", `Execution day of month for category '${key}' must be between the 1st and the 28th.`);
     }
 
     // The saved config carries its own next firing time: computed here for
@@ -186,7 +188,8 @@ export function getPurgeRetentionDays(args: {
 
 export function assertMinimumPurgeRetentionDays(retentionDays: number, context: string) {
   if (retentionDays < MIN_PURGE_RETENTION_DAYS) {
-    throw new Error(
+    throw appError(
+      "INVALID_INPUT",
       `Refusing ${context}: retention of ${retentionDays} days is below the ${MIN_PURGE_RETENTION_DAYS}-day minimum.`,
     );
   }

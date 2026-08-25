@@ -14,6 +14,7 @@ import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vert
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 
 /**
@@ -29,7 +30,7 @@ async function ingestStoredDocument(
 ) {
     try {
       const doc = await ctx.runQuery(internal.knowledge.getDocInternal, { id: documentId });
-      if (!doc) throw new Error("Document missing from DB");
+      if (!doc) throw appError("NOT_FOUND", "Document missing from DB");
       if (!options.alreadyClaimed) {
         await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId });
       }
@@ -40,7 +41,7 @@ async function ingestStoredDocument(
           rawText = doc.textContent;
       } else if (storageId) {
           const fileUrl = await ctx.storage.getUrl(storageId);
-          if (!fileUrl) throw new Error("Storage URL missing");
+          if (!fileUrl) throw appError("NOT_FOUND", "Storage URL missing");
 
           const response = await fetch(fileUrl);
           const arrayBuffer = await response.arrayBuffer();
@@ -57,7 +58,7 @@ async function ingestStoredDocument(
           }
       }
 
-      if (!rawText.trim()) throw new Error("No text content could be extracted from the intelligence file.");
+      if (!rawText.trim()) throw appError("INVALID_INPUT", "No text content could be extracted from the intelligence file.");
 
       let ingestText = rawText;
 
@@ -74,7 +75,7 @@ async function ingestStoredDocument(
         }
       }
 
-      if (!ingestText.trim()) throw new Error("No text content could be extracted from the intelligence file.");
+      if (!ingestText.trim()) throw appError("INVALID_INPUT", "No text content could be extracted from the intelligence file.");
 
       await embedAndStoreDoc(ctx, documentId, doc.companyId, doc.agentId, doc.threadId, ingestText);
 
@@ -119,7 +120,7 @@ export const mapWebsite = adminAction({
   args: { url: v.string() },
   handler: async (ctx, args) => {
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-    if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY environment variable not set");
+    if (!firecrawlKey) throw appError("NOT_CONFIGURED", "FIRECRAWL_API_KEY environment variable not set");
 
     // 🛡️ SECURITY: Prevent internal SSRF scans via Firecrawl
     validateSafeUrl(args.url, "Firecrawl Map Dispatcher");
@@ -135,11 +136,11 @@ export const mapWebsite = adminAction({
 
     if (!response.ok) {
        const text = await response.text();
-       throw new Error(`Firecrawl mapping failed: ${text}`);
+       throw appError("UPSTREAM_FAILURE", `Firecrawl mapping failed: ${text}`);
     }
 
     const data = await response.json();
-    if (!data.success) throw new Error("Firecrawl mapping unsuccesful");
+    if (!data.success) throw appError("UPSTREAM_FAILURE", "Firecrawl mapping unsuccesful");
     return data.links as string[];
   }
 });
@@ -153,7 +154,7 @@ export const processWebsiteQueue = internalAction({
 
      try {
        const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-       if (!firecrawlKey) throw new Error("Missing FIRECRAWL_API_KEY");
+       if (!firecrawlKey) throw appError("INVALID_INPUT", "Missing FIRECRAWL_API_KEY");
 
        const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
            method: "POST",
@@ -174,12 +175,12 @@ export const processWebsiteQueue = internalAction({
                await ctx.scheduler.runAfter(10000, internal.knowledgeActions.processWebsiteQueue);
                return; 
            }
-           throw new Error("Scrape failed: " + await response.text());
+           throw appError("UPSTREAM_FAILURE", "Scrape failed: " + await response.text());
        }
        const data = await response.json();
        const markdownText = data.data?.markdown || "";
 
-       if (!markdownText) throw new Error("No extracted markdown text from URL.");
+       if (!markdownText) throw appError("UPSTREAM_FAILURE", "No extracted markdown text from URL.");
 
        await embedAndStoreDoc(ctx, nextDoc._id, nextDoc.companyId, nextDoc.agentId, nextDoc.threadId, markdownText);
      } catch (e) {
@@ -242,11 +243,11 @@ async function embedAndStoreDoc(
       }
 
       if (failedChunkCount > 0) {
-          throw new Error(`Knowledge embedding failed for ${failedChunkCount} of ${chunks.length} chunks after retries.`);
+          throw appError("UPSTREAM_FAILURE", `Knowledge embedding failed for ${failedChunkCount} of ${chunks.length} chunks after retries.`);
       }
 
       if (embeddedChunks.length === 0) {
-          throw new Error("Knowledge embedding produced no searchable chunks.");
+          throw appError("INVALID_INPUT", "Knowledge embedding produced no searchable chunks.");
       }
 
       // Stagger insertions to avoid 16MB limit

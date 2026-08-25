@@ -12,6 +12,7 @@ import {
   encryptConnectorToken,
   isConnectorTokenEncryptionConfigured,
 } from "./connectorTokenCrypto";
+import { appError } from "./utils/appError";
 
 /**
  * The consent flow: the platform's first real OAuth plumbing.
@@ -226,7 +227,7 @@ export const finalizeConnection = internalMutation({
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.status !== "PENDING") {
-      throw new Error("OAuth session is not pending.");
+      throw appError("CONFLICT", "OAuth session is not pending.");
     }
     const now = Date.now();
 

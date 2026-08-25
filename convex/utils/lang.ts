@@ -6,6 +6,8 @@
  * message. One home each; import them, do not re-declare them.
  */
 
+import { appErrorMessage } from "./appError";
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -16,9 +18,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * The fallback carries each call site's domain default ("Unknown Engine
  * Exception", "Provider request failed.") — that variation was the only real
  * difference between the ten copies, so it became the parameter.
+ *
+ * A ConvexError's own `.message` is the serialised `{code, message}` payload,
+ * not a sentence, so every caller that stores or shows this would have written
+ * JSON where a reader expects words. It unwraps the payload first.
  */
 export function getErrorMessage(error: unknown, fallback?: string): string {
-  if (error instanceof Error && error.message) return error.message;
+  const message = appErrorMessage(error, "");
+  if (message) return message;
   return fallback ?? String(error);
 }
 

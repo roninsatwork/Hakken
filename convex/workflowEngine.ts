@@ -17,6 +17,7 @@ import {
   isApprovalExpired,
   parseApprovalExpiryConfig,
 } from "./approvalExpiryService";
+import { appError } from "./utils/appError";
 
 /**
  * Maximum items an iterator node may fan out to in a single execution.
@@ -371,7 +372,7 @@ export const initExecution = internalMutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.workflowId);
-    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
     // Read so each step can carry the tenant. Steps are queried across executions
     // now, and a company filter cannot reach through to the parent.
     const execution = await ctx.db.get(args.executionId);
@@ -603,7 +604,7 @@ export const resumeNodeStep = internalMutation({
   handler: async (ctx, args) => {
     // Manually force a PENDING_APPROVAL step to DONE and resume downstream
     const execution = await ctx.db.get(args.executionId);
-    if (!execution || execution.status !== "RUNNING") throw new Error("Execution is not running");
+    if (!execution || execution.status !== "RUNNING") throw appError("CONFLICT", "Execution is not running");
 
     const step = await getLatestExecutionStepByStatus(ctx, {
       executionId: args.executionId,
@@ -611,7 +612,7 @@ export const resumeNodeStep = internalMutation({
       status: "PENDING_APPROVAL",
     });
 
-    if (!step || step.status !== "PENDING_APPROVAL") throw new Error("Step is not pending approval");
+    if (!step || step.status !== "PENDING_APPROVAL") throw appError("CONFLICT", "Step is not pending approval");
 
     // Resume with the node's *own* output, marked approved.
     //
@@ -670,7 +671,7 @@ export const rejectNodeApproval = internalMutation({
       nodeId: args.nodeId,
       status: "PENDING_APPROVAL",
     });
-    if (!step) throw new Error("Step is not pending approval");
+    if (!step) throw appError("CONFLICT", "Step is not pending approval");
 
     const now = Date.now();
     const error = args.reason?.trim()
@@ -908,11 +909,11 @@ export const executeDatabaseOperation = internalMutation({
         const id = await ctx.db.insert(table, args.data || {});
         return { id };
       } else if (args.operation === "UPDATE") {
-         if (!args.docId) throw new Error("Document ID required for UPDATE");
+         if (!args.docId) throw appError("INVALID_INPUT", "Document ID required for UPDATE");
          await ctx.db.patch(args.docId as Id<WorkflowDbTable>, args.data || {});
          return { id: args.docId };
       } else if (args.operation === "DELETE") {
-         if (!args.docId) throw new Error("Document ID required for DELETE");
+         if (!args.docId) throw appError("INVALID_INPUT", "Document ID required for DELETE");
          await ctx.db.delete(args.docId as Id<WorkflowDbTable>);
          return { deletedId: args.docId };
       }

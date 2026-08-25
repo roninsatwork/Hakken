@@ -11,6 +11,8 @@
  * until the next morning. It only ever *cancels* — an unattended yes to a deletion
  * is the one outcome worse than a stuck run.
  */
+import { appError } from "./utils/appError";
+
 export const DEFAULT_APPROVAL_EXPIRY_HOURS = 24;
 
 /**
@@ -53,13 +55,13 @@ export function parseApprovalExpiryConfig(value: string | undefined): ApprovalEx
 /** Throws by name, the way the purge retention policy does, so the UI can say why. */
 export function normalizeApprovalExpiryHoursForUpdate(expiryHours: number) {
   if (typeof expiryHours !== "number" || !Number.isFinite(expiryHours)) {
-    throw new Error("Approval expiry must be a number of hours.");
+    throw appError("INVALID_INPUT", "Approval expiry must be a number of hours.");
   }
   if (expiryHours < MIN_APPROVAL_EXPIRY_HOURS) {
-    throw new Error(`Approval expiry must be at least ${MIN_APPROVAL_EXPIRY_HOURS} hour.`);
+    throw appError("INVALID_INPUT", `Approval expiry must be at least ${MIN_APPROVAL_EXPIRY_HOURS} hour.`);
   }
   if (expiryHours > MAX_APPROVAL_EXPIRY_HOURS) {
-    throw new Error(`Approval expiry cannot exceed ${MAX_APPROVAL_EXPIRY_HOURS} hours.`);
+    throw appError("INVALID_INPUT", `Approval expiry cannot exceed ${MAX_APPROVAL_EXPIRY_HOURS} hours.`);
   }
   return Math.floor(expiryHours);
 }

@@ -1,5 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { appError } from "./appError";
 
 export const GLOBAL_INVENTORY_ROLLUP_KEY = "global";
 
@@ -66,7 +67,7 @@ export async function ensureGlobalInventoryRollup(ctx: InventoryRollupCtx) {
 
   const id = await ctx.db.insert("inventoryRollups", defaultGlobalRollup());
   const created = await ctx.db.get(id);
-  if (!created) throw new Error("Failed to create global inventory rollup.");
+  if (!created) throw appError("UPSTREAM_FAILURE", "Failed to create global inventory rollup.");
   return created;
 }
 

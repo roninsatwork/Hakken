@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import { appError } from "./utils/appError";
 
 export const seedAcmeWorkflow = internalMutation({
   args: {},
@@ -22,7 +23,7 @@ export const seedAcmeWorkflow = internalMutation({
 
     const seedUser = await ctx.db.query("users").first();
     if (!seedUser) {
-      throw new Error("Cannot seed workflow without at least one user.");
+      throw appError("INVALID_INPUT", "Cannot seed workflow without at least one user.");
     }
 
     // 2. Create the Workflow

@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
+import { appError } from "./utils/appError";
 
 /** Small enough that one batch stays well inside an action's budget. */
 const DEFAULT_BATCH_SIZE = 25;
@@ -39,7 +40,7 @@ export const reembedStaleChunks = internalAction({
     const reembeddedSoFar = args.reembeddedSoFar ?? 0;
 
     if (batchNumber >= MAX_BATCHES) {
-      throw new Error(`Re-embed stopped after ${MAX_BATCHES} batches, having re-embedded ${reembeddedSoFar} chunks.`);
+      throw appError("INVALID_INPUT", `Re-embed stopped after ${MAX_BATCHES} batches, having re-embedded ${reembeddedSoFar} chunks.`);
     }
 
     const page = await ctx.runQuery(internal.knowledgeReembed.getStaleChunkPageInternal, {
@@ -83,7 +84,7 @@ export const reembedStaleChunks = internalAction({
       // The page held stale chunks and none could be written. Rescheduling would
       // walk the whole table producing nothing, so stop and say why.
       if (reembedded === 0) {
-        throw new Error(`Re-embed made no progress on ${page.batch.length} stale chunks. Check the embedding model configuration.`);
+        throw appError("UPSTREAM_FAILURE", `Re-embed made no progress on ${page.batch.length} stale chunks. Check the embedding model configuration.`);
       }
     }
 

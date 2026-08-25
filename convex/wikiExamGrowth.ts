@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { questionKey } from "./wikiFeedbackService";
+import { appError } from "./utils/appError";
 
 /**
  * The Examiner's default-runtime half (closing-the-loop-plan.md, phase
@@ -133,7 +134,7 @@ async function decideDraft(
   }
 ): Promise<void> {
   const row = await ctx.db.get(args.caseId);
-  if (!row || row.companyId !== args.companyId) throw new Error("Draft not found.");
+  if (!row || row.companyId !== args.companyId) throw appError("NOT_FOUND", "Draft not found.");
   // (Platform drafts have no company; both sides undefined pass the wall.)
   if (row.status !== "PROPOSED") return;
   const now = Date.now();

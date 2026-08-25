@@ -14,6 +14,7 @@ import {
   type CellValue,
   type SheetRows,
 } from "./salesDataImportService";
+import { appError } from "./utils/appError";
 
 /**
  * Reading an uploaded workbook.
@@ -66,7 +67,7 @@ async function loadWorkbook(
   storageId: Id<"_storage">
 ) {
   const blob = await ctx.storage.get(storageId);
-  if (!blob) throw new Error("The uploaded file could not be found. Try uploading it again.");
+  if (!blob) throw appError("NOT_FOUND", "The uploaded file could not be found. Try uploading it again.");
 
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await blob.arrayBuffer());
@@ -116,7 +117,7 @@ export const inspectWorkbook = tenantAction({
       internal.salesData.getImportContextInternal,
       { userId: ctx.userId }
     );
-    if (!context) throw new Error("Sales Data is not enabled for this workspace.");
+    if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
     const workbook = await loadWorkbook(ctx, args.storageId);
 
@@ -167,7 +168,7 @@ export const runImport = tenantAction({
       internal.salesData.getImportContextInternal,
       { userId: ctx.userId }
     );
-    if (!context) throw new Error("Sales Data is not enabled for this workspace.");
+    if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
     const workbook = await loadWorkbook(ctx, args.storageId);
     validateSheetMapping(args.sheetMapping, workbook.worksheets.length);

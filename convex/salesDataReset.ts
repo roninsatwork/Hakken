@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { adminAction } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 /**
  * Empty the CRM side of one workspace: customers, prospects, and findings.
@@ -100,7 +101,7 @@ export const resetSalesData = adminAction({
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {
       userId: ctx.userId,
     });
-    if (!context) throw new Error("Sales Data is not enabled for this workspace.");
+    if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
     let deleted = 0;
 
@@ -318,14 +319,15 @@ export const clearAllSalesData = adminAction({
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {
       userId: ctx.userId,
     });
-    if (!context) throw new Error("Sales Data is not enabled for this workspace.");
+    if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
     const runningWork = await ctx.runQuery(
       internal.salesDataReset.getRunningSalesWorkInternal,
       { companyId: context.companyId }
     );
     if (runningWork) {
-      throw new Error(
+      throw appError(
+        "CONFLICT",
         "An agent is still working on this data. Wait for it to finish, or stop it, then clear."
       );
     }

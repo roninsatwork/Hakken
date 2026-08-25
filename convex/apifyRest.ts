@@ -17,6 +17,8 @@
  * them silently rots.
  */
 
+import { appError } from "./utils/appError";
+
 const API_ROOT = "https://api.apify.com/v2";
 
 /** Long enough for a slow catalogue read, short enough not to hold an action open. */
@@ -46,7 +48,8 @@ async function apifyFetch(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(
+    throw appError(
+      "UPSTREAM_FAILURE",
       `Apify replied ${response.status} to ${init?.method ?? "GET"} ${path}${detail ? `: ${detail.slice(0, 300)}` : ""}`,
     );
   }
@@ -106,7 +109,7 @@ export async function listDatasetItems(
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
-    throw new Error(`Apify replied ${response.status} when reading dataset ${datasetId}.`);
+    throw appError("UPSTREAM_FAILURE", `Apify replied ${response.status} when reading dataset ${datasetId}.`);
   }
 
   // Dataset items come back as a bare array rather than wrapped in `data`.

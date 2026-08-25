@@ -24,6 +24,7 @@ import {
   toWorkflowEntry,
   type AiSystemEntry,
 } from "./governanceRegisterService";
+import { appError } from "./utils/appError";
 
 /**
  * The evidence pack: everything an auditor asks for, for a chosen period.
@@ -270,7 +271,7 @@ export const produce = governanceAction({
     const companyId = platformWide ? undefined : getActiveCompanyId(ctx.user);
 
     if (!platformWide && !companyId) {
-      throw new Error("This account is not attached to a workspace, so it has no evidence to export.");
+      throw appError("NO_ACTIVE_COMPANY", "This account is not attached to a workspace, so it has no evidence to export.");
     }
 
     const pack = await ctx.runQuery(internal.evidencePack.gather, {

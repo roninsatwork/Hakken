@@ -16,6 +16,7 @@ import {
 } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -50,7 +51,7 @@ export async function requireAnalyticsAdmin(ctx: QueryCtx) {
 export function assertAnalyticsUserAccess(admin: Doc<"users">, targetUser: Doc<"users">) {
     if (admin.role !== "SUPER_ADMIN") {
        if (admin.role !== "ADMIN" || admin.companyId !== targetUser.companyId || !admin.companyId) {
-          throw new Error("Unauthorized: Company Admin clearance required.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Company Admin clearance required.");
        }
     }
 }
@@ -66,7 +67,7 @@ export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id
 
     if (admin.role !== "SUPER_ADMIN") {
        if (admin.role !== "ADMIN" || admin.companyId !== companyId) {
-          throw new Error("Unauthorized");
+          throw appError("UNAUTHORIZED", "Unauthorized");
        }
     }
 
@@ -239,7 +240,7 @@ export const getUserCostOverview = adminQuery({
     // 1. Authorization Check
     const admin = ctx.user;
     const targetUser = await ctx.db.get(args.userId);
-    if (!targetUser) throw new Error("User not found");
+    if (!targetUser) throw appError("NOT_FOUND", "User not found");
     assertAnalyticsUserAccess(admin, targetUser);
 
     const now = new Date();
@@ -301,7 +302,7 @@ export const getUserCostThreads = adminQuery({
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const admin = ctx.user;
     const targetUser = await ctx.db.get(args.userId);
-    if (!targetUser) throw new Error("User not found");
+    if (!targetUser) throw appError("NOT_FOUND", "User not found");
     assertAnalyticsUserAccess(admin, targetUser);
 
     const threads = await ctx.db

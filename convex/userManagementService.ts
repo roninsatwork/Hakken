@@ -1,4 +1,5 @@
 import type { Doc, Id } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 
 export type ManagedUserRole = "USER" | "ADMIN" | "SUPER_ADMIN" | "READ_ONLY" | "AUDITOR";
 type UserPolicySubject = Pick<Doc<"users">, "role" | "companyId" | "impersonatingCompanyId">;
@@ -57,11 +58,11 @@ export function assertCanCreateManagedUser(args: {
   if (isUnimpersonatedSuperAdmin(args.caller)) return;
 
   if (!isScopedAdmin(args.caller) || args.activeCompanyId !== args.newCompanyId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 
   if (isPlatformRole(args.newRole)) {
-    throw new Error("Unauthorized: Insufficient privileges");
+    throw appError("UNAUTHORIZED", "Unauthorized: Insufficient privileges");
   }
 }
 
@@ -75,22 +76,22 @@ export function assertCanUpdateManagedUser(args: {
   if (isUnimpersonatedSuperAdmin(args.caller)) return;
 
   if (!isScopedAdmin(args.caller) || args.activeCompanyId !== args.targetUser.companyId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 
   if (args.targetUser.role === "SUPER_ADMIN") {
-    throw new Error("Unauthorized: Cannot modify a Super Administrator");
+    throw appError("UNAUTHORIZED", "Unauthorized: Cannot modify a Super Administrator");
   }
 
   // An account that already holds a platform role is not this administrator's
   // to edit either — otherwise the one they could not create, they could still
   // rename, move or quietly take over.
   if (isPlatformRole(args.targetUser.role)) {
-    throw new Error("Unauthorized: Cannot modify a platform role");
+    throw appError("UNAUTHORIZED", "Unauthorized: Cannot modify a platform role");
   }
 
   if (isPlatformRole(args.nextRole) || (args.nextCompanyId && args.nextCompanyId !== args.activeCompanyId)) {
-    throw new Error("Unauthorized: Insufficient privileges");
+    throw appError("UNAUTHORIZED", "Unauthorized: Insufficient privileges");
   }
 }
 
@@ -102,16 +103,16 @@ export function assertCanDeleteManagedUser(args: {
   if (isUnimpersonatedSuperAdmin(args.caller)) return;
 
   if (!isScopedAdmin(args.caller) || args.activeCompanyId !== args.targetUser.companyId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 
   if (args.targetUser.role === "SUPER_ADMIN") {
-    throw new Error("Unauthorized: Cannot delete a Super Administrator");
+    throw appError("UNAUTHORIZED", "Unauthorized: Cannot delete a Super Administrator");
   }
 
   // Nor removed. An oversight account a company's own administrator can delete
   // is oversight that company controls.
   if (isPlatformRole(args.targetUser.role)) {
-    throw new Error("Unauthorized: Cannot delete a platform role");
+    throw appError("UNAUTHORIZED", "Unauthorized: Cannot delete a platform role");
   }
 }

@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The brain's diary (watch-it-think plan, phase 4): the learning as a
@@ -120,7 +121,7 @@ export const listDiaryForGlobal = adminQuery({
   },
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     return await diaryPage(ctx, undefined, args.paginationOpts, args.action);
   },

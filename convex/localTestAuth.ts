@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { publicMutation } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 export const localTestRoleValidator = v.union(
   v.literal("super-admin"),
@@ -47,20 +48,20 @@ const LOCAL_TEST_USERS: Record<
 
 function assertLocalTestAuthEnabled(secret: string) {
   if (process.env.LOCAL_TEST_AUTH_ENVIRONMENT === "production") {
-    throw new Error("Local test auth is not available in production.");
+    throw appError("UNAUTHORIZED", "Local test auth is not available in production.");
   }
 
   if (process.env.LOCAL_TEST_AUTH_ENABLED !== "1") {
-    throw new Error("Local test auth is disabled.");
+    throw appError("MODULE_DISABLED", "Local test auth is disabled.");
   }
 
   const expectedSecret = process.env.LOCAL_TEST_AUTH_SECRET;
   if (!expectedSecret) {
-    throw new Error("Local test auth secret is not configured.");
+    throw appError("NOT_CONFIGURED", "Local test auth secret is not configured.");
   }
 
   if (secret !== expectedSecret) {
-    throw new Error("Invalid local test auth secret.");
+    throw appError("INVALID_INPUT", "Invalid local test auth secret.");
   }
 }
 
@@ -185,11 +186,11 @@ export const authorize = internalQuery({
       .first();
 
     if (!user || user.role !== userConfig.role) {
-      throw new Error("Local test user has not been seeded.");
+      throw appError("NOT_FOUND", "Local test user has not been seeded.");
     }
 
     if (userConfig.needsCompany && !user.companyId) {
-      throw new Error("Local test tenant user is missing a company.");
+      throw appError("INVALID_INPUT", "Local test tenant user is missing a company.");
     }
 
     return { userId: user._id };

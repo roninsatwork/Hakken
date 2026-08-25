@@ -2,6 +2,7 @@ import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { logAuthEvent } from "./authEvents";
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
+import { appError } from "./utils/appError";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_ONLY_ACCESS_DENIED = "Access Denied: This is an invite-only platform. Please contact your administrator.";
@@ -61,11 +62,11 @@ async function acceptPendingInvite(ctx: AuthProvisioningCtx, email: string, now:
 
 function assertInviteCanProvisionUser(invite: Doc<"invitations">, now: number) {
   if (invite.status === "PENDING" && now - invite.invitedAt > INVITE_EXPIRATION_MS) {
-    throw new Error("Access Denied: Your invitation has expired. Please request a new one.");
+    throw appError("CONFLICT", "Access Denied: Your invitation has expired. Please request a new one.");
   }
 
   if (invite.status !== "PENDING" && invite.status !== "ACCEPTED") {
-    throw new Error(INVITE_ONLY_ACCESS_DENIED);
+    throw appError("UNAUTHORIZED", INVITE_ONLY_ACCESS_DENIED);
   }
 }
 
@@ -103,7 +104,7 @@ export async function createOrUpdateSonaeAuthUser(
   const verifiedEventType = isOAuthProvider ? "OAUTH_VERIFIED" : "MAGIC_LINK_VERIFIED";
 
   if (!email) {
-    throw new Error("Invalid login: No email provided.");
+    throw appError("INVALID_INPUT", "Invalid login: No email provided.");
   }
 
   const existingUser = await ctx.db
@@ -171,7 +172,7 @@ export async function createOrUpdateSonaeAuthUser(
     .first();
 
   if (!invite) {
-    throw new Error(INVITE_ONLY_ACCESS_DENIED);
+    throw appError("UNAUTHORIZED", INVITE_ONLY_ACCESS_DENIED);
   }
 
   assertInviteCanProvisionUser(invite, now);

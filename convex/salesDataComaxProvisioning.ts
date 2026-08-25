@@ -2,6 +2,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { installBuiltInConnector } from "./aiTools";
 import { normalizeKey } from "./salesDataImportService";
+import { appError } from "./utils/appError";
 
 /**
  * Put the Comax agents into the state the screens expect, on any deployment.
@@ -142,7 +143,8 @@ function resolveComaxCompanyId(agents: Doc<"agents">[]) {
   }
 
   if (companyIds.size > 1) {
-    throw new Error(
+    throw appError(
+      "CONFLICT",
       "The Comax agents are split across more than one workspace, so there is no single "
         + "workspace to install the connectors against. Fix the agents' workspace on their "
         + "settings screens, then run this again."
@@ -161,7 +163,8 @@ export async function provisionComaxAgents(
   const comaxAgents = allAgents.filter(isComaxAgent);
 
   if (comaxAgents.length === 0) {
-    throw new Error(
+    throw appError(
+      "NOT_FOUND",
       "No agent on this deployment has Comax in its name. Create the Comax agents first, "
         + "then run this script to give them their tools."
     );

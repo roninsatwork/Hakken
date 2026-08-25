@@ -13,6 +13,7 @@ import {
   maintenanceScriptDefinitions,
   type MaintenanceScriptId,
 } from "./maintenanceScriptRegistry";
+import { appError } from "./utils/appError";
 
 type ScriptRunResult = {
   summary: string;
@@ -43,7 +44,7 @@ async function executeMaintenanceScript(
   }
   // template:remove:end
 
-  throw new Error("Unknown maintenance script");
+  throw appError("INVALID_INPUT", "Unknown maintenance script");
 }
 
 /**
@@ -159,7 +160,7 @@ export const run = superAdminMutation({
     const { userId, user } = ctx;
     const script = getMaintenanceScriptDefinition(args.scriptId);
     if (!script) {
-      throw new Error("Unknown maintenance script");
+      throw appError("INVALID_INPUT", "Unknown maintenance script");
     }
 
     const startedAt = Date.now();

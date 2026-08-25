@@ -84,6 +84,7 @@ import {
   shouldStopForToolBudget,
 } from "./agentRuntimeService";
 import { getErrorMessage, isRecord } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 
 type RuntimeToolMetadata = {
@@ -427,12 +428,12 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   owner?: RunOwner;
 }) {
   const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
-  if (!agent) throw new Error("Agent not found.");
+  if (!agent) throw appError("NOT_FOUND", "Agent not found.");
 
   const thread = args.threadId
     ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
     : null;
-  if (args.threadId && !thread) throw new Error("Thread context missing");
+  if (args.threadId && !thread) throw appError("NOT_FOUND", "Thread context missing");
 
   const owner: RunOwner = thread
     ? { companyId: thread.companyId, userId: thread.userId }
@@ -996,7 +997,7 @@ export const continueAgentObjective = internalAction({
 
     try {
       if (checkpoint.segmentCount >= AGENT_RUN_MAX_SEGMENTS) {
-        throw new Error("Agent run exceeded the maximum number of continuation segments.");
+        throw appError("INVALID_INPUT", "Agent run exceeded the maximum number of continuation segments.");
       }
 
       execution = await buildLoopExecutionContext(ctx, {
@@ -1010,7 +1011,7 @@ export const continueAgentObjective = internalAction({
 
       const conversationHistory = JSON.parse(checkpoint.transcriptJson) as Content[];
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
-        throw new Error("Agent run checkpoint holds no usable conversation transcript.");
+        throw appError("INVALID_INPUT", "Agent run checkpoint holds no usable conversation transcript.");
       }
 
       await executeObjectiveLoop(ctx, {
@@ -2129,8 +2130,8 @@ export const runTriggeredAgentObjective = internalAction({
 
     try {
       const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
-      if (!agent) throw new Error("Agent not found.");
-      if (agent.isActive === false) throw new Error("Agent is inactive.");
+      if (!agent) throw appError("NOT_FOUND", "Agent not found.");
+      if (agent.isActive === false) throw appError("CONFLICT", "Agent is inactive.");
 
       const replayExecutionContext = runId
         ? await ctx.runQuery(internal.agentRuns.getReplayExecutionContextInternal, { runId })
@@ -2579,13 +2580,13 @@ export const resumeApprovedToolCall = internalAction({
       approvalId: args.approvalId,
     });
     if (!context?.approval || !context.run || !context.toolCall) {
-      throw new Error("Approval resume context not found.");
+      throw appError("NOT_FOUND", "Approval resume context not found.");
     }
     if (context.approval.status !== "APPROVED") {
-      throw new Error("Approval has not been approved.");
+      throw appError("CONFLICT", "Approval has not been approved.");
     }
     if (context.toolCall.status !== "PENDING") {
-      throw new Error("Approved tool call is not pending execution.");
+      throw appError("CONFLICT", "Approved tool call is not pending execution.");
     }
 
     const parsedArgs = parseToolArguments(context.toolCall.argumentsJson);
@@ -2699,7 +2700,7 @@ export const executeAgentNode = internalAction({
     const ai = createVertexGenAIClient();
 
     const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
-    if (!agent) throw new Error("Agent not found.");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found.");
 
     const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
        requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,

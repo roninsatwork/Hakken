@@ -29,6 +29,7 @@ import {
   normalizeIdempotencyKey,
   recordCompletedToolCall,
 } from "./aiToolIdempotencyService";
+import { appError } from "./utils/appError";
 
 /**
  * What the research agent is allowed to read and write.
@@ -66,7 +67,7 @@ async function assertSalesDataCompany(
 ) {
   const company = await ctx.db.get(companyId);
   if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
-    throw new Error("Sales Data is not enabled for this workspace.");
+    throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
   }
 }
 
@@ -1863,10 +1864,10 @@ export const decideResearchFinding = tenantMutation({
     // Checked against the caller's own workspace rather than trusted from the
     // id, as everywhere else in this vertical.
     if (!row || row.companyId !== companyId) {
-      throw new Error("That finding is not in this workspace.");
+      throw appError("UNAUTHORIZED", "That finding is not in this workspace.");
     }
     if (row.status !== "NEEDS_CHECK" && row.status !== "APPLIED") {
-      throw new Error("That finding has already been decided.");
+      throw appError("CONFLICT", "That finding has already been decided.");
     }
 
     const now = Date.now();
@@ -1890,10 +1891,10 @@ export const decideResearchFinding = tenantMutation({
     }
 
     if (row.status === "APPLIED") return { status: "APPLIED" as const };
-    if (!isResearchField(row.field)) throw new Error("That finding is for a detail we no longer hold.");
+    if (!isResearchField(row.field)) throw appError("CONFLICT", "That finding is for a detail we no longer hold.");
 
     const parsed = parseResearchValue(row.field, row.value);
-    if (parsed === null) throw new Error("That finding is not a value this detail can hold.");
+    if (parsed === null) throw appError("INVALID_INPUT", "That finding is not a value this detail can hold.");
 
     await writeCustomerField(ctx, {
       companyId,

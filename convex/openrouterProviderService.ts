@@ -23,6 +23,7 @@ import {
   requestProviderJson,
   type ProviderFetch,
 } from "./providerHttpService";
+import { appError } from "./utils/appError";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -71,7 +72,7 @@ export function buildOpenRouterProviderConfig(args: { env: OpenRouterProviderEnv
   const apiKey = args.env.OPENROUTER_API_KEY?.trim();
 
   if (!apiKey) {
-    throw new Error("OpenRouter credentials are missing OPENROUTER_API_KEY.");
+    throw appError("NOT_CONFIGURED", "OpenRouter credentials are missing OPENROUTER_API_KEY.");
   }
 
   return {

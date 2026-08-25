@@ -21,6 +21,7 @@ import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   buildModelSearchText,
 } from "./aiModelService";
+import { appError } from "./utils/appError";
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
@@ -890,7 +891,8 @@ export const run = internalMutation({
   },
   handler: async (ctx, args) => {
     if (!MIGRATIONS[args.name]) {
-      throw new Error(
+      throw appError(
+        "INVALID_INPUT",
         `Unknown migration "${args.name}". Registered: ${getRegisteredMigrationNames().join(", ") || "(none)"}`,
       );
     }

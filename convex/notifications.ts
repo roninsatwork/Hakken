@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 
 /**
  * The platform telling one person that something happened.
@@ -60,7 +61,7 @@ export const markRead = tenantMutation({
     // Checked against the row's own owner, not the tenant: two colleagues in
     // one workspace still have separate inboxes.
     if (!notification || notification.userId !== ctx.userId) {
-      throw new Error("That notification could not be found.");
+      throw appError("NOT_FOUND", "That notification could not be found.");
     }
     if (notification.readAt) return;
 
@@ -97,7 +98,7 @@ export const notifyUserInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const title = args.title.trim();
-    if (!title) throw new Error("A notification needs a title.");
+    if (!title) throw appError("INVALID_INPUT", "A notification needs a title.");
 
     return await ctx.db.insert("notifications", {
       userId: args.userId,

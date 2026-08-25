@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { producesPropertyListings } from "./apifyActors";
 import { readBoundedJson } from "./utils/boundedRequestBody";
 import { constantTimeEqual } from "./utils/security";
+import { appError } from "./utils/appError";
 
 
 const getUrlValue = (value: unknown) => {
@@ -145,7 +146,7 @@ export const storeRightmoveData = internalMutation({
       .withIndex("by_runId", q => q.eq("runId", args.runId))
       .unique();
 
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
 
     // Only the Rightmove scraper's results are property listings. Anything else
     // an agent starts through the generic Apify tool has a shape nobody here

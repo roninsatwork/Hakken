@@ -15,6 +15,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 
 const WEBHOOK_DELIVERY_PREVIEW_MAX_LENGTH = 2000;
 const WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH = 120;
@@ -46,23 +47,23 @@ const webhookDeliveryHeaderValidator = v.array(v.object({
 
 function normalizeEventType(eventType: string) {
   const normalized = eventType.trim().replace(/\s+/g, ".");
-  if (!normalized) throw new Error("Webhook event type is required.");
+  if (!normalized) throw appError("INVALID_INPUT", "Webhook event type is required.");
   if (normalized.length > WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH) {
-    throw new Error(`Webhook event type cannot exceed ${WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH} characters.`);
+    throw appError("INVALID_INPUT", `Webhook event type cannot exceed ${WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH} characters.`);
   }
   return normalized;
 }
 
 function normalizeDestinationUrl(destinationUrl: string) {
   const normalized = destinationUrl.trim();
-  if (!normalized) throw new Error("Webhook destination URL is required.");
+  if (!normalized) throw appError("INVALID_INPUT", "Webhook destination URL is required.");
   try {
     const url = new URL(normalized);
     if (url.protocol !== "https:" && url.protocol !== "http:") {
-      throw new Error("Webhook destination URL must use http or https.");
+      throw appError("INVALID_INPUT", "Webhook destination URL must use http or https.");
     }
   } catch {
-    throw new Error("Webhook destination URL must be valid.");
+    throw appError("INVALID_INPUT", "Webhook destination URL must be valid.");
   }
   return normalized;
 }
@@ -79,16 +80,16 @@ function normalizeMaxAttempts(value: number | undefined) {
   if (value === undefined) return WEBHOOK_DELIVERY_MAX_ATTEMPTS_DEFAULT;
   const normalized = Math.floor(value);
   if (normalized < 1 || normalized > WEBHOOK_DELIVERY_MAX_ATTEMPTS_LIMIT) {
-    throw new Error(`Webhook max attempts must be between 1 and ${WEBHOOK_DELIVERY_MAX_ATTEMPTS_LIMIT}.`);
+    throw appError("INVALID_INPUT", `Webhook max attempts must be between 1 and ${WEBHOOK_DELIVERY_MAX_ATTEMPTS_LIMIT}.`);
   }
   return normalized;
 }
 
 function normalizePayloadJson(value: string) {
   const normalized = value.trim();
-  if (!normalized) throw new Error("Webhook payload is required.");
+  if (!normalized) throw appError("INVALID_INPUT", "Webhook payload is required.");
   if (normalized.length > WEBHOOK_DELIVERY_PAYLOAD_MAX_LENGTH) {
-    throw new Error(`Webhook payload cannot exceed ${WEBHOOK_DELIVERY_PAYLOAD_MAX_LENGTH} characters.`);
+    throw appError("INVALID_INPUT", `Webhook payload cannot exceed ${WEBHOOK_DELIVERY_PAYLOAD_MAX_LENGTH} characters.`);
   }
   return normalized;
 }
@@ -183,10 +184,10 @@ export const recordAttemptInternal = internalMutation({
   },
   handler: async (ctx, args): Promise<Doc<"webhookDeliveries">> => {
     const delivery = await ctx.db.get(args.deliveryId);
-    if (!delivery) throw new Error("Webhook delivery not found.");
-    if (args.status === "PENDING") throw new Error("Attempt status cannot move a delivery back to pending.");
+    if (!delivery) throw appError("NOT_FOUND", "Webhook delivery not found.");
+    if (args.status === "PENDING") throw appError("CONFLICT", "Attempt status cannot move a delivery back to pending.");
     if (args.status === "RETRY_SCHEDULED" && args.nextAttemptAt === undefined) {
-      throw new Error("Retry deliveries require nextAttemptAt.");
+      throw appError("INVALID_INPUT", "Retry deliveries require nextAttemptAt.");
     }
 
     const now = args.now ?? Date.now();
@@ -204,7 +205,7 @@ export const recordAttemptInternal = internalMutation({
     });
 
     const updated = await ctx.db.get(args.deliveryId);
-    if (!updated) throw new Error("Webhook delivery not found.");
+    if (!updated) throw appError("NOT_FOUND", "Webhook delivery not found.");
     return updated;
   },
 });

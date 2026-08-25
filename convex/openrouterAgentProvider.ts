@@ -37,6 +37,7 @@ import type {
   AgentTurnRequest,
   AgentTurnResponse,
 } from "./agentProviderTypes";
+import { appError } from "./utils/appError";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
@@ -91,7 +92,7 @@ export function createOpenRouterAgentProvider(args: {
 
     async streamTurn(request: AgentTurnRequest, options: AgentStreamOptions): Promise<AgentTurnResponse> {
       if (!apiKey) {
-        throw new Error("OpenRouter credentials are missing OPENROUTER_API_KEY.");
+        throw appError("NOT_CONFIGURED", "OpenRouter credentials are missing OPENROUTER_API_KEY.");
       }
 
       const messages: OpenRouterMessage[] = [
@@ -148,7 +149,7 @@ export function createOpenRouterAgentProvider(args: {
 
         if (!response.ok || !response.body) {
           const detail = response.ok ? "no response body" : await response.text();
-          throw new Error(`OpenRouter request failed (${response.status}): ${detail.slice(0, 500)}`);
+          throw appError("UPSTREAM_FAILURE", `OpenRouter request failed (${response.status}): ${detail.slice(0, 500)}`);
         }
 
         const reader = response.body.getReader();

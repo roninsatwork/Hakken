@@ -6,6 +6,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import { parseStoredStringArray } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 const TEXT_MAX_CHARS = 4000;
 const TITLE_MAX_CHARS = 160;
@@ -41,15 +42,15 @@ const evalTargetSurfaceValidator = v.union(
 
 function normalizeText(value: string | undefined, label: string, maxChars = TEXT_MAX_CHARS) {
   const normalized = value?.trim().replace(/\s+/g, " ");
-  if (!normalized) throw new Error(`${label} is required.`);
-  if (normalized.length > maxChars) throw new Error(`${label} cannot exceed ${maxChars} characters.`);
+  if (!normalized) throw appError("INVALID_INPUT", `${label} is required.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `${label} cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
 function normalizeOptionalText(value: string | undefined, maxChars = TEXT_MAX_CHARS) {
   const normalized = value?.trim();
   if (!normalized) return undefined;
-  if (normalized.length > maxChars) throw new Error(`Text cannot exceed ${maxChars} characters.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `Text cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
@@ -60,11 +61,11 @@ function parseJsonArray(value: string | undefined, label: string) {
   try {
     parsed = JSON.parse(normalized);
   } catch {
-    throw new Error(`${label} must be valid JSON.`);
+    throw appError("INVALID_INPUT", `${label} must be valid JSON.`);
   }
 
   if (!Array.isArray(parsed) || parsed.some((entry) => typeof entry !== "string")) {
-    throw new Error(`${label} must be a JSON array of strings.`);
+    throw appError("INVALID_INPUT", `${label} must be a JSON array of strings.`);
   }
 
   const values = Array.from(new Set(parsed.map((entry) => entry.trim()).filter(Boolean)));
@@ -97,11 +98,11 @@ async function requireThreadEvidence(ctx: MutationCtx, args: {
   messageId?: Id<"messages">;
 }) {
   const thread = await ctx.db.get(args.threadId);
-  if (!thread || thread.companyId !== args.companyId) throw new Error("Thread not found for this company.");
+  if (!thread || thread.companyId !== args.companyId) throw appError("NOT_FOUND", "Thread not found for this company.");
   let message: Doc<"messages"> | null = null;
   if (args.messageId) {
     message = await ctx.db.get(args.messageId);
-    if (!message || message.threadId !== args.threadId) throw new Error("Message not found for this thread.");
+    if (!message || message.threadId !== args.threadId) throw appError("NOT_FOUND", "Message not found for this thread.");
   }
   return { thread, message };
 }

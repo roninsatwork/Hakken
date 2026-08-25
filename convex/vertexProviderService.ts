@@ -9,6 +9,7 @@ import type {
 } from "@google/genai";
 import { GOOGLE_VERTEX_EMBEDDING_LOCATION, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { withProviderRetry, type ProviderRetryPolicy } from "./aiProviderRetryService";
+import { appError } from "./utils/appError";
 
 export type VertexProviderEnv = {
   GOOGLE_CLOUD_PROJECT?: string;
@@ -37,7 +38,7 @@ export function buildVertexProviderConfig(args: {
   const privateKey = args.env.GOOGLE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    throw new Error("Vertex AI credentials are missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY.");
+    throw appError("NOT_CONFIGURED", "Vertex AI credentials are missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY.");
   }
 
   return {

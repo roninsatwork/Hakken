@@ -18,6 +18,7 @@ import {
   type GroupMemberSpend,
   type ProspectSubject,
 } from "./salesOpportunityService";
+import { appError } from "./utils/appError";
 
 /**
  * The opportunity report: one press, one run, one row.
@@ -348,12 +349,13 @@ async function requireReportForRun(
 ): Promise<Doc<"salesOpportunityReports">> {
   const report = await findRunningReport(ctx, args.companyId);
   if (!report) {
-    throw new Error(
+    throw appError(
+      "CONFLICT",
       "No report is being built. Call the prospect pricing tool first — it opens the report."
     );
   }
   if (report.runId && args.runId && report.runId !== args.runId) {
-    throw new Error("Another run is already building this workspace's report. Stop here.");
+    throw appError("CONFLICT", "Another run is already building this workspace's report. Stop here.");
   }
   return report;
 }
@@ -428,10 +430,10 @@ export const runMatchingPassInternal = internalMutation({
     if (!report) {
       report = await openReportForRun(ctx, args);
     } else if (report.runId && args.runId && report.runId !== args.runId) {
-      throw new Error("Another run is already building this workspace's report. Stop here.");
+      throw appError("CONFLICT", "Another run is already building this workspace's report. Stop here.");
     }
     if (report.phase !== "MATCHING") {
-      throw new Error("The prospects are already priced. Call the group gaps tool next.");
+      throw appError("CONFLICT", "The prospects are already priced. Call the group gaps tool next.");
     }
 
     const customers = await loadComparableCustomers(ctx, args.companyId, report.importId);
@@ -478,11 +480,11 @@ async function openReportForRun(
   args: { companyId: Id<"companies">; runId?: Id<"agentRuns">; userId?: Id<"users"> }
 ): Promise<Doc<"salesOpportunityReports">> {
   if (!args.userId) {
-    throw new Error("This run belongs to nobody, so it cannot open a report.");
+    throw appError("NO_ACTIVE_COMPANY", "This run belongs to nobody, so it cannot open a report.");
   }
   const currentImport = await getCurrentImport(ctx, args.companyId);
   if (!currentImport) {
-    throw new Error("No workbook is imported, so there is nothing to price.");
+    throw appError("INVALID_INPUT", "No workbook is imported, so there is nothing to price.");
   }
   const now = Date.now();
   const reportId = await ctx.db.insert("salesOpportunityReports", {
@@ -499,7 +501,7 @@ async function openReportForRun(
     reportId,
   });
   const report = await ctx.db.get(reportId);
-  if (!report) throw new Error("The report row vanished as it was made.");
+  if (!report) throw appError("NOT_FOUND", "The report row vanished as it was made.");
   return report;
 }
 
@@ -513,10 +515,10 @@ export const runGapsPassInternal = internalMutation({
     const now = Date.now();
     const report = await requireReportForRun(ctx, args);
     if (report.phase === "MATCHING") {
-      throw new Error("Price the prospects first — the headline needs both sections.");
+      throw appError("CONFLICT", "Price the prospects first — the headline needs both sections.");
     }
     if (report.phase !== "GAPS") {
-      throw new Error("The gaps are already found. Write and save the summary next.");
+      throw appError("CONFLICT", "The gaps are already found. Write and save the summary next.");
     }
 
     const accounts = await ctx.db
@@ -661,7 +663,7 @@ export const saveSummaryInternal = internalMutation({
     const now = Date.now();
     const report = await requireReportForRun(ctx, args);
     if (report.phase !== "SUMMARY" || !report.headline) {
-      throw new Error("Both passes must run before the summary: prospects first, then gaps.");
+      throw appError("CONFLICT", "Both passes must run before the summary: prospects first, then gaps.");
     }
 
     const allowed = collectReportFigures(
@@ -671,7 +673,8 @@ export const saveSummaryInternal = internalMutation({
     );
     const unsupported = findUnsupportedFigures(args.summary, allowed);
     if (unsupported.length > 0) {
-      throw new Error(
+      throw appError(
+        "INVALID_INPUT",
         `The summary names figures the report does not hold: ${unsupported.join(", ")}. `
           + "Quote figures exactly as the tools returned them, then save again."
       );

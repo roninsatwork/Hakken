@@ -21,6 +21,7 @@ import type {
   AgentTurnRequest,
   AgentTurnResponse,
 } from "./agentProviderTypes";
+import { appError } from "./utils/appError";
 
 /**
  * Anthropic behind the neutral agent-provider contract.
@@ -118,7 +119,7 @@ export function createAnthropicAgentProvider(args: {
 
     async streamTurn(request: AgentTurnRequest, options: AgentStreamOptions): Promise<AgentTurnResponse> {
       if (!apiKey) {
-        throw new Error("Anthropic credentials are missing ANTHROPIC_API_KEY.");
+        throw appError("NOT_CONFIGURED", "Anthropic credentials are missing ANTHROPIC_API_KEY.");
       }
 
       const cacheable = applyAnthropicCacheControl({
@@ -180,7 +181,7 @@ export function createAnthropicAgentProvider(args: {
 
         if (!response.ok || !response.body) {
           const detail = response.ok ? "no response body" : await response.text();
-          throw new Error(`Anthropic request failed (${response.status}): ${detail.slice(0, 500)}`);
+          throw appError("UPSTREAM_FAILURE", `Anthropic request failed (${response.status}): ${detail.slice(0, 500)}`);
         }
 
         const reader = response.body.getReader();
