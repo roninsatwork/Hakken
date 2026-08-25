@@ -1,7 +1,7 @@
 "use client";
 
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 export type DeletingProperty = {

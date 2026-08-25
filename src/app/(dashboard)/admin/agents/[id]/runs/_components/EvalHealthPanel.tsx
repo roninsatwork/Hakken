@@ -11,8 +11,8 @@ import {
   getSmokeEvalTone,
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/atoms/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
+import { Button } from "@/src/ui/components/screens/Button";
+import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
 import { useToast } from "@/src/context/ToastContext";
 
 // The suite is page-level rather than per-row, so it needs a key of its own

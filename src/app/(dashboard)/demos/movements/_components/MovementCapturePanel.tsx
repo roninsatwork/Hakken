@@ -2,7 +2,7 @@
 
 import React, { type RefObject } from "react";
 import Webcam from "react-webcam";
-import Typography from "@/src/ui/atoms/typography";
+import Typography from "@/src/ui/components/screens/typography";
 import type { MediaPipeVisionStatus } from "../_hooks/useMediaPipeVision";
 import { movementBodyTrackingVideoConstraints } from "../_lib/movementCameraConstraints";
 import type { MovementCameraDevice } from "../_hooks/useMovementCameraDevices";

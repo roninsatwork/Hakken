@@ -16,7 +16,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";

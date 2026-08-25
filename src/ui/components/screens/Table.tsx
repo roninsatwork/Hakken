@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import type { KeyboardEventHandler, ReactNode, Ref } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "./AccessLevel";
 
 type AdminSearchBarProps = {

@@ -15,7 +15,7 @@
  */
 
 import type { Doc } from "@/convex/_generated/dataModel";
-import type { StatusTone } from "@/src/ui/atoms/statusTone";
+import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { formatMoney } from "./observabilityFormat";
 
 export type RunStatus = Doc<"agentRuns">["status"];

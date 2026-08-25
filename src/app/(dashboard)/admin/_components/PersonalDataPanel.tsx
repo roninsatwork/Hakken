@@ -6,7 +6,7 @@ import { Download, Loader2, Trash2, UserSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { getErrorMessage } from "@/src/lib/errors";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";

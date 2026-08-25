@@ -17,7 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { CompactList } from "@/src/ui/components/screens/CompactList";

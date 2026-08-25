@@ -2,7 +2,7 @@ import React from 'react';
 import { Bot, Webhook, Zap, ArrowRightLeft, X, Code2, Clock, Database, UserCheck, RefreshCcw, GitMerge, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/src/ui/atoms/Button';
+import { Button } from '@/src/ui/components/screens/Button';
 
 export const WorkflowSidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
   const t = useTranslations('admin.workflows.designer.library');

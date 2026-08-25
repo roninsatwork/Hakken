@@ -1,7 +1,7 @@
 "use client";
 
 import type { Doc } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";

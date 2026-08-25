@@ -22,8 +22,8 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/atoms/StatusPill";
-import { toneForStatus } from "@/src/ui/atoms/statusTone";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 
 type KnowledgeDocumentContentProps = {
   companyId: Id<"companies">;

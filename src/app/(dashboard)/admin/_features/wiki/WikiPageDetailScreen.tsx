@@ -13,7 +13,7 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiLocalGraph } from "./WikiLocalGraph";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";

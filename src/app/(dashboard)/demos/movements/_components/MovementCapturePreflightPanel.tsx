@@ -1,4 +1,4 @@
-import Typography from "@/src/ui/atoms/typography";
+import Typography from "@/src/ui/components/screens/typography";
 import type { MovementCapturePreflight } from "../_lib/movementCapturePreflight";
 import {
   MOVEMENT_SALMON,

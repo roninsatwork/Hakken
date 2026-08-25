@@ -7,8 +7,8 @@ import { History, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { StatusPill } from "@/src/ui/atoms/StatusPill";
-import { toneForStatus } from "@/src/ui/atoms/statusTone";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import {
   purgePipelineKeys,
   type PurgeHistoryRow,

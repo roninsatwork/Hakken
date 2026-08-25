@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Loader2, Play, Trash2 } from "lucide-react";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 

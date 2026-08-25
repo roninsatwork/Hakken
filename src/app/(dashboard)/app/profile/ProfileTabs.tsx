@@ -9,7 +9,7 @@ import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucid
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { describeDevice } from "@/src/lib/devices";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { AssistantNoteTab } from "./AssistantNoteTab";
 
 export default function ProfileTabs() {

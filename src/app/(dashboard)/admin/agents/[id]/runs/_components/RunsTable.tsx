@@ -29,8 +29,8 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/atoms/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
+import { Button } from "@/src/ui/components/screens/Button";
+import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
 import { useToast } from "@/src/context/ToastContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import type { FeedbackRecord } from "./FeedbackModal";

@@ -14,7 +14,7 @@ import {
   type AiSystemKind,
   type RegisterSort,
 } from "@/convex/governanceRegisterService";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 /** What the reader picks. Held in its own terms, not the model's. */
 export type SchemaType = "STRING" | "NUMBER" | "BOOLEAN";

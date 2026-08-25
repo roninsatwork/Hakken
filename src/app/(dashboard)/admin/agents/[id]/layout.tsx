@@ -15,7 +15,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useToast } from "@/src/context/ToastContext";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {

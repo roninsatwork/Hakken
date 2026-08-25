@@ -312,7 +312,7 @@ describe("the buttons rule", () => {
 
   it("does not count the kit's own <Button>", () => {
     write(
-      'import { Button } from "@/src/ui/atoms/Button";\n' +
+      'import { Button } from "@/src/ui/components/screens/Button";\n' +
         'export const Probe = () => <Button variant="ghost">probe</Button>;\n'
     );
 
@@ -568,7 +568,7 @@ describe("the shadows rule", () => {
   // it adds, so a reader who sees a familiar name is not misled.
   it("leaves a differently-named wrapper alone", () => {
     write(
-      'import { StatusPill } from "@/src/ui/atoms/StatusPill";\n' +
+      'import { StatusPill } from "@/src/ui/components/screens/StatusPill";\n' +
         "function RunStatusPill() {\n" +
         '  return <StatusPill tone="info">Running</StatusPill>;\n' +
         "}\n" +

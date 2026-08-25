@@ -5,7 +5,7 @@ import { useAction } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { convexHttpActionsUrl } from "@/src/lib/convexHttpActionsUrl";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type {
   WorkflowActionConfig,

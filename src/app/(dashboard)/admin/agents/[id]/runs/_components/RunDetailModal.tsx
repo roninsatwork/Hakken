@@ -22,8 +22,8 @@ import {
 import { formatMoney, type LabelRef } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/atoms/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
+import { Button } from "@/src/ui/components/screens/Button";
+import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 /**

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, DownloadCloud, Loader2, PlugZap, Power, Server, Trash2, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";

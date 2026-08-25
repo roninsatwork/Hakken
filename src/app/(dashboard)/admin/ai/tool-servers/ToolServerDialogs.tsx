@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, Loader2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField, ModalFormActions } from "@/src/ui/components/screens/ModalForm";

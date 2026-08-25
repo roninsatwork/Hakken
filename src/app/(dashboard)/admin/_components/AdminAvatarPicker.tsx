@@ -8,7 +8,7 @@ import { Bot, ImagePlus, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/src/ui/lib/utils";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 

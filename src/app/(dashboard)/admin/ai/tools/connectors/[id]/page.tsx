@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
 import { Cable, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { formatDateTime } from "@/src/lib/dates";
 import { SaveAction } from "@/src/ui/components/screens/SaveControls";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";

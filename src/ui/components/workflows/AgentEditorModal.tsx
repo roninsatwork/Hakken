@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { WorkflowCanvasEdge, WorkflowCanvasNode, WorkflowNodeUpdateHandler } from "./types";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";

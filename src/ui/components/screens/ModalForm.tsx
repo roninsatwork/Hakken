@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "./AccessLevel";
 
 export const modalInputClassName =

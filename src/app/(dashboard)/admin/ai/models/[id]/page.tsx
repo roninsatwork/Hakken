@@ -9,7 +9,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, ChevronDown, Loader2, Save } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";

@@ -39,12 +39,12 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { StatusPill } from "@/src/ui/atoms/StatusPill";
-import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/atoms/statusTone";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 type AgentMemory = Doc<"agentMemories">;
 type SourceRunSummary = {

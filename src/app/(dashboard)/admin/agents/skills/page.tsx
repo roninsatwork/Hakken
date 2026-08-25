@@ -16,7 +16,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 const SkillCatalogDialogs = dynamic(() =>
   import("./SkillCatalogDialogs").then((module) => module.SkillCatalogDialogs)

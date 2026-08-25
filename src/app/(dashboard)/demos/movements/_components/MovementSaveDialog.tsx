@@ -1,6 +1,6 @@
 "use client";
 
-import Typography from "@/src/ui/atoms/typography";
+import Typography from "@/src/ui/components/screens/typography";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ModalField } from "@/src/ui/components/screens/ModalForm";
 import { MIN_MOVEMENT_CAPTURE_FRAMES } from "../_lib/saveMovementRecording";

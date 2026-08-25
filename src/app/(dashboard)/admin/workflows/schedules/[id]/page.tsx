@@ -14,7 +14,7 @@ import {
   ToggleLeft
 } from "lucide-react";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";

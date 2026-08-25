@@ -22,7 +22,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { AgentNode, type AgentNodeType } from "@/src/ui/components/workflows/AgentNode";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
 import { useTranslations } from "next-intl";
 import Link from "next/link";

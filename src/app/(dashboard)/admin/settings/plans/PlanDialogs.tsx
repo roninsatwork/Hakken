@@ -3,7 +3,7 @@
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";

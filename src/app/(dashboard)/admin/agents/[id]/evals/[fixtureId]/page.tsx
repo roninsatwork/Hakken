@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import type { AgentCheckDetail } from "./AgentCheckDetailContent";
 
 const AgentCheckDetailContent = lazy(() => import("./AgentCheckDetailContent"));

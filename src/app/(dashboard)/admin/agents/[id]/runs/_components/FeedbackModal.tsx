@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 type AgentRunFeedback = Doc<"agentRunFeedback">;
 export type FeedbackRating = AgentRunFeedback["rating"];

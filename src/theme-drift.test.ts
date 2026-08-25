@@ -102,7 +102,7 @@ const DRIFT_BASELINE = 1231;
  * OPERATIONS (not statuses) through the shared tone classes, the other maps
  * a numeric score inside the frozen movement demo's domain palette. A new
  * helper anywhere else is the copy-paste pattern that produced eighteen
- * divergent status colour maps — extend `src/ui/atoms/statusTone.ts` instead.
+ * divergent status colour maps — extend `src/ui/components/screens/statusTone.ts` instead.
  */
 const ALLOWED_COLOR_HELPER_FILES = [
   "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
@@ -120,7 +120,7 @@ describe("status colour helpers stay consolidated", () => {
       if (!ALLOWED_COLOR_HELPER_FILES.includes(relative)) offenders.push(relative);
     }
 
-    expect(offenders, "extend src/ui/atoms/statusTone.ts instead of adding a local colour helper").toEqual([]);
+    expect(offenders, "extend src/ui/components/screens/statusTone.ts instead of adding a local colour helper").toEqual([]);
   });
 });
 

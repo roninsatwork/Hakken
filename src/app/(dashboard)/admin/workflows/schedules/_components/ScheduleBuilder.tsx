@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, ChevronDown, Clock3, Repeat2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import {
   addTargetedTime,

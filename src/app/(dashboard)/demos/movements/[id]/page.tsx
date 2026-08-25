@@ -8,7 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trash2, Activity, CheckCircle2, Clock, Sparkles, Play } from "lucide-react";
-import Typography from "@/src/ui/atoms/typography";
+import Typography from "@/src/ui/components/screens/typography";
 import { useMovementFrames } from "../_hooks/useMovementFrames";
 import MovementDeleteDialog from "../_components/MovementDeleteDialog";
 import MovementFrameViewer from "../_components/MovementFrameViewer";

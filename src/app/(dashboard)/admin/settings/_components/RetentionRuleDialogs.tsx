@@ -4,7 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { EXPECTED_RETENTION_DAYS } from "@/convex/governanceDashboardService";
 import { AlertTriangle, Clock, Loader2, Play, Square } from "lucide-react";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";

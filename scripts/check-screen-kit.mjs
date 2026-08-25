@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
  *   showed when the list was actually empty. Sixty-one screens are frozen here
  *   at the moment the rule was written.
  * - A `<button>` written by hand. Added 2026-08-19, and it works by count, not
- *   by file: 387 raw buttons existed the day `Button` (src/ui/atoms/Button.tsx)
+ *   by file: 387 raw buttons existed the day `Button` (src/ui/components/screens/Button.tsx)
  *   did, each inventing its own padding and hover, so a file cannot be asked to
  *   reach zero in one sitting. Instead every file's count is frozen and may
  *   only fall — one more raw button than a file had is the failure. This rule
@@ -133,7 +133,7 @@ const BUTTON_SCAN_DIRS = [path.join("src", "app"), path.join("src", "ui")];
 /** The movement demos are frozen whole by owner decision; Button draws the one <button> the rest should use. */
 const BUTTON_EXEMPT = [
   path.join("src", "app", "(dashboard)", "demos") + path.sep,
-  path.join("src", "ui", "atoms", "Button.tsx"),
+  path.join("src", "ui", "components", "screens", "Button.tsx"),
 ];
 
 /**
@@ -190,7 +190,7 @@ const RULES = {
     part: "a raw <button>",
     headline: "These draw more raw <button>s than their frozen count allows:",
     fix:
-      "Use Button from src/ui/atoms/Button.tsx — pick the variant whose look the screen\n" +
+      "Use Button from src/ui/components/screens/Button.tsx — pick the variant whose look the screen\n" +
       "wants (primary, pill, quiet, ghost, accent, destructive, icon, brand, outline)\n" +
       "and adjust size\n" +
       "through className if it must. A button whose colours or behaviour genuinely match\n" +
@@ -222,7 +222,7 @@ const RULES = {
     part: "a component the kit already exports",
     headline: "These declare a component under a name the kit already uses:",
     fix:
-      "Import it from src/ui/components/screens/ or src/ui/atoms/ instead of declaring\n" +
+      "Import it from src/ui/components/screens/ instead of declaring\n" +
       "your own. Two screens each held a private copy of SettingSwitch, identical to the\n" +
       "kit's character for character except that one used py-3 where the others used\n" +
       "py-4 — three switches, already a row-height apart, and no rule saw it because\n" +
@@ -430,14 +430,11 @@ const HEADER_RULE_CLASSES = /border-b border-border-dim pb-6/g;
 /**
  * Where the kit's components live, for the rule about redeclaring one.
  *
- * Screens and atoms only. `src/ui/components/feedback` and the rest of `src/ui`
+ * The kit only. `src/ui/components/feedback` and the rest of `src/ui`
  * are app chrome rather than the screen kit, and a screen declaring its own
  * `ChatMessage` is not the fault this is about.
  */
-const KIT_DIRS = [
-  path.join("src", "ui", "components", "screens"),
-  path.join("src", "ui", "atoms"),
-];
+const KIT_DIRS = [path.join("src", "ui", "components", "screens")];
 
 /**
  * A top-level declaration of a component: `function Name`, `const Name =`,

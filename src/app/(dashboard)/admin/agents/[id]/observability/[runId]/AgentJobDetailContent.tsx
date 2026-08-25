@@ -34,7 +34,7 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import { toUserFacingMessage } from "@/src/lib/errors";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   thinking: "bg-secondary/40",

@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { Select } from "@/src/ui/components/screens/Select";
 import { getErrorMessage } from "@/src/lib/errors";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";

@@ -7,7 +7,7 @@ import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";

@@ -31,7 +31,7 @@ import {
   History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { InlineSearchInput, PaginationFooter } from "@/src/ui/components/screens/Table";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -39,8 +39,8 @@ import { formatDate } from "@/src/lib/dates";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
 import { MAX_BULK_UPLOAD_FILES, type CollectedFile } from "./knowledgeUploadUtils";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { StatusPill } from "@/src/ui/atoms/StatusPill";
-import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type KnowledgeScope =

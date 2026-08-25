@@ -21,7 +21,7 @@ import {
 import type { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";

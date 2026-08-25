@@ -7,7 +7,7 @@ import { Edit2, Power, Trash2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/atoms/statusTone";
+import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/components/screens/statusTone";
 
 export type AdminRuleTableRow = {
   _id: Id<"aiRules">;

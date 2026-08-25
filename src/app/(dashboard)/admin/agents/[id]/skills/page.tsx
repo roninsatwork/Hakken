@@ -17,7 +17,7 @@ import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 /** One screenful of candidates; "load more" fetches the next. */

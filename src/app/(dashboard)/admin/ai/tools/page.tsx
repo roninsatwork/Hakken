@@ -6,7 +6,7 @@ import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { Loader2, Plus, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SearchBar } from "@/src/ui/components/screens/Table";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";

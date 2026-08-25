@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Webcam from "react-webcam";
 import { ArrowLeft, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
-import Typography from "@/src/ui/atoms/typography";
+import Typography from "@/src/ui/components/screens/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 import { movementBodyTrackingVideoConstraints } from "../../../_lib/movementCameraConstraints";
 import { useMovementCameraDevices } from "../../../_hooks/useMovementCameraDevices";

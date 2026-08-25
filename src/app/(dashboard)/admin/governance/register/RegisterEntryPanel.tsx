@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { AiSystemEntry, AiSystemRisk } from "@/convex/governanceRegisterService";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Select } from "@/src/ui/components/screens/Select";
 

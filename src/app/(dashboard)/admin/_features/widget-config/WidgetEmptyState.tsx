@@ -1,7 +1,7 @@
 import { AppWindow, Loader2, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 type WidgetEmptyStateProps = {
   actionLabel?: string;

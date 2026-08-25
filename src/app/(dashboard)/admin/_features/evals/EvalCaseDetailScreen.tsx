@@ -14,7 +14,7 @@ import {
 } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 
 type CompanyEvalRun = Doc<"companyEvalRuns">;
 

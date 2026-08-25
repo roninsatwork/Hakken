@@ -22,9 +22,9 @@ import {
   type Change,
   type LabelRef,
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
-import { Button } from "@/src/ui/atoms/Button";
-import { StatusPill } from "@/src/ui/atoms/StatusPill";
-import { toneForStatus } from "@/src/ui/atoms/statusTone";
+import { Button } from "@/src/ui/components/screens/Button";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 

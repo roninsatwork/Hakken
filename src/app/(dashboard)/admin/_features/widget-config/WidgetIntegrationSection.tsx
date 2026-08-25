@@ -1,6 +1,6 @@
 import { AppWindow, MonitorSpeaker } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { formatDateTime } from "@/src/lib/dates";
 import { WidgetPanel } from "./WidgetPanel";

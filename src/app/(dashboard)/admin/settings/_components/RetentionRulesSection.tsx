@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Database, Play, Settings2, Square, ToggleLeft, ToggleRight } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";

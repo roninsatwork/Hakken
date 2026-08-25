@@ -7,7 +7,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { Bot, Loader2, RefreshCw } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";

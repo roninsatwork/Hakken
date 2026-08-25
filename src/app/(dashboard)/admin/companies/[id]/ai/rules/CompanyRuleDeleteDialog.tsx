@@ -3,7 +3,7 @@
 import { AlertOctagon, RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Button } from "@/src/ui/atoms/Button";
+import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
