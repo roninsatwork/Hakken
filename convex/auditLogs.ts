@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import schema from "./schema";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, TableNames } from "./_generated/dataModel";
@@ -31,9 +32,27 @@ export const logAction = internalMutation({
 });
 
 // 6. View Recent Logs (UI Feed)
+/**
+ * A trail row as the screens read it: the stored entry, plus the four things
+ * resolved for display. Defined once because five queries hand back the same
+ * shape and a sixth will.
+ */
+const auditRowFields = {
+  _id: v.id("auditLogs"),
+  _creationTime: v.number(),
+  ...schema.tables.auditLogs.validator.fields,
+  actorName: v.string(),
+  targetName: v.union(v.string(), v.null()),
+  companyName: v.union(v.string(), v.null()),
+  change: v.string(),
+};
+
+const namedOptionValidator = v.object({ id: v.string(), name: v.string() });
+
 export const getRecentLogs = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
+  returns: v.array(v.object({ _id: v.id("auditLogs"), _creationTime: v.number(), ...schema.tables.auditLogs.validator.fields, actorName: v.string() })),
   handler: async (ctx) => {
     // The audit trail is a governance surface, so the oversight roles read it.
     // It was super-admin only, which meant the one screen an auditor exists to
@@ -140,6 +159,7 @@ export const getAuditPage = publicQuery({
     to: v.optional(v.number()),
     search: v.optional(v.string()),
   },
+  returns: v.object({ page: v.array(v.object(auditRowFields)), isDone: v.boolean(), continueCursor: v.string(), splitCursor: v.optional(v.union(v.string(), v.null())), pageStatus: v.optional(v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null())) }),
   handler: async (ctx, args) => {
     const empty = { page: [], isDone: true, continueCursor: "" };
 
@@ -220,6 +240,7 @@ export const getAuditFilterOptions = publicQuery({
   reason:
     "Returns empty lists rather than throwing when the caller lacks a session or an oversight role, so the filters render empty instead of erroring. Role filtering happens inside the handler.",
   args: {},
+  returns: v.object({ actions: v.array(v.string()), people: v.array(namedOptionValidator), workspaces: v.array(namedOptionValidator) }),
   handler: async (ctx) => {
     const empty = { actions: [], people: [], workspaces: [] };
 
@@ -303,6 +324,7 @@ export const getAuditExport = publicMutation({
     to: v.optional(v.number()),
     search: v.optional(v.string()),
   },
+  returns: v.object({ rows: v.array(v.object({ when: v.string(), action: v.string(), who: v.string(), whatHappened: v.string(), target: v.string(), workspace: v.string() })), truncated: v.boolean() }),
   handler: async (ctx, args) => {
     const empty = { rows: [], truncated: false };
 
@@ -398,6 +420,7 @@ export const getAuditEntry = publicQuery({
   reason:
     "Returns null rather than throwing when the caller lacks a session or an oversight role, so the screen renders a not-found state instead of an error. Role filtering happens inside the handler.",
   args: { id: v.id("auditLogs") },
+  returns: v.union(v.null(), v.object({ ...auditRowFields, changes: v.array(v.object({ field: v.string(), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()) })), details: v.array(v.object({ key: v.string(), value: v.string() })) })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     const role = current?.user.role;

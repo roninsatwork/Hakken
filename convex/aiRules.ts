@@ -1,4 +1,5 @@
 import { internalQuery, internalMutation } from "./_generated/server";
+import schema from "./schema";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import {
@@ -42,6 +43,7 @@ export const getRules = publicQuery({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
+  returns: v.array(v.object({ _id: v.id("aiRules"), _creationTime: v.number(), ...schema.tables.aiRules.validator.fields })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     if (!current) return [];
@@ -96,6 +98,7 @@ export const getOffsetPaginatedRules = publicQuery({
     page: v.number(),
     pageSize: v.number(),
   },
+  returns: v.object({ data: v.array(v.object({ _id: v.id("aiRules"), _creationTime: v.number(), ...schema.tables.aiRules.validator.fields })), totalCount: v.number(), totalPages: v.number() }),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     if (!current) return { data: [], totalCount: 0, totalPages: 1 };

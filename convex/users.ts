@@ -1,4 +1,5 @@
 import { internalQuery, internalMutation } from "./_generated/server";
+import schema from "./schema";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -158,6 +159,22 @@ type UserPaginationResult = {
 export const getMe = publicQuery({
   reason: "Called on every page to discover whether anyone is signed in; returns null when not.",
   args: {},
+  /*
+   * The whole row, declared rather than trimmed. Unlike the thread and widget
+   * surfaces this returns the caller's own record to the caller, so there is no
+   * one to leak it to, and a dozen screens read different parts of it — several
+   * by passing the object on rather than naming a field. Naming the shape is
+   * what is worth having here; narrowing it would risk those screens for no
+   * privacy gained.
+   */
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      ...schema.tables.users.validator.fields,
+    })
+  ),
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     return current?.user ?? null;

@@ -1,4 +1,5 @@
 import { internalQuery } from "./_generated/server";
+import schema from "./schema";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
@@ -32,6 +33,7 @@ import { validateAdminImageMetadata, validateStoredUpload } from "./utils/upload
 export const get = publicQuery({
   reason: "Branding and theme load on the login screen, before anyone is signed in.",
   args: {},
+  returns: v.object({ _id: v.optional(v.id("systemSettings")), _creationTime: v.optional(v.number()), ...schema.tables.systemSettings.validator.fields }),
   handler: async (ctx) => {
     const settings = await ctx.db.query("systemSettings").first();
     if (!settings) {
