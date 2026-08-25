@@ -12,11 +12,11 @@ import {
     getAggregationType,
     resolveDateRange,
     resolveTimestampRange,
-  mergeSnapshotModelMetrics,
-} from "./analyticsService";
+  mergeSnapshotModelMetrics } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { MODEL_CATALOG_LIMIT } from "./aiModelService";
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -81,7 +81,7 @@ export const getGlobalAICosts = superAdminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
     // 1. Establish Temporal Boundaries
@@ -162,7 +162,7 @@ export const getGlobalAICosts = superAdminQuery({
 export const getPlatformOverview = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Core Authorization Check
 
@@ -235,7 +235,7 @@ export const getPlatformOverview = superAdminQuery({
 export const getUserCostOverview = adminQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Authorization Check
     const admin = ctx.user;
@@ -298,7 +298,7 @@ export const getUserCostThreads = adminQuery({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const admin = ctx.user;
     const targetUser = await ctx.db.get(args.userId);
@@ -363,7 +363,7 @@ export const getCompanyMetrics = adminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     await requireAnalyticsCompanyAccess(ctx, args.companyId);
 
@@ -697,7 +697,7 @@ export const getGlobalAnalytics = superAdminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
     const { now, start: startDate, end: endDate } = resolveDateRange(args);

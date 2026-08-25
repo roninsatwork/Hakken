@@ -2,6 +2,17 @@ import type { Doc } from "./_generated/dataModel";
 import { appError } from "./utils/appError";
 
 /**
+ * How many rows of the model catalogue a cost or listing read takes.
+ *
+ * A truncated catalogue does not fail — it prices the missing models at the
+ * default — so the bound sits an order of magnitude above any real catalogue.
+ * The largest provider sync in the platform lists a few hundred, and the table
+ * is per-provider rather than per-tenant, so it does not grow with customers.
+ */
+export const MODEL_CATALOG_LIMIT = 2000;
+
+
+/**
  * Last-resort model identifier, used only when the catalogue holds nothing
  * enabled at all.
  *

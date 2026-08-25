@@ -22,8 +22,7 @@ import {
   describeUseCaseProviderLimit,
   getProviderQualifiedModelId,
   isGoogleVertexModelId,
-  resolveExecutionModel,
-} from "./aiModelService";
+  resolveExecutionModel, MODEL_CATALOG_LIMIT } from "./aiModelService";
 
 /**
  * How many models a full-catalogue read will take.
@@ -38,7 +37,6 @@ import {
  * this limit the rollup reports `isPartial` rather than presenting a truncated
  * count as a total.
  */
-const MODEL_CATALOG_LIMIT = 2000;
 const DEFAULT_MODEL_LIMIT = 10;
 /** Providers are a handful, not a catalogue. One read covers every one of them. */
 const PROVIDER_LIMIT = 50;

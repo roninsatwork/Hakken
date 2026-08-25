@@ -12,6 +12,7 @@ import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { MODEL_CATALOG_LIMIT } from "./aiModelService";
 
 type SystemAgentId = "system_assistant";
 type SnapshotInteraction = {
@@ -210,7 +211,7 @@ export const generateDailySnapshots = internalMutation({
         return;
     }
 
-    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
     // Fetch all interaction data for the 24h window

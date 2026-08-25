@@ -11,45 +11,26 @@ import {
 } from './test/driftUtils';
 
 const platformScaleBroadReadAllowlist = [
-  { filePath: 'convex/aiModels.ts', exportName: 'internalBatchUpsert', table: 'aiModels', category: 'maintenance', phase: 'Phase 7', reason: 'provider sync upsert is internal maintenance and will be quarantined or bounded' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'analytics cost calculation reads model catalogue while resolving configured costs' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'bounded live-day analytics overlay is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'platform overview reads model catalogue for configured cost resolution' },
   { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'platform overview recent-cost read is bounded by analytics-specific drift checks' },
-  { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'user cost overview reads model catalogue for configured cost resolution' },
   { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'snapshot-first aggregate read is protected by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'user live overlay is bounded and protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getUserCostThreads', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'thread detail cost calculation reads model catalogue for configured costs' },
-  { filePath: 'convex/analytics.ts', exportName: 'getUserCostThreads', table: 'threads', category: 'analytics_detail', phase: 'Analytics Plan', reason: 'thread-level cost details are split from aggregate user cost metrics' },
   { filePath: 'convex/analytics.ts', exportName: 'getUserCostThreads', table: 'messages', category: 'analytics_detail', phase: 'Analytics Plan', reason: 'thread-scoped message detail remains split from aggregate user cost metrics' },
-  { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'company analytics cost calculation reads model catalogue for configured costs' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'users', category: 'inventory_overlay', phase: 'Phase 5', reason: 'company inventory overlay remains exact until inventory rollups are introduced' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'company live message overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'company live transaction overlay is indexed and analytics-protected' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'knowledgeDocuments', category: 'knowledge_inventory', phase: 'Phase 2', reason: 'knowledge document count is scheduled for document-level rollup or bounded pagination' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'company snapshot read is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'global analytics reads model catalogue for configured cost resolution' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live message overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live transaction overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'global snapshot read is protected by analytics-specific drift tests' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'analyticsDailySnapshots', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'snapshot health helper is analytics maintenance protected by analytics plan' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'messages', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'message dimension health helper is analytics maintenance protected by analytics plan' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentTransactions', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'transaction health helper is analytics maintenance protected by analytics plan' },
-  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'backfillMessageAnalyticsDimensions', table: 'messages', category: 'maintenance', phase: 'Analytics Plan', reason: 'paginated analytics backfill is retained for historical repair and validation' },
   { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'messages', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily snapshot generation reads bounded day windows for analytics snapshots' },
   { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'agentTransactions', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily transaction snapshot generation reads bounded day windows' },
-  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'daily snapshot generation reads model catalogue for configured cost resolution' },
   { filePath: 'convex/analyticsSnapshots.ts', exportName: 'wipeSnapshots', table: 'analyticsDailySnapshots', category: 'maintenance', phase: 'Analytics Plan', reason: 'internal destructive snapshot maintenance remains explicitly allowlisted' },
-  { filePath: 'convex/arcade.ts', exportName: 'getPaginatedLeaderboard', table: 'arcadeScores', category: 'low_priority_product', phase: 'Phase 1', reason: 'arcade leaderboard uses a capped list and needs pagination if it becomes a real scale surface' },
   { filePath: 'convex/arcade.ts', exportName: 'getScoresCount', table: 'arcadeScores', category: 'low_priority_product', phase: 'Phase 1', reason: 'arcade score count uses capped reads and needs count strategy if it becomes a real scale surface' },
-  { filePath: 'convex/chat.ts', exportName: 'getThreads', table: 'threads', category: 'chat_logs', phase: 'Phase 3', reason: 'chat thread list is scheduled for bounded date and pagination contracts' },
-  { filePath: 'convex/chat.ts', exportName: 'getMessages', table: 'messages', category: 'chat_logs', phase: 'Phase 3', reason: 'chat message timeline is thread-scoped but needs pagination for long conversations' },
-  { filePath: 'convex/chat.ts', exportName: 'getMessagesForAI', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'AI context message fetch is thread-scoped but needs bounded context-window contracts' },
-  { filePath: 'convex/chat.ts', exportName: 'sendMessage', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'chat send context fetch is thread-scoped but needs bounded context-window contracts' },
-  { filePath: 'convex/chat.ts', exportName: 'deleteThread', table: 'messages', category: 'chat_maintenance', phase: 'Phase 3', reason: 'thread delete cascade should become explicitly batch bounded in chat hardening' },
-  { filePath: 'convex/chatAdmin.ts', exportName: 'getOffsetPaginatedThreads', table: 'threads', category: 'chat_logs', phase: 'Phase 3', reason: 'global admin chat logs need indexed date-bounded server pagination' },
-  { filePath: 'convex/chatAdmin.ts', exportName: 'getOffsetPaginatedCompanyThreads', table: 'threads', category: 'chat_logs', phase: 'Phase 3', reason: 'company admin chat logs need indexed date-bounded server pagination' },
-  { filePath: 'convex/chatAdmin.ts', exportName: 'getAdminThreadMessages', table: 'messages', category: 'chat_logs', phase: 'Phase 3', reason: 'admin thread message details need pagination for long conversations' },
   { filePath: 'convex/companies.ts', exportName: 'getCompanies', table: 'companies', category: 'admin_inventory', phase: 'Phase 1', reason: 'admin company inventory list is scheduled for paginated indexed contracts' },
   { filePath: 'convex/companies.ts', exportName: 'getCompanies', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'company user counts need rollup or bounded lookup during admin inventory hardening' },
   { filePath: 'convex/governanceRollups.ts', exportName: 'rebuildGovernanceRollups', table: 'governanceDayRollups', category: 'governance_rollup', phase: 'Phase 5', reason: 'the rebuild reads its own buckets — rows per scope per day, bounded by construction, and the read is what lets it zero a scope that went quiet' },
@@ -60,22 +41,10 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollupData', table: 'users', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild helper is an explicit repair path for existing inventory data' },
   { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollupData', table: 'companies', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild helper is an explicit repair path for existing inventory data' },
   { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollupData', table: 'plans', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild helper is an explicit repair path for existing inventory data' },
-  { filePath: 'convex/knowledge.ts', exportName: 'getDocuments', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'knowledge document list is scheduled for paginated status/date contracts' },
-  { filePath: 'convex/knowledge.ts', exportName: 'getThreadDocuments', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'thread knowledge lookup needs bounded document-scoped behavior' },
-  { filePath: 'convex/knowledge.ts', exportName: 'getThreadDocumentsInternal', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'internal thread knowledge lookup needs bounded document-scoped behavior' },
-  { filePath: 'convex/knowledge.ts', exportName: 'garbageCollectThreadVectors', table: 'knowledgeDocuments', category: 'knowledge_maintenance', phase: 'Phase 2', reason: 'thread vector garbage collection should remain document-scoped and batch bounded' },
-  { filePath: 'convex/knowledge.ts', exportName: 'getNextPendingUrlInternal', table: 'knowledgeDocuments', category: 'knowledge_ingestion', phase: 'Phase 2', reason: 'website ingestion queue needs indexed status/date reads' },
-  { filePath: 'convex/knowledge.ts', exportName: 'deleteWebsiteBulk', table: 'knowledgeDocuments', category: 'knowledge_maintenance', phase: 'Phase 2', reason: 'bulk website delete needs company/status/date bounded batches' },
-  { filePath: 'convex/knowledge.ts', exportName: 'purgeDocumentChunksInternal', table: 'knowledgeChunks', category: 'knowledge_maintenance', phase: 'Phase 2', reason: 'chunk purge is document-scoped but should become explicitly batch bounded' },
   { filePath: 'convex/knowledge.ts', exportName: 'debugCount', table: 'knowledgeChunks', category: 'debug', phase: 'Phase 7', reason: 'knowledge debug chunk count is scheduled for debug quarantine or rollup comparison only' },
   { filePath: 'convex/knowledge.ts', exportName: 'debugCount', table: 'knowledgeDocuments', category: 'debug', phase: 'Phase 7', reason: 'knowledge debug count is scheduled for debug quarantine or rollup comparison only' },
-  { filePath: 'convex/movements.ts', exportName: 'list', table: 'movements', category: 'frozen_movement_demo', phase: 'Frozen', reason: 'movement demo is explicitly frozen and out of scope unless user requests it' },
-  { filePath: 'convex/properties.ts', exportName: 'listProperties', table: 'properties', category: 'admin_inventory', phase: 'Phase 1', reason: 'property list needs bounded indexed pagination if this surface grows' },
   { filePath: 'convex/properties.ts', exportName: 'getPropertiesCount', table: 'properties', category: 'inventory_rollup', phase: 'Phase 5', reason: 'property count reads need indexed count strategy or rollup when data grows' },
-  { filePath: 'convex/purges.ts', exportName: 'getPipelineConfig', table: 'systemConfig', category: 'maintenance', phase: 'Phase 7', reason: 'purge pipeline config is internal maintenance and remains classified' },
   { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'workflowExecutionSteps', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
-  { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'messages', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
-  { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'threads', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
   { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'swarmLogs', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
   { filePath: 'convex/salesData.ts', exportName: 'listSalesFilterOptions', table: 'salesDataRows', category: 'low_priority_product', phase: 'Phase 1', reason: 'the sales table filter dropdowns are built from the rows so they cannot drift from the data; bounded by one import and cached until the next one, and the fix at larger scale is to store the distinct values on the import record' },
   { filePath: 'convex/salesData.ts', exportName: 'listTableFilterOptions', table: 'salesDataCategoryLinks', category: 'low_priority_product', phase: 'Phase 1', reason: 'the categories tab dropdown is built from the rows so it cannot drift from the data; bounded by one import, read only while that tab is open, and capping it would silently drop filter values and read as the full list' },
@@ -88,14 +57,10 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/salesDataMarketDiscovery.ts', exportName: 'startMarketDiscoveryJob', table: 'salesDataAccounts', category: 'low_priority_product', phase: 'Phase 1', reason: 'market discovery starts from every imported customer type, so the type list must not be capped; bounded by one import at one row per account, and the larger-scale fix is to store distinct customer types on the import record' },
   { filePath: 'convex/salesDataCustomers.ts', exportName: 'countCustomers', table: 'salesDataAccounts', category: 'low_priority_product', phase: 'Phase 1', reason: 'counting customers and how many have details is the point of the read; bounded by one import at one row per account, and the fix at larger scale is a stored count on the import record' },
   { filePath: 'convex/salesDataCustomers.ts', exportName: 'countCustomers', table: 'salesDataProspects', category: 'low_priority_product', phase: 'Phase 1', reason: 'the prospect count sits above the list so the gap is visible without anybody changing the filter to discover it exists; bounded by the sites found across the groups in one import, and the fix at larger scale is the same stored count as the customer total' },
-  { filePath: 'convex/salesReports.ts', exportName: 'getAgentKnowledgeDocumentsQuery', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'agent knowledge report lookup needs bounded knowledge document pagination' },
-  { filePath: 'convex/salesReports.ts', exportName: 'getLatestReport', table: 'salesReports', category: 'admin_inventory', phase: 'Phase 1', reason: 'latest sales report lookup needs indexed latest-by-scope behavior if report volume grows' },
   { filePath: 'convex/swarmRuntime.ts', exportName: 'getSwarmLogs', table: 'swarmLogs', category: 'workflow_runtime', phase: 'Phase 4', reason: 'swarm runtime logs need bounded runtime log pagination' },
   { filePath: 'convex/swarmRuntime.ts', exportName: 'clearSwarmLogs', table: 'swarmLogs', category: 'maintenance', phase: 'Phase 7', reason: 'swarm log clear is maintenance and should remain bounded or quarantined' },
   { filePath: 'convex/swarmRuntime.ts', exportName: 'getDemoAgents', table: 'agents', category: 'maintenance', phase: 'Phase 7', reason: 'demo agent lookup is maintenance/demo-only pending legacy quarantine' },
-  { filePath: 'convex/users.ts', exportName: 'getPaginatedUsers', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'user pagination currently reads a capped user set before server-side filtering hardening' },
   { filePath: 'convex/users.ts', exportName: 'getMyLoginsCount', table: 'logins', category: 'admin_inventory', phase: 'Phase 1', reason: 'login count needs indexed count strategy rather than capped reads' },
-  { filePath: 'convex/users.ts', exportName: 'recordLogin', table: 'logins', category: 'maintenance', phase: 'Phase 7', reason: 'login duplicate cleanup should become bounded by user/session indexes' },
   { filePath: 'convex/users.ts', exportName: 'getUnassignedSuperAdmins', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'unassigned super-admin selector needs bounded role/company lookup before large admin growth' },
   { filePath: 'convex/widgets.ts', exportName: 'generateWidgetUploadUrl', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'widget upload thread lookup should be indexed and bounded in chat hardening' },
   { filePath: 'convex/workflows.ts', exportName: 'list', table: 'workflows', category: 'admin_inventory', phase: 'Phase 1', reason: 'workflow admin inventory list is scheduled for paginated indexed contracts' },
@@ -346,10 +311,18 @@ describe('Analytics And Platform Read Drift', () => {
     const weakAllowlistEntries = platformScaleBroadReadAllowlist
       .filter(({ category, phase, reason }) => category.length < 4 || phase.length < 5 || reason.length < 40)
       .map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`);
+    const present = new Set(
+      broadReads.map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`)
+    );
+    const staleAllowlistEntries = [...allowed.keys()].filter((key) => !present.has(key));
 
     expect(
       offenders,
       `Unclassified Convex broad reads found. Remove them, bound them, or classify them in the platform scale plan:\n${offenders.join('\n')}`
+    ).toEqual([]);
+    expect(
+      staleAllowlistEntries,
+      `These reads are no longer broad, so their exemptions are dead. Delete the entries — the register only shrinks, and an entry nothing matches hides the next regression at that site:\n${staleAllowlistEntries.join('\n')}`
     ).toEqual([]);
     expect(
       weakAllowlistEntries,
