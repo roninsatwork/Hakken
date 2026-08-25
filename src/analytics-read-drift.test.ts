@@ -27,8 +27,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'analyticsDailySnapshots', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'snapshot health helper is analytics maintenance protected by analytics plan' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'messages', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'message dimension health helper is analytics maintenance protected by analytics plan' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentTransactions', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'transaction health helper is analytics maintenance protected by analytics plan' },
-  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'messages', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily snapshot generation reads bounded day windows for analytics snapshots' },
-  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'agentTransactions', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily transaction snapshot generation reads bounded day windows' },
   { filePath: 'convex/analyticsSnapshots.ts', exportName: 'wipeSnapshots', table: 'analyticsDailySnapshots', category: 'maintenance', phase: 'Analytics Plan', reason: 'internal destructive snapshot maintenance remains explicitly allowlisted' },
   { filePath: 'convex/arcade.ts', exportName: 'getScoresCount', table: 'arcadeScores', category: 'low_priority_product', phase: 'Phase 1', reason: 'arcade score count uses capped reads and needs count strategy if it becomes a real scale surface' },
   { filePath: 'convex/companies.ts', exportName: 'getCompanies', table: 'companies', category: 'admin_inventory', phase: 'Phase 1', reason: 'admin company inventory list is scheduled for paginated indexed contracts' },
@@ -294,6 +292,20 @@ describe('Analytics And Platform Read Drift', () => {
     expect(weakExceptionReasons, `Analytics scale exceptions need useful reasons:\n${weakExceptionReasons.join('\n')}`).toEqual([]);
   });
 
+
+  test('the daily snapshot refuses a day it cannot total accurately', () => {
+    const body = extractExportBody('convex/analyticsSnapshots.ts', 'generateDailySnapshots');
+    const dayReads = body.match(/\.take\(SNAPSHOT_DAY_INTERACTION_LIMIT \+ 1\)/g) ?? [];
+
+    expect(
+      dayReads.length,
+      'Both day reads must take one past the ceiling. Taking exactly the ceiling cannot tell a full page from a truncated one, which is how a busy day came to be recorded short and stayed that way.'
+    ).toBe(2);
+    expect(
+      body,
+      'The generator must refuse a day above the ceiling rather than aggregate a short read. A missing snapshot is reported by the analytics health check; a wrong one is invisible for ever.'
+    ).toMatch(/>\s*SNAPSHOT_DAY_INTERACTION_LIMIT[\s\S]*?throw appError/);
+  });
 
   test('platform broad reads stay classified by scale-hardening phase', () => {
     const allowed = new Map(

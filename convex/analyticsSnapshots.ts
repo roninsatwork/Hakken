@@ -7,12 +7,26 @@
  */
 
 import { internalMutation, internalAction, internalQuery } from "./_generated/server";
+import { appError } from "./utils/appError";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
+
+/**
+ * The most interactions one day's snapshot will read in a single pass.
+ *
+ * Reading exactly this many and aggregating whatever came back is what made a
+ * busy day record a permanently wrong total: the snapshot is written once,
+ * nothing recomputes it, and no screen can tell a truncated total from a real
+ * one. So the generator reads one past the ceiling and refuses the day rather
+ * than writing a number it knows is short. A missing snapshot is visible —
+ * the analytics health check counts snapshots per date and reports the gap —
+ * which a wrong one never is.
+ */
+const SNAPSHOT_DAY_INTERACTION_LIMIT = 10000;
 
 type SystemAgentId = "system_assistant";
 type SnapshotInteraction = {
@@ -218,12 +232,22 @@ export const generateDailySnapshots = internalMutation({
     const rawMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTs))
       .filter(q => q.lte(q.field("createdAt"), endTs))
-      .take(10000);
+      .take(SNAPSHOT_DAY_INTERACTION_LIMIT + 1);
 
     const agentTxs = await ctx.db.query("agentTransactions")
       .withIndex("by_createdAt", q => q.gte("createdAt", startTs))
       .filter(q => q.lte(q.field("createdAt"), endTs))
-      .take(10000);
+      .take(SNAPSHOT_DAY_INTERACTION_LIMIT + 1);
+
+    if (
+      rawMessages.length > SNAPSHOT_DAY_INTERACTION_LIMIT ||
+      agentTxs.length > SNAPSHOT_DAY_INTERACTION_LIMIT
+    ) {
+      throw appError(
+        "INVALID_INPUT",
+        `Analytics for ${dateString} were not written: the day holds more than ${SNAPSHOT_DAY_INTERACTION_LIMIT} interactions, which is more than one pass can total accurately. The day is left without a snapshot, which the analytics health check reports, rather than recorded short.`
+      );
+    }
 
     if (rawMessages.length === 0 && agentTxs.length === 0) {
        console.log(`[Analytics] No activity on ${dateString}. Creating empty global snapshot.`);
