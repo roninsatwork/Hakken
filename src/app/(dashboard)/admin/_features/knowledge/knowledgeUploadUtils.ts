@@ -18,6 +18,20 @@ export type CollectedFile = {
 
 export const MAX_BULK_UPLOAD_FILES = 500;
 
+export type UploadQueueEntry = {
+  key: string;
+  title: string;
+  status: "waiting" | "uploading" | "queued" | "failed";
+  error?: string;
+};
+
+export const UPLOAD_STATUS_KEYS: Record<UploadQueueEntry["status"], string> = {
+  waiting: "uploadStatus.waiting",
+  uploading: "uploadStatus.uploading",
+  queued: "uploadStatus.queued",
+  failed: "uploadStatus.failed",
+};
+
 /**
  * Collect one past the cap so the caller can tell "exactly at the limit" from
  * "more than we will take" and say so, rather than silently dropping the tail.
