@@ -37,6 +37,7 @@ export const createKioskVoiceSession = publicAction({
     widgetAccessToken: v.string(),
     voice: v.optional(v.string()),
   },
+  returns: v.union(v.object({ ok: v.literal(false), reason: v.string() }), v.object({ ok: v.literal(true), relayUrl: v.string(), ticket: v.string(), model: v.string(), expiresAt: v.number() })),
   handler: async (
     ctx,
     args

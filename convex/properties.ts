@@ -180,6 +180,7 @@ export const getLatestRuns = publicQuery({
   // or no company, so the dashboard renders an empty state instead of an error.
   reason: "Returns an empty result for callers without a session or company; scoping happens inside the handler.",
   args: {},
+  returns: v.array(v.object({ _id: v.id("apifyRuns"), runId: v.string(), status: v.union(v.literal("PENDING"), v.literal("COMPLETED"), v.literal("FAILED")), startedAt: v.number(), completedAt: v.optional(v.number()), propertiesScraped: v.optional(v.number()) })),
   handler: async (ctx) => {
   const current = await getCurrentUser(ctx);
   if (!current) return [];
@@ -192,17 +193,24 @@ export const getLatestRuns = publicQuery({
     if (!(await effectiveModulesFor(ctx, company)).includes(PROPERTIES_MODULE_KEY)) return [];
   }
 
-  if (canReadAllCompanies) {
-    return await ctx.db.query("apifyRuns")
-      .order("desc")
-      .take(5);
-  }
+  const runs = canReadAllCompanies
+    ? await ctx.db.query("apifyRuns").order("desc").take(5)
+    : activeCompanyId
+      ? await ctx.db
+          .query("apifyRuns")
+          .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+          .order("desc")
+          .take(5)
+      : [];
 
-  if (!activeCompanyId) return [];
-  return await ctx.db.query("apifyRuns")
-    .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
-    .order("desc")
-      .take(5);
+  return runs.map((run) => ({
+    _id: run._id,
+    runId: run.runId,
+    status: run.status,
+    startedAt: run.startedAt,
+    ...(run.completedAt !== undefined ? { completedAt: run.completedAt } : {}),
+    ...(run.propertiesScraped !== undefined ? { propertiesScraped: run.propertiesScraped } : {}),
+  }));
   },
 });
 

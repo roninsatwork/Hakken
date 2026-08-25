@@ -6,7 +6,10 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDateTime, formatTime } from "@/src/lib/dates";
 
 type PropertiesRunRowsProps = {
-  latestRuns: Doc<"apifyRuns">[];
+  latestRuns: Array<
+    Pick<Doc<"apifyRuns">, "_id" | "runId" | "status" | "startedAt"> &
+      Partial<Pick<Doc<"apifyRuns">, "completedAt" | "propertiesScraped">>
+  >;
   renderSyncControl: (runId: string) => ReactNode;
 };
 

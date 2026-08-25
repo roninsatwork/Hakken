@@ -21,6 +21,7 @@ const BILLING_RESET_BATCH_SIZE = 500;
 export const getMyCompanyPlanStatus = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
+  returns: v.union(v.null(), v.object({ planName: v.string(), messageLimit: v.number(), messagesUsed: v.number() })),
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     if (!current) return null;
@@ -45,6 +46,7 @@ export const getMyCompanyPlanStatus = publicQuery({
 export const getCompanyPlanStatus = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { companyId: v.id("companies") },
+  returns: v.union(v.null(), v.object({ planName: v.string(), messageLimit: v.number(), messagesUsed: v.number() })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     if (!current) return null;

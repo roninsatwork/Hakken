@@ -42,6 +42,7 @@ type InviteDispatchResult = {
 export const getActiveTemplate = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
+  returns: v.union(v.null(), v.object({ subject: v.string(), headline: v.string(), body: v.string(), ctaText: v.string() })),
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     if (!current) return null;
@@ -68,7 +69,12 @@ export const getActiveTemplate = publicQuery({
       };
     }
 
-    return template;
+    return {
+      subject: template.subject,
+      headline: template.headline,
+      body: template.body,
+      ctaText: template.ctaText,
+    };
   },
 });
 

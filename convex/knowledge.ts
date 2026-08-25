@@ -833,6 +833,7 @@ export const testRetrieval = tenantQuery({
 export const getThreadDocuments = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { threadId: v.id("threads") },
+  returns: v.array(v.object({ _id: v.id("knowledgeDocuments"), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")) })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     if (!current) return [];
@@ -842,11 +843,13 @@ export const getThreadDocuments = publicQuery({
 
     if (!canReadThreadKnowledgeDocuments(thread, current)) return [];
 
-    return await ctx.db
+    const documents = await ctx.db
       .query("knowledgeDocuments")
       .withIndex("by_thread", q => q.eq("threadId", args.threadId))
       .order("asc")
       .take(100);
+
+    return documents.map((document) => ({ _id: document._id, status: document.status }));
   }
 });
 

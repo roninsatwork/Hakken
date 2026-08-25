@@ -5,7 +5,6 @@ import { api } from "@/convex/_generated/api";
 import { Activity, RefreshCcw } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { lazy, Suspense, useCallback, useMemo, useState, useEffect } from "react";
-import type { Doc } from "@/convex/_generated/dataModel";
 
 const PropertiesRunRows = lazy(() => import("./PropertiesRunRows"));
 
@@ -18,7 +17,7 @@ function PropertiesRunsEmptyState() {
 }
 
 export default function PropertiesLogsPage() {
-  const latestRunsQuery = useQuery(api.properties.getLatestRuns) as Doc<"apifyRuns">[] | undefined;
+  const latestRunsQuery = useQuery(api.properties.getLatestRuns);
   const latestRuns = useMemo(() => latestRunsQuery ?? [], [latestRunsQuery]);
   const syncRun = useAction(api.apify.syncRunStatus);
   const [syncingId, setSyncingId] = useState<string | null>(null);
