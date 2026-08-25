@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import { isPlatformRole } from "./userManagementService";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { canAccessCompany, getActiveCompanyId, getCurrentUser, userRoleValidator } from "./authz";
@@ -314,7 +315,10 @@ export const dispatchInviteEmail = adminAction({
       if (caller.role !== "ADMIN" || activeCompanyId !== args.companyId) {
         throw new Error("Unauthorized: Insufficient privileges to dispatch invites");
       }
-      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== activeCompanyId)) {
+      // The third door. Adding a person and changing a person's role were both
+      // guarded; inviting one was not, and an invitation ends in exactly the
+      // same account.
+      if (isPlatformRole(args.role) || (args.companyId && args.companyId !== activeCompanyId)) {
         throw new Error("Unauthorized: Cannot invite external or elevated roles");
       }
     }

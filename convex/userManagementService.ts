@@ -25,6 +25,29 @@ function isUnimpersonatedSuperAdmin(caller: UserPolicySubject) {
   return caller.role === "SUPER_ADMIN" && !caller.impersonatingCompanyId;
 }
 
+/**
+ * Roles that reach past the company they are attached to.
+ *
+ * `SUPER_ADMIN` for the obvious reason. The oversight roles for a less obvious
+ * one: `READ_ONLY` and `AUDITOR` are platform-wide by design — a read-only
+ * account sees every company's audit trail, governance record, wiki and admin
+ * console, which is the whole point of the role and is documented as such in
+ * `authz.ts`.
+ *
+ * These checks previously named `SUPER_ADMIN` alone, which left a single
+ * company's administrator able to create an account — or relabel their own —
+ * that reads every other client on the platform. No screen ever offered the
+ * role, so it was never a click; it was one call away for anyone who looked.
+ *
+ * An impersonating super admin is caught by this too. While impersonating they
+ * are acting as that company's administrator, and the rule is that nobody
+ * scoped to a company hands out a role that is not. Dropping impersonation
+ * restores it.
+ */
+export function isPlatformRole(role: ManagedUserRole | undefined): boolean {
+  return role === "SUPER_ADMIN" || role === "READ_ONLY" || role === "AUDITOR";
+}
+
 export function assertCanCreateManagedUser(args: {
   caller: UserPolicySubject;
   activeCompanyId: Id<"companies"> | undefined;
@@ -37,7 +60,7 @@ export function assertCanCreateManagedUser(args: {
     throw new Error("Unauthorized");
   }
 
-  if (args.newRole === "SUPER_ADMIN") {
+  if (isPlatformRole(args.newRole)) {
     throw new Error("Unauthorized: Insufficient privileges");
   }
 }
@@ -59,7 +82,14 @@ export function assertCanUpdateManagedUser(args: {
     throw new Error("Unauthorized: Cannot modify a Super Administrator");
   }
 
-  if (args.nextRole === "SUPER_ADMIN" || (args.nextCompanyId && args.nextCompanyId !== args.activeCompanyId)) {
+  // An account that already holds a platform role is not this administrator's
+  // to edit either — otherwise the one they could not create, they could still
+  // rename, move or quietly take over.
+  if (isPlatformRole(args.targetUser.role)) {
+    throw new Error("Unauthorized: Cannot modify a platform role");
+  }
+
+  if (isPlatformRole(args.nextRole) || (args.nextCompanyId && args.nextCompanyId !== args.activeCompanyId)) {
     throw new Error("Unauthorized: Insufficient privileges");
   }
 }
@@ -77,5 +107,11 @@ export function assertCanDeleteManagedUser(args: {
 
   if (args.targetUser.role === "SUPER_ADMIN") {
     throw new Error("Unauthorized: Cannot delete a Super Administrator");
+  }
+
+  // Nor removed. An oversight account a company's own administrator can delete
+  // is oversight that company controls.
+  if (isPlatformRole(args.targetUser.role)) {
+    throw new Error("Unauthorized: Cannot delete a platform role");
   }
 }

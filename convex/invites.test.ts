@@ -365,6 +365,20 @@ describe("OWASP: Broken Access Control - Invites", () => {
       })
     ).rejects.toThrow("Unauthorized");
 
+    // An invitation ends in exactly the same account as adding the person
+    // directly, and read-only reaches every other client on the platform. Only
+    // SUPER_ADMIN was named here, so this was the way round the other two.
+    for (const role of ["READ_ONLY", "AUDITOR"] as const) {
+      await expect(
+        adminAClient.action(api.invites.dispatchInviteEmail, {
+          email: `blocked-${role.toLowerCase()}@test.com`,
+          companyId: companyAId,
+          role,
+          template,
+        })
+      ).rejects.toThrow("Unauthorized");
+    }
+
     await expect(
       adminAClient.action(api.invites.dispatchInviteEmail, {
         email: "member@test.com",

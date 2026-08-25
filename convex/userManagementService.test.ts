@@ -229,17 +229,119 @@ describe("oversight roles cannot manage people", () => {
     }
   });
 
-  test("an administrator can still do all three, so nothing tightened either", () => {
+  test("an administrator can still do all three with the roles that are theirs to give", () => {
     const admin = caller("ADMIN", companyA);
 
     expect(() =>
       assertCanCreateManagedUser({ caller: admin, activeCompanyId: companyA, newRole: "USER", newCompanyId: companyA })
     ).not.toThrow();
     expect(() =>
-      assertCanUpdateManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target("USER", companyA), nextRole: "READ_ONLY" })
+      assertCanUpdateManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target("USER", companyA), nextRole: "ADMIN" })
     ).not.toThrow();
     expect(() =>
       assertCanDeleteManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target("USER", companyA) })
     ).not.toThrow();
+  });
+});
+
+/**
+ * A read-only or auditor account is platform-wide by design: it sees every
+ * company's audit trail, governance record and wiki. Only `SUPER_ADMIN` was
+ * ever blocked here, so a single client's administrator could mint one of those
+ * accounts inside their own company — or relabel their own — and read every
+ * other client on the platform.
+ */
+describe("a company's administrator cannot hand out a role that reaches past their company", () => {
+  const oversight: Role[] = ["READ_ONLY", "AUDITOR"];
+  const admin = caller("ADMIN", companyA);
+
+  test("cannot add a person holding one", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanCreateManagedUser({ caller: admin, activeCompanyId: companyA, newRole: role, newCompanyId: companyA })
+      ).toThrow("Unauthorized: Insufficient privileges");
+    }
+  });
+
+  test("cannot promote anyone into one, themselves included", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanUpdateManagedUser({
+          caller: admin,
+          activeCompanyId: companyA,
+          targetUser: target("USER", companyA),
+          nextRole: role,
+        })
+      ).toThrow("Unauthorized: Insufficient privileges");
+
+      // The cleanest version of the attack: one call, no accomplice, and it
+      // reads like a demotion on the audit trail.
+      expect(() =>
+        assertCanUpdateManagedUser({
+          caller: admin,
+          activeCompanyId: companyA,
+          targetUser: target("ADMIN", companyA),
+          nextRole: role,
+        })
+      ).toThrow("Unauthorized: Insufficient privileges");
+    }
+  });
+
+  test("cannot edit or remove an account that already holds one", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanUpdateManagedUser({
+          caller: admin,
+          activeCompanyId: companyA,
+          targetUser: target(role, companyA),
+          nextRole: "USER",
+        })
+      ).toThrow("Unauthorized: Cannot modify a platform role");
+
+      expect(() =>
+        assertCanDeleteManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target(role, companyA) })
+      ).toThrow("Unauthorized: Cannot delete a platform role");
+    }
+  });
+
+  test("a super admin who is impersonating a company is held to the same rule", () => {
+    // While impersonating they are acting as that company's administrator.
+    // Dropping the impersonation gives the role back.
+    const impersonating = caller("SUPER_ADMIN", companyA, companyA);
+
+    for (const role of oversight) {
+      expect(() =>
+        assertCanCreateManagedUser({
+          caller: impersonating,
+          activeCompanyId: companyA,
+          newRole: role,
+          newCompanyId: companyA,
+        })
+      ).toThrow("Unauthorized: Insufficient privileges");
+    }
+  });
+
+  test("an unimpersonated super admin still hands them out", () => {
+    const superAdmin = caller("SUPER_ADMIN", undefined);
+
+    for (const role of oversight) {
+      expect(() =>
+        assertCanCreateManagedUser({
+          caller: superAdmin,
+          activeCompanyId: companyA,
+          newRole: role,
+          newCompanyId: companyA,
+        })
+      ).not.toThrow();
+
+      expect(() =>
+        assertCanUpdateManagedUser({
+          caller: superAdmin,
+          activeCompanyId: companyA,
+          targetUser: target(role, companyA),
+          nextRole: "USER",
+        })
+      ).not.toThrow();
+    }
   });
 });
