@@ -86,6 +86,7 @@ export const getPrimaryGlobalWidget = superAdminQuery({
 export const getWidgetById = publicQuery({
   reason: "Widget iframes load their own theme and config before any visitor signs in.",
   args: { widgetId: v.id("widgets") },
+  returns: v.union(v.null(), v.object({ _id: v.id("widgets"), name: v.string(), companyId: v.optional(v.id("companies")), agentId: v.optional(v.id("agents")), allowedDomains: v.array(v.string()), themePrimaryColor: v.string(), themeGreeting: v.string(), themeLogoUrl: v.optional(v.string()), themePlaceholder: v.string(), enableSounds: v.optional(v.boolean()), showPopupPreview: v.optional(v.boolean()), requireName: v.optional(v.boolean()), requireEmail: v.optional(v.boolean()), enableGreeting: v.optional(v.boolean()), conversationStarters: v.optional(v.array(v.string())), agentAvatar: v.union(v.string(), v.null()) })),
   handler: async (ctx, args) => {
     // PUBLIC endpoint for the iframe (no auth required here to load config, but we omit sensitive data)
     const widget = await ctx.db.get(args.widgetId);
@@ -281,6 +282,7 @@ export const generateWidgetUploadUrl = publicMutation({
     threadId: v.id("threads"),
     widgetAccessToken: v.string(),
   },
+  returns: v.string(),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw appError("NOT_FOUND", "Invalid or inactive Widget");
@@ -317,6 +319,7 @@ export const finalizeWidgetUpload = publicMutation({
     storageId: v.id("_storage"),
     widgetAccessToken: v.string(),
   },
+  returns: v.object({ success: v.boolean(), storageId: v.id("_storage") }),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw appError("NOT_FOUND", "Invalid or inactive Widget");
@@ -348,6 +351,7 @@ export const createWidgetThread = publicMutation({
     sourceUrl: v.string(),
     embedPass: v.string(),
   },
+  returns: v.union(v.object({ refused: v.union(v.literal("unauthorized"), v.literal("busy")) }), v.object({ threadId: v.id("threads"), accessToken: v.string() })),
   handler: async (ctx, args) => {
     // For anonymous widget interactions, the user might not be authenticated.
     const userId = (await getCurrentUser(ctx))?.userId;

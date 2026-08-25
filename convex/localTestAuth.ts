@@ -132,6 +132,7 @@ export const seedInternal = internalMutation({
 export const seed = publicMutation({
   reason: "Local sign-in helper for development. Gated on LOCAL_TEST_AUTH_ENABLED, refuses to run in production, and requires a shared secret.",
   args: { secret: v.string() },
+  returns: v.object({ companyId: v.id("companies"), companyName: v.string(), users: v.array(v.object({ userId: v.id("users"), action: v.union(v.literal("created"), v.literal("updated")), email: v.string() })) }),
   handler: async (ctx, args) => {
     return await seedLocalTestAuth(ctx, args.secret);
   },

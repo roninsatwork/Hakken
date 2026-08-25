@@ -310,6 +310,7 @@ export const confirmPhotoAction = publicMutation({
     messageId: v.id("messages"),
     widgetAccessToken: v.optional(v.string()),
   },
+  returns: v.id("tasks"),
   handler: async (ctx, args) => {
     const message = await ctx.db.get(args.messageId);
     if (!message || message.role !== "assistant") {

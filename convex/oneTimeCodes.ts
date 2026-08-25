@@ -33,6 +33,7 @@ const REQUEST_SCAN_LIMIT = 50;
 export const requestCode = publicMutation({
   reason: "Called before sign-in, which by definition happens before anyone is authenticated. Records the request and refuses when an address has asked too often.",
   args: { email: v.string() },
+  returns: v.boolean(),
   handler: async (ctx, args): Promise<boolean> => {
     const email = normaliseEmail(args.email);
     const now = Date.now();
@@ -103,6 +104,7 @@ export const recordFailed = publicMutation({
   reason:
     "Called from the sign-in screen when a code is refused, which by definition happens before anyone is authenticated. Records the attempt and never reveals whether the address exists.",
   args: { email: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const email = normaliseEmail(args.email);
     if (!email) return;
@@ -147,6 +149,7 @@ export const recordFailed = publicMutation({
 export const recordVerified = publicMutation({
   reason: "Records that a code worked, which happens as the session is being established rather than after.",
   args: { email: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const email = normaliseEmail(args.email);
     if (!email) return;

@@ -7,6 +7,7 @@ import { publicQuery } from "./tenantFunctions";
 export const getSwarmLogs = publicQuery({
   reason: "Widget conversations show agent progress; gated on the hashed widget session token.",
   args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
+  returns: v.array(v.object({ _id: v.id("swarmLogs"), message: v.string(), status: v.union(v.literal("pending"), v.literal("running"), v.literal("success"), v.literal("error")), isHeading: v.optional(v.boolean()) })),
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
 
@@ -21,11 +22,18 @@ export const getSwarmLogs = publicQuery({
       return [];
     }
 
-    return await ctx.db
+    const logs = await ctx.db
       .query("swarmLogs")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc")
       .take(10000);
+
+    return logs.map((log) => ({
+      _id: log._id,
+      message: log.message,
+      status: log.status,
+      ...(log.isHeading !== undefined ? { isHeading: log.isHeading } : {}),
+    }));
   },
 });
 
