@@ -9,7 +9,7 @@ vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIn
 vi.mock("next/navigation", async () => (await import("@/src/test/screenMocks")).nextNavigation());
 vi.mock("next/dynamic", async () => {
   const { AuditLogsTable } = await import(
-    "@/src/app/(dashboard)/admin/settings/_components/AuditLogsTable"
+    "@/src/ui/components/governance/AuditLogsTable"
   );
   return { default: () => AuditLogsTable };
 });

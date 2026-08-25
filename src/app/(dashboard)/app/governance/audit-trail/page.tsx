@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 const loadAuditLogsTable = () =>
-  import("@/src/app/(dashboard)/admin/settings/_components/AuditLogsTable");
+  import("@/src/ui/components/governance/AuditLogsTable");
 
 function AuditTrailLoading() {
   return (

@@ -56,7 +56,7 @@
     "src/app/(dashboard)/admin/_components/AdminRulesTable.tsx",
     "src/app/(dashboard)/admin/agents/[id]/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/runs/_components/RunsTable.tsx",
-    "src/app/(dashboard)/admin/settings/_components/AuditLogsTable.tsx",
+    "src/ui/components/governance/AuditLogsTable.tsx",
     "src/app/(dashboard)/admin/settings/_components/PurgeHistorySection.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
     "src/app/(dashboard)/app/arcade/ronins-run/page.tsx",
@@ -64,9 +64,7 @@
   ],
   "buttons": {
     "src/app/(dashboard)/admin/_components/AdminAvatarPicker.tsx": 1,
-    "src/app/(dashboard)/admin/_components/governance/GovernanceActivity.tsx": 1,
     "src/app/(dashboard)/admin/_components/MemoryFields.tsx": 1,
-    "src/app/(dashboard)/admin/_components/PersonalDataPanel.tsx": 2,
     "src/app/(dashboard)/admin/_features/chat-logs/ChatLogsScreen.tsx": 2,
     "src/app/(dashboard)/admin/_features/evals/EditEvalScreen.tsx": 1,
     "src/app/(dashboard)/admin/_features/evals/EvalsScreen.tsx": 2,
@@ -182,7 +180,9 @@
     "src/ui/components/screens/TableControls.tsx": 3,
     "src/ui/components/TimeframeDropdown.tsx": 3,
     "src/ui/components/workflows/AgentEditorModal.tsx": 7,
-    "src/ui/components/workflows/ConfigDrawer.tsx": 7
+    "src/ui/components/workflows/ConfigDrawer.tsx": 7,
+    "src/ui/components/governance/PersonalDataPanel.tsx": 2,
+    "src/ui/components/governance/GovernanceActivity.tsx": 1
   },
   "headings": {
     "src/app/(dashboard)/_features/auth-diagnostics/AuthDiagnosticsPage.tsx": 1,

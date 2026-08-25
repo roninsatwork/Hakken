@@ -71,6 +71,36 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // A customer-facing route reaching into an admin folder. The governance
+    // pages did it for four components, and nothing said no: the boundary was
+    // written in the frontend guide and enforced nowhere.
+    //
+    // Both patterns are repeated here on purpose. Flat config replaces a rule
+    // rather than merging it, so a block that set only this one would switch
+    // the Convex rule off for exactly the files most likely to break it.
+    files: ["src/app/(dashboard)/app/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^@/convex/(?!utils/|_generated/)(?!.*Service$).*",
+              allowTypeImports: true,
+              message:
+                "This Convex module defines queries/mutations, so importing it ships the backend to the browser. Move the shared value into convex/utils/ and import it from there.",
+            },
+            {
+              regex: "^@/src/app/\\(dashboard\\)/admin/",
+              message:
+                "A customer-facing /app route must not import admin internals. If the part is shared, promote it: src/ui/components/screens/ for generic screen-kit material, or a shared feature directory such as src/ui/components/governance/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

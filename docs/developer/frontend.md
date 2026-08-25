@@ -57,7 +57,16 @@ Use dense, scannable layouts for operational screens. Admin and SaaS surfaces sh
 Prefer existing shared components before creating page-local variants:
 
 - Feedback: `SonaeModal`, `SonaeEmptyState`, admin modal and confirmation wrappers.
-- Admin tables and layouts: `src/app/(dashboard)/admin/_components/**`.
+- Admin tables and layouts: `src/app/(dashboard)/admin/_components/**` — genuinely
+  admin-only parts. A `/app` route must not import from here, and ESLint now
+  refuses it: a customer-facing page reaching into an admin folder is the
+  boundary this guide always described and nothing enforced. If a part turns out
+  to serve both halves, promote it rather than importing across.
+- Governance, shared by both halves: `src/ui/components/governance/**`
+  (`GovernanceDashboard`, `EvidencePackPanel`, `PersonalDataPanel`,
+  `AuditLogsTable` and the activity chart parts). These moved out of
+  `admin/_components` on 2026-08-25 because the `/app` governance pages had been
+  reaching in for them.
 - Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/SonaeMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
 - Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
   `src/ui/components/charts/ChartTooltip.tsx`.

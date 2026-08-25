@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 
-import { GovernanceActivity } from "./governance/GovernanceActivity";
+import { GovernanceActivity } from "./GovernanceActivity";
 
 /**
  * What needs a person, right now — and what the AI has actually been doing.

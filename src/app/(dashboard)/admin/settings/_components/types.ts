@@ -1,4 +1,4 @@
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 export type PiiConfig = {
   enabled?: boolean;
@@ -42,17 +42,6 @@ export type PurgeConfigMap = Record<PurgePipelineKey, PurgePipelineConfig>;
 
 export type PurgeHistoryRow = Doc<"purgeHistory"> & {
   actorName?: string;
-};
-
-export type AuditLogRow = {
-  _id: string | Id<"auditLogs">;
-  actionType: string;
-  actorName?: string;
-  entityId?: string;
-  entityType?: string;
-  actorId?: Id<"users">;
-  timestamp: number;
-  metadata?: string;
 };
 
 export const purgePipelineKeys: PurgePipelineKey[] = [

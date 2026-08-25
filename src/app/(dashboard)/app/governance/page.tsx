@@ -4,9 +4,9 @@ import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { GovernanceDashboard } from "@/src/app/(dashboard)/admin/_components/GovernanceDashboard";
-import { EvidencePackPanel } from "@/src/app/(dashboard)/admin/_components/EvidencePackPanel";
-import { PersonalDataPanel } from "@/src/app/(dashboard)/admin/_components/PersonalDataPanel";
+import { GovernanceDashboard } from "@/src/ui/components/governance/GovernanceDashboard";
+import { EvidencePackPanel } from "@/src/ui/components/governance/EvidencePackPanel";
+import { PersonalDataPanel } from "@/src/ui/components/governance/PersonalDataPanel";
 
 /**
  * The customer's own governance section.
