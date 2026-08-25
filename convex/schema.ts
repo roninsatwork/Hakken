@@ -792,6 +792,10 @@ export default defineSchema({
     email: v.string(),
     eventType: v.union(
       v.literal("MAGIC_LINK_REQUESTED"),
+      // An address that asked for a link too often. Recorded rather than
+      // silently dropped: a run of these is the shape of someone using the
+      // sign-in form to post mail at a person.
+      v.literal("MAGIC_LINK_THROTTLED"),
       v.literal("MAGIC_LINK_STARTED"),
       v.literal("INVITE_FOUND"),
       v.literal("INVITE_MISSING"),

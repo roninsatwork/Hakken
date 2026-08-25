@@ -2,6 +2,84 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { AUTH_EVENT_TYPES } from "./utils/authEventTypes";
+import { SIGN_IN_MAX_REQUESTS_PER_HOUR, SIGN_IN_REQUEST_WINDOW_MS } from "./signInThrottleService";
+
+/**
+ * The sign-in form posts mail to whatever address is in the box, and nobody is
+ * signed in when it does. Without a limit it is a way to bury someone in email.
+ *
+ * See docs/plans/active/governance-and-trust-plan.md.
+ */
+describe("how often one address may ask for a magic link", () => {
+  const request = (t: ReturnType<typeof convexTest>, email = "someone@example.com") =>
+    t.mutation(api.authEvents.recordMagicLinkRequestAttempt, { email, provider: "resend" });
+
+  test("allows an address its allowance and refuses the next one", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR; index++) {
+      await expect(request(t)).resolves.toMatchObject({ allowed: true });
+    }
+
+    await expect(request(t)).resolves.toMatchObject({ allowed: false });
+  });
+
+  test("a refusal is recorded and sends no further mail", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR + 2; index++) {
+      await request(t);
+    }
+
+    const events = await t.run(async (ctx) => await ctx.db.query("authEvents").collect());
+    const requested = events.filter((event) => event.eventType === "MAGIC_LINK_REQUESTED");
+    const throttled = events.filter((event) => event.eventType === "MAGIC_LINK_THROTTLED");
+
+    // The requests stop being recorded as requests once the limit is reached,
+    // so the count cannot climb its own way past the throttle.
+    expect(requested).toHaveLength(SIGN_IN_MAX_REQUESTS_PER_HOUR);
+    expect(throttled).toHaveLength(2);
+    expect(throttled[0].reasonCode).toBe("too_many_requests");
+  });
+
+  test("counts one address at a time", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR; index++) {
+      await request(t, "busy@example.com");
+    }
+
+    await expect(request(t, "busy@example.com")).resolves.toMatchObject({ allowed: false });
+    await expect(request(t, "quiet@example.com")).resolves.toMatchObject({ allowed: true });
+  });
+
+  test("normalises the address, so casing and spacing are not a way around it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR; index++) {
+      await request(t, "someone@example.com");
+    }
+
+    await expect(request(t, "  SomeOne@Example.com ")).resolves.toMatchObject({ allowed: false });
+  });
+
+  test("forgets a run older than the hour, so nobody is locked out for good", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR; index++) {
+        await ctx.db.insert("authEvents", {
+          email: "someone@example.com",
+          eventType: "MAGIC_LINK_REQUESTED",
+          timestamp: Date.now() - SIGN_IN_REQUEST_WINDOW_MS - 1_000,
+        });
+      }
+    });
+
+    await expect(request(t)).resolves.toMatchObject({ allowed: true });
+  });
+});
 
 describe("Auth event diagnostics access controls", () => {
   test("super admins can read all recent auth events", async () => {
@@ -95,5 +173,29 @@ describe("Auth event diagnostics access controls", () => {
     await expect(t.withIdentity({ subject: userId }).query(api.authEvents.getRecentAuthEvents)).rejects.toThrow(
       "Unauthorized"
     );
+  });
+});
+
+/**
+ * The schema decides what may be written; the shared list decides what the
+ * diagnostics screen can name. They drifted once already — the typed-code
+ * events were writable for weeks and unfilterable the whole time.
+ */
+describe("every kind of sign-in event the screen offers", () => {
+  test("is one the database will actually accept", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      for (const eventType of AUTH_EVENT_TYPES) {
+        await ctx.db.insert("authEvents", {
+          email: "someone@example.com",
+          eventType,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
+    const stored = await t.run(async (ctx) => await ctx.db.query("authEvents").collect());
+    expect(stored.map((event) => event.eventType).sort()).toEqual([...AUTH_EVENT_TYPES].sort());
   });
 });

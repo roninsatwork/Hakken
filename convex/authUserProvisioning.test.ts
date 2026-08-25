@@ -364,6 +364,7 @@ describe("Sonae auth user provisioning", () => {
     ]) {
       await expect(t.mutation(api.authEvents.recordMagicLinkRequestAttempt, { email, provider: "resend" })).resolves.toEqual({
         logged: true,
+        allowed: true,
       });
     }
 

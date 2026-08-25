@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { publicMutation } from "./tenantFunctions";
 import { logAuthEvent } from "./authEvents";
 import { isWithinRequestLimit, normaliseEmail, REQUEST_WINDOW_MS } from "./oneTimeCodeService";
+import {
+  SIGN_IN_MAX_REQUESTS_PER_HOUR,
+  SIGN_IN_REQUEST_WINDOW_MS,
+  isWithinHourlySignInLimit,
+} from "./signInThrottleService";
 
 /**
  * The record behind sign-in codes: who asked, how often, and whether they got
@@ -34,18 +39,24 @@ export const requestCode = publicMutation({
 
     if (!email) return false;
 
-    const recent = await ctx.db
+    /*
+     * Two limits, not one. The short window stops a burst — five codes in a
+     * quarter of an hour is already more than anyone signing in needs — and the
+     * hourly cap stops a patient run that stays under it all afternoon. Read
+     * over the hour once, because the shorter window is a slice of the longer.
+     */
+    const recentRequests = await ctx.db
       .query("authEvents")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q) =>
+        q.eq("email", email).gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
+      )
       .order("desc")
-      .take(REQUEST_SCAN_LIMIT);
+      .filter((q) => q.eq(q.field("eventType"), "ONE_TIME_CODE_REQUESTED"))
+      .take(SIGN_IN_MAX_REQUESTS_PER_HOUR);
 
-    const requestTimes = recent
-      .filter((event) => event.eventType === "ONE_TIME_CODE_REQUESTED")
-      .filter((event) => event.timestamp > now - REQUEST_WINDOW_MS)
-      .map((event) => event.timestamp);
+    const requestTimes = recentRequests.map((event) => event.timestamp);
 
-    if (!isWithinRequestLimit(requestTimes, now)) {
+    if (!isWithinRequestLimit(requestTimes, now) || !isWithinHourlySignInLimit(requestTimes, now)) {
       await logAuthEvent(ctx, {
         email,
         eventType: "ONE_TIME_CODE_THROTTLED",

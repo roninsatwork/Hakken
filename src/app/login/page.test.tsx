@@ -71,7 +71,7 @@ describe("LoginPage", () => {
 
   it("requests email magic links with the app redirect and renders neutral success copy", async () => {
     signInMock.mockResolvedValueOnce(undefined);
-    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true });
+    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: true });
     renderLoginPage();
 
     fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
@@ -97,7 +97,7 @@ describe("LoginPage", () => {
 
   it("renders the same neutral success copy when the backend rejects the email request", async () => {
     signInMock.mockRejectedValueOnce(new Error("Access Denied: invite-only"));
-    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true });
+    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: true });
     renderLoginPage();
 
     fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
@@ -108,6 +108,41 @@ describe("LoginPage", () => {
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
     expect(screen.getByText("If this email is invited, you will receive a sign-in link shortly.")).toBeInTheDocument();
     expect(screen.queryByText(/unknown@example.com/)).not.toBeInTheDocument();
+  });
+
+  it("sends no link when the address has asked too often, and says nothing about why", async () => {
+    // Saying so would confirm which addresses exist, and the person receiving
+    // the unwanted mail is better served by it stopping than by a message.
+    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce({ logged: true, allowed: false });
+    renderLoginPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+      target: { value: "busy@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+
+    expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  it("still signs in when the throttle itself fails", async () => {
+    // The gate exists to stop mail being posted at someone. A wobble in it must
+    // never be the thing that locks a real person out of their own account.
+    signInMock.mockResolvedValueOnce(undefined);
+    recordMagicLinkRequestAttemptMock.mockRejectedValueOnce(new Error("unavailable"));
+    renderLoginPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+      target: { value: "member@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send magic link/i }));
+
+    await waitFor(() => {
+      expect(signInMock).toHaveBeenCalledWith("resend", {
+        email: "member@example.com",
+        redirectTo: "/app",
+      });
+    });
   });
 
   it("requests Google sign-in with the app redirect", () => {

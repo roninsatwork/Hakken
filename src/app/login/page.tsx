@@ -45,12 +45,27 @@ export default function LoginPage() {
     if (!email) return;
     setIsSubmittingEmail(true);
     try {
+      /*
+       * Refused quietly when the address has asked too often, exactly as the
+       * code path is. Saying so would confirm which addresses exist, and the
+       * person receiving unwanted mail is better served by it stopping than by
+       * a message.
+       *
+       * An error here lets the sign-in through rather than blocking it: this
+       * gate exists to stop mail being posted at someone, and a diagnostics
+       * wobble must never be the thing that locks a real person out.
+       */
+      let allowed = true;
       try {
-        await recordMagicLinkRequestAttempt({ email, provider: "resend" });
+        const attempt = await recordMagicLinkRequestAttempt({ email, provider: "resend" });
+        allowed = attempt?.allowed !== false;
       } catch {
         console.debug("Auth diagnostics skipped.");
       }
-      await signIn("resend", { email, redirectTo });
+
+      if (allowed) {
+        await signIn("resend", { email, redirectTo });
+      }
     } catch {
       // Fail silently to thwart user enumeration attacks
       console.debug("Auth action processed.");

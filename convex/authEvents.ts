@@ -1,29 +1,18 @@
 import type { Id } from "./_generated/dataModel";
+import type { AuthEventType } from "./utils/authEventTypes";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getActiveCompanyId } from "./authz";
+import {
+  SIGN_IN_MAX_REQUESTS_PER_HOUR,
+  SIGN_IN_REQUEST_WINDOW_MS,
+  isWithinHourlySignInLimit,
+} from "./signInThrottleService";
 import { adminQuery, publicMutation } from "./tenantFunctions";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
-export type AuthEventType =
-  | "MAGIC_LINK_REQUESTED"
-  | "MAGIC_LINK_STARTED"
-  | "INVITE_FOUND"
-  | "INVITE_MISSING"
-  | "INVITE_EXPIRED"
-  | "INVITE_REVOKED"
-  | "INVITE_STALE_ACCEPTED_RECOVERED"
-  | "USER_FOUND"
-  | "EMAIL_DISPATCH_SIMULATED"
-  | "EMAIL_DISPATCH_STARTED"
-  | "EMAIL_DISPATCH_FAILED"
-  | "MAGIC_LINK_VERIFIED"
-  | "OAUTH_VERIFIED"
-  | "ONE_TIME_CODE_REQUESTED"
-  | "ONE_TIME_CODE_THROTTLED"
-  | "ONE_TIME_CODE_VERIFIED"
-  | "ONE_TIME_CODE_FAILED";
+export type { AuthEventType } from "./utils/authEventTypes";
 
 export type AuthEventInput = {
   email: string;
@@ -82,7 +71,7 @@ export const getRecentAuthEvents = adminQuery({
 });
 
 export const recordMagicLinkRequestAttempt = publicMutation({
-  reason: "Records a sign-in attempt, which by definition happens before anyone is authenticated.",
+  reason: "Called before sign-in, which by definition happens before anyone is authenticated. Records the request and refuses when an address has asked too often.",
   args: {
     email: v.string(),
     provider: v.optional(v.string()),
@@ -91,7 +80,39 @@ export const recordMagicLinkRequestAttempt = publicMutation({
     const email = args.email.trim().toLowerCase();
     const now = Date.now();
 
-    if (!email) return { logged: true };
+    if (!email) return { logged: true, allowed: true };
+
+    /*
+     * The refusal has to happen here, before the sign-in screen calls the
+     * framework, because the provider that sends the mail is Auth.js's own hook
+     * and has no database to count against. Worth stating plainly rather than
+     * implying otherwise: this stops the sign-in form being used to post mail at
+     * someone, which is what it is for; it is not a defence against a caller
+     * driving the auth endpoint directly.
+     *
+     * Bounded on purpose — the take stops at the limit, so an address under a
+     * sustained run is not re-counted from the beginning every time.
+     */
+    const recentRequests = await ctx.db
+      .query("authEvents")
+      .withIndex("by_email", (q) =>
+        q.eq("email", email).gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
+      )
+      .order("desc")
+      .filter((q) => q.eq(q.field("eventType"), "MAGIC_LINK_REQUESTED"))
+      .take(SIGN_IN_MAX_REQUESTS_PER_HOUR);
+
+    if (!isWithinHourlySignInLimit(recentRequests.map((event) => event.timestamp), now)) {
+      await logAuthEvent(ctx, {
+        email,
+        eventType: "MAGIC_LINK_THROTTLED",
+        timestamp: now,
+        provider: args.provider,
+        reasonCode: "too_many_requests",
+      });
+
+      return { logged: true, allowed: false };
+    }
 
     await logAuthEvent(ctx, {
       email,
@@ -117,7 +138,7 @@ export const recordMagicLinkRequestAttempt = publicMutation({
         reasonCode: "existing_user",
       });
 
-      return { logged: true };
+      return { logged: true, allowed: true };
     }
 
     const invite = await ctx.db
@@ -134,7 +155,7 @@ export const recordMagicLinkRequestAttempt = publicMutation({
         reasonCode: "no_invite_or_user",
       });
 
-      return { logged: true };
+      return { logged: true, allowed: true };
     }
 
     await logAuthEvent(ctx, {
@@ -179,6 +200,6 @@ export const recordMagicLinkRequestAttempt = publicMutation({
       });
     }
 
-    return { logged: true };
+    return { logged: true, allowed: true };
   },
 });

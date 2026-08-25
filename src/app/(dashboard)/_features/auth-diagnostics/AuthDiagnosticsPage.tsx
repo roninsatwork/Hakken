@@ -6,6 +6,7 @@ import { Filter, Inbox, MailCheck, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { AUTH_EVENT_TYPES } from "@/convex/utils/authEventTypes";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE, matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
@@ -24,22 +25,6 @@ type AuthDiagnosticsEvent = {
   provider?: string;
   reasonCode?: string;
 };
-
-const authEventTypes = [
-  "MAGIC_LINK_REQUESTED",
-  "MAGIC_LINK_STARTED",
-  "INVITE_FOUND",
-  "INVITE_MISSING",
-  "INVITE_EXPIRED",
-  "INVITE_REVOKED",
-  "INVITE_STALE_ACCEPTED_RECOVERED",
-  "USER_FOUND",
-  "EMAIL_DISPATCH_SIMULATED",
-  "EMAIL_DISPATCH_STARTED",
-  "EMAIL_DISPATCH_FAILED",
-  "MAGIC_LINK_VERIFIED",
-  "OAUTH_VERIFIED",
-];
 
 function formatCode(value: string | null | undefined) {
   if (!value) return "N/A";
@@ -148,7 +133,7 @@ export function AuthDiagnosticsPage() {
             aria-label={t("filters.eventType")}
           >
             <option value="all">{t("filters.allEvents")}</option>
-            {authEventTypes.map((type) => (
+            {AUTH_EVENT_TYPES.map((type) => (
               <option key={type} value={type}>
                 {formatCode(type)}
               </option>
