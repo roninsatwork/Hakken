@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { RIGHTMOVE_ACTOR_ID } from "./apifyActors";
@@ -155,5 +155,69 @@ describe("Apify webhook persistence", () => {
         items: [],
       })
     ).rejects.toThrow("Run not found");
+  });
+});
+
+/**
+ * The secret proves who is calling. It says nothing about how much they intend
+ * to send, and this handler used to read whatever arrived before it could
+ * object — the public API and the workflow webhook both learned to cap first.
+ */
+describe("Apify webhook request body limits", () => {
+  const secret = "apify-webhook-secret";
+  const oversized = "x".repeat(128 * 1024 + 1);
+
+  const post = (t: ReturnType<typeof convexTest>, body: string, headers: Record<string, string> = {}) =>
+    t.fetch("/apify-webhook", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-apify-secret": secret, ...headers },
+      body,
+    });
+
+  beforeEach(() => {
+    vi.stubEnv("APIFY_WEBHOOK_SECRET", secret);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("turns away an oversized payload without acting on it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const response = await post(t, oversized);
+
+    expect(response.status).toBe(413);
+    expect(await t.run(async (ctx) => ctx.db.query("apifyRuns").collect())).toEqual([]);
+  });
+
+  test("still refuses an oversized payload that arrives without the secret", async () => {
+    // The secret is checked first, so a stranger never reaches the reader at all.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const response = await post(t, oversized, { "x-apify-secret": "wrong" });
+
+    expect(response.status).toBe(401);
+  });
+
+  test("lets an ordinary payload through", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const startedBy = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN" })
+    );
+    await t.mutation(internal.webhooks.recordRunStart, {
+      runId: "run-capped",
+      actorId: RIGHTMOVE_ACTOR_ID,
+      startedBy,
+    });
+
+    const response = await post(t, JSON.stringify({ runId: "run-capped", status: "FAILED" }));
+
+    expect(response.status).toBe(200);
+    const run = await t.run(async (ctx) =>
+      ctx.db.query("apifyRuns").withIndex("by_runId", (q) => q.eq("runId", "run-capped")).unique()
+    );
+    expect(run?.status).toBe("FAILED");
   });
 });

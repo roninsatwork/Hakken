@@ -2,6 +2,7 @@ import { httpAction, internalMutation, internalQuery } from "./_generated/server
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { producesPropertyListings } from "./apifyActors";
+import { readBoundedJson } from "./utils/boundedRequestBody";
 import { constantTimeEqual } from "./utils/security";
 
 
@@ -34,14 +35,20 @@ export const processApifyWebhook = httpAction(async (ctx, request) => {
     return new Response("Unauthorized request origin", { status: 401 });
   }
 
-  const payloadStr = await request.text();
-  let payload;
-  try {
-    payload = JSON.parse(payloadStr);
-  } catch {
-    return new Response("Invalid JSON payload", { status: 400 });
+  /*
+   * Only after the secret has been proven, and never more than the cap: the
+   * public API and the workflow webhook both read this way, and this handler
+   * was the one that did not — it took `request.text()` on whatever arrived and
+   * had already buffered it before it could object.
+   */
+  const body = await readBoundedJson(request);
+  if (!body.ok) {
+    return body.reason === "too_large"
+      ? new Response("Payload too large", { status: 413 })
+      : new Response("Invalid JSON payload", { status: 400 });
   }
 
+  const payload = body.payload as { runId?: string; status?: string; datasetId?: string };
   const { runId, status, datasetId } = payload;
   if (!runId || !status) {
     return new Response("Missing runId or status", { status: 400 });

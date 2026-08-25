@@ -1,6 +1,7 @@
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { readBoundedJson as readBoundedJsonBody } from "./utils/boundedRequestBody";
 
 const PUBLIC_API_MAX_BODY_BYTES = 128 * 1024;
 
@@ -24,50 +25,25 @@ function bodyTooLargeResponse() {
   }, 413);
 }
 
+/**
+ * The public API's own wording over the shared reader. The cap and the stream
+ * handling live in `utils/boundedRequestBody`; what belongs here is only how
+ * this surface phrases a refusal, which is JSON where the webhooks use text.
+ */
 async function readBoundedJson(request: Request): Promise<
   | { ok: true; payload: unknown }
   | { ok: false; response: Response }
 > {
-  const contentLength = request.headers.get("content-length");
-  if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > PUBLIC_API_MAX_BODY_BYTES) {
-    return { ok: false, response: bodyTooLargeResponse() };
-  }
+  const body = await readBoundedJsonBody(request, PUBLIC_API_MAX_BODY_BYTES);
+  if (body.ok) return body;
 
-  if (!request.body) {
-    return { ok: false, response: jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400) };
-  }
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      totalBytes += value.byteLength;
-      if (totalBytes > PUBLIC_API_MAX_BODY_BYTES) {
-        await reader.cancel();
-        return { ok: false, response: bodyTooLargeResponse() };
-      }
-      chunks.push(value);
-    }
-
-    const bodyBytes = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bodyBytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes);
-    return { ok: true, payload: JSON.parse(text) as unknown };
-  } catch {
-    return { ok: false, response: jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400) };
-  } finally {
-    reader.releaseLock();
-  }
+  return {
+    ok: false,
+    response:
+      body.reason === "too_large"
+        ? bodyTooLargeResponse()
+        : jsonResponse({ ok: false, error: "Invalid JSON request body." }, 400),
+  };
 }
 
 export const handlePublicApiPing = httpAction(async (ctx, request) => {
