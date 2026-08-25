@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import type { TimelinePoint, Translate } from "./types";
 import { formatCostAxisTick } from "./costFormatters";
 
@@ -60,23 +61,13 @@ export function AICostTimelineChart({
                   />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: "rgba(0,0,0,0.8)",
-                      borderRadius: "12px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
-                    itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
-                    labelStyle={{
-                      color: "#888888",
-                      fontSize: "11px",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      marginBottom: "8px",
-                    }}
-                    formatter={(value: unknown) => [
-                      formatCostAxisTick(Number(value || 0)),
-                      t("chart.tooltipLabel"),
-                    ]}
+                    cursor={CHART_CROSSHAIR}
+                    content={
+                      <ChartTooltip
+                        formatValue={(value) => formatCostAxisTick(value)}
+                        seriesLabel={() => t("chart.tooltipLabel")}
+                      />
+                    }
                   />
                   {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
                   <Area isAnimationActive={false}

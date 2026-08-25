@@ -15,14 +15,23 @@ import {
   Layers,
   Network
 } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import type { LucideIcon } from "lucide-react";
+
+const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
+const Area = dynamic(() => import("recharts").then((module) => module.Area));
+const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
+const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
+const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
+const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
@@ -243,13 +252,14 @@ export default function CompanyAiUsagePage() {
                       />
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                       <Tooltip
-                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
-                        itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
-                        labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
-                        formatter={(value, name) => [
-                          value,
-                          name === "internalMessages" ? "Internal Executions" : "External Widget Traffic"
-                        ]}
+                        cursor={CHART_CROSSHAIR}
+                        content={
+                          <ChartTooltip
+                            seriesLabel={(entry) =>
+                              entry.dataKey === "internalMessages" ? "Internal Executions" : "External Widget Traffic"
+                            }
+                          />
+                        }
                       />
 
                       {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}

@@ -4,14 +4,25 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader2, Download, AlertTriangle, CheckCircle2, ShieldAlert, Zap, Target, LineChart, TrendingUp, Users } from "lucide-react";
 import { useRef } from "react";
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
-} from "recharts";
-import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+import dynamic from "next/dynamic";
+import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import Header from "@/src/ui/components/layout/Header";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+
+const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
+const Area = dynamic(() => import("recharts").then((module) => module.Area));
+const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
+const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
+const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
+const RechartsTooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
+const Legend = dynamic(() => import("recharts").then((module) => module.Legend));
+const RadarChart = dynamic(() => import("recharts").then((module) => module.RadarChart));
+const PolarGrid = dynamic(() => import("recharts").then((module) => module.PolarGrid));
+const PolarAngleAxis = dynamic(() => import("recharts").then((module) => module.PolarAngleAxis));
+const PolarRadiusAxis = dynamic(() => import("recharts").then((module) => module.PolarRadiusAxis));
+const Radar = dynamic(() => import("recharts").then((module) => module.Radar));
 
 const formatCurrency = (val: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', notation: 'compact', maximumFractionDigits: 2 }).format(val);
 
@@ -161,15 +172,12 @@ export default function ReportsPage() {
                               <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0.0}/>
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-dim)" vertical={false} />
                           <XAxis dataKey="window" tick={{ fill: '#a3a3a3', fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} dy={10} />
                           <YAxis tick={{ fill: '#a3a3a3', fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} tickFormatter={(val) => `£${(val/1000).toFixed(0)}k`} dx={-10} />
-                          <RechartsTooltip 
-                            cursor={{ stroke: 'var(--color-brand)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                            contentStyle={{ backgroundColor: 'rgba(15,15,15,0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}
-                            itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}
-                            labelStyle={{ color: 'var(--color-brand)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                            formatter={(value: ValueType | undefined, name: NameType | undefined) => [formatCurrency(Number(value) || 0), name]}
+                          <RechartsTooltip
+                            cursor={CHART_CROSSHAIR}
+                            content={<ChartTooltip formatValue={(value) => formatCurrency(value)} />}
                           />
                           <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#888', paddingTop: '0px', paddingBottom: '15px' }} />
                           {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}

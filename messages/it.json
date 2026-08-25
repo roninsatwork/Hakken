@@ -699,7 +699,8 @@
           "plansTitle": "Piani",
           "plansDescription": "Quanti spazi di lavoro dei clienti sono su ciascun piano.",
           "managePlans": "Gestisci i piani",
-          "signInTooltipRow": "{count, plural, one {# persona} other {# persone}} · {band}"
+          "signInTooltipRow": "{count, plural, one {# persona} other {# persone}} · {band}",
+          "plansTooltipUnit": "{count, plural, one {spazio di lavoro cliente} other {spazi di lavoro cliente}}"
         },
         "bands": {
           "didNotSignIn": "Nessun accesso",
@@ -4820,6 +4821,7 @@
         "tokenSub": "Volume input e output a confronto",
         "noData": "Nessun dato",
         "calls": "{count} chiamate",
+        "callsUnit": "chiamate",
         "inputSeries": "Input (contesto)",
         "outputSeries": "Output (generazione)",
         "unknownProvider": "Sconosciuto / Legacy"

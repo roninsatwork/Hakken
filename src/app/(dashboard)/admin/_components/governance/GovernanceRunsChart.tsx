@@ -2,6 +2,8 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
+
 import { RUN_OUTCOME_COLOURS } from "./governanceColours";
 
 /**
@@ -68,19 +70,15 @@ export function GovernanceRunsChart({ data, labels }: GovernanceRunsChartProps) 
           tick={{ fontSize: 11, fill: "currentColor" }}
           className="text-muted"
         />
+        {/* A day with no waited runs should not list a nought for them. */}
         <Tooltip
-          cursor={{ fill: "currentColor", className: "text-border-dim/40" }}
-          contentStyle={{
-            backgroundColor: "rgba(20,20,20,0.92)",
-            borderRadius: "12px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            fontSize: "12px",
-          }}
-          itemStyle={{ color: "#ffffff", fontSize: "12px" }}
-          labelStyle={{ color: "#a1a1a1", fontSize: "11px", marginBottom: "4px" }}
-          labelFormatter={(date) => formatDay(String(date))}
-          formatter={(value, key) =>
-            [Number(value ?? 0).toLocaleString(), bandLabel[String(key)] ?? String(key)] as [string, string]
+          cursor={CHART_CURSOR}
+          content={
+            <ChartTooltip
+              hideEmptyRows
+              title={(date) => formatDay(date)}
+              seriesLabel={(entry) => bandLabel[String(entry.dataKey)] ?? String(entry.dataKey)}
+            />
           }
         />
         {/* Ordered so the band a reader cares about most sits at the top of the

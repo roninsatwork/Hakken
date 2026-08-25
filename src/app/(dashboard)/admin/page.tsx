@@ -1,30 +1,33 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AlertTriangle, ArrowRight, CircleCheck, LayoutDashboard, MailPlus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { CHART_CURSOR, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+
+const Area = dynamic(() => import("recharts").then((module) => module.Area));
+const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
+const Bar = dynamic(() => import("recharts").then((module) => module.Bar));
+const BarChart = dynamic(() => import("recharts").then((module) => module.BarChart));
+const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
+const Line = dynamic(() => import("recharts").then((module) => module.Line));
+const LineChart = dynamic(() => import("recharts").then((module) => module.LineChart));
+const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
+const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
+const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
+const PlanDistributionChart = dynamic(() =>
+  import("./_components/PlanDistributionChart").then((module) => module.PlanDistributionChart)
+);
 
 type ClientState = "HEALTHY" | "NEEDS_ATTENTION" | "UNUSED";
 
@@ -155,15 +158,6 @@ function ChartLegend({ items }: { items: ReadonlyArray<{ label: string; fill: st
   );
 }
 
-function TooltipShell({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      <div className="text-[12px] font-medium text-foreground">{title}</div>
-      {children}
-    </div>
-  );
-}
-
 function SignInTooltip({ active, payload, label }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string | number; value?: number }>;
@@ -176,14 +170,14 @@ function SignInTooltip({ active, payload, label }: {
     .map((band) => ({ band, value: payload.find((entry) => entry.dataKey === band.key)?.value ?? 0 }))
     .filter((row) => row.value > 0);
   return (
-    <TooltipShell title={label ? formatDay(label, locale) : ""}>
+    <ChartTooltipSurface heading={label ? formatDay(label, locale) : ""}>
       {rows.map((row) => (
-        <div key={row.band.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
+        <div key={row.band.key} className="flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: row.band.fill }} />
           {t("charts.signInTooltipRow", { count: row.value, band: t(row.band.labelKey).toLowerCase() })}
         </div>
       ))}
-    </TooltipShell>
+    </ChartTooltipSurface>
   );
 }
 
@@ -196,14 +190,14 @@ function ActivityTooltip({ active, payload, label }: {
   const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
-    <TooltipShell title={label ? formatDay(label, locale) : ""}>
+    <ChartTooltipSurface heading={label ? formatDay(label, locale) : ""}>
       {ACTIVITY_SERIES.map((series) => (
-        <div key={series.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
+        <div key={series.key} className="flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: series.stroke }} />
           {payload.find((entry) => entry.dataKey === series.key)?.value ?? 0} · {t(series.labelKey).toLowerCase()}
         </div>
       ))}
-    </TooltipShell>
+    </ChartTooltipSurface>
   );
 }
 
@@ -216,9 +210,9 @@ function SpendTooltip({ active, payload, label }: {
   const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
-    <TooltipShell title={label ? formatDay(label, locale) : ""}>
-      <div className="mt-1 text-[12px] text-secondary">{t("charts.spentTooltip", { amount: formatSpend(payload[0]?.value ?? 0) })}</div>
-    </TooltipShell>
+    <ChartTooltipSurface heading={label ? formatDay(label, locale) : ""}>
+      <div className="text-[12px] text-secondary">{t("charts.spentTooltip", { amount: formatSpend(payload[0]?.value ?? 0) })}</div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -392,7 +386,7 @@ export default function AdminDashboardPage() {
                 <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<SignInTooltip />} />
+                <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
                 {SIGN_IN_BANDS.map((band, index) => (
                   <Bar
                     key={band.key}
@@ -423,23 +417,13 @@ export default function AdminDashboardPage() {
             </Link>
           }
         >
-          <div className="w-full">
-            <ResponsiveContainer width="100%" height={Math.max(120, overview.planDistribution.length * 48)}>
-              <BarChart data={overview.planDistribution} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 8 }}>
-                <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" width={130} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-                <Bar dataKey="companies" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                  {/* Unpriced workspaces are revenue not collected, so they read
-                      as absence rather than as another plan. */}
-                  {overview.planDistribution.map((plan) => (
-                    <Cell key={plan.name} fill={plan.name === "No plan" ? "#4d4d52" : "#3987e5"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <PlanDistributionChart
+            data={overview.planDistribution}
+            noPlanName="No plan"
+            noPlanFill="#4d4d52"
+            planFill="#3987e5"
+            unitLabel={(count) => t("charts.plansTooltipUnit", { count })}
+          />
         </ChartCard>
       ) : null}
 

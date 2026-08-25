@@ -1,27 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { ArrowRight, LayoutDashboard, MailPlus, Users } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useLocale, useTranslations } from "next-intl";
+import { CHART_CURSOR, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+
+const Bar = dynamic(() => import("recharts").then((module) => module.Bar));
+const BarChart = dynamic(() => import("recharts").then((module) => module.BarChart));
+const CartesianGrid = dynamic(() => import("recharts").then((module) => module.CartesianGrid));
+const Cell = dynamic(() => import("recharts").then((module) => module.Cell));
+const ResponsiveContainer = dynamic(() => import("recharts").then((module) => module.ResponsiveContainer));
+const Tooltip = dynamic(() => import("recharts").then((module) => module.Tooltip));
+const XAxis = dynamic(() => import("recharts").then((module) => module.XAxis));
+const YAxis = dynamic(() => import("recharts").then((module) => module.YAxis));
 
 type EngagementPerson = {
   userId: Id<"users">;
@@ -140,15 +141,14 @@ function SignInTooltip({ active, payload, label }: {
     .filter((row) => row.value > 0);
 
   return (
-    <div className="rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label, locale) : ""}</div>
+    <ChartTooltipSurface heading={label ? formatDay(label, locale) : ""}>
       {rows.map((row) => (
-        <div key={row.band.key} className="mt-1 flex items-center gap-2 text-[12px] text-secondary">
+        <div key={row.band.key} className="flex items-center gap-2 text-[12px] text-secondary">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: row.band.fill }} />
           {tBands("charts.signInTooltipRow", { count: row.value, band: tBands(row.band.labelKey).toLowerCase() })}
         </div>
       ))}
-    </div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -162,12 +162,9 @@ function QuestionsTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value ?? 0;
   return (
-    <div className="rounded-[10px] border border-border-dim bg-card px-3 py-2 shadow-lg">
-      <div className="text-[12px] font-medium text-foreground">{label ? formatDay(label, locale) : ""}</div>
-      <div className="mt-1 text-[12px] text-secondary">
-        {t("charts.questionsTooltip", { count: value })}
-      </div>
-    </div>
+    <ChartTooltipSurface heading={label ? formatDay(label, locale) : ""}>
+      <div className="text-[12px] text-secondary">{t("charts.questionsTooltip", { count: value })}</div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -269,7 +266,7 @@ export default function CompanyDashboardPage() {
                   tickLine={false}
                   axisLine={false}
                 />
-                <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<SignInTooltip />} />
+                <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
                 {SIGN_IN_BANDS.map((band, index) => (
                   <Bar
                     key={band.key}
@@ -317,7 +314,7 @@ export default function CompanyDashboardPage() {
                   tickLine={false}
                   axisLine={false}
                 />
-                <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<QuestionsTooltip />} />
+                <Tooltip cursor={CHART_CURSOR} content={<QuestionsTooltip />} />
                 {/* One series, so no legend: the title names it. A day with
                     nothing asked is drawn in the recessive grey rather than
                     left blank, so the gap is visible as a gap. */}

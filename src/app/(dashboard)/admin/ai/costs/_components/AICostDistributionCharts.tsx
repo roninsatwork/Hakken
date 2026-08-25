@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import { CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import {
   CHART_SERIES_AMBER,
   CHART_SERIES_BLUE,
@@ -107,13 +108,12 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: "rgba(0,0,0,0.8)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                      }}
-                      itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
-                      formatter={(value: unknown) => t("calls", { count: Number(value).toLocaleString() })}
+                      content={
+                        <ChartTooltip
+                          title={(_, entries) => String(entries[0]?.name ?? "")}
+                          seriesLabel={() => t("callsUnit")}
+                        />
+                      }
                     />
                     <Legend
                       iconType="circle"
@@ -171,13 +171,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: "rgba(0,0,0,0.8)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                      }}
-                      itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
-                      formatter={(value: unknown) => `$${Number(value).toFixed(4)}`}
+                      content={<ChartTooltip formatValue={(value) => `$${value.toFixed(4)}`} />}
                     />
                     <Legend
                       iconType="circle"
@@ -229,13 +223,8 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                       width={40}
                     />
                     <Tooltip
-                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                      contentStyle={{
-                        backgroundColor: "rgba(0,0,0,0.8)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                      }}
-                      itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
+                      cursor={CHART_CURSOR}
+                      content={<ChartTooltip formatValue={(value) => formatTokenAxisTick(value)} />}
                     />
                     <Legend
                       iconType="circle"

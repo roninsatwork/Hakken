@@ -54,8 +54,18 @@ vi.mock("recharts", () => {
     Pie: Shell,
     PieChart: Shell,
     ResponsiveContainer: Shell,
-    Tooltip: ({ formatter }: { formatter?: (value: unknown) => [string, string] | string }) => (
-      <div data-testid="chart-tooltip">{formatter ? String(formatter(1234)) : "tooltip"}</div>
+    // Recharts only renders the hover under a pointer, so the mock puts one
+    // there and lets the real readout draw itself.
+    Tooltip: ({ content }: { content?: React.ReactElement }) => (
+      <div data-testid="chart-tooltip">
+        {content
+          ? React.cloneElement(content, {
+              active: true,
+              label: "2026-06-01",
+              payload: [{ dataKey: "cost", name: "gpt-4.1", value: 1234 }],
+            } as Record<string, unknown>)
+          : "tooltip"}
+      </div>
     ),
     XAxis: Shell,
     YAxis: Shell,

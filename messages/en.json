@@ -699,7 +699,8 @@
           "plansTitle": "Plans",
           "plansDescription": "How many client workspaces are on each plan.",
           "managePlans": "Manage plans",
-          "signInTooltipRow": "{count, plural, one {# person} other {# people}} · {band}"
+          "signInTooltipRow": "{count, plural, one {# person} other {# people}} · {band}",
+          "plansTooltipUnit": "{count, plural, one {client workspace} other {client workspaces}}"
         },
         "bands": {
           "didNotSignIn": "Did not sign in",
@@ -4820,6 +4821,7 @@
         "tokenSub": "Input vs Output Volume",
         "noData": "No Data",
         "calls": "{count} Calls",
+        "callsUnit": "calls",
         "inputSeries": "Input (Context)",
         "outputSeries": "Output (Gen)",
         "unknownProvider": "Unknown / Legacy"
