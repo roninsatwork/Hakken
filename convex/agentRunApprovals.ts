@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as agentRecordShapes from "./utils/agentRecordShapes";
 import {
   getNextStepIndex,
   recordAgentAction,
@@ -77,6 +78,7 @@ export const getPendingApprovals = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: agentRecordShapes.pendingApprovalPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     // Two indexes, one for each mode. Filtering the loaded page in the browser
@@ -126,6 +128,7 @@ export const getPendingApprovals = superAdminQuery({
  */
 export const getPendingApprovalCount = superAdminQuery({
   args: {},
+  returns: agentRecordShapes.pendingApprovalCountShape,
   handler: async (ctx) => {
     const pending = await ctx.db
       .query("agentRunApprovals")
@@ -519,6 +522,7 @@ export const recordApprovedToolResultInternal = internalMutation({
 
 export const getApprovalExpiryConfig = superAdminQuery({
   args: {},
+  returns: agentRecordShapes.approvalExpiryConfigShape,
   handler: async (ctx) => {
     const config = await ctx.db
       .query("systemConfig")
@@ -538,6 +542,7 @@ export const updateApprovalExpiryConfig = superAdminMutation({
   args: {
     expiryHours: v.number(),
   },
+  returns: v.number(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const expiryHours = normalizeApprovalExpiryHoursForUpdate(args.expiryHours);

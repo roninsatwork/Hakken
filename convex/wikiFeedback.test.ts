@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { isSubstantiveQuestion, questionKey } from "./wikiFeedbackService";
 
@@ -409,5 +409,57 @@ describe("usage marks", () => {
     });
     const page = await t.run(async (ctx) => ctx.db.get(globalPageId));
     expect(page?.usageCount).toBe(1);
+  });
+});
+
+describe("the unanswered-question lists", () => {
+  /**
+   * None of the three lists had a test reaching it, so their declared shapes
+   * were checked by the compiler alone — and the compiler cannot see a field a
+   * handler sends that the declaration does not name.
+   */
+  const paginationOpts = { numItems: 10, cursor: null };
+
+  const seed = async (t: ReturnType<typeof convexTest>) => t.run(async (ctx) => {
+    const companyId = await ctx.db.insert("companies", { name: "Asking Co", createdAt: Date.now() });
+    const superAdminId = await ctx.db.insert("users", {
+      email: "unanswered@test.com",
+      role: "SUPER_ADMIN",
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("wikiUnansweredQuestions", {
+      companyId,
+      question: "Do you deliver on Saturdays?",
+      normalizedKey: "do-you-deliver-on-saturdays",
+      askCount: 3,
+      status: "OPEN",
+      firstAskedAt: 1,
+      lastAskedAt: 2,
+    });
+    await ctx.db.insert("wikiUnansweredQuestions", {
+      question: "What is the notice period?",
+      normalizedKey: "what-is-the-notice-period",
+      askCount: 5,
+      companiesJson: JSON.stringify(["a", "b"]),
+      status: "OPEN",
+      firstAskedAt: 1,
+      lastAskedAt: 3,
+    });
+    return { companyId, superAdminId };
+  });
+
+  test("a company's list, the platform's list, and the whole platform's", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, superAdminId } = await seed(t);
+    const client = t.withIdentity({ subject: superAdminId });
+
+    const forCompany = await client.query(api.wikiFeedback.listUnansweredForCompany, { companyId, paginationOpts });
+    const forGlobal = await client.query(api.wikiFeedback.listUnansweredForGlobal, {});
+    const all = await client.query(api.wikiFeedback.listAllUnanswered, { scope: "ALL", paginationOpts });
+
+    // Proof each read something: an empty list has nothing to be wrong about.
+    expect(forCompany.page.map((row) => row.question)).toEqual(["Do you deliver on Saturdays?"]);
+    expect(forGlobal.map((row) => row.companyCount)).toEqual([2]);
+    expect(all.page.map((row) => row.askCount).sort()).toEqual([3, 5]);
   });
 });

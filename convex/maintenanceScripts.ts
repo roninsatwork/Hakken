@@ -3,6 +3,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as platformShapes from "./utils/platformShapes";
 import { getRegisteredMigrationNames } from "./dataMigrations";
 import { rebuildGlobalInventoryRollupData } from "./inventoryRollups";
 // template:remove:start salesData
@@ -124,6 +125,7 @@ async function getLatestRunForScript(ctx: Pick<QueryCtx, "db">, scriptId: string
 
 export const list = superAdminQuery({
   args: {},
+  returns: platformShapes.maintenanceScriptListShape,
   handler: async (ctx) => {
     return await Promise.all(
       maintenanceScriptDefinitions.map(async (script) => ({
@@ -136,6 +138,7 @@ export const list = superAdminQuery({
 
 export const get = superAdminQuery({
   args: { scriptId: v.string() },
+  returns: platformShapes.maintenanceScriptDetailShape,
   handler: async (ctx, args) => {
     const script = getMaintenanceScriptDefinition(args.scriptId);
     if (!script) return null;
@@ -156,6 +159,7 @@ export const get = superAdminQuery({
 
 export const run = superAdminMutation({
   args: { scriptId: v.string() },
+  returns: platformShapes.maintenanceScriptRunShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const script = getMaintenanceScriptDefinition(args.scriptId);
@@ -209,7 +213,7 @@ export const run = superAdminMutation({
       });
 
       return {
-        success: true,
+        success: true as const,
         runId,
         summary: result.summary,
       };
@@ -237,7 +241,7 @@ export const run = superAdminMutation({
       });
 
       return {
-        success: false,
+        success: false as const,
         runId,
         error: message,
       };

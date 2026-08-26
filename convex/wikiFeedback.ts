@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery, superAdminQuery } from "./tenantFunctions";
+import * as platformShapes from "./utils/platformShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import {
   displayQuestion,
@@ -183,6 +184,7 @@ export const listUnansweredForCompany = adminQuery({
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
   },
+  returns: platformShapes.unansweredPageShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const needle = args.search?.trim();
@@ -231,6 +233,7 @@ export const listAllUnanswered = superAdminQuery({
     search: v.optional(v.string()),
     scope: v.optional(v.union(v.literal("ALL"), v.literal("PLATFORM"), v.literal("COMPANIES"))),
   },
+  returns: platformShapes.unansweredPageShape,
   handler: async (ctx, args) => {
     const needle = args.search?.trim();
     // Searched and paged where the rows live. This used to take five hundred
@@ -284,6 +287,7 @@ export const listAllUnanswered = superAdminQuery({
  * named (Anthony's routing rule, 2026-08-17). */
 export const listUnansweredForGlobal = adminQuery({
   args: {},
+  returns: platformShapes.unansweredListShape,
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

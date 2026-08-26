@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as agentRecordShapes from "./utils/agentRecordShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { appError } from "./utils/appError";
@@ -11,6 +12,7 @@ export const createSnapshot = adminMutation({
     agentId: v.id("agents"),
     companyId: v.optional(v.id("companies")),
   },
+  returns: v.id("agentVersions"),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -35,6 +37,7 @@ export const getForAgent = adminQuery({
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: agentRecordShapes.versionPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN") {
@@ -60,6 +63,7 @@ export const getVersionDetail = adminQuery({
   args: {
     versionId: v.id("agentVersions"),
   },
+  returns: agentRecordShapes.versionDetailShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const version = await ctx.db.get(args.versionId);

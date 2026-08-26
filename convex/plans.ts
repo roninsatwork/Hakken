@@ -13,6 +13,7 @@ import {
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 import { superAdminMutation, superAdminQuery, tenantQuery, softQuery } from "./tenantFunctions";
+import * as platformShapes from "./utils/platformShapes";
 import { appError } from "./utils/appError";
 import { rowShape } from "./utils/rowShape";
 
@@ -76,6 +77,7 @@ export const getPaginatedPlans = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: platformShapes.planPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
 
@@ -94,6 +96,7 @@ export const getPaginatedPlans = superAdminQuery({
 
 export const getActivePlans = tenantQuery({
   args: {},
+  returns: platformShapes.planListShape,
   handler: async (ctx) => {
     return await ctx.db
       .query("plans")
@@ -112,6 +115,7 @@ export const createPlan = superAdminMutation({
     grantedModules: v.optional(v.array(v.string())),
     isActive: v.boolean(),
   },
+  returns: v.id("plans"),
   handler: async (ctx, args) => {
     const planId = await ctx.db.insert("plans", buildPlanRecord({
       name: args.name,

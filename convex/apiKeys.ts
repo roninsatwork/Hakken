@@ -5,6 +5,8 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { toClientApiKey } from "./utils/platformShapes";
+import * as platformShapes from "./utils/platformShapes";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { constantTimeEqual } from "./utils/security";
 
@@ -124,7 +126,7 @@ async function enrichApiKey(ctx: Pick<QueryCtx, "db">, apiKey: Doc<"apiKeys">) {
   const revokedBy = apiKey.revokedBy ? await ctx.db.get(apiKey.revokedBy) : null;
 
   return {
-    ...apiKey,
+    ...toClientApiKey(apiKey),
     companyName: company?.name ?? "Unknown company",
     createdByEmail: creator?.email,
     revokedByEmail: revokedBy?.email,
@@ -136,6 +138,7 @@ export const list = adminQuery({
     companyId: v.optional(v.id("companies")),
     paginationOpts: paginationOptsValidator,
   },
+  returns: platformShapes.apiKeyPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -162,6 +165,7 @@ export const create = adminMutation({
     expiresAt: v.optional(v.number()),
     rateLimitPerMinute: v.optional(v.number()),
   },
+  returns: platformShapes.apiKeyCreationShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const companyId = getManagedCompanyId(user, args.companyId);
@@ -221,6 +225,7 @@ export const revoke = adminMutation({
     apiKeyId: v.id("apiKeys"),
     reason: v.optional(v.string()),
   },
+  returns: platformShapes.clientApiKeyShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const apiKey = await ctx.db.get(args.apiKeyId);

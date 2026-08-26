@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as platformShapes from "./utils/platformShapes";
 import { appError } from "./utils/appError";
 
 /**
@@ -30,6 +31,7 @@ export const UNREAD_COUNT_LIMIT = 50;
 
 export const listMine = tenantQuery({
   args: { paginationOpts: paginationOptsValidator },
+  returns: platformShapes.notificationPageShape,
   handler: async (ctx, args) => {
     return await ctx.db
       .query("notifications")
@@ -41,6 +43,7 @@ export const listMine = tenantQuery({
 
 export const countMineUnread = tenantQuery({
   args: {},
+  returns: platformShapes.unreadCountShape,
   handler: async (ctx) => {
     const unread = await ctx.db
       .query("notifications")
@@ -72,6 +75,7 @@ export const markRead = tenantMutation({
 
 export const markAllMineRead = tenantMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const unread = await ctx.db
       .query("notifications")

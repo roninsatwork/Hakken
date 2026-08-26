@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as platformShapes from "./utils/platformShapes";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import { parseStoredStringArray } from "./utils/lang";
@@ -122,6 +123,7 @@ export const getSuggestionsForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: platformShapes.learningSuggestionListShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -341,6 +343,7 @@ export const createMemoryCandidateFromChat = adminMutation({
     reason: v.optional(v.string()),
     confidence: v.optional(v.number()),
   },
+  returns: v.id("companyMemoryCandidates"),
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const { thread } = await requireThreadEvidence(ctx, args);
@@ -394,6 +397,7 @@ export const createEvalCaseFromChat = adminMutation({
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
   },
+  returns: v.id("companyEvalCases"),
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     // Called for the check it performs, not for what it returns: the thread

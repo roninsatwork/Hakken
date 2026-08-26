@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as agentRecordShapes from "./utils/agentRecordShapes";
 import { normalizeSearchTerm } from "./adminQueryService";
 import type { Id } from "./_generated/dataModel";
 import { buildFailureKey } from "./agentFailureKeyService";
@@ -42,6 +43,7 @@ export const getJobGroups = adminQuery({
     page: v.number(),
     pageSize: v.number(),
   },
+  returns: agentRecordShapes.jobGroupsShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -213,6 +215,7 @@ export const insertAgentLogInternal = internalMutation({
  */
 export const getForRun = adminQuery({
   args: { runId: v.id("agentRuns") },
+  returns: agentRecordShapes.runLogListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -249,6 +252,7 @@ export const getLogById = adminQuery({
 
 export const deleteLog = adminMutation({
   args: { id: v.id("agentLogs") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const log = await ctx.db.get(args.id);

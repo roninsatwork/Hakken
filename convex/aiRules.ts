@@ -282,6 +282,7 @@ export const createRule = tenantMutation({
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
     isActive: v.boolean(),
   },
+  returns: v.id("aiRules"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -328,6 +329,7 @@ export const updateRule = tenantMutation({
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
     isActive: v.boolean(),
   },
+  returns: v.id("aiRules"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
@@ -364,6 +366,7 @@ export const toggleRuleActive = tenantMutation({
     id: v.id("aiRules"),
     isActive: v.boolean(),
   },
+  returns: v.id("aiRules"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);

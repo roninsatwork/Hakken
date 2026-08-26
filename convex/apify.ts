@@ -229,6 +229,7 @@ export const startRightmoveScrape = tenantAction({
     listUrls: v.array(v.string()),
     maxProperties: v.number(),
   },
+  returns: v.string(),
   handler: async (ctx, args): Promise<string> => {
     const user = await ctx.runQuery(api.users.getMe);
     if (!user) throw appError("UNAUTHENTICATED", "Unauthenticated");
@@ -307,6 +308,7 @@ export const fetchDatasetAndStore = internalAction({
 
 export const syncRunStatus = tenantAction({
   args: { runId: v.string() },
+  returns: v.string(),
   handler: async (ctx, args) => {
     await requireApifyRunAccess(ctx, args.runId);
     return await syncRunStatusForKnownRun(ctx, args.runId);
@@ -346,6 +348,7 @@ async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
 
 export const debugDatasetItem = tenantAction({
   args: { runId: v.string() },
+  returns: v.any(),
   handler: async (ctx, args) => {
     const { user } = await requireApifyRunAccess(ctx, args.runId);
     if (user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized");

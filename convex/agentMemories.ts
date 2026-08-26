@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as agentRecordShapes from "./utils/agentRecordShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { appError } from "./utils/appError";
@@ -79,6 +80,7 @@ export const getForAgent = adminQuery({
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: agentRecordShapes.memoryPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -162,6 +164,7 @@ export const getQualityForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: agentRecordShapes.memoryQualityShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -517,6 +520,7 @@ export const createMemory = adminMutation({
     content: v.string(),
     applyMode: applyModeValidator,
   },
+  returns: v.id("agentMemories"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
