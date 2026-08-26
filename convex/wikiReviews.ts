@@ -73,6 +73,22 @@ export const fileReviewInternal = internalMutation({
   },
 });
 
+/**
+ * A page waiting on a person: its title, the claims it would make, and when
+ * it was raised.
+ *
+ * The claims leave as the parsed list, never as `claimsJson` — the stored
+ * string is the model's raw output and a screen that received it would be
+ * parsing untrusted JSON in the browser. The document it came from stays
+ * behind too: approving is a decision about the claims, not about the file.
+ */
+const pendingReviewValidator = v.object({
+  reviewId: v.id("wikiReviews"),
+  title: v.string(),
+  claims: v.array(v.string()),
+  requestedAt: v.number(),
+});
+
 function reviewForScreen(review: {
   _id: Id<"wikiReviews">;
   title: string;
@@ -92,6 +108,7 @@ function reviewForScreen(review: {
 export const listPendingReviews = moduleQuery({
   module: CORE_MODULES.wiki,
   args: {},
+  returns: v.array(pendingReviewValidator),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return [];

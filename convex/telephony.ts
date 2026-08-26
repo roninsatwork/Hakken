@@ -604,6 +604,13 @@ export const handleCallStatus = httpAction(async (ctx, request) => {
   return new Response(null, { status: 200 });
 });
 
+const callStatusValidator = v.union(
+  v.literal("RINGING"),
+  v.literal("IN_PROGRESS"),
+  v.literal("COMPLETED"),
+  v.literal("FAILED")
+);
+
 /**
  * The screen behind the presenter.
  *
@@ -614,21 +621,25 @@ export const handleCallStatus = httpAction(async (ctx, request) => {
 export const listCalls = moduleQuery({
   module: CORE_MODULES.calls,
   args: {},
-  handler: async (
-    ctx
-  ): Promise<
-    Array<{
-      _id: Id<"phoneCalls">;
-      fromMasked: string;
-      status: "RINGING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
-      startedAt: number;
-      endedAt?: number;
-      summary?: string;
-      matchedCustomerKey?: string;
-      taskId?: Id<"tasks">;
-      turnCount: number;
-    }>
-  > => {
+  /**
+   * What the recent-calls list draws: a masked number, the state, the time,
+   * one line of summary and the customer it matched. The caller's real
+   * number never leaves here — `fromMasked` is the only form of it this
+   * surface knows — and neither does the follow-up task id or the end time,
+   * because the list renders neither. Both live on the call's own page.
+   */
+  returns: v.array(
+    v.object({
+      _id: v.id("phoneCalls"),
+      fromMasked: v.string(),
+      status: callStatusValidator,
+      startedAt: v.number(),
+      summary: v.optional(v.string()),
+      matchedCustomerKey: v.optional(v.string()),
+      turnCount: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return [];
 
@@ -643,10 +654,10 @@ export const listCalls = moduleQuery({
       fromMasked: maskPhoneNumber(call.fromNumber),
       status: call.status,
       startedAt: call.startedAt,
-      endedAt: call.endedAt,
-      summary: call.summary,
-      matchedCustomerKey: call.matchedCustomerKey,
-      taskId: call.taskId,
+      ...(call.summary === undefined ? {} : { summary: call.summary }),
+      ...(call.matchedCustomerKey === undefined
+        ? {}
+        : { matchedCustomerKey: call.matchedCustomerKey }),
       turnCount: call.turns.length,
     }));
   },
@@ -657,6 +668,34 @@ export const getCall = moduleQuery({
   // A string, not an id: this value arrives straight from the address bar,
   // and a mistyped link must read as "not found" rather than an error page.
   args: { callId: v.string() },
+  /**
+   * One call, as its page reads it — the transcript, the summary, and the
+   * caller's whole number, which appears here and nowhere else.
+   *
+   * The whole row used to leave. That also handed the browser `toNumber`
+   * (the company's own line), `providerCallId` (the telephony provider's
+   * key for the call, and this table's idempotency key), `threadId`, and
+   * the timestamp on every spoken turn. The page renders none of the four,
+   * and two of them are raw telephone identifiers.
+   */
+  returns: v.union(
+    v.null(),
+    v.object({
+      fromNumber: v.string(),
+      status: callStatusValidator,
+      startedAt: v.number(),
+      endedAt: v.optional(v.number()),
+      summary: v.optional(v.string()),
+      matchedCustomerKey: v.optional(v.string()),
+      taskId: v.optional(v.id("tasks")),
+      turns: v.array(
+        v.object({
+          role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+          text: v.string(),
+        })
+      ),
+    })
+  ),
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return null;
@@ -665,7 +704,18 @@ export const getCall = moduleQuery({
     const call = await ctx.db.get(callId);
     // The tenant boundary, asserted on the row itself.
     if (!call || call.companyId !== companyId) return null;
-    return call;
+    return {
+      fromNumber: call.fromNumber,
+      status: call.status,
+      startedAt: call.startedAt,
+      ...(call.endedAt === undefined ? {} : { endedAt: call.endedAt }),
+      ...(call.summary === undefined ? {} : { summary: call.summary }),
+      ...(call.matchedCustomerKey === undefined
+        ? {}
+        : { matchedCustomerKey: call.matchedCustomerKey }),
+      ...(call.taskId === undefined ? {} : { taskId: call.taskId }),
+      turns: call.turns.map((turn) => ({ role: turn.role, text: turn.text })),
+    };
   },
 });
 

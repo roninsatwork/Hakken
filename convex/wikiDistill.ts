@@ -297,9 +297,26 @@ async function distillProgressFor(
   };
 }
 
+/**
+ * What the progress panel draws, and all `distillProgressFor` produces.
+ *
+ * Counts and one document title — no document ids, no page ids, nothing that
+ * would let a reader walk from the progress bar into the source shelf.
+ */
+const distillProgressValidator = v.object({
+  totalDocuments: v.number(),
+  remainingDocuments: v.number(),
+  documentsRead: v.number(),
+  pagesWritten: v.number(),
+  pagesImproved: v.number(),
+  lastDocumentTitle: v.union(v.string(), v.null()),
+  isReading: v.boolean(),
+});
+
 export const getDistillProgress = moduleQuery({
   module: CORE_MODULES.wiki,
   args: {},
+  returns: v.union(v.null(), distillProgressValidator),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return null;

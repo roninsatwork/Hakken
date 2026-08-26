@@ -1089,7 +1089,10 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
     subjectKey: page.subjectKey,
     content: page.content,
     pinnedCorrections: page.pinnedCorrections,
-    rewriteCount: page.rewriteCount,
+    // No `rewriteCount`: it rode along to every reader of a page and is
+    // drawn on none of them. The screen says how a page last changed
+    // (`lastRewriteSource`) and when — how many times is the tending pass's
+    // own bookkeeping, and the history fold shows the revisions themselves.
     lastRewriteSource: page.lastRewriteSource,
     updatedAt: page.updatedAt,
     createdAt: page.createdAt,
@@ -1103,9 +1106,87 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
   };
 }
 
+/**
+ * One page as the map draws it: enough to place a node and label it, and
+ * `links` so the edges can be drawn. Not the body — a thousand pages of
+ * prose is not a picture, and the map never renders a word of it.
+ */
+const wikiMapRowValidator = v.object({
+  pageId: v.id("wikiPages"),
+  kind: wikiKindValidator,
+  title: v.string(),
+  subjectKey: v.string(),
+  links: v.array(v.string()),
+  usageCount: v.number(),
+  updatedAt: v.number(),
+});
+
+/** The receipts a page's source list shows. */
+const wikiPageSourceValidator = v.object({
+  kind: v.union(
+    v.literal("DOCUMENT"),
+    v.literal("PHONE_CALL"),
+    v.literal("EMAIL"),
+    v.literal("HUMAN"),
+    v.literal("CHAT")
+  ),
+  ref: v.string(),
+  label: v.string(),
+  addedAt: v.number(),
+});
+
+/**
+ * One page in full, as its own screen reads it: the prose, its pinned
+ * corrections, its receipts, its history, and the links in both directions
+ * with the sentence that makes each one.
+ *
+ * `searchText` — the title, key and body concatenated for the search index —
+ * never leaves: it is a duplicate of what is already here, and shipping it
+ * would double the size of every page read for nothing. Neither does
+ * `lastTendedAt`, which is the nightly pass's note to itself.
+ */
+const wikiPageDetailValidator = v.object({
+  pageId: v.id("wikiPages"),
+  kind: wikiKindValidator,
+  title: v.string(),
+  subjectKey: v.string(),
+  content: v.string(),
+  pinnedCorrections: v.array(v.object({ text: v.string(), pinnedAt: v.number() })),
+  sources: v.array(wikiPageSourceValidator),
+  revisions: v.array(
+    v.object({ content: v.string(), source: v.string(), createdAt: v.number() })
+  ),
+  resolvedLinks: v.array(
+    v.object({
+      key: v.string(),
+      slug: v.string(),
+      pageId: v.id("wikiPages"),
+      title: v.string(),
+      excerpt: v.string(),
+    })
+  ),
+  backlinks: v.array(
+    v.object({
+      pageId: v.id("wikiPages"),
+      title: v.string(),
+      subjectKey: v.string(),
+      kind: wikiKindValidator,
+      quote: v.string(),
+    })
+  ),
+  lastVerifiedAt: v.union(v.number(), v.null()),
+  openQuestionCount: v.number(),
+  lastRewriteSource: v.string(),
+  updatedAt: v.number(),
+  createdAt: v.number(),
+  usageCount: v.number(),
+  lastUsedAt: v.union(v.number(), v.null()),
+});
+
 export const listCompanyPages = moduleQuery({
   module: CORE_MODULES.wiki,
   args: { search: v.optional(v.string()) },
+  returns: v.array(wikiMapRowValidator),
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return [];
@@ -1124,6 +1205,7 @@ export const listCompanyPages = moduleQuery({
 export const getPageDetail = moduleQuery({
   module: CORE_MODULES.wiki,
   args: { pageId: v.id("wikiPages") },
+  returns: v.union(v.null(), wikiPageDetailValidator),
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return null;

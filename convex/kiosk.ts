@@ -250,6 +250,22 @@ export const reserveKioskSession = internalMutation({
 export const listMyReceptionScreens = moduleQuery({
   module: CORE_MODULES.reception,
   args: {},
+  /**
+   * Four fields, which is what the Reception page draws: the screen's name,
+   * the link to open it, and the two numbers that say whether the tablet is
+   * alive. The widget row carries its rate windows, its hashed-token
+   * bookkeeping and its allowed domains; none of that belongs in a list of
+   * links. `themePrimaryColor` used to ride along here and was rendered
+   * nowhere — the kiosk page reads its own theme from `getKioskConfig`.
+   */
+  returns: v.array(
+    v.object({
+      widgetId: v.id("widgets"),
+      name: v.string(),
+      lastSeenAt: v.union(v.number(), v.null()),
+      sessionCount: v.number(),
+    })
+  ),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return [];
@@ -263,7 +279,6 @@ export const listMyReceptionScreens = moduleQuery({
       .map((widget) => ({
         widgetId: widget._id,
         name: widget.name,
-        themePrimaryColor: widget.themePrimaryColor ?? "#000000",
         lastSeenAt: widget.kioskLastSeenAt ?? null,
         sessionCount: widget.kioskSessionCount ?? 0,
       }));

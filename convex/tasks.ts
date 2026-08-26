@@ -43,6 +43,26 @@ export function assertValidTaskFields(args: { title: string; detail?: string }) 
   return { title, detail: detail || undefined };
 }
 
+/**
+ * The eight fields a to-do row draws.
+ *
+ * The tenant, who filed it, when it was created, when it was completed and
+ * by whom, and the run or workflow id that raised it are all real columns on
+ * the table and none of them appear in the list. `createdBySource` does — it
+ * is the only thing the row says about provenance, and it says it as a word,
+ * not as an id.
+ */
+const taskListRowValidator = v.object({
+  _id: v.id("tasks"),
+  title: v.string(),
+  status: taskStatusValidator,
+  createdBySource: v.union(v.literal("PERSON"), v.literal("AGENT"), v.literal("WORKFLOW")),
+  detail: v.optional(v.string()),
+  assigneeUserId: v.optional(v.id("users")),
+  dueAt: v.optional(v.number()),
+  sourceUrl: v.optional(v.string()),
+});
+
 function toTaskListRow(task: Doc<"tasks">) {
   return {
     _id: task._id,
@@ -134,6 +154,15 @@ export const listTasks = moduleQuery({
     status: v.optional(taskStatusValidator),
     mineOnly: v.optional(v.boolean()),
   },
+  returns: v.object({
+    page: v.array(taskListRowValidator),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+    splitCursor: v.optional(v.union(v.string(), v.null())),
+    pageStatus: v.optional(
+      v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null())
+    ),
+  }),
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     if (!companyId) {
@@ -199,6 +228,18 @@ export const countOpenTasks = moduleQuery({
 export const listAssignableMembers = moduleQuery({
   module: CORE_MODULES.tasks,
   args: {},
+  /**
+   * Three fields, and the name is the only one the picker shows — the email
+   * is the fallback when somebody has not set a name. Roles, companies,
+   * impersonation state and verification times stay where they belong.
+   */
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return [];
@@ -210,8 +251,8 @@ export const listAssignableMembers = moduleQuery({
 
     return members.map((member) => ({
       _id: member._id,
-      name: member.name,
-      email: member.email,
+      ...(member.name === undefined ? {} : { name: member.name }),
+      ...(member.email === undefined ? {} : { email: member.email }),
     }));
   },
 });
@@ -277,6 +318,8 @@ export const createTask = moduleMutation({
     dueAt: v.optional(v.number()),
     sourceUrl: v.optional(v.string()),
   },
+  /** The new task's id, so the caller can navigate straight to it. */
+  returns: v.id("tasks"),
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     if (!companyId) throw appError("NO_ACTIVE_COMPANY", "A task needs a workspace.");

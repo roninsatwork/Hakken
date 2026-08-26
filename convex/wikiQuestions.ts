@@ -101,6 +101,26 @@ export const autoResolveStaleQuestionsInternal = internalMutation({
   },
 });
 
+/**
+ * An open question as a person reads it: the two claims that disagree, the
+ * pages they came from, and when it was raised.
+ *
+ * `dedupeKey` — the hash the nightly finder uses so the same disagreement is
+ * not raised twice — and the resolution bookkeeping (`status`, `resolvedAt`,
+ * `resolvedBy`) are the machine's own, and stay on the server. So does the
+ * tenant id: a reader is already inside their own workspace.
+ */
+const openQuestionValidator = v.object({
+  questionId: v.id("wikiOpenQuestions"),
+  kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION")),
+  pageKeyA: v.string(),
+  claimA: v.string(),
+  pageKeyB: v.union(v.string(), v.null()),
+  claimB: v.union(v.string(), v.null()),
+  detail: v.union(v.string(), v.null()),
+  raisedAt: v.number(),
+});
+
 function questionForScreen(question: {
   _id: Id<"wikiOpenQuestions">;
   kind: "CONTRADICTION" | "FRESHNESS" | "CORRECTION";
@@ -126,6 +146,7 @@ function questionForScreen(question: {
 export const listOpenQuestions = moduleQuery({
   module: CORE_MODULES.wiki,
   args: {},
+  returns: v.array(openQuestionValidator),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return [];
