@@ -2603,8 +2603,8 @@ describe("evals run the agent that ships", () => {
     const t = makeTest();
     const { agentId, companyId, userId } = await seedAgentRun(t);
 
-    await t.run(async (ctx) => {
-      await ctx.db.insert("threads", {
+    const evalThreadId = await t.run(async (ctx) => {
+      return await ctx.db.insert("threads", {
         userId,
         companyId,
         agentId,
@@ -2618,7 +2618,11 @@ describe("evals run the agent that ships", () => {
     const visible = await t.withIdentity({ subject: userId }).query(api.chat.getThreads, {
       paginationOpts: { numItems: 50, cursor: null },
     });
-    expect(visible.page.every((thread) => thread.purpose !== "EVAL")).toBe(true);
+    // By id, not by reading `purpose` off the result: the conversation list
+    // stopped returning that field along with the rest of the row it never
+    // rendered. Asking whether the eval thread is in the list is the question
+    // anyway — the old assertion passed trivially the moment the field left.
+    expect(visible.page.some((thread) => thread._id === evalThreadId)).toBe(false);
   });
 
   test("an agent that answers nothing fails its eval", async () => {

@@ -119,19 +119,16 @@ describe('Provider Classification Drift', () => {
 
   test('provider SDK imports remain classified while adapters mature', () => {
     const allowedProviderSdkImportFiles = new Set([
-      'convex/agentRuntime.ts',
-      // WP04 (2026-08-26) moved the objective loop out of agentRuntime.ts;
-      // both halves still import @google/genai types, and the Google-specific
-      // prompt-cache lifecycle now lives in the loop file. Same transitional
-      // status, now two files.
-      'convex/agentObjectiveLoop.ts',
+      // The runtime's model-facing types, in one seam rather than in each file
+      // that needs them. `agentRuntime.ts` and `agentObjectiveLoop.ts` both
+      // imported them directly until 2026-08-26, and the split that created
+      // the second one added it to this list to pass — which the shrink-only
+      // rule forbids. Both came off; this went on. Net one shorter.
+      'convex/utils/providerContentTypes.ts',
       // Of the four ai.ts successors (2026-08-21 split), only aiSpeech still
       // imports a provider SDK directly (@google/genai Modality for TTS).
       'convex/aiSpeech.ts',
-      // Adapters are where provider SDK usage belongs. `agentRuntime.ts` is
-      // still listed below as transitional: the objective loop now goes through
-      // the provider seam, but the explicit prompt-cache lifecycle is still
-      // Google-specific and has yet to move behind it.
+      // Adapters are where provider SDK usage belongs.
       'convex/googleAgentProvider.ts',
       'convex/googleProviderAdapter.ts',
       'convex/orchestrator.ts',

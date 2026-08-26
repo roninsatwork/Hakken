@@ -3,7 +3,7 @@
 import { internalAction } from "./_generated/server";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { v } from "convex/values";
-import type { Content, GenerateContentConfig, Tool } from "@google/genai";
+import type { Content, GenerateContentConfig, Tool } from "./utils/providerContentTypes";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseDocuments } from "./utils/fileParser";

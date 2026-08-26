@@ -43,11 +43,36 @@ const safetyRefusalSourceValidator = v.union(v.literal("assistant"), v.literal("
  * was already loaded. Now the list pages, and a search term asks the
  * database over the full history instead.
  */
+/**
+ * The thread fields a conversation list actually renders.
+ *
+ * The list used to hand back whole thread documents: the company and agent
+ * ids, the widget id, the URL the chat started from, and
+ * `widgetAccessTokenHash` — the hash a widget session authenticates with.
+ * The `by_user` index means a personal history does not in practice hold
+ * token-bearing widget threads, so this was drift exposure rather than a live
+ * leak, but nothing said so and nothing stopped the next column joining them.
+ * The history sidebar reads four fields; those are the four that leave.
+ */
+const clientThreadValidator = v.object({
+  _id: v.id("threads"),
+  _creationTime: v.number(),
+  title: v.optional(v.string()),
+  updatedAt: v.number(),
+});
+
 export const getThreads = tenantQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: v.object({
+    page: v.array(clientThreadValidator),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+    splitCursor: v.optional(v.union(v.string(), v.null())),
+    pageStatus: v.optional(v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null())),
+  }),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const term = args.searchTerm?.trim();
@@ -70,7 +95,14 @@ export const getThreads = tenantQuery({
       // conversation list somebody scrolls looking for their own chats.
       // Filtered after paging, so a page can run slightly short — better a
       // short page than an eval transcript in a personal history.
-      page: results.page.filter((thread) => thread.purpose !== "EVAL"),
+      page: results.page
+        .filter((thread) => thread.purpose !== "EVAL")
+        .map((thread) => ({
+          _id: thread._id,
+          _creationTime: thread._creationTime,
+          title: thread.title,
+          updatedAt: thread.updatedAt,
+        })),
     };
   },
 });
@@ -218,6 +250,7 @@ export const getAssistantStage = publicQuery({
  */
 export const getThreadHeading = tenantQuery({
   args: { threadId: v.id("threads") },
+  returns: v.union(v.null(), v.object({ title: v.optional(v.string()), updatedAt: v.number() })),
   handler: async (ctx, args) => {
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return null;
@@ -250,6 +283,7 @@ export const getThreadInternal = internalQuery({
 
 export const generateChatUploadUrl = tenantMutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
   },
@@ -259,6 +293,7 @@ export const createThread = tenantMutation({
   args: {
     agentId: v.optional(v.id("agents")),
   },
+  returns: v.id("threads"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -599,6 +634,7 @@ export const deleteThread = tenantMutation({
   args: {
     threadId: v.id("threads"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -629,6 +665,7 @@ export const renameThread = tenantMutation({
     threadId: v.id("threads"),
     title: v.string(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -680,6 +717,7 @@ export const recordVoiceTurn = tenantMutation({
     assistantText: v.string(),
     modelUsed: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw appError("NOT_FOUND", "Thread not found");

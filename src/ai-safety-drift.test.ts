@@ -152,11 +152,38 @@ describe('Ask Sonae Safety Drift', () => {
       return !contents.includes('KnowledgeManager');
     });
 
-    const managerContents = readRepoFile('src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx');
+    // Read across both halves. The manager was split on 2026-08-26 and the
+    // confirmation dialog moved to KnowledgeModals.tsx, leaving this check
+    // reading a file that no longer held the thing it protects. It kept
+    // passing on the state variable that happened to stay behind, so nothing
+    // went red and nobody looked. A gate and the check on it must not be able
+    // to end up on opposite sides of a file boundary again: both files are
+    // named here, and each must be non-empty.
+    const managerPath = 'src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx';
+    const modalsPath = 'src/app/(dashboard)/admin/_features/knowledge/KnowledgeModals.tsx';
+    const managerContents = readRepoFile(managerPath);
+    const modalsContents = readRepoFile(modalsPath);
+
+    expect(managerContents, `${managerPath} is missing, so the delete gate below tested nothing`).not.toBe('');
+    expect(modalsContents, `${modalsPath} is missing, so the delete gate below tested nothing`).not.toBe('');
+
     const managerAllowsDirectDelete = /onClick=\{\(\) => deleteDocument/.test(managerContents) ||
       !managerContents.includes('documentToDelete');
 
+    // The dialog itself, where it now lives: it must exist, take the document
+    // to delete, and only call back on an explicit confirm.
+    // Word-bounded on purpose: a plain substring check matched
+    // `KnowledgeDocumentDeleteModalRenamed` too, so renaming the dialog away
+    // slipped past the check written to notice exactly that.
+    const deleteModalMissing = !/export function KnowledgeDocumentDeleteModal\b/.test(modalsContents) ||
+      !/\bonConfirm\b/.test(modalsContents);
+
+    // And the manager must still be rendering it, rather than deleting inline.
+    const managerSkipsTheDialog = !/<KnowledgeDocumentDeleteModal\b/.test(managerContents);
+
     expect(offenders, `Knowledge pages drifted away from the shared knowledge manager:\n${offenders.join('\n')}`).toEqual([]);
     expect(managerAllowsDirectDelete, 'Shared knowledge manager must keep document deletes confirmation-gated.').toBe(false);
+    expect(deleteModalMissing, `${modalsPath} must keep a confirmation dialog for document deletes.`).toBe(false);
+    expect(managerSkipsTheDialog, 'Shared knowledge manager must render KnowledgeDocumentDeleteModal rather than deleting inline.').toBe(false);
   });
 });

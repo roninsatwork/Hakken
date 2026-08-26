@@ -4,7 +4,7 @@ import type { ActionCtx } from "./_generated/server";
 import type { AgentProviderAdapter, AgentToolDeclaration } from "./agentProviderTypes";
 import { getAgentProviderAdapter } from "./agentProviderRegistry";
 import { isToolVisibleToCompany } from "./mcpToolPolicy";
-import type { Content, FunctionDeclaration, Tool } from "@google/genai";
+import type { Content, FunctionDeclaration, Tool } from "./utils/providerContentTypes";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { redactPII, DEFAULT_PII_CONFIG } from "./utils/pii";
