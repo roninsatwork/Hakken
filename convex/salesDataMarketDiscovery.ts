@@ -1,4 +1,4 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -376,9 +376,7 @@ async function ensureAgentBindings(
       }
     }
     if (!tool) {
-      throw new ConvexError(
-        "The market discovery tools are not installed yet. Install the Comax Market Discovery connector first."
-      );
+      throw appError("NOT_CONFIGURED", "The market discovery tools are not installed yet. Install the Comax Market Discovery connector first.");
     }
     const bindings = await ctx.db
       .query("agentTools")
@@ -410,9 +408,7 @@ async function requireMarketDiscoveryAgent(
   const { companyId } = args;
   const agent = await findMarketDiscoveryAgent(ctx, companyId);
   if (!agent) {
-    throw new ConvexError(
-      "No active Market Discovery Agent was found. Create or activate an agent named Market Discovery Agent, then try again."
-    );
+    throw appError("NOT_CONFIGURED", "No active Market Discovery Agent was found. Create or activate an agent named Market Discovery Agent, then try again.");
   }
   await ensureAgentBindings(ctx, { agent, companyId, userId: args.userId });
   return await ctx.db.get(agent._id) ?? agent;
@@ -713,7 +709,7 @@ export const startMarketDiscoveryJob = tenantMutation({
     if (running) return { started: false, alreadyRunning: true, jobId: running._id };
 
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw new ConvexError("Import a workbook first so the customer type can be checked.");
+    if (!currentImport) throw appError("CONFLICT", "Import a workbook first so the customer type can be checked.");
 
     const accounts = await ctx.db
       .query("salesDataAccounts")
@@ -727,7 +723,7 @@ export const startMarketDiscoveryJob = tenantMutation({
         customerTypeKey: normalizeKey(customerType),
         targetGroupCount: GROUPS_PER_CUSTOMER_TYPE,
       }));
-    if (customerTypes.length === 0) throw new ConvexError("Import a workbook with customer types first.");
+    if (customerTypes.length === 0) throw appError("CONFLICT", "Import a workbook with customer types first.");
 
     const totalTargetGroupCount = customerTypes.reduce(
       (total, type) => total + type.targetGroupCount,
@@ -761,7 +757,7 @@ export const startMarketDiscoveryJob = tenantMutation({
     });
 
     const job = await ctx.db.get(jobId);
-    if (!job) throw new ConvexError("The market discovery job could not be created.");
+    if (!job) throw appError("UPSTREAM_FAILURE", "The market discovery job could not be created.");
 
     const runId = await startDiscoveryRun(ctx, {
       job,

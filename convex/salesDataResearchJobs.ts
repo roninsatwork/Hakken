@@ -1,4 +1,5 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
+import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
 import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -1026,7 +1027,7 @@ export const startResearchJob = tenantMutation({
       mode: args.mode,
     });
     if (!job) {
-      throw new ConvexError("There is no imported spreadsheet to research against.");
+      throw appError("CONFLICT", "There is no imported spreadsheet to research against.");
     }
 
     const items = await loadItems(ctx, job._id);

@@ -1,4 +1,4 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -162,7 +162,7 @@ export const startOpportunityReport = tenantMutation({
 
     const currentImport = await getCurrentImport(ctx, companyId);
     if (!currentImport) {
-      throw new ConvexError("Import a workbook first — the report prices its six months of sales.");
+      throw appError("CONFLICT", "Import a workbook first — the report prices its six months of sales.");
     }
 
     const agent = await resolveOpportunityAgent(ctx, companyId);
@@ -264,10 +264,8 @@ async function resolveOpportunityAgent(
     }
   }
 
-  throw new ConvexError(
-    "No active agent has the opportunity report tools switched on. "
-      + "Add them to an agent under its Interfaces screen, then try again."
-  );
+  throw appError("NOT_CONFIGURED", "No active agent has the opportunity report tools switched on. "
+      + "Add them to an agent under its Interfaces screen, then try again.");
 }
 
 /**

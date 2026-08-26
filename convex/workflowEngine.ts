@@ -1,4 +1,4 @@
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -67,14 +67,14 @@ function getQueryValue(query: WorkflowDbSelectQuery, field: string) {
 function getRequiredStringQueryValue(query: WorkflowDbSelectQuery, field: string) {
   const value = getQueryValue(query, field);
   if (typeof value !== "string" || value.trim() === "") {
-    throw new ConvexError(`Database SELECT index '${query.indexName}' requires string filter '${field}'.`);
+    throw appError("INVALID_INPUT", `Database SELECT index '${query.indexName}' requires string filter '${field}'.`);
   }
   return value;
 }
 
 function getSelectLimit(query: WorkflowDbSelectQuery) {
   if (!Number.isFinite(query.limit) || query.limit < 1 || query.limit > WORKFLOW_DB_SELECT_LIMIT) {
-    throw new ConvexError(`Database SELECT limit must be between 1 and ${WORKFLOW_DB_SELECT_LIMIT}.`);
+    throw appError("INVALID_INPUT", `Database SELECT limit must be between 1 and ${WORKFLOW_DB_SELECT_LIMIT}.`);
   }
   return Math.floor(query.limit);
 }
@@ -82,14 +82,14 @@ function getSelectLimit(query: WorkflowDbSelectQuery) {
 function getWorkflowCompanyFilter(query: WorkflowDbSelectQuery, workflowCompanyId: Id<"companies"> | undefined) {
   const requestedCompanyId = getQueryValue(query, "companyId");
   if (typeof requestedCompanyId !== "undefined" && typeof requestedCompanyId !== "string") {
-    throw new ConvexError("Database SELECT companyId filter must be a string.");
+    throw appError("INVALID_INPUT", "Database SELECT companyId filter must be a string.");
   }
   if (workflowCompanyId && requestedCompanyId && requestedCompanyId !== workflowCompanyId) {
-    throw new ConvexError("Unauthorized: Cannot query a foreign company index.");
+    throw appError("UNAUTHORIZED", "Unauthorized: Cannot query a foreign company index.");
   }
   const companyId = requestedCompanyId || workflowCompanyId;
   if (!companyId) {
-    throw new ConvexError("Database SELECT requires an explicit companyId filter for this index.");
+    throw appError("INVALID_INPUT", "Database SELECT requires an explicit companyId filter for this index.");
   }
   return companyId as Id<"companies">;
 }
@@ -109,7 +109,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
   isSuperAdmin: boolean;
 }) {
   if (!args.query) {
-    throw new ConvexError("Database SELECT requires a target document ID or an indexed query contract.");
+    throw appError("INVALID_INPUT", "Database SELECT requires a target document ID or an indexed query contract.");
   }
 
   const query = args.query;
@@ -193,7 +193,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
         const thread = await ctx.db.get(threadId);
         if (!thread) return [];
         if (!args.isSuperAdmin && thread.companyId !== args.workflowCompanyId) {
-          throw new ConvexError("Unauthorized: Access denied to foreign company thread.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Access denied to foreign company thread.");
         }
         return await ctx.db
           .query("messages")
@@ -205,7 +205,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
         const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
         const role = getRequiredStringQueryValue(query, "role");
         if (role !== "user" && role !== "assistant") {
-          throw new ConvexError("Database SELECT messages role must be 'user' or 'assistant'.");
+          throw appError("INVALID_INPUT", "Database SELECT messages role must be 'user' or 'assistant'.");
         }
         return await ctx.db
           .query("messages")
@@ -242,11 +242,11 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
       }
       if (query.indexName === "by_status") {
         if (!args.isSuperAdmin) {
-          throw new ConvexError("Unauthorized: status-wide knowledge document queries require SUPER_ADMIN.");
+          throw appError("UNAUTHORIZED", "Unauthorized: status-wide knowledge document queries require SUPER_ADMIN.");
         }
         const status = getRequiredStringQueryValue(query, "status");
         if (status !== "pending" && status !== "processing" && status !== "ready" && status !== "failed") {
-          throw new ConvexError("Database SELECT knowledge status is invalid.");
+          throw appError("INVALID_INPUT", "Database SELECT knowledge status is invalid.");
         }
         return await ctx.db
           .query("knowledgeDocuments")
@@ -262,7 +262,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
         const document = await ctx.db.get(documentId);
         if (!document) return [];
         if (!args.isSuperAdmin && document.companyId !== args.workflowCompanyId) {
-          throw new ConvexError("Unauthorized: Access denied to foreign company knowledge document.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Access denied to foreign company knowledge document.");
         }
         return await ctx.db
           .query("knowledgeChunks")
@@ -307,7 +307,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
       if (!args.isSuperAdmin) break;
       if (query.indexName === "by_active_created") {
         const isActive = getQueryValue(query, "isActive");
-        if (typeof isActive !== "boolean") throw new ConvexError("Database SELECT agents isActive filter must be boolean.");
+        if (typeof isActive !== "boolean") throw appError("INVALID_INPUT", "Database SELECT agents isActive filter must be boolean.");
         return await ctx.db.query("agents").withIndex("by_active_created", (q) => q.eq("isActive", isActive)).order(order).take(limit);
       }
       break;
@@ -321,7 +321,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
     }
   }
 
-  throw new ConvexError(`Unsupported indexed SELECT contract '${args.tableName}.${query.indexName}'.`);
+  throw appError("INVALID_INPUT", `Unsupported indexed SELECT contract '${args.tableName}.${query.indexName}'.`);
 }
 
 async function getLatestExecutionStep(
@@ -534,10 +534,8 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
            // no ceiling. Fail loudly rather than silently truncating, so a
            // workflow never reports SUCCESS having processed part of its input.
            if (nodeDataObj.items.length > MAX_ITERATOR_FAN_OUT) {
-              throw new ConvexError(
-                `Iterator node ${args.nodeId} produced ${nodeDataObj.items.length} items, ` +
-                `exceeding the ${MAX_ITERATOR_FAN_OUT} item fan-out limit.`
-              );
+              throw appError("INVALID_INPUT", `Iterator node ${args.nodeId} produced ${nodeDataObj.items.length} items, ` +
+                `exceeding the ${MAX_ITERATOR_FAN_OUT} item fan-out limit.`);
            }
            targetPayloads = nodeDataObj.items.map((item, i) => ({
                ...currentPayload,
@@ -823,7 +821,7 @@ export const executeDatabaseOperation = internalMutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.workflowId);
-    if (!workflow) throw new ConvexError("Workflow not found.");
+    if (!workflow) throw appError("INVALID_INPUT", "Workflow not found.");
 
     // A workflow whose creator was erased gets the tightest treatment rather
     // than the loosest: no user means no super-admin reach and no tenant, so
@@ -834,12 +832,12 @@ export const executeDatabaseOperation = internalMutation({
     if (!user || user.role !== "SUPER_ADMIN") {
       // 🛡️ BOLA Enforcer: Restrict non-SUPER_ADMIN workflows strictly to allowlisted tables
       if (!allowedWorkflowTables.includes(table)) {
-        throw new ConvexError(`Unauthorized: Access to system table '${args.tableName}' is strictly restricted.`);
+        throw appError("UNAUTHORIZED", `Unauthorized: Access to system table '${args.tableName}' is strictly restricted.`);
       }
 
       const companyId = user?.companyId;
       if (!companyId) {
-        throw new ConvexError("Unauthorized: Workflow creator has no company tenant context.");
+        throw appError("UNAUTHORIZED", "Unauthorized: Workflow creator has no company tenant context.");
       }
 
       // Enforce tenant boundary on operations
@@ -848,7 +846,7 @@ export const executeDatabaseOperation = internalMutation({
           const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
           if (!doc) return { error: "Document not found" };
           if (doc.companyId !== companyId) {
-            throw new ConvexError("Unauthorized: Access denied to foreign company document.");
+            throw appError("UNAUTHORIZED", "Unauthorized: Access denied to foreign company document.");
           }
           return doc;
         } else {
@@ -862,31 +860,31 @@ export const executeDatabaseOperation = internalMutation({
       } else if (args.operation === "INSERT") {
         const insertData = args.data || {};
         if (insertData.companyId && insertData.companyId !== companyId) {
-          throw new ConvexError("Unauthorized: Cannot insert records for a foreign company.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Cannot insert records for a foreign company.");
         }
         insertData.companyId = companyId; // Force correct tenant ID
         const id = await ctx.db.insert(table, insertData);
         return { id };
       } else if (args.operation === "UPDATE") {
-        if (!args.docId) throw new ConvexError("Document ID required for UPDATE");
+        if (!args.docId) throw appError("INVALID_INPUT", "Document ID required for UPDATE");
         const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
-        if (!doc) throw new ConvexError("Document not found");
+        if (!doc) throw appError("NOT_FOUND", "Document not found");
         if (doc.companyId !== companyId) {
-          throw new ConvexError("Unauthorized: Cannot update a foreign company document.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Cannot update a foreign company document.");
         }
         const updateData = args.data || {};
         if (updateData.companyId && updateData.companyId !== companyId) {
-          throw new ConvexError("Unauthorized: Cannot modify company association.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Cannot modify company association.");
         }
         updateData.companyId = companyId; // Safeguard company Id mapping
         await ctx.db.patch(args.docId as Id<WorkflowDbTable>, updateData);
         return { id: args.docId };
       } else if (args.operation === "DELETE") {
-        if (!args.docId) throw new ConvexError("Document ID required for DELETE");
+        if (!args.docId) throw appError("INVALID_INPUT", "Document ID required for DELETE");
         const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
-        if (!doc) throw new ConvexError("Document not found");
+        if (!doc) throw appError("NOT_FOUND", "Document not found");
         if (doc.companyId !== companyId) {
-          throw new ConvexError("Unauthorized: Cannot delete a foreign company document.");
+          throw appError("UNAUTHORIZED", "Unauthorized: Cannot delete a foreign company document.");
         }
         await ctx.db.delete(args.docId as Id<WorkflowDbTable>);
         return { deletedId: args.docId };

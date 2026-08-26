@@ -1,34 +1,34 @@
 {
   "scope": "platform",
   "scopeNote": "Thresholds apply to platform code only. The movement demo (src/app/(dashboard)/demos, src/lib/movements, convex/movements*, scripts/movement-debug) is reported by scripts/check-coverage-thresholds.mjs but not gated, so its higher coverage cannot mask a platform regression.",
-  "lastMeasuredAt": "2026-08-21",
+  "lastMeasuredAt": "2026-08-26",
   "current": {
-    "lines": 69,
-    "statements": 67,
+    "lines": 72,
+    "statements": 70,
     "branches": 58,
     "functions": 66
   },
   "floor": {
-    "lines": 69,
-    "statements": 67,
+    "lines": 72,
+    "statements": 70,
     "branches": 58,
     "functions": 66
   },
   "lastMeasured": {
-    "lines": 69.96,
-    "statements": 67.76,
-    "branches": 58.05,
-    "functions": 66.07
+    "lines": 73.56,
+    "statements": 70.97,
+    "branches": 60.0,
+    "functions": 68.5
   },
   "lastMeasuredDemo": {
-    "lines": 74.15,
-    "statements": 71.93,
-    "branches": 66.26,
-    "functions": 75.12
+    "lines": 74.01,
+    "statements": 71.87,
+    "branches": 66.36,
+    "functions": 75.27
   },
   "nextRatchet": {
-    "lines": 72,
-    "statements": 70,
+    "lines": 75,
+    "statements": 73,
     "branches": 61,
     "functions": 69
   },

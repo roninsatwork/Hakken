@@ -134,16 +134,19 @@ describe("appError conversion holds and spreads", () => {
    * Raw `ConvexError` throws carrying a bare string rather than an appError
    * payload.
    *
-   * These are not broken — a string payload puts the sentence in `.message`,
-   * so a reader still gets it — but they carry no `code`, cannot be localised,
-   * and are invisible to every check in this file. The spec named 54 of them
-   * and the conversion never touched one. A count rather than a list: the work
-   * is mechanical, the number is the honest record of it, and it may only
-   * fall.
+   * These were never broken — a string payload puts the sentence in
+   * `.message`, so a reader still got it — but they carried no `code`, could
+   * not be localised, and were invisible to every other check in this file.
+   * The spec named 54 and the conversion never touched one; they were held to
+   * a shrinking count on 2026-08-26 and converted the same day, so the count
+   * is zero and the rule can be absolute rather than a ceiling.
+   *
+   * Zero as an assertion only means something if the scan is reading files,
+   * which is what the count below insists on: this test found nothing to
+   * report on the day it was written *because* there was nothing, and a walk
+   * that silently stopped returning files would look identical.
    */
-  const RAW_CONVEX_ERROR_CEILING = 54;
-
-  test("raw ConvexError throws are a shrinking population", () => {
+  test("no throw carries a message without a code", () => {
     const offenders: string[] = [];
 
     for (const file of convexSourceFiles("convex")) {
@@ -156,11 +159,15 @@ describe("appError conversion holds and spreads", () => {
       });
     }
 
-    expect(offenders.length, "no raw ConvexError throws found at all, so this check is reading nothing").toBeGreaterThan(0);
     expect(
-      offenders.length,
-      `Raw ConvexError throws rose above the frozen count. Use appError(code, message) so the throw carries a code:\n${offenders.join("\n")}`
-    ).toBeLessThanOrEqual(RAW_CONVEX_ERROR_CEILING);
+      convexSourceFiles("convex").length,
+      "no convex source files were scanned at all, so the check below reads nothing"
+    ).toBeGreaterThan(50);
+
+    expect(
+      offenders,
+      `A ConvexError thrown with a bare string carries no code, so nothing can branch on it and it cannot be localised. Use appError(code, message) from convex/utils/appError.ts:\n${offenders.join("\n")}`
+    ).toEqual([]);
   });
 
   test("every unlisted convex file contains no plain `throw new Error(`", () => {

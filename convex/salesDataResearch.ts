@@ -1,4 +1,4 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
@@ -1207,9 +1207,9 @@ export const dismissProspect = tenantMutation({
       )
       .unique();
 
-    if (!prospect) throw new ConvexError("That prospect is not in this workspace.");
+    if (!prospect) throw appError("UNAUTHORIZED", "That prospect is not in this workspace.");
     if (prospect.status === "CONVERTED") {
-      throw new ConvexError("That site is a customer now, so it cannot be dismissed.");
+      throw appError("CONFLICT", "That site is a customer now, so it cannot be dismissed.");
     }
 
     await ctx.db.patch(prospect._id, {
@@ -1268,9 +1268,7 @@ async function resolveAgentBoundTo(
     .take(AGENT_BINDING_LOOKUP_LIMIT);
 
   if (tools.length === 0) {
-    throw new ConvexError(
-      "The customer research tools are not set up on this deployment yet."
-    );
+    throw appError("NOT_CONFIGURED", "The customer research tools are not set up on this deployment yet.");
   }
 
   for (const tool of tools) {
@@ -1297,10 +1295,8 @@ async function resolveResearchAgent(ctx: TenantMutationCtx, companyId: Id<"compa
   const agent = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.research.record");
   if (agent) return agent;
 
-  throw new ConvexError(
-    "No active agent in this workspace has the customer research tools switched on. "
-      + "Add them to an agent under its Interfaces screen, then try again."
-  );
+  throw appError("NOT_CONFIGURED", "No active agent in this workspace has the customer research tools switched on. "
+      + "Add them to an agent under its Interfaces screen, then try again.");
 }
 
 /**
@@ -1317,10 +1313,8 @@ export async function resolveResearchWorkers(
 ) {
   const filler = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.research.record");
   if (!filler) {
-    throw new ConvexError(
-      "No active agent in this workspace has the customer research tools switched on. "
-        + "Add them to an agent under its Interfaces screen, then try again."
-    );
+    throw appError("NOT_CONFIGURED", "No active agent in this workspace has the customer research tools switched on. "
+        + "Add them to an agent under its Interfaces screen, then try again.");
   }
   const finder = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.prospects.record");
   return { filler, finder: finder ?? filler };
@@ -1380,14 +1374,14 @@ export const startCustomerResearch = tenantMutation({
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw new ConvexError("There is no imported data to research against.");
+    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
 
     const subject = await resolveResearchSubject(ctx, {
       companyId,
       importId: currentImport._id,
       key: args.accountNameKey,
     });
-    if (!subject) throw new ConvexError("That record is not in this workspace.");
+    if (!subject) throw appError("UNAUTHORIZED", "That record is not in this workspace.");
 
     const agent = await resolveResearchAgent(ctx, companyId);
     const agentRunId = await queueResearchRun(ctx, {
@@ -1598,9 +1592,9 @@ export const provisionResearchWorkers = internalMutation({
       ctx.db.get(args.fillerAgentId),
       ctx.db.get(args.finderAgentId),
     ]);
-    if (!filler || !finder) throw new ConvexError("Both agents must exist.");
+    if (!filler || !finder) throw appError("INVALID_INPUT", "Both agents must exist.");
     if (args.fillerAgentId === args.finderAgentId) {
-      throw new ConvexError("The two workers must be different agents.");
+      throw appError("INVALID_INPUT", "The two workers must be different agents.");
     }
 
     const tools = await ctx.db.query("aiTools").take(500);
@@ -1608,7 +1602,7 @@ export const provisionResearchWorkers = internalMutation({
 
     const ensureBinding = async (agentId: Id<"agents">, mapping: string) => {
       const tool = byMapping.get(mapping);
-      if (!tool) throw new ConvexError(`No tool is installed for ${mapping}.`);
+      if (!tool) throw appError("INVALID_INPUT", `No tool is installed for ${mapping}.`);
       const existing = await ctx.db
         .query("agentTools")
         .withIndex("by_tool", (q) => q.eq("toolId", tool._id))
@@ -1684,7 +1678,7 @@ export const startCustomerResearchSweep = tenantMutation({
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw new ConvexError("There is no imported data to research against.");
+    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
 
     const agent = await resolveResearchAgent(ctx, companyId);
 
@@ -1757,7 +1751,7 @@ export const startProspectingSweep = tenantMutation({
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw new ConvexError("There is no imported data to research against.");
+    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
 
     const agent = await resolveResearchAgent(ctx, companyId);
 

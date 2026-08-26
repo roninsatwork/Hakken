@@ -1,4 +1,5 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
+import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { TenantMutationCtx } from "./tenantFunctions";
@@ -20,21 +21,21 @@ function isRightmoveHost(hostname: string) {
 
 function normalizeRightmoveUrl(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) throw new ConvexError("Paste a Rightmove search URL first.");
+  if (!trimmed) throw appError("INVALID_INPUT", "Paste a Rightmove search URL first.");
 
   let parsed: URL;
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new ConvexError("Paste a valid Rightmove search URL first.");
+    throw appError("INVALID_INPUT", "Paste a valid Rightmove search URL first.");
   }
 
   if (parsed.protocol !== "https:" || !isRightmoveHost(parsed.hostname)) {
-    throw new ConvexError("Paste a valid Rightmove search URL first.");
+    throw appError("INVALID_INPUT", "Paste a valid Rightmove search URL first.");
   }
 
   if (!parsed.pathname.toLowerCase().includes("/property-for-sale/")) {
-    throw new ConvexError("Paste a Rightmove property search URL first.");
+    throw appError("INVALID_INPUT", "Paste a Rightmove property search URL first.");
   }
 
   return parsed.toString();
@@ -42,11 +43,11 @@ function normalizeRightmoveUrl(value: string) {
 
 function normalizePropertyLimit(value: number) {
   if (!Number.isFinite(value)) {
-    throw new ConvexError("Enter a valid property limit.");
+    throw appError("INVALID_INPUT", "Enter a valid property limit.");
   }
   const integerValue = Math.trunc(value);
   if (integerValue < MIN_PROPERTY_LIMIT || integerValue > MAX_PROPERTY_LIMIT) {
-    throw new ConvexError(`Property limit must be between ${MIN_PROPERTY_LIMIT} and ${MAX_PROPERTY_LIMIT}.`);
+    throw appError("INVALID_INPUT", `Property limit must be between ${MIN_PROPERTY_LIMIT} and ${MAX_PROPERTY_LIMIT}.`);
   }
   return integerValue;
 }
@@ -84,7 +85,7 @@ async function resolveRightmoveAgent(ctx: TenantMutationCtx, companyId: Id<"comp
   );
   if (fallbackMatch) return fallbackMatch;
 
-  throw new ConvexError("The Rightmove Agent is not configured or is inactive.");
+  throw appError("NOT_CONFIGURED", "The Rightmove Agent is not configured or is inactive.");
 }
 
 function buildRightmoveObjective(args: { rightmoveUrl: string; maxProperties: number }) {
@@ -97,7 +98,7 @@ function buildRightmoveObjective(args: { rightmoveUrl: string; maxProperties: nu
   ].join("\n");
 
   if (objective.length > RIGHTMOVE_OBJECTIVE_MAX_LENGTH) {
-    throw new ConvexError("The Rightmove URL is too long to send to the agent.");
+    throw appError("INVALID_INPUT", "The Rightmove URL is too long to send to the agent.");
   }
 
   return objective;
