@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { getCurrentImport, requireSalesDataCompany } from "./salesData";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { extraFieldForType } from "./salesDataCustomerFields";
@@ -58,6 +59,7 @@ const REPORT_TIMEOUT_MS = 20 * 60_000;
 
 export const getLatestOpportunityReport = tenantQuery({
   args: {},
+  returns: tailShapes.opportunityReportShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
 
@@ -138,6 +140,7 @@ export const getLatestOpportunityReport = tenantQuery({
  */
 export const startOpportunityReport = tenantMutation({
   args: {},
+  returns: tailShapes.opportunityReportStartShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const now = Date.now();

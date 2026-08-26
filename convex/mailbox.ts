@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { adminQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 
 /**
@@ -24,6 +25,7 @@ export const listMailboxForCompany = adminQuery({
       )
     ),
   },
+  returns: governanceShapes.mailboxListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const searchTerm = args.searchTerm?.trim();

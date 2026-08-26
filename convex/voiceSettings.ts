@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -37,6 +38,7 @@ export const SPOKEN_VOICE_DESCRIPTIONS: Record<SpeechVoiceKey, string> = {
 
 export const getSpokenVoice = tenantQuery({
   args: {},
+  returns: governanceShapes.spokenVoiceShape,
   handler: async (
     ctx
   ): Promise<{ voice: string; options: Array<{ key: string; description: string }> }> => {

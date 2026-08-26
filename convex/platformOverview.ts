@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import { createCoverage } from "./utils/readCoverage";
 
@@ -46,6 +47,7 @@ function buildDayKeys(now: number, days: number) {
  */
 export const getPlatformOverview = superAdminQuery({
   args: {},
+  returns: governanceShapes.platformOverviewShape,
   handler: async (ctx) => {
     const now = Date.now();
     const cutoff = now - WINDOW_DAYS * DAY_MS;

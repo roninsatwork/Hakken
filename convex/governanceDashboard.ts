@@ -1,5 +1,6 @@
 import type { Id } from "./_generated/dataModel";
 import { getActiveCompanyId } from "./authz";
+import * as governanceShapes from "./utils/governanceShapes";
 import { governanceQuery } from "./tenantFunctions";
 import { parsePurgePipelineConfig } from "./purgeScheduleService";
 import {
@@ -49,6 +50,7 @@ export type GovernanceDashboard = {
 
 export const getGovernanceDashboard = governanceQuery({
   args: {},
+  returns: governanceShapes.governanceDashboardShape,
   handler: async (ctx): Promise<GovernanceDashboard> => {
     const platformWide = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY";
     const scopeCompanyId = platformWide ? undefined : getActiveCompanyId(ctx.user);

@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { tenantAction } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { signVoiceTicket } from "./aiVoiceSession";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
@@ -43,6 +44,7 @@ function buildPreviewInstructions(platformName: string) {
 
 export const mintVoicePreviewTicket = tenantAction({
   args: { voice: v.string() },
+  returns: governanceShapes.voicePreviewTicketShape,
   handler: async (ctx, args): Promise<{ relayUrl: string; ticket: string }> => {
     const { user, userId } = ctx;
     if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {

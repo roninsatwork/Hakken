@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery, superAdminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -113,6 +114,7 @@ async function companyMoneyView(ctx: QueryCtx, companyId: Id<"companies">): Prom
 
 export const getMoneyViewForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: tailShapes.moneyViewShape,
   handler: async (ctx, args): Promise<MoneyView> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await companyMoneyView(ctx, args.companyId);
@@ -124,6 +126,7 @@ export const getMoneyViewForCompany = adminQuery({
  * audit ledger. */
 export const getMoneyViewForGlobal = superAdminQuery({
   args: {},
+  returns: tailShapes.moneyViewShape,
   handler: async (ctx): Promise<MoneyView> => {
     const since = Date.now() - MONTH_MS;
     const sinceDay = new Date(since).toISOString().slice(0, 10);

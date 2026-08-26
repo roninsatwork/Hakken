@@ -161,6 +161,7 @@ export const listOpenQuestions = moduleQuery({
 
 export const listOpenQuestionsForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: v.array(openQuestionValidator),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const rows = await ctx.db
@@ -176,6 +177,7 @@ export const listOpenQuestionsForCompany = adminQuery({
 
 export const listOpenQuestionsForGlobal = adminQuery({
   args: {},
+  returns: v.array(openQuestionValidator),
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

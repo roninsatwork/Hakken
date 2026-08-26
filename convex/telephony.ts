@@ -1,5 +1,6 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { adminQuery, moduleQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
 import { v } from "convex/values";
@@ -740,6 +741,7 @@ export const listCallsForCompany = adminQuery({
       )
     ),
   },
+  returns: governanceShapes.callListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const searchTerm = args.searchTerm?.trim();

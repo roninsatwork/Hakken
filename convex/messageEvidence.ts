@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 
 /**
  * Why an answer said what it said.
@@ -33,6 +34,7 @@ function parseEvidence<T>(raw: string | undefined): T | null {
 
 export const getForMessage = tenantQuery({
   args: { messageId: v.id("messages") },
+  returns: governanceShapes.messageEvidenceShape,
   handler: async (ctx, args) => {
     const { userId, user, companyId } = ctx;
 

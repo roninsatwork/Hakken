@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { effectiveModulesFor } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -806,6 +807,7 @@ export const stopMarketDiscoveryJob = tenantMutation({
 
 export const getMarketDiscoveryJob = tenantQuery({
   args: {},
+  returns: governanceShapes.marketDiscoveryJobShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const job =

@@ -19,6 +19,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { adminQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { chunkPrior } from "./knowledgeRetrievalService";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
@@ -184,6 +185,7 @@ export const getDocumentEvidenceForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: governanceShapes.documentEvidenceShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId);

@@ -3,6 +3,7 @@ import type { AuthEventType } from "./utils/authEventTypes";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getActiveCompanyId } from "./authz";
+import * as governanceShapes from "./utils/governanceShapes";
 import {
   SIGN_IN_MAX_REQUESTS_PER_HOUR,
   SIGN_IN_REQUEST_WINDOW_MS,
@@ -42,6 +43,7 @@ export async function logAuthEvent(ctx: AuthEventCtx, event: AuthEventInput) {
 
 export const getRecentAuthEvents = adminQuery({
   args: {},
+  returns: governanceShapes.authEventListShape,
   handler: async (ctx) => {
     const { user } = ctx;
     const activeCompanyId = getActiveCompanyId(user);

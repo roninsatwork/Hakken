@@ -5,6 +5,7 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { calculateModelCostGBP } from "./aiCostService";
 // template:remove:start salesData
 import { recordAccounts } from "./salesData";
@@ -1046,6 +1047,7 @@ export const processBatch = internalMutation({
 // structurally. See convex/tenantFunctions.ts.
 export const getStatus = superAdminQuery({
   args: { name: v.string() },
+  returns: tailShapes.migrationStatusShape,
   handler: async (ctx, args) => {
     return await ctx.db
       .query("dataMigrations")
@@ -1056,6 +1058,7 @@ export const getStatus = superAdminQuery({
 
 export const listStatus = superAdminQuery({
   args: {},
+  returns: tailShapes.migrationStatusListShape,
   handler: async (ctx) => {
     const applied = await ctx.db.query("dataMigrations").take(1000);
     const appliedByName = new Map(applied.map((record) => [record.name, record]));

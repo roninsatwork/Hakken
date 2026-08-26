@@ -3,6 +3,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { adminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -121,6 +122,7 @@ export const buildWeeklyReportInternal = internalQuery({
 /** The Wiki screen's This Week panel — the same numbers, live. */
 export const getWeeklyReportForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: tailShapes.wikiWeeklyReportShape,
   handler: async (ctx, args): Promise<WeeklyReport> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await buildReport(ctx, args.companyId, Date.now() - WEEK_MS);
@@ -131,6 +133,7 @@ export const getWeeklyReportForCompany = adminQuery({
  * at the shelf's level — pages, staff rounds, and what waits. */
 export const getWeeklyReportForGlobal = adminQuery({
   args: {},
+  returns: tailShapes.wikiWeeklyReportShape,
   handler: async (ctx): Promise<WeeklyReport> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

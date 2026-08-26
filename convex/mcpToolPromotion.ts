@@ -132,6 +132,7 @@ export async function rebuildServerTools(
  */
 export const importServerTools = adminMutation({
   args: { serverId: v.id("mcpServers") },
+  returns: v.object({ created: v.number(), removed: v.number() }),
   handler: async (ctx, args): Promise<{ created: number; removed: number }> => {
     const companyId = getActiveCompanyId(ctx.user);
     const server = await ctx.db.get(args.serverId);

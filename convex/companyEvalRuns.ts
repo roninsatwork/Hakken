@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { appError } from "./utils/appError";
+import * as tailShapes from "./utils/tailShapes";
+import type { CompanyCheckRunResult } from "./companyEvalRunActions";
 
 import { internal } from "./_generated/api";
 import { adminAction } from "./tenantFunctions";
@@ -29,7 +31,8 @@ export const runCheck = adminAction({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
-  handler: async (ctx, args): Promise<{ status: string; score: number }> => {
+  returns: tailShapes.evalRunOutcomeShape,
+  handler: async (ctx, args): Promise<CompanyCheckRunResult> => {
     const evalCase = await ctx.runQuery(internal.companyEvals.getCaseForRunInternal, {
       evalCaseId: args.evalCaseId,
     });
@@ -42,7 +45,7 @@ export const runCheck = adminAction({
       throw appError("UNAUTHORIZED", "Unauthorized access to platform checks");
     }
 
-    const result = await ctx.runAction(internal.companyEvalRunActions.runCompanyCheck, {
+    const result: CompanyCheckRunResult = await ctx.runAction(internal.companyEvalRunActions.runCompanyCheck, {
       evalCaseId: args.evalCaseId,
       ...(evalCase.companyId ? { companyId: evalCase.companyId } : {}),
       userId: ctx.userId,
@@ -66,6 +69,7 @@ export const runBatch = adminAction({
     companyId: v.optional(v.id("companies")),
     mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
   },
+  returns: tailShapes.evalBatchShape,
   handler: async (ctx, args): Promise<{ scheduled: number }> => {
     // No company means the global AI's own evals, which are the super
     // admin's alone — the same wall the single-check door keeps.

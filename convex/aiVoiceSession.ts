@@ -11,6 +11,7 @@
 
 import { internalAction } from "./_generated/server";
 import { appError } from "./utils/appError";
+import * as tailShapes from "./utils/tailShapes";
 import { tenantAction } from "./tenantFunctions";
 import { v } from "convex/values";
 import { createHmac } from "node:crypto";
@@ -75,6 +76,7 @@ export const searchKnowledgeForVoice = tenantAction({
     threadId: v.id("threads"),
     query: v.string(),
   },
+  returns: v.any(),
   handler: async (ctx, args): Promise<{ context: string }> => {
     return await ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
       threadId: args.threadId,
@@ -470,6 +472,7 @@ export const createRealtimeVoiceSession = tenantAction({
   // leaving TypeScript to work the shape out through the generated API costs
   // enough of its inference budget that unrelated callers elsewhere lose
   // their own types.
+  returns: tailShapes.voiceSessionShape,
   handler: async (
     ctx,
     args

@@ -5,6 +5,7 @@ import * as ExcelJSNamespace from "exceljs";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { tenantAction } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import {
   parseAreasOfInterestSheet,
   parseCategorySheet,
@@ -112,6 +113,7 @@ function readSheet(worksheet: ExcelJSNamespace.Worksheet): SheetRows {
  */
 export const inspectWorkbook = tenantAction({
   args: { storageId: v.id("_storage") },
+  returns: tailShapes.workbookInspectionShape,
   handler: async (ctx, args) => {
     const context = await ctx.runQuery(
       internal.salesData.getImportContextInternal,
@@ -163,6 +165,7 @@ export const runImport = tenantAction({
   },
   // Annotated because the handler calls its own module's generated API, which
   // TypeScript cannot resolve while it is still inferring this function.
+  returns: tailShapes.workbookImportShape,
   handler: async (ctx, args): Promise<ImportResult> => {
     const context = await ctx.runQuery(
       internal.salesData.getImportContextInternal,

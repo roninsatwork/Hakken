@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminQuery, moduleQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
@@ -326,6 +327,7 @@ export const getDistillProgress = moduleQuery({
 
 export const getDistillProgressForGlobal = adminQuery({
   args: {},
+  returns: tailShapes.wikiDistillProgressShape,
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
@@ -336,6 +338,7 @@ export const getDistillProgressForGlobal = adminQuery({
 
 export const getDistillProgressForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: tailShapes.wikiDistillProgressShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await distillProgressFor(ctx, args.companyId);

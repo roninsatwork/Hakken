@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -108,6 +109,7 @@ export const getCompanyEngagement = adminQuery({
     companyId: v.id("companies"),
     daysBack: v.optional(v.number()),
   },
+  returns: governanceShapes.companyEngagementShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId);

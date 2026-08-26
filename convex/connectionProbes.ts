@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { adminQuery, superAdminAction } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { resolveConnectorSecret } from "./connectorSecretResolver";
 import { TWILIO_AUTH_TOKEN_SECRET_REF } from "./toolConnectorDefinitions";
 import { getErrorMessage } from "./utils/lang";
@@ -169,6 +170,7 @@ export type ConnectionRow = {
  */
 export const listConnections = adminQuery({
   args: {},
+  returns: governanceShapes.connectionListShape,
   handler: async (ctx): Promise<ConnectionRow[]> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to platform maintenance");

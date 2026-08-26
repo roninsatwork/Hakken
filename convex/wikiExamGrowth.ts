@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { questionKey } from "./wikiFeedbackService";
 import { appError } from "./utils/appError";
@@ -105,6 +106,7 @@ export const proposeExamCaseInternal = internalMutation({
 /** The Evals screen's drafts shelf. */
 export const listProposedCasesForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: tailShapes.wikiProposedCaseListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const rows = await ctx.db

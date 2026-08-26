@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { getActiveCompanyId } from "./authz";
+import * as governanceShapes from "./utils/governanceShapes";
 import { governanceQuery } from "./tenantFunctions";
 import {
   DAY_MS,
@@ -55,6 +56,7 @@ export type GovernanceActivity = {
 
 export const getGovernanceActivity = governanceQuery({
   args: { days: v.number() },
+  returns: governanceShapes.governanceActivityShape,
   handler: async (ctx, args): Promise<GovernanceActivity> => {
     // Clamped rather than trusted. The range arrives from a control offering
     // three values, and a hand-typed one should not be able to widen the scan.

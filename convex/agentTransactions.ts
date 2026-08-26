@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { adminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { requireAdmin } from "./authz";
 import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
 import { appError } from "./utils/appError";
@@ -14,6 +15,7 @@ export const getForAgent = adminQuery({
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: tailShapes.agentTransactionPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const baseQuery = ctx.db
@@ -34,6 +36,7 @@ export const getForAgent = adminQuery({
 
 export const getStatsForAgent = adminQuery({
   args: { agentId: v.id("agents") },
+  returns: tailShapes.agentTransactionStatsShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const baseQuery = ctx.db

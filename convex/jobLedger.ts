@@ -3,6 +3,7 @@ import { internalAction, internalMutation } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { adminQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { getErrorMessage } from "./utils/lang";
 import { appError } from "./utils/appError";
 
@@ -185,6 +186,7 @@ export type JobRow = {
  */
 export const listJobRuns = adminQuery({
   args: {},
+  returns: governanceShapes.jobLedgerShape,
   handler: async (ctx): Promise<JobRow[]> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to platform maintenance");

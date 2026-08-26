@@ -8,6 +8,7 @@
  */
 
 import { tenantAction } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { appError } from "./utils/appError";
 import { v } from "convex/values";
 import { Modality } from "@google/genai";
@@ -116,6 +117,7 @@ export const transcribeAudio = tenantAction({
     audioBase64: v.string(),
     mimeType: v.string(),
   },
+  returns: v.string(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const { audioBase64, mimeType } = assertValidTranscriptionPayload(args);
@@ -163,6 +165,7 @@ export const synthesizeSpeech = tenantAction({
     text: v.string(),
     voiceKey: v.optional(v.string()),
   },
+  returns: tailShapes.spokenAudioShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const { text, voiceKey } = assertValidSpeechPayload(args);

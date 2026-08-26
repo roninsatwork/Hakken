@@ -42,6 +42,19 @@ const movementStartReadinessValidator = v.object({
 });
 // template:remove:end
 
+/** Named so the screen's shape can say "this, or nothing" without copying it. */
+export const opportunityHeadlineValidator = v.object({
+  totalOpportunityGBP: v.number(),
+  prospectOpportunityGBP: v.number(),
+  gapOpportunityGBP: v.number(),
+  prospectCount: v.number(),
+  prospectsSized: v.number(),
+  prospectsUnsized: v.number(),
+  prospectsUnpriced: v.number(),
+  gapCount: v.number(),
+  groupsExamined: v.number(),
+});
+
 export default defineSchema({
   ...authTables,
   
@@ -4266,19 +4279,7 @@ export default defineSchema({
     /** Why a FAILED report failed, in words, for the line the screen shows. */
     failureReason: v.optional(v.string()),
     /** The hero boxes, computed once with the sections, never re-derived. */
-    headline: v.optional(
-      v.object({
-        totalOpportunityGBP: v.number(),
-        prospectOpportunityGBP: v.number(),
-        gapOpportunityGBP: v.number(),
-        prospectCount: v.number(),
-        prospectsSized: v.number(),
-        prospectsUnsized: v.number(),
-        prospectsUnpriced: v.number(),
-        gapCount: v.number(),
-        groupsExamined: v.number(),
-      })
-    ),
+    headline: v.optional(opportunityHeadlineValidator),
     /** Section one: what each prospect would be worth, with its working. */
     prospects: v.optional(
       v.array(

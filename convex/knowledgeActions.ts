@@ -118,6 +118,7 @@ export const processKnowledgeFileQueue = internalAction({
 
 export const mapWebsite = adminAction({
   args: { url: v.string() },
+  returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
     if (!firecrawlKey) throw appError("NOT_CONFIGURED", "FIRECRAWL_API_KEY environment variable not set");

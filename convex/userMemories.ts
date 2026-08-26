@@ -3,6 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { appError } from "./utils/appError";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
@@ -99,6 +100,7 @@ export const countLearnedForCompanyInternal = internalQuery({
 
 export const listMine = tenantQuery({
   args: {},
+  returns: governanceShapes.personalMemoryListShape,
   handler: async (ctx) => {
     const rows = await ctx.db
       .query("userMemories")

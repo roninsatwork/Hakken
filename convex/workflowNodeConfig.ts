@@ -10,6 +10,7 @@
  */
 
 import { adminAction } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import { appError } from "./utils/appError";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -75,6 +76,7 @@ export const generateNodeConfig = adminAction({
       label: v.optional(v.string()),
     }))
   },
+  returns: governanceShapes.workflowNodeConfigShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const { prompt, nodeType, nodesContext } = buildNodeConfigContext(args);

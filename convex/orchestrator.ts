@@ -5,11 +5,13 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { tenantAction } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 
 export const routeAgentIntent = tenantAction({
   args: {
     prompt: v.string(),
   },
+  returns: governanceShapes.intentRouteShape,
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
     const { user } = ctx;

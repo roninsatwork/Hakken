@@ -123,6 +123,7 @@ export const listPendingReviews = moduleQuery({
 
 export const listPendingReviewsForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: v.array(pendingReviewValidator),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const rows = await ctx.db
@@ -138,6 +139,7 @@ export const listPendingReviewsForCompany = adminQuery({
 
 export const listPendingReviewsForGlobal = adminQuery({
   args: {},
+  returns: v.array(pendingReviewValidator),
   handler: async (ctx) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

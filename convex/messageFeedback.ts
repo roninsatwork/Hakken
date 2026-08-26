@@ -16,6 +16,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
 import { appError } from "./utils/appError";
 
@@ -129,6 +130,7 @@ export const upsertForMessage = tenantMutation({
     labels: v.optional(v.array(labelValidator)),
     comment: v.optional(v.string()),
   },
+  returns: v.id("messageFeedback"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -240,6 +242,7 @@ export const getMineForThread = tenantQuery({
   args: {
     threadId: v.id("threads"),
   },
+  returns: tailShapes.messageRatingsShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const config = await getSelfImprovementConfig(ctx.db);

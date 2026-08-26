@@ -17,6 +17,7 @@ import { v } from "convex/values";
 
 import type { DatabaseReader } from "./_generated/server";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 
 export const SELF_IMPROVEMENT_CONFIG_KEY = "SELF_IMPROVEMENT_CONFIG";
 
@@ -86,6 +87,7 @@ export async function getSelfImprovementConfig(db: DatabaseReader): Promise<Self
 
 export const getConfig = superAdminQuery({
   args: {},
+  returns: tailShapes.selfImprovementConfigShape,
   handler: async (ctx) => {
     return await getSelfImprovementConfig(ctx.db);
   },
@@ -99,6 +101,7 @@ export const updateConfig = superAdminMutation({
     retrievalPriors: v.boolean(),
     autonomousMemory: v.boolean(),
   },
+  returns: tailShapes.selfImprovementConfigShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const now = Date.now();

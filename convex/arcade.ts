@@ -3,12 +3,14 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { getActiveCompanyId } from "./authz";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 
 export const getPaginatedLeaderboard = tenantQuery({
   args: { 
     game: v.string(),
     paginationOpts: paginationOptsValidator
   },
+  returns: tailShapes.leaderboardPageShape,
   handler: async (ctx, args) => {
     // Fetch paginated scores for the given game
     const scoresPage = await ctx.db
@@ -35,6 +37,7 @@ export const getPaginatedLeaderboard = tenantQuery({
 
 export const getScoresCount = tenantQuery({
   args: { game: v.string() },
+  returns: v.number(),
   handler: async (ctx, args) => {
     const scores = await ctx.db
       .query("arcadeScores")

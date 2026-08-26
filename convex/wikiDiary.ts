@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -108,6 +109,7 @@ export const listDiaryForCompany = adminQuery({
     paginationOpts: paginationOptsValidator,
     action: v.optional(v.string()),
   },
+  returns: tailShapes.wikiDiaryPageShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await diaryPage(ctx, args.companyId, args.paginationOpts, args.action);
@@ -119,6 +121,7 @@ export const listDiaryForGlobal = adminQuery({
     paginationOpts: paginationOptsValidator,
     action: v.optional(v.string()),
   },
+  returns: tailShapes.wikiDiaryPageShape,
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

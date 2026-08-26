@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { adminAction } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -89,6 +90,7 @@ export async function askCore(
 
 export const askBrainForCompany = adminAction({
   args: { companyId: v.id("companies"), question: v.string() },
+  returns: tailShapes.wikiAnswerShape,
   handler: async (ctx, args): Promise<AskResult> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await askCore(ctx, {
@@ -101,6 +103,7 @@ export const askBrainForCompany = adminAction({
 
 export const askBrainForGlobal = adminAction({
   args: { question: v.string() },
+  returns: tailShapes.wikiAnswerShape,
   handler: async (ctx, args): Promise<AskResult> => {
     if (ctx.user.role !== "SUPER_ADMIN") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");

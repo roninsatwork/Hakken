@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { adminAction } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { appError } from "./utils/appError";
 
 /**
@@ -97,6 +98,7 @@ const MAX_BATCHES = 5000;
 
 export const resetSalesData = adminAction({
   args: {},
+  returns: tailShapes.salesDataResetShape,
   handler: async (ctx): Promise<{ deleted: number }> => {
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {
       userId: ctx.userId,
@@ -315,6 +317,7 @@ export const clearAllWorkspaceSalesDataBatchInternal = internalMutation({
 
 export const clearAllSalesData = adminAction({
   args: {},
+  returns: tailShapes.salesDataResetShape,
   handler: async (ctx): Promise<{ deleted: number }> => {
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {
       userId: ctx.userId,

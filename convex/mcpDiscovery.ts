@@ -23,6 +23,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { adminAction, adminQuery, assertTenantAccess } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { getErrorMessage } from "./utils/lang";
@@ -176,6 +177,7 @@ export const listDiscoveredTools = internalQuery({
  */
 export const listServerTools = adminQuery({
   args: { serverId: v.id("mcpServers") },
+  returns: tailShapes.serverToolListShape,
   handler: async (ctx, args) => {
     const server = await ctx.db.get(args.serverId);
     assertTenantAccess(ctx, server);
@@ -204,6 +206,7 @@ export const listServerTools = adminQuery({
  */
 export const discoverServerTools = adminAction({
   args: { serverId: v.id("mcpServers") },
+  returns: tailShapes.toolDiscoveryShape,
   handler: async (ctx, args): Promise<{ ok: boolean; message: string; toolCount: number }> => {
     const companyId: Id<"companies"> | undefined = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No active company");

@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { governanceAction, superAdminAction } from "./tenantFunctions";
+import * as governanceShapes from "./utils/governanceShapes";
 import {
   PERSONAL_DATA_RULES,
   describeErasure,
@@ -301,6 +302,7 @@ export const recordAction = internalMutation({
 
 export const erase = superAdminAction({
   args: { email: v.string() },
+  returns: governanceShapes.erasureShape,
   handler: async (ctx, args): Promise<ErasureResult> => {
     const found = await ctx.runQuery(internal.personalData.findByEmail, { email: args.email });
     if (!found) throw appError("NOT_FOUND", "No account was found for that email address.");

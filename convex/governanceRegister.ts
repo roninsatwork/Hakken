@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { governanceQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { getActiveCompanyId } from "./authz";
 import {
   sortRegister,
@@ -61,6 +62,7 @@ function ownerNameOf(user: Doc<"users"> | null): string {
  */
 export const getOwnerCandidates = governanceQuery({
   args: {},
+  returns: tailShapes.ownerCandidateListShape,
   handler: async (ctx) => {
     const platformWide = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY";
     const scopeCompanyId = platformWide ? undefined : getActiveCompanyId(ctx.user);
@@ -80,6 +82,7 @@ export const getOwnerCandidates = governanceQuery({
 
 export const getAiRegister = governanceQuery({
   args: {},
+  returns: tailShapes.aiRegisterShape,
   handler: async (ctx) => {
     const scopeCompanyId = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY"
       ? undefined

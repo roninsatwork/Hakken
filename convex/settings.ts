@@ -238,6 +238,7 @@ export const getEmailBranding = internalQuery({
 });
 
 export const generateUploadUrl = superAdminMutation({
+  returns: v.string(),
   handler: async (ctx) => {
 
     return await ctx.storage.generateUploadUrl();

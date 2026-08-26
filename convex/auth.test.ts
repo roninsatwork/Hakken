@@ -19,7 +19,12 @@ const captured = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@convex-dev/auth/server", () => ({
+// Only `convexAuth` is replaced. Blanking the whole module used to work by
+// accident: nothing in this file's import graph reached the package's other
+// exports. The first module that did — the schema, pulled in transitively —
+// found `authTables` missing and the whole file failed.
+vi.mock("@convex-dev/auth/server", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   convexAuth: (config: never) => {
     captured.config = config;
     return { auth: {}, signIn: {}, signOut: {}, store: {}, isAuthenticated: {} };

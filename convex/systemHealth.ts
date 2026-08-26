@@ -13,6 +13,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
+import * as healthShapes from "./utils/healthShapes";
 import { listDisabledPurgePipelines } from "./purgeScheduleService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import {
@@ -889,6 +890,7 @@ export const getAnalyticsDataHealthForAdmin = superAdminQuery({
   args: {
     daysBack: v.optional(v.number()),
   },
+  returns: healthShapes.analyticsHealthShape,
   handler: async (ctx, args): Promise<AnalyticsHealthReport> => {
     return await getAnalyticsDataHealthReport(ctx, args);
   },
@@ -898,6 +900,7 @@ export const getSystemHealthForAdmin = adminQuery({
   args: {
     daysBack: v.optional(v.number()),
   },
+  returns: healthShapes.systemHealthShape,
   handler: async (ctx, args): Promise<SystemHealthReport> => {
     const current = ctx;
     if (current.user.role === "SUPER_ADMIN") {

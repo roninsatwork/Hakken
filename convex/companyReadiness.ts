@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as tailShapes from "./utils/tailShapes";
 import { requireCompanyAccess } from "./authz";
 import { summariseCompanyModelRouting } from "./aiModels";
 import { parseStoredStringArray } from "./utils/lang";
@@ -295,6 +296,7 @@ export const getCompanyAiReadiness = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: tailShapes.companyReadinessShape,
   handler: async (ctx, args) => {
     const { company } = await requireCompanyAccess(ctx, args.companyId);
     const areas = await buildCompanyAiAreas(ctx, args.companyId, company);
@@ -361,6 +363,7 @@ export const resolveDriftEvents = adminMutation({
     companyId: v.id("companies"),
     sourceType: v.optional(driftSourceValidator),
   },
+  returns: tailShapes.driftResolutionShape,
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const unresolvedEvents = await ctx.db
