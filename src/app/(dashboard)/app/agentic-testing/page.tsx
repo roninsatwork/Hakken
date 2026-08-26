@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -29,6 +30,7 @@ const HOLLYWOOD_PHASES = [
 ];
 
 export default function AgenticTestingSandbox() {
+  const t = useTranslations("agenticTesting");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<Id<"threads"> | null>(null);
@@ -148,8 +150,8 @@ export default function AgenticTestingSandbox() {
                <Bot className="w-5 h-5 text-indigo-400" />
             </div>
             <div className="flex flex-col">
-               <span className="text-[14px] font-bold tracking-wide text-foreground">Sandbox Exec</span>
-               <span className="text-[12px] font-mono text-muted uppercase tracking-widest">Isolated Runtime</span>
+               <span className="text-[14px] font-bold tracking-wide text-foreground">{t("sandboxExec")}</span>
+               <span className="text-[12px] font-mono text-muted uppercase tracking-widest">{t("isolatedRuntime")}</span>
             </div>
          </div>
 
@@ -158,7 +160,7 @@ export default function AgenticTestingSandbox() {
                <button 
                  onClick={handleReset}
                  className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 rounded-[8px] transition-colors text-muted"
-                 title="Reset Sandbox Session"
+                 title={t("resetSession")}
                >
                   <RefreshCcw className="w-4 h-4" />
                </button>
@@ -181,12 +183,12 @@ export default function AgenticTestingSandbox() {
                   className="absolute top-full right-0 mt-2 w-[280px] sm:w-[320px] bg-card dark:bg-[#1a1a1c] border border-border-dim rounded-[16px] shadow-2xl p-2 z-[9999] flex flex-col"
                 >
                   <div className="px-4 py-3 pb-2 border-b border-border-dim mb-1">
-                    <span className="text-[11px] font-medium text-muted tracking-widest uppercase">Select Runtime Identity</span>
+                    <span className="text-[11px] font-medium text-muted tracking-widest uppercase">{t("selectIdentity")}</span>
                   </div>
                   {agents === undefined ? (
                      <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
                   ) : agents.length === 0 ? (
-                     <div className="p-4 text-center text-[12px] text-muted">No agents registered.</div>
+                     <div className="p-4 text-center text-[12px] text-muted">{t("noAgents")}</div>
                   ) : (
                     <>
                       <div
@@ -201,7 +203,7 @@ export default function AgenticTestingSandbox() {
                            <span className={`text-[14px] font-bold ${selectedAgentId === "any" ? 'text-indigo-400' : 'text-foreground/90'}`}>
                               Any (Auto-Route)
                            </span>
-                           <span className="text-[12px] text-muted leading-tight pr-4">Automatically routes your prompt to the best agent</span>
+                           <span className="text-[12px] text-muted leading-tight pr-4">{t("autoRoute")}</span>
                         </div>
                         {selectedAgentId === "any" && (
                           <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
@@ -278,7 +280,7 @@ export default function AgenticTestingSandbox() {
                    <div className="absolute inset-0 bg-indigo-500/10 rounded-[24px] animate-pulse pointer-events-none" />
                    <AlertTriangle className="w-8 h-8 text-indigo-400 opacity-80" />
                 </div>
-                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">Air-gapped Testing Environment</h3>
+                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">{t("airGapped")}</h3>
                 <p className="text-[14px] text-secondary max-w-[400px] text-center font-light leading-relaxed">
                    Select an agent from the top right and send a message. All AI loop telemetry will be recorded cleanly into the Agent Logs tab without affecting standard users.
                 </p>

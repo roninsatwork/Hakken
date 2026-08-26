@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ import Image from "next/image";
 import { formatDate } from "@/src/lib/dates";
 
 export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations("properties.detail");
   const router = useRouter();
   const { id } = use(params);
   
@@ -36,8 +38,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         <Header />
         <div className="flex flex-col gap-6 h-[calc(100vh-100px)] items-center justify-center">
           <SonaeEmptyState 
-            title="Property Not Found" 
-            description="The requested property could not be found or you do not have permission to view it." 
+            title={t("notFoundTitle")} 
+            description={t("notFoundBody")} 
           />
         </div>
       </>
@@ -58,10 +60,10 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           {/* Top Image Section */}
           <div className="relative h-[360px] sm:h-[480px] w-full bg-background flex-shrink-0">
             {property.imageUrl ? (
-              <Image src={property.imageUrl} alt="Property" fill sizes="100vw" unoptimized className="object-cover opacity-90" />
+              <Image src={property.imageUrl} alt={t("imageAlt")} fill sizes="100vw" unoptimized className="object-cover opacity-90" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-background/50">
-                <span className="text-secondary font-mono tracking-widest text-sm uppercase">No Image Available</span>
+                <span className="text-secondary font-mono tracking-widest text-sm uppercase">{t("noImage")}</span>
               </div>
             )}
             
@@ -75,7 +77,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-black/60 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="text-[13px] font-medium tracking-wide">Back</span>
+                <span className="text-[13px] font-medium tracking-wide">{t("back")}</span>
               </button>
             </div>
 
@@ -122,7 +124,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <div className="flex items-start gap-3 p-4 rounded-[16px] bg-background border border-border-dim/50 shadow-sm">
                       <Clock className="w-5 h-5 text-brand flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="block text-[11px] uppercase tracking-wider text-secondary">Listed On</span>
+                        <span className="block text-[11px] uppercase tracking-wider text-secondary">{t("listedOn")}</span>
                         <span className="block text-[14px] text-foreground font-medium mt-1">
                           {formatDate(property.firstVisibleDate, { locale: "en-GB", options: { day: 'numeric', month: 'short', year: 'numeric' } })}
                         </span>
@@ -133,7 +135,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <div className="flex items-start gap-3 p-4 rounded-[16px] bg-background border border-border-dim/50 shadow-sm">
                       <Tag className="w-5 h-5 text-brand flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="block text-[11px] uppercase tracking-wider text-secondary">Status</span>
+                        <span className="block text-[11px] uppercase tracking-wider text-secondary">{t("status")}</span>
                         <span className="block text-[14px] text-foreground font-medium mt-1">{property.addedOn}</span>
                       </div>
                     </div>
@@ -142,7 +144,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <div className="flex items-start gap-3 p-4 rounded-[16px] bg-background border border-border-dim/50 shadow-sm">
                       <Maximize2 className="w-5 h-5 text-brand flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="block text-[11px] uppercase tracking-wider text-secondary">Est. Size</span>
+                        <span className="block text-[11px] uppercase tracking-wider text-secondary">{t("estSize")}</span>
                         <span className="block text-[14px] text-foreground font-medium mt-1">
                           {property.sizeSqFeetMin && property.sizeSqFeetMin !== property.sizeSqFeetMax 
                             ? `${property.sizeSqFeetMin} - ${property.sizeSqFeetMax}` 
@@ -155,7 +157,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <div className="flex items-start gap-3 p-4 rounded-[16px] bg-background border border-border-dim/50 shadow-sm">
                       <TrendingDown className="w-5 h-5 text-brand flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="block text-[11px] uppercase tracking-wider text-secondary">Price per SqFt</span>
+                        <span className="block text-[11px] uppercase tracking-wider text-secondary">{t("pricePerSqFt")}</span>
                         <span className="block text-[14px] text-foreground font-medium mt-1">
                           £{Math.round(property.price / parseInt(property.sizeSqFeetMax)).toLocaleString()}/sqft
                         </span>
@@ -169,21 +171,21 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             {/* Specs Row */}
             <div className="flex flex-wrap gap-4">
               <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
-                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">Property Type</span>
+                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("propertyType")}</span>
                 <div className="flex items-center gap-3 mt-1">
                   <Home className="w-5 h-5 text-brand" />
                   <span className="text-[15px] text-foreground font-medium">{property.propertyType || 'Unknown'}</span>
                 </div>
               </div>
               <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
-                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">Bedrooms</span>
+                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("bedrooms")}</span>
                 <div className="flex items-center gap-3 mt-1">
                   <Bed className="w-5 h-5 text-brand" />
                   <span className="text-[15px] text-foreground font-medium">{property.bedrooms || 0}</span>
                 </div>
               </div>
               <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
-                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">Bathrooms</span>
+                <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("bathrooms")}</span>
                 <div className="flex items-center gap-3 mt-1">
                   <Bath className="w-5 h-5 text-brand" />
                   <span className="text-[15px] text-foreground font-medium">{property.bathrooms || 0}</span>
@@ -191,7 +193,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               </div>
               {property.epcRating && (
                 <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
-                  <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">EPC Rating</span>
+                  <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("epcRating")}</span>
                   <div className="flex items-center gap-3 mt-1">
                     <Zap className="w-5 h-5 text-amber-500" />
                     <span className="text-[15px] text-foreground font-medium">{property.epcRating}</span>
@@ -200,7 +202,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               )}
               {property.latitude && property.longitude && (
                 <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
-                  <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">Location</span>
+                  <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("location")}</span>
                   <a 
                     href={`https://www.google.com/maps?q=${property.latitude},${property.longitude}`} 
                     target="_blank" 
@@ -208,7 +210,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     className="flex items-center gap-3 mt-1 hover:text-brand transition-colors"
                   >
                     <Map className="w-5 h-5 text-brand" />
-                    <span className="text-[15px] text-foreground font-medium hover:underline">View Map</span>
+                    <span className="text-[15px] text-foreground font-medium hover:underline">{t("viewMap")}</span>
                   </a>
                 </div>
               )}
@@ -249,7 +251,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       {property.floorplans.map((fp: string, idx: number) => (
                         <a key={idx} href={fp} target="_blank" rel="noopener noreferrer" className="block relative group rounded-[16px] overflow-hidden border border-border-dim hover:border-brand/50 transition-colors bg-background/50 p-2">
                           <div className="w-full sm:w-48 aspect-[4/3] flex items-center justify-center bg-white rounded-[10px] overflow-hidden">
-                             <Image src={fp} alt="Floorplan" width={192} height={144} unoptimized className="w-full h-full object-contain" />
+                             <Image src={fp} alt={t("floorplanAlt")} width={192} height={144} unoptimized className="w-full h-full object-contain" />
                           </div>
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[16px]">
                             <LayoutTemplate className="w-8 h-8 text-white" />
@@ -289,7 +291,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     </div>
                     <div>
                       <span className="block text-[15px] font-medium text-foreground">{property.agentName || "Unknown Agent"}</span>
-                      <span className="block text-[12px] text-secondary mt-0.5">Contact via Rightmove</span>
+                      <span className="block text-[12px] text-secondary mt-0.5">{t("contactRightmove")}</span>
                     </div>
                   </div>
                   {property.agentPhone && (

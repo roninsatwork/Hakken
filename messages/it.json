@@ -619,6 +619,153 @@
       "startingSearch": "Avvio Ricerca...",
       "urlError": "Errore: Incolla prima un URL di ricerca Rightmove valido.",
       "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
+    },
+    "logs": {
+      "empty": "Nessun processo di estrazione è stato ancora avviato."
+    },
+    "detail": {
+      "notFoundTitle": "Immobile non trovato",
+      "notFoundBody": "L'immobile richiesto non è stato trovato oppure non hai i permessi per vederlo.",
+      "imageAlt": "Immobile",
+      "noImage": "Nessuna immagine disponibile",
+      "back": "Indietro",
+      "listedOn": "Pubblicato il",
+      "status": "Stato",
+      "estSize": "Superficie stimata",
+      "pricePerSqFt": "Prezzo per piede quadro",
+      "propertyType": "Tipo di immobile",
+      "bedrooms": "Camere da letto",
+      "bathrooms": "Bagni",
+      "epcRating": "Classe energetica",
+      "location": "Posizione",
+      "viewMap": "Vedi mappa",
+      "floorplanAlt": "Planimetria",
+      "contactRightmove": "Contatta tramite Rightmove"
+    },
+    "information": {
+      "heroKicker": "INTELLIGENCE IMMOBILIARE",
+      "howItWorks": "Come funziona",
+      "engineBehind": "Il motore che lo muove",
+      "oneWorkflow": "Un flusso di lavoro, tre strumenti",
+      "builtTrusted": "Costruito per essere affidabile",
+      "bestCollection": "Ottenere la raccolta migliore",
+      "commonQuestions": "Domande frequenti",
+      "tools": {
+        "search": {
+          "title": "Ricerca",
+          "body": "La porta d'ingresso. Ogni raccolta parte da qui — e ampliare la tua libreria in seguito richiede dieci secondi."
+        },
+        "scraped": {
+          "title": "Dati raccolti",
+          "body": "La tua libreria di annunci in crescita — cerca per indirizzo, apri i dettagli completi di ogni immobile o elimina ciò che non ti serve più."
+        },
+        "logs": {
+          "title": "Registro",
+          "body": "La sala di controllo: segui ogni esecuzione dall'avvio alla fine, con i conteggi che si aggiornano man mano che arrivano gli annunci."
+        }
+      },
+      "apify": {
+        "proven": {
+          "title": "Collaudato, non improvvisato",
+          "body": "L'estrazione gira su una piattaforma di automazione web dedicata e collaudata — un'infrastruttura costruita esattamente per questo lavoro."
+        },
+        "runId": {
+          "title": "Un ID di esecuzione reale, ogni volta",
+          "body": "Ogni raccolta è una vera esecuzione Apify con il proprio ID. Il Registro mostra il resoconto della piattaforma stessa — niente riassunti, niente inventato."
+        },
+        "scales": {
+          "title": "Cresce con te",
+          "body": "Da dieci annunci a mille, da una ricerca a cinquanta — lo stesso motore regge tutto senza sforzo."
+        }
+      },
+      "trust": {
+        "publicOnly": {
+          "title": "Solo annunci pubblici",
+          "body": "L'agente raccoglie ciò che è già pubblico su Rightmove — gli stessi dettagli che vedrebbe chiunque navighi sul sito."
+        },
+        "deleteAnytime": {
+          "title": "Elimina quando vuoi",
+          "body": "Ogni immobile nella tua libreria può essere rimosso con un clic — con un passaggio di conferma perché nulla sparisca per sbaglio."
+        },
+        "honestStatus": {
+          "title": "Stato reale, mai indovinato",
+          "body": "Il Registro rispecchia lo stato reale di ogni esecuzione. Una raccolta è segnata come completata solo quando lo è davvero."
+        }
+      },
+      "tips": {
+        "filterFirst": {
+          "title": "Filtra prima su Rightmove",
+          "body": "La raccolta vale quanto la ricerca. Restringi per zona, prezzo e camere prima di copiare il link."
+        },
+        "forSale": {
+          "title": "Usa una ricerca di immobili in vendita",
+          "body": "I link devono essere pagine di ricerca Rightmove di immobili in vendita — il link a un singolo annuncio non avvia l'esecuzione."
+        },
+        "startSmall": {
+          "title": "Parti in piccolo, poi cresci",
+          "body": "Una prima esecuzione di 50–100 annunci dimostra che la ricerca è giusta prima di impegnarti su mille."
+        },
+        "letItRun": {
+          "title": "Lascialo lavorare",
+          "body": "Le esecuzioni grandi richiedono tempo. Avviane una prima di una riunione e gli annunci ti aspetteranno al ritorno."
+        }
+      },
+      "faq": {
+        "link": {
+          "q": "Che tipo di link incollo?",
+          "a": "Una pagina di risultati di ricerca Rightmove di immobili in vendita — l'indirizzo nel browser dopo aver cercato e filtrato."
+        },
+        "range": {
+          "q": "Perché tra 10 e 1.000 immobili?",
+          "a": "Dieci è la più piccola esecuzione che valga la pena avviare; mille mantiene le esecuzioni rapide e mirate. Per zone più ampie, dividi la ricerca ed esegui ogni parte."
+        },
+        "duration": {
+          "q": "Quanto dura una raccolta?",
+          "a": "Dipende dalla dimensione dell'esecuzione. Quelle piccole arrivano in pochi minuti; le più grandi richiedono il tempo necessario — il Registro mostra sempre progressi reali."
+        },
+        "details": {
+          "q": "Quali dettagli vengono raccolti per ogni immobile?",
+          "a": "Indirizzo, prezzo, camere, bagni, tipo di immobile, l'agenzia e la foto principale — più il testo completo dell'annuncio e la planimetria dove disponibile."
+        },
+        "scraper": {
+          "q": "Cosa esegue davvero l'estrazione?",
+          "a": "Apify — una piattaforma di web scraping standard di settore, diretta dal tuo agente Rightmove. L'agente avvia l'esecuzione e archivia ogni annuncio man mano che arriva."
+        },
+        "keepOpen": {
+          "q": "Devo tenere la pagina aperta?",
+          "a": "No. Una volta avviata, l'esecuzione continua da sola. Torna sul Registro quando vuoi — i conteggi in sospeso si aggiornano man mano che arrivano gli annunci."
+        },
+        "remove": {
+          "q": "Posso rimuovere gli immobili che non voglio?",
+          "a": "Sì — ogni riga nei Dati raccolti ha un'azione di eliminazione, con prima un passaggio di conferma. L'eliminazione è definitiva e non tocca mai l'annuncio online."
+        },
+        "fails": {
+          "q": "Cosa succede se un'esecuzione fallisce?",
+          "a": "Viene segnata come Fallita nel Registro, chiaramente — senza finzioni parziali. La tua libreria esistente resta intatta; ti basta riavviare la ricerca."
+        }
+      },
+      "stats": {
+        "paste": "link incollato avvia una raccolta",
+        "gathered": "annunci raccolti in una singola esecuzione",
+        "checks": "tra i controlli di stato in tempo reale",
+        "manual": "di copia e incolla manuale"
+      },
+      "pageTitle": "Come funziona la raccolta immobili",
+      "pageIntro": "Uno sguardo in parole semplici a come un link Rightmove diventa una libreria consultabile di dati immobiliari — e a come vederlo accadere, in diretta.",
+      "howSubtitle": "Da una ricerca Rightmove alla tua libreria, in quattro passaggi",
+      "engineSubtitle": "Con la potenza di Apify — lo standard di settore per i dati web",
+      "workflowSubtitle": "La Ricerca la avvia. I Dati la conservano. Il Registro la dimostra.",
+      "workflowBody": "La sezione Immobili è composta da tre pagine che lavorano come un'unica pipeline — di solito parti dalla Ricerca, vivi nei Dati raccolti e dai un'occhiata al Registro mentre un'esecuzione è in corso.",
+      "trustSubtitle": "I dati restano sotto il tuo controllo",
+      "trustBody": "Un raccoglitore autonomo è utile solo se puoi fidarti di ciò che riporta — e rimuovere ciò che non vuoi. La pipeline è costruita attorno a entrambe le cose.",
+      "tipsSubtitle": "Quattro piccole cose che fanno una grande differenza",
+      "faqSubtitle": "Tutto il resto che potresti chiederti",
+      "ctaTitle": "Avvia una raccolta",
+      "ctaBody": "Incolla la tua prima ricerca Rightmove e guardala riempirsi.",
+      "visuals": {
+        "journey": "Il percorso della raccolta: un link di ricerca Rightmove arriva all'agente, diventa annunci immobiliari e viene tracciato nel registro delle esecuzioni",
+        "engineBadge": "AGENTE RIGHTMOVE · APIFY"
+      }
     }
   },
   "header": {
@@ -4786,7 +4933,13 @@
         "failed": "Non è stato possibile crearla. Riprova."
       },
       "attachedPhoto": "Foto allegata",
-      "stillWriting": "Sta ancora scrivendo"
+      "stillWriting": "Sta ancora scrivendo",
+      "thread": {
+        "awaiting": "In attesa di istruzioni...",
+        "readingFiles": "Sto leggendo i tuoi file",
+        "readingOne": "Sto leggendo 1 file prima di rispondere",
+        "readingMany": "Sto leggendo {count} file prima di rispondere"
+      }
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",
@@ -6642,5 +6795,152 @@
       "endDateOptional": "Data di Fine (Opzionale)",
       "applyRange": "Applica Intervallo"
     }
+  },
+  "salesReports": {
+    "board": {
+      "emptyTitle": "Nessun report disponibile",
+      "emptyBody": "Carica un CSV della pipeline e programma l'agente Report Vendite per generare i report per il consiglio.",
+      "title": "REPORT PER IL CONSIGLIO",
+      "subtitle": "Generato dal motore di output {platformName} Intelligence",
+      "kpiTotalPipeline": "Pipeline totale",
+      "kpiWeightedPipeline": "Pipeline ponderata",
+      "kpiOpenDeals": "Trattative aperte",
+      "kpiWinRate": "Tasso di successo",
+      "kpiWeighted": "Ponderata",
+      "kpiAvgSize": "Valore medio",
+      "kpiCycleDays": "Giorni di ciclo",
+      "seriesTotalPipeline": "Pipeline totale",
+      "seriesWeightedForecast": "Previsione ponderata",
+      "axisValue": "(Valore)",
+      "axisWeightedValue": "(Valore ponderato)",
+      "recommendation": "Raccomandazione:",
+      "seriesRiskConcentration": "Concentrazione del rischio",
+      "momentumLeaders": "Leader di slancio",
+      "supportCoaching": "Supporto e affiancamento"
+    },
+    "information": {
+      "pageTitle": "Come funzionano i report per il consiglio",
+      "pageIntro": "Uno sguardo in parole semplici all'analista dietro i tuoi report per il consiglio — cosa legge, cosa ricorda e perché puoi fidarti di ogni riga che scrive.",
+      "howItWorks": "Come funziona",
+      "howSubtitle": "Da ciò che sa il tuo team a ciò che vede il tuo consiglio",
+      "gettingStarted": "Per iniziare",
+      "startSubtitle": "Piccolo all'inizio. Più intelligente ogni settimana.",
+      "startBody": "Non c'è alcun progetto di configurazione. L'agente parte da ciò che hai già, e tutto ciò che aggiungi da quel momento lo rende un analista migliore.",
+      "builtTrusted": "Costruito per essere affidabile",
+      "trustSubtitle": "Un report che puoi difendere in sala riunioni",
+      "trustBody": "Un report per il consiglio è utile solo se puoi sostenere ogni sua riga. Il report è costruito attorno a una regola: leggere ciò che c'è nei dati e dire cosa farne.",
+      "readingReport": "Leggere il report",
+      "glossarySubtitle": "Quattro termini, tradotti",
+      "commonQuestions": "Domande frequenti",
+      "faqSubtitle": "Tutto il resto che potresti chiederti",
+      "ctaBody": "Apri l'ultimo report per il consiglio, scritto dalla tua stessa attività.",
+      "ctaButton": "Apri i report per il consiglio",
+      "trust": {
+        "yourNumbers": {
+          "title": "I tuoi numeri, non i nostri",
+          "body": "Ogni cifra è calcolata dalla tua pipeline. Il report legge la tua attività — non la inventa mai."
+        },
+        "comparable": {
+          "title": "Confrontabile, settimana dopo settimana",
+          "body": "Il formato non cambia mai, così ciò che è cambiato nella tua attività salta all'occhio appena apri il report."
+        },
+        "actionable": {
+          "title": "Consigli su cui agire",
+          "body": "Ogni rischio è accompagnato da una ragione e una raccomandazione — il report si chiude con azioni, non osservazioni."
+        }
+      },
+      "glossary": {
+        "weighted": {
+          "title": "Pipeline ponderata",
+          "body": "Il valore di ogni trattativa moltiplicato per la probabilità di chiusura. £100k al 30% vale £30k — una previsione più onesta del valore nominale."
+        },
+        "windows": {
+          "title": "Finestre di chiusura",
+          "body": "Le trattative raggruppate per quando dovrebbero concludersi — questo mese, il prossimo e oltre — così il rischio di tempistica è visibile a colpo d'occhio."
+        },
+        "radar": {
+          "title": "Radar dei rischi",
+          "body": "Critico richiede un intervento questa settimana. A rischio sta peggiorando. Silenzioso semplicemente non viene toccato da un po' — spesso le vittorie più facili."
+        },
+        "winRate": {
+          "title": "Tasso di successo",
+          "body": "Delle trattative arrivate a una decisione, la quota che hai vinto — tracciata con la sua direzione rispetto all'ultimo report."
+        }
+      },
+      "ingredients": {
+        "pipeline": {
+          "title": "La tua pipeline, così com'è oggi",
+          "body": "Un'esportazione delle tue trattative da qualunque strumento usi ora — niente integrazioni, niente progetti IT, nessun nuovo processo per il team."
+        },
+        "knowledge": {
+          "title": "Tutto ciò che sa il tuo team",
+          "body": "Aggiungi nel tempo listini, playbook e note sui clienti. Più conosce il tuo modo di vendere, più affilati saranno i suoi consigli."
+        },
+        "schedule": {
+          "title": "Una cadenza su misura",
+          "body": "Settimanale per il ritmo del consiglio, oppure su richiesta. L'agente lavora da solo — tu apri solo il risultato."
+        }
+      },
+      "faq": {
+        "need": {
+          "q": "Cosa devo dargli?",
+          "a": "Un'esportazione della tua pipeline — lo stesso foglio di trattative che il tuo team già tiene. Da lì in poi, tutto il resto è facoltativo."
+        },
+        "knows": {
+          "q": "Cosa sa della mia azienda?",
+          "a": "Esattamente ciò che condividi con lui, e niente di più. La tua pipeline, più i documenti che il tuo team aggiunge alla sua conoscenza."
+        },
+        "remembers": {
+          "q": "Ricorda i report precedenti?",
+          "a": "Sì. Le lezioni di un'esecuzione passano alla successiva, e la sua memoria della tua attività si accumula — l'analista migliora a ogni report."
+        },
+        "retrieval": {
+          "q": "Come trova le informazioni giuste?",
+          "a": "Mentre scrive, cerca in tutto ciò che hai condiviso e recupera solo i passaggi che contano per il punto in questione."
+        },
+        "cadence": {
+          "q": "Ogni quanto ricevo un nuovo report?",
+          "a": "Quanto spesso vuoi. La maggior parte dei team programma un'esecuzione settimanale prima della riunione di consiglio o di pipeline, e ne avvia altre quando qualcosa di grosso si muove."
+        },
+        "share": {
+          "q": "Posso condividerlo con il consiglio?",
+          "a": "Sì. Esporta per il consiglio cattura l'intero report come una singola immagine ad alta risoluzione, pronta da inserire in una presentazione o in un'email."
+        },
+        "estimated": {
+          "q": "I numeri sono mai stimati?",
+          "a": "Le cifre sono calcolate dalla tua pipeline. Dove il report esprime un giudizio — livelli di rischio, raccomandazioni — lo dice e ne dà la ragione."
+        },
+        "noReports": {
+          "q": "Perché dice 'Nessun report disponibile'?",
+          "a": "L'agente non è ancora stato eseguito. Condividi la tua pipeline e programma o avvia la prima esecuzione — il primo report arriva pochi minuti dopo."
+        }
+      },
+      "stats": {
+        "deals": "delle tue trattative lette a ogni esecuzione",
+        "sections": "sezioni pronte per il consiglio, ogni settimana",
+        "agent": "agente dietro ogni report",
+        "hours": "ore di analista necessarie per produrlo"
+      },
+      "visuals": {
+        "wireframe": "Uno schema del report per il consiglio con le sue sezioni: racconto, numeri, rischi e azioni",
+        "agentCentre": "L'agente dei report al centro di ciò da cui attinge: la tua pipeline, la conoscenza della tua azienda e la propria memoria — mentre scrive il report per il consiglio"
+      }
+    }
+  },
+  "agenticTesting": {
+    "sandboxExec": "Esecuzione sandbox",
+    "isolatedRuntime": "Runtime isolato",
+    "resetSession": "Reimposta la sessione sandbox",
+    "selectIdentity": "Seleziona identità runtime",
+    "noAgents": "Nessun agente registrato.",
+    "autoRoute": "Indirizza automaticamente la tua richiesta all'agente migliore",
+    "airGapped": "Ambiente di test isolato"
+  },
+  "arcade": {
+    "title": "RONIN'S RUN",
+    "playNow": "GIOCA ORA",
+    "controls": "USA LE FRECCE PER MUOVERTI",
+    "leaderboardTitle": "Classifica globale",
+    "leaderboardSubtitle": "I migliori utenti nella matrice"
   }
 }

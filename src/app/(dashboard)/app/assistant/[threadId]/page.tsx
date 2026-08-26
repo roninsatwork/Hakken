@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useEffect, useRef } from "react";
@@ -16,6 +17,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
 
 export default function ActiveThreadPage({ params }: { params: Promise<{ threadId: string }> }) {
+  const t = useTranslations("ai.assistant");
   const resolvedParams = use(params);
   const threadId = resolvedParams.threadId as Id<"threads">;
   
@@ -95,7 +97,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                 <Loader2 className="w-8 h-8 text-muted animate-spin" />
               </div>
             ) : messages.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center text-muted font-light tracking-[0.2em] uppercase text-[10px]">Awaiting Instructions...</div>
+               <div className="flex-1 flex items-center justify-center text-muted font-light tracking-[0.2em] uppercase text-[10px]">{t("thread.awaiting")}</div>
             ) : (
               <div className="flex flex-col flex-1">
                 {messages.map((msg) => (
@@ -109,7 +111,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                     into, so nothing jumps when the real row arrives. */}
                 {optimisticMessage && (
                   <div className="flex flex-col gap-1 mb-6 opacity-60">
-                    <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">You asked</span>
+                    <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">{t("you")}</span>
                     <p className="text-[15px] leading-snug tracking-[-0.01em] text-foreground whitespace-pre-wrap">
                       {optimisticMessage}
                     </p>
@@ -130,15 +132,15 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                           <Sparkles className="w-2.5 h-2.5 text-white" />
                         </span>
                         <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">
-                          Reading your files
+                          {t("thread.readingFiles")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-[14px] text-secondary" role="status">
                         <RefreshCw className="w-3.5 h-3.5 text-brand animate-spin flex-shrink-0" />
                         <span>
                           {pendingDocs.length === 1
-                            ? "Reading 1 file before answering"
-                            : `Reading ${pendingDocs.length} files before answering`}
+                            ? t("thread.readingOne")
+                            : t("thread.readingMany", { count: pendingDocs.length })}
                         </span>
                       </div>
                     </div>

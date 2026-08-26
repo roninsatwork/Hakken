@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { api } from "@/convex/_generated/api";
@@ -16,6 +17,7 @@ const loadRoninCanvas = () => import("./RoninCanvas");
 const RoninCanvas = dynamic(loadRoninCanvas, { ssr: false });
 
 export default function RoninArcadePage() {
+  const t = useTranslations("arcade");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -344,7 +346,7 @@ export default function RoninArcadePage() {
           ) : (
             <>
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
-                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>RONIN&apos;S RUN</h2>
+                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>{t("title")}</h2>
                  <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
                    INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.
                  </p>
@@ -362,13 +364,13 @@ export default function RoninArcadePage() {
                  >
                     <div className="flex items-center gap-4 text-black">
                       <Play className="w-5 h-5 fill-current" />
-                      <span className="text-[14px] leading-none tracking-wide mt-1">PLAY NOW</span>
+                      <span className="text-[14px] leading-none tracking-wide mt-1">{t("playNow")}</span>
                     </div>
                  </button>
                  
                  <div className="mt-8 flex items-center justify-center gap-3 text-secondary/60">
                    <Gamepad2 className="w-4 h-4" />
-                   <span className="text-[11px] font-mono tracking-widest uppercase">USE ARROW KEYS TO MOVE</span>
+                   <span className="text-[11px] font-mono tracking-widest uppercase">{t("controls")}</span>
                  </div>
               </div>
 
@@ -406,8 +408,8 @@ export default function RoninArcadePage() {
              <div className="flex items-center gap-3">
                <Trophy className="w-5 h-5 text-brand" />
                <div>
-                  <h3 className="text-[15px] font-semibold text-foreground tracking-wide">Global Leaderboard</h3>
-                  <p className="text-[13px] text-secondary mt-0.5">Top users in the matrix</p>
+                  <h3 className="text-[15px] font-semibold text-foreground tracking-wide">{t("leaderboardTitle")}</h3>
+                  <p className="text-[13px] text-secondary mt-0.5">{t("leaderboardSubtitle")}</p>
                </div>
              </div>
            </div>

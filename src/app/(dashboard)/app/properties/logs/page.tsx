@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useAction } from "convex/react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Activity, RefreshCcw } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
@@ -9,9 +10,10 @@ import { lazy, Suspense, useCallback, useMemo, useState, useEffect } from "react
 const PropertiesRunRows = lazy(() => import("./PropertiesRunRows"));
 
 function PropertiesRunsEmptyState() {
+  const t = useTranslations("properties.logs");
   return (
     <div className="p-8 rounded-[20px] border border-border-dim bg-background/30 text-center">
-      <span className="text-[14px] text-muted font-medium">No extraction jobs have been dispatched yet.</span>
+      <span className="text-[14px] text-muted font-medium">{t("empty")}</span>
     </div>
   );
 }

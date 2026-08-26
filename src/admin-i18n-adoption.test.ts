@@ -27,8 +27,12 @@ import { describe, expect, test } from "vitest";
  */
 
 const FLOORS: Array<{ root: string; floor: number }> = [
-  { root: "src/app/(dashboard)/admin", floor: 139 },
-  { root: "src/ui", floor: 22 },
+  // Raised 139 -> 156 and 22 -> 29 on 2026-08-26 to the measured counts, per
+  // the convention above; the customer root joined the same day when WP08
+  // brought its pre-kit pages into the catalogue.
+  { root: "src/app/(dashboard)/admin", floor: 156 },
+  { root: "src/ui", floor: 29 },
+  { root: "src/app/(dashboard)/app", floor: 36 },
 ];
 
 const repoRoot = process.cwd();

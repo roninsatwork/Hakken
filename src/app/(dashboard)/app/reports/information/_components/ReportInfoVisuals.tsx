@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   BookOpen,
   Brain,
@@ -98,6 +99,7 @@ function SectionTag({ x, y, children }: { x: number; y: number; children: string
 }
 
 export function ReportAnatomy() {
+  const t = useTranslations("salesReports.information.visuals");
   const [selected, setSelected] = useState<ReportGroup | null>(null);
   const glowId = useId();
 
@@ -114,7 +116,7 @@ export function ReportAnatomy() {
           viewBox="0 0 420 560"
           className="w-full h-auto max-w-[400px] mx-auto"
           role="img"
-          aria-label="A wireframe of the board report showing its story, numbers, risks and actions sections"
+          aria-label={t("wireframe")}
         >
           <defs>
             <filter id={glowId} x="-80%" y="-80%" width="260%" height="260%">
@@ -571,6 +573,7 @@ function FlowArrow({
 }
 
 export function AgentSources() {
+  const t = useTranslations("salesReports.information.visuals");
   const [selected, setSelected] = useState<SourceGroup | null>(null);
   const glowId = useId();
 
@@ -587,7 +590,7 @@ export function AgentSources() {
           viewBox="0 0 420 560"
           className="w-full h-auto max-w-[400px] mx-auto"
           role="img"
-          aria-label="The report agent at the centre of what it draws on: your pipeline, your company's knowledge and its own memory — writing the board report"
+          aria-label={t("agentCentre")}
         >
           <defs>
             <filter id={glowId} x="-80%" y="-80%" width="260%" height="260%">

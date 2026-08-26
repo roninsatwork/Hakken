@@ -619,6 +619,153 @@
       "startingSearch": "Starting Search...",
       "urlError": "Error: Please paste a valid Rightmove search URL first.",
       "searchSuccess": "Search started successfully! Gathering the full property details can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can track the progress in the Logs tab."
+    },
+    "logs": {
+      "empty": "No extraction jobs have been dispatched yet."
+    },
+    "detail": {
+      "notFoundTitle": "Property Not Found",
+      "notFoundBody": "The requested property could not be found or you do not have permission to view it.",
+      "imageAlt": "Property",
+      "noImage": "No Image Available",
+      "back": "Back",
+      "listedOn": "Listed On",
+      "status": "Status",
+      "estSize": "Est. Size",
+      "pricePerSqFt": "Price per SqFt",
+      "propertyType": "Property Type",
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "epcRating": "EPC Rating",
+      "location": "Location",
+      "viewMap": "View Map",
+      "floorplanAlt": "Floorplan",
+      "contactRightmove": "Contact via Rightmove"
+    },
+    "information": {
+      "heroKicker": "PROPERTY INTELLIGENCE",
+      "howItWorks": "How it works",
+      "engineBehind": "The engine behind it",
+      "oneWorkflow": "One workflow, three tools",
+      "builtTrusted": "Built to be trusted",
+      "bestCollection": "Getting the best collection",
+      "commonQuestions": "Common questions",
+      "tools": {
+        "search": {
+          "title": "Search",
+          "body": "The front door. Every collection starts here — and widening your library later is a ten-second job."
+        },
+        "scraped": {
+          "title": "Scraped Data",
+          "body": "Your growing library of listings — search by address, open the full details of any property, or delete what you no longer need."
+        },
+        "logs": {
+          "title": "Logs",
+          "body": "The control room: follow every run from dispatch to done, with counts updating as listings arrive."
+        }
+      },
+      "apify": {
+        "proven": {
+          "title": "Proven, not homemade",
+          "body": "Extraction runs on a dedicated, battle-tested web-automation platform — infrastructure built for exactly this job."
+        },
+        "runId": {
+          "title": "A real run ID, every time",
+          "body": "Every collection is a genuine Apify run with its own ID. Logs shows you the platform's own record — nothing summarised, nothing invented."
+        },
+        "scales": {
+          "title": "Scales as you do",
+          "body": "From ten listings to a thousand, from one search to fifty — the same engine takes it all in stride."
+        }
+      },
+      "trust": {
+        "publicOnly": {
+          "title": "Public listings only",
+          "body": "The agent gathers what's already public on Rightmove — the same details anyone browsing the site would see."
+        },
+        "deleteAnytime": {
+          "title": "Delete anytime",
+          "body": "Every property in your library can be removed with one click — with a confirmation step so nothing vanishes by accident."
+        },
+        "honestStatus": {
+          "title": "Honest status, never guessed",
+          "body": "Logs mirrors the real state of every run. A collection is only marked complete when it truly is."
+        }
+      },
+      "tips": {
+        "filterFirst": {
+          "title": "Filter on Rightmove first",
+          "body": "The collection is only as good as the search. Narrow by area, price and beds before copying the link."
+        },
+        "forSale": {
+          "title": "Use a for-sale search",
+          "body": "Links must be Rightmove property-for-sale search pages — a link to a single listing won't start a run."
+        },
+        "startSmall": {
+          "title": "Start small, then scale",
+          "body": "A first run of 50–100 listings proves the search is right before you commit to a thousand."
+        },
+        "letItRun": {
+          "title": "Let it run",
+          "body": "Big runs take time. Start one before a meeting, and the listings will be waiting when you get back."
+        }
+      },
+      "faq": {
+        "link": {
+          "q": "What kind of link do I paste?",
+          "a": "A Rightmove search results page for properties for sale — the address in your browser after you've searched and filtered."
+        },
+        "range": {
+          "q": "Why between 10 and 1,000 properties?",
+          "a": "Ten is the smallest run worth dispatching; a thousand keeps runs fast and focused. For bigger areas, split the search and run each part."
+        },
+        "duration": {
+          "q": "How long does a collection take?",
+          "a": "It depends on the size of the run. Small runs land in minutes; larger ones take as long as they take — Logs shows honest progress throughout."
+        },
+        "details": {
+          "q": "What details are captured for each property?",
+          "a": "Address, price, bedrooms, bathrooms, property type, the listing agent and the lead photo — plus the full listing text and floorplan where available."
+        },
+        "scraper": {
+          "q": "What actually does the scraping?",
+          "a": "Apify — an industry-standard web scraping platform, directed by your Rightmove Agent. The agent dispatches the run and files every listing as it lands."
+        },
+        "keepOpen": {
+          "q": "Do I need to keep the page open?",
+          "a": "No. Once dispatched, the run continues on its own. Come back to Logs whenever you like — pending counts update as listings arrive."
+        },
+        "remove": {
+          "q": "Can I remove properties I don't want?",
+          "a": "Yes — every row in Scraped Data has a delete action, with a confirmation step first. Deleting is permanent, and it never touches the live listing."
+        },
+        "fails": {
+          "q": "What happens if a run fails?",
+          "a": "It's marked Failed in Logs, plainly — no partial pretence. Your existing library is untouched; just dispatch the search again."
+        }
+      },
+      "stats": {
+        "paste": "pasted link starts a collection",
+        "gathered": "listings gathered in a single run",
+        "checks": "between live status checks",
+        "manual": "copying and pasting by hand"
+      },
+      "pageTitle": "How Property Collection Works",
+      "pageIntro": "A plain-English look at how one Rightmove link becomes a searchable library of property data — and how to watch it happen, live.",
+      "howSubtitle": "From a Rightmove search to your library, in four steps",
+      "engineSubtitle": "Powered by Apify — the industry standard for web data",
+      "workflowSubtitle": "Search starts it. Data holds it. Logs proves it.",
+      "workflowBody": "The Properties section is three pages working as one pipeline — you'll usually start in Search, live in Scraped Data, and glance at Logs while a run is underway.",
+      "trustSubtitle": "You stay in control of the data",
+      "trustBody": "An autonomous collector is only useful if you can trust what it brings back — and remove what you don't want. The pipeline is built around both.",
+      "tipsSubtitle": "Four small things that make a big difference",
+      "faqSubtitle": "Everything else you might be wondering",
+      "ctaTitle": "Start a collection",
+      "ctaBody": "Paste your first Rightmove search and watch it fill.",
+      "visuals": {
+        "journey": "The collection journey: a Rightmove search link travels to the agent, becomes property listings, and is tracked in the run logs",
+        "engineBadge": "RIGHTMOVE AGENT · APIFY"
+      }
     }
   },
   "header": {
@@ -4786,7 +4933,13 @@
         "failed": "That could not be raised. Please try again."
       },
       "attachedPhoto": "Attached photo",
-      "stillWriting": "Still writing"
+      "stillWriting": "Still writing",
+      "thread": {
+        "awaiting": "Awaiting Instructions...",
+        "readingFiles": "Reading your files",
+        "readingOne": "Reading 1 file before answering",
+        "readingMany": "Reading {count} files before answering"
+      }
     },
     "costs": {
       "title": "AI Running Costs",
@@ -6642,5 +6795,152 @@
       "endDateOptional": "End Date (Optional)",
       "applyRange": "Apply Range"
     }
+  },
+  "salesReports": {
+    "board": {
+      "emptyTitle": "No Reports Available",
+      "emptyBody": "Upload a pipeline CSV and schedule the Sales Report Agent to generate board reports.",
+      "title": "BOARD REPORTS",
+      "subtitle": "Generated by {platformName} Intelligence Output Engine",
+      "kpiTotalPipeline": "Total Pipeline",
+      "kpiWeightedPipeline": "Weighted Pipeline",
+      "kpiOpenDeals": "Open Deals",
+      "kpiWinRate": "Win Rate",
+      "kpiWeighted": "Weighted",
+      "kpiAvgSize": "Avg Size",
+      "kpiCycleDays": "Cycle Days",
+      "seriesTotalPipeline": "Total Pipeline",
+      "seriesWeightedForecast": "Weighted Forecast",
+      "axisValue": "(Value)",
+      "axisWeightedValue": "(Weighted Value)",
+      "recommendation": "Recommendation:",
+      "seriesRiskConcentration": "Risk Concentration",
+      "momentumLeaders": "Momentum Leaders",
+      "supportCoaching": "Support & Coaching"
+    },
+    "information": {
+      "pageTitle": "How Board Reports Work",
+      "pageIntro": "A plain-English look at the analyst behind your board reports — what it reads, what it remembers, and why you can trust every line it writes.",
+      "howItWorks": "How it works",
+      "howSubtitle": "From what your team knows to what your board sees",
+      "gettingStarted": "Getting started",
+      "startSubtitle": "Small to start. Smarter every week.",
+      "startBody": "There's no setup project. The agent starts with what you already have, and everything you add from then on makes it a better analyst.",
+      "builtTrusted": "Built to be trusted",
+      "trustSubtitle": "A report you can defend in the room",
+      "trustBody": "A board report is only useful if you can stand behind every line of it. The report is built around one rule: read what's in the data, and say what to do about it.",
+      "readingReport": "Reading the report",
+      "glossarySubtitle": "Four terms, translated",
+      "commonQuestions": "Common questions",
+      "faqSubtitle": "Everything else you might be wondering",
+      "ctaBody": "Open the latest board report, written from your own business.",
+      "ctaButton": "Open Board Reports",
+      "trust": {
+        "yourNumbers": {
+          "title": "Your numbers, not ours",
+          "body": "Every figure is computed from your own pipeline. The report reads your business — it never invents it."
+        },
+        "comparable": {
+          "title": "Comparable, week on week",
+          "body": "The format never changes, so what's changed in your business stands out the moment you open the report."
+        },
+        "actionable": {
+          "title": "Advice you can act on",
+          "body": "Every risk is paired with a reason and a recommendation — the report ends in actions, not observations."
+        }
+      },
+      "glossary": {
+        "weighted": {
+          "title": "Weighted pipeline",
+          "body": "Each deal's value multiplied by its probability of closing. £100k at 30% counts as £30k — a more honest forecast than face value."
+        },
+        "windows": {
+          "title": "Closing windows",
+          "body": "Deals grouped by when they're expected to land — this month, next month, and beyond — so timing risk is visible at a glance."
+        },
+        "radar": {
+          "title": "Risk radar",
+          "body": "Critical needs intervention this week. At-risk is deteriorating. Quiet simply hasn't been touched lately — often the easiest wins."
+        },
+        "winRate": {
+          "title": "Win rate",
+          "body": "Of the deals that reached a decision, the share you won — tracked with its direction of travel from the last report."
+        }
+      },
+      "ingredients": {
+        "pipeline": {
+          "title": "Your pipeline, as it is today",
+          "body": "An export of your deals from whatever you use now — no integrations, no IT project, no new process for the team."
+        },
+        "knowledge": {
+          "title": "Anything your team knows",
+          "body": "Add pricing, playbooks and account notes over time. The more it knows about how you sell, the sharper its advice."
+        },
+        "schedule": {
+          "title": "A schedule that suits you",
+          "body": "Weekly for a board cadence, or on demand. The agent runs on its own — you just open the result."
+        }
+      },
+      "faq": {
+        "need": {
+          "q": "What do I need to give it?",
+          "a": "An export of your pipeline — the same spreadsheet of deals your team already keeps. From there, everything else is optional."
+        },
+        "knows": {
+          "q": "What does it know about my company?",
+          "a": "Exactly what you share with it, and nothing more. Your pipeline, plus the documents your team adds to its knowledge."
+        },
+        "remembers": {
+          "q": "Does it remember previous reports?",
+          "a": "Yes. Lessons from one run carry into the next, and its memory of your business compounds — the analyst gets better with every report."
+        },
+        "retrieval": {
+          "q": "How does it find the right information?",
+          "a": "When it's writing, it searches everything you've shared and pulls in only the passages that matter for the point being made."
+        },
+        "cadence": {
+          "q": "How often do I get a new report?",
+          "a": "As often as you like. Most teams schedule a weekly run ahead of their board or pipeline meeting, and trigger extra runs when something big moves."
+        },
+        "share": {
+          "q": "Can I share it with the board?",
+          "a": "Yes. Export to Board captures the entire report as a single high-resolution image, ready to drop into a deck or an email."
+        },
+        "estimated": {
+          "q": "Are the numbers ever estimated?",
+          "a": "The figures are computed from your own pipeline. Where the report offers judgement — risk tiers, recommendations — it says so and gives its reason."
+        },
+        "noReports": {
+          "q": "Why does it say 'No Reports Available'?",
+          "a": "The agent hasn't run yet. Share your pipeline with it and schedule or trigger its first run — the first report lands minutes later."
+        }
+      },
+      "stats": {
+        "deals": "of your deals read on every run",
+        "sections": "board-ready sections, every week",
+        "agent": "agent behind every report",
+        "hours": "analyst hours needed to produce it"
+      },
+      "visuals": {
+        "wireframe": "A wireframe of the board report showing its story, numbers, risks and actions sections",
+        "agentCentre": "The report agent at the centre of what it draws on: your pipeline, your company's knowledge and its own memory — writing the board report"
+      }
+    }
+  },
+  "agenticTesting": {
+    "sandboxExec": "Sandbox Exec",
+    "isolatedRuntime": "Isolated Runtime",
+    "resetSession": "Reset Sandbox Session",
+    "selectIdentity": "Select Runtime Identity",
+    "noAgents": "No agents registered.",
+    "autoRoute": "Automatically routes your prompt to the best agent",
+    "airGapped": "Air-gapped Testing Environment"
+  },
+  "arcade": {
+    "title": "RONIN'S RUN",
+    "playNow": "PLAY NOW",
+    "controls": "USE ARROW KEYS TO MOVE",
+    "leaderboardTitle": "Global Leaderboard",
+    "leaderboardSubtitle": "Top users in the matrix"
   }
 }

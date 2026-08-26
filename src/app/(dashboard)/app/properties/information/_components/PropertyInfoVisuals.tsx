@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Activity, Bot, Database, Link2 } from "lucide-react";
 
 const ACCENT = "#b9dcc4"; // Properties sage
@@ -124,6 +125,7 @@ function HouseGlyph({ cx, cy, tint }: { cx: number; cy: number; tint: string }) 
 }
 
 export function CollectionJourney() {
+  const t = useTranslations("properties.information.visuals");
   const [selected, setSelected] = useState<JourneyGroup | null>(null);
   const glowId = useId();
 
@@ -140,7 +142,7 @@ export function CollectionJourney() {
           viewBox="0 0 420 640"
           className="w-full h-auto max-w-[400px] mx-auto"
           role="img"
-          aria-label="The collection journey: a Rightmove search link travels to the agent, becomes property listings, and is tracked in the run logs"
+          aria-label={t("journey")}
         >
           <defs>
             <filter id={glowId} x="-80%" y="-80%" width="260%" height="260%">
@@ -292,7 +294,7 @@ export function CollectionJourney() {
                 opacity={0.7}
               />
             ))}
-            <StageTag y={252}>RIGHTMOVE AGENT · APIFY</StageTag>
+            <StageTag y={252}>{t("engineBadge")}</StageTag>
           </g>
 
           <Connector y1={258} y2={288} />
