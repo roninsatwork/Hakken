@@ -794,7 +794,49 @@
         "flowKicker": "From link to library",
         "flowTitle": "One link in, a property library out",
         "flowBody": "You don't fill in forms or copy listings by hand. You describe what you want with a Rightmove search, and the pipeline does the rest — collecting, filing and reporting as it goes.",
-        "flowHint": "Select a stage to see what happens there."
+        "flowHint": "Select a stage to see what happens there.",
+        "logsTag": "EXTRACTION LOGS",
+        "stages": {
+          "defaultDescription": "Four stages, one journey — from a link you paste to a library you own.",
+          "link": {
+            "label": "Paste a link",
+            "count": "Search",
+            "description": "Build your search on Rightmove itself — area, price range, bedrooms, radius — then copy the address of the results page and paste it in. That one link describes everything to collect."
+          },
+          "agent": {
+            "label": "The agent takes over",
+            "count": "Runs on Apify",
+            "description": "The Rightmove Agent reads your link and hands the heavy lifting to Apify, the industry-standard scraping platform. You set the ceiling — anywhere from 10 to 1,000 listings."
+          },
+          "data": {
+            "label": "Listings captured",
+            "count": "Scraped Data",
+            "description": "Each listing lands in Scraped Data with its full details and photo — searchable, browsable, and one click from a complete view."
+          },
+          "logs": {
+            "label": "Watch it live",
+            "count": "Logs",
+            "description": "Every run appears in Logs with its live status — in progress, completed or failed — and a count of what it captured. No refreshing, no guessing."
+          }
+        },
+        "flow": {
+          "search": {
+            "title": "Search on Rightmove",
+            "body": "Use Rightmove's own filters to describe exactly the properties you care about."
+          },
+          "paste": {
+            "title": "Paste the link",
+            "body": "Drop the search URL in, choose how many listings to gather, and press go."
+          },
+          "collect": {
+            "title": "The agent collects",
+            "body": "The extraction kicks off on its own — no tabs to babysit."
+          },
+          "browse": {
+            "title": "Browse your library",
+            "body": "Listings arrive in Scraped Data, with every run tracked in Logs."
+          }
+        }
       },
       "ctaHeading": "Ready to build your library?"
     },
@@ -960,7 +1002,11 @@
         "nameHeader": "Provider",
         "costHeader": "Cost",
         "calls": "{count} calls",
-        "empty": "No Provider Data"
+        "empty": "No Provider Data",
+        "names": {
+          "google": "Google Vertex AI",
+          "unknown": "Unknown / Legacy"
+        }
       }
     },
     "authDiagnostics": {
@@ -3318,7 +3364,8 @@
               "failed": "Failed",
               "settingsChanged": "Settings changed",
               "tooltip": "{formatted} {count, plural, one {job} other {jobs}}",
-              "tooltipFailed": ", {count} failed"
+              "tooltipFailed": ", {count} failed",
+              "failedCount": "{formatted} {count, plural, one {job failed} other {jobs failed}}"
             },
             "failures": {
               "title": "What is going wrong",
@@ -3338,7 +3385,8 @@
                 "worked": "Worked",
                 "usually": "Usually"
               },
-              "notConnected": "{count} of these went to a tool that is not connected"
+              "notConnected": "{count} of these went to a tool that is not connected",
+              "failsOften": "Fails too often"
             },
             "latest": {
               "title": "Latest jobs",
@@ -5052,7 +5100,9 @@
         "readingFiles": "Reading your files",
         "readingOne": "Reading 1 file before answering",
         "readingMany": "Reading {count} files before answering"
-      }
+      },
+      "unsupportedFiles": "Unsupported file(s): {files}",
+      "analyzedDocuments": "Analyzed attached documents."
     },
     "costs": {
       "title": "AI Running Costs",
@@ -5922,6 +5972,9 @@
         "iphone": "iPhone",
         "android": "Android Device",
         "unknown": "Unknown Device"
+      },
+      "pagination": {
+        "showing": "Showing {start} to {end} of {total} logins"
       }
     },
     "preferences": {
@@ -6984,7 +7037,15 @@
       "sectionRiskVector": "Risk Vector Analysis",
       "sectionTeamSpotlight": "Team Spotlight",
       "sectionPatterns": "Patterns & Signals",
-      "sectionPriorities": "This Week's Priorities"
+      "sectionPriorities": "This Week's Priorities",
+      "riskVectors": {
+        "slippedClose": "Slipped Close",
+        "stagnant": "Stagnant",
+        "noChampion": "No Champion",
+        "priceBlock": "Price Block",
+        "competitor": "Competitor",
+        "legalSec": "Legal/Sec"
+      }
     },
     "information": {
       "pageTitle": "How Board Reports Work",
@@ -7099,7 +7160,89 @@
         "sourcesKicker": "The analyst behind it",
         "sourcesTitle": "An analyst that knows your business",
         "sourcesBody": "Board Reports aren't a template filled in with numbers. They're written by an AI agent that reads your entire pipeline, draws on the documents your team shares with it, and remembers what it learned last week.",
-        "sourcesHint": "Select a source to see what the agent draws on."
+        "sourcesHint": "Select a source to see what the agent draws on.",
+        "anatomy": {
+          "defaultDescription": "Eight sections, in the same order every time — written fresh from your pipeline data on each run.",
+          "story": {
+            "label": "The story",
+            "count": "Section 1",
+            "description": "A punchy headline and an executive summary in plain English — the agent's own read on the biggest news in your pipeline, before a single chart."
+          },
+          "numbers": {
+            "label": "The numbers",
+            "count": "Sections 2–4",
+            "description": "Six KPIs with their direction of travel, deals grouped by closing window, top deals to watch, and pipeline health by stage and by rep — the full state of play."
+          },
+          "risks": {
+            "label": "The risks",
+            "count": "Section 5",
+            "description": "Every open deal is triaged into one of three tiers — critical, at risk, or quiet — each with the reason and a recommended next move."
+          },
+          "actions": {
+            "label": "The actions",
+            "count": "Sections 6–8",
+            "description": "Who has momentum and who needs support, the patterns hiding in the data, and a short numbered list of this week's priorities."
+          }
+        },
+        "wireframeTags": {
+          "headline": "1 · HEADLINE",
+          "numbers": "2–4 · THE NUMBERS",
+          "riskRadar": "5 · RISK RADAR",
+          "thisWeek": "6–8 · THIS WEEK"
+        },
+        "riskTiers": {
+          "critical": "CRITICAL",
+          "atRisk": "AT RISK",
+          "quiet": "QUIET"
+        },
+        "nodeTags": {
+          "pipeline": "YOUR PIPELINE",
+          "knowledge": "YOUR KNOWLEDGE",
+          "agent": "THE REPORT AGENT",
+          "memory": "WHAT IT REMEMBERS",
+          "report": "THE BOARD REPORT"
+        },
+        "sources": {
+          "defaultDescription": "One agent, drawing on everything your team already has — and turning it into the report your board reads.",
+          "pipeline": {
+            "label": "Your pipeline",
+            "count": "Every deal, in full",
+            "description": "Every open deal — its value, its stage, its owner, its expected close — read in full on every run. Nothing sampled, nothing skimmed."
+          },
+          "knowledge": {
+            "label": "Company knowledge",
+            "count": "Documents you share",
+            "description": "Pricing, playbooks, account notes — whatever your team shares with it. When it's writing, the agent pulls out the right page at the right moment, the way a good colleague would."
+          },
+          "memory": {
+            "label": "What it remembers",
+            "count": "Run after run",
+            "description": "The agent carries what it learned from previous runs into the next one — so every report builds on the last instead of starting from scratch."
+          },
+          "report": {
+            "label": "The report it writes",
+            "count": "Board-ready",
+            "description": "Everything it read, remembered and looked up — distilled into the pages your board acts on. The full anatomy is just below."
+          }
+        },
+        "flow": {
+          "teach": {
+            "title": "Teach it your business",
+            "body": "Share your pipeline and the documents your team already has. That's its raw material."
+          },
+          "reads": {
+            "title": "It reads everything",
+            "body": "The whole pipeline, plus everything you've shared — before it writes a word."
+          },
+          "finds": {
+            "title": "It finds what matters",
+            "body": "Risks, patterns and momentum — weighed against what it knows and what it remembers."
+          },
+          "writes": {
+            "title": "It writes. You present.",
+            "body": "The report lands on schedule, and one click exports it for the deck."
+          }
+        }
       },
       "ctaHeading": "Ready to see your pipeline this clearly?"
     }
@@ -7114,7 +7257,18 @@
     "airGapped": "Air-gapped Testing Environment",
     "sendFailed": "The test message was not sent. Try again.",
     "anyAutoRoute": "Any (Auto-Route)",
-    "emptyBody": "Select an agent from the top right and send a message. All AI loop telemetry will be recorded cleanly into the Agent Logs tab without affecting standard users."
+    "emptyBody": "Select an agent from the top right and send a message. All AI loop telemetry will be recorded cleanly into the Agent Logs tab without affecting standard users.",
+    "phases": {
+      "sandbox": "Initializing Secure Sandbox...",
+      "intent": "Parsing Intent Parameters...",
+      "vectors": "Aligning Semantic Vectors...",
+      "telemetry": "Establishing Telemetry Lock...",
+      "dispatch": "Routing Tool Dispatch...",
+      "synthesis": "Synthesizing Response..."
+    },
+    "awaitingAgent": "Awaiting Agent Selection...",
+    "promptPlaceholder": "Dispatch a prompt to trigger agentic logic...",
+    "selectAgent": "Select an Agent"
   },
   "arcade": {
     "title": "RONIN'S RUN",
@@ -7122,6 +7276,24 @@
     "controls": "USE ARROW KEYS TO MOVE",
     "leaderboardTitle": "Global Leaderboard",
     "leaderboardSubtitle": "Top users in the matrix",
-    "scoreFailed": "Your score could not be saved. Try again."
+    "scoreFailed": "Your score could not be saved. Try again.",
+    "insertToken": "INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.",
+    "searchPlaceholder": "Search the board by player",
+    "emptyScores": "No scores recorded. Be the first to enter the matrix.",
+    "noAttempts": "No attempts yet",
+    "showing": "Showing {start} to {end} of {total} attempts",
+    "playerAvatar": "Player avatar",
+    "table": {
+      "rank": "Rank",
+      "user": "User",
+      "score": "Score",
+      "timestamp": "Timestamp"
+    },
+    "hud": {
+      "score": "SCORE: {score}",
+      "level": "LEVEL: {level}",
+      "levelCleared": "LEVEL {level} CLEARED!",
+      "nextLevelIn": "NEXT LEVEL IN {seconds}..."
+    }
   }
 }

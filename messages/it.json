@@ -794,7 +794,49 @@
         "flowKicker": "Dal link alla libreria",
         "flowTitle": "Un link in entrata, una libreria di immobili in uscita",
         "flowBody": "Non compili moduli e non copi annunci a mano. Descrivi ciò che vuoi con una ricerca Rightmove, e al resto pensa la pipeline: raccoglie, archivia e ti tiene aggiornato mentre lavora.",
-        "flowHint": "Seleziona una fase per vedere cosa succede."
+        "flowHint": "Seleziona una fase per vedere cosa succede.",
+        "logsTag": "REGISTRO ESTRAZIONI",
+        "stages": {
+          "defaultDescription": "Quattro fasi, un solo percorso — dal link che incolli alla libreria che è tua.",
+          "link": {
+            "label": "Incolla un link",
+            "count": "Ricerca",
+            "description": "Costruisci la ricerca su Rightmove — zona, fascia di prezzo, camere, raggio — poi copia l'indirizzo della pagina dei risultati e incollalo qui. Quel solo link descrive tutto ciò che c'è da raccogliere."
+          },
+          "agent": {
+            "label": "L'agente prende in mano",
+            "count": "Gira su Apify",
+            "description": "L'agente Rightmove legge il tuo link e passa il lavoro pesante ad Apify, la piattaforma di scraping standard di settore. Il limite lo decidi tu — da 10 a 1.000 annunci."
+          },
+          "data": {
+            "label": "Annunci raccolti",
+            "count": "Dati raccolti",
+            "description": "Ogni annuncio arriva nei Dati raccolti con i dettagli completi e la foto — consultabile, navigabile e a un clic dalla scheda completa."
+          },
+          "logs": {
+            "label": "Guardalo in diretta",
+            "count": "Registro",
+            "description": "Ogni esecuzione compare nel Registro con il suo stato in tempo reale — in corso, completata o fallita — e il conteggio di ciò che ha raccolto. Niente ricariche, niente supposizioni."
+          }
+        },
+        "flow": {
+          "search": {
+            "title": "Cerca su Rightmove",
+            "body": "Usa i filtri di Rightmove per descrivere esattamente gli immobili che ti interessano."
+          },
+          "paste": {
+            "title": "Incolla il link",
+            "body": "Inserisci l'indirizzo della ricerca, scegli quanti annunci raccogliere e avvia."
+          },
+          "collect": {
+            "title": "L'agente raccoglie",
+            "body": "L'estrazione parte da sola — nessuna scheda da sorvegliare."
+          },
+          "browse": {
+            "title": "Sfoglia la tua libreria",
+            "body": "Gli annunci arrivano nei Dati raccolti, con ogni esecuzione tracciata nel Registro."
+          }
+        }
       },
       "ctaHeading": "Pronto a costruire la tua libreria?"
     },
@@ -960,7 +1002,11 @@
         "nameHeader": "Fornitore",
         "costHeader": "Costo",
         "calls": "{count} chiamate",
-        "empty": "Nessun dato sui fornitori"
+        "empty": "Nessun dato sui fornitori",
+        "names": {
+          "google": "Google Vertex AI",
+          "unknown": "Sconosciuto / Legacy"
+        }
       }
     },
     "authDiagnostics": {
@@ -3318,7 +3364,8 @@
               "failed": "Falliti",
               "settingsChanged": "Impostazioni cambiate",
               "tooltip": "{formatted} {count, plural, one {lavoro} other {lavori}}",
-              "tooltipFailed": ", {count} falliti"
+              "tooltipFailed": ", {count} falliti",
+              "failedCount": "{formatted} {count, plural, one {lavoro fallito} other {lavori falliti}}"
             },
             "failures": {
               "title": "Cosa sta andando storto",
@@ -3338,7 +3385,8 @@
                 "worked": "Riuscito",
                 "usually": "Di solito"
               },
-              "notConnected": "{count} di queste sono andate a uno strumento non collegato"
+              "notConnected": "{count} di queste sono andate a uno strumento non collegato",
+              "failsOften": "Fallisce troppo spesso"
             },
             "latest": {
               "title": "Ultimi lavori",
@@ -5052,7 +5100,9 @@
         "readingFiles": "Sto leggendo i tuoi file",
         "readingOne": "Sto leggendo 1 file prima di rispondere",
         "readingMany": "Sto leggendo {count} file prima di rispondere"
-      }
+      },
+      "unsupportedFiles": "File non supportati: {files}",
+      "analyzedDocuments": "Documenti allegati analizzati."
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",
@@ -5922,6 +5972,9 @@
         "iphone": "iPhone",
         "android": "Dispositivo Android",
         "unknown": "Dispositivo Sconosciuto"
+      },
+      "pagination": {
+        "showing": "Da {start} a {end} di {total} accessi"
       }
     },
     "preferences": {
@@ -6984,7 +7037,15 @@
       "sectionRiskVector": "Analisi dei vettori di rischio",
       "sectionTeamSpotlight": "Focus sul team",
       "sectionPatterns": "Schemi e segnali",
-      "sectionPriorities": "Le priorità di questa settimana"
+      "sectionPriorities": "Le priorità di questa settimana",
+      "riskVectors": {
+        "slippedClose": "Chiusura slittata",
+        "stagnant": "Ferma",
+        "noChampion": "Nessuno sponsor",
+        "priceBlock": "Blocco sul prezzo",
+        "competitor": "Concorrenza",
+        "legalSec": "Legale/Sicurezza"
+      }
     },
     "information": {
       "pageTitle": "Come funzionano i report per il consiglio",
@@ -7099,7 +7160,89 @@
         "sourcesKicker": "L'analista che c'è dietro",
         "sourcesTitle": "Un analista che conosce la tua attività",
         "sourcesBody": "I report per il consiglio non sono un modello riempito di numeri. Li scrive un agente AI che legge tutta la tua pipeline, attinge ai documenti che il tuo team condivide con lui e ricorda ciò che ha imparato la settimana scorsa.",
-        "sourcesHint": "Seleziona una fonte per vedere da cosa attinge l'agente."
+        "sourcesHint": "Seleziona una fonte per vedere da cosa attinge l'agente.",
+        "anatomy": {
+          "defaultDescription": "Otto sezioni, sempre nello stesso ordine — scritte da zero dai dati della tua pipeline a ogni esecuzione.",
+          "story": {
+            "label": "Il racconto",
+            "count": "Sezione 1",
+            "description": "Un titolo incisivo e una sintesi per la direzione in parole semplici — la lettura dell'agente sulla notizia più grossa della tua pipeline, prima ancora di un grafico."
+          },
+          "numbers": {
+            "label": "I numeri",
+            "count": "Sezioni 2–4",
+            "description": "Sei KPI con la loro direzione, le trattative raggruppate per finestra di chiusura, quelle principali da tenere d'occhio e la salute della pipeline per fase e per venditore — il quadro completo."
+          },
+          "risks": {
+            "label": "I rischi",
+            "count": "Sezione 5",
+            "description": "Ogni trattativa aperta finisce in uno di tre livelli — critica, a rischio o silenziosa — ciascuno con la ragione e la prossima mossa consigliata."
+          },
+          "actions": {
+            "label": "Le azioni",
+            "count": "Sezioni 6–8",
+            "description": "Chi è in slancio e chi ha bisogno di supporto, gli schemi nascosti nei dati e un breve elenco numerato delle priorità di questa settimana."
+          }
+        },
+        "wireframeTags": {
+          "headline": "1 · TITOLO",
+          "numbers": "2–4 · I NUMERI",
+          "riskRadar": "5 · RADAR DEI RISCHI",
+          "thisWeek": "6–8 · QUESTA SETTIMANA"
+        },
+        "riskTiers": {
+          "critical": "CRITICO",
+          "atRisk": "A RISCHIO",
+          "quiet": "SILENZIOSO"
+        },
+        "nodeTags": {
+          "pipeline": "LA TUA PIPELINE",
+          "knowledge": "LA TUA CONOSCENZA",
+          "agent": "L'AGENTE DEI REPORT",
+          "memory": "COSA RICORDA",
+          "report": "IL REPORT PER IL CONSIGLIO"
+        },
+        "sources": {
+          "defaultDescription": "Un solo agente, che attinge a tutto ciò che il tuo team ha già — e lo trasforma nel report che legge il tuo consiglio.",
+          "pipeline": {
+            "label": "La tua pipeline",
+            "count": "Ogni trattativa, per intero",
+            "description": "Ogni trattativa aperta — valore, fase, titolare, chiusura prevista — letta per intero a ogni esecuzione. Niente campioni, niente letture veloci."
+          },
+          "knowledge": {
+            "label": "La conoscenza aziendale",
+            "count": "I documenti che condividi",
+            "description": "Listini, playbook, note sui clienti — tutto ciò che il tuo team condivide con lui. Mentre scrive, l'agente tira fuori la pagina giusta al momento giusto, come farebbe un bravo collega."
+          },
+          "memory": {
+            "label": "Cosa ricorda",
+            "count": "Esecuzione dopo esecuzione",
+            "description": "L'agente porta ciò che ha imparato dalle esecuzioni precedenti in quella successiva — così ogni report parte dall'ultimo invece che da zero."
+          },
+          "report": {
+            "label": "Il report che scrive",
+            "count": "Pronto per il consiglio",
+            "description": "Tutto ciò che ha letto, ricordato e cercato — distillato nelle pagine su cui il tuo consiglio agisce. L'anatomia completa è qui sotto."
+          }
+        },
+        "flow": {
+          "teach": {
+            "title": "Insegnagli la tua attività",
+            "body": "Condividi la tua pipeline e i documenti che il tuo team ha già. È la sua materia prima."
+          },
+          "reads": {
+            "title": "Legge tutto",
+            "body": "L'intera pipeline, più tutto ciò che hai condiviso — prima di scrivere una parola."
+          },
+          "finds": {
+            "title": "Trova ciò che conta",
+            "body": "Rischi, schemi e slancio — pesati con ciò che sa e ciò che ricorda."
+          },
+          "writes": {
+            "title": "Lui scrive. Tu presenti.",
+            "body": "Il report arriva puntuale, e un clic lo esporta per la presentazione."
+          }
+        }
       },
       "ctaHeading": "Pronto a vedere la tua pipeline con questa chiarezza?"
     }
@@ -7114,7 +7257,18 @@
     "airGapped": "Ambiente di test isolato",
     "sendFailed": "Il messaggio di prova non è stato inviato. Riprova.",
     "anyAutoRoute": "Qualsiasi (instradamento automatico)",
-    "emptyBody": "Scegli un agente in alto a destra e invia un messaggio. Tutta la telemetria del ciclo AI viene registrata nella scheda Log agenti senza toccare gli utenti normali."
+    "emptyBody": "Scegli un agente in alto a destra e invia un messaggio. Tutta la telemetria del ciclo AI viene registrata nella scheda Log agenti senza toccare gli utenti normali.",
+    "phases": {
+      "sandbox": "Avvio della sandbox sicura...",
+      "intent": "Analisi dei parametri di intento...",
+      "vectors": "Allineamento dei vettori semantici...",
+      "telemetry": "Aggancio della telemetria...",
+      "dispatch": "Instradamento degli strumenti...",
+      "synthesis": "Sintesi della risposta..."
+    },
+    "awaitingAgent": "In attesa della scelta dell'agente...",
+    "promptPlaceholder": "Invia una richiesta per attivare la logica agentica...",
+    "selectAgent": "Scegli un agente"
   },
   "arcade": {
     "title": "RONIN'S RUN",
@@ -7122,6 +7276,24 @@
     "controls": "USA LE FRECCE PER MUOVERTI",
     "leaderboardTitle": "Classifica globale",
     "leaderboardSubtitle": "I migliori utenti nella matrice",
-    "scoreFailed": "Impossibile salvare il punteggio. Riprova."
+    "scoreFailed": "Impossibile salvare il punteggio. Riprova.",
+    "insertToken": "INSERISCI UN GETTONE VIRTUALE PER AVVIARE LA MATRICE... I PUNTEGGI MIGLIORI FINIRANNO NEL REGISTRO.",
+    "searchPlaceholder": "Cerca nella classifica per giocatore",
+    "emptyScores": "Nessun punteggio registrato. Sii il primo a entrare nella matrice.",
+    "noAttempts": "Ancora nessun tentativo",
+    "showing": "Da {start} a {end} di {total} tentativi",
+    "playerAvatar": "Avatar del giocatore",
+    "table": {
+      "rank": "Posizione",
+      "user": "Utente",
+      "score": "Punteggio",
+      "timestamp": "Data e ora"
+    },
+    "hud": {
+      "score": "PUNTI: {score}",
+      "level": "LIVELLO: {level}",
+      "levelCleared": "LIVELLO {level} SUPERATO!",
+      "nextLevelIn": "PROSSIMO LIVELLO TRA {seconds}..."
+    }
   }
 }

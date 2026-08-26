@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Activity, ArrowRight, Loader2, UserCheck } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Loader2, UserCheck } from "lucide-react";
 import {
   describeRunStatus,
   describeToolName,
@@ -39,6 +39,19 @@ const SLOW_TAIL_MIN_JOBS = 20;
 
 /** Four gridlines, so the scale reads top, two thirds, one third, nothing. */
 const AXIS_FRACTIONS = [1, 2 / 3, 1 / 3, 0];
+
+/**
+ * Diagonal cut-outs in the card colour, worn by the failed share of a bar and
+ * by the legend swatch that names it.
+ *
+ * The two are matched on purpose. A legend is only usable if its swatch can be
+ * found in the chart, and hue cannot do that here: the owner cannot tell red
+ * from green. Texture survives greyscale, a screenshot and an export.
+ */
+const FAILED_HATCH = {
+  backgroundImage:
+    "repeating-linear-gradient(135deg, transparent 0 2px, var(--color-card) 2px 3px)",
+} as const;
 
 /**
  * Whole-number ticks, with duplicates removed.
@@ -434,6 +447,33 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
     [analytics.versionChangeDays]
   );
 
+  // Which of those markers gets to carry the wording.
+  //
+  // Every changed day used to render the full "Settings changed" pill. Change
+  // the agent on four days in a row — which is an ordinary week of tuning —
+  // and the four pills overlap and clip each other, so the chart reads
+  // "Settir Settir Settir Settir Settings changed". Garbled text says less
+  // than no text.
+  //
+  // The line still marks every changed day; only the wording thins out. The
+  // spacing comes from how many days are on screen, because the same pill is
+  // roughly one bar wide over seven days and roughly four bars wide over
+  // thirty.
+  const labelledChangeDays = useMemo(() => {
+    const minimumGap = Math.max(1, Math.round(series.length / 7));
+    const labelled = new Set<number>();
+    let lastLabelled = -Infinity;
+
+    series.forEach((day, index) => {
+      if (!changedDays.has(day.dayStartMs)) return;
+      if (index - lastLabelled < minimumGap) return;
+      labelled.add(day.dayStartMs);
+      lastLabelled = index;
+    });
+
+    return labelled;
+  }, [series, changedDays]);
+
   return (
     <div className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -447,10 +487,10 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
         </div>
         <div className="flex gap-4 text-[11.5px] text-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-success" /> {t("finished")}
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-info" /> {t("finished")}
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-destructive" /> {t("failed")}
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-warning" style={FAILED_HATCH} /> {t("failed")}
           </span>
         </div>
       </div>
@@ -491,9 +531,11 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
                 {changed && (
                   <>
                     <span className="absolute -left-[3px] top-0 bottom-6 w-[2px] bg-brand/60 pointer-events-none" />
-                    <span className="absolute -top-1 left-0 -translate-x-1/2 z-20 whitespace-nowrap rounded-[6px] bg-brand px-2 py-[3px] text-[10.5px] text-white">
-                      {t("settingsChanged")}
-                    </span>
+                    {labelledChangeDays.has(day.dayStartMs) && (
+                      <span className="absolute -top-1 left-0 -translate-x-1/2 z-20 whitespace-nowrap rounded-[6px] bg-brand px-2 py-[3px] text-[10.5px] text-white">
+                        {t("settingsChanged")}
+                      </span>
+                    )}
                   </>
                 )}
 
@@ -503,11 +545,22 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
                 </div>
 
                 {day.failed > 0 && (
-                  <div className="bg-destructive rounded-t-[3px]" style={{ height: `${Math.max(failedHeight, 3)}px` }} />
+                  <>
+                    <span
+                      className="text-[10px] leading-none text-warning tabular-nums text-center truncate mb-1"
+                      title={t("failedCount", { formatted: formatCount(day.failed), count: day.failed })}
+                    >
+                      {formatCount(day.failed)}
+                    </span>
+                    <div
+                      className="bg-warning rounded-t-[3px]"
+                      style={{ ...FAILED_HATCH, height: `${Math.max(failedHeight, 3)}px` }}
+                    />
+                  </>
                 )}
                 {day.succeeded > 0 && (
                   <div
-                    className={`bg-success ${day.failed > 0 ? "" : "rounded-t-[3px]"}`}
+                    className={`bg-info ${day.failed > 0 ? "border-t-2 border-card" : "rounded-t-[3px]"}`}
                     style={{ height: `${Math.max(succeededHeight, 3)}px` }}
                   />
                 )}
@@ -664,7 +717,7 @@ function ToolReliability({
             key: "worked",
             header: t("columns.worked"),
             align: "right",
-            className: "px-0 pr-4 py-2.5 w-[104px]",
+            className: "px-0 pr-4 py-2.5 w-[128px]",
             cell: (tool) => {
               const rate = tool.calls > 0 ? tool.successes / tool.calls : 0;
               const struggling = rate < 0.95;
@@ -673,10 +726,16 @@ function ToolReliability({
                 <div className="flex items-center gap-2">
                   <span className="h-[5px] flex-1 rounded-[3px] bg-border-dim overflow-hidden min-w-[30px]">
                     <span
-                      className={`block h-full rounded-[3px] ${struggling ? "bg-destructive" : "bg-success"}`}
+                      className={`block h-full rounded-[3px] ${struggling ? "bg-warning" : "bg-info"}`}
                       style={{ width: `${Math.round(rate * 100)}%` }}
                     />
                   </span>
+                  {struggling && (
+                    <span className="flex items-center text-warning shrink-0" title={t("failsOften")}>
+                      <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span className="sr-only">{t("failsOften")}</span>
+                    </span>
+                  )}
                   <span className="text-[11.5px] text-secondary tabular-nums w-[38px] text-right">
                     {formatPercent(rate)}
                   </span>
