@@ -714,3 +714,28 @@ describe("connector marketplace honesty", () => {
     }
   });
 });
+
+describe("the tool shelf nothing was calling", () => {
+  test("it groups the shelf by kind and says whether it ran out of room", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      await ctx.db.insert("aiTools", {
+        name: "Hand-built tool",
+        description: "Built here rather than connected.",
+        modelName: "do_the_thing",
+        handlerMapping: "custom.thing",
+        requiredRole: "ADMIN",
+        isActive: true,
+        version: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return ctx.db.insert("users", { email: "shelf@test.com", role: "SUPER_ADMIN" });
+    });
+
+    const shelf = await t.withIdentity({ subject: superAdminId }).query(api.aiTools.getToolShelf, {});
+
+    expect(shelf).toEqual({ counts: { CUSTOM: 1 }, total: 1, isCapped: false });
+  });
+});

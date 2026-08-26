@@ -1446,3 +1446,53 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     ).rejects.toThrow("Unauthorized");
   });
 });
+
+describe("the model doors nothing was calling", () => {
+  /**
+   * Three reads here had no test that reached them, so their declared shapes
+   * were checked by the compiler and by nothing at run time — and the compiler
+   * cannot see a field a handler sends that its declaration does not name.
+   * Each read below asserts what came back, so a door returning nothing cannot
+   * pass by having nothing to be wrong about.
+   */
+  const seed = async (t: ReturnType<typeof convexTest>) => t.run(async (ctx) => {
+    const adminId = await ctx.db.insert("users", { email: "shapes@test.com", role: "SUPER_ADMIN" });
+    await ctx.db.insert("aiModels", {
+      modelId: "google:gemini-3.7-flash",
+      providerKey: "google",
+      providerModelId: "gemini-3.7-flash",
+      displayName: "Gemini 3.7 Flash",
+      isEnabled: true,
+      isDefault: false,
+      supportedUseCases: ["chat", "agent"],
+      capabilities: ["text"],
+      standardInputCostBelow200k: 0.1,
+      outputResponseCost: 0.4,
+      lastSyncedAt: Date.now(),
+    });
+    await ctx.db.insert("aiModelDefaults", {
+      scope: "global",
+      useCase: "chat",
+      providerKey: "google",
+      modelId: "google:gemini-3.7-flash",
+      updatedAt: Date.now(),
+    });
+    return adminId;
+  });
+
+  test("the picker, the active list and the provider usage all answer", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const client = t.withIdentity({ subject: await seed(t) });
+
+    const picker = await client.query(api.aiModels.getModelPickerOptions, {});
+    const active = await client.query(api.aiModels.getActiveModels, {});
+    const usage = await client.query(api.aiModels.getProviderDefaultUsage, { providerKey: "google" });
+
+    expect({
+      picker: picker.length,
+      active: active.length,
+      globalUseCases: usage.globalUseCases,
+      isPartial: usage.isPartial,
+    }).toEqual({ picker: 1, active: 1, globalUseCases: ["chat"], isPartial: false });
+  });
+});

@@ -6,6 +6,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { normalizeSearchTerm } from "./adminQueryService";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import * as aiModelShapes from "./utils/aiModelShapes";
 import {
   ANTHROPIC_PROVIDER_KEY,
   DEFAULT_MODEL_USE_CASES,
@@ -22,7 +23,7 @@ import {
   describeUseCaseProviderLimit,
   getProviderQualifiedModelId,
   isGoogleVertexModelId,
-  resolveExecutionModel, MODEL_CATALOG_LIMIT } from "./aiModelService";
+  resolveExecutionModel, MODEL_CATALOG_LIMIT, withInferredProvider, withInferredProviders } from "./aiModelService";
 
 /**
  * How many models a full-catalogue read will take.
@@ -53,24 +54,9 @@ const PLATFORM_PROVIDER_KEYS = [GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY,
 
 type AiModelDefaultUseCase = (typeof DEFAULT_MODEL_USE_CASES)[number];
 
-function withInferredProvider(model: Doc<"aiModels">): Doc<"aiModels"> {
-  if (model.providerKey || !isGoogleVertexModelId(model.modelId)) {
-    return model;
-  }
-
-  return {
-    ...model,
-    providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
-    providerModelId: model.providerModelId ?? model.modelId,
-  };
-}
-
-function withInferredProviders(models: Doc<"aiModels">[]) {
-  return models.map(withInferredProvider);
-}
-
 export const getModels = tenantQuery({
   args: {},
+  returns: aiModelShapes.modelListShape,
   handler: async (ctx) => {
     return withInferredProviders(await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT));
   },
@@ -84,6 +70,7 @@ export const getModels = tenantQuery({
  */
 export const getModelPickerOptions = tenantQuery({
   args: {},
+  returns: aiModelShapes.modelPickerOptionsShape,
   handler: async (ctx) => {
     const [models, disabledProviders] = await Promise.all([
       ctx.db
@@ -119,6 +106,7 @@ export const getActiveModels = tenantQuery({
   args: {
     useCase: v.optional(v.string()),
   },
+  returns: aiModelShapes.modelListShape,
   handler: async (ctx, args) => {
     const [rawModels, disabledProviders] = await Promise.all([
       ctx.db
@@ -186,6 +174,7 @@ export const getPaginatedModels = superAdminQuery({
     providerFilter: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: aiModelShapes.modelPageShape,
   handler: async (ctx, args) => {
     const term = normalizeSearchTerm(args.searchTerm);
     const statusEnabled = args.statusFilter === undefined ? undefined : args.statusFilter === "active";
@@ -289,6 +278,7 @@ async function recomputeModelRollup(ctx: MutationCtx) {
  */
 export const getModelCounts = superAdminQuery({
   args: {},
+  returns: aiModelShapes.modelCountsShape,
   handler: async (ctx) => {
     const rollup = await ctx.db
       .query("aiModelRollups")
@@ -311,6 +301,7 @@ export const getModelCounts = superAdminQuery({
 
 export const getProviders = superAdminQuery({
   args: {},
+  returns: aiModelShapes.providerListShape,
   handler: async (ctx) => {
     const providers = await ctx.db.query("aiProviders").withIndex("by_provider_key").take(PROVIDER_LIMIT);
     const providersByKey = new Map(providers.map((provider) => [provider.providerKey, provider]));
@@ -479,6 +470,7 @@ export const getProviderDefaultUsage = superAdminQuery({
   args: {
     providerKey: v.string(),
   },
+  returns: aiModelShapes.providerDefaultUsageShape,
   handler: async (ctx, args) => {
     const defaults = await ctx.db
       .query("aiModelDefaults")
@@ -534,6 +526,7 @@ export const setProviderEnabled = superAdminMutation({
 
 export const getGlobalModelDefaults = superAdminQuery({
   args: {},
+  returns: aiModelShapes.globalModelDefaultsShape,
   handler: async (ctx) => {
     const defaults = await Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
       const defaultRow = await ctx.db
@@ -556,7 +549,7 @@ export const getGlobalModelDefaults = superAdminQuery({
     }));
 
     return {
-      useCases: DEFAULT_MODEL_USE_CASES,
+      useCases: [...DEFAULT_MODEL_USE_CASES],
       defaults,
     };
   },
@@ -869,6 +862,7 @@ export const getCompanyModelDefaults = superAdminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: aiModelShapes.companyModelDefaultsShape,
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
     if (!company) throw appError("NOT_FOUND", "Company not found");
@@ -948,7 +942,7 @@ export const getCompanyModelDefaults = superAdminQuery({
 
     return {
       companyId: args.companyId,
-      useCases: DEFAULT_MODEL_USE_CASES,
+      useCases: [...DEFAULT_MODEL_USE_CASES],
       defaults,
       modelPickerOptions,
       providerNames,
@@ -1129,6 +1123,7 @@ export const toggleModelEnforcement = superAdminMutation({
 
 export const setDefaultModel = superAdminMutation({
   args: { modelId: v.id("aiModels") },
+  returns: aiModelShapes.setDefaultModelShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1428,6 +1423,7 @@ export const backfillGoogleVertexModelProviders = internalMutation({
 
 export const getModel = tenantQuery({
   args: { modelId: v.id("aiModels") },
+  returns: aiModelShapes.modelOrNullShape,
   handler: async (ctx, args) => {
     const model = await ctx.db.get(args.modelId);
     return model ? withInferredProvider(model) : model;

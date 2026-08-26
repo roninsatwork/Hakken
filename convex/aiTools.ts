@@ -1,6 +1,6 @@
 import { internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { v } from "convex/values";
+import { type Infer, v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
@@ -12,6 +12,8 @@ import {
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
 import { assertSafeSecretRefs } from "./connectorSecretPolicy";
 import { appError } from "./utils/appError";
+import * as toolShapes from "./utils/toolShapes";
+import { toClientOAuthConnection } from "./utils/toolShapes";
 import {
   assertConnectorOAuthAvailable,
   buildOAuthAuthorizationUrl,
@@ -232,6 +234,7 @@ function resolveConnectorTenantAvailability(args: {
  */
 export const getConnectorMarketplace = adminQuery({
   args: {},
+  returns: toolShapes.connectorMarketplaceShape,
   handler: async (ctx) => {
     const { user } = ctx;
     const activeCompanyId = getActiveCompanyId(user);
@@ -369,6 +372,7 @@ export const installConnector = superAdminMutation({
     enabledToolMappings: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),
   },
+  returns: v.id("toolConnectors"),
   handler: async (ctx, args) => {
     const { connectorId } = await installBuiltInConnector(ctx, {
       key: args.key,
@@ -386,6 +390,7 @@ export const installConnector = superAdminMutation({
 
 export const getConnectorInstallDetails = adminQuery({
   args: { connectorId: v.id("toolConnectors") },
+  returns: toolShapes.connectorInstallDetailsShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
@@ -411,6 +416,7 @@ export const getConnectorInstallDetails = adminQuery({
       .order("desc")
       .take(CONNECTOR_OAUTH_CONNECTION_LIMIT);
     const company = connector.companyId ? await ctx.db.get(connector.companyId) : null;
+    const clientOAuthConnections = oauthConnections.map(toClientOAuthConnection);
 
     return {
       connector,
@@ -419,8 +425,8 @@ export const getConnectorInstallDetails = adminQuery({
       canManageTenantScope: user.role === "SUPER_ADMIN",
       tools,
       secretRefs,
-      oauthConnections,
-      oauthConnection: oauthConnections[0] ?? null,
+      oauthConnections: clientOAuthConnections,
+      oauthConnection: clientOAuthConnections[0] ?? null,
       testLogs,
     };
   },
@@ -428,6 +434,7 @@ export const getConnectorInstallDetails = adminQuery({
 
 export const beginConnectorOAuth = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
+  returns: toolShapes.connectorOAuthStartShape,
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
@@ -467,7 +474,6 @@ export const beginConnectorOAuth = adminMutation({
     return {
       oauthConnectionId,
       authorizationUrl,
-      state,
     };
   },
 });
@@ -538,6 +544,7 @@ export const updateConnectorInstall = adminMutation({
     /** The external account this install is bound to — a phone number, say. */
     authAccountRef: v.optional(v.string()),
   },
+  returns: v.id("toolConnectors"),
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
@@ -633,6 +640,7 @@ export const updateConnectorInstall = adminMutation({
  */
 export const validateConnectorConfiguration = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
+  returns: toolShapes.connectorValidationShape,
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
@@ -651,7 +659,7 @@ export const validateConnectorConfiguration = adminMutation({
     const oauthMissing = authMode === "OAUTH" && connector.authConnectionStatus !== "CONNECTED";
     const disabled = connector.isActive === false || connector.installStatus === "DISABLED";
     const success = !disabled && !oauthMissing && (authMode === "NONE" || authMode === "OAUTH" || missingSecretRefs.length === 0);
-    const diagnosticCode = disabled
+    const diagnosticCode: Infer<typeof toolShapes.connectorDiagnosticCodeShape> = disabled
       ? "CONNECTOR_DISABLED"
       : oauthMissing
         ? "OAUTH_NOT_CONNECTED"
@@ -725,6 +733,7 @@ export const getPaginatedTools = superAdminQuery({
      * which ability. */
     category: v.optional(v.string()),
   },
+  returns: toolShapes.toolPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
 
@@ -815,6 +824,7 @@ export const createTool = superAdminMutation({
     confirmationRequired: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
   },
+  returns: v.id("aiTools"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -854,6 +864,7 @@ export const updateTool = superAdminMutation({
     confirmationRequired: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
   },
+  returns: v.id("aiTools"),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing) throw appError("NOT_FOUND", "Tool not found.");
@@ -898,6 +909,7 @@ export const deleteTool = superAdminMutation({
 // Fetch all tool bindings for a specific agent
 export const getAgentTools = superAdminQuery({
   args: { agentId: v.id("agents") },
+  returns: toolShapes.agentToolListShape,
   handler: async (ctx, args) => {
     const bindings = await ctx.db
        .query("agentTools")
@@ -964,6 +976,7 @@ const TOOL_SHELF_LIMIT = 500;
 
 export const getToolShelf = superAdminQuery({
   args: {},
+  returns: toolShapes.toolShelfShape,
   handler: async (ctx) => {
     const tools = await ctx.db.query("aiTools").take(TOOL_SHELF_LIMIT);
     const categoryByKey = new Map(

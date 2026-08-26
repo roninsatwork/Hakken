@@ -19,6 +19,7 @@ import {
 } from "./utils/inventoryRollupService";
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { appError } from "./utils/appError";
+import * as companyShapes from "./utils/companyShapes";
 import { rowShape } from "./utils/rowShape";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
@@ -27,6 +28,7 @@ const COMPANY_OPTIONS_MAX_LIMIT = 200;
 
 export const getCompanies = superAdminQuery({
   args: { mode: v.optional(v.literal("directoryOptions")) },
+  returns: companyShapes.companyListShape,
   handler: async (ctx, args) => {
     const companies = await ctx.db.query("companies").order("desc").take(10000);
 
@@ -58,6 +60,7 @@ export const getPaginatedCompanies = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: companyShapes.companyPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     const companiesPage = searchTerm
@@ -93,6 +96,7 @@ export const getCompanyOptions = superAdminQuery({
     searchTerm: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
+  returns: companyShapes.companyOptionListShape,
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(Math.floor(args.limit ?? COMPANY_OPTIONS_DEFAULT_LIMIT), 1), COMPANY_OPTIONS_MAX_LIMIT);
     const searchTerm = args.searchTerm?.trim();
@@ -136,6 +140,7 @@ export const getCompanyById = superAdminQuery({
  */
 export const getMyWorkspaceModules = tenantQuery({
   args: {},
+  returns: companyShapes.workspaceModulesShape,
   handler: async (ctx) => {
     if (!ctx.companyId) return { companyName: null, enabledModules: [] as string[] };
 
@@ -161,6 +166,7 @@ export const getMyWorkspaceModules = tenantQuery({
  */
 export const getPlanGrantsForCompany = superAdminQuery({
   args: { id: v.id("companies") },
+  returns: companyShapes.planGrantsShape,
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.id);
     if (!company?.planId) return null;
@@ -186,6 +192,7 @@ export const createCompany = superAdminMutation({
     systemPrompt: v.optional(v.string()),
     enabledModules: v.optional(v.array(v.string())),
   },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
@@ -217,6 +224,7 @@ export const updateCompany = superAdminMutation({
     systemPrompt: v.optional(v.string()),
     enabledModules: v.optional(v.array(v.string())),
   },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
@@ -262,6 +270,7 @@ export const setCompanyModules = superAdminMutation({
     id: v.id("companies"),
     enabledModules: v.array(v.string()),
   },
+  returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
@@ -323,6 +332,7 @@ export const deleteCompany = superAdminMutation({
 
 export const updateCompanyPrompt = superAdminMutation({
   args: { id: v.id("companies"), systemPrompt: v.string() },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -344,6 +354,7 @@ export const updateCompanyPrompt = superAdminMutation({
 
 export const updateCompanyDescription = superAdminMutation({
   args: { id: v.id("companies"), description: v.string() },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { description: args.description });
     return args.id;
@@ -357,6 +368,7 @@ export const updateCompanyProfile = superAdminMutation({
     description: v.optional(v.string()), 
     overview: v.optional(v.string()) 
   },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
@@ -383,6 +395,7 @@ export const updateCompanyProfile = superAdminMutation({
 
 export const assignPlanToCompany = superAdminMutation({
   args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
+  returns: v.id("companies"),
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.id);
     if (!company) throw appError("NOT_FOUND", "Company not found");

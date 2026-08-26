@@ -373,3 +373,24 @@ export function getGoogleVertexProviderModelId(
 
   return config.providerModelId;
 }
+
+/**
+ * A Google Vertex model recorded before the provider key existed reads as
+ * having no provider. The catalogue infers it from the model id rather than
+ * migrating the rows, so every read of the table agrees on who serves a model.
+ */
+export function withInferredProvider(model: Doc<"aiModels">): Doc<"aiModels"> {
+  if (model.providerKey || !isGoogleVertexModelId(model.modelId)) {
+    return model;
+  }
+
+  return {
+    ...model,
+    providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
+    providerModelId: model.providerModelId ?? model.modelId,
+  };
+}
+
+export function withInferredProviders(models: Doc<"aiModels">[]) {
+  return models.map(withInferredProvider);
+}

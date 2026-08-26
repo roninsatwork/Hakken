@@ -1,6 +1,56 @@
-type ConnectorCategory = "KNOWLEDGE" | "PROFILE" | "WORKFLOW" | "HTTP" | "EMAIL" | "VOICE" | "CUSTOM";
-type ConnectorAuthMode = "NONE" | "SECRET_REF" | "OAUTH";
-type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
+import { type Infer, v } from "convex/values";
+
+export const connectorCategoryValidator = v.union(
+  v.literal("KNOWLEDGE"),
+  v.literal("PROFILE"),
+  v.literal("WORKFLOW"),
+  v.literal("HTTP"),
+  v.literal("EMAIL"),
+  v.literal("VOICE"),
+  v.literal("CUSTOM"),
+);
+export const connectorAuthModeValidator = v.union(
+  v.literal("NONE"),
+  v.literal("SECRET_REF"),
+  v.literal("OAUTH"),
+);
+export const toolSideEffectLevelValidator = v.union(
+  v.literal("READ"),
+  v.literal("WRITE"),
+  v.literal("DESTRUCTIVE"),
+  v.literal("EXTERNAL"),
+);
+
+type ConnectorCategory = Infer<typeof connectorCategoryValidator>;
+type ConnectorAuthMode = Infer<typeof connectorAuthModeValidator>;
+type ToolSideEffectLevel = Infer<typeof toolSideEffectLevelValidator>;
+
+export const connectorToolDefinitionValidator = v.object({
+  name: v.string(),
+  description: v.string(),
+  handlerMapping: v.string(),
+  modelName: v.string(),
+  requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+  sideEffectLevel: toolSideEffectLevelValidator,
+  confirmationRequired: v.boolean(),
+  inputSchema: v.optional(v.string()),
+  outputSchema: v.optional(v.string()),
+  secretRefKeys: v.optional(v.array(v.string())),
+});
+
+export const toolConnectorDefinitionValidator = v.object({
+  key: v.string(),
+  name: v.string(),
+  description: v.string(),
+  category: connectorCategoryValidator,
+  authMode: connectorAuthModeValidator,
+  oauthProvider: v.optional(v.string()),
+  tenantAvailability: v.union(v.literal("GLOBAL"), v.literal("TENANT_RESTRICTED")),
+  requiredScopes: v.array(v.string()),
+  requiredSecretRefs: v.array(v.string()),
+  accountRefLabel: v.optional(v.string()),
+  toolDefinitions: v.array(connectorToolDefinitionValidator),
+});
 
 export type ConnectorToolDefinition = {
   name: string;

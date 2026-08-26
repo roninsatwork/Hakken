@@ -493,3 +493,28 @@ describe("OWASP: Broken Access Control - Companies", () => {
     });
   });
 });
+
+describe("the plan-grants door nothing was calling", () => {
+  test("a company on a plan reports the modules that plan grants", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const planId = await ctx.db.insert("plans", {
+        name: "Growth",
+        priceGBP: 99,
+        messageLimit: 5000,
+        isActive: true,
+        grantedModules: ["wiki"],
+        createdAt: Date.now(),
+      });
+      const companyId = await ctx.db.insert("companies", { name: "Granted Co", planId, createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", { email: "grants@test.com", role: "SUPER_ADMIN", createdAt: Date.now() });
+      return { adminId, companyId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    expect(await client.query(api.companies.getPlanGrantsForCompany, { id: companyId }))
+      .toEqual({ planName: "Growth", grantedModules: ["wiki"] });
+  });
+});

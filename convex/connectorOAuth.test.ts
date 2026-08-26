@@ -63,7 +63,12 @@ async function seedConnectedMailbox(t: ReturnType<typeof convexTest>) {
     companyId,
   });
   const begin = await asAdmin.mutation(api.aiTools.beginConnectorOAuth, { connectorId });
-  return { superAdminId, companyId, connectorId, asAdmin, ...begin };
+  // The state stays on the server — the mutation hands back only the URL the
+  // browser follows — so the test reads it from the row it was written to.
+  const state = await t.run(async (ctx) =>
+    (await ctx.db.get(begin.oauthConnectionId))!.state
+  );
+  return { superAdminId, companyId, connectorId, asAdmin, ...begin, state };
 }
 
 describe("the connector consent flow", () => {
@@ -356,5 +361,40 @@ describe("connector client credentials", () => {
     vi.stubEnv("AUTH_GOOGLE_ID", "auth-id");
     vi.stubEnv("AUTH_GOOGLE_SECRET", "auth-secret");
     expect(getConnectorOAuthClientCredentials("google")).toBeNull();
+  });
+});
+
+describe("the connector screen never receives the value that completes a connection", () => {
+  /**
+   * `state` is what finishes a pending OAuth connection, and `buildOAuthState`
+   * makes it unguessable for that reason. Every test above reaches the
+   * connector details while no connection exists, so removing the narrowing
+   * from that door left the whole suite green — the classic shape of a check
+   * with nothing to read.
+   */
+  beforeEach(() => {
+    vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_ID", "client-id.apps.googleusercontent.com");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("SITE_URL", "http://localhost:3000");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  test("a pending connection is on screen, and its state is not", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { asAdmin, connectorId, state } = await seedConnectedMailbox(t);
+
+    const details = await asAdmin.query(api.aiTools.getConnectorInstallDetails, { connectorId });
+
+    // Proof this read something: without a connection there is nothing to leak.
+    expect(details.oauthConnections).toHaveLength(1);
+    expect(details.oauthConnection?.status).toBe("PENDING");
+    expect(state).toContain("connector:");
+    expect(JSON.stringify(details)).not.toContain(state);
+    expect(details.oauthConnections.filter((row) => "state" in row)).toEqual([]);
   });
 });
