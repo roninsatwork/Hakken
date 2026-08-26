@@ -380,15 +380,26 @@ describe("one model turn: the wiring stays shared (source guard)", () => {
   const readRepoFile = (relativePath: string) =>
     fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
   // ai.ts split 2026-08-21 (foundation-quality plan, phase 3): the chat
-  // runtime that calls the shared turn now lives in aiChat.ts.
-  const runtimeFiles = ["convex/aiChat.ts", "convex/agentRuntime.ts"];
+  // runtime that calls the shared turn now lives in aiChat.ts. The agent
+  // runtime split again on 2026-08-26 (WP04): its registered actions stayed in
+  // agentRuntime.ts and the loop moved to agentObjectiveLoop.ts, so the agent
+  // runtime is the pair — the guard reads them together, and the negative
+  // scans below cover each file separately.
+  const runtimes: Array<{ label: string; files: string[] }> = [
+    { label: "convex/aiChat.ts", files: ["convex/aiChat.ts"] },
+    {
+      label: "convex/agentRuntime.ts + convex/agentObjectiveLoop.ts",
+      files: ["convex/agentRuntime.ts", "convex/agentObjectiveLoop.ts"],
+    },
+  ];
+  const runtimeFiles = runtimes.flatMap((runtime) => runtime.files);
 
   test("both runtimes import and call the shared turn", () => {
-    for (const file of runtimeFiles) {
-      const source = readRepoFile(file);
-      expect(source, `${file} must import the shared turn`).toContain('from "./modelTurnService"');
+    for (const { label, files } of runtimes) {
+      const source = files.map(readRepoFile).join("\n");
+      expect(source, `${label} must import the shared turn`).toContain('from "./modelTurnService"');
       for (const needle of ["guardModelTurn(", "runModelTurn(", "finishAssistantReply("]) {
-        expect(source, `${file} must call ${needle}`).toContain(needle);
+        expect(source, `${label} must call ${needle}`).toContain(needle);
       }
     }
   });

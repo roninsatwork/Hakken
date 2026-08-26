@@ -34,8 +34,12 @@ describe('Ask Sonae Safety Drift', () => {
     // shared `executeObjectiveLoop`. Each part is pinned to the safety helper it
     // owns, so a run cannot reach the model down a path that skipped one — in
     // particular, a resumed run must not be a way around tool authorization.
-    const agentSpine: Array<{ declaration: string; requirements: string[] }> = [
+    // The loop and its context builder moved to convex/agentObjectiveLoop.ts
+    // (WP04, 2026-08-26); the registered actions stayed. Each declaration is
+    // pinned in the file it lives in — the requirement set is unchanged.
+    const agentSpine: Array<{ file: string; declaration: string; requirements: string[] }> = [
       {
+        file: 'convex/agentRuntime.ts',
         declaration: 'runAgentObjective',
         requirements: [
           'guardModelTurn',
@@ -45,22 +49,25 @@ describe('Ask Sonae Safety Drift', () => {
         ],
       },
       {
+        file: 'convex/agentRuntime.ts',
         declaration: 'continueAgentObjective',
         requirements: ['buildLoopExecutionContext', 'executeObjectiveLoop'],
       },
       {
+        file: 'convex/agentObjectiveLoop.ts',
         declaration: 'buildLoopExecutionContext',
         requirements: ['buildAgentSystemInstruction'],
       },
       {
+        file: 'convex/agentObjectiveLoop.ts',
         declaration: 'executeObjectiveLoop',
         requirements: ['canExecuteTool'],
       },
     ];
 
-    for (const { declaration, requirements } of agentSpine) {
-      const body = extractDeclarationBody('convex/agentRuntime.ts', declaration);
-      expect(body, `${declaration} not found in convex/agentRuntime.ts`).not.toBe('');
+    for (const { file, declaration, requirements } of agentSpine) {
+      const body = extractDeclarationBody(file, declaration);
+      expect(body, `${declaration} not found in ${file}`).not.toBe('');
 
       const missing = requirements.filter((needle) => !body.includes(needle));
       expect(
@@ -74,9 +81,11 @@ describe('Ask Sonae Safety Drift', () => {
 
     // Checked across the whole runtime, not one function: the unsafe framing
     // these guard against would be just as harmful in the resumption path.
-    const agentRuntimeSource = readRepoFile('convex/agentRuntime.ts');
-    expect(agentRuntimeSource).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
-    expect(agentRuntimeSource).not.toContain('You MUST refer to these when answering');
+    for (const file of ['convex/agentRuntime.ts', 'convex/agentObjectiveLoop.ts']) {
+      const source = readRepoFile(file);
+      expect(source).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
+      expect(source).not.toContain('You MUST refer to these when answering');
+    }
   });
 
 
