@@ -663,6 +663,62 @@ sits behind the claim.
 
 ---
 
+## E5 — the remaining return shapes, scheduled rather than drained
+
+**Anthony, 2026-08-26: "I don't want to take technical debt across to a new app
+when we close the code."** That settles a question this plan had answered the
+other way, and he is right to overrule it.
+
+The advice given earlier was to leave the remaining declarations to drain — to
+let anyone touching one of those functions add its shape then, with the
+shrink-only ceiling making sure the number never rose. That is sound advice for
+*an application*. It is the wrong advice for *this* repository, because Sonae is
+the baseline every future product is forked from. Debt left here is not left
+here: it is copied into every client fork and every micro-SaaS built on it, and
+a fork cannot easily take a later fix back. The cost of leaving it is not one
+untidy codebase; it is one untidy codebase per product, forever.
+
+### What is actually left
+
+| Population | Count | Why it is or is not in scope |
+|---|---|---|
+| Client-callable, no declared shape | 362 | **In scope.** These are the surfaces a browser can call, and the ones where an undeclared shape can put something on the wire that was never meant to travel |
+| Handlers returning an undeclared database row | 0 | Closed 2026-08-26. This was the part that could leak, and it did twice |
+| Short-form handlers the classifier cannot read | 5 | In scope, and named rather than skipped — they return without the word `return`, so they need reading by hand |
+| Internal-only (`internalQuery`, `internalMutation`, `internalAction`) | 393 | **Out of scope, deliberately.** No client can reach them; their callers are inside the same deployment and already type-checked. Recorded so the figure is not rediscovered as a gap |
+
+### How it gets done
+
+One file at a time, smallest first, because the shapes within a file tend to
+repeat and the second is cheap once the first is written. After each file:
+typecheck, its own suite, and the ceiling in `return-shape-drift.test.ts`
+ratcheted down to the new measured figure. The ceiling never rises, so a batch
+that is abandoned halfway still leaves the population smaller than it found it.
+
+Two things make this slower than counting the declarations suggests, and both
+are the reason it is worth doing rather than an argument against it:
+
+- **The declaration is enforced at run time, not just compile time.** Getting a
+  shape slightly wrong breaks a screen for a real person. Every batch needs the
+  suite behind it, and the surfaces with real stored data need looking at.
+- **Writing the shape down finds bugs.** It has, three times now: four handlers
+  that promised `null` and returned nothing, a conversation list carrying a
+  thread's access-token hash, a call page receiving the telephony provider's
+  key. Budget for fixing what the declaring turns up.
+
+### The estimate, honestly
+
+**Ten to fifteen working days of focused sessions.** The comparable figure from
+this plan's own table is WP07 at two days for 41 surfaces, which would put 362
+at around seventeen; this is a little quicker because many sit in the same file
+and share a shape, and the trivial ones are already done.
+
+That is the honest number. It is not a reason to skip it — a fortnight spent
+once, on the framework, is cheaper than the same debt shipped into every product
+built on it.
+
+---
+
 ## Per-package status
 
 Update this table (and nothing else in this section) as work proceeds. States:
@@ -691,7 +747,8 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | E1 agentSkills.ts size | **done** (2026-08-26: 1826eb081, a43649f1c) | 2,458 to 1,173, under agentRuntime.ts and out of the bracket the auditor read it in. ~770 lines of unexported helpers, parsers and starter data into five modules, then ten ctx-taking database helpers into `agentSkillsService.ts`; no Convex API path moved, and the one file importing an exported helper was repointed. The split is not the durable part: `module-size-drift.test.ts` freezes the 23 backend modules over 1,000 lines at today's measurement, shrink-only, with a stale-entry rule, and all three of its rules were broken on purpose and watched to fail. The other 22 modules are recorded, not endorsed, and none was touched |
 | E2 movement scripts dispatcher | **done, rename refused** (2026-08-26: 58b651fa9) | `npm run movement` indexes all 101 in 19 families and 21 one-offs, dispatches by short name, and refuses an unknown one with its own family's suggestions. `npm run help` points at it. The rename half is refused on evidence rather than deferred: the names are referenced 1,258 times across 96 files, and four sit inside the frozen Posture Studio source — `MovementCaptureClient` prints one on screen for a user to copy and type, so renaming publishes a broken instruction. Every existing name still resolves. Three probes broken on purpose and watched to fail |
 | E3 broad analytics reads | **done — every capped figure discloses** (2026-08-26: bc143b7c4, 650c19c91) | All six remaining analytics surfaces read one row past their cap and report whether they ran out of room; five screens show it through one shared notice, in both languages. Sixteen reads left the broad-read register and its stale-entry rule took thirteen entries with them — 58 down to 45. `platformOverview` moved onto the same shared module, so its end-to-end test covers the shared code. **What is deliberately NOT done: the caps are still caps.** A month past ten thousand rows is now honest rather than silent, but it is still not read in full; removing the cap needs rollup tables, which is a design job and remains unscheduled |
-| E4 return validators beyond the client surface | **the harm is closed; the count is ratcheted** (2026-08-26: 25561ddb1, e10c4e0ea) | The population that could leak is zero: fourteen handlers returned undeclared database rows, two were real leaks (`users.tokenIdentifier`, `workflows.webhookSecret`) and the other twelve are shaped. Shapes derive from the schema through `rowShape`, so a new column is declared the day it is added rather than travelling undeclared. **445 client-callable declarations still say nothing about their shape** — mechanical, large, and unable to grow while it waits: `return-shape-drift.test.ts` holds the count shrink-only and holds the raw-row list at empty. Both rules probed |
+| E4 return validators beyond the client surface | **done** (2026-08-26: 25561ddb1, e10c4e0ea, 6dfd7083f) | The population that could leak is zero: fourteen handlers returned undeclared database rows, two were real leaks (`users.tokenIdentifier`, `workflows.webhookSecret`), and all fourteen are shaped. Shapes derive from the schema through `rowShape`, so a new column is declared the day it is added rather than travelling undeclared. The trivial fifth followed — 83 surfaces that return nothing or a bare boolean — taking the undeclared count 455 to 362. What remains is **E5**, which Anthony scheduled rather than left to drain |
+| E5 remaining return shapes | todo | 362 client-callable declarations with no shape, plus 5 short-form handlers the classifier cannot read. Scheduled on 2026-08-26 because Sonae is the baseline every product is forked from: debt left here is inherited by every fork and cannot easily be taken back. 10–15 days, one file at a time, ceiling ratcheted down after each. The 393 internal-only declarations are deliberately out of scope |
 
 ---
 
