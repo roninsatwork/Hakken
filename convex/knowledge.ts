@@ -972,6 +972,7 @@ export const saveChatDocument = tenantMutation({
 
 export const deleteDocument = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -1283,6 +1284,7 @@ export const KNOWLEDGE_FILE_QUEUE_WIDTH = 3;
 
 export const startKnowledgeFileQueue = adminMutation({
   args: {},
+  returns: v.null(),
   handler: async (ctx) => {
     for (let chain = 0; chain < KNOWLEDGE_FILE_QUEUE_WIDTH; chain += 1) {
       await ctx.scheduler.runAfter(chain * 250, internal.knowledgeActions.processKnowledgeFileQueue, {});
@@ -1343,6 +1345,7 @@ export const saveManualText = tenantMutation({
  */
 export const saveAnswerToWiki = tenantMutation({
   args: { messageId: v.id("messages") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { userId, user, companyId: actingCompanyId } = ctx;
 
@@ -1456,6 +1459,7 @@ async function requeueSourceCore(
 
 export const rereadSourceForCompany = tenantMutation({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     assertCanAccessKnowledgeScope(user, args.companyId);
@@ -1465,6 +1469,7 @@ export const rereadSourceForCompany = tenantMutation({
 
 export const rereadSourceForGlobal = tenantMutation({
   args: { pageId: v.id("wikiPages") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     assertCanAccessKnowledgeScope(user, undefined);

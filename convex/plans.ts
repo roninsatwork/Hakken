@@ -140,6 +140,7 @@ export const updatePlan = superAdminMutation({
     grantedModules: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
     await ctx.db.patch(id, {
@@ -157,6 +158,7 @@ export const updatePlan = superAdminMutation({
 
 export const deletePlan = superAdminMutation({
   args: { id: v.id("plans") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     // Ensure we don't delete plans strictly assigned to companies
     const companiesAssigned = await ctx.db

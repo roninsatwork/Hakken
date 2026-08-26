@@ -56,6 +56,7 @@ export const countMineUnread = tenantQuery({
 
 export const markRead = tenantMutation({
   args: { notificationId: v.id("notifications") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const notification = await ctx.db.get(args.notificationId);
     // Checked against the row's own owner, not the tenant: two colleagues in

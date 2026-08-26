@@ -176,6 +176,7 @@ export const updatePiiConfig = superAdminMutation({
   args: {
     configStr: v.string(), // JSON string
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 

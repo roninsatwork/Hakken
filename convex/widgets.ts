@@ -246,6 +246,7 @@ export const deleteWidget = adminMutation({
     widgetId: v.id("widgets"),
     companyId: v.optional(v.id("companies")),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 

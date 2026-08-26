@@ -46,6 +46,7 @@ export const getScoresCount = tenantQuery({
 
 export const submitScore = tenantMutation({
   args: { game: v.string(), score: v.number() },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 

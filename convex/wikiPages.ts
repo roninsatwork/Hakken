@@ -1559,6 +1559,7 @@ async function applyDelete(
 
 export const deletePageForCompany = adminMutation({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyDelete(ctx, { userId: ctx.userId, ...args });
@@ -1567,6 +1568,7 @@ export const deletePageForCompany = adminMutation({
 
 export const deletePageForGlobal = adminMutation({
   args: { pageId: v.id("wikiPages") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertPlatformWikiWrite(ctx.user);
     await applyDelete(ctx, { companyId: undefined, userId: ctx.userId, ...args });
@@ -1608,6 +1610,7 @@ function requireActiveCompany(user: Doc<"users">): Id<"companies"> {
 
 export const editPageContent = adminMutation({
   args: { pageId: v.id("wikiPages"), content: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await applyHumanEdit(ctx, {
       companyId: requireActiveCompany(ctx.user),
@@ -1619,6 +1622,7 @@ export const editPageContent = adminMutation({
 
 export const pinCorrection = adminMutation({
   args: { pageId: v.id("wikiPages"), text: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await applyPin(ctx, { companyId: requireActiveCompany(ctx.user), userId: ctx.userId, ...args });
   },
@@ -1626,6 +1630,7 @@ export const pinCorrection = adminMutation({
 
 export const unpinCorrection = adminMutation({
   args: { pageId: v.id("wikiPages"), pinnedAt: v.number() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await applyUnpin(ctx, { companyId: requireActiveCompany(ctx.user), userId: ctx.userId, ...args });
   },
@@ -1636,6 +1641,7 @@ export const unpinCorrection = adminMutation({
 
 export const editPageContentForCompany = adminMutation({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), content: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyHumanEdit(ctx, { userId: ctx.userId, ...args });
@@ -1644,6 +1650,7 @@ export const editPageContentForCompany = adminMutation({
 
 export const pinCorrectionForCompany = adminMutation({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), text: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyPin(ctx, { userId: ctx.userId, ...args });
@@ -1652,6 +1659,7 @@ export const pinCorrectionForCompany = adminMutation({
 
 export const editPageContentForGlobal = adminMutation({
   args: { pageId: v.id("wikiPages"), content: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertPlatformWikiWrite(ctx.user);
     await applyHumanEdit(ctx, { companyId: undefined, userId: ctx.userId, ...args });
@@ -1660,6 +1668,7 @@ export const editPageContentForGlobal = adminMutation({
 
 export const pinCorrectionForGlobal = adminMutation({
   args: { pageId: v.id("wikiPages"), text: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertPlatformWikiWrite(ctx.user);
     await applyPin(ctx, { companyId: undefined, userId: ctx.userId, ...args });
@@ -1668,6 +1677,7 @@ export const pinCorrectionForGlobal = adminMutation({
 
 export const unpinCorrectionForGlobal = adminMutation({
   args: { pageId: v.id("wikiPages"), pinnedAt: v.number() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertPlatformWikiWrite(ctx.user);
     await applyUnpin(ctx, { companyId: undefined, userId: ctx.userId, ...args });
@@ -1676,6 +1686,7 @@ export const unpinCorrectionForGlobal = adminMutation({
 
 export const unpinCorrectionForCompany = adminMutation({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), pinnedAt: v.number() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyUnpin(ctx, { userId: ctx.userId, ...args });

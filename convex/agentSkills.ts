@@ -1114,6 +1114,7 @@ export const setBindingEnabled = superAdminMutation({
 
 export const unbindSkillFromAgent = superAdminMutation({
   args: { bindingId: v.id("agentSkillBindings") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);

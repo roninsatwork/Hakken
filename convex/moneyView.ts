@@ -185,6 +185,7 @@ function normaliseMinutes(value: number): number {
 
 export const setAssumptionsForCompany = adminMutation({
   args: { companyId: v.id("companies"), ...assumptionArgs },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await ctx.db.patch(args.companyId, {
@@ -208,6 +209,7 @@ export const setAssumptionsForCompany = adminMutation({
 
 export const setAssumptionsForGlobal = adminMutation({
   args: assumptionArgs,
+  returns: v.null(),
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
       throw appError("UNAUTHORIZED", "Unauthorized access to platform settings");

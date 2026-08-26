@@ -54,6 +54,7 @@ export const getSpokenVoice = tenantQuery({
 
 export const setSpokenVoice = adminMutation({
   args: { voice: v.string() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     if (!SPEECH_VOICE_KEYS.includes(args.voice as SpeechVoiceKey)) {

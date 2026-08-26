@@ -217,6 +217,7 @@ export const update = tenantMutation({
     spineGoal: v.optional(movementSpineGoalValidator),
     primaryCue: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const movement = await ctx.db.get(args.id);
     if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Unauthorized");
@@ -240,6 +241,7 @@ export const update = tenantMutation({
 
 export const remove = tenantMutation({
   args: { id: v.id("movements") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const movement = await ctx.db.get(args.id);
     if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Unauthorized");

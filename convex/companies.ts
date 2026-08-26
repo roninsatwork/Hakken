@@ -292,6 +292,7 @@ export const setCompanyModules = superAdminMutation({
 
 export const deleteCompany = superAdminMutation({
   args: { id: v.id("companies") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 

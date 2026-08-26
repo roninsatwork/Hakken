@@ -387,6 +387,7 @@ export const toggleRuleActive = tenantMutation({
 
 export const deleteRule = tenantMutation({
   args: { id: v.id("aiRules") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);

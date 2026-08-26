@@ -125,6 +125,7 @@ export const deleteMemory = adminMutation({
   args: {
     memoryId: v.id("agentMemories"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
@@ -541,6 +542,7 @@ export const updateMemory = adminMutation({
     content: v.string(),
     applyMode: applyModeValidator,
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
@@ -584,6 +586,7 @@ export const restoreMemory = adminMutation({
   args: {
     memoryId: v.id("agentMemories"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);

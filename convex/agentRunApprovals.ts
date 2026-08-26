@@ -148,6 +148,7 @@ export const decideApproval = superAdminMutation({
     decision: v.union(v.literal("APPROVED"), v.literal("REJECTED"), v.literal("CANCELLED")),
     decisionReason: v.optional(v.string()),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const approval = await ctx.db.get(args.approvalId);

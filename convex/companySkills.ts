@@ -486,6 +486,7 @@ export const createSkill = adminMutation({
     recommendedKnowledgeJson: v.optional(v.string()),
     versionLabel: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     throw appError("INVALID_INPUT", CENTRAL_SKILL_ONLY_ERROR);

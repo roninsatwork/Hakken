@@ -498,6 +498,7 @@ export const resumeApprovalStep = superAdminAction({
     action: v.union(v.literal("APPROVED"), v.literal("REJECTED")),
     reason: v.optional(v.string()),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, {
       id: args.executionId,

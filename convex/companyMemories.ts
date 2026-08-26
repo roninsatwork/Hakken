@@ -520,6 +520,7 @@ export const updateMemory = adminMutation({
     content: v.string(),
     applyMode: applyModeValidator,
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
     if (!existing) throw appError("NOT_FOUND", "Memory not found");
@@ -568,6 +569,7 @@ export const archiveMemory = adminMutation({
   args: {
     memoryId: v.id("companyMemories"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
     if (!existing) throw appError("NOT_FOUND", "Memory not found");
@@ -618,6 +620,7 @@ export const restoreMemory = adminMutation({
   args: {
     memoryId: v.id("companyMemories"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
     if (!existing) throw appError("NOT_FOUND", "Memory not found");
@@ -953,6 +956,7 @@ export const rejectCandidate = adminMutation({
     candidateId: v.id("companyMemoryCandidates"),
     rejectionReason: v.optional(v.string()),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const candidate = await ctx.db.get(args.candidateId);
     if (!candidate) throw appError("NOT_FOUND", "Memory candidate not found");

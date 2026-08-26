@@ -481,6 +481,7 @@ export const beginConnectorOAuth = adminMutation({
 
 export const disconnectConnectorOAuth = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
@@ -877,6 +878,7 @@ export const updateTool = superAdminMutation({
 
 export const deleteTool = superAdminMutation({
   args: { id: v.id("aiTools") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     // Must also cleanse all bindings to this tool in the junction table
     const bindings = await ctx.db
@@ -921,6 +923,7 @@ export const toggleAgentTool = superAdminMutation({
     toolId: v.id("aiTools"),
     action: v.union(v.literal("BIND"), v.literal("UNBIND"))
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const existingBinding = await ctx.db
        .query("agentTools")

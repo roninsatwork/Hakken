@@ -1271,6 +1271,7 @@ export const updateAgent = superAdminMutation({
 
 export const deleteAgent = superAdminMutation({
   args: { id: v.id("agents") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1370,6 +1371,7 @@ export const createInlineAgent = superAdminMutation({
 
 export const promoteToGlobal = superAdminMutation({
   args: { id: v.id("agents") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const now = Date.now();

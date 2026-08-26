@@ -146,6 +146,7 @@ export const update = superAdminMutation({
     darkSidebarBg: v.optional(v.string()),
     diagnosticRoutingEnabled: v.optional(v.boolean())
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -192,6 +193,7 @@ export const clearLogo = superAdminMutation({
   args: {
     mode: v.union(v.literal("light"), v.literal("dark")),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 

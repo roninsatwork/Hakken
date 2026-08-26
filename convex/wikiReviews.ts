@@ -155,6 +155,7 @@ export const listPendingReviewsForGlobal = adminQuery({
 
 export const decideReviewForGlobal = adminMutation({
   args: { reviewId: v.id("wikiReviews"), approve: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
@@ -206,6 +207,7 @@ async function decideCore(
 
 export const decideReview = adminMutation({
   args: { reviewId: v.id("wikiReviews"), approve: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No workspace selected.");
@@ -215,6 +217,7 @@ export const decideReview = adminMutation({
 
 export const decideReviewForCompany = adminMutation({
   args: { companyId: v.id("companies"), reviewId: v.id("wikiReviews"), approve: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await decideCore(ctx, { userId: ctx.userId, ...args });

@@ -1,3 +1,4 @@
+import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { replaceGlobalInventoryRollup } from "./utils/inventoryRollupService";
 import { superAdminMutation } from "./tenantFunctions";
@@ -70,6 +71,7 @@ export async function rebuildGlobalInventoryRollupData(ctx: MutationCtx) {
 
 export const rebuildGlobalInventoryRollup = superAdminMutation({
   args: {},
+  returns: v.boolean(),
   handler: async (ctx) => {
     await rebuildGlobalInventoryRollupData(ctx);
     return true;

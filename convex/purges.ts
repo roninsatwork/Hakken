@@ -82,6 +82,7 @@ export const updatePipelineConfig = superAdminMutation({
   args: {
     configStr: v.string(), // JSON string representing the config
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -983,6 +984,7 @@ export const cancelPurge = superAdminMutation({
   args: {
     historyId: v.id("purgeHistory"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { user } = ctx;
 

@@ -162,6 +162,7 @@ async function decideDraft(
 
 export const decideProposedCaseForCompany = adminMutation({
   args: { companyId: v.id("companies"), caseId: v.id("companyEvalCases"), approve: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await decideDraft(ctx, { userId: ctx.userId, ...args });

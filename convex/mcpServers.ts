@@ -163,6 +163,7 @@ export const updateServer = adminMutation({
     authMode: v.optional(authModeValidator),
     secretRef: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const server = await requireOwnServer(ctx, args.id);
 
@@ -189,6 +190,7 @@ export const updateServer = adminMutation({
 /** Turn a server on or off without disconnecting it. */
 export const setServerStatus = adminMutation({
   args: { id: v.id("mcpServers"), status: statusValidator },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const server = await requireOwnServer(ctx, args.id);
     await ctx.db.patch(server._id, { status: args.status, updatedAt: Date.now() });
@@ -208,6 +210,7 @@ export const setServerStatus = adminMutation({
  */
 export const deleteServer = adminMutation({
   args: { id: v.id("mcpServers") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const server = await requireOwnServer(ctx, args.id);
 

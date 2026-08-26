@@ -119,6 +119,7 @@ export const listMine = tenantQuery({
 
 export const addMine = tenantMutation({
   args: { content: v.string() },
+  returns: v.null(),
   handler: async (ctx, args): Promise<void> => {
     const content = normalizeText(args.content).slice(0, USER_MEMORY_MAX_CHARS);
     if (!content) throw appError("INVALID_INPUT", "A note needs words.");
@@ -161,6 +162,7 @@ export const addMine = tenantMutation({
  * archive an admin could read later. */
 export const deleteMine = tenantMutation({
   args: { memoryId: v.id("userMemories") },
+  returns: v.null(),
   handler: async (ctx, args): Promise<void> => {
     const row = await ctx.db.get(args.memoryId);
     if (!row || row.userId !== ctx.userId) throw appError("NOT_FOUND", "Note not found.");

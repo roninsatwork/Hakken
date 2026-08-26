@@ -193,6 +193,7 @@ export const listOpenQuestionsForGlobal = adminQuery({
 
 export const dismissOpenQuestionForGlobal = adminMutation({
   args: { questionId: v.id("wikiOpenQuestions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
@@ -230,6 +231,7 @@ async function dismissCore(
 
 export const dismissOpenQuestion = adminMutation({
   args: { questionId: v.id("wikiOpenQuestions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No workspace selected.");
@@ -239,6 +241,7 @@ export const dismissOpenQuestion = adminMutation({
 
 export const dismissOpenQuestionForCompany = adminMutation({
   args: { companyId: v.id("companies"), questionId: v.id("wikiOpenQuestions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await dismissCore(ctx, { userId: ctx.userId, ...args });

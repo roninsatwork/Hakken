@@ -309,6 +309,7 @@ export const listUnansweredForGlobal = adminQuery({
 
 export const dismissUnansweredForGlobal = adminMutation({
   args: { unansweredId: v.id("wikiUnansweredQuestions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN") {
       throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
@@ -331,6 +332,7 @@ export const dismissUnansweredForGlobal = adminMutation({
 /** Not worth covering — a person's call, audited like every other. */
 export const dismissUnansweredForCompany = adminMutation({
   args: { companyId: v.id("companies"), unansweredId: v.id("wikiUnansweredQuestions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const row = await ctx.db.get(args.unansweredId);

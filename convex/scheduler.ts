@@ -98,6 +98,7 @@ export const updateSchedule = superAdminMutation({
     intervalStr: v.string(),
     isActive: v.boolean(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     if (!args.workflowId && !args.agentId) {
       throw appError("INVALID_INPUT", "Must select a target payload (Workflow or Agent).");
@@ -122,6 +123,7 @@ export const toggleSchedule = superAdminMutation({
     scheduleId: v.id("schedules"),
     isActive: v.boolean(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const schedule = await ctx.db.get(args.scheduleId);
 
@@ -143,6 +145,7 @@ export const deleteSchedule = superAdminMutation({
   args: {
     scheduleId: v.id("schedules"),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     await ctx.db.delete(args.scheduleId);
     return true;

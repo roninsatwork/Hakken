@@ -301,6 +301,7 @@ export const listConnections = adminQuery({
 /** The "Check now" button behind the screen: probe everything, on demand. */
 export const probeConnectionsNow = superAdminAction({
   args: {},
+  returns: v.null(),
   handler: async (ctx): Promise<null> => {
     await ctx.runAction(internal.connectionProbes.probeConnections, {});
     return null;

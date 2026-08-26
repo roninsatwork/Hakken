@@ -508,6 +508,7 @@ export const setProviderEnabled = superAdminMutation({
     providerKey: v.string(),
     isEnabled: v.boolean(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const now = Date.now();
@@ -566,6 +567,7 @@ export const setGlobalModelDefault = superAdminMutation({
     useCase: v.string(),
     modelId: v.string(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const model = await assertModelCanBeDefaultForUseCase(ctx, args);
@@ -609,6 +611,7 @@ export const clearGlobalModelDefault = superAdminMutation({
   args: {
     useCase: v.string(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     if (!isSupportedDefaultUseCase(args.useCase)) {
@@ -959,6 +962,7 @@ export const setCompanyModelDefault = superAdminMutation({
     useCase: v.string(),
     modelId: v.string(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1012,6 +1016,7 @@ export const clearCompanyModelDefault = superAdminMutation({
     companyId: v.id("companies"),
     useCase: v.string(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1088,6 +1093,7 @@ export const resolveEmbeddingModelConfigForExecution = internalQuery({
 
 export const toggleModelEnforcement = superAdminMutation({
   args: { modelId: v.id("aiModels"), isEnabled: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1441,6 +1447,7 @@ export const updatePricingConfig = superAdminMutation({
     // no cost calculation, no budget, no report. A field that only ever travels
     // one way looks like it means something, so it stopped being asked for.
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 

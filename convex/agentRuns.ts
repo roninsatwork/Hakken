@@ -993,6 +993,7 @@ export const cancelRun = adminMutation({
     runId: v.id("agentRuns"),
     reason: v.optional(v.string()),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);

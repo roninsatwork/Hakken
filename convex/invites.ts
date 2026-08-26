@@ -85,6 +85,7 @@ export const saveTemplate = superAdminMutation({
     body: v.string(),
     ctaText: v.string(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -160,6 +161,7 @@ export const getInvitesByCompany = adminQuery({
 // Revoke/Delete a pending invitation
 export const revokeInvite = adminMutation({
   args: { id: v.id("invitations") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 

@@ -226,6 +226,7 @@ export const updateWorkflow = superAdminMutation({
 
 export const deleteWorkflow = superAdminMutation({
   args: { id: v.id("workflows") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 

@@ -408,6 +408,7 @@ export const purgeUserEntitiesInternal = internalMutation({
 
 export const deleteUser = tenantMutation({
   args: { id: v.id("users") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
     if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
@@ -678,6 +679,7 @@ export const recordLogout = softMutation({
 
 export const impersonateCompany = superAdminMutation({
   args: { companyId: v.optional(v.id("companies")) },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -727,6 +729,7 @@ export const getUnassignedSuperAdmins = superAdminQuery({
 
 export const assignSuperAdminToCompany = superAdminMutation({
   args: { userId: v.id("users"), companyId: v.id("companies") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId: callerId } = ctx;
 
@@ -752,6 +755,7 @@ export const assignSuperAdminToCompany = superAdminMutation({
 
 export const detachSuperAdminFromCompany = superAdminMutation({
   args: { userId: v.id("users") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId: callerId } = ctx;
 
