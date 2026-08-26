@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser } from "./authz";
-import { moduleMutation, moduleQuery, publicQuery, superAdminQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, superAdminQuery, softQuery } from "./tenantFunctions";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
 import { appError } from "./utils/appError";
@@ -88,13 +88,13 @@ export const listProperties = moduleQuery({
   },
 });
 
-export const getPropertiesCount = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getPropertiesCount = softQuery({
+  reason: "The properties screen shows a zero count for a caller with no session rather than an error; company scoping is still applied in the handler.",
   args: { searchTerm: v.optional(v.string()) },
   returns: v.number(),
+  empty: 0,
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return 0;
+    const current = { user: ctx.user, userId: ctx.userId };
 
     const { activeCompanyId, canReadAllCompanies } = getPropertyScope(current.user);
 
@@ -175,12 +175,13 @@ export const deleteProperty = moduleMutation({
   },
 });
 
-export const getLatestRuns = publicQuery({
+export const getLatestRuns = softQuery({
   // Returns an empty list rather than throwing when the caller has no session
   // or no company, so the dashboard renders an empty state instead of an error.
-  reason: "Returns an empty result for callers without a session or company; scoping happens inside the handler.",
+  reason: "The dashboard's run list renders empty for a caller with no session rather than erroring; company scoping is still applied in the handler.",
   args: {},
   returns: v.array(v.object({ _id: v.id("apifyRuns"), runId: v.string(), status: v.union(v.literal("PENDING"), v.literal("COMPLETED"), v.literal("FAILED")), startedAt: v.number(), completedAt: v.optional(v.number()), propertiesScraped: v.optional(v.number()) })),
+  empty: [],
   handler: async (ctx) => {
   const current = await getCurrentUser(ctx);
   if (!current) return [];

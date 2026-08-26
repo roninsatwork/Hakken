@@ -9,7 +9,7 @@ import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import { appError } from "./utils/appError";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
-import { adminMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { adminMutation, tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
 import {
   assertCanAccessKnowledgeScope,
   buildKnowledgeChunkRecords,
@@ -584,11 +584,16 @@ export const getWebsiteDocuments = tenantQuery({
   },
 });
 
-export const getQualitySummary = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getQualitySummary = softQuery({
+  reason: "Powers the knowledge quality panel; with no session it shows the zeroed summary instead of an error. A signed-in caller asking for a company or agent outside their remit is still refused by the scope checks inside.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
+  },
+  empty: {
+    totals: { documents: 0, ready: 0, pending: 0, processing: 0, failed: 0, flagged: 0, embeddingDrift: 0, sampledChunks: 0, readyCoverage: 0 },
+    topicCoverage: null,
+    flaggedDocuments: [],
   },
   returns: v.object({ totals: v.object({ documents: v.number(), ready: v.number(), pending: v.number(), processing: v.number(), failed: v.number(), flagged: v.number(), embeddingDrift: v.number(), sampledChunks: v.number(), readyCoverage: v.number() }), topicCoverage: v.union(v.null(), v.object({ score: v.number(), terms: v.array(v.object({ term: v.string(), covered: v.boolean() })), coveredCount: v.number(), totalCount: v.number(), readyDocumentCount: v.number(), recommendation: v.string() })), flaggedDocuments: v.array(v.object({ documentId: v.id("knowledgeDocuments"), title: v.string(), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")), format: v.string(), sourceUrl: v.optional(v.string()), createdAt: v.number(), lastQueuedAt: v.optional(v.number()), lastIngestionStartedAt: v.optional(v.number()), lastIngestedAt: v.optional(v.number()), lastIngestionError: v.optional(v.string()), chunkCount: v.number(), flag: v.union(v.literal("FAILED"), v.literal("READY_WITHOUT_CHUNKS"), v.literal("EMBEDDING_MODEL_DRIFT"), v.literal("STALE_INGESTION")), embeddingDrift: v.optional(v.union(v.null(), v.object({ storedModelId: v.optional(v.string()), storedProviderKey: v.string(), storedProviderModelId: v.optional(v.string()), storedDimensions: v.optional(v.number()), activeModelId: v.string(), activeProviderKey: v.string(), activeProviderModelId: v.string(), activeDimensions: v.optional(v.number()) }))) })) }),
   handler: async (ctx, args) => {
@@ -831,13 +836,13 @@ export const testRetrieval = tenantQuery({
   },
 });
 
-export const getThreadDocuments = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getThreadDocuments = softQuery({
+  reason: "The composer polls its thread's ingestion status; with no session there are no documents to wait on, so an empty list beats an error. Thread access is still checked in the handler.",
   args: { threadId: v.id("threads") },
   returns: v.array(v.object({ _id: v.id("knowledgeDocuments"), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")) })),
+  empty: [],
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return [];
+    const current = { user: ctx.user, userId: ctx.userId };
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return [];

@@ -2,13 +2,13 @@ import { internalMutation } from "./_generated/server";
 import { isPlatformRole } from "./userManagementService";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { canAccessCompany, getActiveCompanyId, getCurrentUser, userRoleValidator } from "./authz";
+import { canAccessCompany, getActiveCompanyId, userRoleValidator } from "./authz";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";
 import { getPlatformName } from "./settings";
-import { adminAction, adminMutation, adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
+import { adminAction, adminMutation, adminQuery, superAdminMutation, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -39,13 +39,12 @@ type InviteDispatchResult = {
 // --- QUERIES & MUTATIONS ---
 
 // Get active email template for invites
-export const getActiveTemplate = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getActiveTemplate = softQuery({
+  reason: "The invite preview renders for whoever is composing an invite; with no session there is nothing to compose, so an empty result beats an error.",
   args: {},
   returns: v.union(v.null(), v.object({ subject: v.string(), headline: v.string(), body: v.string(), ctaText: v.string() })),
+  empty: null,
   handler: async (ctx) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return null;
 
     const template = await ctx.db
       .query("emailTemplates")

@@ -39,6 +39,8 @@ const TENANT_BUILDERS = [
   "adminAction",
   "governanceAction",
   "superAdminAction",
+  "softQuery",
+  "softMutation",
   "publicQuery",
   "publicMutation",
   "publicAction",
@@ -124,6 +126,30 @@ describe("tenancy enforcement", () => {
     expect(
       stale,
       `These functions no longer use a raw builder, so remove them from authz-migration-allowlist.json and lower maxEntries:\n${stale.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  test("soft surfaces state a reason", () => {
+    // The same convention as the public register: softQuery/softMutation admit
+    // callers without a session by returning `empty`, and each must say why
+    // soft-failing is the right shape for that surface.
+    const missingReason: string[] = [];
+
+    for (const fileName of convexSourceFiles()) {
+      const contents = fs.readFileSync(path.join(convexDir, fileName), "utf8");
+      const pattern = /export const (\w+)\s*=\s*(softQuery|softMutation)\(\{([\s\S]{0,400}?)\n\}\)/g;
+
+      for (const match of contents.matchAll(pattern)) {
+        const [, exportName, , body] = match;
+        if (!/\breason:\s*["'`]/.test(body)) {
+          missingReason.push(`${fileName}:${exportName}`);
+        }
+      }
+    }
+
+    expect(
+      missingReason,
+      `Soft surfaces must record why empty-on-no-session is the right shape:\n${missingReason.join("\n")}`,
     ).toEqual([]);
   });
 

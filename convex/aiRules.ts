@@ -5,12 +5,11 @@ import type { Doc } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
-  getCurrentUser,
   } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
-import { publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
@@ -37,17 +36,16 @@ function buildRuleAuditMetadata(metadata: Record<string, unknown>, args: { trigg
 }
 
 // Fetch rules based on company context. If companyId is absent, fetches global rules.
-export const getRules = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getRules = softQuery({
+  reason: "Rule lists render an empty state for a caller with no session; company scoping is still checked in the handler.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
   returns: v.array(v.object({ _id: v.id("aiRules"), _creationTime: v.number(), ...schema.tables.aiRules.validator.fields })),
+  empty: [],
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return [];
-    const { user } = current;
+    const user = ctx.user;
 
     if (user.role !== "SUPER_ADMIN") {
         if (args.companyId && !canAccessCompany(user, args.companyId)) {
@@ -89,8 +87,8 @@ export const getRules = publicQuery({
   },
 });
 
-export const getOffsetPaginatedRules = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getOffsetPaginatedRules = softQuery({
+  reason: "Rule tables render an empty page for a caller with no session; company scoping is still checked in the handler.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -99,10 +97,9 @@ export const getOffsetPaginatedRules = publicQuery({
     pageSize: v.number(),
   },
   returns: v.object({ data: v.array(v.object({ _id: v.id("aiRules"), _creationTime: v.number(), ...schema.tables.aiRules.validator.fields })), totalCount: v.number(), totalPages: v.number() }),
+  empty: { data: [], totalCount: 0, totalPages: 1 },
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return { data: [], totalCount: 0, totalPages: 1 };
-    const { user } = current;
+    const user = ctx.user;
 
     if (user.role !== "SUPER_ADMIN") {
         if (args.companyId && !canAccessCompany(user, args.companyId)) {

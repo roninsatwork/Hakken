@@ -5,7 +5,7 @@ import { v } from "convex/values";
 import type { Doc, TableNames } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { GOVERNANCE_READ_ROLES, getActiveCompanyId, getCurrentUser } from "./authz";
-import { publicMutation, publicQuery } from "./tenantFunctions";
+import { publicMutation, publicQuery, softQuery } from "./tenantFunctions";
 import {
   withAuditLogActorName,
   auditChangesFrom,
@@ -49,17 +49,16 @@ const auditRowFields = {
 
 const namedOptionValidator = v.object({ id: v.string(), name: v.string() });
 
-export const getRecentLogs = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getRecentLogs = softQuery({
+  reason: "The trail widget renders empty for callers outside the governance roles rather than erroring; workspace scoping is still applied in the handler.",
   args: {},
   returns: v.array(v.object({ _id: v.id("auditLogs"), _creationTime: v.number(), ...schema.tables.auditLogs.validator.fields, actorName: v.string() })),
+  empty: [],
+  allowRoles: GOVERNANCE_READ_ROLES,
   handler: async (ctx) => {
     // The audit trail is a governance surface, so the oversight roles read it.
     // It was super-admin only, which meant the one screen an auditor exists to
     // look at was the one screen they could not open.
-    const current = await getCurrentUser(ctx);
-    const role = current?.user.role;
-    if (!role || !GOVERNANCE_READ_ROLES.includes(role as (typeof GOVERNANCE_READ_ROLES)[number])) return [];
 
     /**
      * Whose records these are.
@@ -70,8 +69,8 @@ export const getRecentLogs = publicQuery({
      * activity. Platform-wide reach belongs to the two platform roles; anyone
      * else sees their own workspace and nothing else.
      */
-    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
-    const companyId = getActiveCompanyId(current.user);
+    const platformWide = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY";
+    const companyId = ctx.companyId;
 
     if (!platformWide && !companyId) return [];
 

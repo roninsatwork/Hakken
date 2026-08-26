@@ -14,7 +14,7 @@ import {
 } from "./userManagementService";
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
-import { adminQuery, publicMutation, publicQuery, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { adminQuery, publicQuery, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, softQuery, softMutation } from "./tenantFunctions";
 import {
   type DirectoryActivity,
   activityBound,
@@ -656,13 +656,14 @@ export const getUserLogins = tenantQuery({
   }
 });
 
-export const getMyLoginsCount = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getMyLoginsCount = softQuery({
+  reason: "The security screen counts the caller's own sign-ins; with no session there is nothing to count, so zero beats an error.",
   args: { searchTerm: v.optional(v.string()) },
   returns: v.number(),
+  empty: 0,
+  allowRoles: ["SUPER_ADMIN"],
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current || current.user.role !== "SUPER_ADMIN") return 0;
+    const current = { user: ctx.user, userId: ctx.userId };
     
     if (args.searchTerm && args.searchTerm.trim() !== "") {
        const logins = await ctx.db
@@ -682,17 +683,17 @@ export const getMyLoginsCount = publicQuery({
   }
 });
 
-export const recordLogin = publicMutation({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const recordLogin = softMutation({
+  reason: "Best-effort sign-in telemetry; with no session there is nothing to record, and failing the page over it would be backwards.",
   args: {
     device: v.string(),
     ip: v.string(),
     location: v.string(),
   },
   returns: v.union(v.null(), v.id("logins")),
+  empty: null,
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return null;
+    const current = { user: ctx.user, userId: ctx.userId };
 
     const now = Date.now();
     const lastLogin = await ctx.db
@@ -763,13 +764,13 @@ export const recordLogin = publicMutation({
   }
 });
 
-export const recordLogout = publicMutation({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const recordLogout = softMutation({
+  reason: "Best-effort sign-out telemetry; a caller whose session is already gone has nothing to record, and failing the logout over it would be backwards.",
   args: {},
   returns: v.null(),
+  empty: null,
   handler: async (ctx) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return;
+    const current = { user: ctx.user, userId: ctx.userId };
 
     if (current.user.role === "SUPER_ADMIN" || current.user.role === "ADMIN") {
       await ctx.db.insert("auditLogs", {

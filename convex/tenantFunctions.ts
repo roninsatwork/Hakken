@@ -21,6 +21,7 @@ import {
   GOVERNANCE_READ_ROLES,
   SUPER_ADMIN_READ_ROLES,
   getActiveCompanyId,
+  getCurrentUser,
   requireAdmin,
   requireAdminReader,
   requireCurrentUser,
@@ -330,6 +331,77 @@ export function moduleMutation<ArgsValidator extends PropertyValidators, Output>
       const identity = await resolveTenantIdentity(ctx, config.guard ?? "authenticated");
       await requireModuleOn(ctx, identity, config.module);
       return config.handler({ ...ctx, ...identity }, args);
+    },
+  });
+}
+
+/**
+ * Authenticated-or-empty surface.
+ *
+ * Twelve queries wore the `public*` label with the same pasted reason: they
+ * are really for signed-in callers, and merely prefer showing an empty screen
+ * to showing an error when there is no session. Keeping them in the public
+ * register made the most security-sensitive list in the system a quarter
+ * noise — a reviewer asking "what can a stranger reach?" had to read every
+ * reason to find out. This builder is that behaviour as a mechanism instead
+ * of a promise: no qualifying caller, `empty` comes back and the handler
+ * never runs; a qualifying caller, and the handler gets the same resolved
+ * identity every guarded builder provides. `reason` records why soft-failing
+ * is the right shape for this surface. Anything the handler must still decide
+ * per record — company membership, document ownership — stays in the handler,
+ * exactly as it does under the guarded builders.
+ */
+export function softQuery<ArgsValidator extends PropertyValidators, Output, Empty>(config: {
+  reason: string;
+  args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
+  /** What a caller with no session (or the wrong role) receives. */
+  empty: Empty;
+  /** Roles admitted beyond "any signed-in user". Omit to admit all roles. */
+  allowRoles?: readonly NonNullable<Doc<"users">["role"]>[];
+  handler: (ctx: TenantQueryCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
+}) {
+  return query({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: async (ctx: QueryCtx, args: ObjectType<ArgsValidator>): Promise<Output | Empty> => {
+      const current = await getCurrentUser(ctx);
+      if (!current) return config.empty;
+      if (config.allowRoles && (!current.user.role || !config.allowRoles.includes(current.user.role))) {
+        return config.empty;
+      }
+      return config.handler(
+        { ...ctx, user: current.user, userId: current.userId, companyId: getActiveCompanyId(current.user) },
+        args,
+      );
+    },
+  });
+}
+
+/** `softQuery` for writes that are no-ops without a session — see above. */
+export function softMutation<ArgsValidator extends PropertyValidators, Output, Empty>(config: {
+  reason: string;
+  args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
+  empty: Empty;
+  allowRoles?: readonly NonNullable<Doc<"users">["role"]>[];
+  handler: (ctx: TenantMutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
+}) {
+  return mutation({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: async (ctx: MutationCtx, args: ObjectType<ArgsValidator>): Promise<Output | Empty> => {
+      const current = await getCurrentUser(ctx);
+      if (!current) return config.empty;
+      if (config.allowRoles && (!current.user.role || !config.allowRoles.includes(current.user.role))) {
+        return config.empty;
+      }
+      return config.handler(
+        { ...ctx, user: current.user, userId: current.userId, companyId: getActiveCompanyId(current.user) },
+        args,
+      );
     },
   });
 }

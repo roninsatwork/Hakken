@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
-import { canAccessCompany, getCurrentUser } from "./authz";
+import { canAccessCompany } from "./authz";
 import {
   buildPlanRecord,
   getAssignedPlanDeleteErrorMessage,
@@ -12,20 +12,19 @@ import {
 } from "./planService";
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
-import { publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { superAdminMutation, superAdminQuery, tenantQuery, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 
 const PLAN_CATALOG_LIMIT = 100;
 const BILLING_RESET_BATCH_SIZE = 500;
 
-export const getMyCompanyPlanStatus = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getMyCompanyPlanStatus = softQuery({
+  reason: "The header shows the caller's own plan; with no session there is no plan to show, so an empty result beats an error.",
   args: {},
   returns: v.union(v.null(), v.object({ planName: v.string(), messageLimit: v.number(), messagesUsed: v.number() })),
+  empty: null,
   handler: async (ctx) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return null;
-    const { user } = current;
+    const user = ctx.user;
 
     // Check Override first
     if (user.planOverrideId) {
@@ -43,14 +42,13 @@ export const getMyCompanyPlanStatus = publicQuery({
   }
 });
 
-export const getCompanyPlanStatus = publicQuery({
-  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+export const getCompanyPlanStatus = softQuery({
+  reason: "An admin reads a company's plan from its profile; with no session there is nothing to read, so an empty result beats an error. Company membership is still checked in the handler.",
   args: { companyId: v.id("companies") },
   returns: v.union(v.null(), v.object({ planName: v.string(), messageLimit: v.number(), messagesUsed: v.number() })),
+  empty: null,
   handler: async (ctx, args) => {
-    const current = await getCurrentUser(ctx);
-    if (!current) return null;
-    const { user: admin } = current;
+    const admin = ctx.user;
 
     if (!canAccessCompany(admin, args.companyId)) {
       return null; // Unauthorized
