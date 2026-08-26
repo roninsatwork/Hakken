@@ -61,6 +61,21 @@ describe('component file naming holds', () => {
     .filter((file) => !file.endsWith('.test.tsx'))
     .filter((file) => !conforms(file, path.basename(file, '.tsx')));
 
+  /**
+   * Frozen at the 7 the rule was written with. The docblock above has said
+   * this list may shrink and never grow since the day it was written, and
+   * nothing checked — growing it by one passed green, which is the single thing
+   * the sentence forbids.
+   */
+  const FROZEN_CEILING = 7;
+
+  test('the frozen list only shrinks', () => {
+    expect(
+      [...FROZEN],
+      'The frozen naming list grew. Rename the file instead — adding an entry to make a change pass is what this list exists to prevent:'
+    ).toHaveLength(FROZEN_CEILING);
+  });
+
   test('no new non-PascalCase component file appears', () => {
     const offenders = nonConforming.filter((file) => !FROZEN.has(file));
     expect(

@@ -49,7 +49,16 @@ const SCAN_ROOTS = ['src/app/(dashboard)', 'src/ui'];
 
 const writesToTheBackend = (contents: string) => /useMutation\(|useAction\(/.test(contents);
 const handRollsATry = (contents: string) => /\btry\s*\{/.test(contents);
-const usesTheRunner = (contents: string) => contents.includes('useAdminAction');
+/**
+ * Actually calling the runner, not merely naming it.
+ *
+ * A bare substring check passed on the one line a developer writes while
+ * *not* doing the migration — `// TODO: move this onto useAdminAction when
+ * there is time.` — so a screen could carry its hand-rolled catch and the
+ * comment, and this read it as adopted.
+ */
+const usesTheRunner = (contents: string) =>
+  /\buseAdminAction\s*\(/.test(contents.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, ''));
 
 describe('screens report their failures through the house runner', () => {
   const measured = SCAN_ROOTS.flatMap((root) =>
@@ -69,6 +78,21 @@ describe('screens report their failures through the house runner', () => {
       offenders,
       `These call a Convex mutation or action and hand-roll their own try/catch, so the failure is neither unwrapped for the reader nor reported to us, and a double click fires twice. Use useAdminAction (src/hooks/useAdminAction.ts). If the catch is genuinely deliberate, add the file to HAND_ROLLED with the reason — that list may shrink, never grow:\n${offenders.join('\n')}`
     ).toEqual([]);
+  });
+
+  /**
+   * Frozen at the three entries the list was written with. Every list in this
+   * repository says it may shrink and never grow; three of them, this one
+   * included, said it without anything checking — so the sentence was a
+   * convention, not a rule.
+   */
+  const HAND_ROLLED_CEILING = 3;
+
+  test('the deliberately-hand-rolled list only shrinks', () => {
+    expect(
+      [...HAND_ROLLED.keys()],
+      'The hand-rolled list grew. A screen that writes belongs on the runner; adding an entry to make a change pass is the one thing this list forbids:'
+    ).toHaveLength(HAND_ROLLED_CEILING);
   });
 
   test('listed files still write and still hand-roll (drop the entry otherwise)', () => {

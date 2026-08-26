@@ -902,19 +902,28 @@ export const recomputeLoginCounts = internalMutation({
     const now = Date.now();
     const windowStart = loginWindowStart(now);
 
-    const rows = await ctx.db
+    // One row past each cap, so a scan that came back exactly full is
+    // distinguishable from one that was cut short. Taking the cap itself and
+    // comparing with `>=` cannot tell those apart, and this refuses on the
+    // answer — so a platform that happened to land on exactly 20,000 logins
+    // would have stopped counting for good. The snapshot generator uses the
+    // same probe for the same reason.
+    const scannedRows = await ctx.db
       .query("logins")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", windowStart))
-      .take(LOGIN_SCAN_LIMIT);
+      .take(LOGIN_SCAN_LIMIT + 1);
 
-    const users = await ctx.db.query("users").take(USER_SCAN_LIMIT);
+    const scannedUsers = await ctx.db.query("users").take(USER_SCAN_LIMIT + 1);
+
+    const rows = scannedRows.slice(0, LOGIN_SCAN_LIMIT);
+    const users = scannedUsers.slice(0, USER_SCAN_LIMIT);
 
     // Before anything is written, not after. A capped scan under-counts, which
     // reads on screen as "this person stopped using the platform" — a wrong
     // answer that looks like a real one, and one nobody goes back to check.
     // This used to patch every user first and then warn into a log, so the
     // wrong counts were already stored by the time the warning existed.
-    const truncated = loginScanTruncated({ logins: rows.length, users: users.length });
+    const truncated = loginScanTruncated({ logins: scannedRows.length, users: scannedUsers.length });
 
     if (truncated) {
       throw appError(

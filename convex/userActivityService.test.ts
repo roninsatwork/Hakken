@@ -146,11 +146,19 @@ describe("loginScanTruncated", () => {
     expect(loginScanTruncated({ logins: 19999, users: 19999 })).toBe(false);
   });
 
-  test("a full login scan is truncated, whatever the user count", () => {
-    expect(loginScanTruncated({ logins: LOGIN_SCAN_LIMIT, users: 3 })).toBe(true);
+  // The caller reads LIMIT + 1, so landing exactly on the cap means the table
+  // holds exactly that many and the scan is complete. Only the extra row means
+  // it was cut short. Getting this backwards stops the job for good on a
+  // platform that happens to sit on a round number.
+  test("a scan that came back exactly full is complete, not truncated", () => {
+    expect(loginScanTruncated({ logins: LOGIN_SCAN_LIMIT, users: USER_SCAN_LIMIT })).toBe(false);
   });
 
-  test("a full user scan is truncated, whatever the login count", () => {
-    expect(loginScanTruncated({ logins: 3, users: USER_SCAN_LIMIT })).toBe(true);
+  test("one row past the login cap is truncated, whatever the user count", () => {
+    expect(loginScanTruncated({ logins: LOGIN_SCAN_LIMIT + 1, users: 3 })).toBe(true);
+  });
+
+  test("one row past the user cap is truncated, whatever the login count", () => {
+    expect(loginScanTruncated({ logins: 3, users: USER_SCAN_LIMIT + 1 })).toBe(true);
   });
 });

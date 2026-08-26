@@ -93,7 +93,7 @@ Prefer existing shared components before creating page-local variants:
 - Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/SonaeMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
 - Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
   `src/ui/components/charts/ChartTooltip.tsx`.
-- Workflows: `WorkflowSidebar`, `ConfigDrawer` with its per-node-type `ConfigDrawerPanels`, `AgentEditorModal`, node components, and workflow types.
+- Workflows: `WorkflowSidebar`, `ConfigDrawer` and the three files holding its node-type field sets (`ConfigDrawerEntryPanels`, `ConfigDrawerDataPanels`, `ConfigDrawerHumanPanels`), `AgentEditorModal`, node components, and workflow types.
 - Settings: `JsonSchemaBuilder`, settings sections, white-label components.
 - Navigation: `Header`, `SidebarNavigation` with the `SidebarNavTrees` it renders, and the workspace switcher in the sidebar. Theme selection lives in the profile's preferences, not a standalone toggle.
 

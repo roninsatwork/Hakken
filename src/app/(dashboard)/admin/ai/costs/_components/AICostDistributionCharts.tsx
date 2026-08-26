@@ -5,33 +5,33 @@ import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import {
-  CHART_SERIES_AMBER,
   CHART_SERIES_BLUE,
   CHART_SERIES_EMERALD,
-  CHART_SERIES_ORANGE,
-  CHART_SERIES_ROSE,
-  CHART_SERIES_SLATE,
+  CHART_SERIES_PALETTE,
   CHART_SERIES_TEAL,
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import type { ModelDistributionRow, ProviderDistributionRow, TimelinePoint } from "./types";
 import { formatTokenAxisTick } from "./costFormatters";
 
-const MODEL_COLORS = [
-  CHART_SERIES_VIOLET,
-  CHART_SERIES_EMERALD,
-  CHART_SERIES_ROSE,
-  CHART_SERIES_BLUE,
-  CHART_SERIES_AMBER,
-  CHART_SERIES_TEAL,
-];
+/**
+ * Both sequences are slices of the canonical order, so no chart can be given
+ * an adjacent red/green pair without that order changing first.
+ *
+ * These were hand-written lists, and the model one opened emerald then rose —
+ * the first two slices of the one pie on the platform, in the pair the owner
+ * cannot tell apart. Reordering the canonical palette on 2026-08-26 did not
+ * reach them, because nothing imported it: the fix was real and landed
+ * somewhere nothing used. Deriving both from it is what makes the reorder mean
+ * something.
+ *
+ * The provider list is a rotation rather than the same slice, so the two
+ * charts beside each other stay distinguishable from one another.
+ */
+const MODEL_COLORS = CHART_SERIES_PALETTE.slice(0, 6);
 const PROVIDER_COLORS = [
-  CHART_SERIES_TEAL,
-  CHART_SERIES_BLUE,
-  CHART_SERIES_ORANGE,
-  CHART_SERIES_SLATE,
-  CHART_SERIES_VIOLET,
-  CHART_SERIES_ROSE,
+  ...CHART_SERIES_PALETTE.slice(4),
+  ...CHART_SERIES_PALETTE.slice(0, 2),
 ];
 
 /**

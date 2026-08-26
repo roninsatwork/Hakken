@@ -24,15 +24,22 @@ export const LOGIN_SCAN_LIMIT = 20000;
 export const USER_SCAN_LIMIT = 20000;
 
 /**
- * Did either scan come back full — meaning every count derived from it is short?
+ * Did either scan overrun its cap — meaning every count derived from it is short?
  *
  * A separate function because the answer has to be acted on *before* the first
- * patch. Until 2026-08-26 the job wrote every user's count and then logged a
- * warning about the counts it had just written, which is the failure the
- * ceilings exist to prevent, performed in the correct order to be useless.
+ * patch. The job used to write every user's count and then log a warning about
+ * the counts it had just written, which is the failure the ceilings exist to
+ * prevent, performed in the correct order to be useless.
+ *
+ * Takes the count from a read of `LIMIT + 1` and compares strictly, so a scan
+ * that came back exactly full is not mistaken for one that was cut short. The
+ * first version compared `>=` against a read of `LIMIT`, which cannot tell
+ * those apart — and because this refusal stops the job rather than degrading
+ * it, a platform landing on exactly twenty thousand logins would have stopped
+ * counting for good.
  */
 export function loginScanTruncated(scanned: { logins: number; users: number }) {
-  return scanned.logins >= LOGIN_SCAN_LIMIT || scanned.users >= USER_SCAN_LIMIT;
+  return scanned.logins > LOGIN_SCAN_LIMIT || scanned.users > USER_SCAN_LIMIT;
 }
 
 export function loginWindowStart(now: number) {

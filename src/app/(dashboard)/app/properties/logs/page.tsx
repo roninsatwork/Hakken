@@ -31,6 +31,7 @@ export default function PropertiesLogsPage() {
     await runAction(() => syncRun({ runId }), {
       key: runId,
       suppressErrorToast: isAutomatic,
+      backgroundRetry: isAutomatic,
       fallbackMessage: syncFailedMessage,
     });
   }, [runAction, syncRun, syncFailedMessage]);

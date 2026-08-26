@@ -43,7 +43,19 @@ export const walkFiles = (dir: string, extensions: ReadonlySet<string>): string[
 };
 
 export const relativePath = (filePath: string) => path.relative(repoRoot, filePath);
-export const readRepoFile = (relativeFilePath: string) => fs.readFileSync(path.join(repoRoot, relativeFilePath), 'utf8');
+/**
+ * A repo file's contents, or the empty string when it is not there.
+ *
+ * Several guards name a file and then assert the contents are not empty, so
+ * that a check cannot pass by reading nothing. Throwing on a missing file made
+ * those assertions unreachable: the gate still held, but the developer saw
+ * `ENOENT` instead of the sentence written to explain what had moved and why
+ * it mattered. Returning empty lets the assertion do its job and say its piece.
+ */
+export const readRepoFile = (relativeFilePath: string) => {
+  const fullPath = path.join(repoRoot, relativeFilePath);
+  return fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+};
 
 /**
  * The source of one exported declaration, up to the next *exported* one.

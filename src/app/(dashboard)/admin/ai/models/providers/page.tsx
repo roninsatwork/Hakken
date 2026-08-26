@@ -244,7 +244,12 @@ export default function AIModelProvidersPage() {
             cell: (provider) => {
               const isTesting = action.isBusy(`test:${provider.providerKey}`);
               const syncProviderKey = isSyncProviderKey(provider.providerKey) ? provider.providerKey : null;
-              const isSyncing = action.isBusy(`sync:${provider.providerKey}`);
+              // Any sync, not this row's. Pulling a provider's whole model
+              // catalogue is not a per-row action that happens to be in a
+              // table: the old single flag disabled every sync button while
+              // one ran, and moving to a per-provider key — right for the rest
+              // of this table — quietly allowed three catalogue pulls at once.
+              const isSyncing = action.isBusy();
               return (
                 <div className="flex items-center justify-end gap-2">
                   <WriteButton

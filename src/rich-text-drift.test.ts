@@ -48,12 +48,16 @@ describe('rich text arguments match the tags in their message', () => {
 
     // Which translator variable reads which namespace.
     const namespaces = new Map(
-      [...contents.matchAll(/const (\w+)\s*=\s*useTranslations\("([^"]+)"\)/g)].map(
+      [...contents.matchAll(/const (\w+)\s*=\s*useTranslations\(\s*['"`]([^'"`]+)['"`]\s*\)/g)].map(
         (match) => [match[1], match[2]] as const
       )
     );
 
-    return [...contents.matchAll(/(\w+)\.rich\(\s*"([^"]+)"\s*,\s*\{([\s\S]*?)\n\s*\}\)/g)].flatMap(
+    // Either quote, and backticks too. The first version wanted a double-quoted
+    // key, which left ten call sites invisible — all of them in the workflow
+    // drawer, which happens to be written with single quotes. A blind spot the
+    // exact size of one feature is still a blind spot.
+    return [...contents.matchAll(/(\w+)\.rich\(\s*['"`]([^'"`]+)['"`]\s*,\s*\{([\s\S]*?)\n\s*\}\)/g)].flatMap(
       (match) => {
         const [, variable, key, argumentBlock] = match;
         const namespace = namespaces.get(variable);

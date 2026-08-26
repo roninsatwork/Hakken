@@ -98,7 +98,7 @@ Workflow changes need both editor and runtime support. Do not add a visual node 
 1. Add or narrow the node type and config shape in `src/ui/components/workflows/types.ts`.
 2. Add backend config parsing and validation in `convex/workflowRuntimeService.ts` or `convex/utils/workflowTypes.ts`.
 3. Add the runtime behavior in `convex/workflowRuntime.ts` or call a pure helper from `convex/workflowRuntimeService.ts`.
-4. Add the node's field set as a new panel in `src/ui/components/workflows/ConfigDrawerPanels.tsx`, then render it for the new node type from the panel switch in `src/ui/components/workflows/ConfigDrawer.tsx`. Add visual rendering through `src/ui/components/workflows/GenericNode.tsx` or a dedicated node component.
+4. Add the node's field set as a new panel in whichever of the three panel files it belongs to — `ConfigDrawerEntryPanels.tsx` for how a workflow starts and what it runs, `ConfigDrawerDataPanels.tsx` for shaping and routing what passes through, `ConfigDrawerHumanPanels.tsx` for waiting on a person — then render it for the new node type from the panel switch in `src/ui/components/workflows/ConfigDrawer.tsx`. Add visual rendering through `src/ui/components/workflows/GenericNode.tsx` or a dedicated node component.
 5. Update tests in `convex/workflowRuntimeService.test.ts` and `convex/utils/workflowTypes.test.ts` for valid and invalid config.
 
 Small config-reader example:

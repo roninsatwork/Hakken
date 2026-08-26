@@ -182,6 +182,22 @@ describe('screen copy stays in the catalogue', () => {
     }
   }
 
+  /**
+   * Frozen at 68 files and 119 sentences. The list may shrink and never
+   * grow — a sentence three lists in this repository printed without anything
+   * checking it, so a new entry slipped in unremarked. A file's count may split
+   * when the file splits, but the total may not rise.
+   */
+  const FROZEN_FILE_CEILING = 68;
+  const FROZEN_SENTENCE_CEILING = 119;
+
+  test('the frozen list only shrinks', () => {
+    const sentences = [...FROZEN.values()].reduce((sum, count) => sum + count, 0);
+
+    expect(FROZEN.size, 'The frozen copy list gained a file. Put the copy in the catalogue instead:').toBeLessThanOrEqual(FROZEN_FILE_CEILING);
+    expect(sentences, 'The frozen copy total rose. A count may move between files when one splits; the total may not grow:').toBeLessThanOrEqual(FROZEN_SENTENCE_CEILING);
+  });
+
   test('no file grows hardcoded copy, and new files carry none', () => {
     const regressions = [...measured.entries()]
       .filter(([file, hits]) => hits > (FROZEN.get(file) ?? 0))

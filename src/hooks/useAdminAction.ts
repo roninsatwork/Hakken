@@ -72,6 +72,20 @@ export type AdminActionRunOptions = {
    * reported — those are the parts that must not be optional.
    */
   suppressErrorToast?: boolean;
+  /**
+   * This call is made by a timer, not by a person.
+   *
+   * Reporting is not optional here either, but repeating it is: the property
+   * logs page re-syncs every pending run every thirty seconds, so one stuck
+   * run reported a fresh error two thousand eight hundred times a day, for
+   * ever. With this set the first failure for a key is reported and the rest
+   * are not, until that key succeeds — which is the moment the situation has
+   * actually changed and is worth hearing about again.
+   *
+   * Requires `key`. A background call without one has nothing to be quiet
+   * about.
+   */
+  backgroundRetry?: boolean;
 };
 
 export type AdminActionRunner = {
@@ -101,6 +115,10 @@ export function useAdminAction(options: { scope?: string } = {}): AdminActionRun
   // The double-submit guard has to be synchronous. `busyKeys` is state, so two
   // clicks in one tick would both see it empty and both fire the mutation.
   const inFlight = useRef(new Set<string>());
+
+  // Keys whose failure a timer has already told us about. Cleared on success,
+  // so the next genuine change is reported.
+  const reportedWhileFailing = useRef(new Set<string>());
 
   // An admin action often closes or navigates away from the view that started
   // it, so the component can be gone before the promise settles. Setting state
@@ -142,6 +160,7 @@ export function useAdminAction(options: { scope?: string } = {}): AdminActionRun
 
       try {
         const data = await perform();
+        reportedWhileFailing.current.delete(busyKey);
         if (runOptions.successMessage) showToast(runOptions.successMessage, 'success');
         return { ok: true, data };
       } catch (caught) {
@@ -150,9 +169,15 @@ export function useAdminAction(options: { scope?: string } = {}): AdminActionRun
         const fallbackMessage = runOptions.fallbackMessage ?? DEFAULT_FALLBACK;
         const errorScope = scope ?? 'admin-action';
         let message: string;
+        const alreadyToldAboutThisKey =
+          runOptions.backgroundRetry === true && reportedWhileFailing.current.has(busyKey);
+        if (runOptions.backgroundRetry === true) {
+          reportedWhileFailing.current.add(busyKey);
+        }
+
         if (runOptions.suppressErrorToast) {
           message = toUserFacingMessage(caught, fallbackMessage);
-          reportError(caught, { scope: errorScope });
+          if (!alreadyToldAboutThisKey) reportError(caught, { scope: errorScope });
         } else {
           // `showErrorToast` unwraps and reports in one call and returns the
           // text it showed, so an inline copy cannot drift from the toast.

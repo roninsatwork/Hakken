@@ -28,9 +28,18 @@ describe('Admin Boundary Drift', () => {
   const ADMIN_DIR = path.join(repoRoot, 'src/app/(dashboard)/admin');
   const APP_DIR = path.join(repoRoot, 'src/app/(dashboard)/app');
 
-  /** Static `from '…'`, dynamic `import('…')`, and `require('…')` alike. */
+  /**
+   * Every shape an import can take.
+   *
+   * Static `from '…'`, dynamic `import('…')`, `require('…')`, a bare
+   * side-effect `import '…'`, and the same three written with a template
+   * literal. The first version wanted `from`, `import(` or `require(` in front
+   * of the quote, which let a side-effect import and a backtick specifier
+   * through — narrow shapes, but the whole point of this file is that the
+   * shape is not the boundary.
+   */
   const SPECIFIER =
-    /(?:from\s+|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
+    /(?:from\s*|import\s*\(\s*|require\s*\(\s*|import\s+)['"`]([^'"`]+)['"`]/g;
 
   const resolveImport = (fromFile: string, specifier: string) => {
     let base: string;

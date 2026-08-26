@@ -908,6 +908,14 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
 
   if (path === "users:getMe") return hasHydrated ? getCurrentUser() : undefined;
   if (path === "settings:get") return settings;
+  // The admin settings forms read the wider row through their own door. Without
+  // this they fell to the catch-all below, which builds a fresh array on every
+  // render — and a form that adopts its server data during render then never
+  // settles, so the screen re-rendered until React gave up. Production was
+  // unaffected (real Convex holds the reference stable) but this mock is the
+  // mode the admin screens are looked at in, so it broke exactly where someone
+  // would go to check them.
+  if (path === "settings:getForAdmin") return settings;
   if (path === "system:getAnalyticsId") return null;
   if (path === "aiModels:getModels") return models;
   if (path === "aiModels:getActiveModels") {
