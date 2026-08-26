@@ -57,7 +57,7 @@ export default function WorkflowExecutionDetailPage() {
   const [confirmationActivated, setConfirmationActivated] = useState(false);
 
   const decide = async (nodeId: string, decision: "APPROVED" | "REJECTED") => {
-    await action.run(
+    const outcome = await action.run(
       () => resumeApprovalStep({
         executionId,
         nodeId,
@@ -70,7 +70,7 @@ export default function WorkflowExecutionDetailPage() {
         fallbackMessage: t("errors.failed"),
       },
     );
-    setPendingRejection(null);
+    if (outcome.ok) setPendingRejection(null);
   };
 
   const steps = execution?.steps ?? [];

@@ -88,53 +88,24 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
     setHostOrigin(window.location.origin);
   }, []);
 
-  const hasWidget = Boolean(widget);
-  const widgetName = widget?.name || "";
-  const widgetAllowedDomains = widget?.allowedDomains ? widget.allowedDomains.join(", ") : "";
-  const widgetThemeGreeting = widget?.themeGreeting || "";
-  const widgetThemePrimaryColor = widget?.themePrimaryColor || defaultColor;
-  const widgetThemeLogoUrl = widget?.themeLogoUrl || "";
-  const widgetThemePlaceholder = widget?.themePlaceholder || "Write a reply...";
-  const widgetEnableSounds = widget?.enableSounds || false;
-  const widgetShowPopupPreview = widget?.showPopupPreview || false;
-  const widgetRequireName = widget?.requireName || false;
-  const widgetRequireEmail = widget?.requireEmail || false;
-  const widgetEnableGreeting = widget?.enableGreeting ?? true;
-  const widgetKioskEnabled = widget?.kioskEnabled || false;
-  const widgetConversationStartersKey = widget?.conversationStarters ? widget.conversationStarters.join("\n") : "";
+  const [seenWidgetId, setSeenWidgetId] = useState<Id<"widgets"> | null>(null);
 
-  useEffect(() => {
-    if (!hasWidget) return;
-
-    setName(widgetName);
-    setAllowedDomains(widgetAllowedDomains);
-    setThemeGreeting(widgetThemeGreeting);
-    setThemePrimaryColor(widgetThemePrimaryColor);
-    setThemeLogoUrl(widgetThemeLogoUrl);
-    setThemePlaceholder(widgetThemePlaceholder);
-    setEnableSounds(widgetEnableSounds);
-    setShowPopupPreview(widgetShowPopupPreview);
-    setRequireName(widgetRequireName);
-    setRequireEmail(widgetRequireEmail);
-    setEnableGreeting(widgetEnableGreeting);
-    setKioskEnabled(widgetKioskEnabled);
-    setConversationStarters(widgetConversationStartersKey ? widgetConversationStartersKey.split("\n") : []);
-  }, [
-    hasWidget,
-    widgetName,
-    widgetAllowedDomains,
-    widgetThemeGreeting,
-    widgetThemePrimaryColor,
-    widgetThemeLogoUrl,
-    widgetThemePlaceholder,
-    widgetEnableSounds,
-    widgetShowPopupPreview,
-    widgetRequireName,
-    widgetRequireEmail,
-    widgetEnableGreeting,
-    widgetKioskEnabled,
-    widgetConversationStartersKey,
-  ]);
+  if (widget && widget._id !== seenWidgetId) {
+    setSeenWidgetId(widget._id);
+    setName(widget.name || "");
+    setAllowedDomains(widget.allowedDomains ? widget.allowedDomains.join(", ") : "");
+    setThemeGreeting(widget.themeGreeting || "");
+    setThemePrimaryColor(widget.themePrimaryColor || defaultColor);
+    setThemeLogoUrl(widget.themeLogoUrl || "");
+    setThemePlaceholder(widget.themePlaceholder || "Write a reply...");
+    setEnableSounds(widget.enableSounds || false);
+    setShowPopupPreview(widget.showPopupPreview || false);
+    setRequireName(widget.requireName || false);
+    setRequireEmail(widget.requireEmail || false);
+    setEnableGreeting(widget.enableGreeting ?? true);
+    setKioskEnabled(widget.kioskEnabled || false);
+    setConversationStarters(widget.conversationStarters ?? []);
+  }
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -226,11 +197,14 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
 
   const handleCopy = async () => {
     setFeedbackMessage("");
-    try {
-      await navigator.clipboard.writeText(codeSnippet);
-    } catch {
-      setFeedbackMessage(t("errors.clipboard"));
-    }
+
+    const outcome = await action.run(() => navigator.clipboard.writeText(codeSnippet), {
+      key: "copy",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.clipboard"),
+    });
+
+    if (!outcome.ok) setFeedbackMessage(t("errors.clipboard"));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -4392,7 +4392,8 @@
         "export": {
           "action": "Export",
           "working": "Exporting…",
-          "truncated": "This export stopped at {count} records, which is as many as one file holds. Narrow the dates or the filters and export again to be sure you have everything."
+          "truncated": "This export stopped at {count} records, which is as many as one file holds. Narrow the dates or the filters and export again to be sure you have everything.",
+          "failed": "The export could not be produced. Try again."
         },
         "columns": {
           "action": "Action",
@@ -5721,7 +5722,8 @@
           "runFailed": "The eval could not be run.",
           "batchFailed": "The evals could not be started.",
           "nothingToRun": "Nothing needed running.",
-          "batchStarted": "Running {count, plural, one {1 eval} other {# evals}}. Results appear here as each one finishes."
+          "batchStarted": "Running {count, plural, one {1 eval} other {# evals}}. Results appear here as each one finishes.",
+          "proposedFailed": "The decision could not be saved. Try again."
         },
         "runEvals": "Run evals",
         "newEval": "New eval",
@@ -6156,7 +6158,9 @@
       "chainHeading": "Others in {chain}",
       "lineEmpty": "No line items.",
       "saveFailed": "The details could not be saved.",
-      "findDetailsFailed": "The search could not be started."
+      "findDetailsFailed": "The search could not be started.",
+      "decideFailed": "That decision could not be saved. Try again.",
+      "prospectDismissFailed": "This prospect could not be marked not interested. Try again."
     },
     "tablesTitle": "Spreadsheet Imports",
     "tablesSubtitle": "From {fileName} — {rows} sales rows.",
@@ -6229,6 +6233,7 @@
       "newerImport": "A newer import has arrived since this report — run it again to price the new data.",
       "runButton": "Run the report",
       "exportButton": "Export",
+      "exportFailed": "The report could not be exported. Try again.",
       "idle": "Ready to run.",
       "alreadyRunning": "A report is already being built.",
       "failed": "The last run failed: {reason}",
@@ -6345,14 +6350,18 @@
     },
     "openCount": "{count} open",
     "openSource": "View source",
-    "createFailed": "The task could not be created. Try again."
+    "createFailed": "The task could not be created. Try again.",
+    "doneFailed": "The task could not be ticked off. Try again.",
+    "reopenFailed": "The task could not be reopened. Try again.",
+    "dismissFailed": "The task could not be cancelled. Try again."
   },
   "notifications": {
     "title": "Notifications",
     "empty": "Nothing new.",
     "markAllRead": "Mark all read",
     "open": "Notifications",
-    "waiting": "{count} unread"
+    "waiting": "{count} unread",
+    "markAllReadFailed": "The notifications could not be marked read. Try again."
   },
   "aiVoice": {
     "title": "Voice",
@@ -6536,13 +6545,15 @@
     "questions": {
       "title": "{count, plural, =1 {1 open question} other {# open questions}}",
       "hint": "The wiki's staff found pages that disagree. Settle each one by editing or pinning the right page - or dismiss it if it doesn't matter.",
-      "dismiss": "Dismiss this question"
+      "dismiss": "Dismiss this question",
+      "dismissFailed": "The question could not be dismissed. Try again."
     },
     "reviews": {
       "title": "{count, plural, =1 {1 import waiting for your review} other {# imports waiting for your review}}",
       "hint": "You asked to see these before the wiki learns from them. Here is what each document claims.",
       "approve": "Approve - let the wiki learn it",
-      "reject": "Reject - keep it out of the wiki"
+      "reject": "Reject - keep it out of the wiki",
+      "failed": "The decision could not be saved. Try again."
     },
     "globalTitle": "Platform Wiki",
     "globalSubtitle": "Knowledge every company can draw on. Company wikis always win where they disagree.",
@@ -6590,7 +6601,8 @@
     },
     "export": {
       "button": "Download vault",
-      "exporting": "Packing…"
+      "exporting": "Packing…",
+      "failed": "The vault could not be packed. Try again."
     },
     "switcher": {
       "placeholder": "Jump to a page… (Cmd/Ctrl-K)",
@@ -6716,7 +6728,8 @@
     "emptyState": "Nothing here - every question so far found its pages. When one doesn't, it appears here.",
     "emptyFiltered": "Nothing matches this filter.",
     "subtitleCompany": "Every question this company's AI had no pages for.",
-    "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering."
+    "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering.",
+    "dismissFailed": "The question could not be dismissed. Try again."
   },
   "aiCalls": {
     "title": "Calls",

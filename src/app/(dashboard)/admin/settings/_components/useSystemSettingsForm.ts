@@ -72,13 +72,16 @@ export function useSystemSettingsForm(fields: SettingsFieldList) {
 
   // Adopted during render rather than in an effect, per the React docs on
   // deriving state from props: an effect would paint the empty form first and
-  // then replace it. The sentinel is the settings object itself — Convex hands
-  // back a new reference on every server change, which is exactly when the
-  // form should re-seed.
-  const [seenSettings, setSeenSettings] = useState<typeof currentSettings>(undefined);
+  // then replace it. The sentinel is whether the form has taken its copy yet,
+  // not the settings object: `settings.getForAdmin` merges the row over the
+  // defaults and so builds a fresh object on every read, and keying on that
+  // object re-seeded the form over whatever was being typed and never settled.
+  // There is one settings row per deployment and the query hands back no id to
+  // key on, so its identity never changes: the form takes it once.
+  const [hasSeededSettings, setHasSeededSettings] = useState(false);
 
-  if (currentSettings && currentSettings !== seenSettings) {
-    setSeenSettings(currentSettings);
+  if (currentSettings && !hasSeededSettings) {
+    setHasSeededSettings(true);
     setFormData({
       ...currentSettings,
       // Fonts are stored as named keys (src/lib/themeFonts.ts); legacy rows

@@ -81,7 +81,7 @@ export default function AgentApprovalsPage() {
   };
 
   const submitDecision = async (approvalId: Id<"agentRunApprovals">, decision: Decision) => {
-    await action.run(
+    const outcome = await action.run(
       () => decideApproval({
         approvalId,
         decision,
@@ -93,7 +93,7 @@ export default function AgentApprovalsPage() {
         fallbackMessage: t("errors.failed"),
       },
     );
-    setPendingConfirmation(null);
+    if (outcome.ok) setPendingConfirmation(null);
   };
 
   const countLabel = pendingCount === undefined

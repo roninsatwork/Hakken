@@ -122,26 +122,28 @@ export default function OpportunityReportPage() {
 
   // The export must carry everything the screen can show, so the capture
   // briefly forces every collapsed tail and the summary open, then lets go.
-  const [exporting, setExporting] = useState(false);
-  const handleExport = async () => {
-    if (!pdfRef.current) return;
-    setExporting(true);
-    const html2canvasPromise = import("html2canvas");
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    try {
-      const { default: html2canvas } = await html2canvasPromise;
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: CHART_EXPORT_BACKGROUND,
-      });
-      const link = document.createElement("a");
-      link.download = `opportunity-report-${new Date().toISOString().split("T")[0]}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } finally {
-      setExporting(false);
-    }
+  const exportAction = useAdminAction({ scope: "app-opportunity-report-export" });
+  const exporting = exportAction.isBusy("export");
+  const handleExport = () => {
+    const target = pdfRef.current;
+    if (!target) return;
+    return exportAction.run(
+      async () => {
+        const html2canvasPromise = import("html2canvas");
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const { default: html2canvas } = await html2canvasPromise;
+        const canvas = await html2canvas(target, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: CHART_EXPORT_BACKGROUND,
+        });
+        const link = document.createElement("a");
+        link.download = `opportunity-report-${new Date().toISOString().split("T")[0]}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      },
+      { key: "export", fallbackMessage: t("exportFailed") },
+    );
   };
 
   if (report === undefined) {

@@ -136,6 +136,13 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
   const runAction = useAdminAction({ scope: "admin-company-evals-run" });
   const batchAction = useAdminAction({ scope: "admin-company-evals-batch" });
   const starterAction = useAdminAction({ scope: "admin-company-evals-starters" });
+  const proposedAction = useAdminAction({ scope: "admin-company-evals-proposed" });
+
+  const handleDecideProposed = (caseId: Id<"companyEvalCases">, approve: boolean) =>
+    proposedAction.run(
+      () => decideProposed({ companyId: companyId as Id<"companies">, caseId, approve }),
+      { key: caseId, fallbackMessage: t("notices.proposedFailed") },
+    );
 
   // An empty screen with only "add one" leaves the reader to invent an eval from
   // nothing, which is the hardest possible first step. These are the failures that
@@ -270,13 +277,13 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                 </div>
                 <span className="flex items-center gap-2 shrink-0">
                   <WriteButton
-                    onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: true })}
+                    onClick={() => void handleDecideProposed(draft.caseId, true)}
                     className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
                   >
                     {t("proposed.approve")}
                   </WriteButton>
                   <WriteButton
-                    onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: false })}
+                    onClick={() => void handleDecideProposed(draft.caseId, false)}
                     className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
                   >
                     {t("proposed.reject")}

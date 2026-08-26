@@ -12,6 +12,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 type ScopeFilter = "ALL" | "PLATFORM" | "COMPANIES";
@@ -44,6 +45,7 @@ export function UnansweredScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiUnanswered");
+  const action = useAdminAction({ scope: "admin-wiki-unanswered" });
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<ScopeFilter>("ALL");
 
@@ -73,11 +75,15 @@ export function UnansweredScreen({
   ];
 
   const dismiss = (row: Row) =>
-    row.companyId
-      ? dismissCompany({ companyId: row.companyId, unansweredId: row.unansweredId })
-      : companyId
-        ? dismissCompany({ companyId, unansweredId: row.unansweredId })
-        : dismissGlobal({ unansweredId: row.unansweredId });
+    action.run(
+      () =>
+        row.companyId
+          ? dismissCompany({ companyId: row.companyId, unansweredId: row.unansweredId })
+          : companyId
+            ? dismissCompany({ companyId, unansweredId: row.unansweredId })
+            : dismissGlobal({ unansweredId: row.unansweredId }),
+      { key: row.unansweredId, fallbackMessage: t("dismissFailed") },
+    );
 
 
   return (

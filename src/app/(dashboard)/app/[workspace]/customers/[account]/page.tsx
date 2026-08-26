@@ -245,6 +245,17 @@ function DetailsForm({
   // finding per field — accepting one supersedes the rest.
   const sources = new Map(applied.map((row) => [row.field, row]));
   const sourceFor = (field: string) => sources.get(field);
+  const reject = async (researchId: ResearchRow["id"]) => {
+    const outcome = await action.run(() => decide({ researchId, decision: "discard" }), {
+      key: `reject:${researchId}`,
+      suppressErrorToast: true,
+      fallbackMessage: t("decideFailed"),
+    });
+    if (!outcome.ok) {
+      setStatus("error");
+      if (outcome.message) setError(outcome.message);
+    }
+  };
   const rejectSource = (field: string) => {
     const row = sources.get(field);
     if (!row) return undefined;
@@ -258,7 +269,7 @@ function DetailsForm({
         [field === customer.extraField ? "extra" : (field as keyof DetailFields)]: "",
       }));
       setStatus("idle");
-      void decide({ researchId: row.id, decision: "discard" });
+      void reject(row.id);
     };
   };
 
@@ -669,7 +680,7 @@ function ProspectOrigin({
 }) {
   const t = useTranslations("salesData.customerProfile");
   const dismiss = useMutation(api.salesDataResearch.dismissProspect);
-  const [dismissing, setDismissing] = useState(false);
+  const action = useAdminAction({ scope: "app-customer-prospect-dismiss" });
 
   return (
     <Card>
@@ -678,11 +689,12 @@ function ProspectOrigin({
         {origin.status === "NEW" && (
           <button
             type="button"
-            disabled={dismissing}
-            onClick={() => {
-              setDismissing(true);
-              void dismiss({ prospectKey }).finally(() => setDismissing(false));
-            }}
+            disabled={action.isBusy()}
+            onClick={() =>
+              void action.run(() => dismiss({ prospectKey }), {
+                fallbackMessage: t("prospectDismissFailed"),
+              })
+            }
             className="px-3 py-1.5 rounded-[10px] border border-border-dim text-[12px] text-secondary hover:text-red-400 hover:border-border transition-colors disabled:opacity-60"
           >
             {t("notInterested")}
@@ -828,18 +840,15 @@ function NeedsChecking({
 }) {
   const t = useTranslations("salesData.customerProfile");
   const decide = useMutation(api.salesDataResearch.decideResearchFinding);
-  const [busy, setBusy] = useState<string | null>(null);
+  const action = useAdminAction({ scope: "app-customer-research-decision" });
 
   if (rows.length === 0) return null;
 
-  const onDecide = async (researchId: ResearchRow["id"], decision: "accept" | "discard") => {
-    setBusy(researchId);
-    try {
-      await decide({ researchId, decision });
-    } finally {
-      setBusy(null);
-    }
-  };
+  const onDecide = (researchId: ResearchRow["id"], decision: "accept" | "discard") =>
+    action.run(() => decide({ researchId, decision }), {
+      key: researchId,
+      fallbackMessage: t("decideFailed"),
+    });
 
   return (
     <Card>
@@ -871,16 +880,16 @@ function NeedsChecking({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                disabled={busy === row.id}
-                onClick={() => onDecide(row.id, "accept")}
+                disabled={action.isBusy(row.id)}
+                onClick={() => void onDecide(row.id, "accept")}
                 className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium disabled:opacity-60"
               >
                 {t("useIt")}
               </button>
               <button
                 type="button"
-                disabled={busy === row.id}
-                onClick={() => onDecide(row.id, "discard")}
+                disabled={action.isBusy(row.id)}
+                onClick={() => void onDecide(row.id, "discard")}
                 className="px-3 py-1.5 rounded-[8px] border border-border-dim text-secondary text-[12px] hover:text-foreground transition-colors disabled:opacity-60"
               >
                 {t("discard")}

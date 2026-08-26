@@ -4392,7 +4392,8 @@
         "export": {
           "action": "Esporta",
           "working": "Esportazione…",
-          "truncated": "L'esportazione si è fermata a {count} record, il massimo che un file può contenere. Restringi le date o i filtri ed esporta di nuovo per essere certo di avere tutto."
+          "truncated": "L'esportazione si è fermata a {count} record, il massimo che un file può contenere. Restringi le date o i filtri ed esporta di nuovo per essere certo di avere tutto.",
+          "failed": "Impossibile creare l'esportazione. Riprova."
         },
         "columns": {
           "action": "Azione",
@@ -5721,7 +5722,8 @@
           "runFailed": "Impossibile eseguire la valutazione.",
           "batchFailed": "Impossibile avviare le valutazioni.",
           "nothingToRun": "Niente da eseguire.",
-          "batchStarted": "In esecuzione {count, plural, one {1 valutazione} other {# valutazioni}}. I risultati compaiono qui man mano che ognuna finisce."
+          "batchStarted": "In esecuzione {count, plural, one {1 valutazione} other {# valutazioni}}. I risultati compaiono qui man mano che ognuna finisce.",
+          "proposedFailed": "Impossibile salvare la decisione. Riprova."
         },
         "runEvals": "Esegui valutazioni",
         "newEval": "Nuova valutazione",
@@ -6156,7 +6158,9 @@
       "chainHeading": "Altri in {chain}",
       "lineEmpty": "Nessuna voce.",
       "saveFailed": "Impossibile salvare i dettagli.",
-      "findDetailsFailed": "Impossibile avviare la ricerca."
+      "findDetailsFailed": "Impossibile avviare la ricerca.",
+      "decideFailed": "Impossibile salvare la decisione. Riprova.",
+      "prospectDismissFailed": "Impossibile segnare questo potenziale come non interessante. Riprova."
     },
     "tablesTitle": "Importazioni da fogli di calcolo",
     "tablesSubtitle": "Da {fileName} — {rows} righe di vendita.",
@@ -6229,6 +6233,7 @@
       "newerImport": "È arrivata un'importazione più recente di questo report — eseguilo di nuovo per valutare i nuovi dati.",
       "runButton": "Genera il report",
       "exportButton": "Esporta",
+      "exportFailed": "Impossibile esportare il report. Riprova.",
       "idle": "Pronto per l'esecuzione.",
       "alreadyRunning": "Un report è già in preparazione.",
       "failed": "L'ultima esecuzione non è riuscita: {reason}",
@@ -6345,14 +6350,18 @@
     },
     "openCount": "{count} aperte",
     "openSource": "Vedi origine",
-    "createFailed": "Impossibile creare l'attività. Riprova."
+    "createFailed": "Impossibile creare l'attività. Riprova.",
+    "doneFailed": "Impossibile completare l'attività. Riprova.",
+    "reopenFailed": "Impossibile riaprire l'attività. Riprova.",
+    "dismissFailed": "Impossibile annullare l'attività. Riprova."
   },
   "notifications": {
     "title": "Notifiche",
     "empty": "Nulla di nuovo.",
     "markAllRead": "Segna tutte come lette",
     "open": "Notifiche",
-    "waiting": "{count} non lette"
+    "waiting": "{count} non lette",
+    "markAllReadFailed": "Impossibile segnare le notifiche come lette. Riprova."
   },
   "aiVoice": {
     "title": "Voce",
@@ -6536,13 +6545,15 @@
     "questions": {
       "title": "{count, plural, =1 {1 questione aperta} other {# questioni aperte}}",
       "hint": "Lo staff del wiki ha trovato pagine in disaccordo. Risolvi ciascuna modificando o fissando la pagina giusta — oppure ignorala se non conta.",
-      "dismiss": "Ignora questa questione"
+      "dismiss": "Ignora questa questione",
+      "dismissFailed": "Impossibile ignorare la questione. Riprova."
     },
     "reviews": {
       "title": "{count, plural, =1 {1 importazione in attesa della tua revisione} other {# importazioni in attesa della tua revisione}}",
       "hint": "Hai chiesto di vedere questi documenti prima che il wiki li impari. Ecco cosa afferma ciascuno.",
       "approve": "Approva — lascia che il wiki lo impari",
-      "reject": "Rifiuta — tienilo fuori dal wiki"
+      "reject": "Rifiuta — tienilo fuori dal wiki",
+      "failed": "Impossibile salvare la decisione. Riprova."
     },
     "globalTitle": "Wiki della piattaforma",
     "globalSubtitle": "Conoscenza a disposizione di ogni azienda. In caso di disaccordo vince sempre il wiki aziendale.",
@@ -6590,7 +6601,8 @@
     },
     "export": {
       "button": "Scarica il vault",
-      "exporting": "Preparazione…"
+      "exporting": "Preparazione…",
+      "failed": "Impossibile preparare il vault. Riprova."
     },
     "switcher": {
       "placeholder": "Vai a una pagina… (Cmd/Ctrl-K)",
@@ -6716,7 +6728,8 @@
     "emptyState": "Niente qui - finora ogni domanda ha trovato le sue pagine. Quando una non le trova, appare qui.",
     "emptyFiltered": "Nulla corrisponde a questo filtro.",
     "subtitleCompany": "Ogni domanda per cui l'AI di questa azienda non aveva pagine.",
-    "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire."
+    "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire.",
+    "dismissFailed": "Impossibile ignorare la domanda. Riprova."
   },
   "aiCalls": {
     "title": "Chiamate",

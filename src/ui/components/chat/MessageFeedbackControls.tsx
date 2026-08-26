@@ -62,6 +62,7 @@ export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messag
     );
     setIsSaving(false);
     setLabelPickerOpen(outcome.ok && rating === "NEGATIVE" && !labels);
+    return outcome.ok;
   };
 
   const isPositive = mine?.rating === "POSITIVE";
@@ -95,7 +96,8 @@ export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messag
   const sendCorrection = async () => {
     const text = correction.trim();
     if (!text || isSaving) return;
-    await submit("NEGATIVE", mine?.labels?.length ? mine.labels : undefined, text);
+    const sent = await submit("NEGATIVE", mine?.labels?.length ? mine.labels : undefined, text);
+    if (!sent) return;
     setCorrectionSent(true);
     setCorrection("");
   };

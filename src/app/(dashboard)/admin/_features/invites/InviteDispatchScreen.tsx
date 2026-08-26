@@ -111,12 +111,16 @@ export function InviteDispatchScreen({
   const [sendError, setSendError] = useState<string | null>(null);
 
   // Adopted during render rather than in an effect, as the settings form does:
-  // an effect paints the empty form for a frame before replacing it, and the
-  // sentinel is the template itself — Convex hands back a new reference on
-  // every server change, which is exactly when the form should re-seed.
-  const [seenTemplate, setSeenTemplate] = useState<typeof activeTemplate>(undefined);
-  if (activeTemplate && activeTemplate !== seenTemplate) {
-    setSeenTemplate(activeTemplate);
+  // an effect paints the empty form for a frame before replacing it. The
+  // sentinel is whether this screen has taken its copy of the template yet.
+  // Keying on the template object re-seeded the form every time the server
+  // handed back a new reference — `invites.getActiveTemplate` builds a fresh
+  // object on every read — and threw away whatever was being composed. There is
+  // one invite template and its result carries no id, so its identity never
+  // changes: the form takes it once.
+  const [hasSeededTemplate, setHasSeededTemplate] = useState(false);
+  if (activeTemplate && !hasSeededTemplate) {
+    setHasSeededTemplate(true);
     setFormData({
        subject: activeTemplate.subject,
        headline: activeTemplate.headline,

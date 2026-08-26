@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SearchBar } from "@/src/ui/components/screens/Table";
@@ -45,8 +46,8 @@ export default function AuditTrailPage() {
   const [actorId, setActorId] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [page, setPage] = useState(1);
-  const [exporting, setExporting] = useState(false);
   const [truncatedAt, setTruncatedAt] = useState<number | null>(null);
+  const action = useAdminAction({ scope: "admin-governance-audit-export" });
 
   /**
    * Fixed when the range changes, not on every render.
@@ -56,10 +57,12 @@ export default function AuditTrailPage() {
    * paginated read restarted forever — the table sat on its loading spinner
    * with the data one round trip away the whole time.
    */
-  const from = useMemo(
-    () => (days === 0 ? undefined : Date.now() - days * DAY_MS),
-    [days],
-  );
+  const [from, setFrom] = useState<number | undefined>(() => Date.now() - 30 * DAY_MS);
+
+  const chooseRange = (nextDays: number) => {
+    setDays(nextDays);
+    setFrom(nextDays === 0 ? undefined : Date.now() - nextDays * DAY_MS);
+  };
 
   /** The filters, in the one shape both the screen and the export take. */
   const filters = useMemo(
@@ -139,41 +142,41 @@ export default function AuditTrailPage() {
    * for a button most readers never press.
    */
   const handleExport = async () => {
-    if (exporting) return;
-    setExporting(true);
+    const outcome = await action.run(
+      async () => {
+        const exported = await convex.mutation(api.auditLogs.getAuditExport, filters);
 
-    try {
-      const exported = await convex.mutation(api.auditLogs.getAuditExport, filters);
+        const header = ["When", "Action", "Who", "What happened", "What it was done to", "Workspace"];
+        const csv = [header, ...exported.rows.map((row) => [
+          row.when,
+          row.action,
+          row.who,
+          row.whatHappened,
+          row.target,
+          row.workspace,
+        ])]
+          // Quoted throughout, and inner quotes doubled. A change described as
+          // `Purpose: "old" → "new"` would otherwise tear the row in half.
+          .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
+          .join("\n");
 
-      const header = ["When", "Action", "Who", "What happened", "What it was done to", "Workspace"];
-      const csv = [header, ...exported.rows.map((row) => [
-        row.when,
-        row.action,
-        row.who,
-        row.whatHappened,
-        row.target,
-        row.workspace,
-      ])]
-        // Quoted throughout, and inner quotes doubled. A change described as
-        // `Purpose: "old" → "new"` would otherwise tear the row in half.
-        .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
-        .join("\n");
+        const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
 
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
+        return exported.truncated ? exported.rows.length : null;
+      },
+      { fallbackMessage: t("export.failed") },
+    );
 
-      // Said out loud rather than swallowed. An export that stopped early but
-      // looks complete is a document somebody would sign their name to. Shown
-      // on the page rather than in a browser dialog, which this platform does
-      // not use and which a reader dismisses without reading.
-      setTruncatedAt(exported.truncated ? exported.rows.length : null);
-    } finally {
-      setExporting(false);
-    }
+    // Said out loud rather than swallowed. An export that stopped early but
+    // looks complete is a document somebody would sign their name to. Shown
+    // on the page rather than in a browser dialog, which this platform does
+    // not use and which a reader dismisses without reading.
+    if (outcome.ok) setTruncatedAt(outcome.data);
   };
 
 
@@ -201,7 +204,7 @@ export default function AuditTrailPage() {
           <Select
             id="audit-period"
             value={days}
-            onChange={(next) => narrow(() => setDays(Number(next)))}
+            onChange={(next) => narrow(() => chooseRange(Number(next)))}
             className="w-[150px]"
           >
             {PERIODS.map((period) => (
@@ -278,7 +281,7 @@ export default function AuditTrailPage() {
                   setActionType("");
                   setActorId("");
                   setCompanyId("");
-                  setDays(30);
+                  chooseRange(30);
                 })
               }
               className="h-[38px] rounded-[10px] px-3 py-0 font-normal hover:bg-transparent"
@@ -290,11 +293,11 @@ export default function AuditTrailPage() {
           <Button
             variant="quiet"
             onClick={handleExport}
-            disabled={exporting}
+            disabled={action.isBusy()}
             className="flex h-[38px] items-center gap-2 rounded-[10px] px-3 py-0 text-[13px] font-normal bg-transparent hover:bg-transparent"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
-            {exporting ? t("export.working") : t("export.action")}
+            {action.isBusy() ? t("export.working") : t("export.action")}
           </Button>
         </div>
       </div>

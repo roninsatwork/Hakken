@@ -222,12 +222,15 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
   // Adopted during render rather than in an effect, per the React docs on
   // deriving state from props: an effect would paint the previous node's
-  // configuration first and then replace it. The sentinel is the node itself,
-  // which is a new object whenever the canvas hands the drawer a different one.
-  const [seenNode, setSeenNode] = useState<WorkflowCanvasNode | null>(null);
+  // configuration first and then replace it. The sentinel is the node's id, not
+  // the node: the canvas builds a new object for the same node whenever it
+  // re-renders, and keying on the object re-seeded the drawer over whatever was
+  // being typed.
+  const [seenNodeId, setSeenNodeId] = useState<string | null>(null);
+  const nodeId = node?.id ?? null;
 
-  if (node !== seenNode) {
-    setSeenNode(node);
+  if (nodeId !== seenNodeId) {
+    setSeenNodeId(nodeId);
     if (node) {
         const existingSchedule = node.data?._scheduleInterval;
         let pMode: ScheduleMode = "interval";

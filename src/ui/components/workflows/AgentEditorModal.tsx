@@ -129,29 +129,25 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const generateConfig = useAction(api.workflowNodeConfig.generateNodeConfig);
 
   // Adopted during render rather than in an effect, per the React docs on
-  // deriving state from props. The sentinel is the four inputs the form is
-  // seeded from: the agent document, the node it belongs to, the platform's
-  // default model and the skill bindings. Convex hands back a new reference
-  // whenever any of them changes on the server, which is exactly when the form
-  // should re-seed.
-  const [seenSeed, setSeenSeed] = useState<{
-    agent: typeof agent;
-    node: WorkflowCanvasNode;
-    defaultModelId: string;
-    bindings: typeof existingSkillBindings;
-  } | null>(null);
+  // deriving state from props. The sentinel is the pair of ids the form is
+  // seeded from — this agent and this canvas node — because Convex and the
+  // canvas both hand back new objects for records that have not changed, and
+  // keying on those objects re-seeded the editor over whatever was being typed.
+  // The platform's default model and the skill bindings arrive from their own
+  // queries, which can land after the agent does, so the seed waits for them as
+  // the agent settings screen waits: seeding without them meant a second seed a
+  // moment later that threw away anything typed in between.
+  const seedKey = agent && node ? `${agent._id}:${node.id}` : null;
+  const seedInputsReady =
+    (Boolean(agent?.modelId) || activeModelsData !== undefined)
+    && existingSkillBindingsData !== undefined;
 
-  if (
-    agent &&
-    node &&
-    (seenSeed?.agent !== agent ||
-      seenSeed?.node !== node ||
-      seenSeed?.defaultModelId !== defaultModelId ||
-      seenSeed?.bindings !== existingSkillBindings)
-  ) {
+  const [seenSeedKey, setSeenSeedKey] = useState<string | null>(null);
+
+  if (agent && node && seedInputsReady && seenSeedKey !== seedKey) {
     const bindingSkillIds = existingSkillBindings.map((row) => row.skill._id);
     const nodeSkillIds = node.data?._skillIds ?? [];
-    setSeenSeed({ agent, node, defaultModelId, bindings: existingSkillBindings });
+    setSeenSeedKey(seedKey);
     setFormData({
       name: agent.name || "",
       systemPrompt: agent.systemPrompt || "",
@@ -328,7 +324,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 	  };
 
   if (!node) return null;
-  const isLoading = agentId && agent === undefined;
+  const isLoading = Boolean(agentId) && (agent === undefined || !seedInputsReady);
 
 	  return (
       <>

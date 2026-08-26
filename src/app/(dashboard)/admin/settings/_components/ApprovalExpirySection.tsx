@@ -28,10 +28,10 @@ export function ApprovalExpirySection() {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const [seenConfig, setSeenConfig] = useState<typeof config>(undefined);
+  const [hasSeededHours, setHasSeededHours] = useState(false);
 
-  if (config && config !== seenConfig) {
-    setSeenConfig(config);
+  if (config && !hasSeededHours) {
+    setHasSeededHours(true);
     setHours(String(config.expiryHours));
   }
 

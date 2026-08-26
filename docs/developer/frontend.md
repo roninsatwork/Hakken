@@ -165,6 +165,14 @@ the person is typing — and against any caller that returns a fresh object per
 read it never settles at all, which rendered the model pricing screen until
 React gave up. Key on the record's id.
 
+Where the query reads one singleton row and hands back no id — the system
+settings, the invite template, a `systemConfig` section — that record's identity
+cannot change, so the sentinel is whether the form has taken its copy yet.
+`useSystemSettingsForm.ts` is that shape. Where a form is seeded from more than
+one query, wait for all of them before seeding, as
+`admin/agents/[id]/settings/page.tsx` waits for the model list: seeding early
+means a second seed a moment later, which throws away anything typed in between.
+
 ## Localization
 
 User-visible dashboard copy is localized through `next-intl` and dictionaries in `messages/en.json` and `messages/it.json`. `src/i18n/request.ts` reads the `locale` cookie, defaults to `en`, and imports the matching message dictionary for `NextIntlClientProvider` in `src/app/layout.tsx`. The profile preferences UI writes that cookie and reloads the page when the user switches between English and Italian.

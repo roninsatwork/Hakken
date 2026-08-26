@@ -1,8 +1,15 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render as renderBare, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "./Header";
+
+import { ToastProvider } from "@/src/context/ToastContext";
+
+// The header renders the notification bell, which reports its failures
+// through the house runner — so it reads the toast context the root layout
+// always supplies.
+const render = (ui: Parameters<typeof renderBare>[0]) => renderBare(ui, { wrapper: ToastProvider });
 
 const setIsSidebarOpen = vi.hoisted(() => vi.fn());
 const useQueryMock = vi.hoisted(() => vi.fn());

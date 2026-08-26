@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -43,6 +44,7 @@ export function NotificationBell() {
   );
   const markRead = useMutation(api.notifications.markRead);
   const markAllRead = useMutation(api.notifications.markAllMineRead);
+  const action = useAdminAction({ scope: "notifications-mark-all-read" });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -126,7 +128,11 @@ export function NotificationBell() {
                 // bare text action.
                 <button
                   type="button"
-                  onClick={() => markAllRead({})}
+                  onClick={() =>
+                    void action.run(() => markAllRead({}), {
+                      fallbackMessage: t("markAllReadFailed"),
+                    })
+                  }
                   className="text-[11px] text-secondary hover:text-foreground transition-colors inline-flex items-center gap-1"
                 >
                   <Check className="w-3 h-3" />

@@ -89,7 +89,10 @@ export function WikiPagesListScreen({
   const dismissGlobal = useMutation(api.wikiQuestions.dismissOpenQuestionForGlobal);
   const dismissCompany = useMutation(api.wikiQuestions.dismissOpenQuestionForCompany);
   const dismissQuestion = (questionId: (typeof openQuestions)[number]["questionId"]) =>
-    companyId ? dismissCompany({ companyId, questionId }) : dismissGlobal({ questionId });
+    action.run(
+      () => (companyId ? dismissCompany({ companyId, questionId }) : dismissGlobal({ questionId })),
+      { key: `question:${questionId}`, fallbackMessage: t("questions.dismissFailed") },
+    );
   const pageHrefForKey = (pageKey: string) => {
     // Only the page in hand can be linked from here; a key from an older
     // page is left as plain words rather than pointing at nothing.
@@ -115,7 +118,13 @@ export function WikiPagesListScreen({
   const decideGlobal = useMutation(api.wikiReviews.decideReviewForGlobal);
   const decideCompany = useMutation(api.wikiReviews.decideReviewForCompany);
   const decideReview = (reviewId: (typeof pendingReviews)[number]["reviewId"], approve: boolean) =>
-    companyId ? decideCompany({ companyId, reviewId, approve }) : decideGlobal({ reviewId, approve });
+    action.run(
+      () =>
+        companyId
+          ? decideCompany({ companyId, reviewId, approve })
+          : decideGlobal({ reviewId, approve }),
+      { key: `review:${reviewId}`, fallbackMessage: t("reviews.failed") },
+    );
 
   // Taking pages off the shelf (Anthony, 2026-08-20: clearing a workspace's
   // documents left "the wiki still full" with no way to empty it).
@@ -209,56 +218,55 @@ export function WikiPagesListScreen({
   // browser — filenames are the subjectKeys, so every [[reference]]
   // resolves the moment Obsidian opens the folder.
   const convex = useConvex();
-  const [isExporting, setIsExporting] = useState(false);
-  const downloadVault = async () => {
-    setIsExporting(true);
-    try {
-      const fflatePromise = import("fflate");
-      const pages = companyId
-        ? await convex.query(api.wikiPages.getExportForCompany, { companyId })
-        : await convex.query(api.wikiPages.getExportForGlobal, {});
-      const { strToU8, zipSync } = await fflatePromise;
-      const folders: Record<string, string> = {
-        CUSTOMER: "customers",
-        PRODUCT: "products",
-        POLICY: "policies",
-        ISSUE: "issues",
-        SOURCE: "sources",
-        GOAL: "goals",
-      };
-      const files: Record<string, Uint8Array> = {};
-      for (const page of pages) {
-        const safeName = page.subjectKey.replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(0, 120);
-        const frontmatter = [
-          "---",
-          `title: ${JSON.stringify(page.title)}`,
-          `kind: ${page.kind}`,
-          `updated: ${new Date(page.updatedAt).toISOString().slice(0, 10)}`,
-          ...(page.sources.length
-            ? ["sources:", ...page.sources.map((label: string) => `  - ${JSON.stringify(label)}`)]
-            : []),
-          ...(page.pinnedCorrections.length
-            ? ["pinned:", ...page.pinnedCorrections.map((pin: string) => `  - ${JSON.stringify(pin)}`)]
-            : []),
-          "---",
-          "",
-        ].join("\n");
-        files[`${folders[page.kind] ?? "pages"}/${safeName}.md`] = strToU8(
-          frontmatter + page.content + "\n"
-        );
-      }
-      const zipped = zipSync(files);
-      const blob = new Blob([zipped.buffer as ArrayBuffer], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = companyId ? "company-wiki-vault.zip" : "platform-wiki-vault.zip";
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  const isExporting = action.isBusy("export");
+  const downloadVault = () =>
+    action.run(
+      async () => {
+        const fflatePromise = import("fflate");
+        const pages = companyId
+          ? await convex.query(api.wikiPages.getExportForCompany, { companyId })
+          : await convex.query(api.wikiPages.getExportForGlobal, {});
+        const { strToU8, zipSync } = await fflatePromise;
+        const folders: Record<string, string> = {
+          CUSTOMER: "customers",
+          PRODUCT: "products",
+          POLICY: "policies",
+          ISSUE: "issues",
+          SOURCE: "sources",
+          GOAL: "goals",
+        };
+        const files: Record<string, Uint8Array> = {};
+        for (const page of pages) {
+          const safeName = page.subjectKey.replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(0, 120);
+          const frontmatter = [
+            "---",
+            `title: ${JSON.stringify(page.title)}`,
+            `kind: ${page.kind}`,
+            `updated: ${new Date(page.updatedAt).toISOString().slice(0, 10)}`,
+            ...(page.sources.length
+              ? ["sources:", ...page.sources.map((label: string) => `  - ${JSON.stringify(label)}`)]
+              : []),
+            ...(page.pinnedCorrections.length
+              ? ["pinned:", ...page.pinnedCorrections.map((pin: string) => `  - ${JSON.stringify(pin)}`)]
+              : []),
+            "---",
+            "",
+          ].join("\n");
+          files[`${folders[page.kind] ?? "pages"}/${safeName}.md`] = strToU8(
+            frontmatter + page.content + "\n"
+          );
+        }
+        const zipped = zipSync(files);
+        const blob = new Blob([zipped.buffer as ArrayBuffer], { type: "application/zip" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = companyId ? "company-wiki-vault.zip" : "platform-wiki-vault.zip";
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      { key: "export", fallbackMessage: t("export.failed") },
+    );
 
   const describeSource = (source: string) => {
     if (source.startsWith("PHONE_CALL:")) return t("sources.phone");

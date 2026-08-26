@@ -64,10 +64,10 @@ export function SelfImprovementSection() {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const [seenConfig, setSeenConfig] = useState<typeof config>(undefined);
+  const [hasSeededSwitches, setHasSeededSwitches] = useState(false);
 
-  if (config && config !== seenConfig) {
-    setSeenConfig(config);
+  if (config && !hasSeededSwitches) {
+    setHasSeededSwitches(true);
     setSwitches(config);
   }
 

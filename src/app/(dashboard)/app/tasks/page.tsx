@@ -31,6 +31,7 @@ const TASK_PAGE_SIZE = 30;
 export default function TasksPage() {
   const t = useTranslations("tasks");
   const action = useAdminAction({ scope: "tasks-create" });
+  const rowAction = useAdminAction({ scope: "tasks-row" });
 
   const [mineOnly, setMineOnly] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -82,6 +83,24 @@ export default function TasksPage() {
       { fallbackMessage: t("createFailed") },
     );
   };
+
+  const handleComplete = (taskId: Id<"tasks">) =>
+    rowAction.run(() => completeTask({ taskId }), {
+      key: taskId,
+      fallbackMessage: t("doneFailed"),
+    });
+
+  const handleReopen = (taskId: Id<"tasks">) =>
+    rowAction.run(() => reopenTask({ taskId }), {
+      key: taskId,
+      fallbackMessage: t("reopenFailed"),
+    });
+
+  const handleCancel = (taskId: Id<"tasks">) =>
+    rowAction.run(() => cancelTask({ taskId }), {
+      key: taskId,
+      fallbackMessage: t("dismissFailed"),
+    });
 
   return (
     <>
@@ -226,7 +245,7 @@ export default function TasksPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            isSettled ? reopenTask({ taskId: task._id }) : completeTask({ taskId: task._id })
+                            void (isSettled ? handleReopen(task._id) : handleComplete(task._id))
                           }
                           aria-label={isSettled ? t("reopen") : t("done")}
                           className={`mt-0.5 w-4 h-4 rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -280,7 +299,7 @@ export default function TasksPage() {
                         {task.status === "OPEN" && (
                           <button
                             type="button"
-                            onClick={() => cancelTask({ taskId: task._id })}
+                            onClick={() => void handleCancel(task._id)}
                             aria-label={t("dismiss")}
                             className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-7 h-7 rounded-[8px] flex items-center justify-center text-muted hover:text-foreground hover:bg-foreground/5 transition-all"
                           >
@@ -290,7 +309,7 @@ export default function TasksPage() {
                         {task.status === "DONE" && (
                           <button
                             type="button"
-                            onClick={() => reopenTask({ taskId: task._id })}
+                            onClick={() => void handleReopen(task._id)}
                             aria-label={t("reopen")}
                             className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-7 h-7 rounded-[8px] flex items-center justify-center text-muted hover:text-foreground hover:bg-foreground/5 transition-all"
                           >
