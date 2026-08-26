@@ -2771,7 +2771,9 @@
           },
           "deleteFailed": "The rule could not be deleted. Try again.",
           "toggleFailed": "The rule could not be switched. Try again.",
-          "ruleColumn": "Rule Name / Trigger"
+          "ruleColumn": "Rule Name / Trigger",
+          "priorityColumn": "Priority",
+          "statusColumn": "Status"
         },
         "knowledge": {
           "title": "Knowledge Base",

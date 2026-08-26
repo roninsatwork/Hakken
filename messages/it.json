@@ -525,7 +525,7 @@
     "agents": "Flotta Agent",
     "settings": "Impostazioni",
     "aiManagement": "Gestione AI",
-    "auditLogs": "Audit Ledger"
+    "auditLogs": "Registro delle attività"
   },
   "sidebar": {
     "governance": "Governance",
@@ -588,7 +588,7 @@
     "salesDataCustomers": "Clienti",
     "salesDataOpportunityReport": "Report opportunità",
     "plans": "Piani",
-    "skillCenter": "Skill Center",
+    "skillCenter": "Centro competenze",
     "widget": "Widget",
     "askPlatform": "Chiedi a {platformName}",
     "tasks": "Attività",
@@ -1623,7 +1623,7 @@
         "addAgent": "Aggiungi Agent",
         "sandboxLabel": "Agent Sandbox",
         "header": {
-          "trigger": "Trigger: {type}",
+          "trigger": "Attivazione: {type}",
           "addAgent": "Aggiungi Agent",
           "saveGraph": "Salva Grafo",
           "saving": "Sincronizzazione...",
@@ -1767,7 +1767,7 @@
         "drawer": {
           "closeAria": "Chiudi configurazione",
           "standardTab": "🪄 Standard",
-          "developerTab": "⚡️ Developer",
+          "developerTab": "⚡️ Sviluppatore",
           "nodeLabel": "Etichetta Nodo",
           "nodeLabelPlaceholder": "es. Scrape Google",
           "saveConfiguration": "Salva Configurazione",
@@ -2220,25 +2220,25 @@
     },
     "aiTools": {
       "new": {
-        "back": "Back to tools",
-        "title": "Add a tool",
-        "subtitle": "Give the assistant something it can go and do.",
+        "back": "Torna agli strumenti",
+        "title": "Aggiungi uno strumento",
+        "subtitle": "Dai all'assistente qualcosa che può andare a fare.",
         "fields": {
           "name": {
-            "label": "Name the assistant will use",
-            "placeholder": "For example: check_stock",
-            "help": "Lower case, words joined by underscores, no spaces. The box tidies it as you type."
+            "label": "Il nome che userà l'assistente",
+            "placeholder": "Per esempio: check_stock",
+            "help": "Lettere minuscole, parole unite da trattini bassi, senza spazi. Il campo lo sistema mentre scrivi."
           },
           "description": {
-            "label": "What it does, and when to use it",
-            "placeholder": "For example: Looks up how many of an item are left in stock."
+            "label": "Che cosa fa, e quando usarlo",
+            "placeholder": "Per esempio: Controlla quanti pezzi di un articolo restano in magazzino."
           },
           "handler": {
-            "label": "Which piece of code it runs",
-            "placeholder": "For example: api.stock.check"
+            "label": "Quale parte del codice esegue",
+            "placeholder": "Per esempio: api.stock.check"
           },
           "role": {
-            "label": "Who is allowed to use it",
+            "label": "Chi può usarlo",
             "admin": "Admin",
             "systemAdmin": "Amministratore di sistema"
           },
@@ -2261,7 +2261,7 @@
             "label": "Cosa restituisce (JSON)"
           }
         },
-        "submit": "Add tool",
+        "submit": "Aggiungi strumento",
         "createFailed": "Impossibile creare lo strumento. Riprova."
       },
       "shelf": {
@@ -2679,14 +2679,14 @@
           "title": "Istruzioni",
           "subtitle": "Cosa deve fare {name} e come deve comportarsi.",
           "saveButton": "Salva",
-          "revertButton": "Undo Changes",
+          "revertButton": "Annulla le modifiche",
           "feedback": {
             "success": {
               "title": "Istruzioni salvate",
               "subtitle": "L'agente le userà a partire dal prossimo lavoro."
             },
             "error": {
-              "title": "Configuration Error"
+              "title": "Errore di configurazione"
             }
           },
           "errors": {
@@ -2699,7 +2699,7 @@
               "statusSynced": "Saved",
               "loading": "Caricamento...",
               "placeholder": "Come deve comportarsi questo agente: il tono, cosa deve sempre fare e cosa non deve mai fare.",
-              "label": "SYSTEM PROMPT"
+              "label": "ISTRUZIONI DI SISTEMA"
             },
             "job": {
               "title": "Il lavoro",
@@ -2710,45 +2710,45 @@
         },
         "rules": {
           "title": "Regole di Confine Operativo",
-          "subtitle": "Specific instructions and constraints this agent must follow.",
-          "addButton": "Add Rule",
+          "subtitle": "Istruzioni e vincoli specifici che questo assistente deve seguire.",
+          "addButton": "Aggiungi regola",
           "searchPlaceholder": "Cerca regole...",
           "empty": "Nessuna regola definita per questo agent.",
           "table": {
             "tooltips": {
-              "activate": "Activate",
-              "deactivate": "Deactivate",
-              "edit": "Edit",
-              "delete": "Delete"
+              "activate": "Attiva",
+              "deactivate": "Disattiva",
+              "edit": "Modifica",
+              "delete": "Elimina"
             }
           },
           "deleteModal": {
-            "title": "Delete Rule",
-            "description": "Are you sure you want to permanently delete this rule?",
-            "warning": "This action cannot be undone.",
+            "title": "Elimina regola",
+            "description": "Vuoi davvero eliminare questa regola in modo definitivo?",
+            "warning": "Questa azione non può essere annullata.",
             "abort": "Cancel",
             "confirm": "Delete"
           },
           "form": {
-            "back": "Back to rules",
+            "back": "Torna alle regole",
             "create": {
-              "title": "Add a rule",
-              "subtitle": "Tell the assistant what to do when someone says something in particular.",
-              "submit": "Create rule"
+              "title": "Aggiungi una regola",
+              "subtitle": "Dì all'assistente che cosa fare quando qualcuno dice qualcosa in particolare.",
+              "submit": "Crea regola"
             },
             "edit": {
-              "title": "Edit rule",
-              "subtitle": "Change what the assistant does when someone says something.",
+              "title": "Modifica regola",
+              "subtitle": "Cambia che cosa fa l'assistente quando qualcuno dice qualcosa.",
               "idLabel": "ID: {id}",
-              "submit": "Save changes"
+              "submit": "Salva le modifiche"
             },
             "trigger": {
-              "label": "When to use it",
-              "entity": "Words or phrases that set it off",
-              "placeholder": "For example: where are you based, what is your address"
+              "label": "Quando usarla",
+              "entity": "Parole o frasi che la attivano",
+              "placeholder": "Per esempio: dove avete sede, qual è il vostro indirizzo"
             },
             "priority": {
-              "label": "How important it is",
+              "label": "Quanto è importante",
               "levels": {
                 "LOW": "Low",
                 "NORMAL": "Normal",
@@ -2757,11 +2757,11 @@
               }
             },
             "instruction": {
-              "label": "What the assistant should do",
-              "context": "The instruction, in your own words",
+              "label": "Che cosa deve fare l'assistente",
+              "context": "L'istruzione, con parole tue",
               "placeholder": {
-                "new": "For example: Tell them our office is in London and offer to book a visit.",
-                "edit": "For example: Tell them our office is in London and offer to book a visit."
+                "new": "Per esempio: Di' che il nostro ufficio è a Londra e proponi di fissare una visita.",
+                "edit": "Per esempio: Di' che il nostro ufficio è a Londra e proponi di fissare una visita."
               }
             },
             "name": {
@@ -2771,15 +2771,17 @@
           },
           "deleteFailed": "Impossibile eliminare la regola. Riprova.",
           "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova.",
-          "ruleColumn": "Nome della regola / Attivazione"
+          "ruleColumn": "Nome della regola / Attivazione",
+          "priorityColumn": "Priorità",
+          "statusColumn": "Stato"
         },
         "knowledge": {
           "title": "Grafo della Conoscenza",
-          "subtitle": "Files, documents, and data this agent can reference during conversations.",
-          "uploadButton": "Upload Document",
+          "subtitle": "File, documenti e dati che questo assistente può consultare durante le conversazioni.",
+          "uploadButton": "Carica un documento",
           "empty": {
-            "title": "No documents uploaded",
-            "subtitle": "Upload PDF, Word, or Text files to give your agent custom memory."
+            "title": "Nessun documento caricato",
+            "subtitle": "Carica file PDF, Word o di testo per dare all'assistente una memoria tutta sua."
           },
           "table": {
             "name": "Documento",
@@ -2787,19 +2789,19 @@
             "type": "Tipo",
             "actions": "Azioni",
             "statusReady": "Ready",
-            "deleteConfirm": "Are you sure you want to delete this document?"
+            "deleteConfirm": "Vuoi davvero eliminare questo documento?"
           },
           "errors": {
-            "unsupportedFileType": "Unsupported file type.",
-            "uploadFailed": "Upload failed",
-            "deleteFailed": "Failed to delete document"
+            "unsupportedFileType": "Tipo di file non supportato.",
+            "uploadFailed": "Caricamento non riuscito",
+            "deleteFailed": "Non è stato possibile eliminare il documento"
           },
           "uploadModal": {
-            "title": "Upload Document",
-            "processing": "Encoding document...",
-            "dropTitle": "Drag and drop your file here",
-            "dropSubtitle": "Supports .pdf, .docx, and .txt files",
-            "browseButton": "Browse Files"
+            "title": "Carica un documento",
+            "processing": "Sto elaborando il documento...",
+            "dropTitle": "Trascina qui il tuo file",
+            "dropSubtitle": "Accetta file .pdf, .docx e .txt",
+            "browseButton": "Sfoglia i file"
           },
           "agent": {
             "headerTitle": "Conoscenza dell'agente",
@@ -2810,37 +2812,37 @@
         },
         "logs": {
           "title": "Tracce di Esecuzione",
-          "subtitle": "View a history of this agent's interactions and background tasks.",
-          "searchPlaceholder": "Search logs by input or output...",
+          "subtitle": "Guarda lo storico di quello che questo assistente ha fatto, comprese le attività in background.",
+          "searchPlaceholder": "Cerca nei registri per richiesta o risposta...",
           "table": {
             "headers": {
               "timestamp": "Timestamp",
               "status": "Status",
-              "event": "Pipeline Event",
-              "report": "Trace Report"
+              "event": "Evento",
+              "report": "Resoconto"
             },
             "empty": {
-              "search": "No logs found matching search.",
-              "index": "No activity logs recorded.",
-              "tryDifferent": "Try adjusting your search criteria.",
-              "notIntercepted": "When this agent runs tasks, logs will appear here.",
-              "seedButton": "Generate Sample Log"
+              "search": "Nessun registro corrisponde alla ricerca.",
+              "index": "Nessuna attività registrata.",
+              "tryDifferent": "Prova a modificare i criteri di ricerca.",
+              "notIntercepted": "Quando questo assistente lavora, le sue attività appariranno qui.",
+              "seedButton": "Genera un registro di esempio"
             }
           },
           "pagination": {
-            "showing": "Showing {start} to {end} of {total} logs",
-            "none": "No logs to display",
+            "showing": "Mostro da {start} a {end} di {total} registri",
+            "none": "Nessun registro da mostrare",
             "prev": "Previous",
-            "pageOf": "Page {current} of {total}",
+            "pageOf": "Pagina {current} di {total}",
             "next": "Next"
           },
           "detail": {
-            "title": "Execution Trace Detail",
-            "recorded": "Recorded: {date}",
-            "back": "Back to Index",
+            "title": "Dettaglio dell'esecuzione",
+            "recorded": "Registrato: {date}",
+            "back": "Torna all'elenco",
             "tabs": {
-              "payload": "EXECUTION PAYLOAD",
-              "config": "PROMPT & RUNTIME CONFIGURATION"
+              "payload": "CONTENUTO DELL'ESECUZIONE",
+              "config": "ISTRUZIONI E CONFIGURAZIONE"
             },
             "notFound": "Traccia non trovata o eliminata.",
             "copyTitle": "Copia negli appunti"
@@ -3050,7 +3052,7 @@
             "notFound": "Questo lavoro non è stato trovato, oppure appartiene a uno spazio di lavoro che non puoi vedere.",
             "rehearsalNote": "Prova — scritture registrate, non eseguite",
             "seeTime": "Vedi dove è andato il tempo",
-            "runId": "run: {id}",
+            "runId": "esecuzione: {id}",
             "version": "versione: {id}",
             "model": "modello: {id}",
             "error": "Errore",
@@ -3846,8 +3848,8 @@
             "description": "Thread di conversazione dei clienti, messaggi, log di tracciamento swarm e allegati di documenti caricati."
           },
           "auditLogs": {
-            "title": "System Audit Ledger",
-            "description": "Immutable security logging tracking admin events, impersonations, user modifications, and role changes."
+            "title": "Registro delle attività di sistema",
+            "description": "Registro di sicurezza non modificabile: tiene traccia delle azioni degli amministratori, delle impersonificazioni, delle modifiche agli utenti e dei cambi di ruolo."
           },
           "agentRunHistory": {
             "title": "Cronologia Esecuzioni Agenti",
@@ -4171,7 +4173,7 @@
       },
       "detailPage": {
         "title": "Dettagli Evento",
-        "subtitle": "Log ID: {id}",
+        "subtitle": "ID registro: {id}",
         "back": "Torna ai Log di Audit",
         "eventSignature": "Azione",
         "timestamp": "Ora",
@@ -4618,7 +4620,7 @@
         "pending": "Invito in Attesa",
         "awaiting": "In attesa di risposta",
         "systemLevel": "Livello di Sistema",
-        "platformGlobal": "{platformName} Global",
+        "platformGlobal": "{platformName} globale",
         "noOneFound": "Nessuno trovato",
         "noMatches": "Nessuna identità attiva trovata corrispondente alla query.",
         "na": "N/D",
@@ -4628,7 +4630,7 @@
         "openProfile": "Apri profilo"
       },
       "roles": {
-        "superAdmin": "Super Admin",
+        "superAdmin": "Super amministratore",
         "admin": "Amministratore",
         "user": "Utente Protocollo",
         "readOnly": "Sola lettura",
@@ -4778,7 +4780,7 @@
       "previewHeadlineEmpty": "Intestazione vuota",
       "previewBodyEmpty": "Nessun contenuto di paragrafo configurato al momento.",
       "previewCtaEmpty": "In verifica",
-      "previewFooter": "{platformName} - to be prepared",
+      "previewFooter": "{platformName} - preparati",
       "sending": "Invio dell'invito...",
       "send": "Invia invito",
       "sendSuccess": "Fatto! L'API Resend ha accettato il messaggio.",
@@ -5121,24 +5123,24 @@
       "title": "Telemetria Economica AI Globale",
       "subtitle": "Monitora il consumo di token AI e i costi operativi di tutte le aziende.",
       "metrics": {
-        "periodCost": "Total Cost",
-        "exchangeSub": "Estimated total spend",
-        "tokensProcessed": "Total Tokens",
+        "periodCost": "Costo totale",
+        "exchangeSub": "Spesa totale stimata",
+        "tokensProcessed": "Token totali",
         "tokenSub": "{input} IN • {output} OUT",
-        "interactions": "Total Messages",
-        "interactionsSub": "Messages generated",
-        "avgCostUser": "Average Cost per User",
-        "avgCostUserSub": "Cost per active user",
-        "avgCostConv": "Average Cost per Message",
-        "avgCostConvSub": "Cost per message"
+        "interactions": "Messaggi totali",
+        "interactionsSub": "Messaggi generati",
+        "avgCostUser": "Costo medio per utente",
+        "avgCostUserSub": "Costo per utente attivo",
+        "avgCostConv": "Costo medio per messaggio",
+        "avgCostConvSub": "Costo per messaggio"
       },
       "aggregation": {
-        "day": "Daily Cost",
-        "week": "Weekly Cost",
-        "month": "Monthly Cost"
+        "day": "Costo giornaliero",
+        "week": "Costo settimanale",
+        "month": "Costo mensile"
       },
       "chart": {
-        "tooltipLabel": "Total Cost",
+        "tooltipLabel": "Costo totale",
         "titleUsd": "{label} (USD)"
       },
       "distribution": {
@@ -5187,10 +5189,10 @@
         "emptyDesc": "Fai clic su qualsiasi conversazione dall'elenco per visualizzare la cronologia completa dei messaggi."
       },
       "status": {
-        "loading": "Loading logs...",
-        "loadMore": "Load More",
-        "noTraces": "No logs found.",
-        "logEmpty": "This conversation is empty."
+        "loading": "Sto caricando i registri...",
+        "loadMore": "Carica altri",
+        "noTraces": "Nessun registro trovato.",
+        "logEmpty": "Questa conversazione è vuota."
       },
       "company": {
         "title": "Registri chat",
@@ -6027,7 +6029,7 @@
     "title": "Elenco dello Spazio di Lavoro",
     "description": "Le persone che possono accedere allo spazio di lavoro di questa azienda.",
     "roles": {
-      "superAdmin": "Super Admin",
+      "superAdmin": "Super amministratore",
       "admin": "Amministratore",
       "user": "Utente Protocollo",
       "readOnly": "Sola lettura",
