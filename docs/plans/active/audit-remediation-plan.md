@@ -388,11 +388,15 @@ first, because they are what let the rest drift; then the two sites saving
 wrong numbers, the spreadsheet import, the login-page leak, and the hundred and
 five hand-rolled error paths; then the oversized files, the chart palette, the
 naming rule and the documentation. Every row in the table below carries the
-commits. What is knowingly still open is written into the rows themselves
-rather than left to be rediscovered: the builders' `returns?` collapsing
-Convex's type constraint, the 54 raw ConvexError throws, five sibling GBP
-formatters, the dormant coverage nudge, and the absence of any guard binding a
-*new* page to the action hook.
+commits. Anthony then read the five items those rows recorded as knowingly open and
+said they sounded like fixes to make, so four of them were: the builders now
+carry Convex's own return constraint (which found a real bug in the widget
+configuration query), the 54 raw ConvexError throws all carry codes, the
+coverage prompt is provable and fired for the first time, and
+`action-hook-adoption.test.ts` binds a *new* page to the runner the way the
+copy and naming rules bind theirs. The fifth — five sibling GBP formatters,
+differing in their options rather than duplicated — is the one left, and it is
+cosmetic beside the others.
 
 The pattern is consistent and worth naming, because it will recur: *the work
 was done and the proof was not*. Counts were taken with a grep narrower than
@@ -442,7 +446,7 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | WP04 god-components | **done** (2026-08-26: ce5c12529, 7f67fa813, 93f12f41e) | all four targets and both files the first pass created are now within reach of the target: agentRuntime 1,210, agentObjectiveLoop 1,103 (of which 921 is one function, stated rather than implied), KnowledgeManager 1,156→662, ConfigDrawerPanels 818→322/342/204, SidebarNavigation 604, ConfigDrawer 518. Every frozen count split with its file and every platform total is unchanged (raw buttons 295, hardcoded copy 183). The allowlist this package grew is one entry shorter than before the split. Four guards follow the code rather than the old paths, and the knowledge-delete gate reads both halves |
 | WP03 useAdminAction | **done** (2026-08-26: 5ec50023e, 7f67fa813) | the real figure was 105 sites across 62 files, not the 0 claimed. All 105 migrated: 29 that told the user nothing, 69 that told them something but reported nothing, 7 partial. Four more found in passing (three silent activation toggles, two purge writes). 48 catalogue keys added in both languages. Still no drift guard binding a NEW page to the hook — the durability the first claim implied does not exist |
 | WP06 app→admin imports | **done** (2026-08-26: f0366eb21) | the move was always clean; the enforcement was not. The ESLint rule missed the dynamic `import()` the violation was actually written in, missed relative paths, and had no transitive cover. admin-boundary-drift.test.ts walks the import graph and catches all three, probed with each form |
-| WP08 app i18n | partial — see review | parity is exact (5,051 keys each, zero orphans), the Italian is genuinely translated (1 of 178 added keys identical, a proper noun), and the placeholder-parity guard is correct. But **the copy guard does not bind new pages**: it matches `>text<` within a single line and Prettier puts JSX copy on its own line, so a brand-new all-English page scores zero. 42 multi-word English strings survive across 17 `/app` files, including thirteen section headings on the reports board — the spec's headline page. 117 prose values are byte-identical across both catalogues repo-wide (pre-existing, unguarded) |
+| WP08 app i18n | **done** (2026-08-26: c09f3bcc7, d1d0805c7, ca81e5298, 67e889108) | parity is exact and the Italian is genuinely translated. The copy guard that was supposed to bind new pages matched `>text<` on a single line, which Prettier never produces — it read almost nothing, and a probe page written entirely in English passed it. Fixed and re-probed; the honest baseline is 183 sentences across 80 files, now 119 across 68. The customer area went from 73 to 9, and all nine are scanner false positives with the code left alone. 117 prose values identical across both catalogues repo-wide remain untranslated and unguarded — pre-existing, recorded, not in this package |
 | WP10 palette + formatters | **done** (2026-08-26: 2e39036ee) | five files stopped keeping private copies of palette constants, including one re-declaring the whole engagement ramp. The canonical series order put emerald directly before rose — the first two slices of every pie in the one pair Anthony cannot read; separated. The theme-drift baseline dropped from 1,231 to the actual 1,052, closing 179 units of slack (f883b61a8). Formatters remain moved rather than deduped: five sibling GBP formatters survive, differing in options |
 | WP09 naming ratchet | **done** (2026-08-26: f883b61a8) | freeze verified entry for entry. The structural exemption matched on basename anywhere under src/, so `error.tsx` or `template.tsx` passed as an ordinary component name — scoped to the router tree and probed. The headline figure compared two populations (302 counted test files, 7 excludes them); the honest figure for what the rule governs is 230 vs 7. The doc insertion that swallowed the Shared Components section is repaired |
 | WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
