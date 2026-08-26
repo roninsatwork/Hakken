@@ -89,5 +89,5 @@ if (other.length > 0) {
 }
 
 console.log(
-  `  ${movement.length} movement demo scripts are prefixed "movement:" — run \`npm run\` to see them all.\n`,
+  `  ${movement.length} movement demo scripts are prefixed "movement:" — run \`npm run movement\` for a grouped index of them.\n`,
 );

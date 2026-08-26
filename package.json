@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "help": "node scripts/list-platform-scripts.mjs",
+    "movement": "node scripts/movement.mjs",
     "dev": "next dev",
     "predev": "npm run verify:env",
     "build": "next build",
