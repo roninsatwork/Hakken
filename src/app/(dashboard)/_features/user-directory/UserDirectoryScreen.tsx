@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
@@ -66,7 +67,7 @@ export type UserDirectoryFormData = {
 };
 
 export type UserDirectoryRow =
-  | { kind: "invite"; invite: Doc<"invitations"> }
+  | { kind: "invite"; invite: ClientInvite }
   | { kind: "user"; user: DirectoryUser };
 
 /** A page's translator, passed in so the screen owns no namespace of its own. */
@@ -104,7 +105,7 @@ export function UserDirectoryScreen({
   /** `"platform"` on the admin screen, which ignores impersonation. See convex/users.ts. */
   scope?: "platform";
   /** A page's own narrowing of the invitation list, on top of the email search. */
-  filterInvite?: (invite: Doc<"invitations">) => boolean;
+  filterInvite?: (invite: ClientInvite) => boolean;
   minWidthClassName?: string;
   /** The page's own columns, drawn between Role and Joined. */
   extraColumns?: DataTableColumn<UserDirectoryRow>[];
@@ -143,7 +144,7 @@ export function UserDirectoryScreen({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<DirectoryUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<DirectoryUser | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<ClientInvite | null>(null);
   const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<UserDirectoryFormData>(EMPTY_FORM);
@@ -199,7 +200,7 @@ export function UserDirectoryScreen({
     setDeletingUser(user);
   };
 
-  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+  const handleOpenRevoke = (invite: ClientInvite) => {
     requestDialogs();
     setDeletingInvite(invite);
   };

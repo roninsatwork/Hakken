@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import type { FormEvent, ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
@@ -33,7 +34,7 @@ export function TeamDialogs({
   isAddModalOpen: boolean;
   editingUser: Doc<"users"> | null;
   deletingUser: Doc<"users"> | null;
-  deletingInvite: Doc<"invitations"> | null;
+  deletingInvite: ClientInvite | null;
   formData: TeamUserFormData;
   onFormDataChange: (formData: TeamUserFormData) => void;
   onCloseEditor: () => void;

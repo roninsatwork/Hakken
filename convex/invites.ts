@@ -1,6 +1,8 @@
 import { internalMutation } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import schema from "./schema";
 import { isPlatformRole } from "./userManagementService";
-import { v } from "convex/values";
+import { type Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { canAccessCompany, getActiveCompanyId, userRoleValidator } from "./authz";
 import { requireActionUser } from "./actionAuth";
@@ -14,6 +16,12 @@ import { appError } from "./utils/appError";
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
 
+const inviteOutcomeValidator = v.union(
+  v.literal("created"),
+  v.literal("reissued"),
+  v.literal("alreadyActive"),
+);
+
 /**
  * What a dispatch actually did to the invitation table.
  *
@@ -24,8 +32,39 @@ const COMPANY_INVITE_LIST_LIMIT = 100;
  * types into unrelated files.
  */
 type InviteRecordOutcome = {
-  outcome: "created" | "reissued" | "alreadyActive";
-  previousStatus?: "PENDING" | "ACCEPTED" | "REVOKED";
+  outcome: Infer<typeof inviteOutcomeValidator>;
+  previousStatus?: Infer<typeof schema.tables.invitations.validator.fields.status>;
+};
+
+/**
+ * An invitation as a screen may see it.
+ *
+ * `token` is deliberately absent. Nothing reads it — the sign-in path finds an
+ * invitation by email — but it is a secret-shaped value that four admin screens
+ * were receiving for every pending invite, and a field with no reader has no
+ * business on the wire. The validator is what keeps it that way: a Convex
+ * return validator refuses an unexpected field rather than dropping it, so
+ * forgetting `toClientInvite` is a failure instead of a leak.
+ */
+const clientInviteValidator = v.object({
+  _id: v.id("invitations"),
+  _creationTime: v.number(),
+  email: v.string(),
+  companyId: v.optional(v.id("companies")),
+  role: userRoleValidator,
+  status: schema.tables.invitations.validator.fields.status,
+  invitedBy: v.optional(v.id("users")),
+  invitedAt: v.number(),
+  acceptedAt: v.optional(v.number()),
+});
+
+const pendingInviteListValidator = v.array(clientInviteValidator);
+
+export type ClientInvite = Infer<typeof clientInviteValidator>;
+
+const toClientInvite = (invite: Doc<"invitations">) => {
+  const { token: _token, ...rest } = invite;
+  return rest;
 };
 
 /** Annotated for the same reason as {@link InviteRecordOutcome}. */
@@ -122,27 +161,29 @@ export const saveTemplate = superAdminMutation({
 
 // Fetch all active/pending invites for the Admin Dashboard Left-Column
 export const getPendingInvites = adminQuery({
+  returns: pendingInviteListValidator,
   handler: async (ctx) => {
     const { user } = ctx;
 
     if (user.role === "SUPER_ADMIN") {
-      return await ctx.db
+      return (await ctx.db
         .query("invitations")
         .filter(q => q.eq(q.field("status"), "PENDING"))
         .order("desc")
-        .take(50);
+        .take(50)).map(toClientInvite);
     }
     
-    return await ctx.db
+    return (await ctx.db
       .query("invitations")
       .withIndex("by_company_status", q => q.eq("companyId", user.companyId).eq("status", "PENDING"))
       .order("desc")
-      .take(50);
+      .take(50)).map(toClientInvite);
   },
 });
 
 export const getInvitesByCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: pendingInviteListValidator,
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -150,11 +191,11 @@ export const getInvitesByCompany = adminQuery({
       throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
-    return await ctx.db
+    return (await ctx.db
       .query("invitations")
       .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
       .order("desc")
-      .take(COMPANY_INVITE_LIST_LIMIT);
+      .take(COMPANY_INVITE_LIST_LIMIT)).map(toClientInvite);
   },
 });
 
@@ -314,6 +355,12 @@ export const dispatchInviteEmail = adminAction({
       ctaText: v.string(),
     }),
   },
+  returns: v.object({
+    success: v.literal(true),
+    id: v.optional(v.string()),
+    simulated: v.optional(v.boolean()),
+    outcome: inviteOutcomeValidator,
+  }),
   handler: async (ctx, args): Promise<InviteDispatchResult> => {
     const { userId: callerId, user: caller } = await requireActionUser(ctx);
     if (!caller.role) throw appError("UNAUTHORIZED", "Unauthorized");

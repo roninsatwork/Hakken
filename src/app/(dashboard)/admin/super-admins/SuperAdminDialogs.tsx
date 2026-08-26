@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -20,7 +21,7 @@ type SuperAdminDialogsProps = {
   isEditOpen: boolean;
   editingUser: Doc<"users"> | null;
   deletingUser: Doc<"users"> | null;
-  deletingInvite: Doc<"invitations"> | null;
+  deletingInvite: ClientInvite | null;
   formData: SuperAdminFormData;
   setFormData: Dispatch<SetStateAction<SuperAdminFormData>>;
   isSubmitting: boolean;

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -33,7 +34,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type CompanyUser = Doc<"users">;
-type PendingInvite = Doc<"invitations">;
+type PendingInvite = ClientInvite;
 
 type UserFormData = {
   name: string;

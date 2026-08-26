@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import dynamic from "next/dynamic";
@@ -38,13 +39,13 @@ const SuperAdminDialogs = dynamic(
  * carries which it is and each column decides what to draw.
  */
 type DirectoryRow =
-  | { kind: "invite"; invite: Doc<"invitations"> }
+  | { kind: "invite"; invite: ClientInvite }
   | { kind: "user"; user: Doc<"users"> };
 
 function buildDirectoryColumns(actions: {
   onEdit: (user: Doc<"users">) => void;
   onDelete: (user: Doc<"users">) => void;
-  onRevoke: (invite: Doc<"invitations">) => void;
+  onRevoke: (invite: ClientInvite) => void;
   onPrepareDialogs: () => void;
   t: (key: string, values?: Record<string, string | number>) => string;
 }): DataTableColumn<DirectoryRow>[] {
@@ -176,7 +177,7 @@ export default function ManageSuperAdminsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
   const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<ClientInvite | null>(null);
   const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<SuperAdminFormData>({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
@@ -244,7 +245,7 @@ export default function ManageSuperAdminsPage() {
     setDeletingUser(user);
   };
 
-  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+  const handleOpenRevoke = (invite: ClientInvite) => {
     prepareSuperAdminDialogs();
     setDeletingInvite(invite);
   };

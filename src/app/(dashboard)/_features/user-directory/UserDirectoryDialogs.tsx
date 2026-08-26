@@ -1,7 +1,7 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import type { FormEvent } from "react";
-import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
@@ -40,7 +40,7 @@ export default function UserDirectoryDialogs({
   isAddModalOpen: boolean;
   editingUser: DirectoryUser | null;
   deletingUser: DirectoryUser | null;
-  deletingInvite: Doc<"invitations"> | null;
+  deletingInvite: ClientInvite | null;
   formData: UserDirectoryFormData;
   isSubmitting: boolean;
   submitError: string;

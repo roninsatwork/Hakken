@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClientInvite } from "@/convex/invites";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -61,7 +62,7 @@ export default function CompanyTeamPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
   const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<ClientInvite | null>(null);
   const [hasOpenedDialogs, setHasOpenedDialogs] = useState(false);
 
   const [formData, setFormData] = useState<TeamUserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
@@ -112,7 +113,7 @@ export default function CompanyTeamPage() {
     setDeletingUser(user);
   };
 
-  const handleOpenRevoke = (invite: Doc<"invitations">) => {
+  const handleOpenRevoke = (invite: ClientInvite) => {
     void loadTeamDialogs();
     setHasOpenedDialogs(true);
     setDeletingInvite(invite);
