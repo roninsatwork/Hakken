@@ -568,15 +568,20 @@ while it was open: `Priority` and `Status` were hardcoded English in the table
 header, and the four row tooltips were untranslated. That is the shape of the
 whole population — small, visible, and invisible to both guards.
 
-**D2. A governance screen shows fabricated audit records.**
-`admin/audit-logs/[id]/AuditLogDetailContent.tsx` falls back to four
-hand-written rows when the real query returns nothing — including "Anthony
-(SuperAdmin)" changing a security policy, with a plausible timestamp and
-entity id. An auditor looking at a quiet system would read four events that
-never happened. Found while widening the copy guard, which counted those rows
-as untranslated English; they should not be translated because they should not
-exist. **Not fixed:** changing what a compliance screen displays is a visible
-behaviour change and Anthony's call, not a passing tidy.
+**D2. A governance screen showed fabricated audit records — fixed 2026-08-26
+(`bc75892ca`).** The audit log detail screen fell back to four hand-written
+rows whenever the real query returned nothing, including a super-admin
+enforcing a security policy, with a plausible actor, timestamp and reference.
+An empty trail now reads as "Log Not Found", which is both true and what an
+auditor needs to hear when a record has been purged.
+
+Two things worth keeping from it. A test named "keeps the existing
+empty-database fallback record" was holding the invention in place, so it was
+pinned rather than overlooked — the replacement asserts the opposite and was
+watched failing. And it was the copy guard that surfaced it: it counted the
+invented rows as untranslated English, because nothing can tell a fabricated
+record from real copy by looking at it. A scan found no other screen doing
+this outside the frozen demos.
 
 ### Not work — two properties recorded so they are not mistaken for gaps
 
