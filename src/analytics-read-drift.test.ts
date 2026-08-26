@@ -93,13 +93,19 @@ const exportNameAtOffset = (contents: string, offset: number) => {
  * written out or hidden behind a constant.
  *
  * The register used to match the literal `.take(10000)`, which meant a site
- * could leave it by being renamed rather than fixed: seven were "fixed" on
- * 2026-08-26 by swapping the digits for `MODEL_CATALOG_LIMIT`, and stopped
- * being tracked while still truncating. Worse, reads that were never visible
- * at all — `LOGIN_SCAN_LIMIT` and `MESSAGE_LIMIT` at twenty thousand rows —
- * had been sitting outside the register since the day they were written.
- * Constants are resolved now, so the register tracks the size of the read
- * rather than how it happens to be spelled.
+ * could leave it by being renamed rather than fixed. Constants are resolved
+ * now, so it tracks the size of the read rather than how it is spelled, and
+ * twenty-three reads at ten and twenty thousand rows that had never once been
+ * visible — `LOGIN_SCAN_LIMIT` and `MESSAGE_LIMIT` among them — came into it.
+ *
+ * Be precise about what that did and did not catch. Seven model-catalogue
+ * reads in `convex/analytics.ts` were "fixed" the same morning by swapping
+ * `10000` for `MODEL_CATALOG_LIMIT`, which is **2,000** — so resolving the
+ * constant puts them *below* this threshold, not back in the register. They
+ * are counted anonymously in the mid-sized band below, still truncating, with
+ * no `+ 1` probe and no partial marker. Lowering a cap is not the same as
+ * paging a read, and the register saying nothing about them is the honest
+ * position rather than the reassuring one.
  */
 const BROAD_READ_THRESHOLD = 10000;
 

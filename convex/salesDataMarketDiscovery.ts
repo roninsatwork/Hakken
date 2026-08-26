@@ -757,7 +757,7 @@ export const startMarketDiscoveryJob = tenantMutation({
     });
 
     const job = await ctx.db.get(jobId);
-    if (!job) throw appError("UPSTREAM_FAILURE", "The market discovery job could not be created.");
+    if (!job) throw appError("NOT_FOUND", "The market discovery job could not be created.");
 
     const runId = await startDiscoveryRun(ctx, {
       job,

@@ -182,6 +182,11 @@ describe("theme drift ratchet", () => {
   it(`hardcoded colour count never rises above the baseline (${DRIFT_BASELINE})`, () => {
     const { total, perFile } = countDrift();
 
+    // A ratchet asserting `total <= 1052` passes just as happily at zero, and
+    // zero is what a broken walk returns. The count is the evidence; this is
+    // the evidence that the count was taken.
+    expect(perFile.size, 'no files were scanned at all, so the baseline below is measuring nothing').toBeGreaterThan(50);
+
     if (total > DRIFT_BASELINE) {
       const worst = [...perFile.entries()]
         .sort((a, b) => b[1] - a[1])

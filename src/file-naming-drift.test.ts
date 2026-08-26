@@ -9,7 +9,7 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * Pascal in similar numbers. Measured properly it is not: kebab lives entirely
  * in Next's structural names (page.tsx, route segments), camel in hooks and
  * test harnesses, both of which are their own correct conventions. Among
- * actual component files PascalCase leads 302 to 7, so PascalCase is the rule
+ * actual component files PascalCase leads 234 to 7 (non-test .tsx under src/, which is what this guard reads — an earlier figure of 302 counted test files, a different population from the one being ruled on), so PascalCase is the rule
  * — it already was, in everything but writing.
  *
  * The rule, as enforced here: a .tsx file is PascalCase unless it is a Next

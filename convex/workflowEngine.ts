@@ -821,7 +821,7 @@ export const executeDatabaseOperation = internalMutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.workflowId);
-    if (!workflow) throw appError("INVALID_INPUT", "Workflow not found.");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found.");
 
     // A workflow whose creator was erased gets the tightest treatment rather
     // than the loosest: no user means no super-admin reach and no tenant, so

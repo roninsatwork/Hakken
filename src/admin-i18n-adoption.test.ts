@@ -27,12 +27,16 @@ import { describe, expect, test } from "vitest";
  */
 
 const FLOORS: Array<{ root: string; floor: number }> = [
-  // Raised 139 -> 156 and 22 -> 29 on 2026-08-26 to the measured counts, per
-  // the convention above; the customer root joined the same day when WP08
-  // brought its pre-kit pages into the catalogue.
-  { root: "src/app/(dashboard)/admin", floor: 156 },
-  { root: "src/ui", floor: 29 },
-  { root: "src/app/(dashboard)/app", floor: 36 },
+  // Raised to the measured counts on 2026-08-26, twice. The first raise
+  // (139→156, 22→29, and the customer root joining at 36) was correct that
+  // morning; the day's later work then added translated components and left
+  // seven units of slack between the floors and the truth — room for that many
+  // screens to leave the catalogue with nothing failing. A ratchet with slack
+  // in it is not a ratchet, which is the same finding a review made about the
+  // theme baseline the same afternoon.
+  { root: "src/app/(dashboard)/admin", floor: 158 },
+  { root: "src/ui", floor: 31 },
+  { root: "src/app/(dashboard)/app", floor: 39 },
 ];
 
 const repoRoot = process.cwd();

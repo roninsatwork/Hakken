@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatPreciseGBP } from "@/src/lib/currency";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -232,7 +233,7 @@ export default function CompanySettingsDashboard() {
             <MetricBlock
               icon={PoundSterling}
               title={t('metrics.logisticBurn')}
-              value={`$${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
+              value={formatPreciseGBP(data.aggregates.totalCostGBP ?? 0)}
               sub={t('metrics.burnSub')}
               delay={0.2}
             />

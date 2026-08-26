@@ -1602,7 +1602,7 @@ export const provisionResearchWorkers = internalMutation({
 
     const ensureBinding = async (agentId: Id<"agents">, mapping: string) => {
       const tool = byMapping.get(mapping);
-      if (!tool) throw appError("INVALID_INPUT", `No tool is installed for ${mapping}.`);
+      if (!tool) throw appError("NOT_CONFIGURED", `No tool is installed for ${mapping}.`);
       const existing = await ctx.db
         .query("agentTools")
         .withIndex("by_tool", (q) => q.eq("toolId", tool._id))

@@ -63,7 +63,7 @@ structural names (`page.tsx`, `layout.tsx`, kebab-case route segments) are the
 framework's, not ours.
 
 Measured on 2026-08-26, of the component files the rule governs — non-test
-`.tsx` under `src/` — 230 were PascalCase against 7 stragglers, alongside 202
+`.tsx` under `src/` — 234 were PascalCase against 7 stragglers, alongside 202
 structural names. So the rule writes down what had already won rather than
 imposing something new. (An earlier figure of 302 counted test files, which the
 guard excludes; it described a different population from the one being ruled
