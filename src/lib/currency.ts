@@ -20,11 +20,21 @@ export function formatCurrencyGBP(value: number): string {
  * screens needing the small end were hand-rolling `Intl`.
  *
  * A caution for anyone extending this file: not every cost on the platform is
- * sterling. Model spend is billed by the providers in US dollars and stored
- * without conversion, so the screens showing it print a dollar sign correctly
- * — even though the columns holding it are named `costGBP`, `totalCostGBP`
- * and `maxCostGBP`. Those names are wrong, not the symbol. Do not "fix" a
- * dollar sign into a pound one on the strength of a field name.
+ * sterling, and that is deliberate.
+ *
+ * What the platform spends on AI is billed by the providers in US dollars and
+ * stored without conversion, and Anthony settled on 2026-08-26 that it reports
+ * in dollars throughout. The screens printing a dollar sign are correct — even
+ * though the columns holding those values are named `costGBP`, `totalCostGBP`
+ * and `maxCostGBP`. The names are the inaccuracy, not the symbol, and renaming
+ * stored columns for a question that is now settled was judged not worth it.
+ *
+ * So: never change a currency symbol on the strength of a field name. Check
+ * what billed the number. That mistake has been made here once already.
+ *
+ * The helpers below are for the other kind — what a customer earns. Sales and
+ * opportunity figures come from the customer's own spreadsheet import and are
+ * genuinely sterling. Both kinds live on this platform at once.
  */
 export function formatPreciseGBP(value: number, fractionDigits = 5): string {
   return new Intl.NumberFormat("en-GB", {

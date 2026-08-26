@@ -475,11 +475,13 @@ back the exact reference that regressed within an hour of the WP14 sweep.
 ## Known open, after the 2026-08-26 close
 
 The fourteen packages are closed. What follows was found while closing them and
-was never part of the plan. **About two and a half days**, sized and ordered as
+was never part of the plan. **About a day and a half**, sized and ordered as
 they should be taken. Nothing here is failing, and nothing is urgent.
 
-Agreed with Anthony 2026-08-26: do group A, then group B, and leave group C
-until he asks for it.
+Agreed with Anthony 2026-08-26: do group A, then group B. Group C was the
+largest and the only risky item, and he settled it by decision rather than by
+work — AI costs report in dollars because that is what the providers bill, and
+that is now the intended behaviour rather than an open question.
 
 ### Group A — about half a day, safe
 
@@ -522,24 +524,33 @@ of them full English sentences, all under `admin.*` and `ai.*`. Admin only —
 nothing a customer sees. Unguarded, so the population can grow; the fix is a
 translation pass plus a guard that freezes the count.
 
-### Group C — about a day, holds live data, do not start unasked
+### Group C — settled by Anthony 2026-08-26, no work outstanding
 
-**C1. Names that say GBP over values that are USD.** Model spend is billed by
-the providers in dollars and stored with no conversion anywhere in the
-codebase, so the eighteen screens printing `$` are correct — while the columns
-holding it are called `costGBP`, `totalCostGBP`, `maxCostGBP` and `totalGBP`.
-The symbol is right and the names are wrong.
+**C1. AI running costs report in US dollars, and that is the intended
+behaviour.** The providers bill in dollars, nothing in the codebase converts,
+and the eighteen screens printing `$` are showing the truth. Anthony confirmed
+on 2026-08-26 that he is happy for the platform to report AI costs in dollars
+throughout. **No display changes anywhere.**
 
-This is last for two reasons. It is the only item touching records that already
-exist rather than only code, so it is the only one where getting it wrong costs
-something. And the visible benefit is nil: the screens are already correct.
-Doing nothing is a defensible permanent answer.
+What is left is only a naming inaccuracy: the columns holding those dollars are
+called `costGBP`, `totalCostGBP`, `maxCostGBP` and `totalGBP`. Renaming them
+would touch records that already exist, for no visible benefit now the currency
+question is settled, so it is **not scheduled**. `src/lib/currency.ts` carries
+the warning instead, and that is the permanent answer unless Anthony says
+otherwise.
 
-It is nonetheless first in danger, because the obvious reading is the wrong
-one — it invites someone to "fix" the symbol to match the name, or to sum model
-spend into a sterling report. I made the first of those mistakes myself on
-2026-08-26 before tracing the pricing back. `src/lib/currency.ts` now carries
-the warning; the columns are unrenamed.
+**The trap this leaves, stated so it is not walked into twice.** The obvious
+reading of a dollar sign beside a field named `costGBP` is that the display is
+wrong. It is not. I made exactly that change on 2026-08-26 and had to revert
+it. Never change a currency symbol on the strength of a field name; check where
+the number is billed.
+
+**And the one exception to "dollars all over".** Sales and opportunity figures
+(`totalOpportunityGBP`, `prospectTotalGBP`, `spendGBP`) really are sterling —
+they come from the customer's own spreadsheet import, not from a model
+provider, and Comax is a UK business selling in pounds. Those stay in pounds.
+"Dollars all over" governs what the platform *spends* on AI, not what a
+customer *earns*.
 
 ### Not work — two properties recorded so they are not mistaken for gaps
 
