@@ -22,13 +22,13 @@ import dynamic from "next/dynamic";
 const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
 
 const HOLLYWOOD_PHASES = [
-  "Initializing Secure Sandbox...",
-  "Parsing Intent Parameters...",
-  "Aligning Semantic Vectors...",
-  "Establishing Telemetry Lock...",
-  "Routing Tool Dispatch...",
-  "Synthesizing Response..."
-];
+  "sandbox",
+  "intent",
+  "vectors",
+  "telemetry",
+  "dispatch",
+  "synthesis",
+] as const;
 
 export default function AgenticTestingSandbox() {
   const t = useTranslations("agenticTesting");
@@ -165,7 +165,7 @@ export default function AgenticTestingSandbox() {
               className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors border ${agentDropdownOpen ? 'bg-foreground/5 border-border-dim text-foreground' : 'hover:bg-foreground/5 bg-sidebar text-foreground border-border-dim'}`}
             >
               <span className="text-[13px] font-medium tracking-wide">
-                 {selectedAgentId === "any" ? "Any (Auto-Route)" : selectedAgent ? selectedAgent.name : "Select an Agent"}
+                 {selectedAgentId === "any" ? t("anyAutoRoute") : selectedAgent ? selectedAgent.name : t("selectAgent")}
               </span>
               <ChevronDown className="w-4 h-4 text-muted" />
             </button>
@@ -260,7 +260,7 @@ export default function AgenticTestingSandbox() {
                           transition={{ duration: 0.15 }}
                           className="text-[13px] font-mono tracking-wide text-indigo-400/80"
                        >
-                          {HOLLYWOOD_PHASES[loadingPhase]}
+                          {t(`phases.${HOLLYWOOD_PHASES[loadingPhase]}`)}
                        </motion.div>
                     </AnimatePresence>
                   </motion.div>
@@ -295,7 +295,7 @@ export default function AgenticTestingSandbox() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 disabled={!selectedAgentId || showLoader}
-                placeholder={!selectedAgentId ? "Awaiting Agent Selection..." : "Dispatch a prompt to trigger agentic logic..."}
+                placeholder={!selectedAgentId ? t("awaitingAgent") : t("promptPlaceholder")}
                 className="w-full bg-transparent border-none outline-none focus:outline-none text-[15px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-mono mt-0.5 placeholder:font-sans transition-colors disabled:opacity-50"
                 rows={1}
                 onKeyDown={(e) => {

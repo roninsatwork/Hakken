@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   appendTranscript,
-  buildUnsupportedFileMessage,
+  buildUnsupportedFileList,
   canStartAssistantThread,
   getGreetingKey,
 } from "./assistantWelcomeUtils";
@@ -20,8 +20,10 @@ describe("assistant welcome utils", () => {
   });
 
   test("builds upload error copy only for invalid files", () => {
-    expect(buildUnsupportedFileMessage([])).toBeNull();
-    expect(buildUnsupportedFileMessage(["bad.exe (blocked)"])).toBe("Unsupported file(s): bad.exe (blocked)");
+    expect(buildUnsupportedFileList([])).toBeNull();
+    expect(buildUnsupportedFileList(["bad.exe (blocked)", "big.zip (too large)"])).toBe(
+      "bad.exe (blocked), big.zip (too large)",
+    );
   });
 
   test("allows thread start with either content or files while not submitting", () => {

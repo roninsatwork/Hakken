@@ -20,51 +20,13 @@ type JourneyGroup = "link" | "agent" | "data" | "logs";
 const LEGEND: {
   group: JourneyGroup;
   icon: typeof Link2;
-  label: string;
-  count: string;
   tint: string;
-  description: string;
 }[] = [
-  {
-    group: "link",
-    icon: Link2,
-    label: "Paste a link",
-    count: "Search",
-    tint: LINK,
-    description:
-      "Build your search on Rightmove itself — area, price range, bedrooms, radius — then copy the address of the results page and paste it in. That one link describes everything to collect.",
-  },
-  {
-    group: "agent",
-    icon: Bot,
-    label: "The agent takes over",
-    count: "Runs on Apify",
-    tint: AGENT,
-    description:
-      "The Rightmove Agent reads your link and hands the heavy lifting to Apify, the industry-standard scraping platform. You set the ceiling — anywhere from 10 to 1,000 listings.",
-  },
-  {
-    group: "data",
-    icon: Database,
-    label: "Listings captured",
-    count: "Scraped Data",
-    tint: DATA,
-    description:
-      "Each listing lands in Scraped Data with its full details and photo — searchable, browsable, and one click from a complete view.",
-  },
-  {
-    group: "logs",
-    icon: Activity,
-    label: "Watch it live",
-    count: "Logs",
-    tint: LOGS,
-    description:
-      "Every run appears in Logs with its live status — in progress, completed or failed — and a count of what it captured. No refreshing, no guessing.",
-  },
+  { group: "link", icon: Link2, tint: LINK },
+  { group: "agent", icon: Bot, tint: AGENT },
+  { group: "data", icon: Database, tint: DATA },
+  { group: "logs", icon: Activity, tint: LOGS },
 ];
-
-const DEFAULT_DESCRIPTION =
-  "Four stages, one journey — from a link you paste to a library you own.";
 
 function groupOpacity(selected: JourneyGroup | null, group: JourneyGroup) {
   if (selected === null) return 1;
@@ -408,7 +370,7 @@ export function CollectionJourney() {
               letterSpacing={1.6}
               fontFamily="ui-monospace, monospace"
             >
-              EXTRACTION LOGS
+              {t("logsTag")}
             </text>
             {[
               { y: 504, dot: "#22c55e", pending: false, idW: 92, countW: 30 },
@@ -500,10 +462,10 @@ export function CollectionJourney() {
                 <item.icon className="w-5 h-5 shrink-0" style={{ color: item.tint }} />
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium text-foreground truncate">
-                    {item.label}
+                    {t(`stages.${item.group}.label`)}
                   </div>
                   <div className="text-[12px] text-secondary tabular-nums">
-                    {item.count}
+                    {t(`stages.${item.group}.count`)}
                   </div>
                 </div>
               </button>
@@ -530,7 +492,7 @@ export function CollectionJourney() {
                 key={active?.group ?? "all"}
                 className={`text-[13px] leading-relaxed ${active ? "text-foreground/90" : "text-secondary"}`}
               >
-                {active ? active.description : DEFAULT_DESCRIPTION}
+                {active ? t(`stages.${active.group}.description`) : t("stages.defaultDescription")}
               </p>
             </div>
           );
@@ -544,37 +506,16 @@ export function CollectionJourney() {
 // Four-step collection flow.
 // ---------------------------------------------------------------------------
 
-type FlowStep = {
-  title: string;
-  body: string;
-};
-
-const FLOW: FlowStep[] = [
-  {
-    title: "Search on Rightmove",
-    body: "Use Rightmove's own filters to describe exactly the properties you care about.",
-  },
-  {
-    title: "Paste the link",
-    body: "Drop the search URL in, choose how many listings to gather, and press go.",
-  },
-  {
-    title: "The agent collects",
-    body: "The extraction kicks off on its own — no tabs to babysit.",
-  },
-  {
-    title: "Browse your library",
-    body: "Listings arrive in Scraped Data, with every run tracked in Logs.",
-  },
-];
+const FLOW = ["search", "paste", "collect", "browse"] as const;
 
 export function CollectionFlow() {
+  const t = useTranslations("properties.information.visuals");
   const gradientId = useId();
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {FLOW.map((step, index) => (
         <div
-          key={step.title}
+          key={step}
           className="relative flex flex-col gap-2 rounded-[16px] border border-border-dim bg-card/60 p-4 backdrop-blur-xl"
         >
           <div className="flex items-center gap-2.5">
@@ -607,8 +548,8 @@ export function CollectionFlow() {
               </svg>
             )}
           </div>
-          <h3 className="text-[15px] font-semibold text-foreground">{step.title}</h3>
-          <p className="text-[13px] leading-relaxed text-secondary">{step.body}</p>
+          <h3 className="text-[15px] font-semibold text-foreground">{t(`flow.${step}.title`)}</h3>
+          <p className="text-[13px] leading-relaxed text-secondary">{t(`flow.${step}.body`)}</p>
         </div>
       ))}
     </div>

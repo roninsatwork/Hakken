@@ -69,12 +69,12 @@ type CompanyMetricsData = {
   }>;
 };
 
-function formatProviderName(providerKey: string) {
-  if (providerKey === "google") return "Google Vertex AI";
+function formatProviderName(providerKey: string, t: ReturnType<typeof useTranslations>) {
+  if (providerKey === "google") return t("providers.names.google");
   if (providerKey === "openai") return "OpenAI";
   if (providerKey === "anthropic") return "Anthropic";
   if (providerKey === "openrouter") return "OpenRouter";
-  if (providerKey === "unknown") return "Unknown / Legacy";
+  if (providerKey === "unknown") return t("providers.names.unknown");
   return providerKey;
 }
 
@@ -120,7 +120,7 @@ const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["prov
           rowKey={(provider) => provider.providerKey}
           ranked={false}
           nameHeader={t("providers.nameHeader")}
-          name={(provider) => formatProviderName(provider.providerKey)}
+          name={(provider) => formatProviderName(provider.providerKey, t)}
           sub={(provider) => t("providers.calls", { count: provider.calls.toLocaleString() })}
           empty={t("providers.empty")}
           stats={[

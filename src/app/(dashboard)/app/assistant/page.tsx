@@ -16,7 +16,7 @@ import { AssistantComposer } from "./_components/AssistantComposer";
 import { AssistantHero } from "./_components/AssistantHero";
 import {
   appendTranscript,
-  buildUnsupportedFileMessage,
+  buildUnsupportedFileList,
   canStartAssistantThread,
   getGreetingKey,
 } from "./_components/assistantWelcomeUtils";
@@ -124,9 +124,9 @@ export default function AssistantWelcomePage() {
       }
     });
 
-    const invalidFileMessage = buildUnsupportedFileMessage(invalidFiles);
-    if (invalidFileMessage) {
-      setUploadError(invalidFileMessage);
+    const invalidFileList = buildUnsupportedFileList(invalidFiles);
+    if (invalidFileList) {
+      setUploadError(t("unsupportedFiles", { files: invalidFileList }));
     }
 
     if (validFiles.length > 0) {
@@ -258,7 +258,7 @@ export default function AssistantWelcomePage() {
 
         await sendMessage({
           threadId,
-          content: textSnapshot || "Analyzed attached documents.",
+          content: textSnapshot || t("analyzedDocuments"),
           modelId: effectiveSelectedModelId || undefined,
           // A model that ignores the thinking setting is never sent one, so
           // the request matches what the screen offered.

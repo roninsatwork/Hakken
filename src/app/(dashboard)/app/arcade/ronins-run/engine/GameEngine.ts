@@ -7,6 +7,13 @@ interface GameEngineCallbacks {
   onGameOver: (score: number) => void;
 }
 
+export interface GameEngineLabels {
+  score: (score: number) => string;
+  level: (level: number) => string;
+  levelCleared: (level: number) => string;
+  nextLevelIn: (seconds: number) => string;
+}
+
 export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -30,13 +37,15 @@ export class GameEngine {
   private readonly fixedStep: number = 1000 / 60; // Locked 60 FPS
 
   private callbacks: GameEngineCallbacks;
+  private labels: GameEngineLabels;
 
-  constructor(canvas: HTMLCanvasElement, callbacks: GameEngineCallbacks) {
+  constructor(canvas: HTMLCanvasElement, callbacks: GameEngineCallbacks, labels: GameEngineLabels) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error("Could not initialize 2D context");
     this.ctx = ctx;
     this.callbacks = callbacks;
+    this.labels = labels;
     this.audio = new AudioEngine();
     
     this.resetGame();
@@ -257,11 +266,11 @@ export class GameEngine {
     this.ctx.fillStyle = '#ffffff';
     this.ctx.font = '16px "Press Start 2P"';
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(`SCORE: ${this.score}`, 10, 25);
+    this.ctx.fillText(this.labels.score(this.score), 10, 25);
     
     this.ctx.fillStyle = '#FFEB3B';
     this.ctx.textAlign = 'right';
-    this.ctx.fillText(`LEVEL: ${this.currentLevel}`, this.canvas.width - 10, 25);
+    this.ctx.fillText(this.labels.level(this.currentLevel), this.canvas.width - 10, 25);
 
     // Draw Lives (Roningasa icons)
     this.ctx.fillStyle = '#D2B48C';
@@ -286,12 +295,12 @@ export class GameEngine {
       this.ctx.fillStyle = '#FFEB3B';
       this.ctx.textAlign = 'center';
       this.ctx.font = '24px "Press Start 2P"';
-      this.ctx.fillText(`LEVEL ${this.currentLevel} CLEARED!`, this.canvas.width / 2, this.canvas.height / 2 - 20);
+      this.ctx.fillText(this.labels.levelCleared(this.currentLevel), this.canvas.width / 2, this.canvas.height / 2 - 20);
 
       this.ctx.font = '16px "Press Start 2P"';
       this.ctx.fillStyle = '#ffffff';
       const seconds = Math.ceil(this.levelTransitionTimer / 1000);
-      this.ctx.fillText(`NEXT LEVEL IN ${seconds}...`, this.canvas.width / 2, this.canvas.height / 2 + 30);
+      this.ctx.fillText(this.labels.nextLevelIn(seconds), this.canvas.width / 2, this.canvas.height / 2 + 30);
     }
   }
 

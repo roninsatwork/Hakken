@@ -323,7 +323,7 @@ export default function ProfileTabs() {
                 pageSize={itemsPerPage}
                 isLoading={status === "LoadingMore"}
                 onPageChange={handlePageChange}
-                labels={{ showing: (start, end, total) => `Showing ${start} to ${end} of ${total} logins` }}
+                labels={{ showing: (start, end, total) => t('pagination.showing', { start, end, total }) }}
               />
             }
           >

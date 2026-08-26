@@ -19,10 +19,10 @@ export function appendTranscript(content: string, text: string) {
   return content + (content && content.length > 0 ? " " : "") + text;
 }
 
-export function buildUnsupportedFileMessage(invalidFiles: string[]) {
+export function buildUnsupportedFileList(invalidFiles: string[]) {
   if (invalidFiles.length === 0) return null;
 
-  return `Unsupported file(s): ${invalidFiles.join(", ")}`;
+  return invalidFiles.join(", ");
 }
 
 export function canStartAssistantThread(content: string, pendingFileCount: number, isSubmitting: boolean) {

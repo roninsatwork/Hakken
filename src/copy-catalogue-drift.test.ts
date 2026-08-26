@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
 import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
 
@@ -10,18 +11,35 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * the catalogue, so they defend the migration but cannot see a brand-new page
  * written in hardcoded English: it never joins the count it would need to
  * lower. This guard closes that gap from the other side, the way the raw-button
- * rule does for hand-drawn buttons: every sentence-shaped literal in screen JSX
- * is counted per file, today's counts are frozen below, and counts may FALL,
- * NEVER RISE. A new file starts at zero, so its first hardcoded sentence fails
- * here — which is what binds pages written after the migration.
+ * rule does for hand-drawn buttons: every sentence-shaped literal in screen
+ * source is counted per file, today's counts are frozen below, and counts may
+ * FALL, NEVER RISE. A new file starts at zero, so its first hardcoded sentence
+ * fails here — which is what binds pages written after the migration.
  *
- * What counts as a sentence: an eight-plus-character text node or copy-bearing
- * attribute (title, label, placeholder, alt, description, aria-label, and the
- * action hook's message options) containing a space and mostly letters.
- * Interpolations ({...}) are invisible to the scan, so a translated page
- * scores zero. The heuristic can miss copy assembled in variables — review
- * still owns that — but it cannot be fooled by the case that actually
- * happened: whole pages of inline English.
+ * The scan parses each file rather than matching text against it, so the
+ * positions below are syntax, not guesswork, and code can never be mistaken for
+ * a sentence sitting in one of them:
+ *
+ *   - JSX text, which includes SVG `<text>` labels;
+ *   - a string rendered as a child, `{busy ? "Working…" : "Ready"}`;
+ *   - a copy-bearing JSX attribute — `description="…"`, `emptyLabel="…"`;
+ *   - a copy-bearing object property, which is how a module-level config array
+ *     hides a paragraph that the component later renders as `{item.label}`,
+ *     and how a chart carries its axis labels;
+ *   - a bare string element of an array, the shape of a phase list;
+ *   - a string assigned to a variable, or returned from a function;
+ *   - a string drawn onto a canvas with `fillText`.
+ *
+ * A template literal counts by its literal parts alone: `Showing ${a} of ${b}
+ * attempts` is a sentence, `${label} opacity` is one hardcoded word, and
+ * `/admin/companies/${id}` is a path. Copy assembled across statements is
+ * invisible to any of this — review still owns that.
+ *
+ * A name carries copy if it is on the list below or ends in one of the copy
+ * words, so `emptySearchMessage` and `successLabel` are read without being
+ * named. Everything else is left alone, which is what keeps a Tailwind class
+ * list out of the count: `className` is not a copy name, and a bare string that
+ * is mostly utility tokens is rejected wherever it appears.
  *
  * When you translate a file, its count falls; move the entry down or delete it
  * at zero — the check tells you which. Adding or raising an entry is never the
@@ -29,144 +47,195 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * public marketing site, which is deliberately single-language.
  */
 
-const COPY_ATTRS =
-  /(?:title|label|placeholder|alt|description|aria-label|successMessage|fallbackMessage)="([^"]+)"/g;
+const COPY_NAMES: ReadonlySet<string> = new Set([
+  'alt',
+  'aria-label',
+  'ariaLabel',
+  'body',
+  'caption',
+  'content',
+  'count',
+  'description',
+  'header',
+  'heading',
+  'hint',
+  'label',
+  'legend',
+  'message',
+  'placeholder',
+  'showing',
+  'subject',
+  'subtitle',
+  'summary',
+  'title',
+  'tooltip',
+]);
+
+const COPY_NAME_SUFFIX =
+  /(?:Label|Title|Text|Message|Placeholder|Description|Heading|Caption|Hint|Tooltip|Summary|Body)$/;
+
+const carriesCopy = (name: string) => COPY_NAMES.has(name) || COPY_NAME_SUFFIX.test(name);
 
 /**
- * 68 files, 119 sentences.
+ * 23 files, 102 sentences.
  *
- * The customer area was translated on 2026-08-26, taking the list from 80
- * files and 183 sentences. What is left under `app/` is nine matches in four
- * files that no reader ever sees: a generic type parameter, two JSX comments
- * and the code between an object's icon and its next element. The scanner
- * cannot tell those from copy, so they stay on the list at their measured
- * value rather than being written out of it.
+ * The customer area under `app/` was translated on 2026-08-26 and is absent
+ * from the list; what remains is the admin area, the chat and workflow kit, and
+ * the sidebar. `GameEngine.ts` is gone from it for the same reason as the rest:
+ * the arcade HUD now takes its four strings from the catalogue, passed in as
+ * formatters so the canvas loop stays free of React.
  *
- * The previous list read 72 sentences across 35 files. Nothing was added in
- * between — the scanner below was fixed. It matched line by line, so a JSX
- * sentence on its own line between its tags, which is what Prettier produces
- * and therefore what almost every file here contains, was invisible. Four
- * fully-English pages scored zero under the old count, and a probe page
- * written entirely in hardcoded English passed the check that exists to stop
- * exactly that.
- *
- * So this is the first honest baseline, not a regression. Every entry is work;
- * the list may only fall.
- *
- * The first attempt at this baseline read 675 across 201 files, because
- * scanning whole files let a generic type parameter open a match that ran on
- * through the code beneath it. `looksLikeCopy` rejects code punctuation now.
- * 183 was the number that survived both corrections, and the baseline the
- * customer-area translation was measured against.
+ * The list is measured, not chosen. It last read 68 files and 119 sentences
+ * under a scan that matched `>text<` against the file as a string. That shape
+ * could not see a sentence held in a config array, an SVG label in capitals, a
+ * chart axis, a fallback arm or anything drawn on a canvas — and 66 of its 119
+ * sentences sat in 51 files that carried no copy at all, being type parameters,
+ * JSX comments and the code between two elements. Parsing the file drops those
+ * and reads 189 across 33 files in the same tree; translating the customer area
+ * took it to what is written above.
  */
 const FROZEN: ReadonlyMap<string, number> = new Map([
-  ['src/app/(dashboard)/_features/user-directory/UserDirectoryScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/chat-logs/ChatLogsScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/evals/EvalCaseDetailScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/evals/EvalDialogs.tsx', 2],
-  ['src/app/(dashboard)/admin/_features/evals/EvalsScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/widget-config/WidgetConfigScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/wiki/UnansweredScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/wiki/WikiDiaryScreen.tsx', 1],
-  ['src/app/(dashboard)/admin/_features/wiki/WikiPageDetailScreen.tsx', 2],
-  ['src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/[id]/layout.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/[id]/logs/AgentLogsResults.tsx', 2],
-  ['src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/[id]/logs/page.tsx', 3],
-  ['src/app/(dashboard)/admin/agents/[id]/memory/page.tsx', 2],
-  ['src/app/(dashboard)/admin/agents/[id]/observability/[runId]/AgentJobDetailContent.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/[id]/observability/page.tsx', 3],
-  ['src/app/(dashboard)/admin/agents/[id]/page.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx', 1],
+  ['src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils.ts', 2],
   ['src/app/(dashboard)/admin/agents/[id]/settings/page.tsx', 1],
   ['src/app/(dashboard)/admin/agents/new/page.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/skills/SkillCatalogDialogs.tsx', 3],
-  ['src/app/(dashboard)/admin/ai/models/catalogue/page.tsx', 2],
-  ['src/app/(dashboard)/admin/ai/models/defaults/page.tsx', 1],
-  ['src/app/(dashboard)/admin/ai/tool-servers/page.tsx', 1],
+  ['src/app/(dashboard)/admin/ai/costs/_components/AICostDistributionCharts.tsx', 1],
   ['src/app/(dashboard)/admin/companies/CompanyDialogs.tsx', 1],
-  ['src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx', 2],
-  ['src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx', 1],
-  ['src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx', 10],
-  ['src/app/(dashboard)/admin/companies/[id]/features/CompanyFeaturesContent.tsx', 1],
+  ['src/app/(dashboard)/admin/companies/[id]/ai/usage/page.tsx', 5],
+  ['src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx', 21],
+  ['src/app/(dashboard)/admin/companies/[id]/features/CompanyFeaturesContent.tsx', 5],
   ['src/app/(dashboard)/admin/companies/[id]/features/page.tsx', 1],
-  ['src/app/(dashboard)/admin/companies/[id]/page.tsx', 1],
-  ['src/app/(dashboard)/admin/governance/audit-trail/page.tsx', 3],
-  ['src/app/(dashboard)/admin/governance/register/page.tsx', 2],
-  ['src/app/(dashboard)/admin/settings/_components/RetentionRuleDialogs.tsx', 1],
-  ['src/app/(dashboard)/admin/settings/analytics/page.tsx', 1],
-  ['src/app/(dashboard)/admin/settings/api-keys/ApiKeyRevokeDialog.tsx', 1],
-  ['src/app/(dashboard)/admin/settings/api-keys/page.tsx', 2],
-  ['src/app/(dashboard)/admin/settings/plans/PlanDialogs.tsx', 2],
-  ['src/app/(dashboard)/admin/settings/plans/page.tsx', 1],
-  ['src/app/(dashboard)/admin/super-admins/invite/page.tsx', 1],
-  ['src/app/(dashboard)/admin/users/invite/page.tsx', 1],
-  ['src/app/(dashboard)/admin/workflows/WorkflowDialogs.tsx', 2],
-  ['src/app/(dashboard)/admin/workflows/schedules/page.tsx', 1],
-  ['src/app/(dashboard)/app/[workspace]/customers/[account]/page.tsx', 1],
-  ['src/app/(dashboard)/app/[workspace]/customers/page.tsx', 1],
-  ['src/app/(dashboard)/app/assistant/_components/AssistantComposer.tsx', 1],
-  ['src/app/(dashboard)/app/page.tsx', 2],
-  ['src/app/(dashboard)/app/properties/logs/PropertiesRunRows.tsx', 1],
-  ['src/app/(dashboard)/app/properties/scraped-data/ScrapedDataDeleteDialog.tsx', 1],
-  ['src/app/(dashboard)/app/properties/scraped-data/page.tsx', 1],
-  ['src/app/(dashboard)/app/settings/team/page.tsx', 1],
-  ['src/ui/components/chat/ChatHistoryList.tsx', 6],
-  ['src/ui/components/chat/ChatInput.tsx', 8],
-  ['src/ui/components/chat/ChatMessage.tsx', 1],
-  ['src/ui/components/chat/MessageFeedbackControls.tsx', 4],
-  ['src/ui/components/chat/PhotoActionChip.tsx', 1],
+  ['src/app/(dashboard)/admin/directory/page.tsx', 1],
+  ['src/app/(dashboard)/admin/governance/audit-trail/page.tsx', 2],
+  ['src/app/(dashboard)/admin/super-admins/[id]/page.tsx', 1],
+  ['src/app/(dashboard)/admin/super-admins/page.tsx', 1],
+  ['src/app/(dashboard)/admin/users/page.tsx', 1],
+  ['src/ui/components/chat/ChatHistoryList.tsx', 7],
+  ['src/ui/components/chat/ChatInput.tsx', 15],
+  ['src/ui/components/chat/MessageFeedbackControls.tsx', 8],
   ['src/ui/components/chat/SwarmStatusCard.tsx', 2],
-  ['src/ui/components/governance/GovernanceDashboard.tsx', 1],
-  ['src/ui/components/screens/AccessLevel.tsx', 1],
-  ['src/ui/components/screens/CompactList.tsx', 2],
-  ['src/ui/components/screens/DataTable.tsx', 1],
-  ['src/ui/components/screens/Field.tsx', 2],
-  ['src/ui/components/workflows/AgentNode.tsx', 1],
-  ['src/ui/components/workflows/ConfigDrawerDataPanels.tsx', 2],
-  ['src/ui/components/workflows/ConfigDrawerHumanPanels.tsx', 5],
+  ['src/ui/components/layout/SidebarNavigation.tsx', 17],
+  ['src/ui/components/workflows/AgentEditorModal.tsx', 1],
+  ['src/ui/components/workflows/ConfigDrawer.tsx', 1],
+  ['src/ui/components/workflows/ConfigDrawerDataPanels.tsx', 3],
+  ['src/ui/components/workflows/ConfigDrawerHumanPanels.tsx', 4],
 ]);
 
 const SCAN_ROOTS = ['src/app/(dashboard)', 'src/ui'];
+const SCAN_EXTENSIONS = new Set(['.ts', '.tsx']);
+
+/**
+ * A utility class list is not a sentence, however English its words look.
+ *
+ * `px-4 py-3 text-[13px] whitespace-nowrap text-secondary` passes every other
+ * test here — long enough, spaced, mostly letters — so the shape of a Tailwind
+ * token is what separates it from copy. One hyphenated word in a sentence is
+ * ordinary ("auto-generate", "multi-agent"), so the rule only fires when more
+ * than half the words are built that way.
+ */
+function looksLikeStyling(text: string): boolean {
+  const tokens = text.split(' ').filter(Boolean);
+  const styling = tokens.filter((token) => /^\/|\[|\]|^[a-z][a-z0-9]*(?:[:/-][a-z0-9./%[\]-]+)+$/.test(token));
+  return styling.length * 2 > tokens.length;
+}
 
 function looksLikeCopy(raw: string): boolean {
-  const text = raw.trim();
+  const text = raw.replace(/\s+/g, ' ').trim();
   if (text.length < 8 || !text.includes(' ')) return false;
-  if (!/[a-z]{2}/.test(text)) return false;
-  // Angle brackets are not only JSX. Scanning whole files rather than lines
-  // means a generic type parameter — `useState<Id<"companies"> | null>(null)` —
-  // opens a match that runs on through the code below it until the next `<`.
-  // Punctuation that appears in code and effectively never in screen copy is
-  // what tells the two apart.
-  if (/[;=]|\/\/|=>/.test(text)) return false;
+  if (!/[A-Za-z]{2}/.test(text)) return false;
+  // Punctuation that appears in code and effectively never in screen copy:
+  // statements, arrows, comments, markup samples and JSON keys.
+  if (/[;=]|\/\/|=>|<\/|\/>|":/.test(text)) return false;
   const letters = text.replace(/[^A-Za-z ]/g, '');
-  return letters.length >= text.length * 0.6;
+  if (letters.length < text.length * 0.6) return false;
+  return !looksLikeStyling(text);
+}
+
+/** The literal chunks of a string or template, with interpolations dropped. */
+function literalParts(node: ts.Node): string[] | null {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node.text];
+  if (ts.isTemplateExpression(node)) {
+    return [node.head.text, ...node.templateSpans.map((span) => span.literal.text)];
+  }
+  return null;
 }
 
 /**
- * Scanned over the whole file, not line by line.
+ * The strings a value can turn out to be.
  *
- * Line-by-line was the same as not scanning at all for most of this codebase:
- * Prettier puts a JSX sentence on its own line between the tags, so `>` and
- * `<` are never on one line together and the match never fired. Measured on
- * 2026-08-26, four fully-English pages scored zero, and a probe page written
- * entirely in hardcoded English passed — the docblock above promised the
- * opposite. Newlines inside the text are collapsed before the shape test so
- * a wrapped sentence reads as one.
+ * A prop is often written as a choice rather than a string — `placeholder={busy
+ * ? "Awaiting agent…" : "Dispatch a prompt…"}`, `alt={name || "Player avatar"}`
+ * — and both arms are copy someone reads.
  */
-function countHardcodedCopy(contents: string): number {
+function valueBranches(expression: ts.Expression): ts.Expression[] {
+  if (ts.isParenthesizedExpression(expression)) return valueBranches(expression.expression);
+  if (ts.isArrowFunction(expression) && !ts.isBlock(expression.body)) return valueBranches(expression.body);
+  if (ts.isConditionalExpression(expression)) {
+    return [...valueBranches(expression.whenTrue), ...valueBranches(expression.whenFalse)];
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    (expression.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+      expression.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
+  ) {
+    return [...valueBranches(expression.left), ...valueBranches(expression.right)];
+  }
+  return [expression];
+}
+
+function countHardcodedCopy(contents: string, filePath: string): number {
+  const source = ts.createSourceFile(
+    filePath,
+    contents,
+    ts.ScriptTarget.Latest,
+    true,
+    filePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+
   let hits = 0;
 
-  for (const match of contents.matchAll(/>\s*([^<>{}]+?)\s*</g)) {
-    if (looksLikeCopy(match[1].replace(/\s+/g, ' '))) hits += 1;
-  }
+  const count = (parts: string[] | null) => {
+    if (parts && looksLikeCopy(parts.join(''))) hits += 1;
+  };
 
-  for (const match of contents.matchAll(COPY_ATTRS)) {
-    if (looksLikeCopy(match[1].replace(/\s+/g, ' '))) hits += 1;
-  }
+  const countValue = (expression: ts.Expression | undefined) => {
+    if (!expression) return;
+    for (const branch of valueBranches(expression)) count(literalParts(branch));
+  };
+
+  const declaredName = (node: ts.JsxAttribute | ts.PropertyAssignment) =>
+    ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : node.name.getText(source);
+
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxText(node)) {
+      count([node.text]);
+    } else if (ts.isJsxAttribute(node)) {
+      if (carriesCopy(declaredName(node)) && node.initializer) {
+        const initializer = node.initializer;
+        countValue(ts.isJsxExpression(initializer) ? initializer.expression : initializer);
+      }
+    } else if (ts.isPropertyAssignment(node)) {
+      if (carriesCopy(declaredName(node))) countValue(node.initializer);
+    } else if (ts.isArrayLiteralExpression(node)) {
+      for (const element of node.elements) {
+        if (ts.isStringLiteral(element) || ts.isNoSubstitutionTemplateLiteral(element)) count([element.text]);
+      }
+    } else if (ts.isVariableDeclaration(node)) {
+      if (node.initializer) count(literalParts(node.initializer));
+    } else if (ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
+      countValue(node.expression);
+    } else if (ts.isReturnStatement(node)) {
+      if (node.expression) count(literalParts(node.expression));
+    } else if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      if (ts.isPropertyAccessExpression(callee) && callee.name.text === 'fillText' && node.arguments.length > 0) {
+        count(literalParts(node.arguments[0]));
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(source);
 
   return hits;
 }
@@ -174,22 +243,22 @@ function countHardcodedCopy(contents: string): number {
 describe('screen copy stays in the catalogue', () => {
   const measured = new Map<string, number>();
   for (const root of SCAN_ROOTS) {
-    for (const file of walkFiles(path.join(repoRoot, root), new Set(['.tsx']))) {
+    for (const file of walkFiles(path.join(repoRoot, root), SCAN_EXTENSIONS)) {
       const relative = relativePath(file).replaceAll(path.sep, '/');
-      if (relative.includes('/demos/') || relative.endsWith('.test.tsx')) continue;
-      const hits = countHardcodedCopy(fs.readFileSync(file, 'utf8'));
+      if (relative.includes('/demos/') || /\.test\.tsx?$/.test(relative) || relative.endsWith('.d.ts')) continue;
+      const hits = countHardcodedCopy(fs.readFileSync(file, 'utf8'), file);
       if (hits > 0) measured.set(relative, hits);
     }
   }
 
   /**
-   * Frozen at 68 files and 119 sentences. The list may shrink and never
+   * Frozen at 23 files and 102 sentences. The list may shrink and never
    * grow — a sentence three lists in this repository printed without anything
    * checking it, so a new entry slipped in unremarked. A file's count may split
    * when the file splits, but the total may not rise.
    */
-  const FROZEN_FILE_CEILING = 68;
-  const FROZEN_SENTENCE_CEILING = 119;
+  const FROZEN_FILE_CEILING = 23;
+  const FROZEN_SENTENCE_CEILING = 102;
 
   test('the frozen list only shrinks', () => {
     const sentences = [...FROZEN.values()].reduce((sum, count) => sum + count, 0);

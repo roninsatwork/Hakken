@@ -22,6 +22,11 @@ const KNOWLEDGE = "#b9dcc4";
 const MEMORY = "#c7bfe6";
 const REPORT = "#f0d8a8";
 
+// The amber ramp the real risk radar uses for its three tiers, each read
+// alongside its own written tier name rather than by colour alone.
+const RISK_AMBER = "#fbbf24";
+const RISK_QUIET = "var(--color-secondary)";
+
 type ReportGroup = "story" | "numbers" | "risks" | "actions";
 
 // ---------------------------------------------------------------------------
@@ -32,51 +37,25 @@ type ReportGroup = "story" | "numbers" | "risks" | "actions";
 const LEGEND: {
   group: ReportGroup;
   icon: typeof Newspaper;
-  label: string;
-  count: string;
   tint: string;
-  description: string;
 }[] = [
-  {
-    group: "story",
-    icon: Newspaper,
-    label: "The story",
-    count: "Section 1",
-    tint: STORY,
-    description:
-      "A punchy headline and an executive summary in plain English — the agent's own read on the biggest news in your pipeline, before a single chart.",
-  },
-  {
-    group: "numbers",
-    icon: LineChart,
-    label: "The numbers",
-    count: "Sections 2–4",
-    tint: NUMBERS,
-    description:
-      "Six KPIs with their direction of travel, deals grouped by closing window, top deals to watch, and pipeline health by stage and by rep — the full state of play.",
-  },
-  {
-    group: "risks",
-    icon: ShieldAlert,
-    label: "The risks",
-    count: "Section 5",
-    tint: RISKS,
-    description:
-      "Every open deal is triaged into one of three tiers — critical, at risk, or quiet — each with the reason and a recommended next move.",
-  },
-  {
-    group: "actions",
-    icon: ClipboardList,
-    label: "The actions",
-    count: "Sections 6–8",
-    tint: ACTIONS,
-    description:
-      "Who has momentum and who needs support, the patterns hiding in the data, and a short numbered list of this week's priorities.",
-  },
+  { group: "story", icon: Newspaper, tint: STORY },
+  { group: "numbers", icon: LineChart, tint: NUMBERS },
+  { group: "risks", icon: ShieldAlert, tint: RISKS },
+  { group: "actions", icon: ClipboardList, tint: ACTIONS },
 ];
 
-const DEFAULT_DESCRIPTION =
-  "Eight sections, in the same order every time — written fresh from your pipeline data on each run.";
+const RISK_ROWS: {
+  y: number;
+  tier: "critical" | "atRisk" | "quiet";
+  fill: string;
+  dotOpacity: number;
+  barWidth: number;
+}[] = [
+  { y: 332, tier: "critical", fill: RISK_AMBER, dotOpacity: 1, barWidth: 96 },
+  { y: 364, tier: "atRisk", fill: RISK_AMBER, dotOpacity: 0.45, barWidth: 110 },
+  { y: 396, tier: "quiet", fill: RISK_QUIET, dotOpacity: 0.5, barWidth: 88 },
+];
 
 function groupOpacity(selected: ReportGroup | null, group: ReportGroup) {
   if (selected === null) return 1;
@@ -153,7 +132,7 @@ export function ReportAnatomy() {
           {/* Section 1 — headline + executive summary */}
           <g style={{ ...fade, opacity: storyO }}>
             <SectionTag x={90} y={54}>
-              1 · HEADLINE
+              {t("wireframeTags.headline")}
             </SectionTag>
             <rect
               x={90}
@@ -185,7 +164,7 @@ export function ReportAnatomy() {
           {/* Sections 2–4 — KPIs + charts */}
           <g style={{ ...fade, opacity: numbersO }}>
             <SectionTag x={90} y={140}>
-              2–4 · THE NUMBERS
+              {t("wireframeTags.numbers")}
             </SectionTag>
             {[90, 172, 254].map((x) => (
               <g key={x}>
@@ -289,34 +268,32 @@ export function ReportAnatomy() {
           {/* Section 5 — risk radar */}
           <g style={{ ...fade, opacity: risksO }}>
             <SectionTag x={90} y={314}>
-              5 · RISK RADAR
+              {t("wireframeTags.riskRadar")}
             </SectionTag>
-            {[
-              { y: 332, dot: "#ef4444", w1: 100, w2: 96 },
-              { y: 364, dot: "#facc15", w1: 84, w2: 110 },
-              { y: 396, dot: "#22c55e", w1: 92, w2: 88 },
-            ].map((row) => (
+            {RISK_ROWS.map((row) => (
               <g key={row.y}>
                 <circle
                   cx={100}
                   cy={row.y}
                   r={5}
-                  fill={row.dot}
+                  style={{ fill: row.fill }}
+                  opacity={row.dotOpacity}
                   filter={selected === "risks" ? `url(#${glowId})` : undefined}
                 />
-                <rect
+                <text
                   x={114}
-                  y={row.y - 3.5}
-                  width={row.w1}
-                  height={7}
-                  rx={3.5}
-                  style={{ fill: "var(--color-secondary)" }}
-                  opacity={0.5}
-                />
+                  y={row.y + 2.5}
+                  style={{ fill: "var(--color-muted)" }}
+                  fontSize={7.5}
+                  letterSpacing={1.2}
+                  fontFamily="ui-monospace, monospace"
+                >
+                  {t(`riskTiers.${row.tier}`)}
+                </text>
                 <rect
-                  x={322 - row.w2}
+                  x={322 - row.barWidth}
                   y={row.y - 2.5}
-                  width={row.w2}
+                  width={row.barWidth}
                   height={5}
                   rx={2.5}
                   fill={RISKS}
@@ -329,7 +306,7 @@ export function ReportAnatomy() {
           {/* Sections 6–8 — team, patterns, priorities */}
           <g style={{ ...fade, opacity: actionsO }}>
             <SectionTag x={90} y={428}>
-              6–8 · THIS WEEK
+              {t("wireframeTags.thisWeek")}
             </SectionTag>
             {[
               { y: 450, w: 190 },
@@ -412,10 +389,10 @@ export function ReportAnatomy() {
                 <item.icon className="w-5 h-5 shrink-0" style={{ color: item.tint }} />
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium text-foreground truncate">
-                    {item.label}
+                    {t(`anatomy.${item.group}.label`)}
                   </div>
                   <div className="text-[12px] text-secondary tabular-nums">
-                    {item.count}
+                    {t(`anatomy.${item.group}.count`)}
                   </div>
                 </div>
               </button>
@@ -442,7 +419,7 @@ export function ReportAnatomy() {
                 key={active?.group ?? "all"}
                 className={`text-[13px] leading-relaxed ${active ? "text-foreground/90" : "text-secondary"}`}
               >
-                {active ? active.description : DEFAULT_DESCRIPTION}
+                {active ? t(`anatomy.${active.group}.description`) : t("anatomy.defaultDescription")}
               </p>
             </div>
           );
@@ -463,51 +440,13 @@ type SourceGroup = "pipeline" | "knowledge" | "memory" | "report";
 const SOURCE_LEGEND: {
   group: SourceGroup;
   icon: typeof LineChart;
-  label: string;
-  count: string;
   tint: string;
-  description: string;
 }[] = [
-  {
-    group: "pipeline",
-    icon: LineChart,
-    label: "Your pipeline",
-    count: "Every deal, in full",
-    tint: PIPELINE,
-    description:
-      "Every open deal — its value, its stage, its owner, its expected close — read in full on every run. Nothing sampled, nothing skimmed.",
-  },
-  {
-    group: "knowledge",
-    icon: BookOpen,
-    label: "Company knowledge",
-    count: "Documents you share",
-    tint: KNOWLEDGE,
-    description:
-      "Pricing, playbooks, account notes — whatever your team shares with it. When it's writing, the agent pulls out the right page at the right moment, the way a good colleague would.",
-  },
-  {
-    group: "memory",
-    icon: Brain,
-    label: "What it remembers",
-    count: "Run after run",
-    tint: MEMORY,
-    description:
-      "The agent carries what it learned from previous runs into the next one — so every report builds on the last instead of starting from scratch.",
-  },
-  {
-    group: "report",
-    icon: FileCheck,
-    label: "The report it writes",
-    count: "Board-ready",
-    tint: REPORT,
-    description:
-      "Everything it read, remembered and looked up — distilled into the pages your board acts on. The full anatomy is just below.",
-  },
+  { group: "pipeline", icon: LineChart, tint: PIPELINE },
+  { group: "knowledge", icon: BookOpen, tint: KNOWLEDGE },
+  { group: "memory", icon: Brain, tint: MEMORY },
+  { group: "report", icon: FileCheck, tint: REPORT },
 ];
-
-const SOURCES_DEFAULT_DESCRIPTION =
-  "One agent, drawing on everything your team already has — and turning it into the report your board reads.";
 
 function sourceOpacity(selected: SourceGroup | null, group: SourceGroup) {
   if (selected === null) return 1;
@@ -656,7 +595,7 @@ export function AgentSources() {
               </g>
             ))}
             <NodeTag x={116} y={166}>
-              YOUR PIPELINE
+              {t("nodeTags.pipeline")}
             </NodeTag>
             <FlowArrow x1={152} y1={154} x2={192} y2={246} angle={66.5} />
           </g>
@@ -736,7 +675,7 @@ export function AgentSources() {
               filter={selected === "knowledge" ? `url(#${glowId})` : undefined}
             />
             <NodeTag x={296} y={176}>
-              YOUR KNOWLEDGE
+              {t("nodeTags.knowledge")}
             </NodeTag>
             <FlowArrow x1={272} y1={166} x2={228} y2={246} angle={117.6} />
           </g>
@@ -784,7 +723,7 @@ export function AgentSources() {
             <circle cx={201} cy={271} r={4} fill={ACCENT} />
             <circle cx={219} cy={271} r={4} fill={ACCENT} />
             <NodeTag x={210} y={336}>
-              THE REPORT AGENT
+              {t("nodeTags.agent")}
             </NodeTag>
           </g>
 
@@ -882,7 +821,7 @@ export function AgentSources() {
               opacity={0.25}
             />
             <NodeTag x={120} y={496}>
-              WHAT IT REMEMBERS
+              {t("nodeTags.memory")}
             </NodeTag>
             <FlowArrow x1={148} y1={386} x2={194} y2={298} angle={-62.4} />
           </g>
@@ -970,7 +909,7 @@ export function AgentSources() {
               </g>
             ))}
             <NodeTag x={296} y={514}>
-              THE BOARD REPORT
+              {t("nodeTags.report")}
             </NodeTag>
             <FlowArrow x1={226} y1={298} x2={264} y2={382} angle={65.7} tint={REPORT} />
           </g>
@@ -1018,10 +957,10 @@ export function AgentSources() {
                 <item.icon className="w-5 h-5 shrink-0" style={{ color: item.tint }} />
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium text-foreground truncate">
-                    {item.label}
+                    {t(`sources.${item.group}.label`)}
                   </div>
                   <div className="text-[12px] text-secondary tabular-nums">
-                    {item.count}
+                    {t(`sources.${item.group}.count`)}
                   </div>
                 </div>
               </button>
@@ -1048,7 +987,7 @@ export function AgentSources() {
                 key={active?.group ?? "all"}
                 className={`text-[13px] leading-relaxed ${active ? "text-foreground/90" : "text-secondary"}`}
               >
-                {active ? active.description : SOURCES_DEFAULT_DESCRIPTION}
+                {active ? t(`sources.${active.group}.description`) : t("sources.defaultDescription")}
               </p>
             </div>
           );
@@ -1062,37 +1001,16 @@ export function AgentSources() {
 // Four-step flow: from a spreadsheet of deals to a board-ready report.
 // ---------------------------------------------------------------------------
 
-type FlowStep = {
-  title: string;
-  body: string;
-};
-
-const FLOW: FlowStep[] = [
-  {
-    title: "Teach it your business",
-    body: "Share your pipeline and the documents your team already has. That's its raw material.",
-  },
-  {
-    title: "It reads everything",
-    body: "The whole pipeline, plus everything you've shared — before it writes a word.",
-  },
-  {
-    title: "It finds what matters",
-    body: "Risks, patterns and momentum — weighed against what it knows and what it remembers.",
-  },
-  {
-    title: "It writes. You present.",
-    body: "The report lands on schedule, and one click exports it for the deck.",
-  },
-];
+const FLOW = ["teach", "reads", "finds", "writes"] as const;
 
 export function ReportFlow() {
+  const t = useTranslations("salesReports.information.visuals");
   const gradientId = useId();
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {FLOW.map((step, index) => (
         <div
-          key={step.title}
+          key={step}
           className="relative flex flex-col gap-2 rounded-[16px] border border-border-dim bg-card/60 p-4 backdrop-blur-xl"
         >
           <div className="flex items-center gap-2.5">
@@ -1125,8 +1043,8 @@ export function ReportFlow() {
               </svg>
             )}
           </div>
-          <h3 className="text-[15px] font-semibold text-foreground">{step.title}</h3>
-          <p className="text-[13px] leading-relaxed text-secondary">{step.body}</p>
+          <h3 className="text-[15px] font-semibold text-foreground">{t(`flow.${step}.title`)}</h3>
+          <p className="text-[13px] leading-relaxed text-secondary">{t(`flow.${step}.body`)}</p>
         </div>
       ))}
     </div>

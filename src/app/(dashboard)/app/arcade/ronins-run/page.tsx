@@ -351,7 +351,7 @@ export default function RoninArcadePage() {
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
                  <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>{t("title")}</h2>
                  <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
-                   INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.
+                   {t("insertToken")}
                  </p>
                  
                  <button 
@@ -429,11 +429,11 @@ export default function RoninArcadePage() {
              search={{
                value: scoreSearch,
                onChange: setScoreSearch,
-               placeholder: "Search the board by player",
+               placeholder: t("searchPlaceholder"),
              }}
              empty={{
                icon: <Trophy className="w-8 h-8 text-muted/30" />,
-               label: "No scores recorded. Be the first to enter the matrix.",
+               label: t("emptyScores"),
              }}
              footer={{
                mode: "paged",
@@ -444,14 +444,14 @@ export default function RoninArcadePage() {
                isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
                onPageChange: handlePageChange,
                labels: {
-                 empty: "No attempts yet",
-                 showing: (start, end, total) => `Showing ${start} to ${end} of ${total} attempts`,
+                 empty: t("noAttempts"),
+                 showing: (start, end, total) => t("showing", { start, end, total }),
                },
              }}
              columns={[
                {
                  key: "rank",
-                 header: "Rank",
+                 header: t("table.rank"),
                  className: "w-[80px]",
                  cell: (entry) => {
                    const globalIndex = paginatedItems.indexOf(entry) + (currentPage - 1) * itemsPerPage;
@@ -464,13 +464,13 @@ export default function RoninArcadePage() {
                },
                {
                  key: "user",
-                 header: "User",
+                 header: t("table.user"),
                  cell: (entry) => (
                    <div className="flex items-center gap-3">
                      {entry.userAvatar ? (
                        <Image
                          src={entry.userAvatar}
-                         alt={entry.userName || "Player avatar"}
+                         alt={entry.userName || t("playerAvatar")}
                          width={32}
                          height={32}
                          unoptimized
@@ -487,7 +487,7 @@ export default function RoninArcadePage() {
                },
                {
                  key: "score",
-                 header: "Score",
+                 header: t("table.score"),
                  align: "right",
                  cell: (entry) => (
                    <span className="text-[16px] font-mono font-bold text-brand tracking-widest">
@@ -497,7 +497,7 @@ export default function RoninArcadePage() {
                },
                {
                  key: "timestamp",
-                 header: "Timestamp",
+                 header: t("table.timestamp"),
                  align: "right",
                  cell: (entry) => (
                    <div className="flex items-center justify-end gap-1.5 text-secondary">

@@ -56,7 +56,7 @@ describe("RoninArcadePage", () => {
       },
       sampleRows: scores,
       sampleRowText: "Anthony Basker",
-      emptyText: /No scores recorded/,
+      emptyText: "arcade.emptyScores",
     });
   });
 });

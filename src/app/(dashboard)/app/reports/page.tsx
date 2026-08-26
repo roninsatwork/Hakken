@@ -95,12 +95,12 @@ export default function ReportsPage() {
 
   // Visual Addendum synthetic data to plot a premium Risk Vector Radar chart beside Section 5
   const riskVectorData = [
-    { subject: 'Slipped Close', A: 90, fullMark: 100 },
-    { subject: 'Stagnant', A: 85, fullMark: 100 },
-    { subject: 'No Champion', A: 65, fullMark: 100 },
-    { subject: 'Price Block', A: 40, fullMark: 100 },
-    { subject: 'Competitor', A: 55, fullMark: 100 },
-    { subject: 'Legal/Sec', A: 30, fullMark: 100 },
+    { subject: t('riskVectors.slippedClose'), A: 90, fullMark: 100 },
+    { subject: t('riskVectors.stagnant'), A: 85, fullMark: 100 },
+    { subject: t('riskVectors.noChampion'), A: 65, fullMark: 100 },
+    { subject: t('riskVectors.priceBlock'), A: 40, fullMark: 100 },
+    { subject: t('riskVectors.competitor'), A: 55, fullMark: 100 },
+    { subject: t('riskVectors.legalSec'), A: 30, fullMark: 100 },
   ];
 
   return (

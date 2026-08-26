@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { GameEngine } from './engine/GameEngine';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { useTranslations } from 'next-intl';
+import { GameEngine, type GameEngineLabels } from './engine/GameEngine';
 
 interface RoninCanvasProps {
   onGameOver: (score: number) => void;
@@ -7,18 +8,29 @@ interface RoninCanvasProps {
 }
 
 export default function RoninCanvas({ onGameOver, isFullscreen }: RoninCanvasProps) {
+  const t = useTranslations('arcade.hud');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
+  const labels = useMemo<GameEngineLabels>(
+    () => ({
+      score: (score) => t('score', { score }),
+      level: (level) => t('level', { level }),
+      levelCleared: (level) => t('levelCleared', { level }),
+      nextLevelIn: (seconds) => t('nextLevelIn', { seconds }),
+    }),
+    [t],
+  );
+
   useEffect(() => {
     if (!canvasRef.current) return;
-    
+
     // Initialize Game Engine
     engineRef.current = new GameEngine(canvasRef.current, {
       onGameOver: (score) => {
         onGameOver(score);
       }
-    });
+    }, labels);
 
     engineRef.current.start();
 
@@ -27,7 +39,7 @@ export default function RoninCanvas({ onGameOver, isFullscreen }: RoninCanvasPro
         engineRef.current.stop();
       }
     };
-  }, [onGameOver]);
+  }, [onGameOver, labels]);
 
   // Adjust canvas wrapper layout depending on fullscreen state
   return (
