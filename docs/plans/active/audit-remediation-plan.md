@@ -333,7 +333,7 @@ fixed. Add to this as you go.
 
 ---
 
-## The softQuery proposal (WP14 item 5 — Anthony's decision, not built)
+## The softQuery builder (WP14 item 5 — approved by Anthony 2026-08-26, built, commit 88ce9f083)
 
 **What Alessandro saw.** Twelve of the forty-one `public*` declarations carry
 the identical copy-pasted reason: *"Returns an empty result rather than
@@ -344,34 +344,30 @@ empty state instead of an error. Calling them `public` blurs the register:
 a reviewer scanning for genuinely unauthenticated surface has to read twelve
 reasons to find the ones that matter (the widget, kiosk and sign-in paths).
 
-**The proposal.** A fourth builder in `convex/tenantFunctions.ts`:
+**What was built (as proposed, with `allowRoles` instead of `minimumRole` —
+the two role-gated doors each accept a *set* of roles, not a floor).**
+`softQuery` and `softMutation` live in `convex/tenantFunctions.ts` between the
+guarded and public builders. Each takes `reason`, `args`, optional `returns`,
+`empty`, optional `allowRoles`, and a handler that receives the same resolved
+identity ctx every guarded builder provides. No session, or a role outside
+`allowRoles`, returns `empty` without the handler running.
 
-    softQuery({
-      args,
-      returns,
-      empty,            // what to return when there is no qualifying caller
-      minimumRole?,     // e.g. "SUPER_ADMIN" — checked for you
-      handler(ctx, args) // ctx.user is present and role-checked when it runs
-    })
+**Thirteen doors migrated, not twelve.** In flight we found `getLatestRuns`
+saying the pasted sentence in different words, and — better — that
+`getQualitySummary`'s pasted reason was *false*: it promised empty-not-error,
+but its scope helper threw for a caller with no session. Both migrated with
+the rest. Every hand-rolled prelude is gone, every reason is now bespoke, and
+the two role-gated doors (`getMyLoginsCount` on SUPER_ADMIN, `getRecentLogs`
+on the governance read roles) declare it instead of hand-checking it. The
+public register is down to 28 genuinely public declarations (from 41).
 
-It resolves the caller itself; if there is no session or the role falls short
-it returns `empty` without invoking the handler. The twelve soft queries
-migrate, their hand-rolled `if (!current) return 0`-style preludes disappear,
-and `public*` shrinks to the twenty-nine genuinely public declarations, each
-with a reason that is actually about being public.
-
-**What the enforcement test gains.** `authzEnforcement.test.ts` can then hold
-three honest registers instead of two: public (reason required, list shrinks),
-soft (empty-on-unauthorised by construction), guarded (throws). Today the
-soft twelve sit in the public register diluting it.
-
-**Why it is his call.** The builders in `tenantFunctions.ts` are the
-crown-jewel layer — the one place authorisation happens — and adding a builder
-there changes what a reviewer must understand about every query in the system.
-The migration itself is mechanical (twelve sites, each shedding two lines),
-but the layer it touches is the one we do not change quietly.
-
-**Cost if approved:** about half a day including the register test changes.
+**Enforcement and proof.** Both builders joined the recognised list in
+`authzEnforcement.test.ts` and soft surfaces must state a reason exactly as
+public ones must. `convex/tenantFunctions.soft.test.ts` pins the behaviour
+through real endpoints: no session is empty *and writes nothing*, the wrong
+role is empty, a qualifying caller reaches the handler, a signed-in write
+lands. Browser-checked signed in on governance (audit widget, plan badge) and
+the agent knowledge screen (quality summary) — real data, no console errors.
 
 ## Per-package status
 
@@ -386,17 +382,17 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | WP01 real-auth CI | blocked on Anthony | verified 2026-08-25: all five specs pass against a real Convex deployment in 15.7s. Still needs the dedicated test deployment + 2 GitHub secrets before the CI job can run |
 | WP11 split quality-drift | done (commit eba6cb1c4) | 38 tests before and after; 8 files + src/test/driftUtils.ts |
 | WP02 backend appError | done (commits 2f4f4b46c, 457c0721d) | all 444 converted; allowlist 92 files down to 2 (frozen movement demo + a doc comment); CONFLICT added to the code union |
-| WP05 take(10000) | in progress | 51 sites -> 38; register 124 -> 83 entries and now accurate both ways; every truncated-read-becomes-stored-truth site fixed. What remains needs the pipeline redesign (see Waiting on Anthony) or a count rollup |
+| WP05 take(10000) | done (commits d8c5efe3d, 8e5e3c385, f1b58bb35, 0d491e02e) | 51 sites -> 38; register 124 -> 83 entries and now accurate both ways; every truncated-read-becomes-stored-truth site fixed. What remains needs the pipeline redesign (see Waiting on Anthony) or a count rollup |
 | WP07 return validators | done (commits 871e52ae3, f73f1a4d9, 8508ee79b, 693264a86) | all 41 public surfaces + chat; 8 validators to 55. Leaks closed on getMessages, getSwarmLogs, getThreadDocuments, getLatestRuns, getActiveTemplate |
 | WP13 atoms consolidation | done (commit 19574af4f) | 4 modules moved, 87 files repointed, placement rule written down, shadowing verified |
-| WP04 god-components | in progress | unblocked 2026-08-25: frozen counts may split with the file, total unchanged |
-| WP03 useAdminAction | done (commit HEAD) | 15 pages migrated, 34 files on the hook, 0 hand-rolled remain; 3 real faults fixed in passing |
+| WP04 god-components | done (commits 11315686e, 612c5d098, 485717201, 5e880976c) | all four split; loop file over ~500 by design, suite unchanged |
+| WP03 useAdminAction | done (commit 443576630) | 15 pages migrated, 34 files on the hook, 0 hand-rolled remain; 3 real faults fixed in passing |
 | WP06 app→admin imports | done (commit 4ba970fd8) | 4 components + 2 hidden dependencies promoted to src/ui/components/governance/; ESLint rule verified by probe |
 | WP08 app i18n | done (commit c09f3bcc7) | 150 keys per language, real Italian; floors raised 139→156, 22→29, app floor added at 36; plus copy ratchet + placeholder parity guards (d1d0805c7) |
 | WP10 palette + formatters | done | dashboards on chartPalette.ts; formatters deduped to src/lib; TimeframeDropdown reclassified as theme-plan chrome, not chart colours |
-| WP09 naming ratchet | todo | baseline frozen only after WP13/04/06 land |
+| WP09 naming ratchet | done (commit bf1019e2e) | measured properly it was 302 Pascal vs 7; rule written down, ratcheted, probe-verified |
 | WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
-| WP14 small sweep | todo | spec in this file |
+| WP14 small sweep | done (commits bd43c4941, 88ce9f083) | docs repointed, CI dedupe, ratchet nudge, knip on (2 dead deps removed), lang bound; softQuery approved by Anthony and built — 13 doors migrated, public register 41→28, behavioural tests pin the empty/role/write contract |
 
 ---
 
@@ -416,5 +412,5 @@ appError ratio within ~7% of stated).
   Anthony says the effort is closed** — WP01 stays open until his secrets
   land and the CI job has run green on a real PR.
 - Give Anthony a plain-English closing summary: what changed, what he must
-  still do (WP01 secrets, the WP14 softQuery decision), and what was
-  deliberately left alone.
+  still do (WP01 secrets — the softQuery decision was made and built
+  2026-08-26), and what was deliberately left alone.
