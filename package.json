@@ -24,7 +24,7 @@
     "check:encoding": "node scripts/check-text-source-encoding.mjs",
     "check:layering": "node scripts/check-layering.mjs",
     "check:screen-kit": "node scripts/check-screen-kit.mjs",
-    "check:orphans": "knip --include files --no-config-hints",
+    "check:orphans": "knip --include files,dependencies,unlisted --no-config-hints",
     "check:fences": "node scripts/strip-verticals.mjs --check",
     "check:guards": "npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:orphans && npm run check:fences",
     "template:build": "node scripts/strip-verticals.mjs",

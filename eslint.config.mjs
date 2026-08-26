@@ -92,7 +92,13 @@ const eslintConfig = defineConfig([
                 "This Convex module defines queries/mutations, so importing it ships the backend to the browser. Move the shared value into convex/utils/ and import it from there.",
             },
             {
-              regex: "^@/src/app/\\(dashboard\\)/admin/",
+              // Both spellings of the same reach. The relative form was not
+              // covered until 2026-08-26, and neither form is the one that
+              // actually had to be removed — that was a dynamic `import()`,
+              // which this rule cannot see at all. src/admin-boundary-drift.test.ts
+              // walks the import graph and covers all three; this stays for the
+              // feedback in the editor.
+              regex: "^@/src/app/\\(dashboard\\)/admin/|^(\\.\\./)+admin/",
               message:
                 "A customer-facing /app route must not import admin internals. If the part is shared, promote it: src/ui/components/screens/ for generic screen-kit material, or a shared feature directory such as src/ui/components/governance/.",
             },

@@ -106,13 +106,21 @@ Future documentation upkeep should still treat newly changed implementation area
 ## Tooling Notes
 
 `knip` checks for orphaned files and, since 2026-08-26, unused and unlisted
-dependencies — its `ignoreDependencies` was `.*`, which switched that half of
-the tool off entirely. It now names five exceptions, each with a reason:
-`tailwindcss` (used by the CSS build, invisible to import analysis), `esbuild`
-and `playwright` (imported by the frozen movement-debug scripts, whose
-manifest entries are transitive and whose files are out of bounds), and
-`google-auth-library` and `ws` (dependencies of `services/voice-relay`, which
-carries its own `package.json`). Two genuinely dead dependencies found by
-switching it on — `apify-client`, replaced by the plain-fetch `apifyRest`, and
-the `resend` npm package, superseded by the `@auth/core` provider — were
-removed the same day.
+dependencies. Both halves took two goes. `ignoreDependencies` was `.*`, which
+switched dependency analysis off in the config; narrowing it that morning
+changed nothing, because `check:orphans` passed `--include files`, and that
+flag excludes the very issue types the narrowed config had just enabled. The
+script asks for `files,dependencies,unlisted` now, so the gate runs what the
+config describes — a review the same afternoon is what caught the gap.
+
+Five exceptions are named, and they are two different kinds. `tailwindcss` is
+a genuinely unused-looking dependency: the CSS build uses it and import
+analysis cannot see that. The other four suppress *unlisted* reports rather
+than unused ones — `esbuild` and `playwright` are imported by the frozen
+movement-debug scripts, and `google-auth-library` and `ws` belong to
+`services/voice-relay`, which carries its own `package.json`.
+
+Two genuinely dead dependencies — `apify-client`, replaced by the plain-fetch
+`apifyRest`, and the `resend` npm package, superseded by the `@auth/core`
+provider — were found by a manual run and removed. Nothing would have caught a
+third until the script was fixed.
