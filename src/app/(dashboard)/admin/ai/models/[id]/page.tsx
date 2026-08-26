@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, use, useEffect, useState } from "react";
+import { formatDateTime } from "@/src/lib/dates";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -21,15 +22,12 @@ import {
 
 const DefaultModelConfirmation = lazy(() => import("./DefaultModelConfirmation"));
 
-function formatDate(value: number | undefined, locale: string, neverLabel: string) {
+function formatSyncDate(value: number | undefined, locale: string, neverLabel: string) {
   if (!value) return neverLabel;
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatDateTime(value, {
+    locale,
+    options: { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" },
+  });
 }
 
 /**
@@ -318,7 +316,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         {t.rich("suppliedBy", {
           provider: getProviderDisplayName(model.providerKey, providerNameByKey) ?? tShared("legacyProvider"),
           id: model.modelId,
-          date: formatDate(model.lastSyncedAt, locale, t("never")),
+          date: formatSyncDate(model.lastSyncedAt, locale, t("never")),
           code: (chunks) => <span className="font-mono">{chunks}</span>,
         })}
       </p>

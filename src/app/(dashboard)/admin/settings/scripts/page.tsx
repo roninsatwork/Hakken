@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDateTime } from "@/src/lib/dates";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -23,12 +24,12 @@ import { useLocale, useTranslations } from "next-intl";
 type ScriptRunStatus = "RUNNING" | "SUCCESS" | "FAILED";
 
 /** Returns `undefined` when nothing has run — the screen says "Never" in the reader's language. */
-function formatDate(timestamp: number | undefined, locale: string) {
+function formatRunDate(timestamp: number | undefined, locale: string) {
   if (!timestamp) return undefined;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(timestamp));
+  return formatDateTime(timestamp, {
+    locale,
+    options: { dateStyle: "medium", timeStyle: "short" },
+  });
 }
 
 function StatusBadge({ status }: { status?: ScriptRunStatus }) {
@@ -177,7 +178,7 @@ export default function MaintenanceScriptsPage() {
             header: t("columnLastRun"),
             cell: (script) => (
               <span className="text-[12px] text-secondary">
-                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
+                {formatRunDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
               </span>
             ),
           },

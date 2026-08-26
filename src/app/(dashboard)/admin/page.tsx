@@ -1,6 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import {
+  CHART_COMPARATOR_GREY,
+  CHART_ENGAGEMENT_NONE,
+  CHART_ENGAGEMENT_RAMP,
+  CHART_PRIMARY_BLUE,
+} from "@/src/ui/components/charts/chartPalette";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -71,18 +77,18 @@ type PlatformOverview = {
  * did not sign in — without whom one active person looks like full adoption.
  */
 const SIGN_IN_BANDS = [
-  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: "#4d4d52" },
-  { key: "oneSession", labelKey: "bands.oneSession", fill: "#256abf" },
-  { key: "twoSessions", labelKey: "bands.twoSessions", fill: "#3987e5" },
-  { key: "threeSessions", labelKey: "bands.threeSessions", fill: "#6da7ec" },
-  { key: "fourSessions", labelKey: "bands.fourSessions", fill: "#9ec5f4" },
-  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: "#cde2fb" },
+  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: CHART_ENGAGEMENT_NONE },
+  { key: "oneSession", labelKey: "bands.oneSession", fill: CHART_ENGAGEMENT_RAMP[0] },
+  { key: "twoSessions", labelKey: "bands.twoSessions", fill: CHART_ENGAGEMENT_RAMP[1] },
+  { key: "threeSessions", labelKey: "bands.threeSessions", fill: CHART_ENGAGEMENT_RAMP[2] },
+  { key: "fourSessions", labelKey: "bands.fourSessions", fill: CHART_ENGAGEMENT_RAMP[3] },
+  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: CHART_ENGAGEMENT_RAMP[4] },
 ] as const;
 
 /** Two unrelated series, so two categorical slots rather than one ramp. */
 const ACTIVITY_SERIES = [
-  { key: "questions", labelKey: "series.questions", stroke: "#3987e5" },
-  { key: "aiCalls", labelKey: "series.aiCalls", stroke: "#8a8a90" },
+  { key: "questions", labelKey: "series.questions", stroke: CHART_PRIMARY_BLUE },
+  { key: "aiCalls", labelKey: "series.aiCalls", stroke: CHART_COMPARATOR_GREY },
 ] as const;
 
 const STATE_LABEL_KEYS: Record<ClientState, string> = {
@@ -351,8 +357,8 @@ export default function AdminDashboardPage() {
                 <AreaChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
                   <defs>
                     <linearGradient id="platform-spend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3987e5" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#3987e5" stopOpacity={0} />
+                      <stop offset="0%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
@@ -363,7 +369,7 @@ export default function AdminDashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="spendGBP"
-                    stroke="#3987e5"
+                    stroke={CHART_PRIMARY_BLUE}
                     strokeWidth={2}
                     fill="url(#platform-spend)"
                     isAnimationActive={false}
@@ -420,8 +426,8 @@ export default function AdminDashboardPage() {
           <PlanDistributionChart
             data={overview.planDistribution}
             noPlanName="No plan"
-            noPlanFill="#4d4d52"
-            planFill="#3987e5"
+            noPlanFill={CHART_ENGAGEMENT_NONE}
+            planFill={CHART_PRIMARY_BLUE}
             unitLabel={(count) => t("charts.plansTooltipUnit", { count })}
           />
         </ChartCard>

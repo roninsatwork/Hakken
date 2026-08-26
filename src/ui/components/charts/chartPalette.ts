@@ -24,3 +24,32 @@ export const CHART_SERIES_PALETTE = [
   CHART_SERIES_ORANGE,
   CHART_SERIES_SLATE,
 ] as const;
+
+/**
+ * The admin dashboard's engagement ramp: no sign-in through five-plus
+ * sessions, dark to light. Blue on purpose — the owner cannot tell red from
+ * green, so intensity carries the scale and the grey marks absence.
+ */
+export const CHART_ENGAGEMENT_NONE = "#4d4d52";
+export const CHART_ENGAGEMENT_RAMP = [
+  "#256abf",
+  "#3987e5",
+  "#6da7ec",
+  "#9ec5f4",
+  "#cde2fb",
+] as const;
+
+/** The dashboard's primary line/area series, and its muted comparator. */
+export const CHART_PRIMARY_BLUE = "#3987e5";
+export const CHART_COMPARATOR_GREY = "#8a8a90";
+
+/**
+ * Recharts prop colours for the board report. Kept as literal hex because the
+ * report renders inside ChartExportWrapper: Tailwind v4 compiles opacity
+ * shorthands to color-mix(in oklab, …), which html2canvas cannot parse, so
+ * anything inside an export boundary paints from these values instead.
+ */
+export const CHART_EXPORT_BACKGROUND = "#0d0d0d";
+export const CHART_AXIS_TICK = "#a3a3a3";
+export const CHART_LEGEND_TEXT = "#888";
+export const CHART_RISK_RED = "#ef4444";

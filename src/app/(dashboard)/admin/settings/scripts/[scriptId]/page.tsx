@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDateTime } from "@/src/lib/dates";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
@@ -34,12 +35,12 @@ const RISK_BADGE_CLASSES: Record<string, string> = {
 };
 
 /** Returns `undefined` when nothing has run — the screen says "Never" in the reader's language. */
-function formatDate(timestamp: number | undefined, locale: string) {
+function formatRunDate(timestamp: number | undefined, locale: string) {
   if (!timestamp) return undefined;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(timestamp));
+  return formatDateTime(timestamp, {
+    locale,
+    options: { dateStyle: "medium", timeStyle: "short" },
+  });
 }
 
 function StatusBadge({ status }: { status?: "RUNNING" | "SUCCESS" | "FAILED" }) {
@@ -200,7 +201,7 @@ export default function MaintenanceScriptDetailPage() {
               </div>
               <div>
                 <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("columnLastRun")}</span>
-                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
+                {formatRunDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt, locale) ?? t("never")}
               </div>
               <div>
                 <span className="block text-[11px] uppercase tracking-[0.12em] text-muted mb-1">{t("columnLastRunBy")}</span>
@@ -242,7 +243,7 @@ export default function MaintenanceScriptDetailPage() {
                   align: "right",
                   className: "w-[110px] align-top whitespace-nowrap text-[11px] text-muted",
                   cell: (run) =>
-                    formatDate(run.completedAt ?? run.startedAt, locale) ?? t("never"),
+                    formatRunDate(run.completedAt ?? run.startedAt, locale) ?? t("never"),
                 },
               ]}
             />

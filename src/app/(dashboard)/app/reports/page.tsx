@@ -1,6 +1,13 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import {
+  CHART_AXIS_TICK,
+  CHART_EXPORT_BACKGROUND,
+  CHART_LEGEND_TEXT,
+  CHART_RISK_RED,
+} from "@/src/ui/components/charts/chartPalette";
+import { formatCurrencyGBP } from "@/src/lib/currency";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -26,7 +33,6 @@ const PolarAngleAxis = dynamic(() => import("recharts").then((module) => module.
 const PolarRadiusAxis = dynamic(() => import("recharts").then((module) => module.PolarRadiusAxis));
 const Radar = dynamic(() => import("recharts").then((module) => module.Radar));
 
-const formatCurrency = (val: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', notation: 'compact', maximumFractionDigits: 2 }).format(val);
 
 export default function ReportsPage() {
   const t = useTranslations("salesReports.board");
@@ -40,7 +46,7 @@ export default function ReportsPage() {
     const canvas = await html2canvas(pdfRef.current, {
       scale: 2,
       useCORS: true,
-      backgroundColor: "#0d0d0d", 
+      backgroundColor: CHART_EXPORT_BACKGROUND, 
     });
     const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
@@ -137,8 +143,8 @@ export default function ReportsPage() {
             {isLegacy ? (
                 // Safe Fallback for older database objects
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <KpiCard label={t("kpiTotalPipeline")} value={formatCurrency(kpis?.totalPipeline || 0)} />
-                  <KpiCard label={t("kpiWeightedPipeline")} value={formatCurrency(kpis?.weightedPipeline || 0)} />
+                  <KpiCard label={t("kpiTotalPipeline")} value={formatCurrencyGBP(kpis?.totalPipeline || 0)} />
+                  <KpiCard label={t("kpiWeightedPipeline")} value={formatCurrencyGBP(kpis?.weightedPipeline || 0)} />
                   <KpiCard label={t("kpiOpenDeals")} value={kpis?.openDeals?.toString() || "0"} />
                   <KpiCard label={t("kpiWinRate")} value={`${(kpis?.winRatePct || 0).toFixed(1)}%`} highlight />
                 </div>
@@ -146,10 +152,10 @@ export default function ReportsPage() {
              <>
                 {/* SECTION 2: Pipeline at a Glance */}
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-2">
-                  <KpiCard label={t("kpiTotalPipeline")} value={formatCurrency(kpis?.totalPipeline || 0)} />
-                  <KpiCard label={t("kpiWeighted")} value={formatCurrency(kpis?.weightedPipeline || 0)} />
+                  <KpiCard label={t("kpiTotalPipeline")} value={formatCurrencyGBP(kpis?.totalPipeline || 0)} />
+                  <KpiCard label={t("kpiWeighted")} value={formatCurrencyGBP(kpis?.weightedPipeline || 0)} />
                   <KpiCard label={t("kpiOpenDeals")} value={(kpis?.openDeals || 0).toString()} />
-                  <KpiCard label={t("kpiAvgSize")} value={formatCurrency(kpis?.avgDealSize || 0)} />
+                  <KpiCard label={t("kpiAvgSize")} value={formatCurrencyGBP(kpis?.avgDealSize || 0)} />
                   <KpiCard label={t("kpiCycleDays")} value={(kpis?.avgSalesCycleDays || 0).toString()} />
                   <KpiCard label={t("kpiWinRate")} value={`${(kpis?.winRatePct || 0).toFixed(1)}%`} highlight />
                 </div>
@@ -177,13 +183,13 @@ export default function ReportsPage() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-dim)" vertical={false} />
-                          <XAxis dataKey="window" tick={{ fill: '#a3a3a3', fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} dy={10} />
-                          <YAxis tick={{ fill: '#a3a3a3', fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} tickFormatter={(val) => `£${(val/1000).toFixed(0)}k`} dx={-10} />
+                          <XAxis dataKey="window" tick={{ fill: CHART_AXIS_TICK, fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} dy={10} />
+                          <YAxis tick={{ fill: CHART_AXIS_TICK, fontSize: 12, fontWeight: 400 }} axisLine={false} tickLine={false} tickFormatter={(val) => `£${(val/1000).toFixed(0)}k`} dx={-10} />
                           <RechartsTooltip
                             cursor={CHART_CROSSHAIR}
-                            content={<ChartTooltip formatValue={(value) => formatCurrency(value)} />}
+                            content={<ChartTooltip formatValue={(value) => formatCurrencyGBP(value)} />}
                           />
-                          <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#888', paddingTop: '0px', paddingBottom: '15px' }} />
+                          <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: CHART_LEGEND_TEXT, paddingTop: '0px', paddingBottom: '15px' }} />
                           {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
                           <Area isAnimationActive={false} type="monotone" dataKey="totalValue" name={t("seriesTotalPipeline")} fill="url(#totalArea)" stroke="var(--color-brand)" strokeOpacity={0.3} strokeWidth={2} />
                           <Area isAnimationActive={false} type="monotone" dataKey="weightedValue" name={t("seriesWeightedForecast")} fill="url(#weightedArea)" stroke="var(--color-brand)" strokeWidth={3} />
@@ -208,7 +214,7 @@ export default function ReportsPage() {
                               <div className="flex items-center gap-3 text-[12px] text-muted mb-3.5">
                                 <span className="flex items-center gap-1.5 font-medium"><Users className="w-3.5 h-3.5 opacity-60"/> {deal.rep}</span>
                                 <span className="w-1 h-1 rounded-full bg-border-dim"></span>
-                                <span className="font-mono text-secondary tracking-tight">{formatCurrency(deal.value)}</span>
+                                <span className="font-mono text-secondary tracking-tight">{formatCurrencyGBP(deal.value)}</span>
                               </div>
                               <div className="text-[12px] text-brand/80 leading-relaxed font-medium tracking-wide border-t border-white/[0.03] pt-3 flex items-center gap-2">
                                 <Target className="w-3.5 h-3.5 opacity-70"/> {deal.status}
@@ -232,7 +238,7 @@ export default function ReportsPage() {
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[12px] uppercase tracking-[0.1em] text-muted font-medium truncate">{ph.stage}</span>
                                <span className="font-mono text-[10px] sm:text-[13px] tracking-[0.2em] text-white/10 group-hover:text-brand/60 transition-colors duration-500 flex-1 truncate">{ph.barChart}</span>
-                               <span className="font-mono text-[13px] text-brand/90 ml-auto">{ph.valueFormatted || formatCurrency(ph.value)}</span>
+                               <span className="font-mono text-[13px] text-brand/90 ml-auto">{ph.valueFormatted || formatCurrencyGBP(ph.value)}</span>
                             </div>
                             <p className="text-[13px] text-secondary/70 italic border-l-[3px] border-brand/20 pl-4 py-0.5 ml-0 sm:ml-[128px]">
                               {ph.observation}
@@ -253,7 +259,7 @@ export default function ReportsPage() {
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[14px] font-medium text-foreground truncate">{ph.rep}</span>
                                <span className="font-mono text-[10px] sm:text-[13px] tracking-[0.2em] text-white/10 group-hover:text-brand/60 transition-colors duration-500 flex-1 truncate">{ph.barChart}</span>
-                               <span className="font-mono text-[13px] text-brand/90 ml-auto whitespace-nowrap">{ph.valueFormatted || formatCurrency(ph.valPct)}</span>
+                               <span className="font-mono text-[13px] text-brand/90 ml-auto whitespace-nowrap">{ph.valueFormatted || formatCurrencyGBP(ph.valPct)}</span>
                             </div>
                             <p className="text-[13px] text-secondary/70 italic border-l-[3px] border-brand/20 pl-4 py-0.5 ml-0 sm:ml-[128px]">
                               {ph.observation}
@@ -285,7 +291,7 @@ export default function ReportsPage() {
                            <div className="space-y-4">
                              {riskRadar.critical.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-red-500/20">
-                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
+                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}
                            </div>
@@ -302,7 +308,7 @@ export default function ReportsPage() {
                            <div className="space-y-4">
                              {riskRadar.atRisk.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-yellow-400/20">
-                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
+                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}
                            </div>
@@ -319,7 +325,7 @@ export default function ReportsPage() {
                            <div className="space-y-4">
                              {riskRadar.quiet.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-green-500/20">
-                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
+                                  <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}
                            </div>
@@ -337,9 +343,9 @@ export default function ReportsPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <RadarChart cx="50%" cy="50%" outerRadius="65%" data={riskVectorData}>
                           <PolarGrid stroke="rgba(255,255,255,0.05)" />
-                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#888', fontSize: 11, letterSpacing: '0.05em' }} />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: CHART_LEGEND_TEXT, fontSize: 11, letterSpacing: '0.05em' }} />
                           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                          <Radar name={t("seriesRiskConcentration")} dataKey="A" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} />
+                          <Radar name={t("seriesRiskConcentration")} dataKey="A" stroke={CHART_RISK_RED} fill={CHART_RISK_RED} fillOpacity={0.15} />
                         </RadarChart>
                       </ResponsiveContainer>
                     </div>
