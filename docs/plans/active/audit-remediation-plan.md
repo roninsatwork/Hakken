@@ -426,68 +426,91 @@ gate was green after the fixes (697 files, 6,089 tests, exit 0).
 
 ---
 
-## Known open, 2026-08-26 evening — written down so it is not rediscovered
+## The list of 2026-08-26 evening, and what became of it
 
-Six independent readers went over the day's work. What they found and what was
-fixed is in the rows above. This is what they found and nothing was done
-about — recorded here rather than left for a fourth review to surface as if it
-were new. Roughly two days, ordered by what a customer or an auditor would
-notice first.
+Six independent readers went over the day's work and named roughly two days of
+remaining work. That list is now **closed**, in the commits from `c03f53892`
+through `2e2c41548`. Recorded here in the form it was closed, because each item
+came with a rule as well as a fix, and the rules are the durable part.
 
-**Copy that is still English on a customer screen (~¾ day).** The copy guard
-matches JSX text nodes and a fixed attribute list, so it cannot see a sentence
-that lives in a module-level config array, a chart's axis labels, or text drawn
-onto a canvas. About 101 survive that way — heaviest in
-`app/reports/information/_components/ReportInfoVisuals.tsx` (43, in `LEGEND` /
-`SOURCE_LEGEND` / `FLOW` arrays and SVG `<text>`), the matching properties
-visuals (22), the arcade page and its game engine's HUD (14), and
-`agentic-testing` (10). Separately, about 120 catalogue values are byte-identical
-across both languages; 56 of those are full English sentences, all under
-`admin.*` and `ai.*`. Neither population is guarded, so both can grow.
+**Copy still English on a customer screen — closed.** The guard matched
+`>text<` and an attribute list, which is why it scored the two worst files, at
+42 and 20 English sentences, as zero. It now parses each file with the
+TypeScript compiler and reads eleven syntactic shapes, each proved by putting a
+real sentence back into a file it holds at zero. Reading properly also cleared
+68 false positives out of the old 119. 87 sentences translated across ten
+screens; ceilings now 23 files and 102 sentences, matching measurement.
 
-**Three more counts stored short and marked complete (~¼ day).**
-`agentSkills.ts` derives `isPartial` from the catalogue read only, so a skill
-bound to more than 100 agents stores short binding totals the Skill Center
-presents as whole — 100 is a number a real customer reaches.
-`governanceRollups.ts` computes `truncated` from two of its seven reads, so the
-"waited for a person" column can be short with `truncated: false`.
-`dataMigrations.ts` has the same omission in the backfill. All three are the
-fault WP05 exists to prevent, in code WP05 did not read.
+**Counts stored short — closed, and it was eight sites, not three.** Where the
+caller loops over everything and can carry a caveat, the number is marked
+partial. Where the caller promises to act on *all* of them, marking is not
+available and the cap was doing real harm: deleting a skill deleted a hundred
+of its bindings and left the rest pointing at a skill that no longer existed,
+and upgrading left the surplus agents on old instruction text while reporting
+success. Both are probed by seeding 101 agents onto one skill.
 
-**Status still readable only by hue (~¼ day).** The agent observability screen
-stacks failure directly on success in one bar with no border, pattern or label,
-and flips a "worked" meter between the two colours at a hidden 95% threshold
-with no word for the verdict. `ReportInfoVisuals` draws the risk radar
-illustration as three bare red/amber/green dots — while the real risk radar it
-illustrates uses the accessible amber ramp with text labels.
+**Status readable only by hue — closed.** Blue against amber, a diagonal hatch
+on the failed series carried into the legend swatch, a separator between
+segments, failure counts printed on the bars, and a shape rather than a colour
+for the "worked" verdict. `status-colour-drift.test.ts` fails a bare swatch
+that flips between the success and destructive tones, or a pair of them sitting
+together with no word between.
 
-**Twenty guarded surfaces declare no return shape (~¼ day).** The constraint
-added in `67e889108` can only check a surface that declares something. These
-twenty declare nothing, so the avatar-class bug it caught cannot be caught on
-them: `kiosk.ts`, `properties.ts` (3), `salesReports.ts`, `tasks.ts` (7),
-`telephony.ts` (3), `wikiDistill.ts`, `wikiPages.ts` (2), `wikiQuestions.ts`,
-`wikiReviews.ts`. All tenant-scoped, none public.
+**Twenty surfaces with no declared return shape — closed.** Four were returning
+whole table rows: a call's page was receiving the company's own line and the
+telephony provider's key for the call, neither of which it renders.
 
-**Seven `CONFLICT` codes contradict their own definition (~⅛ day).**
-`appError.ts` defines CONFLICT as "the same request would have worked a moment
-earlier". Every "Import a workbook first" case is the opposite — it would work a
-moment *later* — which by that definition is NOT_FOUND. Only
-`salesDataResearch.ts:1212` is a real conflict. Nothing branches on a code yet,
-so this is latent until localisation keys off them, which is the stated reason
-the codes exist.
+**Seven `CONFLICT` codes contradicting their own definition — closed.**
 
-**Smaller, named so they are not lost (~¼ day together).** The snapshot
-generator's partial-catalogue refusal has no try/catch around the historical
-backfill loop, so one refusal aborts the whole backfill. Several screens treat
-the runner's deduplicated repeat click as a real failure and show an error with
-no text. `PhotoActionChip` now shows the server's English sentence where a
-translated label used to be guaranteed — on the widget, which is the one surface
-a non-English visitor reaches. Five sibling GBP formatters still differ only in
-their options.
+**The smaller ones — closed.** Backfill continues past a refusal and reports
+which dates went unwritten; a deduplicated repeat click no longer shows an
+empty error box; `PhotoActionChip` shows its own translated label again; the
+five sibling sterling formatters are one module.
 
-**And two properties of this document itself.** Nothing guards the file paths
-named in `docs/developer/**` — the WP14 sweep was a one-off and regressed within
-the hour when a split deleted a file. And no per-package percentages were ever
+**Documentation paths — closed.** `doc-path-drift.test.ts`, probed by putting
+back the exact reference that regressed within an hour of the WP14 sweep.
+
+---
+
+## Known open, after the 2026-08-26 close
+
+**Names that say GBP over values that are USD.** Model spend is billed by the
+providers in dollars and stored with no conversion anywhere in the codebase, so
+the eighteen screens printing `$` are correct — while the columns holding it
+are called `costGBP`, `totalCostGBP`, `maxCostGBP` and `totalGBP`. The symbol
+is right and the names are wrong. This is the most dangerous item on the list
+precisely because the obvious reading is the wrong one: it invites someone to
+"fix" the symbol to match the name, or to sum model spend into a sterling
+report. `src/lib/currency.ts` carries a warning; the columns are unrenamed.
+
+**About 120 catalogue values are byte-identical across both languages**, 56 of
+them full English sentences, all under `admin.*` and `ai.*`. Unguarded, so the
+population can grow.
+
+**What the copy guard still cannot read**, stated because precision was bought
+with coverage: single words below the eight-character threshold, strings passed
+as function arguments (`setUploadStatus("Parsing Intelligence Data…")` in the
+assistant page is real and invisible), props whose name carries no copy word,
+and copy assembled across statements.
+
+**Three colour-only signals outside the two that were fixed.** Failure groups
+rank worst-first by a red rail against amber ones; the job waterfall separates
+four states by warm hue alone; the saved-record dots are unlabelled. None is
+green-versus-red, so none breaches the standing rule, and all three are outside
+what the new guard can see.
+
+**A limit of the return-shape constraint, measured rather than assumed.** It
+catches a handler returning the wrong type or missing a field, but not one
+returning an *extra* field, because the generic infers the handler's own type
+first. Extra fields are caught at runtime by `convex-test`, so the cover is
+real only where a test exercises the happy path — true for seven of the
+fourteen surfaces added on 2026-08-26.
+
+**The arcade search box sits in two nested bordered boxes.** The shared
+table-screen floor has an assertion for it that has never run, because that
+page's test passes no search placeholder.
+
+**And one property of this document.** No per-package percentages were ever
 recorded, so the "about 70%" figure in the review section above cannot be
 reproduced by anyone; treat it as a band, not a number.
 
@@ -507,14 +530,14 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | WP01 real-auth CI | **done, automation declined** | the five specs exist, are tagged, and passed against a real deployment in 15.7s on 2026-08-25. The chat spec asserts the send, not the reply — corrected in d8468bb5a and now named for what it does; strengthening it needs a live run of the lane. Anthony declined the dedicated deployment 2026-08-26; the job is on the Actions button, so no PR fails for want of secrets. Open on his side only: whether "Real Auth Smoke" is a required status check in GitHub branch protection |
 | WP11 split quality-drift | **done** (commit eba6cb1c4) | verified independently: 38 tests before and after with identical titles, 80 assertions both sides, nothing skipped, allowlist byte-identical. The one inaccuracy is the Found-in-passing row below — six references across four docs, not five |
 | WP02 backend appError | **done** (2026-08-26: cd2f51d20, d8468bb5a) | zero plain throws outside the frozen demo, allowlist 92→2 and now enforced shrink-only, CONFLICT in the union. The sales spreadsheet import's eleven sentences reached production as "Server Error" through an Error subclass the guard could not see — it extends ConvexError now, and no class in convex/ may extend Error without a listed reason. The 54 raw ConvexError throws the spec named were held to a shrinking count and then converted the same day (361361f74); the count is zero and the rule is absolute. The SSRF regression this package caused is fixed |
-| WP05 take(10000) | **done** (2026-08-26: 234a679ac) | the register keys on the row cap, not the spelling, so twenty-three reads at ten and twenty thousand rows it had never seen came into it. The seven "fixes" that renamed 10000 to a constant did NOT come back: that constant is 2,000, so resolving it puts them below the threshold, and they sit anonymously in the mid-sized count still truncating. Sixteen entries added with honest reasons; a second count holds the one-to-ten-thousand band at 129, shrink-only. Both stored-truth sites refuse now (the nightly login recount checks before it writes; the snapshot refuses a truncated catalogue). Seven false justifications rewritten. The vacuous getGlobalAnalytics split reads the function again |
-| WP07 return validators | **done** (2026-08-26: 1bfbdfef3) | 41 of 41 public and soft surfaces declare a validator and the soft migration lost none. The conversation list stopped returning whole thread rows including widgetAccessTokenHash, and six more client-facing chat functions gained the validator the package claimed they had. `settings.get` stopped spreading the whole systemSettings row to unauthenticated visitors (739984f2f). Fixed the same day (67e889108): the builders carry Convex's own constraint, so a handler disagreeing with its declaration is a compile error. Residual: 20 of the 62 surfaces on those builders declare no validator at all, so there is nothing for the constraint to check them against. 12 httpActions have no returns slot at all |
+| WP05 take(10000) | **done** (2026-08-26: 234a679ac) | the register keys on the row cap, not the spelling, so twenty-three reads at ten and twenty thousand rows it had never seen came into it. The seven "fixes" that renamed 10000 to a constant did NOT come back: that constant is 2,000, so resolving it puts them below the threshold, and they sit anonymously in the mid-sized count still truncating. Sixteen entries added with honest reasons; a second count holds the one-to-ten-thousand band, shrink-only, now at 126. Both stored-truth sites refuse now (the nightly login recount checks before it writes; the snapshot refuses a truncated catalogue). Seven false justifications rewritten. The vacuous getGlobalAnalytics split reads the function again. A later pass (2ce4fa9ab) found eight more short reads this package had not read: five marked partial, and three that had to walk the whole population instead, because deleting a skill was leaving its surplus bindings pointing at a skill that no longer existed and upgrading was leaving agents on old instruction text while reporting success |
+| WP07 return validators | **done** (2026-08-26: 1bfbdfef3) | 41 of 41 public and soft surfaces declare a validator and the soft migration lost none. The conversation list stopped returning whole thread rows including widgetAccessTokenHash, and six more client-facing chat functions gained the validator the package claimed they had. `settings.get` stopped spreading the whole systemSettings row to unauthenticated visitors (739984f2f). Fixed the same day (67e889108): the builders carry Convex's own constraint, so a handler disagreeing with its declaration is a compile error. The 20 surfaces that declared nothing for it to check now all declare a shape (c03f53892, 6a1e5284a); four were returning whole table rows, and a call's page stopped receiving the company's own line and the provider's key for the call. Declaring it caught four handlers returning nothing where they promised null. Measured limit: an *extra* field still compiles, because the generic infers the handler's own type first — runtime cover exists only where a test runs the happy path, which is 7 of the last 14. 12 httpActions have no returns slot at all |
 | WP13 atoms consolidation | **done** (commit 19574af4f) | verified independently: folder gone, zero references in src/ or scripts/, placement rule is a real developer doc (`docs/developer/screen-kit.md`), no shadowed kit names. Four references remain in completed-plan files, deliberately, as record |
 | WP04 god-components | **done** (2026-08-26: ce5c12529, 7f67fa813, 93f12f41e) | all four targets and both files the first pass created are now within reach of the target: agentRuntime 1,212, agentObjectiveLoop 1,101 (of which 910 is one function, stated rather than implied), KnowledgeManager 1,156→662, ConfigDrawerPanels 818→322/342/204, SidebarNavigation 604, ConfigDrawer 518. Every frozen count split with its file and every platform total is unchanged (raw buttons 295; hardcoded copy 183 at the time of the splits, 119 after the translation pass). The allowlist this package grew is back to the length it was before the split — ten entries, not the eleven the split left; not shorter, as an earlier version of this row claimed. Four guards follow the code rather than the old paths, and the knowledge-delete gate reads both halves |
 | WP03 useAdminAction | **done** (2026-08-26: 5ec50023e, 7f67fa813) | the real figure was 105 sites across 62 files, not the 0 claimed. All 105 migrated: 29 that told the user nothing, 69 that told them something but reported nothing, 7 partial. Five more found in passing (three silent activation toggles, two purge writes). 23 catalogue keys added in each language. A drift guard binds a new page to the hook as of the same day (0893fecaf, hardened in aefaba0df). A second review found the guard could not see a `try`/`finally` with no catch, nor a floating promise — and sixteen writes were failing silently through those shapes, including the governance evidence export. Both shapes are covered and all sixteen fixed (c36a888a9), with six probes written, failed and deleted. Five forms that keyed their seed on an object rather than a stable id, so a server change overwrote whatever was being typed, went in the same commit |
 | WP06 app→admin imports | **done** (2026-08-26: f0366eb21) | the move was always clean; the enforcement was not. The ESLint rule missed the dynamic `import()` the violation was actually written in, missed relative paths, and had no transitive cover. admin-boundary-drift.test.ts walks the import graph and catches all three, probed with each form |
-| WP08 app i18n | **done** (2026-08-26: c09f3bcc7, d1d0805c7, ca81e5298, 67e889108) | parity is exact and the Italian is genuinely translated. The copy guard that was supposed to bind new pages matched `>text<` on a single line, which Prettier never produces — it read almost nothing, and a probe page written entirely in English passed it. Fixed and re-probed; the honest baseline is 183 sentences across 80 files, now 119 across 68. The customer area went from 73 to 9, and all nine are scanner false positives with the code left alone. roughly 120 prose values identical across both catalogues repo-wide remain untranslated and unguarded — 56 of them full English sentences, all in admin namespaces — pre-existing, recorded, not in this package |
-| WP10 palette + formatters | **done** (2026-08-26: 2e39036ee) | five files stopped keeping private copies of palette constants, including one re-declaring the whole engagement ramp. The canonical series order put emerald directly before rose — the first two slices of every pie in the one pair Anthony cannot read; separated. **A second review found that fix inert**: nothing imported the reordered array, and the one pie on the platform drew from its own hand-written list still in the old order. Both sequences derive from the canonical order now, and `chart-palette-drift.test.ts` fails a screen that names a palette colour in a chart prop without importing it — the rule the first pass never wrote (9da153995, aefaba0df). The theme-drift baseline dropped from 1,231 to the actual 1,052, closing 179 units of slack (f883b61a8). Formatters remain moved rather than deduped: five sibling GBP formatters survive, differing in options |
+| WP08 app i18n | **done** (2026-08-26: c09f3bcc7, d1d0805c7, ca81e5298, 67e889108) | parity is exact and the Italian is genuinely translated. The copy guard that was supposed to bind new pages matched `>text<` on a single line, which Prettier never produces — it read almost nothing, and a probe page written entirely in English passed it. Fixed and re-probed; the honest baseline is 183 sentences across 80 files, now 119 across 68. **A third review found even the fixed guard structurally blind**: matching `>text<` cannot see a sentence in a config array, a chart axis label, canvas text, or a string returned from a function, and it scored the two worst files — 42 and 20 English sentences — at zero. It parses with the TypeScript compiler now and reads eleven shapes, each probed (2e2c41548). That also removed 68 false positives from the old 119. 87 sentences translated across ten screens; ceilings 23 files / 102 sentences. Roughly 120 prose values identical across both catalogues repo-wide remain untranslated and unguarded — 56 of them full English sentences, all in admin namespaces — pre-existing, recorded, not in this package |
+| WP10 palette + formatters | **done** (2026-08-26: 2e39036ee) | five files stopped keeping private copies of palette constants, including one re-declaring the whole engagement ramp. The canonical series order put emerald directly before rose — the first two slices of every pie in the one pair Anthony cannot read; separated. **A second review found that fix inert**: nothing imported the reordered array, and the one pie on the platform drew from its own hand-written list still in the old order. Both sequences derive from the canonical order now, and `chart-palette-drift.test.ts` fails a screen that names a palette colour in a chart prop without importing it — the rule the first pass never wrote (9da153995, aefaba0df). The theme-drift baseline dropped from 1,231 to the actual 1,052, closing 179 units of slack (f883b61a8). The five sibling GBP formatters are now one module (be747ac67) — as three named variants, because they genuinely differ, and not a single displayed figure changed. That module's own docblock had to be corrected afterwards (5a4c2bc4e): it claimed one of the five had printed a dollar sign over a sterling figure, and checking the diff showed no dollar sign was ever removed. Chasing that turned up the real thing, which is now recorded in the open list — model spend is USD stored in columns named GBP |
 | WP09 naming ratchet | **done** (2026-08-26: f883b61a8) | freeze verified entry for entry. The structural exemption matched on basename anywhere under src/, so `error.tsx` or `template.tsx` passed as an ordinary component name — scoped to the router tree and probed. The headline figure compared two populations (302 counted test files, 7 excludes them); the honest figure for what the rule governs is 234 vs 7 today. The doc insertion that swallowed the Shared Components section is repaired |
 | WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
 | WP14 small sweep | **done** (2026-08-26: d8468bb5a, f0366eb21) | `<html lang>` and the CI dedupe were real. The softQuery enforcement was a dead test — it and the public-register test it was copied from matched 0 of 41 declarations; both fixed and proven to read all 41. knip never ran dependency analysis (`--include files` excluded the very checks the config enabled); it runs them now, clean. The coverage nudge moved to its own module with five tests and now writes to the run summary (0893fecaf), and it fired for the first time once real coverage was measured — two floors rose behind it. It remains unreachable from `npm run check`, which only `npm run gate` and CI call. Docs: 7 dead paths at 9 sites fixed, plus 15 guides repointed after the splits |
