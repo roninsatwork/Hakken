@@ -277,7 +277,7 @@ export default function PropertiesInformationPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-[16px] border border-border-dim bg-sidebar/40 px-6 py-5 backdrop-blur-xl">
           <div>
             <div className="text-[15px] font-semibold text-foreground">
-              Ready to build your library?
+              {t("ctaHeading")}
             </div>
             <div className="text-[13px] text-secondary mt-0.5">
               {t("ctaBody")}

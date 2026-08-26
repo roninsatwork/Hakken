@@ -618,11 +618,21 @@
       "gatherButton": "Raccogli Proprietà",
       "startingSearch": "Avvio Ricerca...",
       "urlError": "Errore: Incolla prima un URL di ricerca Rightmove valido.",
-      "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
+      "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log.",
+      "pageSubtitle": "Importa annunci immobiliari e dati di mercato direttamente da Rightmove."
     },
     "logs": {
       "empty": "Nessun processo di estrazione è stato ancora avviato.",
-      "syncFailed": "Impossibile aggiornare lo stato dell'esecuzione. Riprova."
+      "syncFailed": "Impossibile aggiornare lo stato dell'esecuzione. Riprova.",
+      "title": "Registro delle estrazioni",
+      "subtitle": "Segui in tempo reale lo stato e lo storico dei tuoi agenti di estrazione dati.",
+      "syncStatus": "Aggiorna stato",
+      "inProgress": "In corso",
+      "completed": "Completata",
+      "failed": "Fallita",
+      "dispatched": "Avviata: {time}",
+      "finished": "Conclusa: {time}",
+      "scraped": "<strong>{count}</strong> immobili raccolti"
     },
     "detail": {
       "notFoundTitle": "Immobile non trovato",
@@ -641,7 +651,22 @@
       "location": "Posizione",
       "viewMap": "Vedi mappa",
       "floorplanAlt": "Planimetria",
-      "contactRightmove": "Contatta tramite Rightmove"
+      "contactRightmove": "Contatta tramite Rightmove",
+      "priceReduced": "Prezzo ridotto",
+      "marketIntelligence": "Dati di mercato",
+      "descriptionHeading": "Descrizione dell'immobile",
+      "keyFeatures": "Caratteristiche principali",
+      "floorplans": "Planimetrie",
+      "imageGallery": "Galleria fotografica",
+      "galleryAlt": "Galleria {index}",
+      "listingAgent": "Agenzia dell'annuncio",
+      "viewOriginal": "Vedi l'annuncio originale",
+      "agentProfile": "Profilo dell'agenzia",
+      "unknownAgent": "Agenzia sconosciuta",
+      "unknownType": "Non indicato",
+      "noDescription": "L'agente non ha fornito una descrizione.",
+      "readLess": "Mostra meno",
+      "readFull": "Leggi la descrizione completa"
     },
     "information": {
       "heroKicker": "INTELLIGENCE IMMOBILIARE",
@@ -765,8 +790,35 @@
       "ctaBody": "Incolla la tua prima ricerca Rightmove e guardala riempirsi.",
       "visuals": {
         "journey": "Il percorso della raccolta: un link di ricerca Rightmove arriva all'agente, diventa annunci immobiliari e viene tracciato nel registro delle esecuzioni",
-        "engineBadge": "AGENTE RIGHTMOVE · APIFY"
-      }
+        "engineBadge": "AGENTE RIGHTMOVE · APIFY",
+        "flowKicker": "Dal link alla libreria",
+        "flowTitle": "Un link in entrata, una libreria di immobili in uscita",
+        "flowBody": "Non compili moduli e non copi annunci a mano. Descrivi ciò che vuoi con una ricerca Rightmove, e al resto pensa la pipeline: raccoglie, archivia e ti tiene aggiornato mentre lavora.",
+        "flowHint": "Seleziona una fase per vedere cosa succede."
+      },
+      "ctaHeading": "Pronto a costruire la tua libreria?"
+    },
+    "scrapedData": {
+      "pageDescription": "Consulta e gestisci gli immobili raccolti da Rightmove.",
+      "searchPlaceholder": "Cerca immobili per indirizzo...",
+      "emptyLabel": "Nessun risultato",
+      "emptyNoMatch": "Nessun immobile corrisponde a questa ricerca.",
+      "emptyNone": "Nessun immobile ancora raccolto. Avvia una ricerca per riempire l'elenco.",
+      "showing": "Da {start} a {end} di {total} immobili",
+      "columnAddress": "Indirizzo dell'immobile",
+      "columnPrice": "Prezzo",
+      "columnSpecs": "Caratteristiche",
+      "columnActions": "Azioni",
+      "imageAlt": "Immobile",
+      "noImage": "Nessuna",
+      "beds": "{count} camere",
+      "baths": "{count} bagni",
+      "viewDetails": "Vedi dettagli",
+      "deleteRow": "Elimina {address}",
+      "deleteTitle": "Elimina immobile",
+      "deleteBody": "Vuoi davvero eliminare <highlight>{address}</highlight>? L'azione non può essere annullata.",
+      "cancel": "Annulla",
+      "delete": "Elimina"
     }
   },
   "header": {
@@ -802,7 +854,14 @@
       "leaderboards": {
         "tenants": "Workspace a Maggior Consumo",
         "initiators": "Principali Iniziatori Protocollo",
-        "empty": "Nessuna telemetria registrata."
+        "empty": "Nessuna telemetria registrata.",
+        "topTeamMembers": "Membri del team più attivi",
+        "topActiveAgents": "Agenti più attivi",
+        "memberHeader": "Membro del team",
+        "agentHeader": "Agente",
+        "messagesHeader": "Messaggi",
+        "costHeader": "Costo",
+        "autonomousProcess": "Processo autonomo"
       },
       "timeframes": {
         "today": "Oggi",
@@ -889,6 +948,19 @@
           "noPlanSub": "Vengono serviti senza essere fatturati.",
           "noPlanCta": "Apri le aziende"
         }
+      },
+      "noOrganization": "Nessuna organizzazione collegata a questo account.",
+      "organization": {
+        "title": "Pannello dell'organizzazione",
+        "description": "Tieni sotto controllo l'uso dell'AI del tuo team, i messaggi consumati e i costi in tempo reale."
+      },
+      "providers": {
+        "title": "Utilizzo per fornitore",
+        "subtitle": "Spesa dell'organizzazione per fornitore",
+        "nameHeader": "Fornitore",
+        "costHeader": "Costo",
+        "calls": "{count} chiamate",
+        "empty": "Nessun dato sui fornitori"
       }
     },
     "authDiagnostics": {
@@ -4581,7 +4653,13 @@
       },
       "saveFailed": "Impossibile salvare l'utente. Riprova.",
       "deleteFailed": "Impossibile eliminare l'utente. Riprova.",
-      "revokeFailed": "Impossibile revocare l'invito. Riprova."
+      "revokeFailed": "Impossibile revocare l'invito. Riprova.",
+      "team": {
+        "title": "Gestisci il team",
+        "description": "Aggiungi, rimuovi o modifica i ruoli delle persone della tua organizzazione.",
+        "emptyLabel": "Nessuno trovato",
+        "noMatches": "Nessuno nel team corrisponde a questa ricerca."
+      }
     },
     "directory": {
       "title": "Tutti gli Utenti",
@@ -4887,6 +4965,12 @@
           "subtitle": "API Sicura Bloccata",
           "description": "Il tuo browser ha bloccato l'uso del microfono da parte di {platformName}.",
           "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
+        },
+        "upload": {
+          "title": "Caricamento del file non valido",
+          "subtitle": "Formato di file non supportato",
+          "tip": "Suggerimento: converti i documenti in formati di solo testo (CSV o PDF standard) per un funzionamento affidabile.",
+          "clear": "Chiudi l'avviso"
         }
       },
       "voice": {
@@ -5803,7 +5887,14 @@
       },
       "saveFailed": "Il profilo non è stato salvato. Riprova.",
       "photoFailed": "Impossibile caricare la foto. Riprova.",
-      "photoLabel": "Foto del profilo"
+      "photoLabel": "Foto del profilo",
+      "usage": {
+        "poolTitle": "Messaggi AI disponibili",
+        "unlimited": "Illimitati",
+        "planLabel": "Piano:",
+        "resets": "(si azzera ogni mese)",
+        "limitReached": "Limite di utilizzo raggiunto. Tutte le interazioni AI non essenziali sono sospese fino al prossimo ciclo di fatturazione."
+      }
     },
     "logins": {
       "tabs": {
@@ -6695,7 +6786,8 @@
       "searchPlaceholder": "Cerca lavori per nome",
       "noJobs": "Nessun lavoro pianificato"
     },
-    "searchPlaceholder": "Cerca connessioni per nome"
+    "searchPlaceholder": "Cerca connessioni per nome",
+    "checkFailed": "Impossibile verificare le connessioni. Riprova."
   },
   "aiMailbox": {
     "title": "Casella di posta",
@@ -6791,7 +6883,8 @@
       "saving": "Salvataggio…",
       "cancel": "Annulla"
     },
-    "honesty": "Ogni numero è un conteggio di eventi reali registrati. La riga delle ore è una stima costruita sull'ipotesi visibile sopra - modificala perché rispecchi quanto tempo servirebbe davvero al tuo team."
+    "honesty": "Ogni numero è un conteggio di eventi reali registrati. La riga delle ore è una stima costruita sull'ipotesi visibile sopra - modificala perché rispecchi quanto tempo servirebbe davvero al tuo team.",
+    "saveFailed": "Impossibile salvare le ipotesi. Riprova."
   },
   "ui": {
     "table": {
@@ -6864,7 +6957,21 @@
       "recommendation": "Raccomandazione:",
       "seriesRiskConcentration": "Concentrazione del rischio",
       "momentumLeaders": "Leader di slancio",
-      "supportCoaching": "Supporto e affiancamento"
+      "supportCoaching": "Supporto e affiancamento",
+      "exportToBoard": "Esporta per il consiglio",
+      "noSummary": "Nessuna sintesi esecutiva disponibile.",
+      "sectionClosingWindows": "Finestre di chiusura",
+      "sectionTopDeals": "Trattative principali da seguire",
+      "sectionPipelineByStage": "4a. Pipeline per fase",
+      "sectionPipelineByRep": "4b. Pipeline per venditore",
+      "sectionRiskRadar": "Sezione 5 — Radar dei rischi",
+      "riskCritical": "Critico — richiede un intervento questa settimana",
+      "riskAtRisk": "A rischio — in peggioramento",
+      "riskQuiet": "Silenzioso — vale un sollecito",
+      "sectionRiskVector": "Analisi dei vettori di rischio",
+      "sectionTeamSpotlight": "Focus sul team",
+      "sectionPatterns": "Schemi e segnali",
+      "sectionPriorities": "Le priorità di questa settimana"
     },
     "information": {
       "pageTitle": "Come funzionano i report per il consiglio",
@@ -6971,8 +7078,17 @@
       },
       "visuals": {
         "wireframe": "Uno schema del report per il consiglio con le sue sezioni: racconto, numeri, rischi e azioni",
-        "agentCentre": "L'agente dei report al centro di ciò da cui attinge: la tua pipeline, la conoscenza della tua azienda e la propria memoria — mentre scrive il report per il consiglio"
-      }
+        "agentCentre": "L'agente dei report al centro di ciò da cui attinge: la tua pipeline, la conoscenza della tua azienda e la propria memoria — mentre scrive il report per il consiglio",
+        "anatomyKicker": "Cosa contiene",
+        "anatomyTitle": "L'anatomia di un report per il consiglio",
+        "anatomyBody": "Ogni report ha le stesse otto sezioni, nello stesso ordine — un ritmo voluto che parte dal racconto, lo dimostra con i numeri, segnala i rischi e si chiude con cosa fare.",
+        "anatomyHint": "Seleziona una parte del report per vedere a cosa serve.",
+        "sourcesKicker": "L'analista che c'è dietro",
+        "sourcesTitle": "Un analista che conosce la tua attività",
+        "sourcesBody": "I report per il consiglio non sono un modello riempito di numeri. Li scrive un agente AI che legge tutta la tua pipeline, attinge ai documenti che il tuo team condivide con lui e ricorda ciò che ha imparato la settimana scorsa.",
+        "sourcesHint": "Seleziona una fonte per vedere da cosa attinge l'agente."
+      },
+      "ctaHeading": "Pronto a vedere la tua pipeline con questa chiarezza?"
     }
   },
   "agenticTesting": {
@@ -6983,7 +7099,9 @@
     "noAgents": "Nessun agente registrato.",
     "autoRoute": "Indirizza automaticamente la tua richiesta all'agente migliore",
     "airGapped": "Ambiente di test isolato",
-    "sendFailed": "Il messaggio di prova non è stato inviato. Riprova."
+    "sendFailed": "Il messaggio di prova non è stato inviato. Riprova.",
+    "anyAutoRoute": "Qualsiasi (instradamento automatico)",
+    "emptyBody": "Scegli un agente in alto a destra e invia un messaggio. Tutta la telemetria del ciclo AI viene registrata nella scheda Log agenti senza toccare gli utenti normali."
   },
   "arcade": {
     "title": "RONIN'S RUN",

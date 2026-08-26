@@ -48,24 +48,24 @@ export function AssistantModals({
         </div>
       </SonaeModal>
 
-      <SonaeModal isOpen={!!uploadError} onClose={onClearUploadError} title="File Upload Invalid">
+      <SonaeModal isOpen={!!uploadError} onClose={onClearUploadError} title={t("errors.upload.title")}>
         <div className="flex flex-col gap-5 pt-2">
           <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
             <AlertTriangle className="w-6 h-6 text-red-500 opacity-80" />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-[16px] font-semibold tracking-wide">Unsupported File Format</span>
+            <span className="text-[16px] font-semibold tracking-wide">{t("errors.upload.subtitle")}</span>
             <p className="text-[14px] text-secondary font-light leading-relaxed">{uploadError}</p>
           </div>
           <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4 text-[13px] text-muted font-mono tracking-wide mt-2">
-            Tip: Convert documents to pure text formats (CSV or standard PDF) for stable execution.
+            {t("errors.upload.tip")}
           </div>
           <div className="w-full flex justify-end mt-2">
             <button
               onClick={onClearUploadError}
               className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
             >
-              Clear Alert
+              {t("errors.upload.clear")}
             </button>
           </div>
         </div>

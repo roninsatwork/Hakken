@@ -93,7 +93,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               )}
               {property.listingUpdateReason === 'price_reduced' && (
                 <span className="px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[11px] font-semibold tracking-widest uppercase shadow-lg flex items-center gap-1.5">
-                  <TrendingDown className="w-3 h-3" /> Price Reduced
+                  <TrendingDown className="w-3 h-3" /> {t("priceReduced")}
                 </span>
               )}
             </div>
@@ -117,7 +117,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
             {(property.firstVisibleDate || property.addedOn || property.sizeSqFeetMax) && (
               <div className="flex flex-col gap-4">
                 <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary border-b border-border-dim pb-3">
-                  Market Intelligence
+                  {t("marketIntelligence")}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {property.firstVisibleDate && (
@@ -174,7 +174,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 <span className="text-[11px] uppercase tracking-widest text-secondary mb-1.5">{t("propertyType")}</span>
                 <div className="flex items-center gap-3 mt-1">
                   <Home className="w-5 h-5 text-brand" />
-                  <span className="text-[15px] text-foreground font-medium">{property.propertyType || 'Unknown'}</span>
+                  <span className="text-[15px] text-foreground font-medium">{property.propertyType || t("unknownType")}</span>
                 </div>
               </div>
               <div className="flex flex-col bg-background/40 rounded-[20px] p-6 flex-1 min-w-[140px] border border-border-dim/50 shadow-sm">
@@ -221,7 +221,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               <div className="flex-1 flex flex-col gap-10">
                 <div className="bg-sidebar/40 border border-border-dim rounded-[24px] p-6 sm:p-8 backdrop-blur-md shadow-sm">
                   <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary mb-6 border-b border-border-dim pb-3">
-                    Property Description
+                    {t("descriptionHeading")}
                   </h3>
                   <PropertyDescription rawText={property.description || ""} />
                 </div>
@@ -229,7 +229,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 {property.features && property.features.length > 0 && (
                   <div>
                     <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary mb-5 border-b border-border-dim pb-3">
-                      Key Features
+                      {t("keyFeatures")}
                     </h3>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {property.features.map((feature: string, idx: number) => (
@@ -245,7 +245,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 {property.floorplans && property.floorplans.length > 0 && (
                   <div>
                     <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary mb-5 border-b border-border-dim pb-3">
-                      Floorplans
+                      {t("floorplans")}
                     </h3>
                     <div className="flex flex-wrap gap-4">
                       {property.floorplans.map((fp: string, idx: number) => (
@@ -265,12 +265,12 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 {property.images && property.images.length > 1 && (
                   <div>
                     <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary mb-5 border-b border-border-dim pb-3">
-                      Image Gallery
+                      {t("imageGallery")}
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {property.images.slice(1).map((img: string, idx: number) => (
                         <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block relative group rounded-[16px] overflow-hidden border border-border-dim aspect-[4/3]">
-                          <Image src={img} alt={`Gallery ${idx + 1}`} fill sizes="(min-width: 640px) 33vw, 50vw" unoptimized className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <Image src={img} alt={t("galleryAlt", { index: idx + 1 })} fill sizes="(min-width: 640px) 33vw, 50vw" unoptimized className="object-cover transition-transform duration-500 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
                       ))}
@@ -282,7 +282,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               {/* Agent Sidebar */}
               <div className="w-full lg:w-[320px] flex flex-col gap-6 flex-shrink-0">
                 <h3 className="text-[12px] font-semibold uppercase tracking-widest text-secondary mb-1 border-b border-border-dim pb-3">
-                  Listing Agent
+                  {t("listingAgent")}
                 </h3>
                 <div className="flex flex-col gap-4 p-6 rounded-[24px] bg-brand/5 border border-brand/10">
                   <div className="flex items-center gap-4">
@@ -290,7 +290,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       <User className="w-6 h-6 text-brand" />
                     </div>
                     <div>
-                      <span className="block text-[15px] font-medium text-foreground">{property.agentName || "Unknown Agent"}</span>
+                      <span className="block text-[15px] font-medium text-foreground">{property.agentName || t("unknownAgent")}</span>
                       <span className="block text-[12px] text-secondary mt-0.5">{t("contactRightmove")}</span>
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     rel="noopener noreferrer" 
                     className="mt-2 flex items-center justify-center gap-2 w-full px-5 py-3 rounded-[12px] bg-brand text-white text-[13px] font-medium shadow-lg shadow-brand/20 hover:bg-brand/90 transition-all"
                   >
-                    View Original Listing <ExternalLink className="w-4 h-4" />
+                    {t("viewOriginal")} <ExternalLink className="w-4 h-4" />
                   </a>
                   {property.agentProfileUrl && (
                     <a 
@@ -316,7 +316,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       rel="noopener noreferrer" 
                       className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-[12px] bg-background border border-border-dim text-foreground text-[13px] font-medium hover:bg-foreground/5 transition-all"
                     >
-                      Agent Profile <User className="w-4 h-4" />
+                      {t("agentProfile")} <User className="w-4 h-4" />
                     </a>
                   )}
                 </div>

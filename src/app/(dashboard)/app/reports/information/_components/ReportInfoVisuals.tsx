@@ -377,18 +377,16 @@ export function ReportAnatomy() {
             className="text-[11px] font-bold uppercase tracking-[0.14em]"
             style={{ color: ACCENT }}
           >
-            What&apos;s inside
+            {t("anatomyKicker")}
           </span>
           <h2 className="text-xl font-semibold text-foreground">
-            The anatomy of a board report
+            {t("anatomyTitle")}
           </h2>
           <p className="text-[14px] text-secondary leading-relaxed">
-            Every report has the same eight sections, in the same order — a
-            deliberate rhythm that starts with the story, proves it with
-            numbers, flags the risks, and ends with what to do about them.
+            {t("anatomyBody")}
           </p>
           <p className="text-[12px] text-muted">
-            Select a part of the report to see what it does.
+            {t("anatomyHint")}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
@@ -985,19 +983,16 @@ export function AgentSources() {
             className="text-[11px] font-bold uppercase tracking-[0.14em]"
             style={{ color: ACCENT }}
           >
-            The analyst behind it
+            {t("sourcesKicker")}
           </span>
           <h2 className="text-xl font-semibold text-foreground">
-            An analyst that knows your business
+            {t("sourcesTitle")}
           </h2>
           <p className="text-[14px] text-secondary leading-relaxed">
-            Board Reports aren&apos;t a template filled in with numbers.
-            They&apos;re written by an AI agent that reads your entire
-            pipeline, draws on the documents your team shares with it, and
-            remembers what it learned last week.
+            {t("sourcesBody")}
           </p>
           <p className="text-[12px] text-muted">
-            Select a source to see what the agent draws on.
+            {t("sourcesHint")}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">

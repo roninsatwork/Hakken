@@ -130,6 +130,19 @@ function summarizeEmbeddingDrift(args: {
   };
 }
 
+/**
+ * Why a document is flagged, as the four answers the quality panel draws.
+ *
+ * Named rather than inferred: without it the helper widens to `string`, which
+ * is wider than the surface declares, and the declaration and the code sat
+ * disagreeing until the builders started constraining one against the other.
+ */
+type KnowledgeQualityFlag =
+  | "FAILED"
+  | "READY_WITHOUT_CHUNKS"
+  | "EMBEDDING_MODEL_DRIFT"
+  | "STALE_INGESTION";
+
 function getKnowledgeDocumentQualityFlag(args: {
   document: {
     status: "pending" | "processing" | "ready" | "failed";
@@ -140,7 +153,7 @@ function getKnowledgeDocumentQualityFlag(args: {
   chunkCount: number;
   now: number;
   embeddingDrift?: ReturnType<typeof summarizeEmbeddingDrift> | null;
-}) {
+}): KnowledgeQualityFlag | null {
   if (args.document.status === "failed") return "FAILED";
   if (args.document.status === "ready" && args.chunkCount === 0) return "READY_WITHOUT_CHUNKS";
   if (args.embeddingDrift) return "EMBEDDING_MODEL_DRIFT";

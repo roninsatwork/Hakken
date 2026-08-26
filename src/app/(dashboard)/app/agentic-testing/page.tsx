@@ -194,7 +194,7 @@ export default function AgenticTestingSandbox() {
                       >
                         <div className="flex flex-col gap-0.5 pointer-events-none">
                            <span className={`text-[14px] font-bold ${selectedAgentId === "any" ? 'text-indigo-400' : 'text-foreground/90'}`}>
-                              Any (Auto-Route)
+                              {t("anyAutoRoute")}
                            </span>
                            <span className="text-[12px] text-muted leading-tight pr-4">{t("autoRoute")}</span>
                         </div>
@@ -275,7 +275,7 @@ export default function AgenticTestingSandbox() {
                 </div>
                 <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">{t("airGapped")}</h3>
                 <p className="text-[14px] text-secondary max-w-[400px] text-center font-light leading-relaxed">
-                   Select an agent from the top right and send a message. All AI loop telemetry will be recorded cleanly into the Agent Logs tab without affecting standard users.
+                   {t("emptyBody")}
                 </p>
              </div>
          )}

@@ -4,7 +4,7 @@ import {
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
-import type { GenericValidator, ObjectType, PropertyValidators } from "convex/values";
+import type { Infer, ObjectType, PropertyValidators, Validator } from "convex/values";
 import {
   action,
   mutation,
@@ -297,12 +297,51 @@ async function requireModuleOn(
   }
 }
 
-export function moduleQuery<ArgsValidator extends PropertyValidators, Output>(config: {
+/*
+ * Convex's own builder constraint, named once.
+ *
+ * `Validator<any, "required", any>` is the shape Convex uses for "a validator,
+ * whatever it validates", and `any` as the output default is what lets the
+ * handler's own return type be inferred rather than pinned. Both are genuinely
+ * unavoidable here — this is the seam where our wrappers meet Convex's
+ * generics — so the exception is taken once, on two named aliases, rather than
+ * twenty-eight times across seven signatures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyReturnsValidator = Validator<any, "required", any>;
+type InferredOutput = any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * What a handler must return, given the validator its declaration names.
+ *
+ * Convex's own builders constrain the handler against `returns`, which is what
+ * makes a mismatch a compile error rather than a runtime one. Wrapping them
+ * lost that: every builder here declared `returns?: GenericValidator`, and a
+ * `GenericValidator` tells the compiler nothing about the shape, so the
+ * handler was unconstrained on all forty-one guarded surfaces. Enforcement was
+ * runtime-only, which means a branch nobody exercised in a test failed in
+ * production rather than in the editor.
+ *
+ * Deliberately the *unwrapped* value, not Convex's `ReturnValueForOptionalValidator`:
+ * that permits `T | Promise<T>`, and these builders already say
+ * `Output | Promise<Output>` in the handler signature, so reusing it would
+ * allow a promise of a promise and reconcile with nothing.
+ */
+type HandlerOutputFor<ReturnsValidator> = [ReturnsValidator] extends [AnyReturnsValidator]
+  ? Infer<ReturnsValidator>
+  : InferredOutput;
+
+export function moduleQuery<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   module: string;
   guard?: ModuleGuard;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   handler: (ctx: TenantQueryCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
   return query({
@@ -316,12 +355,16 @@ export function moduleQuery<ArgsValidator extends PropertyValidators, Output>(co
   });
 }
 
-export function moduleMutation<ArgsValidator extends PropertyValidators, Output>(config: {
+export function moduleMutation<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   module: string;
   guard?: ModuleGuard;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   handler: (ctx: TenantMutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
   return mutation({
@@ -351,11 +394,21 @@ export function moduleMutation<ArgsValidator extends PropertyValidators, Output>
  * per record — company membership, document ownership — stays in the handler,
  * exactly as it does under the guarded builders.
  */
-export function softQuery<ArgsValidator extends PropertyValidators, Output, Empty>(config: {
+export function softQuery<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+  /**
+   * What a caller with no session receives. Held to the same declaration
+   * as the handler: it is a real answer from this surface, and a screen
+   * must not be handed a shape the surface says it never returns.
+   */
+  Empty extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   reason: string;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   /** What a caller with no session (or the wrong role) receives. */
   empty: Empty;
   /** Roles admitted beyond "any signed-in user". Omit to admit all roles. */
@@ -380,11 +433,21 @@ export function softQuery<ArgsValidator extends PropertyValidators, Output, Empt
 }
 
 /** `softQuery` for writes that are no-ops without a session — see above. */
-export function softMutation<ArgsValidator extends PropertyValidators, Output, Empty>(config: {
+export function softMutation<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+  /**
+   * What a caller with no session receives. Held to the same declaration
+   * as the handler: it is a real answer from this surface, and a screen
+   * must not be handed a shape the surface says it never returns.
+   */
+  Empty extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   reason: string;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   empty: Empty;
   allowRoles?: readonly NonNullable<Doc<"users">["role"]>[];
   handler: (ctx: TenantMutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
@@ -413,11 +476,15 @@ export function softMutation<ArgsValidator extends PropertyValidators, Output, E
  * recorded next to the code and shows up in review, rather than being inferred
  * from the absence of a guard.
  */
-export function publicQuery<ArgsValidator extends PropertyValidators, Output>(config: {
+export function publicQuery<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   reason: string;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   handler: (ctx: QueryCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
   return query({
@@ -427,11 +494,15 @@ export function publicQuery<ArgsValidator extends PropertyValidators, Output>(co
   });
 }
 
-export function publicMutation<ArgsValidator extends PropertyValidators, Output>(config: {
+export function publicMutation<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   reason: string;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   handler: (ctx: MutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
   return mutation({
@@ -441,11 +512,15 @@ export function publicMutation<ArgsValidator extends PropertyValidators, Output>
   });
 }
 
-export function publicAction<ArgsValidator extends PropertyValidators, Output>(config: {
+export function publicAction<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
   reason: string;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
-  returns?: GenericValidator;
+  returns?: ReturnsValidator;
   handler: (ctx: ActionCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
 }) {
   return action({

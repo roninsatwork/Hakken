@@ -42,7 +42,7 @@ describe("CompanyTeamPage", () => {
       },
       sampleRows: team,
       sampleRowText: "Anthony Basker",
-      emptyText: "No one found",
+      emptyText: "admin.users.team.emptyLabel",
     });
   });
 

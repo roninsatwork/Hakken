@@ -107,7 +107,7 @@ export const recordFailed = publicMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const email = normaliseEmail(args.email);
-    if (!email) return;
+    if (!email) return null;
 
     const now = Date.now();
 
@@ -130,7 +130,7 @@ export const recordFailed = publicMutation({
       reasonCode: "code_refused",
     });
 
-    if (!isWithinRequestLimit(failureTimes, now)) return;
+    if (!isWithinRequestLimit(failureTimes, now)) return null;
 
     await ctx.db.insert("auditLogs", {
       // No actor: nobody is signed in, and naming the account holder as the
@@ -142,6 +142,7 @@ export const recordFailed = publicMutation({
       timestamp: now,
       metadata: JSON.stringify({ attemptedEmail: email, method: "one-time code" }),
     });
+    return null;
   },
 });
 
@@ -152,7 +153,7 @@ export const recordVerified = publicMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const email = normaliseEmail(args.email);
-    if (!email) return;
+    if (!email) return null;
 
     await logAuthEvent(ctx, {
       email,
@@ -161,5 +162,6 @@ export const recordVerified = publicMutation({
       provider: "one-time-code",
       reasonCode: "code_accepted",
     });
+    return null;
   },
 });

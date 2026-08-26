@@ -50,8 +50,8 @@ describe("ScrapedDataPage", () => {
       },
       sampleRows: properties,
       sampleRowText: "12 Ash Road, Guildford",
-      emptyText: "Nothing found",
-      searchPlaceholder: "Search properties by address...",
+      emptyText: "properties.scrapedData.emptyLabel",
+      searchPlaceholder: "properties.scrapedData.searchPlaceholder",
       // The footer is hidden when there is nothing to page through, which is a
       // decision this screen made before the numbered footer became standard.
     });
@@ -63,9 +63,9 @@ describe("ScrapedDataPage", () => {
     );
 
     render(<ScrapedDataPage />);
-    fireEvent.click(screen.getByLabelText("Delete 12 Ash Road, Guildford"));
+    fireEvent.click(screen.getAllByLabelText("properties.scrapedData.deleteRow")[0]);
 
-    expect(await screen.findByText("Delete Property")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    expect(await screen.findByText("properties.scrapedData.deleteTitle")).toBeInTheDocument();
+    expect(screen.getByText("properties.scrapedData.cancel")).toBeInTheDocument();
   });
 });

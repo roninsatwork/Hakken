@@ -117,9 +117,9 @@ export default function MyProfilePage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
               <UserCircle className="w-6 h-6 text-brand" />
-              My Profile
+              {t('title')}
             </h1>
-            <p className="text-[13px] text-secondary mt-1">Manage your identity and personal preferences.</p>
+            <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -183,7 +183,7 @@ export default function MyProfilePage() {
                   {formData.image ? (
                     <Image
                       src={formData.image}
-                      alt="Avatar Preview"
+                      alt={t('photoLabel')}
                       width={44}
                       height={44}
                       unoptimized
@@ -229,13 +229,13 @@ export default function MyProfilePage() {
                 </div>
                 <div className="flex flex-col flex-1">
                   <div className="flex justify-between items-end w-full">
-                    <span className="text-[14px] font-bold tracking-wide text-foreground">AI Messaging Pool</span>
+                    <span className="text-[14px] font-bold tracking-wide text-foreground">{t('usage.poolTitle')}</span>
                     <span className="text-[12px] font-mono font-medium text-foreground">
-                      {planStatus.messagesUsed.toLocaleString()} / {planStatus.messageLimit === -1 ? 'Unlimited' : planStatus.messageLimit.toLocaleString()}
+                      {planStatus.messagesUsed.toLocaleString()} / {planStatus.messageLimit === -1 ? t('usage.unlimited') : planStatus.messageLimit.toLocaleString()}
                     </span>
                   </div>
                   <span className="text-[12px] text-secondary mt-0.5 tracking-wide">
-                    Plan: <span className="text-foreground/80 font-medium">{planStatus.planName}</span> (Resets monthly)
+                    {t('usage.planLabel')} <span className="text-foreground/80 font-medium">{planStatus.planName}</span> {t('usage.resets')}
                   </span>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function MyProfilePage() {
               </div>
             )}
             {planStatus.messageLimit !== -1 && (planStatus.messagesUsed >= planStatus.messageLimit) && (
-              <p className="text-[11px] text-red-500 mt-2 font-medium z-10 relative">Usage limit reached. All non-critical AI interactions are paused until the next billing cycle.</p>
+              <p className="text-[11px] text-red-500 mt-2 font-medium z-10 relative">{t('usage.limitReached')}</p>
             )}
           </div>
         )}

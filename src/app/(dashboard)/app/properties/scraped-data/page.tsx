@@ -20,6 +20,7 @@ const ScrapedDataDeleteDialog = dynamic(loadDeleteDialog);
 
 export default function ScrapedDataPage() {
   const t = useTranslations('sidebar');
+  const tPage = useTranslations('properties.scrapedData');
   const router = useRouter();
   const [deletingProperty, setDeletingProperty] = useState<DeletingProperty | null>(null);
   const deleteProperty = useMutation(api.properties.deleteProperty);
@@ -67,7 +68,7 @@ export default function ScrapedDataPage() {
         <PageHeader
           icon={<Database className="w-6 h-6 text-brand" />}
           title={t('propertiesScrapedData')}
-          description="View and manage properties scraped from Rightmove."
+          description={tPage('pageDescription')}
         />
 
 
@@ -81,16 +82,16 @@ export default function ScrapedDataPage() {
               setSearchTerm(value);
               setCurrentPage(1);
             },
-            placeholder: "Search properties by address...",
+            placeholder: tPage('searchPlaceholder'),
           }}
           empty={{
             icon: <Database className="w-8 h-8 text-muted/30" />,
-            label: "Nothing found",
+            label: tPage('emptyLabel'),
             action: (
               <p className="text-[13px] text-secondary">
                 {searchTerm.length > 0
-                  ? "No property matches that search."
-                  : "No properties collected yet. Run a search to fill this in."}
+                  ? tPage('emptyNoMatch')
+                  : tPage('emptyNone')}
               </p>
             ),
           }}
@@ -103,22 +104,23 @@ export default function ScrapedDataPage() {
             isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
             onPageChange: handlePageChange,
             labels: {
-              empty: "Nothing found",
-              showing: (start, end, total) => `Showing ${start} to ${end} of ${total} properties`,
+              empty: tPage('emptyLabel'),
+              showing: (start, end, total) =>
+                tPage('showing', { start, end, total }),
             },
           }}
           columns={[
             {
               key: "address",
-              header: "Property Address",
+              header: tPage('columnAddress'),
               className: "w-[40%]",
               cell: (property) => (
                 <div className="flex items-center gap-4">
                   {property.imageUrl ? (
-                    <Image src={property.imageUrl} alt="Property" width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
+                    <Image src={property.imageUrl} alt={tPage('imageAlt')} width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
                   ) : (
                     <div className="w-12 h-12 rounded-[8px] bg-background border border-border-dim flex items-center justify-center">
-                      <span className="text-[9px] font-mono text-muted uppercase">No Img</span>
+                      <span className="text-[9px] font-mono text-muted uppercase">{tPage('noImage')}</span>
                     </div>
                   )}
                   <div>
@@ -134,7 +136,7 @@ export default function ScrapedDataPage() {
             },
             {
               key: "price",
-              header: "Price",
+              header: tPage('columnPrice'),
               cell: (property) => (
                 <span className="text-[13px] font-medium text-brand">
                   {property.price ? `£${property.price.toLocaleString()}` : "POA"}
@@ -143,21 +145,21 @@ export default function ScrapedDataPage() {
             },
             {
               key: "specs",
-              header: "Specs",
+              header: tPage('columnSpecs'),
               cell: (property) => (
                 <div className="flex gap-2">
                   <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
-                    {property.bedrooms} Beds
+                    {tPage('beds', { count: property.bedrooms ?? 0 })}
                   </span>
                   <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
-                    {property.bathrooms} Baths
+                    {tPage('baths', { count: property.bathrooms ?? 0 })}
                   </span>
                 </div>
               ),
             },
             {
               key: "actions",
-              header: "Actions",
+              header: tPage('columnActions'),
               align: "right",
               /* Not RowActions: these two are always visible here rather than
                  appearing on hover, and "View details" is a labelled button
@@ -169,7 +171,7 @@ export default function ScrapedDataPage() {
                     onClick={() => router.push(`/app/properties/scraped-data/${property._id}`)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand/10 text-brand text-[12px] font-medium hover:bg-brand/20 transition-colors"
                   >
-                    View Details
+                    {tPage('viewDetails')}
                   </button>
                   <RowIconButton
                     onClick={() => {
@@ -177,7 +179,7 @@ export default function ScrapedDataPage() {
                       setDeletingProperty(property);
                     }}
                     tone="danger"
-                    label={`Delete ${property.address}`}
+                    label={tPage('deleteRow', { address: property.address })}
                   >
                     <Trash2 className="w-4 h-4" />
                   </RowIconButton>

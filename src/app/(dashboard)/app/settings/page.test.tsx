@@ -18,7 +18,7 @@ vi.mock("next/image", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => {
+  useTranslations: () => (key: string, values?: Record<string, string | number>) => {
     const labels: Record<string, string> = {
       "charts.daily": "Daily",
       "charts.monthly": "Monthly",
@@ -33,8 +33,24 @@ vi.mock("next-intl", () => ({
       "metrics.messagesSub": "Total messages",
       "metrics.mrr": "MRR",
       "metrics.mrrSub": "Monthly recurring revenue",
+      "noOrganization": "No organization linked to this account.",
+      "organization.title": "Organization Dashboard",
+      "organization.description": "Team AI usage",
+      "providers.title": "Provider Usage",
+      "providers.subtitle": "Spend by provider",
+      "providers.nameHeader": "Provider",
+      "providers.costHeader": "Cost",
+      "providers.calls": "{count} calls",
+      "providers.empty": "No provider rows",
+      "leaderboards.topTeamMembers": "Top Team Members",
+      "leaderboards.topActiveAgents": "Top Active Agents",
+      "leaderboards.memberHeader": "Team member",
+      "leaderboards.agentHeader": "Agent",
+      "leaderboards.messagesHeader": "Messages",
+      "leaderboards.costHeader": "Cost",
+      "leaderboards.autonomousProcess": "Autonomous Process",
     };
-    return labels[key] ?? key;
+    return (labels[key] ?? key).replace(/\{(\w+)\}/g, (_match, name: string) => String(values?.[name] ?? ""));
   },
 }));
 

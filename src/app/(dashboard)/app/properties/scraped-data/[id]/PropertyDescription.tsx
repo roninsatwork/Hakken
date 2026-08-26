@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
@@ -7,12 +8,13 @@ interface PropertyDescriptionProps {
 }
 
 export default function PropertyDescription({ rawText }: PropertyDescriptionProps) {
+  const t = useTranslations("properties.detail");
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!rawText) {
     return (
       <div className="text-[15px] leading-relaxed text-foreground/50 italic font-light">
-        No description provided by the agent.
+        {t("noDescription")}
       </div>
     );
   }
@@ -100,9 +102,9 @@ export default function PropertyDescription({ rawText }: PropertyDescriptionProp
           className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-background border border-border-dim text-foreground text-[13px] font-medium shadow-lg hover:border-brand/50 hover:text-brand transition-all"
         >
           {isExpanded ? (
-            <>Read Less <ChevronUp className="w-4 h-4" /></>
+            <>{t("readLess")} <ChevronUp className="w-4 h-4" /></>
           ) : (
-            <>Read Full Description <ChevronDown className="w-4 h-4" /></>
+            <>{t("readFull")} <ChevronDown className="w-4 h-4" /></>
           )}
         </button>
       </div>

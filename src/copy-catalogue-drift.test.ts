@@ -33,7 +33,14 @@ const COPY_ATTRS =
   /(?:title|label|placeholder|alt|description|aria-label|successMessage|fallbackMessage)="([^"]+)"/g;
 
 /**
- * Re-measured 2026-08-26: 80 files, 183 sentences.
+ * 68 files, 119 sentences.
+ *
+ * The customer area was translated on 2026-08-26, taking the list from 80
+ * files and 183 sentences. What is left under `app/` is nine matches in four
+ * files that no reader ever sees: a generic type parameter, two JSX comments
+ * and the code between an object's icon and its next element. The scanner
+ * cannot tell those from copy, so they stay on the list at their measured
+ * value rather than being written out of it.
  *
  * The previous list read 72 sentences across 35 files. Nothing was added in
  * between — the scanner below was fixed. It matched line by line, so a JSX
@@ -49,7 +56,8 @@ const COPY_ATTRS =
  * The first attempt at this baseline read 675 across 201 files, because
  * scanning whole files let a generic type parameter open a match that ran on
  * through the code beneath it. `looksLikeCopy` rejects code punctuation now.
- * 183 is the number that survives both corrections.
+ * 183 was the number that survived both corrections, and the baseline the
+ * customer-area translation was measured against.
  */
 const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/_features/user-directory/UserDirectoryScreen.tsx', 1],
@@ -100,25 +108,12 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/admin/workflows/schedules/page.tsx', 1],
   ['src/app/(dashboard)/app/[workspace]/customers/[account]/page.tsx', 1],
   ['src/app/(dashboard)/app/[workspace]/customers/page.tsx', 1],
-  ['src/app/(dashboard)/app/agentic-testing/page.tsx', 2],
   ['src/app/(dashboard)/app/assistant/_components/AssistantComposer.tsx', 1],
-  ['src/app/(dashboard)/app/assistant/_components/AssistantModals.tsx', 4],
   ['src/app/(dashboard)/app/page.tsx', 2],
-  ['src/app/(dashboard)/app/profile/page.tsx', 6],
-  ['src/app/(dashboard)/app/properties/information/_components/PropertyInfoVisuals.tsx', 3],
-  ['src/app/(dashboard)/app/properties/information/page.tsx', 1],
-  ['src/app/(dashboard)/app/properties/logs/PropertiesRunRows.tsx', 2],
-  ['src/app/(dashboard)/app/properties/logs/page.tsx', 3],
-  ['src/app/(dashboard)/app/properties/scraped-data/ScrapedDataDeleteDialog.tsx', 4],
-  ['src/app/(dashboard)/app/properties/scraped-data/[id]/PropertyDescription.tsx', 3],
-  ['src/app/(dashboard)/app/properties/scraped-data/[id]/page.tsx', 8],
-  ['src/app/(dashboard)/app/properties/scraped-data/page.tsx', 3],
-  ['src/app/(dashboard)/app/properties/search/page.tsx', 1],
-  ['src/app/(dashboard)/app/reports/information/_components/ReportInfoVisuals.tsx', 6],
-  ['src/app/(dashboard)/app/reports/information/page.tsx', 1],
-  ['src/app/(dashboard)/app/reports/page.tsx', 12],
-  ['src/app/(dashboard)/app/settings/page.tsx', 6],
-  ['src/app/(dashboard)/app/settings/team/page.tsx', 3],
+  ['src/app/(dashboard)/app/properties/logs/PropertiesRunRows.tsx', 1],
+  ['src/app/(dashboard)/app/properties/scraped-data/ScrapedDataDeleteDialog.tsx', 1],
+  ['src/app/(dashboard)/app/properties/scraped-data/page.tsx', 1],
+  ['src/app/(dashboard)/app/settings/team/page.tsx', 1],
   ['src/ui/components/chat/ChatHistoryList.tsx', 6],
   ['src/ui/components/chat/ChatInput.tsx', 8],
   ['src/ui/components/chat/ChatMessage.tsx', 1],

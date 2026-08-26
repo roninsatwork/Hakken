@@ -62,6 +62,7 @@ const t: Translate = (key, values) => {
   if (key === "controls.mic.start") return "Start recording";
   if (key === "controls.mic.stop") return "Stop recording";
   if (key === "errors.mic.description") return `Allow ${values?.platformName}`;
+  if (key === "errors.upload.clear") return "Clear Alert";
   return key;
 };
 

@@ -42,9 +42,9 @@ export default function PropertiesLogsPage() {
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-border-dim text-secondary hover:text-foreground transition-colors text-[11px] font-bold uppercase tracking-widest hover:border-brand/30"
     >
       <RefreshCcw className={`w-3.5 h-3.5 ${isBusy(runId) ? "animate-spin" : ""}`} />
-      Sync Status
+      {t("syncStatus")}
     </button>
-  ), [handleSync, isBusy]);
+  ), [handleSync, isBusy, t]);
 
   // Auto-sync PENDING runs every 30 seconds
   useEffect(() => {
@@ -72,10 +72,10 @@ export default function PropertiesLogsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
               <Activity className="w-6 h-6 text-brand" />
-              Extraction Logs
+              {t("title")}
             </h1>
             <p className="text-[13px] text-secondary mt-1">
-              Monitor the live status and history of your autonomous data extraction agents.
+              {t("subtitle")}
             </p>
           </div>
         </div>

@@ -148,15 +148,10 @@ export default function CompanyTeamPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* The words stay exactly as they were. `admin.users.title` reads
-          "Access & Identity Control", which is the platform screen's wording
-          and not this one's — swapping it in here would change the page while
-          claiming to move it onto the kit. These two strings are hardcoded and
-          so untranslated; that is recorded with the other copy findings. */}
       <PageHeader
         icon={<Users className="w-6 h-6 text-brand" />}
-        title="Manage Team"
-        description="Add, remove, or modify roles for users in your organization."
+        title={t('team.title')}
+        description={t('team.description')}
         action={
           <PagePrimaryAction onClick={handleOpenAdd} icon={<Plus className="w-4 h-4" />}>
             {t('invite')}
@@ -174,10 +169,10 @@ export default function CompanyTeamPage() {
         rowClassName={(row) => (row.kind === "invite" ? "bg-brand/[0.03] hover:bg-brand/[0.05] opacity-80" : "")}
         empty={{
           icon: <Users className="w-8 h-8 text-muted/30" />,
-          label: "No one found",
+          label: t('team.emptyLabel'),
           action: (
             <p className="text-[13px] text-secondary">
-              {searchTerm.length > 0 ? "Nobody on the team matches that search." : t('table.noMatches')}
+              {searchTerm.length > 0 ? t('team.noMatches') : t('table.noMatches')}
             </p>
           ),
         }}

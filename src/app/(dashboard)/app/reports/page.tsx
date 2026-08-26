@@ -118,7 +118,7 @@ export default function ReportsPage() {
               className="flex items-center gap-2 px-4 py-2 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl transition-all border border-brand/20 font-medium text-sm"
             >
               <Download className="w-4 h-4" />
-              Export to Board
+              {t("exportToBoard")}
             </button>
           </div>
 
@@ -134,7 +134,7 @@ export default function ReportsPage() {
                 <div>
                   <h2 className="text-[22px] font-medium tracking-wide text-foreground mb-4 leading-snug">{headline}</h2>
                   <div className="text-secondary text-base leading-relaxed max-w-4xl opacity-90 prose prose-invert prose-brand">
-                     <SonaeMarkdown content={executiveSummary || markdownReport || "No executive summary available."} />
+                     <SonaeMarkdown content={executiveSummary || markdownReport || t("noSummary")} />
                   </div>
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function ReportsPage() {
                     <div className="absolute inset-0 bg-gradient-to-br from-brand/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
                     <div className="p-6 border-b border-white/5 flex items-center justify-between relative z-10">
                       <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2">
-                         Closing Windows
+                         {t("sectionClosingWindows")}
                       </h3>
                     </div>
                     <div className="flex-1 w-full p-4 min-h-[350px] relative z-10">
@@ -201,7 +201,7 @@ export default function ReportsPage() {
                   <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl overflow-hidden shadow-xl p-7 relative flex flex-col h-full">
                      <div className="absolute top-0 right-0 w-full h-64 bg-gradient-to-bl from-brand/10 to-transparent rounded-full -mt-20 -mr-20 pointer-events-none blur-3xl"></div>
                      <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-brand flex items-center gap-2 mb-6 drop-shadow-md relative z-10">
-                        <Zap className="w-4 h-4 text-brand" /> Top Deals to Watch
+                        <Zap className="w-4 h-4 text-brand" /> {t("sectionTopDeals")}
                       </h3>
                       <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
                         {(topDeals || []).map((deal, i) => (
@@ -230,7 +230,7 @@ export default function ReportsPage() {
                   <ChartExportWrapper exportName="pipeline-stage-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden h-full">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[60px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
-                       4a. Pipeline by Stage <span className="opacity-50 tracking-normal capitalize ml-1">{t("axisValue")}</span>
+                       {t("sectionPipelineByStage")} <span className="opacity-50 tracking-normal capitalize ml-1">{t("axisValue")}</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
                        {(pipelineHealth?.byStage || []).map((ph, i) => (
@@ -251,7 +251,7 @@ export default function ReportsPage() {
                   <ChartExportWrapper exportName="pipeline-rep-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden h-full">
                     <div className="absolute top-0 left-0 w-64 h-64 bg-brand/5 blur-[60px] rounded-full -mt-20 -ml-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
-                       4b. Pipeline by Rep <span className="opacity-50 tracking-normal capitalize ml-1">{t("axisWeightedValue")}</span>
+                       {t("sectionPipelineByRep")} <span className="opacity-50 tracking-normal capitalize ml-1">{t("axisWeightedValue")}</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
                        {(pipelineHealth?.byRep || []).map((ph, i) => (
@@ -276,7 +276,7 @@ export default function ReportsPage() {
                     <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400/5 blur-[100px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <div className="p-7 border-b border-border-dim/50 relative z-10">
                       <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2">
-                         <ShieldAlert className="w-4 h-4 text-red-500" /> Section 5 — Risk Radar
+                         <ShieldAlert className="w-4 h-4 text-red-500" /> {t("sectionRiskRadar")}
                       </h3>
                     </div>
                     
@@ -286,7 +286,7 @@ export default function ReportsPage() {
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
                               <span className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.75)] border border-amber-300"></span>
-                              Critical — Needs Intervention This Week
+                              {t("riskCritical")}
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.critical.map((d, i) => (
@@ -303,7 +303,7 @@ export default function ReportsPage() {
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
                               <span className="w-3.5 h-3.5 rounded-full bg-amber-400/45 border border-amber-400/70"></span>
-                              At Risk — Deteriorating
+                              {t("riskAtRisk")}
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.atRisk.map((d, i) => (
@@ -320,7 +320,7 @@ export default function ReportsPage() {
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
                               <span className="w-3.5 h-3.5 rounded-full bg-secondary/40 border border-secondary/50"></span>
-                              Quiet — Worth a Nudge
+                              {t("riskQuiet")}
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.quiet.map((d, i) => (
@@ -337,7 +337,7 @@ export default function ReportsPage() {
                   <ChartExportWrapper exportName="risk-vector-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden flex flex-col h-full">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-400/5 blur-[80px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
-                       Risk Vector Analysis
+                       {t("sectionRiskVector")}
                     </h3>
                     <div className="flex-1 w-full relative z-10 min-h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
@@ -358,7 +358,7 @@ export default function ReportsPage() {
                   <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#00C49F]/5 blur-[80px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
-                       <Users className="w-4 h-4 text-brand" /> Team Spotlight
+                       <Users className="w-4 h-4 text-brand" /> {t("sectionTeamSpotlight")}
                     </h3>
                     <div className="space-y-8 relative z-10">
                         <div>
@@ -403,7 +403,7 @@ export default function ReportsPage() {
                   <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[80px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
-                       <LineChart className="w-4 h-4 text-brand" /> Patterns & Signals
+                       <LineChart className="w-4 h-4 text-brand" /> {t("sectionPatterns")}
                     </h3>
                     <div className="space-y-6 relative z-10">
                         {(patterns || []).map((p, i) => (
@@ -422,7 +422,7 @@ export default function ReportsPage() {
                 <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-8 relative overflow-hidden shadow-xl mt-4">
                    <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 blur-[100px] rounded-full -mt-20 -mr-20 pointer-events-none" />
                    <h3 className="text-[14px] uppercase tracking-[0.2em] font-medium text-foreground mb-8 flex items-center gap-2 relative z-10">
-                       <CheckCircle2 className="w-4 h-4 text-brand" /> This Week&apos;s Priorities
+                       <CheckCircle2 className="w-4 h-4 text-brand" /> {t("sectionPriorities")}
                    </h3>
                    <div className="space-y-5 relative z-10">
                       {(priorities || []).map((task: string, i: number) => (

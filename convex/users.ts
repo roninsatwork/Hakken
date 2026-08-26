@@ -783,6 +783,8 @@ export const recordLogout = softMutation({
         metadata: JSON.stringify({ action: "explicit_logout" })
       });
     }
+
+    return null;
   }
 });
 

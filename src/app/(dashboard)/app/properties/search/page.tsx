@@ -75,7 +75,7 @@ export default function PropertiesSearchPage() {
               {t('sidebar.propertiesSearch')}
             </h1>
             <p className="text-[13px] text-secondary mt-1">
-              Import property listings and market data directly from Rightmove.
+              {t('properties.search.pageSubtitle')}
             </p>
           </div>
         </div>

@@ -96,7 +96,7 @@ export const getWidgetById = publicQuery({
     let agentAvatar = null;
     if (widget.agentId) {
        const agent = await ctx.db.get(widget.agentId);
-       if (agent) agentAvatar = agent.avatar; 
+       if (agent) agentAvatar = agent.avatar ?? null;
     }
     const systemBranding = await getSystemWidgetBranding(ctx);
 

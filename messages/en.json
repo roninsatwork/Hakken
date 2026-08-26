@@ -618,11 +618,21 @@
       "gatherButton": "Gather Properties",
       "startingSearch": "Starting Search...",
       "urlError": "Error: Please paste a valid Rightmove search URL first.",
-      "searchSuccess": "Search started successfully! Gathering the full property details can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can track the progress in the Logs tab."
+      "searchSuccess": "Search started successfully! Gathering the full property details can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can track the progress in the Logs tab.",
+      "pageSubtitle": "Import property listings and market data directly from Rightmove."
     },
     "logs": {
       "empty": "No extraction jobs have been dispatched yet.",
-      "syncFailed": "The run status could not be refreshed. Try again."
+      "syncFailed": "The run status could not be refreshed. Try again.",
+      "title": "Extraction Logs",
+      "subtitle": "Monitor the live status and history of your autonomous data extraction agents.",
+      "syncStatus": "Sync Status",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "dispatched": "Dispatched: {time}",
+      "finished": "Finished: {time}",
+      "scraped": "<strong>{count}</strong> properties scraped"
     },
     "detail": {
       "notFoundTitle": "Property Not Found",
@@ -641,7 +651,22 @@
       "location": "Location",
       "viewMap": "View Map",
       "floorplanAlt": "Floorplan",
-      "contactRightmove": "Contact via Rightmove"
+      "contactRightmove": "Contact via Rightmove",
+      "priceReduced": "Price Reduced",
+      "marketIntelligence": "Market Intelligence",
+      "descriptionHeading": "Property Description",
+      "keyFeatures": "Key Features",
+      "floorplans": "Floorplans",
+      "imageGallery": "Image Gallery",
+      "galleryAlt": "Gallery {index}",
+      "listingAgent": "Listing Agent",
+      "viewOriginal": "View Original Listing",
+      "agentProfile": "Agent Profile",
+      "unknownAgent": "Unknown Agent",
+      "unknownType": "Unknown",
+      "noDescription": "No description provided by the agent.",
+      "readLess": "Read Less",
+      "readFull": "Read Full Description"
     },
     "information": {
       "heroKicker": "PROPERTY INTELLIGENCE",
@@ -765,8 +790,35 @@
       "ctaBody": "Paste your first Rightmove search and watch it fill.",
       "visuals": {
         "journey": "The collection journey: a Rightmove search link travels to the agent, becomes property listings, and is tracked in the run logs",
-        "engineBadge": "RIGHTMOVE AGENT · APIFY"
-      }
+        "engineBadge": "RIGHTMOVE AGENT · APIFY",
+        "flowKicker": "From link to library",
+        "flowTitle": "One link in, a property library out",
+        "flowBody": "You don't fill in forms or copy listings by hand. You describe what you want with a Rightmove search, and the pipeline does the rest — collecting, filing and reporting as it goes.",
+        "flowHint": "Select a stage to see what happens there."
+      },
+      "ctaHeading": "Ready to build your library?"
+    },
+    "scrapedData": {
+      "pageDescription": "View and manage properties scraped from Rightmove.",
+      "searchPlaceholder": "Search properties by address...",
+      "emptyLabel": "Nothing found",
+      "emptyNoMatch": "No property matches that search.",
+      "emptyNone": "No properties collected yet. Run a search to fill this in.",
+      "showing": "Showing {start} to {end} of {total} properties",
+      "columnAddress": "Property Address",
+      "columnPrice": "Price",
+      "columnSpecs": "Specs",
+      "columnActions": "Actions",
+      "imageAlt": "Property",
+      "noImage": "No Img",
+      "beds": "{count} Beds",
+      "baths": "{count} Baths",
+      "viewDetails": "View Details",
+      "deleteRow": "Delete {address}",
+      "deleteTitle": "Delete Property",
+      "deleteBody": "Are you sure you want to delete <highlight>{address}</highlight>? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete"
     }
   },
   "header": {
@@ -802,7 +854,14 @@
       "leaderboards": {
         "tenants": "Top Companies by Usage",
         "initiators": "Top Users by Activity",
-        "empty": "No activity recorded yet."
+        "empty": "No activity recorded yet.",
+        "topTeamMembers": "Top Team Members",
+        "topActiveAgents": "Top Active Agents",
+        "memberHeader": "Team member",
+        "agentHeader": "Agent",
+        "messagesHeader": "Messages",
+        "costHeader": "Cost",
+        "autonomousProcess": "Autonomous Process"
       },
       "timeframes": {
         "today": "Today",
@@ -889,6 +948,19 @@
           "noPlanSub": "They are being served and not billed.",
           "noPlanCta": "Open companies"
         }
+      },
+      "noOrganization": "No organization linked to this account.",
+      "organization": {
+        "title": "Organization Dashboard",
+        "description": "Monitor your team's AI logistics, message consumption, and live costs."
+      },
+      "providers": {
+        "title": "Provider Usage",
+        "subtitle": "Organization spend by provider",
+        "nameHeader": "Provider",
+        "costHeader": "Cost",
+        "calls": "{count} calls",
+        "empty": "No Provider Data"
       }
     },
     "authDiagnostics": {
@@ -4581,7 +4653,13 @@
       },
       "saveFailed": "The user could not be saved. Try again.",
       "deleteFailed": "The user could not be deleted. Try again.",
-      "revokeFailed": "The invitation could not be revoked. Try again."
+      "revokeFailed": "The invitation could not be revoked. Try again.",
+      "team": {
+        "title": "Manage Team",
+        "description": "Add, remove, or modify roles for users in your organization.",
+        "emptyLabel": "No one found",
+        "noMatches": "Nobody on the team matches that search."
+      }
     },
     "directory": {
       "title": "All Users",
@@ -4887,6 +4965,12 @@
           "subtitle": "Secure API Blocked",
           "description": "Your browser has blocked {platformName} from using the microphone.",
           "instruction": "Click the microphone icon located in your browser's top URL search bar and select 'Allow'."
+        },
+        "upload": {
+          "title": "File Upload Invalid",
+          "subtitle": "Unsupported File Format",
+          "tip": "Tip: Convert documents to pure text formats (CSV or standard PDF) for stable execution.",
+          "clear": "Clear Alert"
         }
       },
       "voice": {
@@ -5803,7 +5887,14 @@
       },
       "saveFailed": "Your profile was not saved. Try again.",
       "photoFailed": "The photo could not be uploaded. Try again.",
-      "photoLabel": "Profile photo"
+      "photoLabel": "Profile photo",
+      "usage": {
+        "poolTitle": "AI Messaging Pool",
+        "unlimited": "Unlimited",
+        "planLabel": "Plan:",
+        "resets": "(Resets monthly)",
+        "limitReached": "Usage limit reached. All non-critical AI interactions are paused until the next billing cycle."
+      }
     },
     "logins": {
       "tabs": {
@@ -6695,7 +6786,8 @@
       "searchPlaceholder": "Search jobs by name",
       "noJobs": "No scheduled jobs yet"
     },
-    "searchPlaceholder": "Search connections by name"
+    "searchPlaceholder": "Search connections by name",
+    "checkFailed": "The connections could not be checked. Try again."
   },
   "aiMailbox": {
     "title": "Mailbox",
@@ -6791,7 +6883,8 @@
       "saving": "Saving…",
       "cancel": "Cancel"
     },
-    "honesty": "Every number is a count of real recorded events. The hours line is an estimate built from the visible assumption above - change it to match how long these would really take your team."
+    "honesty": "Every number is a count of real recorded events. The hours line is an estimate built from the visible assumption above - change it to match how long these would really take your team.",
+    "saveFailed": "The assumptions could not be saved. Try again."
   },
   "ui": {
     "table": {
@@ -6864,7 +6957,21 @@
       "recommendation": "Recommendation:",
       "seriesRiskConcentration": "Risk Concentration",
       "momentumLeaders": "Momentum Leaders",
-      "supportCoaching": "Support & Coaching"
+      "supportCoaching": "Support & Coaching",
+      "exportToBoard": "Export to Board",
+      "noSummary": "No executive summary available.",
+      "sectionClosingWindows": "Closing Windows",
+      "sectionTopDeals": "Top Deals to Watch",
+      "sectionPipelineByStage": "4a. Pipeline by Stage",
+      "sectionPipelineByRep": "4b. Pipeline by Rep",
+      "sectionRiskRadar": "Section 5 — Risk Radar",
+      "riskCritical": "Critical — Needs Intervention This Week",
+      "riskAtRisk": "At Risk — Deteriorating",
+      "riskQuiet": "Quiet — Worth a Nudge",
+      "sectionRiskVector": "Risk Vector Analysis",
+      "sectionTeamSpotlight": "Team Spotlight",
+      "sectionPatterns": "Patterns & Signals",
+      "sectionPriorities": "This Week's Priorities"
     },
     "information": {
       "pageTitle": "How Board Reports Work",
@@ -6971,8 +7078,17 @@
       },
       "visuals": {
         "wireframe": "A wireframe of the board report showing its story, numbers, risks and actions sections",
-        "agentCentre": "The report agent at the centre of what it draws on: your pipeline, your company's knowledge and its own memory — writing the board report"
-      }
+        "agentCentre": "The report agent at the centre of what it draws on: your pipeline, your company's knowledge and its own memory — writing the board report",
+        "anatomyKicker": "What's inside",
+        "anatomyTitle": "The anatomy of a board report",
+        "anatomyBody": "Every report has the same eight sections, in the same order — a deliberate rhythm that starts with the story, proves it with numbers, flags the risks, and ends with what to do about them.",
+        "anatomyHint": "Select a part of the report to see what it does.",
+        "sourcesKicker": "The analyst behind it",
+        "sourcesTitle": "An analyst that knows your business",
+        "sourcesBody": "Board Reports aren't a template filled in with numbers. They're written by an AI agent that reads your entire pipeline, draws on the documents your team shares with it, and remembers what it learned last week.",
+        "sourcesHint": "Select a source to see what the agent draws on."
+      },
+      "ctaHeading": "Ready to see your pipeline this clearly?"
     }
   },
   "agenticTesting": {
@@ -6983,7 +7099,9 @@
     "noAgents": "No agents registered.",
     "autoRoute": "Automatically routes your prompt to the best agent",
     "airGapped": "Air-gapped Testing Environment",
-    "sendFailed": "The test message was not sent. Try again."
+    "sendFailed": "The test message was not sent. Try again.",
+    "anyAutoRoute": "Any (Auto-Route)",
+    "emptyBody": "Select an agent from the top right and send a message. All AI loop telemetry will be recorded cleanly into the Agent Logs tab without affecting standard users."
   },
   "arcade": {
     "title": "RONIN'S RUN",

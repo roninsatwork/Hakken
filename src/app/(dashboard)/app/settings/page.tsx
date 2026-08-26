@@ -96,42 +96,45 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
   </motion.div>
 );
 
-const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["providerDistribution"] }) => (
-  <motion.section
-    initial={{ opacity: 0, y: 15 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.55 }}
-    className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
-  >
-    <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
-      <div className="flex items-center gap-3">
-        <Network className="w-4 h-4 text-brand opacity-80" />
-        <h2 className="text-[14px] font-bold text-foreground">Provider Usage</h2>
+const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["providerDistribution"] }) => {
+  const t = useTranslations("admin.overview");
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.55 }}
+      className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+    >
+      <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+        <div className="flex items-center gap-3">
+          <Network className="w-4 h-4 text-brand opacity-80" />
+          <h2 className="text-[14px] font-bold text-foreground">{t("providers.title")}</h2>
+        </div>
+        <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">{t("providers.subtitle")}</span>
       </div>
-      <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Organization spend by provider</span>
-    </div>
-    <div className="flex flex-col p-4">
-      {/* Unranked: every provider there is, not the leaders of a longer list. */}
-      <Leaderboard
-        rows={providers ?? []}
-        rowKey={(provider) => provider.providerKey}
-        ranked={false}
-        nameHeader="Provider"
-        name={(provider) => formatProviderName(provider.providerKey)}
-        sub={(provider) => `${provider.calls.toLocaleString()} calls`}
-        empty="No Provider Data"
-        stats={[
-          {
-            key: "cost",
-            header: "Cost",
-            cell: (provider) =>
-              `$${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
-          },
-        ]}
-      />
-    </div>
-  </motion.section>
-);
+      <div className="flex flex-col p-4">
+        {/* Unranked: every provider there is, not the leaders of a longer list. */}
+        <Leaderboard
+          rows={providers ?? []}
+          rowKey={(provider) => provider.providerKey}
+          ranked={false}
+          nameHeader={t("providers.nameHeader")}
+          name={(provider) => formatProviderName(provider.providerKey)}
+          sub={(provider) => t("providers.calls", { count: provider.calls.toLocaleString() })}
+          empty={t("providers.empty")}
+          stats={[
+            {
+              key: "cost",
+              header: t("providers.costHeader"),
+              cell: (provider) =>
+                `$${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
+            },
+          ]}
+        />
+      </div>
+    </motion.section>
+  );
+};
 
 export default function CompanySettingsDashboard() {
   const t = useTranslations('admin.overview');
@@ -166,7 +169,7 @@ export default function CompanySettingsDashboard() {
   if (!companyId) {
     return (
       <div className="flex flex-col gap-8 w-full pb-12 p-8 text-center text-muted font-mono uppercase tracking-widest text-sm">
-        No organization linked to this account.
+        {t('noOrganization')}
       </div>
     );
   }
@@ -178,10 +181,10 @@ export default function CompanySettingsDashboard() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Building2 className="w-6 h-6 text-brand" />
-            Organization Dashboard
+            {t('organization.title')}
           </h1>
           <p className="text-[13px] text-secondary tracking-wide max-w-xl">
-            Monitor your team&apos;s AI logistics, message consumption, and live costs.
+            {t('organization.description')}
           </p>
         </div>
 
@@ -279,23 +282,23 @@ export default function CompanySettingsDashboard() {
               <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-4 h-4 text-brand opacity-80" />
-                  <h2 className="text-[14px] font-bold text-foreground">Top Team Members</h2>
+                  <h2 className="text-[14px] font-bold text-foreground">{t('leaderboards.topTeamMembers')}</h2>
                 </div>
               </div>
               <div className="flex flex-col p-4">
                 <Leaderboard
                   rows={data.topUsers}
                   rowKey={(user) => user.id}
-                  nameHeader="Team member"
+                  nameHeader={t('leaderboards.memberHeader')}
                   name={(user) => user.name}
                   sub={(user) => user.email}
                   avatar={{ src: (user) => user.image, shape: "circle" }}
                   empty={t('leaderboards.empty')}
                   stats={[
-                    { key: "messages", header: "Messages", cell: (user) => user.messages.toLocaleString() },
+                    { key: "messages", header: t('leaderboards.messagesHeader'), cell: (user) => user.messages.toLocaleString() },
                     {
                       key: "cost",
-                      header: "Cost",
+                      header: t('leaderboards.costHeader'),
                       cell: (user) =>
                         `$${user.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
                     },
@@ -311,23 +314,23 @@ export default function CompanySettingsDashboard() {
               <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Activity className="w-4 h-4 text-brand opacity-80" />
-                  <h2 className="text-[14px] font-bold text-foreground">Top Active Agents</h2>
+                  <h2 className="text-[14px] font-bold text-foreground">{t('leaderboards.topActiveAgents')}</h2>
                 </div>
               </div>
               <div className="flex flex-col p-4">
                 <Leaderboard
                   rows={data.topAgents ?? []}
                   rowKey={(agent) => agent.id}
-                  nameHeader="Agent"
+                  nameHeader={t('leaderboards.agentHeader')}
                   name={(agent) => agent.name}
-                  sub={() => "Autonomous Process"}
+                  sub={() => t('leaderboards.autonomousProcess')}
                   avatar={{ src: (agent) => agent.avatar, shape: "rounded" }}
                   empty={t('leaderboards.empty')}
                   stats={[
-                    { key: "messages", header: "Messages", cell: (agent) => agent.interactions.toLocaleString() },
+                    { key: "messages", header: t('leaderboards.messagesHeader'), cell: (agent) => agent.interactions.toLocaleString() },
                     {
                       key: "cost",
-                      header: "Cost",
+                      header: t('leaderboards.costHeader'),
                       cell: (agent) =>
                         `$${agent.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
                     },

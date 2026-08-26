@@ -465,18 +465,16 @@ export function CollectionJourney() {
             className="text-[11px] font-bold uppercase tracking-[0.14em]"
             style={{ color: ACCENT }}
           >
-            From link to library
+            {t("flowKicker")}
           </span>
           <h2 className="text-xl font-semibold text-foreground">
-            One link in, a property library out
+            {t("flowTitle")}
           </h2>
           <p className="text-[14px] text-secondary leading-relaxed">
-            You don&apos;t fill in forms or copy listings by hand. You describe
-            what you want with a Rightmove search, and the pipeline does the
-            rest — collecting, filing and reporting as it goes.
+            {t("flowBody")}
           </p>
           <p className="text-[12px] text-muted">
-            Select a stage to see what happens there.
+            {t("flowHint")}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
