@@ -41,7 +41,7 @@ Company AI routes use the same backend tables but pass a company id and apply co
 - `src/app/(dashboard)/admin/companies/[id]/calls/**` and `src/app/(dashboard)/admin/companies/[id]/mailbox/page.tsx` expose company calls and mailbox operations to platform operators.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the company widget.
 
-The shared knowledge UI lives in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx`. It is reused for global, company, and agent knowledge.
+The shared knowledge UI lives in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx`, which owns the document list, search, pagination, and upload queue, and is reused for global, company, and agent knowledge. Its four dialogs — upload, document delete, document inspect, and website delete — are in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeModals.tsx`, and the folder-walking and batching helpers behind the upload queue are in `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.ts`.
 The shared Wiki UI lives in `src/app/(dashboard)/admin/_features/wiki/`, including page lists/detail, map, import box, ask box, diary, unanswered questions, and money view. These components support both platform scope and company scope; keep their scope props explicit rather than inferring company access from the URL alone.
 
 ## Data Model

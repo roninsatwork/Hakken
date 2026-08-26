@@ -2016,7 +2016,9 @@
             "noWorkflow": "Please select a target payload (Workflow or Agent).",
             "missingTargetedTime": "Add at least one targeted time before saving this schedule.",
             "configError": "Configuration Error"
-          }
+          },
+          "createFailed": "The schedule could not be created. Try again.",
+          "saveFailed": "The schedule could not be saved. Try again."
         }
       }
     },
@@ -4017,7 +4019,8 @@
       "logoUploadFailed": "The logo could not be uploaded. Try again.",
       "logoRemoveFailed": "The logo could not be removed. Try again.",
       "piiSaveFailed": "The redaction settings were not saved. Try again.",
-      "saveFailed": "The settings were not saved. Try again."
+      "saveFailed": "The settings were not saved. Try again.",
+      "avatarUploadFailed": "The image could not be uploaded. Try again."
     },
     "auditLogs": {
       "title": "System Audit Logs",
@@ -4575,7 +4578,10 @@
           "ctaEmpty": "Your button text",
           "footer": "Sent by {platformName}"
         }
-      }
+      },
+      "saveFailed": "The user could not be saved. Try again.",
+      "deleteFailed": "The user could not be deleted. Try again.",
+      "revokeFailed": "The invitation could not be revoked. Try again."
     },
     "directory": {
       "title": "All Users",
@@ -4932,7 +4938,8 @@
       "answer": {
         "save": "Save to wiki",
         "saved": "Saved to the wiki",
-        "saveFailed": "Could not save"
+        "saveFailed": "Could not save",
+        "wikiSaveFailed": "The answer could not be saved to the wiki. Try again."
       },
       "evidence": {
         "why": "Why this answer",
@@ -5895,7 +5902,12 @@
       "showingLoaded": "Showing {count} users",
       "loadMore": "Load more users",
       "loadingMore": "Loading users..."
-    }
+    },
+    "assignAdminFailed": "The system administrator could not be assigned. Try again.",
+    "detachAdminFailed": "The system administrator could not be detached. Try again.",
+    "saveUserFailed": "The user could not be saved. Try again.",
+    "deleteUserFailed": "The user could not be deleted. Try again.",
+    "revokeInviteFailed": "The invitation could not be revoked. Try again."
   },
   "salesData": {
     "importTitle": "Import Data",
@@ -5990,7 +6002,11 @@
       "researchIdle": "Ready — press a button to put the agents to work.",
       "researchFinished": "Finished — {reason}",
       "researchDoneTitle": "The research job has finished",
-      "researchDoneOk": "OK"
+      "researchDoneOk": "OK",
+      "clearFailed": "The customer database could not be cleared. Try again.",
+      "researchFailed": "The search could not be started. Try again.",
+      "discoveryStartFailed": "Market discovery could not be started. Try again.",
+      "discoveryStopFailed": "Market discovery could not be stopped. Try again."
     },
     "customerProfile": {
       "back": "All customers",
@@ -6200,8 +6216,10 @@
       "runningPhaseGapsCounted": "{prospects} prospects priced — finding the gaps inside the chains…",
       "runningPhaseSummaryCounted": "{prospects} prospects priced, {gaps} gaps found — writing the summary…",
       "failedTitle": "Report failed",
-      "failedBody": "The run ended without finishing the report: {reason}"
-    }
+      "failedBody": "The run ended without finishing the report: {reason}",
+      "startFailed": "The report could not be started. Try again."
+    },
+    "clearAllFailed": "The imported data could not be cleared. Try again."
   },
   "tasks": {
     "title": "Tasks",

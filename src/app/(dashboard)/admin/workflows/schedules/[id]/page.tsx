@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -20,6 +19,7 @@ import ScheduleBuilder from "../_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { InlineSearchInput } from "@/src/ui/components/screens/Table";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   createDefaultScheduleDraft,
   hydrateScheduleDraft,
@@ -95,6 +95,7 @@ export default function EditSchedulePage() {
   const workflows = (useQuery(api.workflows.list) || []) as WorkflowRow[];
   const agents = (useQuery(api.agents.list) || []) as AgentRow[];
   const updateSchedule = useMutation(api.scheduler.updateSchedule);
+  const action = useAdminAction({ scope: "admin-schedule-editor" });
 
   const [draft, setDraft] = useState<ScheduleDraft | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -147,18 +148,24 @@ export default function EditSchedulePage() {
 
     setIsSubmitting(true);
 
-    try {
-      await updateSchedule({
+    const outcome = await action.run(
+      () => updateSchedule({
         scheduleId,
         name: form.formData.name,
         workflowId: form.formData.workflowId || undefined,
         agentId: form.formData.agentId || undefined,
         intervalStr: serializeScheduleDraft(form.schedule),
         isActive: form.isActive
-      });
+      }),
+      { suppressErrorToast: true, fallbackMessage: t('saveFailed') },
+    );
+
+    if (outcome.ok) {
       router.push("/admin/workflows/schedules");
-    } catch (err: unknown) {
-      showError(getErrorMessage(err, "Failed to edit schedule."));
+      return;
+    }
+    if (outcome.message) {
+      showError(outcome.message);
       setIsSubmitting(false);
     }
   };

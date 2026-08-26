@@ -1,5 +1,4 @@
-import { getErrorMessage } from "@/src/lib/errors";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -10,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { WorkflowCanvasEdge, WorkflowCanvasNode, WorkflowNodeUpdateHandler } from "./types";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";
@@ -35,6 +35,17 @@ type AgentEditorFormData = {
 type JsonSchemaObject = {
   properties?: Record<string, unknown>;
 };
+
+function deriveCSVFromSchema(schemaStr: string) {
+  try {
+    const parsed = JSON.parse(schemaStr) as JsonSchemaObject;
+    return Object.keys(parsed.properties || {}).join(", ");
+  } catch { return ""; }
+}
+
+const AUTO_CONFIGURE_KEY = "auto-configure";
+const SAVE_KEY = "save-agent";
+const PROMOTE_KEY = "promote";
 
 type AgentEditorModalProps = {
   node: WorkflowCanvasNode | null;
@@ -87,6 +98,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const promoteToGlobal = useMutation(api.agents.promoteToGlobal);
   const bindSkillToAgent = useMutation(api.agentSkills.bindSkillToAgent);
   const unbindSkillFromAgent = useMutation(api.agentSkills.unbindSkillFromAgent);
+  const action = useAdminAction({ scope: "admin-workflow-agent-editor" });
 
   const [formData, setFormData] = useState<AgentEditorFormData>({
     name: "",
@@ -105,46 +117,59 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     _outputFields: "",
     selectedSkillIds: [],
   });
-  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'IDENTITY' | 'MAPPING'>('MAPPING');
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
 
+  const isGenerating = action.isBusy(AUTO_CONFIGURE_KEY);
+  const isSaving = action.isBusy(SAVE_KEY);
+
   const generateConfig = useAction(api.workflowNodeConfig.generateNodeConfig);
 
-  useEffect(() => {
-    if (agent && node) {
-      const bindingSkillIds = existingSkillBindings.map((row) => row.skill._id);
-      const nodeSkillIds = node.data?._skillIds ?? [];
-      setFormData({
-        name: agent.name || "",
-        systemPrompt: agent.systemPrompt || "",
-        inputSchema: agent.inputSchema || "",
-        outputSchema: agent.outputSchema || "",
-        modelId: agent.modelId || defaultModelId,
-        modelSelectionMode: agent.modelSelectionMode || "override",
-        thinkingMode: agent.thinkingMode || false,
-        reasoningEffort: agent.reasoningEffort || "MEDIUM",
-        allowInternetAccess: agent.allowInternetAccess || false,
-        temperature: agent.temperature ?? 1.0,
-        _inputMapping: typeof node.data?._inputMapping === 'object' ? JSON.stringify(node.data._inputMapping, null, 2) : node.data?._inputMapping || "",
-        _inputTemplate: node.data?._inputTemplate || "",
-        _inputFields: agent.inputSchema ? deriveCSVFromSchema(agent.inputSchema) : "",
-        _outputFields: agent.outputSchema ? deriveCSVFromSchema(agent.outputSchema) : "",
-        selectedSkillIds: Array.from(new Set([...bindingSkillIds, ...nodeSkillIds])),
-      });
-    }
-  }, [agent, defaultModelId, existingSkillBindings, node]);
+  // Adopted during render rather than in an effect, per the React docs on
+  // deriving state from props. The sentinel is the four inputs the form is
+  // seeded from: the agent document, the node it belongs to, the platform's
+  // default model and the skill bindings. Convex hands back a new reference
+  // whenever any of them changes on the server, which is exactly when the form
+  // should re-seed.
+  const [seenSeed, setSeenSeed] = useState<{
+    agent: typeof agent;
+    node: WorkflowCanvasNode;
+    defaultModelId: string;
+    bindings: typeof existingSkillBindings;
+  } | null>(null);
 
-  const deriveCSVFromSchema = (schemaStr: string) => {
-    try {
-      const parsed = JSON.parse(schemaStr) as JsonSchemaObject;
-      return Object.keys(parsed.properties || {}).join(", ");
-    } catch { return ""; }
-  };
+  if (
+    agent &&
+    node &&
+    (seenSeed?.agent !== agent ||
+      seenSeed?.node !== node ||
+      seenSeed?.defaultModelId !== defaultModelId ||
+      seenSeed?.bindings !== existingSkillBindings)
+  ) {
+    const bindingSkillIds = existingSkillBindings.map((row) => row.skill._id);
+    const nodeSkillIds = node.data?._skillIds ?? [];
+    setSeenSeed({ agent, node, defaultModelId, bindings: existingSkillBindings });
+    setFormData({
+      name: agent.name || "",
+      systemPrompt: agent.systemPrompt || "",
+      inputSchema: agent.inputSchema || "",
+      outputSchema: agent.outputSchema || "",
+      modelId: agent.modelId || defaultModelId,
+      modelSelectionMode: agent.modelSelectionMode || "override",
+      thinkingMode: agent.thinkingMode || false,
+      reasoningEffort: agent.reasoningEffort || "MEDIUM",
+      allowInternetAccess: agent.allowInternetAccess || false,
+      temperature: agent.temperature ?? 1.0,
+      _inputMapping: typeof node.data?._inputMapping === 'object' ? JSON.stringify(node.data._inputMapping, null, 2) : node.data?._inputMapping || "",
+      _inputTemplate: node.data?._inputTemplate || "",
+      _inputFields: agent.inputSchema ? deriveCSVFromSchema(agent.inputSchema) : "",
+      _outputFields: agent.outputSchema ? deriveCSVFromSchema(agent.outputSchema) : "",
+      selectedSkillIds: Array.from(new Set([...bindingSkillIds, ...nodeSkillIds])),
+    });
+  }
 
   const createSchemaFromCSV = (csv: string) => {
     const fields = csv.split(',').map(f => f.trim()).filter(Boolean);
@@ -173,10 +198,10 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const handleAutoConfigure = async () => {
 	    if (!node) return;
 	    if (!aiPrompt.trim() || isGenerating) return;
-	    setIsGenerating(true);
     setFeedbackMessage("");
-    try {
-      const result = await generateConfig({
+
+    const outcome = await action.run(
+      () => generateConfig({
         prompt: aiPrompt,
         nodeType: node.type,
         availableNodes: upstreamNodes.map((n) => ({
@@ -184,107 +209,122 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
           type: n.type,
           label: n.data?.label
         }))
-      });
+      }),
+      { key: AUTO_CONFIGURE_KEY, suppressErrorToast: true, fallbackMessage: tAlerts('autoConfigureFailed') },
+    );
 
-      setFormData({
-         ...formData,
-         _inputMapping: result.mapping ? result.mapping.trim() : "",
-         _inputTemplate: result.template ? result.template.trim() : "",
-         name: result.agentName || formData.name,
-         systemPrompt: result.agentSystemPrompt || formData.systemPrompt,
-         _inputFields: result.agentInputFields || formData._inputFields,
-         _outputFields: result.agentOutputFields || formData._outputFields,
-         allowInternetAccess: result.agentAllowInternet !== undefined ? result.agentAllowInternet : formData.allowInternetAccess,
-      });
-      setAiPrompt("");
-      setIsDeveloperMode(true);
-    } catch {
-      setFeedbackMessage(tAlerts('autoConfigureFailed'));
-    } finally {
-      setIsGenerating(false);
+    if (!outcome.ok) {
+      if (outcome.message) setFeedbackMessage(outcome.message);
+      return;
     }
+
+    const result = outcome.data;
+    setFormData({
+       ...formData,
+       _inputMapping: result.mapping ? result.mapping.trim() : "",
+       _inputTemplate: result.template ? result.template.trim() : "",
+       name: result.agentName || formData.name,
+       systemPrompt: result.agentSystemPrompt || formData.systemPrompt,
+       _inputFields: result.agentInputFields || formData._inputFields,
+       _outputFields: result.agentOutputFields || formData._outputFields,
+       allowInternetAccess: result.agentAllowInternet !== undefined ? result.agentAllowInternet : formData.allowInternetAccess,
+    });
+    setAiPrompt("");
+    setIsDeveloperMode(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
 	    e.preventDefault();
 	    if (!node) return;
-	    setIsSaving(true);
     setFeedbackMessage("");
-    let targetAgentId = agentId;
 
-    try {
-      if (!targetAgentId) {
-         targetAgentId = await createInlineAgent({ workflowId: params.id as Id<"workflows"> });
-      }
-
-      const generatedInputSchema = formData._inputFields ? createSchemaFromCSV(formData._inputFields) : formData.inputSchema;
-      const generatedOutputSchema = formData._outputFields ? createSchemaFromCSV(formData._outputFields) : formData.outputSchema;
-
-      await updateAgent({
-        id: targetAgentId,
-        name: formData.name,
-        systemPrompt: formData.systemPrompt,
-        inputSchema: generatedInputSchema,
-        outputSchema: generatedOutputSchema,
-        modelSelectionMode: formData.modelSelectionMode,
-        ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
-        thinkingMode: formData.thinkingMode,
-        reasoningEffort: formData.reasoningEffort,
-        allowInternetAccess: formData.allowInternetAccess,
-        temperature: parseFloat(String(formData.temperature)),
-      });
-
-      for (const skillId of formData.selectedSkillIds) {
-        await bindSkillToAgent({
-          agentId: targetAgentId,
-          skillId,
-          isEnabled: true,
-          seedEvalFixtures: false,
-        });
-      }
-      const selectedSkillIdSet = new Set(formData.selectedSkillIds);
-      for (const row of existingSkillBindings) {
-        if (!selectedSkillIdSet.has(row.skill._id)) {
-          await unbindSkillFromAgent({ bindingId: row.binding._id });
+    const outcome = await action.run(
+      async () => {
+        let targetAgentId = agentId;
+        if (!targetAgentId) {
+           targetAgentId = await createInlineAgent({ workflowId: params.id as Id<"workflows"> });
         }
-      }
 
-      let parsedMapping = formData._inputMapping;
-      if (parsedMapping) {
-        try { parsedMapping = JSON.parse(parsedMapping); } catch {}
-      }
+        const generatedInputSchema = formData._inputFields ? createSchemaFromCSV(formData._inputFields) : formData.inputSchema;
+        const generatedOutputSchema = formData._outputFields ? createSchemaFromCSV(formData._outputFields) : formData.outputSchema;
 
-      // Update the visual node on the canvas too
-      onUpdateNode(node.id, {
-        ...node.data,
-        label: formData.name,
-        inputSchema: generatedInputSchema,
-        outputSchema: generatedOutputSchema,
-        modelId: formData.modelSelectionMode === "override" ? formData.modelId : defaultModelId,
-        _agentId: targetAgentId,
-        _inputMapping: parsedMapping,
-        _inputTemplate: formData._inputTemplate,
-        _skillIds: formData.selectedSkillIds,
-        _skillNames: selectedSkillNames,
-      });
+        await updateAgent({
+          id: targetAgentId,
+          name: formData.name,
+          systemPrompt: formData.systemPrompt,
+          inputSchema: generatedInputSchema,
+          outputSchema: generatedOutputSchema,
+          modelSelectionMode: formData.modelSelectionMode,
+          ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
+          thinkingMode: formData.thinkingMode,
+          reasoningEffort: formData.reasoningEffort,
+          allowInternetAccess: formData.allowInternetAccess,
+          temperature: parseFloat(String(formData.temperature)),
+        });
 
-      onClose();
-    } catch (err: unknown) {
-      setFeedbackMessage(getErrorMessage(err, tAlerts('saveAgentFailed')));
-    } finally {
-      setIsSaving(false);
+        for (const skillId of formData.selectedSkillIds) {
+          await bindSkillToAgent({
+            agentId: targetAgentId,
+            skillId,
+            isEnabled: true,
+            seedEvalFixtures: false,
+          });
+        }
+        const selectedSkillIdSet = new Set(formData.selectedSkillIds);
+        for (const row of existingSkillBindings) {
+          if (!selectedSkillIdSet.has(row.skill._id)) {
+            await unbindSkillFromAgent({ bindingId: row.binding._id });
+          }
+        }
+
+        return { targetAgentId, generatedInputSchema, generatedOutputSchema };
+      },
+      { key: SAVE_KEY, suppressErrorToast: true, fallbackMessage: tAlerts('saveAgentFailed') },
+    );
+
+    if (!outcome.ok) {
+      if (outcome.message) setFeedbackMessage(outcome.message);
+      return;
     }
+
+    let parsedMapping = formData._inputMapping;
+    if (parsedMapping) {
+      try { parsedMapping = JSON.parse(parsedMapping); } catch {}
+    }
+
+    // Update the visual node on the canvas too
+    onUpdateNode(node.id, {
+      ...node.data,
+      label: formData.name,
+      inputSchema: outcome.data.generatedInputSchema,
+      outputSchema: outcome.data.generatedOutputSchema,
+      modelId: formData.modelSelectionMode === "override" ? formData.modelId : defaultModelId,
+      _agentId: outcome.data.targetAgentId,
+      _inputMapping: parsedMapping,
+      _inputTemplate: formData._inputTemplate,
+      _skillIds: formData.selectedSkillIds,
+      _skillNames: selectedSkillNames,
+    });
+
+    onClose();
 	  };
 
 	  const handlePromote = async () => {
 	    if (!agent) return;
-	    try {
-	      await promoteToGlobal({ id: agent._id });
-	      onClose();
-	    } catch (err: unknown) {
-        setIsPromoteModalOpen(false);
-	      setFeedbackMessage(getErrorMessage(err, tAlerts('promoteFailed')));
-	    }
+    const outcome = await action.run(() => promoteToGlobal({ id: agent._id }), {
+      key: PROMOTE_KEY,
+      suppressErrorToast: true,
+      fallbackMessage: tAlerts('promoteFailed'),
+    });
+
+    if (outcome.ok) {
+      onClose();
+      return;
+    }
+    if (outcome.message) {
+      setIsPromoteModalOpen(false);
+      setFeedbackMessage(outcome.message);
+    }
 	  };
 
   if (!node) return null;

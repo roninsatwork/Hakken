@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +19,7 @@ import ScheduleBuilder from "../_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { InlineSearchInput } from "@/src/ui/components/screens/Table";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   createDefaultScheduleDraft,
   serializeScheduleDraft,
@@ -48,6 +48,7 @@ export default function NewSchedulePage() {
   const workflows = (useQuery(api.workflows.list) || []) as WorkflowRow[];
   const agents = (useQuery(api.agents.list) || []) as AgentRow[];
   const createSchedule = useMutation(api.scheduler.createSchedule);
+  const action = useAdminAction({ scope: "admin-schedule-editor" });
 
   const [payloadType, setPayloadType] = useState<PayloadType>("agent"); // matched screenshot
   
@@ -98,17 +99,23 @@ export default function NewSchedulePage() {
 
     setIsSubmitting(true);
 
-    try {
-      await createSchedule({
+    const outcome = await action.run(
+      () => createSchedule({
         name: formData.name,
         workflowId: formData.workflowId || undefined,
         agentId: formData.agentId || undefined,
         intervalStr: serializeScheduleDraft(scheduleDraft),
         isActive
-      });
+      }),
+      { suppressErrorToast: true, fallbackMessage: t('createFailed') },
+    );
+
+    if (outcome.ok) {
       router.push("/admin/workflows/schedules");
-    } catch (err: unknown) {
-      showError(getErrorMessage(err, "Failed to create schedule."));
+      return;
+    }
+    if (outcome.message) {
+      showError(outcome.message);
       setIsSubmitting(false);
     }
   };

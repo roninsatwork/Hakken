@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -27,9 +27,9 @@ export function PersonalDataPanel() {
   const me = useQuery(api.users.getMe);
   const produce = useAction(api.personalData.produceSubjectAccess);
   const erase = useAction(api.personalData.erase);
+  const action = useAdminAction({ scope: "admin-personal-data" });
 
   const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState<"none" | "reading" | "erasing">("none");
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
@@ -37,43 +37,47 @@ export function PersonalDataPanel() {
   const canErase = me?.role === "SUPER_ADMIN";
 
   const handleRead = async () => {
-    if (!email.trim() || busy !== "none") return;
-    setBusy("reading");
+    if (!email.trim()) return;
     setError("");
     setSummary([]);
 
-    try {
-      const result = await produce({ email: email.trim() });
-      const document = JSON.stringify(result, null, 2);
-      const url = URL.createObjectURL(new Blob([document], { type: "application/json" }));
-      const link = window.document.createElement("a");
-      link.href = url;
-      link.download = `personal-data-${result.person.email}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (caught) {
-      setError(getErrorMessage(caught, t("readFailed")));
-    } finally {
-      setBusy("none");
-    }
+    const outcome = await action.run(
+      async () => {
+        const result = await produce({ email: email.trim() });
+        const document = JSON.stringify(result, null, 2);
+        const url = URL.createObjectURL(new Blob([document], { type: "application/json" }));
+        const link = window.document.createElement("a");
+        link.href = url;
+        link.download = `personal-data-${result.person.email}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      { key: "read", suppressErrorToast: true, fallbackMessage: t("readFailed") },
+    );
+
+    if (!outcome.ok && outcome.message) setError(outcome.message);
   };
 
   const handleErase = async () => {
-    setBusy("erasing");
     setError("");
 
-    try {
-      const result = await erase({ email: email.trim() });
+    const outcome = await action.run(() => erase({ email: email.trim() }), {
+      key: "erase",
+      suppressErrorToast: true,
+      fallbackMessage: t("eraseFailed"),
+    });
+
+    if (outcome.ok) {
       // The summary is the answer to give a regulator, so it stays on screen
       // rather than flashing past in a toast.
-      setSummary(result.summary);
+      setSummary(outcome.data.summary);
       setConfirming(false);
       setEmail("");
-    } catch (caught) {
-      setError(getErrorMessage(caught, t("eraseFailed")));
+      return;
+    }
+    if (outcome.message) {
+      setError(outcome.message);
       setConfirming(false);
-    } finally {
-      setBusy("none");
     }
   };
 
@@ -102,10 +106,10 @@ export function PersonalDataPanel() {
         <Button
           variant="quiet"
           onClick={handleRead}
-          disabled={busy !== "none" || !email.trim()}
+          disabled={action.isBusy() || !email.trim()}
           className="flex items-center gap-2 rounded-[10px] px-4 py-2 text-[13px] text-foreground bg-transparent hover:bg-foreground/5"
         >
-          {busy === "reading" ? (
+          {action.isBusy("read") ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             <UserSearch className="h-4 w-4" aria-hidden="true" />
@@ -118,7 +122,7 @@ export function PersonalDataPanel() {
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            disabled={busy !== "none" || !email.trim()}
+            disabled={action.isBusy() || !email.trim()}
             className="flex items-center gap-2 rounded-[10px] bg-rose-500/90 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -165,7 +169,7 @@ export function PersonalDataPanel() {
         title={t("confirmTitle")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmErase")}
-        isSubmitting={busy === "erasing"}
+        isSubmitting={action.isBusy("erase")}
         onConfirm={handleErase}
         warning={{ title: t("confirmWarningTitle"), description: t("confirmWarning") }}
       >

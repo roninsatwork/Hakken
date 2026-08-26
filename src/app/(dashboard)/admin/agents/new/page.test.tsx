@@ -1,9 +1,15 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render as renderBare, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import NewAgentPage from "./page";
+
+import { ToastProvider } from "@/src/context/ToastContext";
+
+// The screen reports failures through the house action runner, which reads
+// the toast context the root layout always supplies.
+const render = (ui: Parameters<typeof renderBare>[0]) => renderBare(ui, { wrapper: ToastProvider });
 
 /**
  * The screen had no test at all, which is how three dead controls survived on it.

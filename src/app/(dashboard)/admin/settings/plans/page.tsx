@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMutation } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import {
@@ -37,6 +38,7 @@ export default function SubscriptionPlansPage() {
   const createPlan = useMutation(api.plans.createPlan);
   const updatePlan = useMutation(api.plans.updatePlan);
   const deletePlan = useMutation(api.plans.deletePlan);
+  const action = useAdminAction({ scope: "admin-plans" });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -53,7 +55,6 @@ export default function SubscriptionPlansPage() {
     isActive: true 
   });
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const itemsPerPage = TABLE_PAGE_SIZE;
@@ -95,47 +96,49 @@ export default function SubscriptionPlansPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      if (editingPlan) {
-        await updatePlan({ 
-            id: editingPlan._id, 
-            name: formData.name, 
-            description: formData.description,
-            messageLimit: Number(formData.messageLimit),
-            priceGBP: Number(formData.priceGBP),
-            grantedModules: formData.grantedModules,
-            isActive: formData.isActive
-        });
-      } else {
-        await createPlan({ 
-            name: formData.name, 
-            description: formData.description,
-            messageLimit: Number(formData.messageLimit),
-            priceGBP: Number(formData.priceGBP),
-            grantedModules: formData.grantedModules,
-            isActive: formData.isActive
-        });
-      }
+    const outcome = await action.run(
+      async () => {
+        if (editingPlan) {
+          await updatePlan({
+              id: editingPlan._id,
+              name: formData.name,
+              description: formData.description,
+              messageLimit: Number(formData.messageLimit),
+              priceGBP: Number(formData.priceGBP),
+              grantedModules: formData.grantedModules,
+              isActive: formData.isActive
+          });
+        } else {
+          await createPlan({
+              name: formData.name,
+              description: formData.description,
+              messageLimit: Number(formData.messageLimit),
+              priceGBP: Number(formData.priceGBP),
+              grantedModules: formData.grantedModules,
+              isActive: formData.isActive
+          });
+        }
+      },
+      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
+    );
+    if (outcome.ok) {
       setIsAddModalOpen(false);
-    } catch {
-      setSubmitError(t("errors.saveFailed"));
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+    if (outcome.message) setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
     if (deletingPlan) {
-      setIsSubmitting(true);
-      try {
-        await deletePlan({ id: deletingPlan._id });
+      const outcome = await action.run(() => deletePlan({ id: deletingPlan._id }), {
+        suppressErrorToast: true,
+        fallbackMessage: t("errors.deleteFailed"),
+      });
+      if (outcome.ok) {
         setDeletingPlan(null);
-      } catch {
-        setSubmitError(t("errors.deleteFailed"));
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
+      if (outcome.message) setSubmitError(outcome.message);
     }
   };
 
@@ -272,7 +275,7 @@ export default function SubscriptionPlansPage() {
           formData={formData}
           setFormData={setFormData}
           submitError={submitError}
-          isSubmitting={isSubmitting}
+          isSubmitting={action.isBusy()}
           onEditorClose={() => setIsAddModalOpen(false)}
           onSubmit={handleSubmit}
           grantsControl={

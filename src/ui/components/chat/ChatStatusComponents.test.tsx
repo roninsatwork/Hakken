@@ -1,10 +1,15 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import React, { type ReactElement } from "react";
+import { render as renderBare, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { ToastProvider } from "@/src/context/ToastContext";
 import ChatMessage from "./ChatMessage";
 import SwarmStatusCard from "./SwarmStatusCard";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
+
+// A finished reply carries the rating row, which reports failures through the
+// house action runner and so reads the toast context the root layout supplies.
+const render = (ui: ReactElement) => renderBare(ui, { wrapper: ToastProvider });
 
 const useQueryMock = vi.fn();
 
@@ -173,12 +178,19 @@ describe("chat status components", () => {
     useQueryMock.mockReturnValue(undefined);
     const { container, rerender } = render(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
 
+    // Everything here now renders inside the toast provider the chat reports
+    // failures through, and that provider draws its own empty region — so
+    // "renders nothing" means the card drew nothing, not that the tree is
+    // bare. Anything the provider owns carries role="alert".
+    const cardDrewNothing = () =>
+      Array.from(container.children).every((child) => child.getAttribute("role") === "alert");
+
     rerender(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(cardDrewNothing()).toBe(true);
 
     useQueryMock.mockReturnValue([]);
     rerender(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(cardDrewNothing()).toBe(true);
   });
 
   it("renders swarm execution logs with every status state", () => {

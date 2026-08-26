@@ -12,7 +12,7 @@ import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
@@ -40,12 +40,10 @@ export default function AIModelProvidersPage() {
   const syncOpenRouterModels = useAction(api.aiModelsActions.syncOpenRouterModels);
   const testProviderConnection = useAction(api.aiModelsActions.testProviderConnection);
   const setProviderEnabled = useMutation(api.aiModels.setProviderEnabled);
+  const action = useAdminAction({ scope: "admin-ai-model-providers" });
 
-  const [syncingProvider, setSyncingProvider] = useState<SyncProviderKey | null>(null);
-  const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [providerError, setProviderError] = useState("");
   const [disableTarget, setDisableTarget] = useState<string | null>(null);
-  const [isDisabling, setIsDisabling] = useState(false);
 
   // Only asked for while a disable is being confirmed.
   const disableUsage = useQuery(
@@ -83,31 +81,30 @@ export default function AIModelProvidersPage() {
   };
 
   const syncProvider = async (providerKey: SyncProviderKey) => {
-    setSyncingProvider(providerKey);
     setProviderError("");
-    try {
-      await syncActionsByProvider[providerKey]();
-    } catch (err) {
-      console.error(err);
-      setProviderError(t("syncFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
-    } finally {
-      setSyncingProvider(null);
+    const outcome = await action.run(() => syncActionsByProvider[providerKey](), {
+      key: `sync:${providerKey}`,
+      suppressErrorToast: true,
+    });
+    if (!outcome.ok && outcome.message) {
+      setProviderError(t("syncFailed", { provider: providerKey, message: outcome.message }));
     }
   };
 
   const testProvider = async (providerKey: string) => {
-    setTestingProvider(providerKey);
     setProviderError("");
-    try {
-      const result = await testProviderConnection({ providerKey });
-      if (!result.ok) {
-        setProviderError(t("connectionFailed", { provider: getProviderDisplayName(providerKey), message: result.message }));
+    const outcome = await action.run(() => testProviderConnection({ providerKey }), {
+      key: `test:${providerKey}`,
+      suppressErrorToast: true,
+    });
+    if (outcome.ok) {
+      if (!outcome.data.ok) {
+        setProviderError(t("connectionFailed", { provider: getProviderDisplayName(providerKey), message: outcome.data.message }));
       }
-    } catch (err) {
-      console.error(err);
-      setProviderError(t("testFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
-    } finally {
-      setTestingProvider(null);
+      return;
+    }
+    if (outcome.message) {
+      setProviderError(t("testFailed", { provider: providerKey, message: outcome.message }));
     }
   };
 
@@ -123,26 +120,28 @@ export default function AIModelProvidersPage() {
       setDisableTarget(providerKey);
       return;
     }
-    try {
-      await setProviderEnabled({ providerKey, isEnabled: true });
-    } catch (err) {
-      console.error(err);
-      setProviderError(t("updateFailed", { provider: providerKey, message: getErrorMessage(err, String(err)) }));
+    const outcome = await action.run(() => setProviderEnabled({ providerKey, isEnabled: true }), {
+      key: `toggle:${providerKey}`,
+      suppressErrorToast: true,
+    });
+    if (!outcome.ok && outcome.message) {
+      setProviderError(t("updateFailed", { provider: providerKey, message: outcome.message }));
     }
   };
 
   const confirmDisable = async () => {
     if (!disableTarget) return;
-    setIsDisabling(true);
     setProviderError("");
-    try {
-      await setProviderEnabled({ providerKey: disableTarget, isEnabled: false });
+    const outcome = await action.run(
+      () => setProviderEnabled({ providerKey: disableTarget, isEnabled: false }),
+      { key: `toggle:${disableTarget}`, suppressErrorToast: true },
+    );
+    if (outcome.ok) {
       setDisableTarget(null);
-    } catch (err) {
-      console.error(err);
-      setProviderError(t("updateFailed", { provider: disableTarget, message: getErrorMessage(err, String(err)) }));
-    } finally {
-      setIsDisabling(false);
+      return;
+    }
+    if (outcome.message) {
+      setProviderError(t("updateFailed", { provider: disableTarget, message: outcome.message }));
     }
   };
 
@@ -243,15 +242,15 @@ export default function AIModelProvidersPage() {
             align: "right",
             className: "w-[18%]",
             cell: (provider) => {
-              const isTesting = testingProvider === provider.providerKey;
+              const isTesting = action.isBusy(`test:${provider.providerKey}`);
               const syncProviderKey = isSyncProviderKey(provider.providerKey) ? provider.providerKey : null;
-              const isSyncing = syncProviderKey !== null && syncingProvider === syncProviderKey;
+              const isSyncing = action.isBusy(`sync:${provider.providerKey}`);
               return (
                 <div className="flex items-center justify-end gap-2">
                   <WriteButton
                     type="button"
                     onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
-                    disabled={!syncProviderKey || syncingProvider !== null}
+                    disabled={!syncProviderKey || isSyncing}
                     className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
                   >
                     {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
@@ -301,7 +300,7 @@ export default function AIModelProvidersPage() {
         <ModelProviderDisableDialog
           providerName={getProviderDisplayName(disableTarget)}
           disableUsage={disableUsage}
-          isDisabling={isDisabling}
+          isDisabling={action.isBusy(`toggle:${disableTarget}`)}
           onClose={() => setDisableTarget(null)}
           onConfirm={confirmDisable}
         />

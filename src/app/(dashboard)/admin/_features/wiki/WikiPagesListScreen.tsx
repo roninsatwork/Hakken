@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -44,6 +45,7 @@ export function WikiPagesListScreen({
 }) {
   const t = useTranslations("aiPages");
   const { platformName } = useSystemSettings();
+  const action = useAdminAction({ scope: "admin-wiki-pages" });
   const [search, setSearch] = useState("");
   const [sortByUse, setSortByUse] = useState(false);
   const [kindFilter, setKindFilter] = useState<WikiKindFilter | null>(null);
@@ -121,11 +123,11 @@ export function WikiPagesListScreen({
   const deletePageGlobal = useMutation(api.wikiPages.deletePageForGlobal);
   const clearWikiCompany = useMutation(api.wikiPages.clearWikiForCompany);
   const [pageToDelete, setPageToDelete] = useState<{ pageId: Id<"wikiPages">; title: string } | null>(null);
-  const [isDeletingPage, setIsDeletingPage] = useState(false);
   const [deletePageError, setDeletePageError] = useState("");
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
-  const [isClearingWiki, setIsClearingWiki] = useState(false);
   const [clearWikiError, setClearWikiError] = useState("");
+  const isDeletingPage = action.isBusy("delete");
+  const isClearingWiki = action.isBusy("clear");
 
   // The goals door (personal-layer-and-goals-plan.md, part 1): goals are
   // the one page kind people write from scratch — the Distiller never does.
@@ -134,59 +136,65 @@ export function WikiPagesListScreen({
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [goalTitle, setGoalTitle] = useState("");
   const [goalContent, setGoalContent] = useState("");
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [goalError, setGoalError] = useState("");
+  const isSavingGoal = action.isBusy("goal");
 
   const handleSaveGoal = async () => {
-    if (isSavingGoal || !goalTitle.trim() || !goalContent.trim()) return;
-    setIsSavingGoal(true);
+    if (!goalTitle.trim() || !goalContent.trim()) return;
     setGoalError("");
-    try {
-      if (companyId) await createGoalCompany({ companyId, title: goalTitle, content: goalContent });
-      else await createGoalGlobal({ title: goalTitle, content: goalContent });
+    const outcome = await action.run(
+      () =>
+        companyId
+          ? createGoalCompany({ companyId, title: goalTitle, content: goalContent })
+          : createGoalGlobal({ title: goalTitle, content: goalContent }),
+      { key: "goal", suppressErrorToast: true, fallbackMessage: t("goal.failed") },
+    );
+    if (outcome.ok) {
       setIsGoalFormOpen(false);
       setGoalTitle("");
       setGoalContent("");
-    } catch {
-      setGoalError(t("goal.failed"));
-    } finally {
-      setIsSavingGoal(false);
+      return;
     }
+    if (outcome.message) setGoalError(outcome.message);
   };
 
   const handleConfirmPageDelete = async () => {
-    if (!pageToDelete || isDeletingPage) return;
-    setIsDeletingPage(true);
+    if (!pageToDelete) return;
     setDeletePageError("");
-    try {
-      if (companyId) await deletePageCompany({ companyId, pageId: pageToDelete.pageId });
-      else await deletePageGlobal({ pageId: pageToDelete.pageId });
+    const outcome = await action.run(
+      () =>
+        companyId
+          ? deletePageCompany({ companyId, pageId: pageToDelete.pageId })
+          : deletePageGlobal({ pageId: pageToDelete.pageId }),
+      { key: "delete", suppressErrorToast: true, fallbackMessage: t("delete.failed") },
+    );
+    if (outcome.ok) {
       setPageToDelete(null);
-    } catch {
-      setDeletePageError(t("delete.failed"));
-    } finally {
-      setIsDeletingPage(false);
+      return;
     }
+    if (outcome.message) setDeletePageError(outcome.message);
   };
 
   const handleConfirmClearWiki = async () => {
-    if (!companyId || isClearingWiki) return;
-    setIsClearingWiki(true);
+    if (!companyId) return;
     setClearWikiError("");
-    try {
-      // Batched on the server; pressed once here. The loop ends when the
-      // wiki reports itself empty, however many pages it held.
-      let remaining = 1;
-      while (remaining > 0) {
-        const result = await clearWikiCompany({ companyId });
-        remaining = result.remaining;
-      }
+    const outcome = await action.run(
+      async () => {
+        // Batched on the server; pressed once here. The loop ends when the
+        // wiki reports itself empty, however many pages it held.
+        let remaining = 1;
+        while (remaining > 0) {
+          const result = await clearWikiCompany({ companyId });
+          remaining = result.remaining;
+        }
+      },
+      { key: "clear", suppressErrorToast: true, fallbackMessage: t("clear.failed") },
+    );
+    if (outcome.ok) {
       setIsClearConfirmOpen(false);
-    } catch {
-      setClearWikiError(t("clear.failed"));
-    } finally {
-      setIsClearingWiki(false);
+      return;
     }
+    if (outcome.message) setClearWikiError(outcome.message);
   };
 
   const isLoading = rows.isLoading;

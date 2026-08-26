@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useToast } from "@/src/context/ToastContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Cable, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { Button } from "@/src/ui/components/screens/Button";
 import { formatDateTime } from "@/src/lib/dates";
@@ -53,7 +53,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export default function ConnectorSetupPage() {
   const t = useTranslations("admin.aiTools.connector");
   const { platformName } = useSystemSettings();
-  const { showErrorToast } = useToast();
+  const action = useAdminAction({ scope: "admin-connector-detail" });
   const params = useParams();
   const id = params.id as Id<"toolConnectors">;
 
@@ -75,11 +75,11 @@ export default function ConnectorSetupPage() {
   const beginConnectorOAuth = useMutation(api.aiTools.beginConnectorOAuth);
   const disconnectConnectorOAuth = useMutation(api.aiTools.disconnectConnectorOAuth);
 
-  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const isSaving = action.isBusy("save");
+  const isChecking = action.isBusy("check");
+  const isConnecting = action.isBusy("connect");
+  const isDisconnecting = action.isBusy("disconnect");
 
   // The callback route lands the admin back here with the outcome in the URL.
   const oauthCallbackError = searchParams.get("oauthError");
@@ -126,66 +126,46 @@ export default function ConnectorSetupPage() {
 
   const handleSave = async (event: FormEvent) => {
     event.preventDefault();
-    if (isSaving) return;
-    setIsSaving(true);
-    try {
-      await updateConnectorInstall({
-        connectorId: id,
-        configuredSecretRefs: parseSecretRefs(form.configuredSecretRefs),
-        enabledToolMappings: form.enabledToolMappings,
-        isActive: form.isActive,
-        ...(accountRefLabel ? { authAccountRef: form.authAccountRef } : {}),
-        ...(details.canManageTenantScope ? {
-          tenantAvailability: form.tenantAvailability,
-          companyId: form.companyId ? form.companyId as Id<"companies"> : undefined,
-        } : {}),
-      });
+    const outcome = await action.run(
+      () =>
+        updateConnectorInstall({
+          connectorId: id,
+          configuredSecretRefs: parseSecretRefs(form.configuredSecretRefs),
+          enabledToolMappings: form.enabledToolMappings,
+          isActive: form.isActive,
+          ...(accountRefLabel ? { authAccountRef: form.authAccountRef } : {}),
+          ...(details.canManageTenantScope ? {
+            tenantAvailability: form.tenantAvailability,
+            companyId: form.companyId ? form.companyId as Id<"companies"> : undefined,
+          } : {}),
+        }),
+      { key: "save" },
+    );
+    if (outcome.ok) {
       setDraft(null);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleCheck = async () => {
-    if (isChecking) return;
-    setIsChecking(true);
-    try {
-      await validateConnectorConfiguration({ connectorId: id });
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsChecking(false);
-    }
+    await action.run(() => validateConnectorConfiguration({ connectorId: id }), { key: "check" });
   };
 
   const handleConnect = async () => {
-    if (isConnecting) return;
-    setIsConnecting(true);
-    try {
-      // Begin stores the pending connection; the browser then carries only
-      // its single-use state to the consent screen and back.
-      const { authorizationUrl } = await beginConnectorOAuth({ connectorId: id });
-      window.location.href = authorizationUrl;
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-      setIsConnecting(false);
-    }
+    await action.run(
+      async () => {
+        // Begin stores the pending connection; the browser then carries only
+        // its single-use state to the consent screen and back.
+        const { authorizationUrl } = await beginConnectorOAuth({ connectorId: id });
+        window.location.href = authorizationUrl;
+      },
+      { key: "connect" },
+    );
   };
 
   const handleDisconnect = async () => {
-    if (isDisconnecting) return;
-    setIsDisconnecting(true);
-    try {
-      await disconnectConnectorOAuth({ connectorId: id });
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsDisconnecting(false);
-    }
+    await action.run(() => disconnectConnectorOAuth({ connectorId: id }), { key: "disconnect" });
   };
 
   const isOAuthConnector = (definition?.authMode ?? connector.authMode) === "OAUTH";

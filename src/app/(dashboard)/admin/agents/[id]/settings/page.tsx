@@ -1,11 +1,11 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AgentBudgetFields } from "../../_components/AgentBudgetFields";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -126,11 +126,10 @@ export default function AgentOverviewPage() {
   const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const updateAgent = useMutation(api.agents.updateAgent);
+  const action = useAdminAction({ scope: "admin-agent-settings" });
 
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
-  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState("");
 
   // What "follow the platform default" would actually mean, named before it is
   // chosen rather than left as a greyed-out box. The server resolves it for this
@@ -168,13 +167,14 @@ export default function AgentOverviewPage() {
     return ` · ${input} in · ${output} out`;
   };
 
-  const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
+  const [seenAgentId, setSeenAgentId] = useState<Id<"agents"> | null>(null);
 
-  useEffect(() => {
-    if (!agent || initializedAgentIdRef.current === agent._id) return;
-    if (!agent.modelId && activeModelsData === undefined) return;
-
-    initializedAgentIdRef.current = agent._id;
+  if (
+    agent
+    && seenAgentId !== agent._id
+    && (agent.modelId || activeModelsData !== undefined)
+  ) {
+    setSeenAgentId(agent._id);
     setFormData({
       name: agent.name || "",
       description: agent.description || "",
@@ -205,16 +205,14 @@ export default function AgentOverviewPage() {
       maxCostGBP: agent.maxCostGBP ? String(agent.maxCostGBP) : "",
       storageId: undefined,
     });
-  }, [agent, activeModelsData, defaultModelId]);
+  }
 
   const handleSave = async (e?: FormEvent) => {
     if (e) {
       e.preventDefault();
     }
-    setIsSaving(true);
-    setSaveError("");
-    try {
-      await updateAgent({
+    const outcome = await action.run(
+      () => updateAgent({
         id: agentId,
         name: formData.name,
         description: formData.description,
@@ -238,14 +236,13 @@ export default function AgentOverviewPage() {
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
         maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
         storageId: formData.storageId
-      });
+      }),
+      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
+    );
+    if (outcome.ok) {
       setFormData((prev) => ({ ...prev, storageId: undefined }));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (err: unknown) {
-      setSaveError(getErrorMessage(err, t("errors.saveFailed")));
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -275,14 +272,14 @@ export default function AgentOverviewPage() {
         <div className="flex justify-end">
           <SaveAction
             type="submit"
-            isSaving={isSaving}
+            isSaving={action.isBusy()}
             label={t("sections.identity.saveButton")}
             savingLabel={t("sections.identity.saving")}
             successLabel={t("sections.identity.synchronized")}
             showSuccess={saveSuccess}
           />
         </div>
-        <SaveError>{saveError}</SaveError>
+        <SaveError>{action.error}</SaveError>
 
         {/* Two columns rather than one.
             Every control on this page used to be full width, so seven settings

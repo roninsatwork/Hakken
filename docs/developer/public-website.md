@@ -134,8 +134,11 @@ fixture-branded screenshots.
 `ProductPanels` contains proof panels for Properties, Reports, and Posture
 Studio. Those vertical references are wrapped by template removal comments in
 the route where required by the template boundary. When adding public showcase
-routes for verticals, update `template.manifest.json` in the same product
-change as the route implementation.
+routes for verticals, wrap the vertical-specific lines in a
+`template:remove:start <vertical>` / `template:remove:end` fence in the same
+product change as the route implementation. `scripts/strip-verticals.mjs`
+reads those fences, and `npm run check:fences` fails the build if one is
+unclosed or names a vertical that does not exist.
 
 ## Copy Rules
 

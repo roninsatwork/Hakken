@@ -33,7 +33,7 @@ import {
   type WaterfallRow,
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
-import { toUserFacingMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 
 const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
@@ -89,24 +89,50 @@ export function AgentJobDetailContent({
   const upsertFeedback = useMutation(api.agentRunFeedback.upsertForRun);
   const createEvalFixture = useMutation(api.agentEvalFixtures.createFromRun);
 
-  const [busy, setBusy] = useState<string | null>(null);
+  const action = useAdminAction({ scope: "admin-agent-run-detail" });
   const [notice, setNotice] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const [rating, setRating] = useState(false);
 
-  const perform = async (key: string, work: () => Promise<unknown>, done: string) => {
-    setBusy(key);
+  const handleReplay = async () => {
     setNotice(null);
-    try {
-      await work();
-      setNotice({ tone: "good", text: done });
-    } catch (error) {
-      setNotice({
-        tone: "bad",
-        text: toUserFacingMessage(error, t("actionFailed")),
-      });
-    } finally {
-      setBusy(null);
-    }
+    const outcome = await action.run(() => replayRun({ runId, mode: "CURRENT_ACTIVE" }), {
+      key: "replay",
+      suppressErrorToast: true,
+      fallbackMessage: t("actionFailed"),
+    });
+    if (outcome.ok) setNotice({ tone: "good", text: t("replayDone") });
+    else if (outcome.message) setNotice({ tone: "bad", text: outcome.message });
+  };
+
+  const handleCreateCheck = async () => {
+    setNotice(null);
+    const outcome = await action.run(() => createEvalFixture({ runId }), {
+      key: "check",
+      suppressErrorToast: true,
+      fallbackMessage: t("actionFailed"),
+    });
+    if (outcome.ok) setNotice({ tone: "good", text: t("checkDone") });
+    else if (outcome.message) setNotice({ tone: "bad", text: outcome.message });
+  };
+
+  const handleRateGood = async () => {
+    setNotice(null);
+    const outcome = await action.run(
+      () => upsertFeedback({ runId, rating: "POSITIVE", labels: ["GOOD_ANSWER"] }),
+      { key: "rate-good", suppressErrorToast: true, fallbackMessage: t("actionFailed") },
+    );
+    if (outcome.ok) setNotice({ tone: "good", text: t("ratedGood") });
+    else if (outcome.message) setNotice({ tone: "bad", text: outcome.message });
+  };
+
+  const handleRateBad = async () => {
+    setNotice(null);
+    const outcome = await action.run(
+      () => upsertFeedback({ runId, rating: "NEGATIVE", labels: ["INCORRECT"] }),
+      { key: "rate-bad", suppressErrorToast: true, fallbackMessage: t("actionFailed") },
+    );
+    if (outcome.ok) setNotice({ tone: "good", text: t("ratedBad") });
+    else if (outcome.message) setNotice({ tone: "bad", text: outcome.message });
   };
 
   const rows = useMemo(() => {
@@ -206,15 +232,9 @@ export function AgentJobDetailContent({
           {canReplay && (
             <Action
               RawButton={RawButton}
-              busy={busy === "replay"}
-              disabled={busy !== null}
-              onClick={() =>
-                perform(
-                  "replay",
-                  () => replayRun({ runId, mode: "CURRENT_ACTIVE" }),
-                  t("replayDone"),
-                )
-              }
+              busy={action.isBusy("replay")}
+              disabled={action.isBusy()}
+              onClick={() => void handleReplay()}
               icon={<RotateCcw className="w-3.5 h-3.5" />}
               label={t("runAgain")}
             />
@@ -222,7 +242,7 @@ export function AgentJobDetailContent({
           <Action
             RawButton={RawButton}
             onClick={() => setRating((open) => !open)}
-            disabled={busy !== null}
+            disabled={action.isBusy()}
             icon={<ThumbsUp className="w-3.5 h-3.5" />}
             label={t("rate")}
             active={rating}
@@ -230,15 +250,9 @@ export function AgentJobDetailContent({
           {detail.evalFixtureContext.canCreateFromRun && (
             <Action
               RawButton={RawButton}
-              busy={busy === "check"}
-              disabled={busy !== null}
-              onClick={() =>
-                perform(
-                  "check",
-                  () => createEvalFixture({ runId }),
-                  t("checkDone"),
-                )
-              }
+              busy={action.isBusy("check")}
+              disabled={action.isBusy()}
+              onClick={() => void handleCreateCheck()}
               icon={<ClipboardCheck className="w-3.5 h-3.5" />}
               label={detail.evalFixtureContext.activeCount > 0 ? t("updateCheck") : t("turnIntoCheck")}
             />
@@ -252,29 +266,17 @@ export function AgentJobDetailContent({
           <div className="flex gap-2">
             <Action
               RawButton={RawButton}
-              busy={busy === "rate-good"}
-              disabled={busy !== null}
-              onClick={() =>
-                perform(
-                  "rate-good",
-                  () => upsertFeedback({ runId, rating: "POSITIVE", labels: ["GOOD_ANSWER"] }),
-                  t("ratedGood"),
-                )
-              }
+              busy={action.isBusy("rate-good")}
+              disabled={action.isBusy()}
+              onClick={() => void handleRateGood()}
               icon={<ThumbsUp className="w-3.5 h-3.5" />}
               label={t("itDid")}
             />
             <Action
               RawButton={RawButton}
-              busy={busy === "rate-bad"}
-              disabled={busy !== null}
-              onClick={() =>
-                perform(
-                  "rate-bad",
-                  () => upsertFeedback({ runId, rating: "NEGATIVE", labels: ["INCORRECT"] }),
-                  t("ratedBad"),
-                )
-              }
+              busy={action.isBusy("rate-bad")}
+              disabled={action.isBusy()}
+              onClick={() => void handleRateBad()}
               icon={<ThumbsDown className="w-3.5 h-3.5" />}
               label={t("itDidNot")}
             />

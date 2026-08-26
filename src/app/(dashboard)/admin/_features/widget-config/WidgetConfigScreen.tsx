@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { WidgetAppearanceSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection";
 import { WidgetConversationStartersSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection";
@@ -57,12 +58,12 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
   const widget = companyId ? companyWidget : globalWidget;
   const saveWidget = useMutation(api.widgets.saveWidget);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const action = useAdminAction({ scope: "admin-widget-config" });
 
   const defaultName = companyId ? "Website Bot" : `${platformName} Intercept Bot`;
   const defaultColor = companyId ? "#000000" : "#4f46e5";
 
   const activeTab = getWidgetActiveTab(searchParams.get("section"));
-  const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hostOrigin, setHostOrigin] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -81,7 +82,6 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
   const [kioskEnabled, setKioskEnabled] = useState(false);
   const [conversationStarters, setConversationStarters] = useState<string[]>([]);
   const [starterInput, setStarterInput] = useState("");
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(true);
 
   useEffect(() => {
@@ -147,30 +147,31 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
       return;
     }
 
-    setIsUploadingLogo(true);
     setFeedbackMessage("");
 
-    try {
-      const objectUrl = URL.createObjectURL(file);
-      setThemeLogoUrl(objectUrl);
+    const outcome = await action.run(
+      async () => {
+        const objectUrl = URL.createObjectURL(file);
+        setThemeLogoUrl(objectUrl);
 
-      const uploadUrl = await generateUploadUrl();
-      const result = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
 
-      if (!result.ok) throw new Error("Upload failed");
-      const { storageId } = await result.json();
+        if (!result.ok) throw new Error(t("errors.logoUpload"));
+        const { storageId } = await result.json();
 
-      setThemeLogoUrl(storageId);
-    } catch (error) {
-      console.error(error);
+        setThemeLogoUrl(storageId);
+      },
+      { key: "logo-upload", suppressErrorToast: true, fallbackMessage: t("errors.logoUpload") },
+    );
+
+    if (!outcome.ok && outcome.message) {
       setThemeLogoUrl("");
-      setFeedbackMessage(t("errors.logoUpload"));
-    } finally {
-      setIsUploadingLogo(false);
+      setFeedbackMessage(outcome.message);
     }
   };
 
@@ -186,35 +187,37 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
   };
 
   const handleCreateOrUpdate = async () => {
-    setIsSaving(true);
     setFeedbackMessage("");
 
-    try {
-      await saveWidget({
-        widgetId: widget?._id,
-        ...(companyId ? { companyId } : {}),
-        name,
-        isActive: true,
-        isGlobal: !companyId,
-        allowedDomains: parseAllowedDomains(allowedDomains),
-        themeGreeting,
-        themePrimaryColor,
-        themeLogoUrl,
-        themePlaceholder,
-        enableSounds,
-        showPopupPreview,
-        requireName,
-        requireEmail,
-        enableGreeting,
-        kioskEnabled,
-        conversationStarters,
-      });
-    } catch (error) {
-      console.error(error);
-      setFeedbackMessage(companyId ? t("errors.saveCompany") : t("errors.saveGlobal"));
-    } finally {
-      setIsSaving(false);
-    }
+    const outcome = await action.run(
+      () =>
+        saveWidget({
+          widgetId: widget?._id,
+          ...(companyId ? { companyId } : {}),
+          name,
+          isActive: true,
+          isGlobal: !companyId,
+          allowedDomains: parseAllowedDomains(allowedDomains),
+          themeGreeting,
+          themePrimaryColor,
+          themeLogoUrl,
+          themePlaceholder,
+          enableSounds,
+          showPopupPreview,
+          requireName,
+          requireEmail,
+          enableGreeting,
+          kioskEnabled,
+          conversationStarters,
+        }),
+      {
+        key: "save",
+        suppressErrorToast: true,
+        fallbackMessage: companyId ? t("errors.saveCompany") : t("errors.saveGlobal"),
+      },
+    );
+
+    if (!outcome.ok && outcome.message) setFeedbackMessage(outcome.message);
   };
 
   const codeSnippet = buildWidgetEmbedSnippet(hostOrigin, widget?._id);
@@ -262,10 +265,10 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
         {widget && (
           <WriteButton
             onClick={handleCreateOrUpdate}
-            disabled={isSaving}
+            disabled={action.isBusy("save")}
             className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand text-white font-medium tracking-wide text-[13px] hover:bg-brand/90 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] transition-all shrink-0"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {action.isBusy("save") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{companyId ? t("publish") : t("save")}</span>
           </WriteButton>
         )}
@@ -280,12 +283,12 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
         </div>
       ) : !widget ? (
         companyId ? (
-          <WidgetEmptyState isSaving={isSaving} onInitialize={handleCreateOrUpdate} />
+          <WidgetEmptyState isSaving={action.isBusy("save")} onInitialize={handleCreateOrUpdate} />
         ) : (
           <WidgetEmptyState
             actionLabel={t("emptyGlobal.action")}
             description={t("emptyGlobal.description")}
-            isSaving={isSaving}
+            isSaving={action.isBusy("save")}
             onInitialize={handleCreateOrUpdate}
             title={t("emptyGlobal.title")}
           />
@@ -297,7 +300,7 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
               <WidgetAppearanceSection
                 activeColor={activeColor}
                 enableSounds={enableSounds}
-                isUploadingLogo={isUploadingLogo}
+                isUploadingLogo={action.isBusy("logo-upload")}
                 logoPreviewUrl={logoPreviewUrl}
                 name={name}
                 onLogoUpload={handleLogoUpload}

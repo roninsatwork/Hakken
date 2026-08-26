@@ -18,8 +18,8 @@ import {
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
-import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
@@ -45,20 +45,17 @@ export function KnowledgeDocumentContent({
 }: KnowledgeDocumentContentProps) {
   const t = useTranslations("admin.companyDetails.knowledgeDoc");
   const retryDocumentIngestion = useMutation(api.knowledge.retryDocumentIngestion);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const action = useAdminAction({ scope: "admin-knowledge-document" });
   const [retryError, setRetryError] = useState("");
+  const isRetrying = action.isBusy();
 
   const handleRetry = async () => {
-    if (isRetrying) return;
-    setIsRetrying(true);
     setRetryError("");
-    try {
-      await retryDocumentIngestion({ documentId });
-    } catch (error: unknown) {
-      setRetryError(getErrorMessage(error, t("retryFailed")));
-    } finally {
-      setIsRetrying(false);
-    }
+    const outcome = await action.run(() => retryDocumentIngestion({ documentId }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("retryFailed"),
+    });
+    if (!outcome.ok) setRetryError(outcome.message);
   };
 
   const backHref = `/admin/companies/${companyId}/ai/knowledge`;

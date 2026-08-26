@@ -22,7 +22,7 @@ Sonae is a reusable foundation for agentic applications with:
 Treat these as platform core:
 
 - `convex/schema.ts`: database tables and indexes.
-- `convex/agentRuntime.ts`: governed agent execution loop.
+- `convex/agentRuntime.ts` and `convex/agentObjectiveLoop.ts`: the runtime's internal actions and the governed execution loop they hand off to.
 - `convex/agentRuns.ts`: durable run, step, tool-call, approval, replay, cancel, and analytics APIs.
 - `convex/agents.ts` and `convex/agentService.ts`: agent CRUD, builder flow, readiness, template creation, and agent record normalization.
 - `convex/aiToolExecutionService.ts`: tool normalization, policy checks, registered handlers, and execution dispatch.

@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Field } from "@/src/ui/components/screens/Field";
 
 function isRightmoveSearchUrl(value: string) {
@@ -24,11 +24,12 @@ function isRightmoveSearchUrl(value: string) {
 export default function PropertiesSearchPage() {
   const t = useTranslations();
   const startRightmoveCollection = useMutation(api.propertyAgents.startRightmoveCollection);
-  
+  const action = useAdminAction({ scope: "app-properties-search" });
+
   const [baseRightmoveUrl, setBaseRightmoveUrl] = useState("");
   const [maxProperties, setMaxProperties] = useState(100);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageIsError, setMessageIsError] = useState(false);
 
   const handleUrlPaste = (val: string) => {
     setBaseRightmoveUrl(val);
@@ -41,24 +42,24 @@ export default function PropertiesSearchPage() {
     
     if (!isRightmoveSearchUrl(trimmedUrl)) {
       setMessage(t('properties.search.urlError'));
+      setMessageIsError(true);
       return;
     }
 
-    setIsSubmitting(true);
     setMessage("");
+    setMessageIsError(false);
 
-    try {
-      await startRightmoveCollection({
-        rightmoveUrl: trimmedUrl,
-        maxProperties,
-      });
+    const outcome = await action.run(
+      () => startRightmoveCollection({ rightmoveUrl: trimmedUrl, maxProperties }),
+      { suppressErrorToast: true, fallbackMessage: t('properties.search.urlError') }
+    );
 
+    if (outcome.ok) {
       setMessage(t('properties.search.searchSuccess'));
       setBaseRightmoveUrl("");
-    } catch (err: unknown) {
-      setMessage(`Error: ${getErrorMessage(err, t('properties.search.urlError'))}`);
-    } finally {
-      setIsSubmitting(false);
+    } else if (outcome.message) {
+      setMessage(outcome.message);
+      setMessageIsError(true);
     }
   };
 
@@ -153,10 +154,10 @@ export default function PropertiesSearchPage() {
               <div className="flex flex-col gap-4 items-end flex-1">
                 <button 
                   type="submit"
-                  disabled={isSubmitting || !baseRightmoveUrl}
+                  disabled={action.isBusy() || !baseRightmoveUrl}
                   className="flex items-center gap-2 px-8 py-3.5 rounded-[12px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50 w-full sm:w-auto justify-center"
                 >
-                  {isSubmitting ? (
+                  {action.isBusy() ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       {t('properties.search.startingSearch')}
@@ -172,7 +173,7 @@ export default function PropertiesSearchPage() {
             </div>
 
             {message && (
-              <div className={`p-5 rounded-[16px] text-[14px] border ${message.startsWith('Error') ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-brand/10 border-brand/20 text-brand'} animate-in fade-in slide-in-from-bottom-2`}>
+              <div className={`p-5 rounded-[16px] text-[14px] border ${messageIsError ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-brand/10 border-brand/20 text-brand'} animate-in fade-in slide-in-from-bottom-2`}>
                 {message}
               </div>
             )}

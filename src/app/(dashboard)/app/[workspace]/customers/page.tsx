@@ -9,6 +9,7 @@ import { Users } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { CursorPaginationFooter, useCursorPagination } from "@/src/ui/components/screens/CursorPagination";
 import { TableFilterSelect, TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { TableHeaderCell, TableHeaderRow, TableLoadingRow, TableShell } from "@/src/ui/components/screens/Table";
@@ -359,6 +360,7 @@ function ClearDatabaseButton() {
   const t = useTranslations("salesData.customers");
   const me = useQuery(api.users.getMe);
   const clearDatabase = useAction(api.salesDataReset.resetSalesData);
+  const action = useAdminAction({ scope: "app-customers-clear" });
   const [state, setState] = useState<"idle" | "confirming" | "clearing" | "cleared" | "error">(
     "idle"
   );
@@ -371,13 +373,16 @@ function ClearDatabaseButton() {
   const onConfirm = async () => {
     setState("clearing");
     setMessage(null);
-    try {
-      await clearDatabase({});
+    const outcome = await action.run(() => clearDatabase({}), {
+      suppressErrorToast: true,
+      fallbackMessage: t("clearFailed"),
+    });
+    if (outcome.ok) {
       setState("cleared");
       setMessage(t("clearDone"));
-    } catch (caught) {
+    } else {
       setState("error");
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+      if (outcome.message) setMessage(outcome.message);
     }
   };
 
@@ -437,6 +442,7 @@ function ResearchRow() {
   const startResearch = useMutation(api.salesDataResearchJobs.startResearchJob);
   const startMarketDiscovery = useMutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob);
   const stopMarketDiscovery = useMutation(api.salesDataMarketDiscovery.stopMarketDiscoveryJob);
+  const action = useAdminAction({ scope: "app-customers-research" });
   const job = useQuery(api.salesDataResearchJobs.getResearchJob, {});
   const marketJob = useQuery(api.salesDataMarketDiscovery.getMarketDiscoveryJob, {});
   const [message, setMessage] = useState<string | null>(null);
@@ -478,30 +484,36 @@ function ResearchRow() {
 
   const onPress = async (mode: "DETAILS" | "PROSPECTS") => {
     clearMessages();
-    try {
-      const result = await startResearch({ mode });
-      if (result.nothingToDo) setMessage(t("researchNothingToDo"));
-    } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+    const outcome = await action.run(() => startResearch({ mode }), {
+      key: mode,
+      suppressErrorToast: true,
+      fallbackMessage: t("researchFailed"),
+    });
+    if (outcome.ok) {
+      if (outcome.data.nothingToDo) setMessage(t("researchNothingToDo"));
+    } else if (outcome.message) {
+      setMessage(outcome.message);
     }
   };
 
   const onStartMarketDiscovery = async () => {
     clearMessages();
-    try {
-      await startMarketDiscovery({});
-    } catch (caught) {
-      setMarketMessage(caught instanceof Error ? caught.message : String(caught));
-    }
+    const outcome = await action.run(() => startMarketDiscovery({}), {
+      key: "market-start",
+      suppressErrorToast: true,
+      fallbackMessage: t("discoveryStartFailed"),
+    });
+    if (!outcome.ok && outcome.message) setMarketMessage(outcome.message);
   };
 
   const onStopMarketDiscovery = async () => {
     clearMessages();
-    try {
-      await stopMarketDiscovery({});
-    } catch (caught) {
-      setMarketMessage(caught instanceof Error ? caught.message : String(caught));
-    }
+    const outcome = await action.run(() => stopMarketDiscovery({}), {
+      key: "market-stop",
+      suppressErrorToast: true,
+      fallbackMessage: t("discoveryStopFailed"),
+    });
+    if (!outcome.ok && outcome.message) setMarketMessage(outcome.message);
   };
 
   const finished = (job?.done ?? 0) + (job?.failed ?? 0);

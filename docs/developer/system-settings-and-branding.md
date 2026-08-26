@@ -72,7 +72,7 @@ Dark and light theme overrides include the main background, radial colors, text 
 
 The provider also sets wrapper `fontFamily` and `fontSize` from settings values. Because it mutates global CSS variables, changes can affect every tenant and every route using shared tokens.
 
-`SidebarNavigation` reads `diagnosticRoutingEnabled` through `useSystemSettings`. When enabled, it shows diagnostic/temporary navigation such as the Arcade route. This is presentation behavior, not authorization. Do not rely on the setting as a security boundary.
+`UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx` reads `diagnosticRoutingEnabled` through `useSystemSettings`. When enabled, it shows diagnostic/temporary navigation such as the Arcade route. This is presentation behavior, not authorization. Do not rely on the setting as a security boundary.
 
 ## Identity And Appearance UI
 

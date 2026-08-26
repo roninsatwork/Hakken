@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { BookmarkPlus, Check, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
 
@@ -29,6 +30,7 @@ export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messag
   const feedback = useQuery(api.messageFeedback.getMineForThread, { threadId: message.threadId });
   const upsert = useMutation(api.messageFeedback.upsertForMessage);
   const saveAnswer = useMutation(api.knowledge.saveAnswerToWiki);
+  const action = useAdminAction({ scope: "assistant-message-feedback" });
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [correction, setCorrection] = useState("");
@@ -46,21 +48,20 @@ export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messag
   ) => {
     if (isSaving) return;
     setIsSaving(true);
-    try {
-      await upsert({
-        messageId: message._id,
-        rating,
-        ...(labels ? { labels } : {}),
-        ...(comment ? { comment } : {}),
-      });
-      setLabelPickerOpen(rating === "NEGATIVE" && !labels);
-    } catch {
-      // A failed rating is not worth an error state in the conversation; the
-      // buttons simply stay as they were.
-      setLabelPickerOpen(false);
-    } finally {
-      setIsSaving(false);
-    }
+    // A failed rating is not worth an error state in the conversation; the
+    // buttons simply stay as they were.
+    const outcome = await action.run(
+      () =>
+        upsert({
+          messageId: message._id,
+          rating,
+          ...(labels ? { labels } : {}),
+          ...(comment ? { comment } : {}),
+        }),
+      { key: "rate", suppressErrorToast: true },
+    );
+    setIsSaving(false);
+    setLabelPickerOpen(outcome.ok && rating === "NEGATIVE" && !labels);
   };
 
   const isPositive = mine?.rating === "POSITIVE";
@@ -84,12 +85,11 @@ export function MessageFeedbackControls({ message }: { message: Pick<Doc<"messag
   const save = async () => {
     if (saveState === "saving" || saveState === "saved") return;
     setSaveState("saving");
-    try {
-      await saveAnswer({ messageId: message._id });
-      setSaveState("saved");
-    } catch {
-      setSaveState("failed");
-    }
+    const outcome = await action.run(() => saveAnswer({ messageId: message._id }), {
+      key: "wiki-save",
+      fallbackMessage: tAnswer("wikiSaveFailed"),
+    });
+    setSaveState(outcome.ok ? "saved" : "failed");
   };
 
   const sendCorrection = async () => {

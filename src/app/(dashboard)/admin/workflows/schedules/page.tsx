@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { lazy, Suspense, useState } from "react";
@@ -21,6 +20,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   formatUtcPreview,
   getPrimaryScheduleTime,
@@ -50,13 +50,13 @@ export default function SchedulesPage() {
   const deleteSchedule = useMutation(api.scheduler.deleteSchedule);
   const toggleSchedule = useMutation(api.scheduler.toggleSchedule);
   const manualRunSchedule = useMutation(api.scheduler.manualRunSchedule);
+  const action = useAdminAction({ scope: "admin-workflow-schedules" });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingSchedule, setDeletingSchedule] = useState<ScheduleRow | null>(null);
   const [messageModal, setMessageModal] = useState<{ title: string; body: string } | null>(null);
   const [dialogsActivated, setDialogsActivated] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = TABLE_PAGE_SIZE;
 
@@ -91,38 +91,53 @@ export default function SchedulesPage() {
   };
 
   const confirmDelete = async () => {
-    if (deletingSchedule) {
-      setIsSubmitting(true);
-      try {
-        await deleteSchedule({ scheduleId: deletingSchedule._id });
-        setDeletingSchedule(null);
-      } catch (err: unknown) {
-        showMessage({ title: t('modals.error.deleteFailed'), body: getErrorMessage(err, tCommon('errors.default')) });
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!deletingSchedule) return;
+    const outcome = await action.run(() => deleteSchedule({ scheduleId: deletingSchedule._id }), {
+      key: `delete:${deletingSchedule._id}`,
+      suppressErrorToast: true,
+      fallbackMessage: tCommon('errors.default'),
+    });
+
+    if (outcome.ok) {
+      setDeletingSchedule(null);
+      return;
+    }
+    if (outcome.message) {
+      showMessage({ title: t('modals.error.deleteFailed'), body: outcome.message });
     }
   };
 
   const handleManualRun = async (
+    scheduleId: Id<"schedules">,
     target: { workflowId?: Id<"workflows">; agentId?: Id<"agents"> },
     e: MouseEvent<HTMLButtonElement>
   ) => {
     e.stopPropagation();
-    try {
-      await manualRunSchedule(target);
+    const outcome = await action.run(() => manualRunSchedule(target), {
+      key: `run:${scheduleId}`,
+      suppressErrorToast: true,
+      fallbackMessage: tCommon('errors.default'),
+    });
+
+    if (outcome.ok) {
       showMessage({ title: t('modals.execution.title'), body: t('modals.execution.body') });
-    } catch (e: unknown) {
-      showMessage({ title: t('modals.error.executionFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
+      return;
+    }
+    if (outcome.message) {
+      showMessage({ title: t('modals.error.executionFailed'), body: outcome.message });
     }
   };
 
   const handleToggle = async (scheduleId: Id<"schedules">, current: boolean, e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    try {
-      await toggleSchedule({ scheduleId, isActive: !current });
-    } catch (e: unknown) {
-      showMessage({ title: t('modals.error.statusFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
+    const outcome = await action.run(() => toggleSchedule({ scheduleId, isActive: !current }), {
+      key: `toggle:${scheduleId}`,
+      suppressErrorToast: true,
+      fallbackMessage: tCommon('errors.default'),
+    });
+
+    if (!outcome.ok && outcome.message) {
+      showMessage({ title: t('modals.error.statusFailed'), body: outcome.message });
     }
   };
 
@@ -229,6 +244,7 @@ export default function SchedulesPage() {
             label={t('actions.forceRun')}
             onClick={() =>
               handleManualRun(
+                schedule._id,
                 { workflowId: schedule.workflowId, agentId: schedule.agentId },
                 { stopPropagation: () => {} } as MouseEvent<HTMLButtonElement>
               )
@@ -297,7 +313,7 @@ export default function SchedulesPage() {
         <Suspense fallback={null}>
           <ScheduleDialogs
             deletingSchedule={deletingSchedule}
-            isSubmitting={isSubmitting}
+            isSubmitting={deletingSchedule ? action.isBusy(`delete:${deletingSchedule._id}`) : false}
             onCloseDelete={() => setDeletingSchedule(null)}
             onConfirmDelete={confirmDelete}
             messageModal={messageModal}

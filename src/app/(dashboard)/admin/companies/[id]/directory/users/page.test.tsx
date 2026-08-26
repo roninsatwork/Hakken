@@ -1,9 +1,15 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as renderBare, screen, fireEvent } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import CompanyUsersPage from "./page";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import type { ReactNode, HTMLAttributes } from "react";
+
+import { ToastProvider } from "@/src/context/ToastContext";
+
+// The screen reports failures through the house action runner, which reads
+// the toast context the root layout always supplies.
+const render = (ui: Parameters<typeof renderBare>[0]) => renderBare(ui, { wrapper: ToastProvider });
 
 type MockQueryFunction = {
   _path?: string;

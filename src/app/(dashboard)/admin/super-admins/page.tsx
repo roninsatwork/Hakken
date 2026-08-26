@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import dynamic from "next/dynamic";
@@ -24,6 +23,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 import type { SuperAdminFormData } from "./SuperAdminDialogs";
 
@@ -156,6 +156,7 @@ function buildDirectoryColumns(actions: {
 
 export default function ManageSuperAdminsPage() {
   const t = useTranslations("admin.superAdmins");
+  const action = useAdminAction({ scope: "admin-super-admins" });
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
@@ -179,8 +180,8 @@ export default function ManageSuperAdminsPage() {
   const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<SuperAdminFormData>({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const isSubmitting = action.isBusy();
 
   const filteredUsers = paginatedUsers.filter((u) =>
     (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -251,43 +252,35 @@ export default function ManageSuperAdminsPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-    setIsSubmitting(true);
-    try {
-      await updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined });
-      setIsAddModalOpen(false);
-    } catch (err: unknown) {
-      setSubmitError(getErrorMessage(err, t("opFailed")));
-    } finally {
-      setIsSubmitting(false);
-    }
+    setSubmitError("");
+    const outcome = await action.run(
+      () => updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined }),
+      { suppressErrorToast: true, fallbackMessage: t("opFailed") }
+    );
+    if (outcome.ok) setIsAddModalOpen(false);
+    else setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
-    if (deletingUser) {
-      setIsSubmitting(true);
-      try {
-        await deleteUser({ id: deletingUser._id });
-        setDeletingUser(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, t("deleteFailed")));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingUser) return;
+    setSubmitError("");
+    const outcome = await action.run(() => deleteUser({ id: deletingUser._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("deleteFailed"),
+    });
+    if (outcome.ok) setDeletingUser(null);
+    else setSubmitError(outcome.message);
   };
 
   const confirmRevoke = async () => {
-    if (deletingInvite) {
-      setIsSubmitting(true);
-      try {
-        await revokeInvite({ id: deletingInvite._id });
-        setDeletingInvite(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, t("revokeFailed")));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingInvite) return;
+    setSubmitError("");
+    const outcome = await action.run(() => revokeInvite({ id: deletingInvite._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("revokeFailed"),
+    });
+    if (outcome.ok) setDeletingInvite(null);
+    else setSubmitError(outcome.message);
   };
 
   return (

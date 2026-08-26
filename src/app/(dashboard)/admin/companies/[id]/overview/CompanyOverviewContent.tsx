@@ -1,13 +1,13 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Save, Loader2, PoundSterling } from "lucide-react";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 
 type CompanyOverviewContentProps = {
@@ -32,6 +32,7 @@ export default function CompanyOverviewContent({
   const t = useTranslations("admin.companyDetails.profile");
   const updateProfile = useMutation(api.companies.updateCompanyProfile);
   const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
+  const action = useAdminAction({ scope: "admin-company-profile" });
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   const [nameVal, setNameVal] = useState("");
@@ -39,36 +40,47 @@ export default function CompanyOverviewContent({
   const [overviewVal, setOverviewVal] = useState("");
   const [planIdVal, setPlanIdVal] = useState("");
 
-  const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ text: "", type: "" });
+  const isSaving = action.isBusy();
 
-  useEffect(() => {
+  // Adopted during render rather than in an effect, as the settings form does:
+  // an effect paints the empty form for a frame before replacing it. The
+  // sentinel is the company's id, not the document. A reference sentinel looks
+  // equivalent and is not: it re-seeds on every server change, which overwrites
+  // whatever the person is typing, and it never settles at all against a caller
+  // that hands back a fresh object each read — which is how the same pattern on
+  // the model pricing screen rendered until React gave up.
+  const [seenCompanyId, setSeenCompanyId] = useState<Id<"companies"> | null>(null);
+  if (company && company._id !== seenCompanyId) {
+    setSeenCompanyId(company._id);
     setNameVal(company.name || "");
     setDescVal(company.description || "");
     setOverviewVal(company.overview || "");
     setPlanIdVal(company.planId || "");
-  }, [company]);
+  }
 
   const handleSave = async () => {
-    setIsSaving(true);
     setSaveMessage({ text: "", type: "" });
-    try {
-      await updateProfile({
-        id: companyId,
-        name: nameVal,
-        description: descVal,
-        overview: overviewVal,
-      });
-      if (isSuperAdmin) {
-        if (planIdVal) await assignPlanToCompany({ id: companyId, planId: planIdVal as Id<"plans"> });
-        else await assignPlanToCompany({ id: companyId, planId: undefined });
-      }
+    const outcome = await action.run(
+      async () => {
+        await updateProfile({
+          id: companyId,
+          name: nameVal,
+          description: descVal,
+          overview: overviewVal,
+        });
+        if (isSuperAdmin) {
+          if (planIdVal) await assignPlanToCompany({ id: companyId, planId: planIdVal as Id<"plans"> });
+          else await assignPlanToCompany({ id: companyId, planId: undefined });
+        }
+      },
+      { suppressErrorToast: true, fallbackMessage: t("saveFailed") }
+    );
+    if (outcome.ok) {
       setSaveMessage({ text: t("saveSuccess"), type: "success" });
       setTimeout(() => setSaveMessage({ text: "", type: "" }), 3000);
-    } catch (error: unknown) {
-      setSaveMessage({ text: getErrorMessage(error, t("saveFailed")), type: "error" });
-    } finally {
-      setIsSaving(false);
+    } else {
+      setSaveMessage({ text: outcome.message, type: "error" });
     }
   };
 

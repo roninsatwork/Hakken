@@ -1,7 +1,7 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import { lazy, Suspense, useState } from "react";
@@ -69,8 +69,7 @@ export default function AgentsPage() {
   const [deletingAgent, setDeletingAgent] = useState<Agent | null>(null);
   const [deleteDialogActivated, setDeleteDialogActivated] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const action = useAdminAction({ scope: "admin-agents-delete" });
 
   const itemsPerPage = TABLE_PAGE_SIZE;
   const agents = useServerPagedTable(api.agents.getPaginatedAgents, { searchTerm }, itemsPerPage);
@@ -86,17 +85,12 @@ export default function AgentsPage() {
   const handleOpenAdd = () => router.push("/admin/agents/new");
 
   const confirmDelete = async () => {
-    if (deletingAgent) {
-      setIsSubmitting(true);
-      try {
-        await deleteAgent({ id: deletingAgent._id });
-        setDeletingAgent(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, t('errors.delete')));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingAgent) return;
+    const outcome = await action.run(() => deleteAgent({ id: deletingAgent._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t('errors.delete'),
+    });
+    if (outcome.ok) setDeletingAgent(null);
   };
 
   const openDelete = (agent: Agent) => {
@@ -226,11 +220,11 @@ export default function AgentsPage() {
           <AgentDeleteDialog
             agentName={deletingAgent?.name ?? ""}
             isOpen={Boolean(deletingAgent)}
-            isSubmitting={isSubmitting}
-            error={submitError}
+            isSubmitting={action.isBusy()}
+            error={action.error ?? ""}
             onClose={() => {
               setDeletingAgent(null);
-              setSubmitError("");
+              action.clearError();
             }}
             onConfirm={confirmDelete}
           />

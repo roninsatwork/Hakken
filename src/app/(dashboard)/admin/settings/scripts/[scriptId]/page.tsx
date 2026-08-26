@@ -18,6 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -76,26 +77,27 @@ export default function MaintenanceScriptDetailPage() {
   const scriptId = params.scriptId ?? "";
   const script = useQuery(api.maintenanceScripts.get, { scriptId });
   const runScript = useMutation(api.maintenanceScripts.run);
+  const action = useAdminAction({ scope: "admin-maintenance-script" });
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const isRunning = action.isBusy();
 
   const handleRun = async () => {
-    setIsRunning(true);
     setFeedback(null);
-    try {
-      const result = await runScript({ scriptId });
-      if (result.success) {
-        setFeedback({ type: "success", message: result.summary ?? t("runCompleted") });
+    const outcome = await action.run(() => runScript({ scriptId }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("runNotStarted"),
+    });
+    if (outcome.ok) {
+      if (outcome.data.success) {
+        setFeedback({ type: "success", message: outcome.data.summary ?? t("runCompleted") });
         setIsConfirmOpen(false);
       } else {
-        setFeedback({ type: "error", message: result.error ?? t("runFailed") });
+        setFeedback({ type: "error", message: outcome.data.error ?? t("runFailed") });
       }
-    } catch {
-      setFeedback({ type: "error", message: t("runNotStarted") });
-    } finally {
-      setIsRunning(false);
+      return;
     }
+    if (outcome.message) setFeedback({ type: "error", message: outcome.message });
   };
 
   if (script === undefined) {

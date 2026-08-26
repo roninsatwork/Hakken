@@ -8,6 +8,7 @@ import { Table2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   CursorPaginationFooter,
   useCursorPagination,
@@ -565,6 +566,7 @@ function ClearAllButton() {
   const t = useTranslations("salesData");
   const me = useQuery(api.users.getMe);
   const clearAll = useAction(api.salesDataReset.clearAllSalesData);
+  const action = useAdminAction({ scope: "app-spreadsheet-import-clear" });
   const [state, setState] = useState<"idle" | "confirming" | "clearing" | "cleared" | "error">(
     "idle"
   );
@@ -577,13 +579,16 @@ function ClearAllButton() {
   const onConfirm = async () => {
     setState("clearing");
     setMessage(null);
-    try {
-      await clearAll({});
+    const outcome = await action.run(() => clearAll({}), {
+      suppressErrorToast: true,
+      fallbackMessage: t("clearAllFailed"),
+    });
+    if (outcome.ok) {
       setState("cleared");
       setMessage(t("clearAllDone"));
-    } catch (caught) {
+    } else {
       setState("error");
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+      if (outcome.message) setMessage(outcome.message);
     }
   };
 

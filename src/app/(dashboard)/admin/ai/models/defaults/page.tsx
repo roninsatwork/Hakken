@@ -11,7 +11,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { cn } from "@/src/ui/lib/utils";
@@ -47,12 +47,11 @@ export default function AIModelDefaultsPage() {
   const setGlobalModelDefault = useMutation(api.aiModels.setGlobalModelDefault);
   const clearGlobalModelDefault = useMutation(api.aiModels.clearGlobalModelDefault);
   const setDefaultModel = useMutation(api.aiModels.setDefaultModel);
+  const action = useAdminAction({ scope: "admin-ai-model-defaults" });
 
   const [defaultsError, setDefaultsError] = useState("");
-  const [savingDefaultUseCase, setSavingDefaultUseCase] = useState<string | null>(null);
   const [everyJobModelId, setEveryJobModelId] = useState("");
   const [isEveryJobConfirmOpen, setIsEveryJobConfirmOpen] = useState(false);
-  const [isApplyingEveryJob, setIsApplyingEveryJob] = useState(false);
 
   const allModels = Array.isArray(allModelsResult) ? allModelsResult : [];
   const providers = Array.isArray(providersResult) ? providersResult : [];
@@ -100,34 +99,29 @@ export default function AIModelDefaultsPage() {
    */
   const applyToEveryJob = async () => {
     if (!everyJobModel) return;
-    setIsApplyingEveryJob(true);
     setDefaultsError("");
-    try {
-      await setDefaultModel({ modelId: everyJobModel._id as Id<"aiModels"> });
+    const outcome = await action.run(
+      () => setDefaultModel({ modelId: everyJobModel._id as Id<"aiModels"> }),
+      { key: "apply-every-job", suppressErrorToast: true },
+    );
+    if (outcome.ok) {
       setIsEveryJobConfirmOpen(false);
       setEveryJobModelId("");
-    } catch (err) {
-      console.error(err);
-      setDefaultsError(t("applyFailed", { message: getErrorMessage(err, String(err)) }));
-    } finally {
-      setIsApplyingEveryJob(false);
+      return;
+    }
+    if (outcome.message) {
+      setDefaultsError(t("applyFailed", { message: outcome.message }));
     }
   };
 
   const setPlatformDefault = async (useCase: string, modelId: string) => {
-    setSavingDefaultUseCase(useCase);
     setDefaultsError("");
-    try {
-      if (modelId) {
-        await setGlobalModelDefault({ useCase, modelId });
-      } else {
-        await clearGlobalModelDefault({ useCase });
-      }
-    } catch (err) {
-      console.error(err);
-      setDefaultsError(t("updateFailed", { useCase, message: getErrorMessage(err, String(err)) }));
-    } finally {
-      setSavingDefaultUseCase(null);
+    const outcome = await action.run(
+      () => (modelId ? setGlobalModelDefault({ useCase, modelId }) : clearGlobalModelDefault({ useCase })),
+      { key: `default:${useCase}`, suppressErrorToast: true },
+    );
+    if (!outcome.ok && outcome.message) {
+      setDefaultsError(t("updateFailed", { useCase, message: outcome.message }));
     }
   };
 
@@ -222,7 +216,7 @@ export default function AIModelDefaultsPage() {
               const strandedModel = isStranded
                 ? allModels.find((model) => model.modelId === selectedModelId)
                 : undefined;
-              const isSaving = savingDefaultUseCase === row.useCase;
+              const isSaving = action.isBusy(`default:${row.useCase}`);
 
               return (
                 <>
@@ -262,7 +256,7 @@ export default function AIModelDefaultsPage() {
             align: "right",
             className: "w-[20%]",
             cell: (row) =>
-              savingDefaultUseCase === row.useCase ? (
+              action.isBusy(`default:${row.useCase}`) ? (
                 <Loader2 className="h-4 w-4 animate-spin text-brand inline-block" />
               ) : row.default ? (
                 <span className="text-[12px] text-secondary">{selectedCost(row.default.modelId)}</span>
@@ -322,7 +316,7 @@ export default function AIModelDefaultsPage() {
           jobs={everyJobSplit.can.map(formatModelTag).join(", ")}
           cannotJobs={everyJobSplit.cannot.map(formatModelTag).join(", ")}
           cannotCount={everyJobSplit.cannot.length}
-          isApplying={isApplyingEveryJob}
+          isApplying={action.isBusy("apply-every-job")}
           onClose={() => setIsEveryJobConfirmOpen(false)}
           onApply={applyToEveryJob}
         />

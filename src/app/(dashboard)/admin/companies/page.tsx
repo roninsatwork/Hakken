@@ -13,6 +13,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   PageHeader,
   PagePrimaryAction,
@@ -42,6 +43,7 @@ type CompanyFormData = {
 export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
+  const action = useAdminAction({ scope: "admin-companies" });
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
@@ -54,9 +56,9 @@ export default function CompaniesPage() {
   const [deletingCompany, setDeletingCompany] = useState<CompanyRow | null>(null);
 
   const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [dialogsActivated, setDialogsActivated] = useState(false);
+  const isSubmitting = action.isBusy();
 
   const itemsPerPage = TABLE_PAGE_SIZE;
   // The house footer — Previous, Page X of Y, Next — over a query that still
@@ -110,45 +112,42 @@ export default function CompaniesPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      if (editingCompany) {
-        await updateCompany({
-          id: editingCompany._id,
-          name: formData.name,
-          systemPrompt: formData.systemPrompt,
-          enabledModules: formData.enabledModules,
-        });
-        if (formData.planId) await assignPlanToCompany({ id: editingCompany._id, planId: formData.planId as Id<"plans"> });
-        else await assignPlanToCompany({ id: editingCompany._id, planId: undefined });
-      } else {
-        const newCompanyId = await createCompany({
-          name: formData.name,
-          systemPrompt: formData.systemPrompt,
-          enabledModules: formData.enabledModules,
-        });
-        if (formData.planId) await assignPlanToCompany({ id: newCompanyId, planId: formData.planId as Id<"plans"> });
-      }
-      setIsAddModalOpen(false);
-    } catch {
-      setSubmitError(t("errors.saveFailed"));
-    } finally {
-      setIsSubmitting(false);
-    }
+    setSubmitError("");
+    const outcome = await action.run(
+      async () => {
+        if (editingCompany) {
+          await updateCompany({
+            id: editingCompany._id,
+            name: formData.name,
+            systemPrompt: formData.systemPrompt,
+            enabledModules: formData.enabledModules,
+          });
+          if (formData.planId) await assignPlanToCompany({ id: editingCompany._id, planId: formData.planId as Id<"plans"> });
+          else await assignPlanToCompany({ id: editingCompany._id, planId: undefined });
+        } else {
+          const newCompanyId = await createCompany({
+            name: formData.name,
+            systemPrompt: formData.systemPrompt,
+            enabledModules: formData.enabledModules,
+          });
+          if (formData.planId) await assignPlanToCompany({ id: newCompanyId, planId: formData.planId as Id<"plans"> });
+        }
+      },
+      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") }
+    );
+    if (outcome.ok) setIsAddModalOpen(false);
+    else setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
-    if (deletingCompany) {
-      setIsSubmitting(true);
-      try {
-        await deleteCompany({ id: deletingCompany._id });
-        setDeletingCompany(null);
-      } catch {
-        setSubmitError(t("errors.deleteFailed"));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingCompany) return;
+    setSubmitError("");
+    const outcome = await action.run(() => deleteCompany({ id: deletingCompany._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.deleteFailed"),
+    });
+    if (outcome.ok) setDeletingCompany(null);
+    else setSubmitError(outcome.message);
   };
 
   return (

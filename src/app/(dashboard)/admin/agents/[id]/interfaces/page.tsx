@@ -8,6 +8,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Cpu, Wrench } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
@@ -41,7 +42,7 @@ export default function AgentInterfacesPage() {
   const toggleToolMutation = useMutation(api.aiTools.toggleAgentTool);
   const updateAgent = useMutation(api.agents.updateAgent);
 
-  const [processingId, setProcessingId] = useState<Id<"aiTools"> | null>(null);
+  const action = useAdminAction({ scope: "admin-agent-interfaces" });
   const [toolSearch, setToolSearch] = useState("");
   const [toolPage, setToolPage] = useState(1);
 
@@ -54,40 +55,45 @@ export default function AgentInterfacesPage() {
   const [toolError, setToolError] = useState("");
 
   const [outputSchema, setOutputSchema] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
 
   const handleToggleTool = async (toolId: Id<"aiTools">, isBound: boolean) => {
-    if (processingId) return;
-    setProcessingId(toolId);
     setToolError("");
-    try {
-      await toggleToolMutation({ agentId, toolId, action: isBound ? "UNBIND" : "BIND" });
-    } catch {
-      setToolError(t("tools.errors.assignFailed"));
-    } finally {
-      setProcessingId(null);
-    }
+    const outcome = await action.run(
+      () => toggleToolMutation({ agentId, toolId, action: isBound ? "UNBIND" : "BIND" }),
+      {
+        key: toolId,
+        suppressErrorToast: true,
+        fallbackMessage: t("tools.errors.assignFailed"),
+      },
+    );
+    if (!outcome.ok && outcome.message) setToolError(outcome.message);
   };
 
   const handleSaveAnswer = async () => {
-    setIsSaving(true);
     setSaveError("");
-    try {
-      // Null means the builder has not reported a change, so the stored shape
-      // stands. Empty string means every field was removed, which has to clear it.
-      const next = outputSchema ?? agent?.outputSchema ?? "";
-      await updateAgent({
-        id: agentId,
-        outputSchema: next.trim() === "" ? undefined : next,
-      });
+    const outcome = await action.run(
+      () => {
+        // Null means the builder has not reported a change, so the stored shape
+        // stands. Empty string means every field was removed, which has to clear it.
+        const next = outputSchema ?? agent?.outputSchema ?? "";
+        return updateAgent({
+          id: agentId,
+          outputSchema: next.trim() === "" ? undefined : next,
+        });
+      },
+      {
+        key: "answer",
+        suppressErrorToast: true,
+        fallbackMessage: t("answer.errors.saveFailed"),
+      },
+    );
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch {
-      setSaveError(t("answer.errors.saveFailed"));
-    } finally {
-      setIsSaving(false);
+    } else if (outcome.message) {
+      setSaveError(outcome.message);
     }
   };
 
@@ -187,7 +193,7 @@ export default function AgentInterfacesPage() {
                     role="switch"
                     aria-checked={isBound}
                     aria-label={tool.name}
-                    disabled={processingId !== null}
+                    disabled={action.isBusy(tool._id)}
                     onClick={() => handleToggleTool(tool._id, isBound)}
                     className="disabled:opacity-50"
                   >
@@ -221,7 +227,7 @@ export default function AgentInterfacesPage() {
             </p>
           </div>
           <SaveAction
-            isSaving={isSaving}
+            isSaving={action.isBusy("answer")}
             label={t("answer.saveButton")}
             savingLabel={t("answer.savingButton")}
             successLabel={t("answer.saveSuccess")}

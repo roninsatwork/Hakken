@@ -33,7 +33,9 @@ The root application layout in `src/app/layout.tsx` wraps the app in `ThemeProvi
 
 `src/ui/components/layout/Header.tsx` is the sticky top bar used by app and admin pages. It records best-effort login metadata once per browser session, exposes profile/admin/dashboard/logout actions, and uses hard navigation on logout to avoid stale deep-route auth state.
 
-`src/ui/components/layout/SidebarNavigation.tsx` maps route prefixes to active items and renders the app/admin navigation groups. It also handles impersonation exit, diagnostic routing visibility, arcade navigation, movement demo visibility, organization routes, and admin sections. When adding a durable route, update sidebar active-route logic and navigation copy in the same change.
+`src/ui/components/layout/SidebarNavigation.tsx` is the sidebar shell. It maps route prefixes to active items, holds the open/closed state of each section, handles impersonation exit and the workspace switcher, and chooses which of the two navigation trees to render. It also defines the shared `NavItem` and `SubNavItem` parts the trees are built from.
+
+The trees themselves are `AdminNavTree` and `UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx`. That is where the links live, and with them diagnostic routing visibility, arcade navigation, movement demo visibility, organization routes, and admin sections. When adding a durable route, add the link to the right tree and the active-route mapping in the shell, with navigation copy, in the same change.
 
 `src/app/(dashboard)/app/page.tsx` is the authenticated app dashboard. It is a localized product-overview route with assistant, platform-depth, hosting-positioning, assurance, governance, benefit, and use-case sections. Its primary action routes to `/app/assistant`; the benefits action routes super admins to `/admin/ai/costs` and other users to `/app/reports`. The page redirects super admins to `/admin` once per browser session through `sessionStorage.admin_redirected`; treat that as a convenience redirect only, not an authorization boundary. If dashboard copy changes, keep the `dashboard` namespace in `messages/en.json` and `messages/it.json` in parity.
 
@@ -91,9 +93,9 @@ Prefer existing shared components before creating page-local variants:
 - Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/SonaeMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
 - Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
   `src/ui/components/charts/ChartTooltip.tsx`.
-- Workflows: `WorkflowSidebar`, `ConfigDrawer`, `AgentEditorModal`, node components, and workflow types.
+- Workflows: `WorkflowSidebar`, `ConfigDrawer` with its per-node-type `ConfigDrawerPanels`, `AgentEditorModal`, node components, and workflow types.
 - Settings: `JsonSchemaBuilder`, settings sections, white-label components.
-- Navigation: `Header`, `SidebarNavigation`, and the workspace switcher in the sidebar. Theme selection lives in the profile's preferences, not a standalone toggle.
+- Navigation: `Header`, `SidebarNavigation` with the `SidebarNavTrees` it renders, and the workspace switcher in the sidebar. Theme selection lives in the profile's preferences, not a standalone toggle.
 
 `src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`. 
 

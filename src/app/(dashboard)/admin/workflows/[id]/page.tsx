@@ -293,6 +293,9 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
   );
 }
 
+const SAVE_KEY = "save-graph";
+const RUN_KEY = "manual-run";
+
 export default function WorkflowCanvas({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const workflowId = id as Id<"workflows">;
@@ -301,16 +304,14 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
   const workflow = useQuery(api.workflows.get, { id: workflowId });
   const updateWorkflow = useMutation(api.workflows.updateWorkflow);
   const runWorkflow = useMutation(api.workflows.triggerManualRun);
+  const action = useAdminAction({ scope: "admin-workflow-designer" });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const handleSave = async (nodes: WorkflowCanvasNode[], edges: WorkflowCanvasEdge[]) => {
 	    if (!workflow) return;
-	    setIsSaving(true);
     setFeedbackMessage("");
-    
+
     // Phase 5: Graph Validation (DFS Cycle Detection)
     const hasCycle = () => {
       const graph = new Map<string, string[]>();
@@ -346,50 +347,47 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
 
 	    if (hasCycle()) {
 	      setFeedbackMessage("Cycle Detected: Infinite loops are not supported. Please use the Iterator (Loop) node for iteration instead of routing edges backwards.");
-	      setIsSaving(false);
 	      return;
     }
 
-    try {
-      const triggerNode = nodes.find((n) => n.type === 'triggerNode');
-      const triggerType: WorkflowTriggerType = triggerNode?.data?._triggerType || 'MANUAL';
+    const outcome = await action.run(
+      () => {
+        const triggerNode = nodes.find((n) => n.type === 'triggerNode');
+        const triggerType: WorkflowTriggerType = triggerNode?.data?._triggerType || 'MANUAL';
 
-      await updateWorkflow({
-        id: workflow._id,
-        triggerType,
-        nodes: JSON.stringify(nodes),
-        edges: JSON.stringify(edges)
-      });
-	    } catch (e) {
-	      console.error(e);
-	      setFeedbackMessage(t('alerts.saveFailed'));
-    } finally {
-      setIsSaving(false);
-    }
+        return updateWorkflow({
+          id: workflow._id,
+          triggerType,
+          nodes: JSON.stringify(nodes),
+          edges: JSON.stringify(edges)
+        });
+      },
+      { key: SAVE_KEY, suppressErrorToast: true, fallbackMessage: t('alerts.saveFailed') },
+    );
+
+    if (!outcome.ok) setFeedbackMessage(outcome.message);
   };
 
   const handleManualRun = async () => {
 	    if (!workflow) return;
-	    setIsRunning(true);
     setFeedbackMessage("");
-    try {
-      await runWorkflow({ id: workflow._id });
-      setIsRunning(false);
-	    } catch (e) {
-	      console.error(e);
-	      setFeedbackMessage(t('alerts.dispatchFailed'));
-	      setIsRunning(false);
-    }
+    const outcome = await action.run(() => runWorkflow({ id: workflow._id }), {
+      key: RUN_KEY,
+      suppressErrorToast: true,
+      fallbackMessage: t('alerts.dispatchFailed'),
+    });
+
+    if (!outcome.ok) setFeedbackMessage(outcome.message);
   };
 
   if (!workflow) return <div className="p-8 text-secondary">{t('loading')}</div>;
 
   return (
     <ReactFlowProvider>
-       <FlowCanvasWithProvider 
-          workflow={workflow} 
-	          isSaving={isSaving}
-	          isRunning={isRunning}
+       <FlowCanvasWithProvider
+          workflow={workflow}
+	          isSaving={action.isBusy(SAVE_KEY)}
+	          isRunning={action.isBusy(RUN_KEY)}
             feedbackMessage={feedbackMessage}
 	          handleSave={handleSave}
           handleManualRun={handleManualRun} 

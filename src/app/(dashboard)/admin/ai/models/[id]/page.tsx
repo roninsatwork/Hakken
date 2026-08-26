@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, use, useEffect, useState } from "react";
+import { lazy, Suspense, use, useState } from "react";
 import { formatDateTime } from "@/src/lib/dates";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   buildDefaultJobsByModelId,
   formatModelTag,
@@ -79,13 +80,12 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const updatePricing = useMutation(api.aiModels.updatePricingConfig);
 
   const setDefaultModel = useMutation(api.aiModels.setDefaultModel);
+  const action = useAdminAction({ scope: "admin-ai-model-detail" });
 
-  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [showMorePrices, setShowMorePrices] = useState(false);
   const [isDefaultConfirmOpen, setIsDefaultConfirmOpen] = useState(false);
   const [hasDefaultModalActivated, setHasDefaultModalActivated] = useState(false);
-  const [isMakingDefault, setIsMakingDefault] = useState(false);
 
   const [friendlyName, setFriendlyName] = useState("");
   const [standardBelow, setStandardBelow] = useState("");
@@ -94,39 +94,40 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const [cachedAbove, setCachedAbove] = useState("");
   const [outputResponse, setOutputResponse] = useState("");
 
-  useEffect(() => {
-    if (model) {
-      setFriendlyName(model.friendlyName || "");
-      setStandardBelow(model.standardInputCostBelow200k?.toString() || "");
-      setStandardAbove(model.standardInputCostAbove200k?.toString() || "");
-      setCachedBelow(model.cachedInputCostBelow200k?.toString() || "");
-      setCachedAbove(model.cachedInputCostAbove200k?.toString() || "");
-      setOutputResponse(model.outputResponseCost?.toString() || "");
-    }
-  }, [model]);
+  const [seenModelId, setSeenModelId] = useState<string | null>(null);
+
+  if (model && model._id !== seenModelId) {
+    setSeenModelId(model._id);
+    setFriendlyName(model.friendlyName || "");
+    setStandardBelow(model.standardInputCostBelow200k?.toString() || "");
+    setStandardAbove(model.standardInputCostAbove200k?.toString() || "");
+    setCachedBelow(model.cachedInputCostBelow200k?.toString() || "");
+    setCachedAbove(model.cachedInputCostAbove200k?.toString() || "");
+    setOutputResponse(model.outputResponseCost?.toString() || "");
+  }
 
   const handleSave = async () => {
-    setIsSaving(true);
     setSaveError("");
-    try {
-      await updatePricing({
-        modelId,
-        friendlyName: friendlyName || undefined,
-        standardInputCostBelow200k: standardBelow ? parseFloat(standardBelow) : 0,
-        standardInputCostAbove200k: standardAbove ? parseFloat(standardAbove) : 0,
-        cachedInputCostBelow200k: cachedBelow ? parseFloat(cachedBelow) : 0,
-        cachedInputCostAbove200k: cachedAbove ? parseFloat(cachedAbove) : 0,
-        outputResponseCost: outputResponse ? parseFloat(outputResponse) : 0,
-      });
+    const outcome = await action.run(
+      () =>
+        updatePricing({
+          modelId,
+          friendlyName: friendlyName || undefined,
+          standardInputCostBelow200k: standardBelow ? parseFloat(standardBelow) : 0,
+          standardInputCostAbove200k: standardAbove ? parseFloat(standardAbove) : 0,
+          cachedInputCostBelow200k: cachedBelow ? parseFloat(cachedBelow) : 0,
+          cachedInputCostAbove200k: cachedAbove ? parseFloat(cachedAbove) : 0,
+          outputResponseCost: outputResponse ? parseFloat(outputResponse) : 0,
+        }),
+      { key: "save", suppressErrorToast: true, fallbackMessage: t("saveFailed") },
+    );
+    if (outcome.ok) {
       // Back to the catalogue rather than back through history, which could be
       // anywhere the reader happened to come from.
       router.push("/admin/ai/models/catalogue");
-    } catch (e) {
-      console.error(e);
-      setSaveError(t("saveFailed"));
-    } finally {
-      setIsSaving(false);
+      return;
     }
+    if (outcome.message) setSaveError(outcome.message);
   };
 
   if (model === undefined) {
@@ -158,17 +159,17 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
    * this control is no longer a hover-revealed button on a catalogue row.
    */
   const makeDefault = async () => {
-    setIsMakingDefault(true);
     setSaveError("");
-    try {
-      await setDefaultModel({ modelId });
+    const outcome = await action.run(() => setDefaultModel({ modelId }), {
+      key: "make-default",
+      suppressErrorToast: true,
+      fallbackMessage: t("makeDefaultFailed"),
+    });
+    if (outcome.ok) {
       setIsDefaultConfirmOpen(false);
-    } catch (e) {
-      console.error(e);
-      setSaveError(t("makeDefaultFailed"));
-    } finally {
-      setIsMakingDefault(false);
+      return;
     }
+    if (outcome.message) setSaveError(outcome.message);
   };
 
   return (
@@ -198,10 +199,10 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         </div>
         <WriteButton
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={action.isBusy("save")}
           className="h-10 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {action.isBusy("save") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {t("save")}
         </WriteButton>
       </div>
@@ -327,7 +328,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
             allJobs={allJobs}
             isEnabled={model.isEnabled}
             isOpen={isDefaultConfirmOpen}
-            isSubmitting={isMakingDefault}
+            isSubmitting={action.isBusy("make-default")}
             modelName={model.friendlyName || model.displayName || model.modelId}
             onClose={() => setIsDefaultConfirmOpen(false)}
             onConfirm={makeDefault}

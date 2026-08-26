@@ -21,31 +21,63 @@ Keep new work inside the layer that owns the behavior. A route should not contai
 Use this path when adding a super-admin or platform-admin feature.
 
 1. Add the route under `src/app/(dashboard)/admin/<section>/page.tsx`.
-2. Use existing primitives from `src/app/(dashboard)/admin/_components` before creating local table, header, modal, or confirmation UI.
+2. Take the table, header, form fields, and confirmation modal from the screen kit in `src/ui/components/screens/` before writing any of them locally. `docs/developer/screen-kit.md` describes the parts and the build checks that enforce them.
 3. Keep backend reads/writes in Convex queries and mutations. Use `requireSuperAdmin`, `requireCurrentUser`, or the relevant auth helper inside the Convex handler.
-4. Add navigation in `src/ui/components/layout/SidebarNavigation.tsx` and add matching translation keys in both `messages/en.json` and `messages/it.json`.
-5. Preserve the admin pagination standard: use 15 rows per page unless the product requirement explicitly says otherwise.
+4. Add the route to the admin tree in `src/ui/components/layout/SidebarNavTrees.tsx` and add matching translation keys in both `messages/en.json` and `messages/it.json`.
+5. Preserve the admin pagination standard: use `TABLE_PAGE_SIZE` from `src/ui/components/screens/pagination.ts`, which is 15 rows per page, unless the product requirement explicitly says otherwise.
 6. Add a focused unit test for reusable logic or UI and extend Playwright route coverage when the new page is high value.
 
-Minimal page shape:
+Minimal page shape. The header sits above the table, not inside it, and the table comes from `DataTable` whole rather than assembled from the kit's loose parts — `scripts/check-screen-kit.mjs` fails the build on either mistake:
 
 ```tsx
 "use client";
 
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { useState } from "react";
+import { Boxes } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 export default function AdminExamplePage() {
+  const [page, setPage] = useState(1);
+  const examples = useQuery(api.examples.listExamples, { page, pageSize: TABLE_PAGE_SIZE });
+
   return (
-    <div className="flex flex-col gap-6">
-      <AdminPageHeader
+    <div className="flex w-full flex-col gap-6 pb-12">
+      <PageHeader
+        icon={<Boxes className="h-6 w-6 text-brand" />}
         title="Example"
         description="Manage example records."
       />
-      {/* Use AdminTable, AdminModalForm, SonaeEmptyState, or shared feedback primitives here. */}
+
+      <DataTable
+        rows={examples?.items}
+        rowKey={(example) => example._id}
+        empty={{
+          icon: <Boxes className="h-8 w-8 text-muted/30" />,
+          label: "No examples yet.",
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages: examples?.totalPages ?? 1,
+          totalCount: examples?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: examples === undefined,
+          onPageChange: setPage,
+        }}
+        columns={[
+          { key: "name", header: "Name", cell: (example) => example.name },
+        ]}
+      />
     </div>
   );
 }
 ```
+
+For a create or edit dialog, build the body from the field helpers in `src/ui/components/screens/ModalForm.tsx` — `ModalField`, `ModalTextAreaField`, `ModalFormError`, and `ModalFormActions` — and use `ConfirmationModal` from `src/ui/components/screens/ConfirmationModal.tsx` for anything destructive.
 
 Backend shape:
 
@@ -66,7 +98,7 @@ Workflow changes need both editor and runtime support. Do not add a visual node 
 1. Add or narrow the node type and config shape in `src/ui/components/workflows/types.ts`.
 2. Add backend config parsing and validation in `convex/workflowRuntimeService.ts` or `convex/utils/workflowTypes.ts`.
 3. Add the runtime behavior in `convex/workflowRuntime.ts` or call a pure helper from `convex/workflowRuntimeService.ts`.
-4. Add UI controls in `src/ui/components/workflows/ConfigDrawer.tsx` and visual rendering through `src/ui/components/workflows/GenericNode.tsx` or a dedicated node component.
+4. Add the node's field set as a new panel in `src/ui/components/workflows/ConfigDrawerPanels.tsx`, then render it for the new node type from the panel switch in `src/ui/components/workflows/ConfigDrawer.tsx`. Add visual rendering through `src/ui/components/workflows/GenericNode.tsx` or a dedicated node component.
 5. Update tests in `convex/workflowRuntimeService.test.ts` and `convex/utils/workflowTypes.test.ts` for valid and invalid config.
 
 Small config-reader example:
@@ -150,7 +182,7 @@ Product branding is configuration-first.
 
 1. Use system settings for product name, logos, theme colors, fonts, and diagnostic route visibility. Defaults live in `convex/settingsService.ts`.
 2. Read settings through `useSystemSettings()` rather than hardcoding the platform name in app shell UI.
-3. Add new sidebar routes in `SidebarNavigation.tsx` only after the route exists and the role/tenant behavior is clear.
+3. Add new sidebar routes to the matching tree in `SidebarNavTrees.tsx` only after the route exists and the role/tenant behavior is clear.
 4. Add labels to both locale dictionaries.
 5. Keep temporary demo routes behind `diagnosticRoutingEnabled` or an explicit product flag.
 

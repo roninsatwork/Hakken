@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
@@ -13,7 +12,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
-import { useToast } from "@/src/context/ToastContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/components/screens/Button";
 
@@ -40,47 +39,51 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     paginationOpts: { numItems: 1, cursor: null },
   });
 
-  const { showToast } = useToast();
   const runManualSchedule = useMutation(api.scheduler.manualRunSchedule);
   const cancelRun = useMutation(api.agentRuns.cancelRun);
-  const [isManualRunning, setIsManualRunning] = useState(false);
-  const [isStoppingAgent, setIsStoppingAgent] = useState(false);
+  const action = useAdminAction({ scope: "admin-agent-header" });
   const [stopRunId, setStopRunId] = useState<Id<"agentRuns"> | null>(null);
   const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
 
   const handleManualRun = async (objective?: string) => {
-    setIsManualRunning(true);
-    try {
-      await runManualSchedule({ agentId, ...(objective ? { objective } : {}) });
+    const outcome = await action.run(
+      () => runManualSchedule({ agentId, ...(objective ? { objective } : {}) }),
+      {
+        key: "run",
+        successMessage: t("manualRun.started"),
+        fallbackMessage: t("manualRun.startFallback"),
+        suppressErrorToast: true,
+      },
+    );
+    if (outcome.ok) {
       // Lands on Activity rather than Overview, because Activity is where the
       // new job appears — top row, marked Running. Overview looks identical
       // the instant a job starts, so pressing the button read as doing nothing.
       router.push(`/admin/agents/${agentId}/runs`);
-      showToast(t("manualRun.started"), "success");
-    } catch (e: unknown) {
-      setModalState({
-        title: t("manualRun.couldNotStart"),
-        message: getErrorMessage(e, t("manualRun.startFallback"))
-      });
-    } finally {
-      setIsManualRunning(false);
+      return;
+    }
+    if (outcome.message) {
+      setModalState({ title: t("manualRun.couldNotStart"), message: outcome.message });
     }
   };
 
   const handleConfirmStop = async () => {
     if (!stopRunId) return;
-    setIsStoppingAgent(true);
-    try {
-      await cancelRun({ runId: stopRunId, reason: "Cancelled from the agent header" });
+    const outcome = await action.run(
+      () => cancelRun({ runId: stopRunId, reason: "Cancelled from the agent header" }),
+      {
+        key: "stop",
+        successMessage: t("manualRun.stopped"),
+        fallbackMessage: t("manualRun.stopFallback"),
+        suppressErrorToast: true,
+      },
+    );
+    if (outcome.ok) {
       setStopRunId(null);
-      showToast(t("manualRun.stopped"), "success");
-    } catch (e: unknown) {
-      setModalState({
-        title: t("manualRun.couldNotStop"),
-        message: getErrorMessage(e, t("manualRun.stopFallback"))
-      });
-    } finally {
-      setIsStoppingAgent(false);
+      return;
+    }
+    if (outcome.message) {
+      setModalState({ title: t("manualRun.couldNotStop"), message: outcome.message });
     }
   };
 
@@ -142,7 +145,8 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const activeRun = runningRuns?.page?.[0] ?? pendingApprovalRuns?.page?.[0] ?? queuedRuns?.page?.[0] ?? null;
   const isRunStateLoading = runningRuns === undefined || pendingApprovalRuns === undefined || queuedRuns === undefined;
   const hasActiveRun = activeRun !== undefined && activeRun !== null;
-  const isPrimaryActionBusy = isManualRunning || isStoppingAgent || isRunStateLoading;
+  const isStoppingAgent = action.isBusy("stop");
+  const isPrimaryActionBusy = action.isBusy() || isRunStateLoading;
 
   return (
     <DetailLayout

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Save, Database, Code2, Wand2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAction } from "convex/react";
@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { convexHttpActionsUrl } from "@/src/lib/convexHttpActionsUrl";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
   ActionPanel,
   ApprovalPanel,
@@ -79,6 +80,7 @@ const defaultActionConfig: WorkflowActionConfig = { method: "GET", url: "", head
 const defaultDbConfig: WorkflowDatabaseConfig = { operation: "INSERT", tableName: "", docId: "" };
 const defaultLogicConfig: WorkflowLogicConfig = { rules: [], fallbackBranch: "" };
 const WEBHOOK_ORIGIN_PLACEHOLDER = "https://[YOUR_CONVEX_SITE_URL]";
+const AUTO_CONFIGURE_KEY = "auto-configure";
 
 /**
  * `labelKey` is a key under `admin.workflows.designer.drawer` resolved with
@@ -202,9 +204,10 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const generateConfig = useAction(api.workflowNodeConfig.generateNodeConfig);
+  const action = useAdminAction({ scope: "admin-workflow-node-config" });
+  const isGenerating = action.isBusy(AUTO_CONFIGURE_KEY);
   const webhookOrigin = convexHttpActionsUrl({
     CONVEX_SITE_URL: process.env.CONVEX_SITE_URL,
     NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
@@ -226,7 +229,14 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
     });
   };
 
-  useEffect(() => {
+  // Adopted during render rather than in an effect, per the React docs on
+  // deriving state from props: an effect would paint the previous node's
+  // configuration first and then replace it. The sentinel is the node itself,
+  // which is a new object whenever the canvas hands the drawer a different one.
+  const [seenNode, setSeenNode] = useState<WorkflowCanvasNode | null>(null);
+
+  if (node !== seenNode) {
+    setSeenNode(node);
     if (node) {
         const existingSchedule = node.data?._scheduleInterval;
         let pMode: ScheduleMode = "interval";
@@ -275,16 +285,16 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
         _emailConfig: node.data?._emailConfig || { from: '', to: '', subject: '', body: '' },
       });
     }
-  }, [node]);
+  }
 
   if (!node) return null;
 
 	  const handleAutoConfigure = async () => {
 	    if (!aiPrompt.trim() || isGenerating) return;
-	    setIsGenerating(true);
     setFeedbackMessage("");
-    try {
-      const result = await generateConfig({
+
+    const outcome = await action.run(
+      () => generateConfig({
         prompt: aiPrompt,
         nodeType: node.type,
         availableNodes: upstreamNodes.map((n) => ({
@@ -292,20 +302,22 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
           type: n.type,
           label: n.data?.label
         }))
-      });
+      }),
+      { key: AUTO_CONFIGURE_KEY, suppressErrorToast: true, fallbackMessage: tAlerts('autoConfigureFailed') },
+    );
 
-      setFormData({
-         ...formData,
-         _inputMapping: result.mapping ? result.mapping.trim() : "",
-         _inputTemplate: result.template ? result.template.trim() : ""
-      });
-      setAiPrompt("");
-      setIsDeveloperMode(true);
-    } catch {
-      setFeedbackMessage(tAlerts('autoConfigureFailed'));
-    } finally {
-      setIsGenerating(false);
+    if (!outcome.ok) {
+      if (outcome.message) setFeedbackMessage(outcome.message);
+      return;
     }
+
+    setFormData({
+       ...formData,
+       _inputMapping: outcome.data.mapping ? outcome.data.mapping.trim() : "",
+       _inputTemplate: outcome.data.template ? outcome.data.template.trim() : ""
+    });
+    setAiPrompt("");
+    setIsDeveloperMode(true);
   };
 
   const handleSave = (e: React.FormEvent) => {

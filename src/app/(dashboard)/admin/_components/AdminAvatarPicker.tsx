@@ -8,6 +8,7 @@ import { Bot, ImagePlus, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/src/ui/lib/utils";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -41,12 +42,13 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
   onUploaded: (upload: { storageId: Id<"_storage">; previewUrl: string }) => void;
 }) {
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const action = useAdminAction({ scope: "admin-avatar-upload" });
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isUploading = action.isBusy();
 
   const processUpload = async (file: File) => {
     const { validateUploadFile } = await import("@/src/lib/constants/uploads");
@@ -56,25 +58,23 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
       return;
     }
 
-    setIsUploading(true);
     setUploadError("");
-    try {
-      const postUrl = await generateUploadUrl();
-      const result = await fetch(postUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
-      onUploaded({ storageId, previewUrl: URL.createObjectURL(file) });
-      setIsOpen(false);
-    } catch (error) {
-      console.error("Upload failed", error);
-      setUploadError(labels.uploadFailed);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    const outcome = await action.run(
+      async () => {
+        const postUrl = await generateUploadUrl();
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const { storageId } = await result.json() as { storageId: Id<"_storage"> };
+        onUploaded({ storageId, previewUrl: URL.createObjectURL(file) });
+      },
+      { suppressErrorToast: true, fallbackMessage: labels.uploadFailed }
+    );
+    if (outcome.ok) setIsOpen(false);
+    else setUploadError(outcome.message);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDrag = (e: DragEvent<HTMLElement>) => {

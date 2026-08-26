@@ -1,7 +1,7 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -124,6 +124,7 @@ export function UserDirectoryScreen({
   ) => Omit<UserDirectoryFormData, "companyId"> & { companyId?: Id<"companies"> };
 }) {
   const { platformName } = useSystemSettings();
+  const action = useAdminAction({ scope: "admin-user-directory" });
   const [searchTerm, setSearchTerm] = useState("");
 
   const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
@@ -146,8 +147,8 @@ export function UserDirectoryScreen({
   const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState<UserDirectoryFormData>(EMPTY_FORM);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const isSubmitting = action.isBusy();
 
   const filteredInvites = pendingInvites.filter(
     (inv) =>
@@ -205,52 +206,36 @@ export function UserDirectoryScreen({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
     setSubmitError("");
     const payload = submitPayload(formData);
-    try {
-      if (editingUser) {
-        await updateUser({ id: editingUser._id, ...payload });
-      } else {
-        await addUser(payload);
-      }
-      setIsAddModalOpen(false);
-    } catch (error) {
-      setSubmitError(getErrorMessage(error, "Failed to save user."));
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () => (editingUser ? updateUser({ id: editingUser._id, ...payload }) : addUser(payload)),
+      { suppressErrorToast: true, fallbackMessage: t('saveFailed') }
+    );
+    if (outcome.ok) setIsAddModalOpen(false);
+    else setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
-    if (deletingUser && !isSubmitting) {
-      setIsSubmitting(true);
-      setSubmitError("");
-      try {
-      await deleteUser({ id: deletingUser._id });
-      setDeletingUser(null);
-      } catch (error) {
-        setSubmitError(getErrorMessage(error, "Failed to delete user."));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingUser) return;
+    setSubmitError("");
+    const outcome = await action.run(() => deleteUser({ id: deletingUser._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t('deleteFailed'),
+    });
+    if (outcome.ok) setDeletingUser(null);
+    else setSubmitError(outcome.message);
   };
 
   const confirmRevoke = async () => {
-    if (deletingInvite && !isSubmitting) {
-      setIsSubmitting(true);
-      setSubmitError("");
-      try {
-      await revokeInvite({ id: deletingInvite._id });
-      setDeletingInvite(null);
-      } catch (error) {
-        setSubmitError(getErrorMessage(error, "Failed to revoke invitation."));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingInvite) return;
+    setSubmitError("");
+    const outcome = await action.run(() => revokeInvite({ id: deletingInvite._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t('revokeFailed'),
+    });
+    if (outcome.ok) setDeletingInvite(null);
+    else setSubmitError(outcome.message);
   };
 
   return (

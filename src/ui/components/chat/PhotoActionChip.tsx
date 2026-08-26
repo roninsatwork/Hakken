@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { CheckCircle2, ClipboardList, Loader2 } from "lucide-react";
 
@@ -36,26 +37,23 @@ export function PhotoActionChip({
   accentColor?: string;
 }) {
   const confirmProposal = useMutation(api.tasks.confirmPhotoAction);
-  const [isFiling, setIsFiling] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const action = useAdminAction({ scope: "assistant-photo-action" });
+  const [failed, setFailed] = useState<string | null>(null);
 
   const proposal = message.photoActionProposal;
   if (!proposal) return null;
 
+  const isFiling = action.isBusy();
   const isFiled = Boolean(message.photoActionTaskId);
 
   const handleConfirm = async () => {
-    if (isFiling || isFiled) return;
-    setIsFiling(true);
-    setFailed(false);
-    try {
-      await confirmProposal({ messageId: message._id, widgetAccessToken });
-    } catch (error) {
-      console.error("Photo action confirmation failed", error);
-      setFailed(true);
-    } finally {
-      setIsFiling(false);
-    }
+    if (isFiled) return;
+    setFailed(null);
+    const outcome = await action.run(
+      () => confirmProposal({ messageId: message._id, widgetAccessToken }),
+      { suppressErrorToast: true, fallbackMessage: labels.failed },
+    );
+    if (!outcome.ok && outcome.message) setFailed(outcome.message);
   };
 
   return (
@@ -90,7 +88,7 @@ export function PhotoActionChip({
           </button>
           {failed && (
             <p className="text-[11px] text-amber-500/90" role="alert">
-              {labels.failed}
+              {failed}
             </p>
           )}
         </div>

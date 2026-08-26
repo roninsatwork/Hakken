@@ -15,6 +15,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import useDebounce from "@/src/hooks/useDebounce";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { isModelCostMeasurable } from "@/convex/utils/modelPricing";
 import { cn } from "@/src/ui/lib/utils";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
@@ -31,6 +32,7 @@ export default function AIModelCataloguePage() {
   const tc = useTranslations("ai.models.catalogue");
   const tShared = useTranslations("ai.models.shared");
   const toggleModelEnforcement = useMutation(api.aiModels.toggleModelEnforcement);
+  const action = useAdminAction({ scope: "admin-ai-model-catalogue" });
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -108,12 +110,11 @@ export default function AIModelCataloguePage() {
 
   const toggleStatus = async (modelId: Id<"aiModels">, currentState: boolean) => {
     setModelError("");
-    try {
-      await toggleModelEnforcement({ modelId, isEnabled: !currentState });
-    } catch (error) {
-      console.error(error);
-      setModelError(tc("updateFailed"));
-    }
+    const outcome = await action.run(
+      () => toggleModelEnforcement({ modelId, isEnabled: !currentState }),
+      { key: `toggle:${modelId}`, suppressErrorToast: true, fallbackMessage: tc("updateFailed") },
+    );
+    if (!outcome.ok && outcome.message) setModelError(outcome.message);
   };
 
   return (

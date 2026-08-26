@@ -70,6 +70,20 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
+const runMock = vi.fn(async (operation: () => Promise<unknown>) => ({
+  ok: true,
+  data: await operation(),
+}));
+
+vi.mock("@/src/hooks/useAdminAction", () => ({
+  useAdminAction: () => ({
+    run: runMock,
+    isBusy: () => false,
+    error: null,
+    clearError: vi.fn(),
+  }),
+}));
+
 const workflows = [
   { _id: "workflow_1", _creationTime: 1, name: "Lead Router", description: "Route leads", triggerType: "manual", isActive: true },
   { _id: "workflow_2", _creationTime: 1, name: "Daily Digest", description: "Summaries", triggerType: "schedule", isActive: false },

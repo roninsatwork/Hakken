@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -22,30 +22,33 @@ export function ApprovalExpirySection() {
   const t = useTranslations("admin.settings.approvals");
   const config = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
   const updateConfig = useMutation(api.agentRunApprovals.updateApprovalExpiryConfig);
+  const action = useAdminAction({ scope: "admin-approval-expiry" });
 
   const [hours, setHours] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    if (config) setHours(String(config.expiryHours));
-  }, [config]);
+  const [seenConfig, setSeenConfig] = useState<typeof config>(undefined);
+
+  if (config && config !== seenConfig) {
+    setSeenConfig(config);
+    setHours(String(config.expiryHours));
+  }
 
   const handleSave = async () => {
-    setIsSaving(true);
     setSaveError("");
-    try {
-      await updateConfig({ expiryHours: Number(hours) });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (error) {
+    const outcome = await action.run(() => updateConfig({ expiryHours: Number(hours) }), {
       // The server refuses a window below the minimum by name, so the reason is
       // shown rather than a generic failure.
-      setSaveError(getErrorMessage(error, t("saveFailed")));
-    } finally {
-      setIsSaving(false);
+      suppressErrorToast: true,
+      fallbackMessage: t("saveFailed"),
+    });
+    if (outcome.ok) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      return;
     }
+    if (outcome.message) setSaveError(outcome.message);
   };
 
   return (
@@ -83,7 +86,7 @@ export function ApprovalExpirySection() {
         <div className="flex justify-end">
           <SaveAction
             onClick={handleSave}
-            isSaving={isSaving}
+            isSaving={action.isBusy()}
             showSuccess={saveSuccess}
             label={t("save")}
             savingLabel={t("saving")}

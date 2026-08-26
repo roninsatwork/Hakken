@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { getErrorMessage } from "@/src/lib/errors";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -24,6 +23,7 @@ import {
   RowIconButton,
 } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -32,11 +32,15 @@ const WorkflowDialogs = dynamic(() =>
   loadWorkflowDialogs().then((module) => module.WorkflowDialogs),
 );
 
+const CREATE_KEY = "create";
+const DELETE_KEY = "delete";
+
 export default function WorkflowsPage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows');
   const createWorkflow = useMutation(api.workflows.createWorkflow);
   const deleteWorkflow = useMutation(api.workflows.deleteWorkflow);
+  const action = useAdminAction({ scope: "admin-workflows" });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,7 +48,6 @@ export default function WorkflowsPage() {
   const [dialogsRequested, setDialogsRequested] = useState(false);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const itemsPerPage = TABLE_PAGE_SIZE;
@@ -73,33 +76,37 @@ export default function WorkflowsPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const newWorkflowId = await createWorkflow({
+    const outcome = await action.run(
+      () => createWorkflow({
         name: formData.name,
         description: formData.description
-      });
-      setIsAddModalOpen(false);
-      router.push(`/admin/workflows/${newWorkflowId}`);
-    } catch (err: unknown) {
-      setSubmitError(getErrorMessage(err, t('errors.create')));
-    } finally {
-      setIsSubmitting(false);
+      }),
+      { key: CREATE_KEY, suppressErrorToast: true, fallbackMessage: t('errors.create') },
+    );
+
+    if (!outcome.ok) {
+      setSubmitError(outcome.message);
+      return;
     }
+
+    setIsAddModalOpen(false);
+    router.push(`/admin/workflows/${outcome.data}`);
   };
 
   const confirmDelete = async () => {
-    if (deletingWorkflow) {
-      setIsSubmitting(true);
-      try {
-        await deleteWorkflow({ id: deletingWorkflow._id });
-        setDeletingWorkflow(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, t('errors.delete')));
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!deletingWorkflow) return;
+    const outcome = await action.run(() => deleteWorkflow({ id: deletingWorkflow._id }), {
+      key: DELETE_KEY,
+      suppressErrorToast: true,
+      fallbackMessage: t('errors.delete'),
+    });
+
+    if (!outcome.ok) {
+      setSubmitError(outcome.message);
+      return;
     }
+
+    setDeletingWorkflow(null);
   };
 
   return (
@@ -207,7 +214,7 @@ export default function WorkflowsPage() {
           formData={formData}
           setFormData={setFormData}
           submitError={submitError}
-          isSubmitting={isSubmitting}
+          isSubmitting={action.isBusy()}
           onEditorClose={() => setIsAddModalOpen(false)}
           onSubmit={handleSubmit}
           deletingWorkflowName={deletingWorkflow?.name ?? null}

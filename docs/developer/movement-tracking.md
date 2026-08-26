@@ -113,6 +113,6 @@ The browser eval for avatar body-motion regressions is:
 npm run eval:movement-avatar
 ```
 
-That command runs `e2e/movement-avatar-proof.eval.spec.ts` against `/demos/movements/squat-proof`. It asserts the expected debug baseline labels and owners, verifies the right-side player-avatar region contains visible rendered pixels, compares squat, far-camera squat, leg-raise, and far-camera leg-raise silhouettes against standing, and attaches screenshots plus visual metrics to the Playwright report.
+That command runs `e2e/on-demand/movement-avatar-proof.eval.spec.ts` against `/demos/movements/squat-proof`. It asserts the expected debug baseline labels and owners, verifies the right-side player-avatar region contains visible rendered pixels, compares squat, far-camera squat, leg-raise, and far-camera leg-raise silhouettes against standing, and attaches screenshots plus visual metrics to the Playwright report.
 
 When documentation-only automation audits this area, source reads are allowed but source edits are not. If the current behaviour needs product or code changes, report that the user must explicitly reopen the movement demo rather than changing the frozen files from this automation.

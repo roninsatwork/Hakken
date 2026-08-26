@@ -92,9 +92,9 @@ Response scheduling follows the shared chat rules:
 
 ### Visibility And Navigation
 
-Ronin's Run is exposed by `src/ui/components/layout/SidebarNavigation.tsx` as an arcade item only when `settings.diagnosticRoutingEnabled` is true. The sandbox route exists under `/app/agentic-testing`, but it is not currently a primary sidebar destination.
+Ronin's Run is exposed by `UserNavTree` in `src/ui/components/layout/SidebarNavTrees.tsx` as an arcade item only when `settings.diagnosticRoutingEnabled` is true. The sandbox route exists under `/app/agentic-testing`, but it is not currently a primary sidebar destination.
 
-If the sandbox becomes a customer-facing workflow, update `SidebarNavigation`, locale copy, and this guide in the same change. If it remains an internal test surface, keep language clear that it is for isolated agent testing rather than standard assistant use.
+If the sandbox becomes a customer-facing workflow, update `SidebarNavTrees.tsx`, locale copy, and this guide in the same change. If it remains an internal test surface, keep language clear that it is for isolated agent testing rather than standard assistant use.
 
 ## Testing And Verification
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { NextIntlClientProvider } from "next-intl";
+import { ToastProvider } from "@/src/context/ToastContext";
 import { fireEvent, render as renderBase, screen, waitFor } from "@testing-library/react";
 import messages from "../../../../../../../messages/en.json";
 
@@ -9,7 +10,7 @@ function render(ui: React.ReactElement) {
   return renderBase(ui, {
     wrapper: ({ children }: { children: React.ReactNode }) => (
       <NextIntlClientProvider locale="en" messages={messages}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </NextIntlClientProvider>
     ),
   });

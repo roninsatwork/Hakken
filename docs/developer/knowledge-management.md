@@ -9,7 +9,8 @@ Company knowledge now has a separate page-based layer documented in [Company Wik
 - `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` renders global knowledge for super admins.
 - `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` renders company knowledge source documents behind the Company AI area.
 - `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx` renders agent knowledge.
-- `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx` is the shared admin knowledge UI.
+- `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx` is the shared admin knowledge UI, holding the document list, search, pagination, and upload queue.
+- `src/app/(dashboard)/admin/_features/knowledge/KnowledgeModals.tsx` holds its four dialogs: upload, document delete, document inspect, and website delete.
 - `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.ts` walks dropped folders, preserves relative paths, caps batches, skips reserved OKF bundle files, and limits browser upload concurrency.
 - `src/app/(dashboard)/app/assistant/page.tsx` and thread routes use chat-thread document APIs for assistant attachments.
 

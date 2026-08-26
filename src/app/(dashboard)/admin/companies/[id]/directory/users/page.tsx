@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -31,6 +30,7 @@ import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal
 import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type CompanyUser = Doc<"users">;
 type PendingInvite = Doc<"invitations">;
@@ -46,6 +46,7 @@ type UserFormData = {
 
 export default function CompanyUsersPage() {
   const t = useTranslations('companyUsers');
+  const action = useAdminAction({ scope: "admin-company-users" });
   const params = useParams();
   const router = useRouter();
   const companyId = params.id as Id<"companies">;
@@ -83,36 +84,34 @@ export default function CompanyUsersPage() {
   ) || [];
 
   const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const isSubmitting = action.isBusy();
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAdminId) return;
-    setIsSubmitting(true);
-    try {
-      await assignSuperAdmin({ userId: selectedAdminId as Id<"users">, companyId });
+    setSubmitError("");
+    const outcome = await action.run(
+      () => assignSuperAdmin({ userId: selectedAdminId as Id<"users">, companyId }),
+      { suppressErrorToast: true, fallbackMessage: t("assignAdminFailed") }
+    );
+    if (outcome.ok) {
       setIsAssignModalOpen(false);
       setSelectedAdminId("");
-    } catch (err: unknown) {
-      setSubmitError(getErrorMessage(err, "Failed to assign system admin."));
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      setSubmitError(outcome.message);
     }
   };
 
   const confirmDetach = async () => {
-    if (detachingAdmin) {
-      setIsSubmitting(true);
-      try {
-        await detachSuperAdmin({ userId: detachingAdmin._id });
-        setDetachingAdmin(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, "Failed to detach system admin."));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!detachingAdmin) return;
+    setSubmitError("");
+    const outcome = await action.run(() => detachSuperAdmin({ userId: detachingAdmin._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("detachAdminFailed"),
+    });
+    if (outcome.ok) setDetachingAdmin(null);
+    else setSubmitError(outcome.message);
   };
 
   const filteredUsers = paginatedUsers.filter((u) =>
@@ -152,52 +151,40 @@ export default function CompanyUsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setSubmitError("");
     const payload = {
       ...formData,
       role: formData.role,
       companyId
     };
-    try {
-      if (editingUser) {
-        await updateUser({ id: editingUser._id, ...payload });
-      } else {
-        await addUser(payload);
-      }
-      setIsAddModalOpen(false);
-    } catch (err: unknown) {
-      setSubmitError(getErrorMessage(err, "Operation failed."));
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () => (editingUser ? updateUser({ id: editingUser._id, ...payload }) : addUser(payload)),
+      { suppressErrorToast: true, fallbackMessage: t("saveUserFailed") }
+    );
+    if (outcome.ok) setIsAddModalOpen(false);
+    else setSubmitError(outcome.message);
   };
 
   const confirmDelete = async () => {
-    if (deletingUser) {
-      setIsSubmitting(true);
-      try {
-        await deleteUser({ id: deletingUser._id });
-        setDeletingUser(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, "Failed to delete user."));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingUser) return;
+    setSubmitError("");
+    const outcome = await action.run(() => deleteUser({ id: deletingUser._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("deleteUserFailed"),
+    });
+    if (outcome.ok) setDeletingUser(null);
+    else setSubmitError(outcome.message);
   };
 
   const confirmRevoke = async () => {
-    if (deletingInvite) {
-      setIsSubmitting(true);
-      try {
-        await revokeInvite({ id: deletingInvite._id });
-        setDeletingInvite(null);
-      } catch (err: unknown) {
-        setSubmitError(getErrorMessage(err, "Failed to revoke invite."));
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    if (!deletingInvite) return;
+    setSubmitError("");
+    const outcome = await action.run(() => revokeInvite({ id: deletingInvite._id }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("revokeInviteFailed"),
+    });
+    if (outcome.ok) setDeletingInvite(null);
+    else setSubmitError(outcome.message);
   };
 
   return (

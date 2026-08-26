@@ -1,6 +1,5 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
@@ -16,6 +15,7 @@ import {
   modelSupportsUseCase,
 } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
 import { cn } from "@/src/ui/lib/utils";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -68,6 +68,7 @@ export default function CompanyModelDefaultsPage() {
   const providersData = pageData?.providerNames;
   const setCompanyDefault = useMutation(api.aiModels.setCompanyModelDefault);
   const clearCompanyDefault = useMutation(api.aiModels.clearCompanyModelDefault);
+  const action = useAdminAction({ scope: "admin-company-model-defaults" });
 
   const activeModels = modelsData ?? [];
   const providerNameByKey = useMemo(
@@ -75,7 +76,6 @@ export default function CompanyModelDefaultsPage() {
     [providersData]
   );
 
-  const [savingUseCase, setSavingUseCase] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
 
   const rows = pageData?.defaults ?? [];
@@ -106,21 +106,15 @@ export default function CompanyModelDefaultsPage() {
   };
 
   const handleChange = async (useCase: string, nextModelId: string) => {
-    setSavingUseCase(useCase);
     setSaveError("");
-    try {
-      if (nextModelId) {
-        await setCompanyDefault({ companyId, useCase, modelId: nextModelId });
-      } else {
-        await clearCompanyDefault({ companyId, useCase });
-      }
-    } catch (error) {
-      console.error(error);
-      setSaveError(
-        t("updateFailed", { useCase: formatModelTag(useCase), message: getErrorMessage(error, String(error)) })
-      );
-    } finally {
-      setSavingUseCase(null);
+    const outcome = await action.run(
+      () => nextModelId
+        ? setCompanyDefault({ companyId, useCase, modelId: nextModelId })
+        : clearCompanyDefault({ companyId, useCase }),
+      { key: useCase, suppressErrorToast: true }
+    );
+    if (!outcome.ok && outcome.message) {
+      setSaveError(t("updateFailed", { useCase: formatModelTag(useCase), message: outcome.message }));
     }
   };
 
@@ -214,7 +208,7 @@ export default function CompanyModelDefaultsPage() {
                 modelSupportsUseCase(model, row.useCase)
                 && canProviderServeUseCase(model.providerKey, row.useCase)
               );
-              const isSaving = savingUseCase === row.useCase;
+              const isSaving = action.isBusy(row.useCase);
 
               /**
                * An override can point at a model this row would not offer — a
@@ -294,7 +288,7 @@ export default function CompanyModelDefaultsPage() {
                 ?? row.globalDefault?.modelId
                 ?? "";
 
-              return savingUseCase === row.useCase ? (
+              return action.isBusy(row.useCase) ? (
                 <Loader2 className="inline-block h-4 w-4 animate-spin text-brand" />
               ) : effectiveModelId ? (
                 <span className="text-[12px] text-secondary">{describeCost(effectiveModelId)}</span>

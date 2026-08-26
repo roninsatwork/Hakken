@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Bot } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AgentBudgetFields } from "../_components/AgentBudgetFields";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
@@ -140,6 +140,7 @@ export default function NewAgentPage() {
   const ts = useTranslations("admin.agents.details.settings");
 
   const createAgent = useMutation(api.agents.createAgent);
+  const action = useAdminAction({ scope: "admin-agents-new" });
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
@@ -152,7 +153,6 @@ export default function NewAgentPage() {
 
   const [formData, setFormData] = useState<NewAgentForm>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
 
   // What "follow the platform default" would actually mean, named before it is
   // chosen rather than left as a greyed-out box — exactly as settings names it.
@@ -190,10 +190,9 @@ export default function NewAgentPage() {
     if (!canCreate || isSubmitting) return;
 
     setIsSubmitting(true);
-    setSubmitError("");
 
-    try {
-      const newAgentId = await createAgent({
+    const outcome = await action.run(
+      () => createAgent({
         name: formData.name.trim(),
         description: formData.description,
         ownerId: formData.ownerId ? (formData.ownerId as Id<"users">) : undefined,
@@ -214,13 +213,15 @@ export default function NewAgentPage() {
         maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
         isActive: formData.isActive,
         ...(formData.storageId ? { storageId: formData.storageId } : {}),
-      });
+      }),
+      { suppressErrorToast: true, fallbackMessage: t("errors.create") },
+    );
 
-      router.push(`/admin/agents/${newAgentId}`);
-    } catch (error: unknown) {
-      setSubmitError(getErrorMessage(error, t("errors.create")));
-      setIsSubmitting(false);
+    if (outcome.ok) {
+      router.push(`/admin/agents/${outcome.data}`);
+      return;
     }
+    setIsSubmitting(false);
   };
 
   return (
@@ -241,7 +242,7 @@ export default function NewAgentPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-        <SaveError>{submitError}</SaveError>
+        <SaveError>{action.error}</SaveError>
 
         {/* The settings screen's layout, card for card. */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

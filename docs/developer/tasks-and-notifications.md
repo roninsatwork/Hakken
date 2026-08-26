@@ -15,8 +15,10 @@ or Gmail follow-up task creation, or photo-action confirmation.
 - `src/app/(dashboard)/app/tasks/page.tsx` is the workspace task list.
 - `src/lib/taskGrouping.ts` groups tasks by overdue, today, this week, later,
   done, and cancelled.
-- `src/ui/components/layout/SidebarNavigation.tsx` links `/app/tasks` and shows
-  the open task badge.
+- `src/ui/components/layout/SidebarNavTrees.tsx` links `/app/tasks` from the
+  user navigation tree, when the company has the tasks module. The link carries
+  no count; the two sidebar badges are for workflow runs and governance
+  approvals.
 - `src/ui/components/layout/Header.tsx` mounts the notification bell.
 - `src/ui/components/layout/NotificationBell.tsx` lists recent notifications,
   shows the unread count, opens notification links, marks one notification read,

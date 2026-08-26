@@ -25,8 +25,8 @@ The prompt sandbox lives at `src/app/(dashboard)/app/agentic-testing/page.tsx`. 
 
 The agent implementation is split across several Convex modules:
 
-- `convex/agents.ts` owns agent list/get/create/update/delete, template creation, readiness checks, activation guards, and internal agent lookup.
-- `convex/agentRuntime.ts` and `convex/agentService.ts` execute agent objectives and build the runtime prompt/tool flow.
+- `convex/agents.ts` owns agent list/get/create/update/delete, template creation, readiness checks, activation guards, and internal agent lookup, with the record-building and audit-metadata helpers behind it in `convex/agentService.ts`.
+- `convex/agentRuntime.ts` holds the internal actions that start and resume a run: objectives, triggered objectives, chat responses, approval resume and refusal, and the workflow agent node. Each hands off to `convex/agentObjectiveLoop.ts`, which builds the run's tools and knowledge, walks the model/tool conversation, settles parallel tool batches, and finalizes failures. Per-turn helpers — tool argument and result parsing, the autonomy and confirmation rules, cost, and approval messages — live in `convex/agentRuntimeTurnService.ts`.
 - `convex/agentRuns.ts` owns run listing, run detail, analytics, run observatory, pending approvals, approval decisions, replay, cancellation, and internal run creation/status updates.
 - `convex/agentRunFeedback.ts`, `convex/agentRunReflections.ts`, `convex/agentMemoryCandidates.ts`, `convex/agentMemories.ts`, and `convex/agentImprovementSuggestions.ts` implement learning and review loops.
 - `convex/agentEvalFixtures.ts` implements check CRUD, smoke evals, eval suites, suite presets, and grading context.

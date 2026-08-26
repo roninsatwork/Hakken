@@ -59,8 +59,8 @@ from the connection, never from narrowing an agent — see
 A tool that arrived from a server carries `companyId`. `isToolVisibleToCompany`
 in `mcpToolPolicy.ts` is the single rule, and it is applied at two points:
 
-1. **When a run resolves its tools** (`agentRuntime.ts`), so a shared agent
-   running for one company is never *offered* another's tool.
+1. **When a run resolves its tools** (`agentObjectiveLoop.ts`), so a shared
+   agent running for one company is never *offered* another's tool.
 2. **At the moment of use** (`mcpToolCall.ts`), because a binding is not
    permission — the run is.
 
@@ -119,9 +119,9 @@ tools were chosen by somebody accountable *and the tools are ours*. A tool on
 somebody else's server is neither, and the third party can change what it does
 without changing its name.
 
-`autonomyAppliesToTool` in `agentRuntime.ts` is the only place that decides this.
-Two functions used to, which is how the gate was bypassed the first time it was
-built.
+`autonomyAppliesToTool` in `agentRuntimeTurnService.ts` is the only place that
+decides this. Two functions used to, which is how the gate was bypassed the
+first time it was built.
 
 The approval message tells the reviewer the request leaves the platform.
 

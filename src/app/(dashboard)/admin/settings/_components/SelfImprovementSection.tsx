@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Info, Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -56,31 +56,34 @@ export function SelfImprovementSection() {
   const t = useTranslations("admin.settings.selfImprovement");
   const config = useQuery(api.selfImprovementConfig.getConfig, {});
   const updateConfig = useMutation(api.selfImprovementConfig.updateConfig);
+  const action = useAdminAction({ scope: "admin-self-improvement" });
 
   const [switches, setSwitches] = useState<SwitchState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    if (config) setSwitches(config);
-  }, [config]);
+  const [seenConfig, setSeenConfig] = useState<typeof config>(undefined);
+
+  if (config && config !== seenConfig) {
+    setSeenConfig(config);
+    setSwitches(config);
+  }
 
   const handleSave = async () => {
     if (!switches) return;
-    setIsSaving(true);
     setSaveError("");
-    try {
-      await updateConfig(switches);
+    const outcome = await action.run(() => updateConfig(switches), {
+      suppressErrorToast: true,
+      fallbackMessage: t("saveFailed"),
+    });
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (error) {
-      setSaveError(getErrorMessage(error, t("saveFailed")));
-    } finally {
-      setIsSaving(false);
+      return;
     }
+    if (outcome.message) setSaveError(outcome.message);
   };
 
   /**
@@ -195,7 +198,7 @@ export function SelfImprovementSection() {
         </div>
         <SaveAction
           onClick={handleSave}
-          isSaving={isSaving}
+          isSaving={action.isBusy()}
           showSuccess={saveSuccess}
           label={t("save")}
           savingLabel={t("saving")}
