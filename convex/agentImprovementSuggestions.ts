@@ -5,9 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
-import {
-  ensureAgentSkillVersionSnapshot,
-} from "./agentSkills";
+import { ensureAgentSkillVersionSnapshot } from "./agentSkillsService";
 import { appError } from "./utils/appError";
 
 const SUGGESTION_LIMIT = 200;

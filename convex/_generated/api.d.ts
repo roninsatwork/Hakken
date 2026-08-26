@@ -40,6 +40,7 @@ import type * as agentRuntimeService from "../agentRuntimeService.js";
 import type * as agentRuntimeTurnService from "../agentRuntimeTurnService.js";
 import type * as agentService from "../agentService.js";
 import type * as agentSkills from "../agentSkills.js";
+import type * as agentSkillsService from "../agentSkillsService.js";
 import type * as agentTemplates from "../agentTemplates.js";
 import type * as agentTransactions from "../agentTransactions.js";
 import type * as agentVersioningService from "../agentVersioningService.js";
@@ -351,6 +352,7 @@ declare const fullApi: ApiFromModules<{
   agentRuntimeTurnService: typeof agentRuntimeTurnService;
   agentService: typeof agentService;
   agentSkills: typeof agentSkills;
+  agentSkillsService: typeof agentSkillsService;
   agentTemplates: typeof agentTemplates;
   agentTransactions: typeof agentTransactions;
   agentVersioningService: typeof agentVersioningService;
