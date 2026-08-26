@@ -1006,7 +1006,8 @@
         "deleteFailed": "Failed to purge tenant from protocol."
       },
       "featuresIntro": "What this workspace can reach. Switching one off removes it from their menu and closes the section — typing the address will not get them in. Nobody else is affected.",
-      "featuresPlanNote": "Already included in this plan"
+      "featuresPlanNote": "Already included in this plan",
+      "featuresSaveFailed": "The features could not be updated. Try again."
     },
     "plans": {
       "title": "Subscription Plans",
@@ -5825,6 +5826,7 @@
       "addPlaceholder": "Tell the assistant something about you, e.g. \"Keep answers short\"",
       "addButton": "Add",
       "addFailed": "The note could not be saved. It may be full, or the wording was refused.",
+      "deleteFailed": "The note could not be removed. Try again.",
       "privacyHint": "Notes shape your answers only. Deleting one removes it immediately."
     }
   },

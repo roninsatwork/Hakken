@@ -7,7 +7,7 @@
  * widgetEmbedPass) until 2026-08-19 — a security primitive with four forks
  * means a fix lands in one of them. This is the only copy now; import it.
  */
-import { appError } from "./appError";
+import { appError, appErrorMessage } from "./appError";
 
 export function constantTimeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -80,7 +80,7 @@ export function validateSafeUrl(url: string, context: string = "URL"): void {
     }
 
   } catch (e: unknown) {
-    if (e instanceof Error && e.message.startsWith("SSRF Prevention")) throw e;
+    if (appErrorMessage(e, "").startsWith("SSRF Prevention")) throw e;
     throw appError("INVALID_INPUT", `SSRF Prevention: Malformed URL provided for ${context}.`);
   }
 }

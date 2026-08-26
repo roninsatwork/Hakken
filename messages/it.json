@@ -1006,7 +1006,8 @@
       "featuresSearchPlaceholder": "Cerca funzionalità...",
       "featuresEmptyState": "Nessuna funzionalità corrisponde alla ricerca.",
       "featuresPlanNote": "Già inclusa in questo piano",
-      "featuresIntro": "Cosa può raggiungere questo workspace. Disattivarne una la rimuove dal loro menu e chiude la sezione: digitare l'indirizzo non permetterà l'accesso. Nessun altro viene coinvolto."
+      "featuresIntro": "Cosa può raggiungere questo workspace. Disattivarne una la rimuove dal loro menu e chiude la sezione: digitare l'indirizzo non permetterà l'accesso. Nessun altro viene coinvolto.",
+      "featuresSaveFailed": "Impossibile aggiornare le funzionalità. Riprova."
     },
     "plans": {
       "title": "Piani di Abbonamento",
@@ -5825,6 +5826,7 @@
       "addPlaceholder": "Di' qualcosa di te all'assistente, es. \"Risposte brevi\"",
       "addButton": "Aggiungi",
       "addFailed": "Impossibile salvare la nota. Forse il blocco è pieno o la formulazione è stata rifiutata.",
+      "deleteFailed": "Impossibile rimuovere la nota. Riprova.",
       "privacyHint": "Le note influenzano solo le tue risposte. Eliminarne una la rimuove subito."
     }
   },

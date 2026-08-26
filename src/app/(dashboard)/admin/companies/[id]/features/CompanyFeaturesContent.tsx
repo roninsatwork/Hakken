@@ -81,7 +81,7 @@ export function CompanyFeaturesContent({
     setError("");
     const outcome = await action.run(
       () => setCompanyModules({ id: companyId, enabledModules: selected }),
-      { key: "save-features", suppressErrorToast: true, fallbackMessage: "Failed to update features" }
+      { key: "save-features", suppressErrorToast: true, fallbackMessage: t("featuresSaveFailed") }
     );
     if (outcome.ok) {
       setSaveSuccess(true);

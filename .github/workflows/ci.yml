@@ -20,8 +20,12 @@ on:
 # three times in ten minutes runs the whole suite three times and nobody ever
 # reads the first two results. `main` is exempt: those runs gate a deploy, so
 # each commit's result has to stand on its own.
+#
+# The event name is part of the key so a hand-pressed real-auth run and the
+# branch's own push CI do not cancel each other: same ref, different purpose,
+# and the newer one is not a replacement for the older.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
@@ -167,9 +171,9 @@ jobs:
     # into main until 2026-08-26, when Anthony weighed what it needs against
     # what it buys and declined: a target deployment it can reinstall over and
     # leave the test-login door open on cannot be dev, and a dedicated one is a
-    # second paid deployment carrying its own copies of every metered key
-    # (Anthropic, OpenAI, Google, Resend, Apify, Firecrawl, Twilio) — the chat
-    # spec spends real model tokens on every run. He verifies sign-in himself.
+    # second paid deployment needing its own auth keys stood up and kept in
+    # sync (dev carries thirty environment variables). He verifies sign-in
+    # himself before he ships.
     #
     # Left wired rather than deleted because it is proven — it passed 5/5
     # against a real deployment in 15.7s on 2026-08-25 — and because the same

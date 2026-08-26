@@ -49,7 +49,7 @@ test("super admin reads a real admin table @real-auth-super-admin @real-auth-smo
   await expect(page.getByText("Local Test Company").first()).toBeVisible({ timeout: 30000 });
 });
 
-test("standard user sends a message and the assistant answers @real-auth-user @real-auth-smoke", async ({ page }) => {
+test("standard user sends a message and the thread accepts it @real-auth-user @real-auth-smoke", async ({ page }) => {
   // A real model writes the reply, so this one waits on something slower than
   // the suite's default half minute.
   test.setTimeout(150_000);
@@ -70,17 +70,15 @@ test("standard user sends a message and the assistant answers @real-auth-user @r
   await expect(page).toHaveURL(/\/app\/assistant\/[a-zA-Z0-9_-]+/, { timeout: 30000 });
   await expect(page.getByText(message).first()).toBeVisible({ timeout: 30000 });
 
-  // The reply itself, not the controls around it: the rating buttons are behind
-  // a platform switch, so asserting them makes the smoke test depend on how the
-  // deployment happens to be configured. The writing indicator is written by the
-  // backend as the run passes each stage, so watching it appear and then clear
-  // proves the whole loop — mutation, scheduled action, and the reactive query
-  // carrying the finished answer back.
-  // Appearing is the assertion, not clearing. This is written by the backend as
-  // the run starts, so seeing it proves the whole loop: the mutation, the action
-  // the scheduler picked up, and the reactive query carrying its writes back.
-  // Whether it clears is a separate question — see the stalled-stream note in
-  // docs/plans/active/audit-remediation-plan.md — and a smoke test should not be
-  // the thing that fails for it.
+  // This is the send half only, and the name says so now. The indicator below
+  // is AssistantStagePill, which the thread renders whenever the last message
+  // is the user's own — so it is already true by the line above, and it clears
+  // again when the reply lands. It was documented as proof of the whole loop
+  // (mutation, scheduled action, reactive query) and it is not.
+  //
+  // Asserting the reply itself is the right fix and wants a live run of this
+  // lane to land safely — the assistant's own message, not the pill, not the
+  // rating buttons (those sit behind a platform switch, so asserting them
+  // would make the result depend on how the deployment is configured).
   await expect(page.getByRole("status").first()).toBeVisible({ timeout: 60000 });
 });

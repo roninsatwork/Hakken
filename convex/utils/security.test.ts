@@ -34,4 +34,27 @@ describe("Security Utilities - validateSafeUrl", () => {
     expect(() => validateSafeUrl("not-a-url", "Test")).toThrow("SSRF Prevention: Malformed URL");
     expect(() => validateSafeUrl("", "Test")).toThrow("SSRF Prevention: Malformed URL");
   });
+
+  // Asserting the sentence, not the prefix. Every rejection above shares the
+  // "SSRF Prevention" prefix with the malformed-URL fallback the catch block
+  // substitutes, so a prefix assertion stays green while the diagnosis is
+  // being thrown away — which is exactly what happened when these throws
+  // became structured errors and the catch kept matching on a plain message.
+  test("Keeps the reason a URL was rejected, not just that it was", () => {
+    expect(() => validateSafeUrl("http://10.0.0.1", "Test")).toThrow("Private IPv4 address denied");
+    expect(() => validateSafeUrl("http://169.254.169.254", "Test")).toThrow("Private IPv4 address denied");
+    expect(() => validateSafeUrl("ftp://files.example.com", "Test")).toThrow("Invalid protocol");
+    expect(() => validateSafeUrl("not-a-url", "Test")).toThrow("Malformed URL");
+  });
+
+  // Both forms are the loopback address written to slip past a dotted-quad
+  // check. They never reach this module's own numeric and hexadecimal rules:
+  // the URL parser normalises them to 127.0.0.1 first, so the private-IPv4
+  // rule is what answers. Asserted here so that stays deliberate — if a parser
+  // change ever stops normalising, these fail rather than quietly passing
+  // through.
+  test("Blocks numeric and hexadecimal spellings of loopback", () => {
+    expect(() => validateSafeUrl("http://2130706433", "Test")).toThrow("Private IPv4 address denied");
+    expect(() => validateSafeUrl("http://0x7f000001", "Test")).toThrow("Private IPv4 address denied");
+  });
 });

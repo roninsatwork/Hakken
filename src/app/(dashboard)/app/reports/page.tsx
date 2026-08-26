@@ -273,7 +273,7 @@ export default function ReportsPage() {
                 {/* SECTION 5: Risk Radar & Vector Analysis */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
                   <div className="lg:col-span-2 bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl overflow-hidden shadow-xl relative">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/5 blur-[100px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400/5 blur-[100px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <div className="p-7 border-b border-border-dim/50 relative z-10">
                       <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2">
                          <ShieldAlert className="w-4 h-4 text-red-500" /> Section 5 — Risk Radar
@@ -285,12 +285,12 @@ export default function ReportsPage() {
                        {riskRadar.critical && riskRadar.critical.length > 0 && (
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
-                              <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.7)] border border-red-400"></span> 
+                              <span className="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.75)] border border-amber-300"></span>
                               Critical — Needs Intervention This Week
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.critical.map((d, i) => (
-                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-red-500/20">
+                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-amber-400/40">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}
@@ -302,12 +302,12 @@ export default function ReportsPage() {
                        {riskRadar.atRisk && riskRadar.atRisk.length > 0 && (
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
-                              <span className="w-3 h-3 rounded-full bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.7)] border border-yellow-300"></span> 
+                              <span className="w-3.5 h-3.5 rounded-full bg-amber-400/45 border border-amber-400/70"></span>
                               At Risk — Deteriorating
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.atRisk.map((d, i) => (
-                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-yellow-400/20">
+                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-amber-400/20">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}
@@ -319,12 +319,12 @@ export default function ReportsPage() {
                        {riskRadar.quiet && riskRadar.quiet.length > 0 && (
                          <div>
                            <h4 className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.1em] text-foreground mb-4">
-                              <span className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.7)] border border-green-400"></span> 
+                              <span className="w-3.5 h-3.5 rounded-full bg-secondary/40 border border-secondary/50"></span>
                               Quiet — Worth a Nudge
                            </h4>
                            <div className="space-y-4">
                              {riskRadar.quiet.map((d, i) => (
-                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-green-500/20">
+                                <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-secondary/20">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrencyGBP(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">{t("recommendation")}</strong> {d.recommendation}
                                 </p>
                              ))}

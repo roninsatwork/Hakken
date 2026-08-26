@@ -79,7 +79,7 @@ export function AssistantNoteTab() {
                   void action.run(() => deleteNote({ memoryId: note.memoryId }), {
                     key: note.memoryId,
                     suppressErrorToast: true,
-                    fallbackMessage: t("addFailed"),
+                    fallbackMessage: t("deleteFailed"),
                   }).then((outcome) => {
                     if (!outcome.ok && outcome.message) setError(outcome.message);
                   })

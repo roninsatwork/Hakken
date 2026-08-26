@@ -90,12 +90,17 @@ assistant round trip. Adding `@real-auth-smoke` to a spec in
 `e2e/local-real-auth-smoke.spec.ts` is what puts it in CI; specs in that file
 without the tag stay local-only.
 
-The assistant round trip asserts that a reply *arrives*, not what it says. With
-no AI provider configured on the test deployment the runtime writes its own
-"Core Offline" notice into the thread, which still proves the whole loop —
-browser to mutation, mutation to scheduled action, action back to a mutation,
-and the reactive query back to the browser — without spending provider credit on
-every pull request.
+**The assistant round trip is weaker than its name.** It asserts the composer
+accepts a message, the browser lands on the thread URL, the message appears,
+and the writing indicator is visible. It does **not** assert that a reply
+arrives: the indicator it waits for (`AssistantStagePill`) renders whenever the
+last message is the user's own, so it is already true the moment the message
+round-trips, and it *disappears* when the reply lands. Send is covered; receive
+is not. Asserting the reply itself is the obvious strengthening, and it needs a
+live run of the lane to verify rather than a guess — do that before trusting
+this spec as loop coverage. (It would not cost provider credit: with no AI
+provider configured the runtime writes its own "Core Offline" notice into the
+thread, which is a real assistant message.)
 
 #### Its deployment and secrets
 
@@ -123,9 +128,16 @@ There is no third secret for `LOCAL_TEST_AUTH_SECRET`. The job mints a fresh
 random one per run, masks it, and sets it on the deployment, so no long-lived
 test credential exists to leak or to rotate.
 
-The job fails when those secrets are absent rather than skipping. A gate that
-quietly passes when it is unconfigured is the problem this job was added to fix,
-so until both secrets exist, PRs into `main` will be blocked by it.
+The job fails when those secrets are absent rather than skipping. A run that
+quietly passes while unconfigured is the problem this job was added to fix, and
+pressing "Run workflow" is an explicit request for the check — so it says so
+instead of pretending. No pull request is affected either way: since 2026-08-26
+nothing triggers this job automatically.
+
+If "Real Auth Smoke" was ever added as a **required status check** in the
+repository's branch-protection settings, remove it there — a required check
+that no longer runs leaves pull requests waiting on it forever. That setting
+lives in GitHub, not in this repository, so it cannot be verified from here.
 
 Failed Playwright runs upload `playwright-report/`. Coverage runs upload `coverage/`.
 
