@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { metricsClearingRatchet } from "./coverageRatchet.mjs";
 
 /**
  * Coverage gate, scoped to the platform.
@@ -98,6 +99,22 @@ if (!fs.existsSync(summaryPath)) {
 }
 
 const summary = readJson(summaryPath);
+
+// How old the numbers being judged actually are.
+//
+// This reads whatever `test:coverage` last wrote. In CI that is seconds old,
+// because the two run back to back. Run by hand it can be anything: on
+// 2026-08-26 it was reporting a month-old file as if it were today, four
+// points under the floor, and said nothing about it. A threshold check that
+// cannot tell you when it was measured is a number without a date on it.
+const summaryAgeDays = (Date.now() - fs.statSync(summaryPath).mtimeMs) / 86_400_000;
+
+if (summaryAgeDays >= 1) {
+  console.warn(
+    `Coverage data is ${Math.floor(summaryAgeDays)} day(s) old (${path.relative(rootDir, summaryPath)}). ` +
+      `Run \`npm run test:coverage\` first, or these figures describe a tree that no longer exists.`,
+  );
+}
 const platformEntries = [];
 const demoEntries = [];
 
@@ -161,17 +178,24 @@ if (coverageFailures.length > 0) {
 // the measured platform coverage clears a target, say so loudly; raising
 // `current` (and `floor`) in coverage-thresholds.json stays a deliberate,
 // reviewed edit rather than something this script does behind anyone's back.
-if (config.nextRatchet) {
-  const ready = rows.filter(
-    ({ metric, actual }) =>
-      config.nextRatchet[metric] !== undefined && actual >= config.nextRatchet[metric],
+const ready = metricsClearingRatchet(rows, config.nextRatchet);
+
+if (ready.length > 0) {
+  const lines = ready.map(
+    ({ metric, actual, target }) =>
+      `- ${metric}: platform ${formatPercent(actual)} ≥ target ${formatPercent(target)} — raise current/floor in coverage-thresholds.json`,
   );
-  if (ready.length > 0) {
-    console.log("\nCoverage has cleared its next ratchet target:");
-    for (const { metric, actual } of ready) {
-      console.log(
-        `- ${metric}: platform ${formatPercent(actual)} ≥ target ${formatPercent(config.nextRatchet[metric])} — raise current/floor in coverage-thresholds.json`,
-      );
-    }
+
+  console.log("\nCoverage has cleared its next ratchet target:");
+  for (const line of lines) console.log(line);
+
+  // Into the run summary as well as the log. This printed only to stdout, so on
+  // the one day it finally fires it would have landed in raw CI output that
+  // nobody opens — the table above had already learned that lesson.
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    fs.appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `### Coverage Can Ratchet Up\n\n${lines.join("\n")}\n`,
+    );
   }
 }

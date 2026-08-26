@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { CircleDollarSign, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -25,6 +26,7 @@ export function MoneyViewScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiMoney");
+  const action = useAdminAction({ scope: "admin-money-view" });
   const companyView = useQuery(
     api.moneyView.getMoneyViewForCompany,
     companyId ? { companyId } : "skip"
@@ -60,25 +62,26 @@ export function MoneyViewScreen({
     const callMinutes = Number(perCall ?? view.minutesPerCall);
     if (!Number.isFinite(conversationMinutes) || !Number.isFinite(callMinutes)) return;
     setIsSaving(true);
-    try {
-      if (companyId) {
-        await setCompany({
-          companyId,
-          minutesPerConversation: conversationMinutes,
-          minutesPerCall: callMinutes,
-        });
-      } else {
-        await setGlobal({
-          minutesPerConversation: conversationMinutes,
-          minutesPerCall: callMinutes,
-        });
-      }
+    const outcome = await action.run(
+      () =>
+        companyId
+          ? setCompany({
+              companyId,
+              minutesPerConversation: conversationMinutes,
+              minutesPerCall: callMinutes,
+            })
+          : setGlobal({
+              minutesPerConversation: conversationMinutes,
+              minutesPerCall: callMinutes,
+            }),
+      { fallbackMessage: t("saveFailed") },
+    );
+    if (outcome.ok) {
       setIsEditingAssumptions(false);
       setPerConversation(null);
       setPerCall(null);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   return (

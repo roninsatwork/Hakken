@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AlertTriangle, CircleCheck, HelpCircle, Loader2, PlugZap } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -22,6 +23,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
  */
 export default function ConnectionsPage() {
   const t = useTranslations("connections");
+  const action = useAdminAction({ scope: "admin-connections" });
   const { platformName } = useSystemSettings();
   const [connectionSearch, setConnectionSearch] = useState("");
   const [connectionPage, setConnectionPage] = useState(1);
@@ -50,11 +52,8 @@ export default function ConnectionsPage() {
 
   const check = async () => {
     setIsChecking(true);
-    try {
-      await probeNow({});
-    } finally {
-      setIsChecking(false);
-    }
+    await action.run(() => probeNow({}), { fallbackMessage: t("checkFailed") });
+    setIsChecking(false);
   };
 
   const when = (at: number | null) => (at ? formatDateTime(at) : t("never"));
