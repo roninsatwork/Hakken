@@ -204,7 +204,20 @@ export const snapshotDateAlreadyGenerated = internalQuery({
 
 export const readSnapshotModelCatalogue = internalQuery({
   args: {},
-  handler: async (ctx) => await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT),
+  handler: async (ctx) => {
+    // One row past the cap, so a full read is distinguishable from a truncated
+    // one. Everything below prices a day from this catalogue and writes the
+    // cost into a snapshot that is never recomputed — so a model missing from
+    // a short read is not a gap, it is a wrong number stored for ever, priced
+    // at the default rate. `aiModels.ts` already marks its own rollup partial
+    // for the same reason; the write path did not.
+    const models = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT + 1);
+
+    return {
+      models: models.slice(0, MODEL_CATALOG_LIMIT),
+      isPartial: models.length > MODEL_CATALOG_LIMIT,
+    };
+  },
 });
 
 export const readDayInteractionsPage = internalQuery({
@@ -313,7 +326,21 @@ export const generateDailySnapshots = internalAction({
     }
 
     const catalogue = await ctx.runQuery(internal.analyticsSnapshots.readSnapshotModelCatalogue, {});
-    const { modelMap, defaultModelId } = buildModelCostContext(catalogue);
+
+    // Refused for the same reason the day ceiling refuses: a snapshot is
+    // written once and read for ever. Priced from a short catalogue, every
+    // model past the cap silently falls back to the default rate, and the
+    // wrong cost is indistinguishable from a right one the moment it lands.
+    // A missing day is reported by the analytics health check; a mispriced one
+    // is not reported by anything.
+    if (catalogue.isPartial) {
+      throw appError(
+        "INVALID_INPUT",
+        `Analytics for ${dateString} were not written: the model catalogue is larger than ${MODEL_CATALOG_LIMIT} rows, so any cost this run recorded would price the models it could not read at the default rate.`
+      );
+    }
+
+    const { modelMap, defaultModelId } = buildModelCostContext(catalogue.models);
 
     const rawInteractions: Array<{
       userId?: Id<"users">;

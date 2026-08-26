@@ -171,6 +171,33 @@ describe("analytics cron snapshots", () => {
     });
   });
 
+  // A snapshot is written once and read for ever, so a cost priced from a
+  // catalogue the read could not finish is a wrong number stored permanently —
+  // the models past the cap fall back to the default rate and nothing says so.
+  // The day ceiling above already refuses for the same reason; this proves the
+  // catalogue read reports whether it finished, which is what the refusal
+  // stands on. The truncated case is not seeded: it needs 2,001 model rows.
+  test("the snapshot model catalogue reports whether it read the whole thing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", {
+        modelId: "test-model",
+        displayName: "Test Model",
+        providerKey: "anthropic",
+        providerModelId: "test-model",
+        isEnabled: true,
+        isDefault: true,
+        lastSyncedAt: 0,
+      });
+    });
+
+    const catalogue = await t.query(internal.analyticsSnapshots.readSnapshotModelCatalogue, {});
+
+    expect(catalogue.isPartial).toBe(false);
+    expect(catalogue.models).toHaveLength(1);
+  });
+
   test("a day larger than one page is totalled whole, not to the first page", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const dayStart = Date.UTC(2026, 4, 3);

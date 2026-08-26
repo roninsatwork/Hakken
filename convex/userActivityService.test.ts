@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
+  LOGIN_SCAN_LIMIT,
   LOGIN_WINDOW_DAYS,
+  USER_SCAN_LIMIT,
   activityBound,
+  loginScanTruncated,
   loginWindowStart,
   planLoginCountUpdates,
   tallyLoginsByUser,
@@ -135,5 +138,19 @@ describe("activityBound", () => {
 
   test("any places no bound at all", () => {
     expect(activityBound("any", NOW)).toEqual({ kind: "any" });
+  });
+});
+
+describe("loginScanTruncated", () => {
+  test("a scan that came back under both caps is complete", () => {
+    expect(loginScanTruncated({ logins: 19999, users: 19999 })).toBe(false);
+  });
+
+  test("a full login scan is truncated, whatever the user count", () => {
+    expect(loginScanTruncated({ logins: LOGIN_SCAN_LIMIT, users: 3 })).toBe(true);
+  });
+
+  test("a full user scan is truncated, whatever the login count", () => {
+    expect(loginScanTruncated({ logins: 3, users: USER_SCAN_LIMIT })).toBe(true);
   });
 });

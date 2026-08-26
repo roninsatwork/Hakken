@@ -16,12 +16,24 @@ export const LOGIN_WINDOW_DAYS = 30;
 /**
  * Ceilings, so a runaway table degrades loudly rather than silently.
  *
- * Hitting either is reported by the caller. A truncated tally that nobody
+ * Hitting either is refused by the caller. A truncated tally that nobody
  * mentions reads as "this user stopped logging in", which is a wrong answer
  * dressed as a real one.
  */
 export const LOGIN_SCAN_LIMIT = 20000;
 export const USER_SCAN_LIMIT = 20000;
+
+/**
+ * Did either scan come back full — meaning every count derived from it is short?
+ *
+ * A separate function because the answer has to be acted on *before* the first
+ * patch. Until 2026-08-26 the job wrote every user's count and then logged a
+ * warning about the counts it had just written, which is the failure the
+ * ceilings exist to prevent, performed in the correct order to be useless.
+ */
+export function loginScanTruncated(scanned: { logins: number; users: number }) {
+  return scanned.logins >= LOGIN_SCAN_LIMIT || scanned.users >= USER_SCAN_LIMIT;
+}
 
 export function loginWindowStart(now: number) {
   return now - LOGIN_WINDOW_DAYS * 24 * 60 * 60 * 1000;

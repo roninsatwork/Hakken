@@ -19,6 +19,7 @@ import {
   type DirectoryActivity,
   activityBound,
   LOGIN_SCAN_LIMIT,
+  loginScanTruncated,
   USER_SCAN_LIMIT,
   loginWindowStart,
   planLoginCountUpdates,
@@ -906,6 +907,20 @@ export const recomputeLoginCounts = internalMutation({
 
     const users = await ctx.db.query("users").take(USER_SCAN_LIMIT);
 
+    // Before anything is written, not after. A capped scan under-counts, which
+    // reads on screen as "this person stopped using the platform" — a wrong
+    // answer that looks like a real one, and one nobody goes back to check.
+    // This used to patch every user first and then warn into a log, so the
+    // wrong counts were already stored by the time the warning existed.
+    const truncated = loginScanTruncated({ logins: rows.length, users: users.length });
+
+    if (truncated) {
+      throw appError(
+        "CONFLICT",
+        `Login counts refused: the nightly scan hit its cap (${rows.length} logins, ${users.length} users), so every count it could write would be short. Raise the scan limits or page the scan.`,
+      );
+    }
+
     const tally = tallyLoginsByUser(
       rows.map((row) => ({ userId: row.userId, status: row.status, timestamp: row.timestamp })),
       windowStart
@@ -917,17 +932,6 @@ export const recomputeLoginCounts = internalMutation({
 
     for (const update of updates) {
       await ctx.db.patch(update.id as Id<"users">, { loginCount30d: update.loginCount30d });
-    }
-
-    // Never truncate quietly. A capped scan under-counts, which reads on screen
-    // as "this person stopped using the platform" — a wrong answer that looks
-    // like a real one.
-    const truncated = rows.length >= LOGIN_SCAN_LIMIT || users.length >= USER_SCAN_LIMIT;
-    if (truncated) {
-      console.warn("[userActivity] Scan limit reached; 30-day login counts may be incomplete.", {
-        logins: rows.length,
-        users: users.length,
-      });
     }
 
     return { scannedLogins: rows.length, scannedUsers: users.length, updated: updates.length, truncated };

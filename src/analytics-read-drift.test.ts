@@ -11,18 +11,18 @@ import {
 } from './test/driftUtils';
 
 const platformScaleBroadReadAllowlist = [
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
-  { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
+  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'capped at 10,000 rows over the whole requested range, NOT just today — the window start is the range start, and no snapshot read stands behind it. Nothing protects this read: a busy period shows short on screen with no gap reported anywhere. Recorded honestly on 2026-08-26 after the previous reason claimed the snapshot ceiling covered it, which was false in both halves (the ceiling is 250,000, and this read is not today-scoped). First candidate for paging' },
+  { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'capped at 10,000 rows over the whole requested range, NOT just today — the window start is the range start, and no snapshot read stands behind it. Nothing protects this read: a busy period shows short on screen with no gap reported anywhere. Recorded honestly on 2026-08-26 after the previous reason claimed the snapshot ceiling covered it, which was false in both halves (the ceiling is 250,000, and this read is not today-scoped). First candidate for paging' },
   { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'snapshot-first aggregate read is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
+  { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day, capped at 10,000 rows. It is genuinely today-scoped — the window start is max(requested, midnight) — so a day busy enough to truncate it is also a day the snapshot generator refuses at its own 250,000 ceiling, and the analytics health check reports the missing snapshot. Paging it is part of the same pipeline redesign, not a separate fix' },
   { filePath: 'convex/analytics.ts', exportName: 'getUserCostThreads', table: 'messages', category: 'analytics_detail', phase: 'Analytics Plan', reason: 'thread-scoped message detail remains split from aggregate user cost metrics' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'users', category: 'inventory_overlay', phase: 'Phase 5', reason: 'company inventory overlay remains exact until inventory rollups are introduced' },
-  { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
-  { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
+  { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day, capped at 10,000 rows. It is genuinely today-scoped — the window start is max(requested, midnight) — so a day busy enough to truncate it is also a day the snapshot generator refuses at its own 250,000 ceiling, and the analytics health check reports the missing snapshot. Paging it is part of the same pipeline redesign, not a separate fix' },
+  { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day, capped at 10,000 rows. It is genuinely today-scoped — the window start is max(requested, midnight) — so a day busy enough to truncate it is also a day the snapshot generator refuses at its own 250,000 ceiling, and the analytics health check reports the missing snapshot. Paging it is part of the same pipeline redesign, not a separate fix' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'knowledgeDocuments', category: 'knowledge_inventory', phase: 'Phase 2', reason: 'knowledge document count is scheduled for document-level rollup or bounded pagination' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'company snapshot read is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day. It shares the 10,000-interaction day ceiling that generateDailySnapshots now enforces: above that a day gets no snapshot at all and the analytics health check reports the gap, so this read cannot be the first place a busy day is noticed. Paging it is part of the same pipeline redesign, not a separate fix' },
+  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'two reads: the today-scoped overlay (protected as above) and a separate 30-day scan for the monthly-active set, which is NOT today-scoped and NOT covered by the snapshot ceiling. The monthly-active figure can therefore show short on a busy month with nothing reporting it. Recorded honestly on 2026-08-26; the 30-day scan is the half that needs paging' },
+  { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'the live overlay for today, on top of the snapshot for every earlier day, capped at 10,000 rows. It is genuinely today-scoped — the window start is max(requested, midnight) — so a day busy enough to truncate it is also a day the snapshot generator refuses at its own 250,000 ceiling, and the analytics health check reports the missing snapshot. Paging it is part of the same pipeline redesign, not a separate fix' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'global snapshot read is protected by analytics-specific drift tests' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'analyticsDailySnapshots', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'snapshot health helper is analytics maintenance protected by analytics plan' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'messages', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'message dimension health helper is analytics maintenance protected by analytics plan' },
@@ -58,6 +58,22 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/users.ts', exportName: 'getUnassignedSuperAdmins', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'unassigned super-admin selector needs bounded role/company lookup before large admin growth' },
   { filePath: 'convex/widgets.ts', exportName: 'generateWidgetUploadUrl', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'widget upload thread lookup should be indexed and bounded in chat hardening' },
   { filePath: 'convex/workflows.ts', exportName: 'list', table: 'workflows', category: 'admin_inventory', phase: 'Phase 1', reason: 'workflow admin inventory list is scheduled for paginated indexed contracts' },
+  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentRuns', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. The governance backfill reads one day of runs at a time at 10,000 rows; it rewrites that day set-style, so it must read the day whole to converge rather than double-count. Operator-run, not on a request path' },
+  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentToolCalls', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Same one-day-per-batch backfill as the runs read above, at the same 10,000 cap' },
+  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentRunApprovals', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Same one-day-per-batch backfill, read once per approval status at the same 10,000 cap' },
+  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'aiModels', category: 'admin_inventory', phase: 'Phase 1', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. The model catalogue at 10,000 rows, read to price the overview. Truncation here misprices rather than under-counts, which is the same class as the snapshot catalogue read — needs the same partial marker' },
+  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day message scan at 20,000 rows — the largest unprotected read on the platform, and nothing stands behind it. A busy month shows short on the overview with no gap reported. Rank this above the 10,000-row reads when paging starts' },
+  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'logins', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day login scan at 20,000 rows, feeding the active-user figure on the same screen. Same exposure as the message scan above' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentRuns', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Health signals read at 10,000 rows. Truncation understates a problem count, which is the safe direction for an alert that already exists — but it can also hide one, so it is listed rather than excused' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentLogs', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Recent agent logs at 10,000 rows, read for the error-rate signal' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentRunApprovals', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Pending approvals at 10,000 rows, read for the waiting-on-a-person signal' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'workflowExecutionSteps', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Halted workflow steps at 10,000 rows, filtered to scope in memory afterwards — so the cap bites before the filter, and a busy platform could hide the halted step of one company behind those of another' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentToolCalls', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Failed tool calls in the window at 10,000 rows' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'workflowExecutions', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Recent and latest executions at 10,000 rows, read for the schedule-health signals' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'schedules', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Overdue and active schedules at 10,000 rows' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'companies', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Every company at 10,000 rows when the health check runs platform-wide' },
+  { filePath: 'convex/users.ts', exportName: 'recomputeLoginCounts', table: 'logins', category: 'admin_inventory', phase: 'Phase 1', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day login scan at 20,000 rows for the nightly directory counts. As of 2026-08-26 hitting the cap refuses the whole run rather than writing short counts, so truncation can no longer become stored truth here — the read is still listed because refusing means the counts stop updating, which is a real ceiling on platform size' },
+  { filePath: 'convex/users.ts', exportName: 'recomputeLoginCounts', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Every user at 20,000 rows in the same nightly job, under the same refusal' },
 ] as const;
 
 const exportNameAtOffset = (contents: string, offset: number) => {
@@ -72,20 +88,119 @@ const exportNameAtOffset = (contents: string, offset: number) => {
   return exportName;
 };
 
-const findConvexBroadReads = () => {
-  const files = walkFiles(path.join(repoRoot, 'convex'), new Set(['.ts']))
+/**
+ * A read counts as broad at or above this many rows, whether the number is
+ * written out or hidden behind a constant.
+ *
+ * The register used to match the literal `.take(10000)`, which meant a site
+ * could leave it by being renamed rather than fixed: seven were "fixed" on
+ * 2026-08-26 by swapping the digits for `MODEL_CATALOG_LIMIT`, and stopped
+ * being tracked while still truncating. Worse, reads that were never visible
+ * at all — `LOGIN_SCAN_LIMIT` and `MESSAGE_LIMIT` at twenty thousand rows —
+ * had been sitting outside the register since the day they were written.
+ * Constants are resolved now, so the register tracks the size of the read
+ * rather than how it happens to be spelled.
+ */
+const BROAD_READ_THRESHOLD = 10000;
+
+/** The lower band: bounded, not yet triaged, and held to a shrinking count. */
+const UNTRIAGED_READ_THRESHOLD = 1000;
+
+/**
+ * Frozen at the measured count on 2026-08-26. Shrink-only, like every other
+ * baseline in this repo — it may fall as reads are paged and may never rise.
+ */
+const MID_SIZED_READ_CEILING = 129;
+
+const numericConstants = (() => {
+  const constants = new Map<string, number>();
+  const declarationPattern = /const\s+([A-Z][A-Z0-9_]*)\s*(?::\s*number)?\s*=\s*([0-9_]+)\s*;/g;
+
+  for (const filePath of convexSourceFiles()) {
+    const contents = fs.readFileSync(filePath, 'utf8');
+
+    for (const match of contents.matchAll(declarationPattern)) {
+      constants.set(match[1], Number(match[2].replaceAll('_', '')));
+    }
+  }
+
+  return constants;
+})();
+
+/** The row cap of a `.take(...)` argument, or null when it cannot be read statically. */
+const resolveTakeSize = (argument: string) => {
+  if (/^[0-9_]+$/.test(argument)) {
+    return Number(argument.replaceAll('_', ''));
+  }
+
+  return numericConstants.get(argument) ?? null;
+};
+
+function convexSourceFiles() {
+  return walkFiles(path.join(repoRoot, 'convex'), new Set(['.ts']))
     .filter((filePath) => {
       const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
 
       return !normalizedPath.includes('/_generated/') && !normalizedPath.endsWith('.test.ts');
     });
-  const broadOperationPattern = /\.(take\(10000\)|collect\(\))/g;
+}
+
+/**
+ * Reads bounded between the untriaged threshold and the broad-read threshold.
+ *
+ * The register proper starts at ten thousand rows. Without this, a read could
+ * leave it by dropping its cap to 9,999 — the same move that hid seven reads
+ * behind a constant name on 2026-08-26, one threshold lower. There is no
+ * register entry to write for each of these and no claim being made that they
+ * are safe: only a count that may fall and may not rise, so the population is
+ * visible and shrinking rather than invisible and growing.
+ */
+const findMidSizedReads = () => {
+  const pattern = /\.take\(\s*([A-Za-z0-9_]+)\s*(\+\s*1\s*)?\)/g;
+
+  return convexSourceFiles().flatMap((filePath) => {
+    const contents = fs.readFileSync(filePath, 'utf8');
+    const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+
+    return Array.from(contents.matchAll(pattern)).flatMap((match) => {
+      if (match[2]) {
+        return [];
+      }
+
+      const size = resolveTakeSize(match[1]);
+
+      if (size === null || size < UNTRIAGED_READ_THRESHOLD || size >= BROAD_READ_THRESHOLD) {
+        return [];
+      }
+
+      return [`${normalizedPath}:${contents.slice(0, match.index ?? 0).split('\n').length}:${match[1]}`];
+    });
+  });
+};
+
+const findConvexBroadReads = () => {
+  const files = convexSourceFiles();
+  // `.take(LIMIT + 1)` is the refuse-or-mark-partial pattern, not a silent cap:
+  // the extra row exists to detect the overflow the code then acts on.
+  const broadOperationPattern = /\.(take\(\s*([A-Za-z0-9_]+)\s*(\+\s*1\s*)?\)|collect\(\))/g;
 
   return files.flatMap((filePath) => {
     const contents = fs.readFileSync(filePath, 'utf8');
     const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
 
     return Array.from(contents.matchAll(broadOperationPattern)).flatMap((match) => {
+      if (match[2] !== undefined) {
+        if (match[3]) {
+          return [];
+        }
+
+        const size = resolveTakeSize(match[2]);
+
+        if (size === null || size < BROAD_READ_THRESHOLD) {
+          return [];
+        }
+      }
+
       const operationOffset = match.index ?? 0;
       const statementStart = Math.max(
         contents.lastIndexOf(';', operationOffset) + 1,
@@ -94,7 +209,15 @@ const findConvexBroadReads = () => {
       const statementEndIndex = contents.indexOf(';', operationOffset);
       const statementEnd = statementEndIndex === -1 ? contents.length : statementEndIndex + 1;
       const statement = contents.slice(statementStart, statementEnd);
-      const queryMatch = /ctx\.db\s*\.query\(\s*(?:"([^"]+)"|(table))\s*\)/.exec(statement);
+      // The query this read belongs to is the last one opened before it, not
+      // the first one in the statement: a `Promise.all([...])` holds several,
+      // and taking the first filed every read in the block under the first
+      // table's name — `platformOverview`'s twenty-thousand-row message scan
+      // was recorded against `companies`.
+      const queryMatches = Array.from(
+        contents.slice(statementStart, operationOffset).matchAll(/ctx\.db\s*\.query\(\s*(?:"([^"]+)"|(table))\s*\)/g),
+      );
+      const queryMatch = queryMatches.at(-1);
 
       if (!queryMatch) {
         return [];
@@ -115,8 +238,19 @@ const findConvexBroadReads = () => {
 describe('Analytics And Platform Read Drift', () => {
 
   test('global analytics hot path stays separate from broad inventory scans', () => {
-    const analyticsContents = readRepoFile('convex/analytics.ts');
-    const globalAnalyticsBody = analyticsContents.split('export const getGlobalAnalytics = query({')[1]?.split('export const debugTime = internalQuery({')[0] || '';
+    // Read by declaration name, not by the builder that happens to follow it.
+    // This split on the literal `= query({` until 2026-08-26; the function had
+    // moved to `superAdminQuery({`, so the split missed, the body was the empty
+    // string, and every pattern below passed against nothing for as long as
+    // that was true. Hence the emptiness assertion — this check is worthless
+    // unless it is reading the function.
+    const globalAnalyticsBody = extractExportBody('convex/analytics.ts', 'getGlobalAnalytics');
+
+    expect(
+      globalAnalyticsBody,
+      'getGlobalAnalytics was not found in convex/analytics.ts, so the scan check below tested nothing',
+    ).not.toBe('');
+
     const forbiddenPatterns = [
       /ctx\.db\s*\.query\("threads"\)\s*\.take\(10000\)/,
       /ctx\.db\s*\.query\("users"\)\s*\.take\(10000\)/,
@@ -304,6 +438,16 @@ describe('Analytics And Platform Read Drift', () => {
       body,
       'The generator must not go back to a fixed take.'
     ).not.toMatch(/\.take\(/);
+  });
+
+  test('mid-sized bounded reads stay a shrinking population', () => {
+    const midSized = findMidSizedReads();
+
+    expect(midSized.length, 'no mid-sized reads found at all, so this check is reading nothing').toBeGreaterThan(0);
+    expect(
+      midSized.length,
+      `Bounded reads between ${UNTRIAGED_READ_THRESHOLD} and ${BROAD_READ_THRESHOLD} rows rose above the frozen count. Either page the new read or take it below ${UNTRIAGED_READ_THRESHOLD}; lowering a ten-thousand-row read into this band to leave the register is the move this count exists to catch:\n${midSized.sort().join('\n')}`,
+    ).toBeLessThanOrEqual(MID_SIZED_READ_CEILING);
   });
 
   test('platform broad reads stay classified by scale-hardening phase', () => {
