@@ -1026,7 +1026,7 @@
       "promptPlaceholder": "Enter specialized directives for this organization...",
       "provisionTenant": "Save Company",
       "deleteTitle": "Delete Company",
-      "deleteConfirm": "Are you sure you want to permanently erase {name} and all associated protocol data?",
+      "deleteConfirm": "Are you sure you want to permanently erase <highlight>{name}</highlight> and all associated protocol data?",
       "warningCascade": "Permanent Data Deletion",
       "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
       "deleteTenant": "Delete Company",
@@ -1101,7 +1101,7 @@
       "editTitle": "Edit Plan",
       "editSubtitle": "Modify this subscription plan's limits or details.",
       "deleteTitle": "Delete Plan",
-      "deleteConfirm": "Are you sure you want to delete the plan {name}?",
+      "deleteConfirm": "Are you sure you want to delete the plan <highlight>{name}</highlight>?",
       "deleteWarning": "You cannot delete a plan that is actively assigned to companies.",
       "emptyState": "No subscription plans created yet.",
       "searchPlaceholder": "Search plans...",
@@ -2751,7 +2751,7 @@
             "headerTitle": "Agent knowledge",
             "headerDescription": "Inspect and manage the tenant-scoped knowledge available to this agent.",
             "emptyDescription": "Upload documents, Markdown or an OKF folder, text, or website pages so this agent can retrieve approved tenant-scoped reference material.",
-            "deleteDescription": "Are you sure you want to remove {title} from this agent's knowledge?"
+            "deleteDescription": "Are you sure you want to remove <highlight>{title}</highlight> from this agent's knowledge?"
           }
         },
         "logs": {
@@ -3179,7 +3179,7 @@
             "askedUpTo": "· asked up to {count} times",
             "cost": "· cost {cost}",
             "whatWentWrong": "What went wrong",
-            "missingTool": "This agent does not have the tool {tool} available.",
+            "missingTool": "This agent does not have the tool <highlight>{tool}</highlight> available.",
             "earlierRuns": "Earlier runs"
           }
         },
@@ -3502,7 +3502,7 @@
         "cancel": "Cancel",
         "save": "Save",
         "deleteTitle": "Delete skill",
-        "deleteBody": "Delete {name}? This removes the file and takes the skill away from any agent using it. It cannot be undone.",
+        "deleteBody": "Delete <highlight>{name}</highlight>? This removes the file and takes the skill away from any agent using it. It cannot be undone.",
         "deleteConfirm": "Delete skill",
         "addTitle": "Add new skill",
         "newNamePlaceholder": "What you want to call this skill",
@@ -5585,7 +5585,7 @@
         },
         "websiteDeleteModal": {
           "title": "Delete Website Data",
-          "body": "Are you sure you want to completely remove {root} and all of its trained sub-pages from {platformName}'s memory? This will delete the vectors instantly.",
+          "body": "Are you sure you want to completely remove <highlight>{root}</highlight> and all of its trained sub-pages from {platformName}'s memory? This will delete the vectors instantly.",
           "cancel": "Cancel",
           "confirm": "Delete Everything"
         }
@@ -5760,7 +5760,7 @@
         },
         "deleteModal": {
           "title": "Delete eval",
-          "body": "This deletes {name} and its results for good. There is no undo.",
+          "body": "This deletes <highlight>{name}</highlight> and its results for good. There is no undo.",
           "cancel": "Cancel",
           "confirm": "Delete eval"
         }

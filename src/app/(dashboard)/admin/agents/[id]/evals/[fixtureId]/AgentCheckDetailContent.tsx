@@ -116,7 +116,8 @@ export default function AgentCheckDetailContent({
                 <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
                 <p className="text-[13px] leading-relaxed text-foreground">
                   {t.rich("detail.missingTool", {
-                    tool: () => <span className="font-semibold">{tool}</span>,
+                    tool: tool,
+                    highlight: (chunks) => <span className="font-semibold">{chunks}</span>,
                   })}
                 </p>
               </div>

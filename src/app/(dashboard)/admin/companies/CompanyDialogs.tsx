@@ -149,8 +149,9 @@ export function CompanyDialogs({
       >
         <p>
           {t.rich("deleteConfirm", {
-            name: () => (
-              <strong className="text-foreground font-semibold">{deletingCompanyName}</strong>
+            name: deletingCompanyName ?? "",
+            highlight: (chunks) => (
+              <strong className="text-foreground font-semibold">{chunks}</strong>
             ),
           })}
         </p>

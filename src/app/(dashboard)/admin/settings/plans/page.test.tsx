@@ -59,7 +59,23 @@ vi.mock("next-intl", () => ({
       };
       return labels[key] ?? key;
     };
-    t.rich = (key: string, values?: { name?: () => React.ReactNode }) => (key === "deleteConfirm" ? <>Delete {values?.name?.()}</> : key);
+    // Mirrors next-intl: a function argument is a TAG renderer, called with the
+    // text between the tags. A plain value is substituted. The previous mock
+    // called `name` as a function whatever the message said, which is how a
+    // dialog rendering "delete the plan ?" with the name missing passed here.
+    t.rich = (key: string, values?: Record<string, unknown>) =>
+      key === "deleteConfirm" ? (
+        <>
+          Delete{" "}
+          {typeof values?.highlight === "function"
+            ? (values.highlight as (chunks: React.ReactNode) => React.ReactNode)(
+                String(values?.name ?? ""),
+              )
+            : String(values?.name ?? "")}
+        </>
+      ) : (
+        key
+      );
     return t;
   },
 }));

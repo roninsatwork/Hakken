@@ -118,7 +118,8 @@ export function SkillCatalogDialogs({
           <div className="flex flex-col gap-5 px-1 pb-2">
             <p className="text-[13px] leading-relaxed text-secondary">
               {t.rich("deleteBody", {
-                name: () => <span className="text-foreground font-semibold">{deleteTarget.name}</span>,
+                name: deleteTarget.name,
+                highlight: (chunks) => <span className="text-foreground font-semibold">{chunks}</span>,
               })}
             </p>
             <div className="flex justify-end gap-2">

@@ -1026,7 +1026,7 @@
       "promptPlaceholder": "Inserisci direttive specializzate per questa organizzazione...",
       "provisionTenant": "Attiva Workspace",
       "deleteTitle": "Disattiva Workspace",
-      "deleteConfirm": "Sei sicuro di voler eliminare permanentemente {name} e tutti i dati di protocollo associati?",
+      "deleteConfirm": "Sei sicuro di voler eliminare permanentemente <highlight>{name}</highlight> e tutti i dati di protocollo associati?",
       "warningCascade": "Eliminazione Permanente Dati",
       "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
       "deleteTenant": "Purga Tenant",
@@ -1101,7 +1101,7 @@
       "editTitle": "Modifica Piano",
       "editSubtitle": "Modifica i limiti e i dettagli di questo piano.",
       "deleteTitle": "Elimina Piano",
-      "deleteConfirm": "Sei sicuro di voler eliminare il piano {name}?",
+      "deleteConfirm": "Sei sicuro di voler eliminare il piano <highlight>{name}</highlight>?",
       "deleteWarning": "Non puoi eliminare un piano attualmente assegnato a delle aziende.",
       "emptyState": "Nessun piano creato.",
       "searchPlaceholder": "Cerca piani...",
@@ -2751,7 +2751,7 @@
             "headerTitle": "Conoscenza dell'agente",
             "headerDescription": "Ispeziona e gestisci la conoscenza a livello di tenant disponibile per questo agente.",
             "emptyDescription": "Carica documenti, Markdown o una cartella OKF, testo, o pagine web perché questo agente possa recuperare materiale di riferimento approvato del tenant.",
-            "deleteDescription": "Vuoi davvero rimuovere {title} dalla conoscenza di questo agente?"
+            "deleteDescription": "Vuoi davvero rimuovere <highlight>{title}</highlight> dalla conoscenza di questo agente?"
           }
         },
         "logs": {
@@ -3179,7 +3179,7 @@
             "askedUpTo": "· chiesto fino a {count} volte",
             "cost": "· costo {cost}",
             "whatWentWrong": "Cosa è andato storto",
-            "missingTool": "Questo agente non ha lo strumento {tool} disponibile.",
+            "missingTool": "Questo agente non ha lo strumento <highlight>{tool}</highlight> disponibile.",
             "earlierRuns": "Esecuzioni precedenti"
           }
         },
@@ -3502,7 +3502,7 @@
         "cancel": "Annulla",
         "save": "Salva",
         "deleteTitle": "Elimina competenza",
-        "deleteBody": "Eliminare {name}? Questo rimuove il file e toglie la competenza a qualsiasi agente che la usa. Non si può annullare.",
+        "deleteBody": "Eliminare <highlight>{name}</highlight>? Questo rimuove il file e toglie la competenza a qualsiasi agente che la usa. Non si può annullare.",
         "deleteConfirm": "Elimina competenza",
         "addTitle": "Aggiungi nuova competenza",
         "newNamePlaceholder": "Come vuoi chiamare questa competenza",
@@ -5585,7 +5585,7 @@
         },
         "websiteDeleteModal": {
           "title": "Elimina i dati del sito web",
-          "body": "Vuoi davvero rimuovere completamente {root} e tutte le sue sottopagine addestrate dalla memoria di {platformName}? I vettori verranno eliminati immediatamente.",
+          "body": "Vuoi davvero rimuovere completamente <highlight>{root}</highlight> e tutte le sue sottopagine addestrate dalla memoria di {platformName}? I vettori verranno eliminati immediatamente.",
           "cancel": "Annulla",
           "confirm": "Elimina tutto"
         }
@@ -5760,7 +5760,7 @@
         },
         "deleteModal": {
           "title": "Elimina valutazione",
-          "body": "Questo elimina {name} e i suoi risultati per sempre. Non si può annullare.",
+          "body": "Questo elimina <highlight>{name}</highlight> e i suoi risultati per sempre. Non si può annullare.",
           "cancel": "Annulla",
           "confirm": "Elimina valutazione"
         }

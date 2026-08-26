@@ -455,8 +455,9 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
           }}
           deletion={{
             body: t.rich("deleteModal.body", {
-              name: () => (
-                <span className="font-semibold text-foreground">{deleteTarget?.name}</span>
+              name: deleteTarget?.name ?? "",
+              highlight: (chunks) => (
+                <span className="font-semibold text-foreground">{chunks}</span>
               ),
             }),
             busy: deleteAction.isBusy(),

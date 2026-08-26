@@ -29,7 +29,8 @@ export default function AgentKnowledgePage() {
       )}
       emptyDocumentDescription={t("emptyDescription")}
       deleteDocumentDescription={(title) => t.rich("deleteDescription", {
-        title: () => <strong>{title}</strong>,
+        title: title ?? "",
+        highlight: (chunks) => <strong>{chunks}</strong>,
       })}
     />
   );

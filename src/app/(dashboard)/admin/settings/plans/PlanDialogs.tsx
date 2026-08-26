@@ -139,7 +139,8 @@ export function PlanDialogs({
       >
         <p>
           {t.rich("deleteConfirm", {
-            name: () => <strong className="text-foreground font-semibold">{deletingPlanName}</strong>,
+            name: deletingPlanName ?? "",
+            highlight: (chunks) => <strong className="text-foreground font-semibold">{chunks}</strong>,
           })}
         </p>
       </ConfirmationModal>

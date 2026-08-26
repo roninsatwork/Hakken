@@ -443,7 +443,8 @@ export function KnowledgeWebsiteDeleteModal({
       <div className="flex flex-col gap-6 w-full pt-4">
         <p className="text-[14px] text-secondary">
           {t.rich("websiteDeleteModal.body", {
-            root: () => <strong>{root}</strong>,
+            root: root ?? "",
+            highlight: (chunks) => <strong>{chunks}</strong>,
             platformName,
           })}
         </p>
