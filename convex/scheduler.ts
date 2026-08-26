@@ -4,6 +4,7 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as schedulerShapes from "./utils/schedulerShapes";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
 import { WIKI_STAFF } from "./wikiStaff";
@@ -17,6 +18,7 @@ const WORKFLOW_EXECUTION_STEP_DETAIL_LIMIT = 500;
 
 export const getSchedules = superAdminQuery({
   args: {},
+  returns: schedulerShapes.scheduleListShape,
   handler: async (ctx) => {
     const schedules = await ctx.db
       .query("schedules")
@@ -59,6 +61,7 @@ export const createSchedule = superAdminMutation({
     intervalStr: v.string(), // e.g. "daily", "weekly"
     isActive: v.boolean(),
   },
+  returns: v.id("schedules"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     
@@ -164,6 +167,7 @@ export const manualRunSchedule = superAdminMutation({
      */
     objective: v.optional(v.string()),
   },
+  returns: v.id("workflowExecutions"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     
@@ -325,6 +329,7 @@ export const getWorkflowExecutions = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
   },
+  returns: schedulerShapes.executionPageShape,
   handler: async (ctx, args) => {
     const page = await ctx.db
       .query("workflowExecutions")
@@ -365,6 +370,7 @@ export const getWorkflowExecutions = superAdminQuery({
  */
 export const getPendingWorkflowApprovalCount = superAdminQuery({
   args: {},
+  returns: schedulerShapes.pendingApprovalCountShape,
   handler: async (ctx) => {
     const halted = await ctx.db
       .query("workflowExecutionSteps")
@@ -384,6 +390,7 @@ export const getPendingWorkflowApprovalCount = superAdminQuery({
 
 export const getWorkflowExecution = superAdminQuery({
   args: { executionId: v.id("workflowExecutions") },
+  returns: schedulerShapes.executionDetailShape,
   handler: async (ctx, args) => {
     const exec = await ctx.db.get(args.executionId);
     if (!exec) return null;

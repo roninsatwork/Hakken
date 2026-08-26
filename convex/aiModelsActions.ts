@@ -341,11 +341,21 @@ export async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
   return formattedModels;
 }
 
+/**
+ * What a sync tells the screen.
+ *
+ * The whole formatted catalogue used to travel back — hundreds of model records
+ * the browser types as `unknown` and never opens. The count is what the screen
+ * could use; the catalogue is already in the database by the time this returns.
+ */
+const modelSyncOutcome = v.object({ synced: v.number() });
+
 export const syncGoogleModels = superAdminAction({
   args: {},
+  returns: modelSyncOutcome,
   handler: async (ctx) => {
     try {
-      return await syncGoogleVertexModelCatalogue(ctx);
+      return { synced: (await syncGoogleVertexModelCatalogue(ctx)).length };
     } catch (e: unknown) {
       throw appError("UPSTREAM_FAILURE", `Failed to sync Google Vertex AI models: ${getErrorMessage(e, "Unknown error")}`);
     }
@@ -354,9 +364,10 @@ export const syncGoogleModels = superAdminAction({
 
 export const syncOpenAIModels = superAdminAction({
   args: {},
+  returns: modelSyncOutcome,
   handler: async (ctx) => {
     try {
-      return await syncOpenAIModelCatalogue(ctx);
+      return { synced: (await syncOpenAIModelCatalogue(ctx)).length };
     } catch (e: unknown) {
       throw appError("UPSTREAM_FAILURE", `Failed to sync OpenAI models: ${getErrorMessage(e, "Unknown error")}`);
     }
@@ -365,9 +376,10 @@ export const syncOpenAIModels = superAdminAction({
 
 export const syncOpenRouterModels = superAdminAction({
   args: {},
+  returns: modelSyncOutcome,
   handler: async (ctx) => {
     try {
-      return await syncOpenRouterModelCatalogue(ctx);
+      return { synced: (await syncOpenRouterModelCatalogue(ctx)).length };
     } catch (e: unknown) {
       throw appError("UPSTREAM_FAILURE", `Failed to sync OpenRouter models: ${getErrorMessage(e, "Unknown error")}`);
     }
@@ -376,9 +388,10 @@ export const syncOpenRouterModels = superAdminAction({
 
 export const syncAnthropicModels = superAdminAction({
   args: {},
+  returns: modelSyncOutcome,
   handler: async (ctx) => {
     try {
-      return await syncAnthropicModelCatalogue(ctx);
+      return { synced: (await syncAnthropicModelCatalogue(ctx)).length };
     } catch (e: unknown) {
       throw appError("UPSTREAM_FAILURE", `Failed to sync Anthropic models: ${getErrorMessage(e, "Unknown error")}`);
     }
@@ -387,9 +400,10 @@ export const syncAnthropicModels = superAdminAction({
 
 export const syncVertexModels = superAdminAction({
   args: {},
+  returns: modelSyncOutcome,
   handler: async (ctx) => {
     try {
-      return await syncGoogleVertexModelCatalogue(ctx);
+      return { synced: (await syncGoogleVertexModelCatalogue(ctx)).length };
     } catch (e: unknown) {
       throw appError("UPSTREAM_FAILURE", `Failed to sync Vertex Models: ${getErrorMessage(e, "Unknown error")}`);
     }
@@ -471,6 +485,7 @@ export const testProviderConnection = superAdminAction({
   args: {
     providerKey: v.string(),
   },
+  returns: v.object({ ok: v.boolean(), providerKey: v.string(), message: v.string() }),
   handler: async (ctx, args): Promise<{ ok: boolean; providerKey: string; message: string }> =>
     await ctx.runAction(internal.aiModelsActions.probeProviderInternal, {
       providerKey: args.providerKey,

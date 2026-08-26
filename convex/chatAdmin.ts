@@ -9,6 +9,8 @@ import {
   threadMatchesSearch,
 } from "./chatAdminService";
 import { appError } from "./utils/appError";
+import { toClientAdminThread } from "./utils/chatAdminShapes";
+import * as chatAdminShapes from "./utils/chatAdminShapes";
 
 const CHAT_LOG_SEARCH_CANDIDATE_LIMIT = 500;
 const ADMIN_THREAD_MESSAGE_LIMIT = 500;
@@ -20,6 +22,7 @@ export const getOffsetPaginatedThreads = superAdminQuery({
     page: v.number(),
     pageSize: v.number()
   },
+  returns: chatAdminShapes.offsetThreadPageShape,
   handler: async (ctx, args) => {
     // Fetch the raw threads
     const allThreads = await ctx.db
@@ -42,7 +45,7 @@ export const getOffsetPaginatedThreads = superAdminQuery({
     // Map over the chunk to manually join the user identity
     const enrichedThreads = page.data.map(({ thread, user }) => {
         return {
-          ...thread,
+          ...toClientAdminThread(thread),
           user: getThreadUserSummary(user, "Unknown User")
         };
       });
@@ -62,6 +65,7 @@ export const getOffsetPaginatedCompanyThreads = adminQuery({
     page: v.number(),
     pageSize: v.number()
   },
+  returns: chatAdminShapes.offsetThreadPageShape,
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
@@ -87,7 +91,7 @@ export const getOffsetPaginatedCompanyThreads = adminQuery({
 
     const enrichedThreads = page.data.map(({ thread, user }) => {
         return {
-          ...thread,
+          ...toClientAdminThread(thread),
           user: getThreadUserSummary(user, "Widget Visitor")
         };
       });
@@ -105,6 +109,7 @@ export const getPaginatedThreads = superAdminQuery({
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: chatAdminShapes.adminThreadPageShape,
   handler: async (ctx, args) => {
     const term = normalizeSearchTerm(args.searchTerm);
     if (term) {
@@ -119,7 +124,7 @@ export const getPaginatedThreads = superAdminQuery({
         const user = thread.userId ? await ctx.db.get(thread.userId) : null;
         if (threadMatchesSearch({ thread, user, term })) {
           page.push({
-            ...thread,
+            ...toClientAdminThread(thread),
             user: getThreadUserSummary(user, "Unknown User"),
           });
         }
@@ -138,7 +143,7 @@ export const getPaginatedThreads = superAdminQuery({
       threads.page.map(async (thread) => {
         const user = thread.userId ? await ctx.db.get(thread.userId) : null;
         return {
-          ...thread,
+          ...toClientAdminThread(thread),
           user: getThreadUserSummary(user, "Unknown User"),
         };
       })
@@ -154,6 +159,7 @@ export const getPaginatedCompanyThreads = adminQuery({
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: chatAdminShapes.adminThreadPageShape,
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
@@ -173,7 +179,7 @@ export const getPaginatedCompanyThreads = adminQuery({
         const user = thread.userId ? await ctx.db.get(thread.userId) : null;
         if (threadMatchesSearch({ thread, user, term, includeSourceUrl: true })) {
           page.push({
-            ...thread,
+            ...toClientAdminThread(thread),
             user: getThreadUserSummary(user, "Widget Visitor"),
           });
         }
@@ -192,7 +198,7 @@ export const getPaginatedCompanyThreads = adminQuery({
       threads.page.map(async (thread) => {
         const user = thread.userId ? await ctx.db.get(thread.userId) : null;
         return {
-          ...thread,
+          ...toClientAdminThread(thread),
           user: getThreadUserSummary(user, "Widget Visitor"),
         };
       })
@@ -207,6 +213,7 @@ export const getCompanyThreadById = adminQuery({
     companyId: v.id("companies"),
     threadId: v.id("threads"),
   },
+  returns: chatAdminShapes.clientAdminThreadShape,
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
@@ -220,7 +227,7 @@ export const getCompanyThreadById = adminQuery({
 
     const user = thread.userId ? await ctx.db.get(thread.userId) : null;
     return {
-      ...thread,
+      ...toClientAdminThread(thread),
       user: getThreadUserSummary(user, "Widget Visitor"),
     };
   },
@@ -229,6 +236,7 @@ export const getCompanyThreadById = adminQuery({
 // Secure API endpoint to fetch the raw timeline for any specific thread ID
 export const getAdminThreadMessages = adminQuery({
   args: { threadId: v.id("threads") },
+  returns: chatAdminShapes.adminThreadMessagesShape,
   handler: async (ctx, args) => {
     const { user: admin } = ctx;
     const thread = await ctx.db.get(args.threadId);

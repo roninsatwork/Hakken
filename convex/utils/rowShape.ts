@@ -39,6 +39,7 @@ export const rowShape = {
   companySkills: v.object({ ...whole("companySkills"), _id: v.id("companySkills") }),
   knowledgeDocuments: v.object({ ...whole("knowledgeDocuments"), _id: v.id("knowledgeDocuments") }),
   logins: v.object({ ...whole("logins"), _id: v.id("logins") }),
+  messages: v.object({ ...whole("messages"), _id: v.id("messages") }),
   phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
   plans: v.object({ ...whole("plans"), _id: v.id("plans") }),
   salesDataAreasOfInterest: v.object({ ...whole("salesDataAreasOfInterest"), _id: v.id("salesDataAreasOfInterest") }),
@@ -46,4 +47,6 @@ export const rowShape = {
   salesDataFrequencies: v.object({ ...whole("salesDataFrequencies"), _id: v.id("salesDataFrequencies") }),
   salesDataRows: v.object({ ...whole("salesDataRows"), _id: v.id("salesDataRows") }),
   schedules: v.object({ ...whole("schedules"), _id: v.id("schedules") }),
+  workflowExecutionSteps: v.object({ ...whole("workflowExecutionSteps"), _id: v.id("workflowExecutionSteps") }),
+  workflowExecutions: v.object({ ...whole("workflowExecutions"), _id: v.id("workflowExecutions") }),
 };

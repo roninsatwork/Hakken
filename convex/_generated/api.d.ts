@@ -246,6 +246,7 @@ import type * as utils_appError from "../utils/appError.js";
 import type * as utils_authEventTypes from "../utils/authEventTypes.js";
 import type * as utils_authIdentityPurge from "../utils/authIdentityPurge.js";
 import type * as utils_boundedRequestBody from "../utils/boundedRequestBody.js";
+import type * as utils_chatAdminShapes from "../utils/chatAdminShapes.js";
 import type * as utils_companyEvalShapes from "../utils/companyEvalShapes.js";
 import type * as utils_companyMemoryShapes from "../utils/companyMemoryShapes.js";
 import type * as utils_companyModules from "../utils/companyModules.js";
@@ -272,6 +273,7 @@ import type * as utils_salesCustomerShapes from "../utils/salesCustomerShapes.js
 import type * as utils_salesDataModule from "../utils/salesDataModule.js";
 import type * as utils_salesDataShapes from "../utils/salesDataShapes.js";
 import type * as utils_salesResearchShapes from "../utils/salesResearchShapes.js";
+import type * as utils_schedulerShapes from "../utils/schedulerShapes.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_skillBundleService from "../utils/skillBundleService.js";
 import type * as utils_skillContracts from "../utils/skillContracts.js";
@@ -580,6 +582,7 @@ declare const fullApi: ApiFromModules<{
   "utils/authEventTypes": typeof utils_authEventTypes;
   "utils/authIdentityPurge": typeof utils_authIdentityPurge;
   "utils/boundedRequestBody": typeof utils_boundedRequestBody;
+  "utils/chatAdminShapes": typeof utils_chatAdminShapes;
   "utils/companyEvalShapes": typeof utils_companyEvalShapes;
   "utils/companyMemoryShapes": typeof utils_companyMemoryShapes;
   "utils/companyModules": typeof utils_companyModules;
@@ -606,6 +609,7 @@ declare const fullApi: ApiFromModules<{
   "utils/salesDataModule": typeof utils_salesDataModule;
   "utils/salesDataShapes": typeof utils_salesDataShapes;
   "utils/salesResearchShapes": typeof utils_salesResearchShapes;
+  "utils/schedulerShapes": typeof utils_schedulerShapes;
   "utils/security": typeof utils_security;
   "utils/skillBundleService": typeof utils_skillBundleService;
   "utils/skillContracts": typeof utils_skillContracts;

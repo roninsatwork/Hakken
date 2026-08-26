@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { paginationOptsValidator } from "convex/server";
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { internalQuery, internalMutation, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
@@ -71,10 +71,11 @@ export const getPaginatedWorkflows = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: paginationResultValidator(clientWorkflowValidator),
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
 
-    return searchTerm
+    const page = searchTerm
       ? await ctx.db
         .query("workflows")
         .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
@@ -84,6 +85,8 @@ export const getPaginatedWorkflows = superAdminQuery({
         .withIndex("by_createdAt")
         .order("desc")
         .paginate(args.paginationOpts);
+
+    return { ...page, page: page.page.map(toClientWorkflow) };
   },
 });
 
@@ -112,6 +115,7 @@ export const createWorkflow = superAdminMutation({
     name: v.string(), 
     description: v.optional(v.string()) 
   },
+  returns: v.id("workflows"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -150,6 +154,7 @@ export const updateWorkflow = superAdminMutation({
     nodes: v.optional(v.string()),
     edges: v.optional(v.string()),
   },
+  returns: v.id("workflows"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -252,6 +257,7 @@ export const triggerManualRun = superAdminMutation({
     id: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
+  returns: v.id("workflowExecutions"),
   handler: async (ctx, args): Promise<Id<"workflowExecutions">> => {
     const { userId } = ctx;
 
@@ -315,7 +321,8 @@ export const runManualSync = superAdminAction({
     workflowId: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<unknown> => {
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
     // 1. Create execution record
     const executionId = await ctx.runMutation(api.workflows.triggerManualRun, {
       id: args.workflowId,
@@ -323,11 +330,13 @@ export const runManualSync = superAdminAction({
     });
 
     // 2. Run the workflow
-    return await ctx.runAction(internal.workflowRuntime.startWorkflow, {
+    await ctx.runAction(internal.workflowRuntime.startWorkflow, {
       workflowId: args.workflowId,
       executionId: executionId,
       initialInput: args.initialInput,
     });
+
+    return null;
   },
 });
 
@@ -458,6 +467,7 @@ export const handleWebhook = httpAction(async (ctx, request) => {
 
 export const getWebhookSecret = superAdminQuery({
   args: { id: v.id("workflows") },
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw appError("NOT_FOUND", "Workflow not found");

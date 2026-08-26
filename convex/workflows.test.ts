@@ -894,3 +894,34 @@ describe("OWASP: Broken Access Control - Workflows", () => {
   });
   // template:remove:end
 });
+
+describe("the workflow list never carries the webhook secret", () => {
+  /**
+   * `list` and `get` were narrowed through `toClientWorkflow`. The paged read
+   * was not — and the paged read is the one the workflow list screen calls, so
+   * a workflow with a webhook trigger handed its secret to the browser on every
+   * page of that list. No test reached the paged read at all, so removing the
+   * narrowing left the suite green.
+   */
+  test("a webhook workflow is listed, and its secret is not", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "wf-super@test.com", role: "SUPER_ADMIN" }));
+    const client = t.withIdentity({ subject: superAdminId });
+
+    const workflowId = await client.mutation(api.workflows.createWorkflow, { name: "Webhook Flow" });
+    await client.mutation(api.workflows.updateWorkflow, { id: workflowId, triggerType: "WEBHOOK" });
+
+    const listed = await client.query(api.workflows.getPaginatedWorkflows, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    // Proof the read had something to be wrong about: a listed workflow, and a
+    // secret sitting on it in the database.
+    expect(listed.page.map((workflow) => workflow.name)).toEqual(["Webhook Flow"]);
+    expect(await t.run(async (ctx) => (await ctx.db.get(workflowId))?.webhookSecret))
+      .toEqual(expect.any(String));
+    expect(listed.page.filter((workflow) => "webhookSecret" in workflow)).toEqual([]);
+  });
+});

@@ -150,3 +150,57 @@ describe("OWASP: Broken Access Control - Chat Logs", () => {
     expect(firstPage.isDone).toBe(false);
   });
 });
+
+describe("the widget's authentication hash never reaches the chat logs", () => {
+  /**
+   * A widget conversation authenticates with `widgetAccessTokenHash`, and the
+   * chat logs are exactly where widget-originated threads appear — so all five
+   * of these doors were handing it to an administrator's browser. `chat.ts`
+   * narrowed it out of a person's own history and called that drift exposure,
+   * because a personal history holds no widget threads. Here it was live.
+   *
+   * No fixture in this file created a thread that had one, so removing the
+   * narrowing left the suite green. This is the fixture that has one.
+   */
+  const seed = async (t: ReturnType<typeof convexTest>) => t.run(async (ctx) => {
+    const companyId = await ctx.db.insert("companies", { name: "Widget Co", createdAt: Date.now() });
+    const superAdminId = await ctx.db.insert("users", {
+      email: "logs@test.com",
+      role: "SUPER_ADMIN",
+      createdAt: Date.now(),
+    });
+    const threadId = await ctx.db.insert("threads", {
+      companyId,
+      title: "Visitor conversation",
+      widgetAccessTokenHash: "hash-of-the-widget-token",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    return { companyId, superAdminId, threadId };
+  });
+
+  test("no chat-log door hands it back, and each one read a real thread", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, superAdminId, threadId } = await seed(t);
+    const client = t.withIdentity({ subject: superAdminId });
+    const paginationOpts = { numItems: 10, cursor: null };
+
+    const readings: Array<{ surface: string; rows: unknown[] }> = [
+      { surface: "getOffsetPaginatedThreads", rows: (await client.query(api.chatAdmin.getOffsetPaginatedThreads, { page: 1, pageSize: 10 })).data },
+      { surface: "getOffsetPaginatedCompanyThreads", rows: (await client.query(api.chatAdmin.getOffsetPaginatedCompanyThreads, { companyId, page: 1, pageSize: 10 })).data },
+      { surface: "getPaginatedThreads", rows: (await client.query(api.chatAdmin.getPaginatedThreads, { paginationOpts })).page },
+      { surface: "getPaginatedCompanyThreads", rows: (await client.query(api.chatAdmin.getPaginatedCompanyThreads, { companyId, paginationOpts })).page },
+      { surface: "getCompanyThreadById", rows: [await client.query(api.chatAdmin.getCompanyThreadById, { companyId, threadId })] },
+    ];
+
+    // Proof each door read something: an empty answer has nothing to leak.
+    expect(readings.filter((reading) => reading.rows.length === 0)).toEqual([]);
+    expect(readings.flatMap((reading) => reading.rows
+      .filter((row) => row !== null && typeof row === "object" && "widgetAccessTokenHash" in row)
+      .map(() => reading.surface))).toEqual([]);
+
+    // And proof the fixture really carries one, so the check above can fail.
+    expect(await t.run(async (ctx) => (await ctx.db.get(threadId))?.widgetAccessTokenHash))
+      .toBe("hash-of-the-widget-token");
+  });
+});
