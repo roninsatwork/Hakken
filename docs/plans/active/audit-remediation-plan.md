@@ -506,10 +506,6 @@ first. Extra fields are caught at runtime by `convex-test`, so the cover is
 real only where a test exercises the happy path — true for seven of the
 fourteen surfaces added on 2026-08-26.
 
-**The arcade search box sits in two nested bordered boxes.** The shared
-table-screen floor has an assertion for it that has never run, because that
-page's test passes no search placeholder.
-
 **And one property of this document.** No per-package percentages were ever
 recorded, so the "about 70%" figure in the review section above cannot be
 reproduced by anyone; treat it as a band, not a number.
