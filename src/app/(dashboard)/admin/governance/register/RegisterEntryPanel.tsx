@@ -65,9 +65,14 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
   // half-typed purpose cannot follow the reader onto the next system. During
   // render rather than in an effect: the effect ran after paint, so the next
   // system flashed the previous one's half-typed text for a frame.
-  const [shownEntry, setShownEntry] = useState<typeof entry | null>(null);
-  if (entry !== shownEntry) {
-    setShownEntry(entry);
+  //
+  // Keyed on the row's id, not the row. Holding the record itself worked only
+  // because the parent keeps the opened row in state, so the reference happens
+  // to be stable; had it derived the row from the table's query instead, every
+  // server push would have re-seeded the form over whatever was being typed.
+  const [shownEntryId, setShownEntryId] = useState<string | null>(null);
+  if ((entry?.id ?? null) !== shownEntryId) {
+    setShownEntryId(entry?.id ?? null);
     setPurpose(entry?.purpose ?? "");
     setOwnerId("");
     setRisk(entry && entry.risk !== "UNRATED" ? entry.risk : "");

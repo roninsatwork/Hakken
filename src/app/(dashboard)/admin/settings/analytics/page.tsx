@@ -41,8 +41,11 @@ export default function AnalyticsPage() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Sync state once data loads
-  const [seenId, setSeenId] = useState<typeof currentId | null>(null);
+  // Adopt the saved id once it loads. Typed as the string it is rather than as
+  // `typeof currentId`: the sentinel being a primitive is the thing that makes
+  // this safe, and spelling it out is what lets a reader — and the guard in
+  // src/render-adoption-drift.test.ts — see that at a glance.
+  const [seenId, setSeenId] = useState<string | null>(null);
   if (currentId !== undefined && currentId !== seenId) {
     setSeenId(currentId);
     setTrackingId(currentId || "");
