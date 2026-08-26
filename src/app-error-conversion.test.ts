@@ -59,6 +59,20 @@ describe("appError conversion holds and spreads", () => {
     ).toEqual([]);
   });
 
+  /**
+   * Frozen 2026-08-26. The docblock above has called this list shrink-only
+   * since it was written, and nothing checked: adding a newly-unconverted file
+   * passed green, which is the one thing the rule forbids.
+   */
+  const NOT_YET_CONVERTED_CEILING = 2;
+
+  test("the unconverted list only shrinks", () => {
+    expect(
+      [...NOT_YET_CONVERTED],
+      `The not-yet-converted list grew. Un-converting part of the backend needs the review the conversion had — do not add an entry to make a change pass:`
+    ).toHaveLength(NOT_YET_CONVERTED_CEILING);
+  });
+
   test("no listed file is already clean (shrink the list as files convert)", () => {
     const alreadyClean = [...NOT_YET_CONVERTED].filter((file) => {
       const fullPath = path.join(repoRoot, file);
@@ -69,6 +83,84 @@ describe("appError conversion holds and spreads", () => {
       alreadyClean,
       `These files have zero plain throws — delete their entries so the guard covers them:\n${alreadyClean.join("\n")}`
     ).toEqual([]);
+  });
+
+  /**
+   * Classes that may extend `Error` rather than `ConvexError`, and why.
+   *
+   * A subclass of `Error` is redacted to "Server Error" in production exactly
+   * like a plain one, so the check above — which matches the literal
+   * `throw new Error(` — could not see a single one of them. That is how the
+   * sales spreadsheet import kept eleven sentences written for the person who
+   * chose the file, and showed them "Server Error" instead, through a package
+   * whose entire purpose was to stop that happening.
+   *
+   * An entry here is a promise that the class never reaches a client, and the
+   * promise has to be checkable from the call site.
+   */
+  const INTERNAL_ERROR_CLASSES = new Map<string, string>([
+    [
+      "McpFailure",
+      "convex/mcpToolCall.ts:162 is its only consumer and converts it into an `{ ok: false, error }` return value; nothing rethrows it.",
+    ],
+    [
+      "ProviderRuntimeError",
+      "carries provider status and retry metadata for `withProviderRetry` to branch on. It escapes to callers, so its message must stay safe — `safeProviderMessage` is what it is built from — but it is deliberately not a ConvexError: the agent runtime catches it and writes the failure into the run record rather than throwing at a screen.",
+    ],
+  ]);
+
+  test("error classes in convex extend ConvexError, or say why they do not", () => {
+    const offenders: string[] = [];
+
+    for (const file of convexSourceFiles("convex")) {
+      const lines = fs.readFileSync(path.join(repoRoot, file), "utf8").split("\n");
+
+      lines.forEach((line, index) => {
+        const match = /class\s+(\w+)\s+extends\s+Error\b/.exec(line);
+
+        if (match && !INTERNAL_ERROR_CLASSES.has(match[1])) {
+          offenders.push(`${file}:${index + 1}: ${match[1]}`);
+        }
+      });
+    }
+
+    expect(
+      offenders,
+      `These extend Error, so production redacts every message they carry to "Server Error". Extend ConvexError<AppErrorData> instead — or add the class to INTERNAL_ERROR_CLASSES with the reason it can never reach a client:\n${offenders.join("\n")}`
+    ).toEqual([]);
+  });
+
+  /**
+   * Raw `ConvexError` throws carrying a bare string rather than an appError
+   * payload.
+   *
+   * These are not broken — a string payload puts the sentence in `.message`,
+   * so a reader still gets it — but they carry no `code`, cannot be localised,
+   * and are invisible to every check in this file. The spec named 54 of them
+   * and the conversion never touched one. A count rather than a list: the work
+   * is mechanical, the number is the honest record of it, and it may only
+   * fall.
+   */
+  const RAW_CONVEX_ERROR_CEILING = 54;
+
+  test("raw ConvexError throws are a shrinking population", () => {
+    const offenders: string[] = [];
+
+    for (const file of convexSourceFiles("convex")) {
+      const lines = fs.readFileSync(path.join(repoRoot, file), "utf8").split("\n");
+
+      lines.forEach((line, index) => {
+        if (line.includes("throw new ConvexError(")) {
+          offenders.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+
+    expect(offenders.length, "no raw ConvexError throws found at all, so this check is reading nothing").toBeGreaterThan(0);
+    expect(
+      offenders.length,
+      `Raw ConvexError throws rose above the frozen count. Use appError(code, message) so the throw carries a code:\n${offenders.join("\n")}`
+    ).toBeLessThanOrEqual(RAW_CONVEX_ERROR_CEILING);
   });
 
   test("every unlisted convex file contains no plain `throw new Error(`", () => {

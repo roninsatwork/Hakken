@@ -17,13 +17,26 @@
  * nobody finds out until someone acts on the numbers.
  */
 
+import { ConvexError } from "convex/values";
+import type { AppErrorData } from "./utils/appError";
+
 /** A cell as read from the workbook, before we decide what it is. */
 export type CellValue = string | number | boolean | Date | null | undefined;
 export type SheetRows = CellValue[][];
 
-export class SalesDataImportError extends Error {
+/**
+ * Every sentence below is written for the person who chose the file, and every
+ * one of them reached production as "Server Error" until 2026-08-26.
+ *
+ * These throws leave `startSalesImport` without a try/catch, so production
+ * Convex redacted them exactly where the wording mattered most. Extending
+ * `ConvexError` is what carries the sentence across the wire — the same escape
+ * hatch `appError` uses, kept as a class here because the parsers are pure and
+ * the tests assert on the type. `instanceof SalesDataImportError` is unchanged.
+ */
+export class SalesDataImportError extends ConvexError<AppErrorData> {
   constructor(message: string) {
-    super(message);
+    super({ code: "INVALID_INPUT", message });
     this.name = "SalesDataImportError";
   }
 }
