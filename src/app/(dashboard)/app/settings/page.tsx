@@ -21,6 +21,8 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
+import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
+import type { ReadCoverage } from "@/convex/utils/readCoverage";
 
 const OrganizationUsagePlot = dynamic(() =>
   import("./_components/OrganizationUsagePlot").then((module) => module.OrganizationUsagePlot),
@@ -39,6 +41,8 @@ type MetricBlockProps = {
 };
 
 type CompanyMetricsData = {
+  /** Present when a bounded read ran out of room, so the figures are floors. */
+  coverage?: ReadCoverage;
   timeline: Array<{ date: string; cost: number; messages: number }>;
   providerDistribution?: Array<{
     providerKey: string;
@@ -177,6 +181,7 @@ export default function CompanySettingsDashboard() {
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
+      <IncompleteFiguresNotice coverage={data?.coverage} />
       {/* Header Area */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2">

@@ -73,7 +73,11 @@
       "retry": "Try again"
     },
     "unknownIp": "Unknown IP",
-    "unknownLocation": "Unknown Location"
+    "unknownLocation": "Unknown Location",
+    "coverage": {
+      "title": "Some figures are incomplete",
+      "body": "This period was busier than this screen can read in one go, so the totals here are at least this high rather than exact."
+    }
   },
   "landing": {
     "getStarted": "Get Started",

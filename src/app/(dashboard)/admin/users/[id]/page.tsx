@@ -16,6 +16,7 @@ import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { describeDevice } from "@/src/lib/devices";
+import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -302,6 +303,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
 
   return (
     <div className="flex flex-col gap-6 mt-4 w-full">
+      <IncompleteFiguresNotice coverage={costs?.coverage} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t('grossCost')}</span>

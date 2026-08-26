@@ -73,7 +73,11 @@
       "retry": "Riprova"
     },
     "unknownIp": "IP sconosciuto",
-    "unknownLocation": "Posizione sconosciuta"
+    "unknownLocation": "Posizione sconosciuta",
+    "coverage": {
+      "title": "Alcuni dati sono incompleti",
+      "body": "Questo periodo è stato più intenso di quanto questa schermata riesca a leggere in una sola volta, quindi i totali qui sono almeno di questa entità, non esatti."
+    }
   },
   "landing": {
     "getStarted": "Inizia ora",

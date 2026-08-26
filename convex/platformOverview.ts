@@ -1,6 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminQuery } from "./tenantFunctions";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
+import { createCoverage } from "./utils/readCoverage";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 30;
@@ -50,23 +51,10 @@ export const getPlatformOverview = superAdminQuery({
     const cutoff = now - WINDOW_DAYS * DAY_MS;
     const dayKeys = buildDayKeys(now, WINDOW_DAYS);
 
-    /**
-     * Every read here is capped, and a cap that is reached is indistinguishable
-     * from a cap that is not — `.take(n)` returning n rows cannot tell a busy
-     * month from an exhausted one. So each asks for one row more than it wants:
-     * getting it back is the only evidence the window was cut short.
-     *
-     * The figures are still shown when that happens. Refusing the whole screen
-     * over an incomplete month helps nobody, and the numbers stay directionally
-     * true. What changes is that the screen now says so, rather than presenting
-     * a short month as a quiet one.
-     */
-    const incomplete: string[] = [];
-    const capped = <T,>(label: string, limit: number, rows: T[]) => {
-      if (rows.length <= limit) return rows;
-      incomplete.push(label);
-      return rows.slice(0, limit);
-    };
+    // Every read here is capped, and asks for one row more than it wants: the
+    // extra row is the only evidence the window was cut short. See readCoverage.
+    const coverage = createCoverage();
+    const capped = coverage.cap;
 
     const [companyRows, userRows, planRows, modelRows] = await Promise.all([
       ctx.db.query("companies").take(COMPANY_LIMIT + 1),
@@ -275,10 +263,7 @@ export const getPlatformOverview = superAdminQuery({
 
     return {
       windowDays: WINDOW_DAYS,
-      coverage: {
-        complete: incomplete.length === 0,
-        incomplete,
-      },
+      coverage: coverage.result(),
       clients: {
         total: companies.length,
         healthy: portfolio.filter((client) => client.state === "HEALTHY").length,

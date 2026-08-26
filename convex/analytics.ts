@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { requireAdmin, requireSuperAdmin } from "./authz";
+import { requireSuperAdmin } from "./authz";
 import {
     createTimelineMap,
     buildModelCostContext,
@@ -17,6 +17,11 @@ import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
+import { assertAnalyticsUserAccess, requireAnalyticsCompanyAccess } from "./utils/analyticsAccess";
+import { createCoverage } from "./utils/readCoverage";
+
+/** The row cap every analytics scan shares. Read one past it, because the extra row is the only evidence there was more. */
+const ANALYTICS_SCAN = 10000;
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -43,37 +48,6 @@ export async function requireAnalyticsSuperAdmin(ctx: QueryCtx, unauthenticatedM
     return await requireSuperAdmin(ctx, "Unauthorized", unauthenticatedMessage);
 }
 
-export async function requireAnalyticsAdmin(ctx: QueryCtx) {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
-    return admin;
-}
-
-export function assertAnalyticsUserAccess(admin: Doc<"users">, targetUser: Doc<"users">) {
-    if (admin.role !== "SUPER_ADMIN") {
-       if (admin.role !== "ADMIN" || admin.companyId !== targetUser.companyId || !admin.companyId) {
-          throw appError("UNAUTHORIZED", "Unauthorized: Company Admin clearance required.");
-       }
-    }
-}
-
-export async function requireAnalyticsUserAccess(ctx: QueryCtx, targetUser: Doc<"users">) {
-    const admin = await requireAnalyticsAdmin(ctx);
-    assertAnalyticsUserAccess(admin, targetUser);
-    return admin;
-}
-
-export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id<"companies">) {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
-
-    if (admin.role !== "SUPER_ADMIN") {
-       if (admin.role !== "ADMIN" || admin.companyId !== companyId) {
-          throw appError("UNAUTHORIZED", "Unauthorized");
-       }
-    }
-
-    return admin;
-}
-
 export const getGlobalAICosts = superAdminQuery({
   args: {
     timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
@@ -81,6 +55,7 @@ export const getGlobalAICosts = superAdminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
@@ -88,11 +63,11 @@ export const getGlobalAICosts = superAdminQuery({
     const { start: startDate, end: endDate } = resolveTimestampRange(args);
 
     // Filter target threads natively against timeframe parameters
-    const messages = await ctx.db
+    const messages = coverage.cap("messages", ANALYTICS_SCAN, await ctx.db
       .query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startDate))
       .filter(q => q.lte(q.field("createdAt"), endDate))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     // Execution Variables
     let periodInputTokens = 0;
@@ -146,6 +121,7 @@ export const getGlobalAICosts = superAdminQuery({
     }));
 
     return {
+       coverage: coverage.result(),
        periodInputTokens,
        periodOutputTokens,
        periodTokens: periodInputTokens + periodOutputTokens,
@@ -162,6 +138,7 @@ export const getGlobalAICosts = superAdminQuery({
 export const getPlatformOverview = superAdminQuery({
   args: {},
   handler: async (ctx) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Core Authorization Check
@@ -170,10 +147,10 @@ export const getPlatformOverview = superAdminQuery({
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
-    const recentMessages = await ctx.db
+    const recentMessages = coverage.cap("recentMessages", ANALYTICS_SCAN, await ctx.db
       .query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     let total30DCostUSD = 0;
     const activeWeeklyUsers = new Set<string>();
@@ -221,6 +198,7 @@ export const getPlatformOverview = superAdminQuery({
     const topUsers = Array.from(userLeaderboardMap.values()).sort((a,b) => b.costGBP - a.costGBP);
 
     return {
+       coverage: coverage.result(),
        totalUsers: userLeaderboardMap.size,
        wauCount: activeWeeklyUsers.size,
        totalThreads: periodUniqueThreads.size,
@@ -235,6 +213,7 @@ export const getPlatformOverview = superAdminQuery({
 export const getUserCostOverview = adminQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Authorization Check
@@ -247,11 +226,11 @@ export const getUserCostOverview = adminQuery({
     const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
     const todayDate = formatSnapshotDate(new Date(todayStartTs));
 
-    const snapshots = await ctx.db
+    const snapshots = coverage.cap("snapshots", ANALYTICS_SCAN, await ctx.db
       .query("analyticsDailySnapshots")
       .withIndex("by_user_date", (q) => q.eq("userId", args.userId))
       .filter((q) => q.lt(q.field("date"), todayDate))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     let totalCostGBP = 0;
     let totalTokens = 0;
@@ -265,10 +244,10 @@ export const getUserCostOverview = adminQuery({
       totalTokens += snapshot.metrics.totalInputTokens + snapshot.metrics.totalOutputTokens;
     });
 
-    const liveAssistantMessages = await ctx.db
+    const liveAssistantMessages = coverage.cap("liveAssistantMessages", ANALYTICS_SCAN, await ctx.db
       .query("messages")
       .withIndex("by_user_role_created", (q) => q.eq("userId", args.userId).eq("role", "assistant").gte("createdAt", todayStartTs))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     liveAssistantMessages.forEach((message) => {
       const inputs = message.inputTokens || 0;
@@ -283,6 +262,7 @@ export const getUserCostOverview = adminQuery({
     });
 
     return {
+      coverage: coverage.result(),
       totalCostGBP: Number(totalCostGBP.toFixed(6)),
       totalTokens,
       totalInputTokens,
@@ -298,6 +278,7 @@ export const getUserCostThreads = adminQuery({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const admin = ctx.user;
@@ -313,10 +294,10 @@ export const getUserCostThreads = adminQuery({
 
     const enrichedThreads = await Promise.all(
       threads.page.map(async (thread) => {
-        const messages = await ctx.db
+        const messages = coverage.cap("messages", ANALYTICS_SCAN, await ctx.db
           .query("messages")
           .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
-          .take(10000);
+          .take(ANALYTICS_SCAN + 1));
           
         let threadCostUSD = 0;
         let threadTokens = 0;
@@ -334,6 +315,7 @@ export const getUserCostThreads = adminQuery({
         });
 
         return {
+          coverage: coverage.result(),
           threadId: thread._id,
           title: thread.title || "Untitled Conversation",
           createdAt: thread.createdAt,
@@ -345,6 +327,7 @@ export const getUserCostThreads = adminQuery({
     );
 
     return {
+      coverage: coverage.result(),
       ...threads,
       page: enrichedThreads
     };
@@ -363,6 +346,7 @@ export const getCompanyMetrics = adminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     await requireAnalyticsCompanyAccess(ctx, args.companyId);
@@ -395,7 +379,7 @@ export const getCompanyMetrics = adminQuery({
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
-    const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
+    const companyUsers = coverage.cap("companyUsers", ANALYTICS_SCAN, await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(ANALYTICS_SCAN + 1));
     const companyUserMap = new Map(companyUsers.map((u) => [u._id, u]));
 
     const startTimeStamp = startDate.getTime();
@@ -404,19 +388,19 @@ export const getCompanyMetrics = adminQuery({
     const endTimeStamp = endDate.getTime();
 
     // Bound Message and Tx retrieval natively to temporal bounds and indexes
-    const companyScopedMessages = await ctx.db.query("messages")
+    const companyScopedMessages = coverage.cap("companyScopedMessages", ANALYTICS_SCAN, await ctx.db.query("messages")
       .withIndex("by_company_role_created", q => q.eq("companyId", args.companyId).eq("role", "assistant").gte("createdAt", realStartTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     const periodRawMessages = companyScopedMessages;
 
-    const periodAgentTxs = await ctx.db.query("agentTransactions")
+    const periodAgentTxs = coverage.cap("periodAgentTxs", ANALYTICS_SCAN, await ctx.db.query("agentTransactions")
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
        .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-       .take(10000);
+       .take(ANALYTICS_SCAN + 1));
        
-    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(10000);
+    const knowledgeDocs = coverage.cap("knowledgeDocs", ANALYTICS_SCAN, await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(ANALYTICS_SCAN + 1));
 
     const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
     for (const u of companyUsers) {
@@ -471,10 +455,10 @@ export const getCompanyMetrics = adminQuery({
     const snapshotStartTs = startDate.getTime();
     const snapshotStartDate = formatSnapshotDate(startDate);
     const todayDate = formatSnapshotDate(new Date(todayStartTs));
-    const snapshots = await ctx.db.query("analyticsDailySnapshots")
+    const snapshots = coverage.cap("snapshots", ANALYTICS_SCAN, await ctx.db.query("analyticsDailySnapshots")
         .withIndex("by_company_date", q => q.eq("companyId", args.companyId).gte("date", snapshotStartDate))
         .filter(q => q.lt(q.field("date"), todayDate))
-        .take(10000);
+        .take(ANALYTICS_SCAN + 1));
         
     const validSnapshots = snapshots.filter(s => {
         const t = new Date(s.date).getTime();
@@ -647,6 +631,7 @@ export const getCompanyMetrics = adminQuery({
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
     return {
+       coverage: coverage.result(),
        timeline,
        aggregates: {
           activeUsers: activePeriodUsers.size,
@@ -697,6 +682,7 @@ export const getGlobalAnalytics = superAdminQuery({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
@@ -743,28 +729,28 @@ export const getGlobalAnalytics = superAdminQuery({
     const realStartTimeStamp = Math.max(startTimeStamp, todayStartTs);
     const endTimeStamp = endDate.getTime();
     
-    const periodRawMessages = await ctx.db.query("messages")
+    const periodRawMessages = coverage.cap("periodRawMessages", ANALYTICS_SCAN, await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", realStartTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
       
-    const periodAgentTxs = await ctx.db.query("agentTransactions")
+    const periodAgentTxs = coverage.cap("periodAgentTxs", ANALYTICS_SCAN, await ctx.db.query("agentTransactions")
       .withIndex("by_createdAt", q => q.gte("createdAt", realStartTimeStamp))
       .filter((q) => q.lte(q.field("createdAt"), endTimeStamp))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
       
     const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
-    const thirtyDayMessages = await ctx.db.query("messages")
+    const thirtyDayMessages = coverage.cap("thirtyDayMessages", ANALYTICS_SCAN, await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
-      .take(10000);
+      .take(ANALYTICS_SCAN + 1));
 
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
        if (msg.userId) mauSet.add(msg.userId);
     }
-    const thirtyDayTxs = await ctx.db.query("agentTransactions")
+    const thirtyDayTxs = coverage.cap("thirtyDayTxs", ANALYTICS_SCAN, await ctx.db.query("agentTransactions")
        .withIndex("by_createdAt", q => q.gte("createdAt", thirtyDaysAgo))
-       .take(10000);
+       .take(ANALYTICS_SCAN + 1));
     for (const tx of thirtyDayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
@@ -813,10 +799,10 @@ export const getGlobalAnalytics = superAdminQuery({
     const snapshotStartTs = startDate.getTime();
     const snapshotStartDate = formatSnapshotDate(startDate);
     const todayDate = formatSnapshotDate(new Date(todayStartTs));
-    const snapshots = await ctx.db.query("analyticsDailySnapshots")
+    const snapshots = coverage.cap("snapshots", ANALYTICS_SCAN, await ctx.db.query("analyticsDailySnapshots")
         .withIndex("by_type_date", q => q.eq("type", "global").gte("date", snapshotStartDate))
         .filter(q => q.lt(q.field("date"), todayDate))
-        .take(10000);
+        .take(ANALYTICS_SCAN + 1));
         
     const validSnapshots = snapshots.filter(s => {
         const t = new Date(s.date).getTime();
@@ -877,10 +863,10 @@ export const getGlobalAnalytics = superAdminQuery({
         if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
     });
 
-    const companySnaps = await ctx.db.query("analyticsDailySnapshots")
+    const companySnaps = coverage.cap("companySnaps", ANALYTICS_SCAN, await ctx.db.query("analyticsDailySnapshots")
         .withIndex("by_type_date", q => q.eq("type", "company").gte("date", snapshotStartDate))
         .filter(q => q.lt(q.field("date"), todayDate))
-        .take(10000);
+        .take(ANALYTICS_SCAN + 1));
     companySnaps.filter(s => {
         const t = new Date(s.date).getTime();
         return t >= snapshotStartTs && t < todayStartTs;
@@ -1032,6 +1018,7 @@ export const getGlobalAnalytics = superAdminQuery({
     const providerBreakdown = Object.values(providerDistribution).sort((a,b) => b.cost - a.cost);
 
     return {
+       coverage: coverage.result(),
        timeline,
        aggregates: {
           activeUsers: activePeriodUsers.size,

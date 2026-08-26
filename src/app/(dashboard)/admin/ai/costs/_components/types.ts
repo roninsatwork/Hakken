@@ -1,3 +1,4 @@
+import type { ReadCoverage } from "@/convex/utils/readCoverage";
 export type TimeframeOption =
   | "today"
   | "yesterday"
@@ -67,6 +68,8 @@ export type AnalyticsAggregates = {
 };
 
 export type AICostsData = {
+  /** Present when a bounded read ran out of room, so the figures are floors. */
+  coverage?: ReadCoverage;
   aggregates: AnalyticsAggregates;
   modelDistribution?: ModelDistributionRow[];
   providerDistribution?: ProviderDistributionRow[];

@@ -13,6 +13,7 @@ import { AICostsHeader } from "./_components/AICostsHeader";
 import { AICostsMetricGrid } from "./_components/AICostsMetricGrid";
 import type { AICostsData, TimeframeOption } from "./_components/types";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
+import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 
 const AICostDistributionCharts = dynamic(() =>
   import("./_components/AICostDistributionCharts").then((module) => module.AICostDistributionCharts),
@@ -43,6 +44,7 @@ export default function AICostsDashboard() {
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
+      <IncompleteFiguresNotice coverage={data?.coverage} />
       <AICostsHeader
         customEnd={customEnd}
         customStart={customStart}

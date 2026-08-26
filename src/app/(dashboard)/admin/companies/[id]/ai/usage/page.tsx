@@ -28,6 +28,7 @@ import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import type { LucideIcon } from "lucide-react";
+import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 
 const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
 const Area = dynamic(() => import("recharts").then((module) => module.Area));
@@ -149,6 +150,7 @@ export default function CompanyAiUsagePage() {
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
+      <IncompleteFiguresNotice coverage={data?.coverage} />
       <PageHeader
         icon={<Building2 className="w-6 h-6 text-[#10b981]" />}
         title={t('aiUsageTitle')}
