@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { appError } from "./utils/appError";
+import * as researchJobShapes from "./utils/researchJobShapes";
 import { internal } from "./_generated/api";
 import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -766,6 +767,7 @@ async function tickJob(ctx: MutationCtx, jobId: Id<"salesDataResearchJobs">) {
  */
 export const getResearchJobForAgent = adminQuery({
   args: { agentId: v.id("agents") },
+  returns: researchJobShapes.researchJobShape,
   handler: async (ctx, args) => {
     // By agent, not by the agent's workspace: a global agent belongs to no
     // workspace, and asking for one hid the job panel for exactly the agent
@@ -808,6 +810,7 @@ export const getResearchJobForAgent = adminQuery({
  */
 export const getRunRecord = adminQuery({
   args: { runId: v.id("agentRuns") },
+  returns: researchJobShapes.researchRunRecordShape,
   handler: async (ctx, args) => {
     const run = await ctx.db.get(args.runId);
     if (!run?.companyId) return null;
@@ -1014,6 +1017,7 @@ export const startResearchJob = tenantMutation({
     /** Which button was pressed. Each starts its own kind of job. */
     mode: v.union(v.literal("DETAILS"), v.literal("PROSPECTS")),
   },
+  returns: researchJobShapes.researchJobStartShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
 
@@ -1048,6 +1052,7 @@ export const startResearchJob = tenantMutation({
 
 export const getResearchJob = tenantQuery({
   args: {},
+  returns: researchJobShapes.researchJobShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
 

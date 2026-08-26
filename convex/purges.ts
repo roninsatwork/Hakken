@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as purgeShapes from "./utils/purgeShapes";
 import {
   calculateNextPurgeRun,
   calculatePurgeCutoffTimestamp,
@@ -15,27 +16,13 @@ import {
   MIN_PURGE_RETENTION_DAYS,
   PURGE_PIPELINE_KEYS,
   type PurgePipelineKey,
+  purgePipelineKeyValidator,
 } from "./purgeScheduleService";
 import { AUDIT_PURGE_ACTION, isAuditPurgeRecord } from "./auditLogService";
 import { appError } from "./utils/appError";
 
-export const purgePipelineKeyValidator = v.union(
-  v.literal("agentLogs"),
-  v.literal("workflowLogs"),
-  v.literal("userLogins"),
-  v.literal("chatHistory"),
-  v.literal("auditLogs"),
-  v.literal("publicApiRequests"),
-  v.literal("authEvents"),
-  v.literal("aiActionRequests"),
-  v.literal("analyticsSnapshots"),
-  v.literal("webhookDeliveries"),
-  v.literal("agentRunHistory"),
-  v.literal("agentTransactions"),
-  v.literal("phoneCalls"),
-  v.literal("mailboxMessages"),
-  v.literal("purgeHistory"),
-);
+export { purgePipelineKeyValidator };
+
 
 /** A run is only ever purged after it has finished. */
 const TERMINAL_RUN_STATUSES = new Set(["SUCCESS", "FAILED", "CANCELLED"]);
@@ -68,6 +55,7 @@ async function findRunningPurge(ctx: Pick<MutationCtx, "db">, pipelineKey: Purge
 
 export const getPipelineConfig = superAdminQuery({
   args: {},
+  returns: purgeShapes.purgePipelineConfigShape,
   handler: async (ctx) => {
     const config = await ctx.db
       .query("systemConfig")
@@ -140,6 +128,7 @@ export const getPurgeHistoryPaginated = superAdminQuery({
       v.literal("CANCELLED"),
     )),
   },
+  returns: purgeShapes.purgeHistoryPageShape,
   handler: async (ctx, args) => {
     const base = args.pipelineKey
       ? ctx.db.query("purgeHistory").withIndex("by_pipeline_started", (q) => q.eq("pipelineKey", args.pipelineKey!))
@@ -226,6 +215,7 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
 /** The RUNNING rows only — the rules screen shows a Stop button on them. */
 export const getRunningPurges = superAdminQuery({
   args: {},
+  returns: purgeShapes.runningPurgeListShape,
   handler: async (ctx) => {
     const recent = await ctx.db
       .query("purgeHistory")
@@ -238,6 +228,7 @@ export const getRunningPurges = superAdminQuery({
 
 export const getPurgePreviewCounts = superAdminQuery({
   args: {},
+  returns: purgeShapes.purgePreviewCountsShape,
   handler: async (ctx) => buildPurgePreviewCounts(ctx),
 });
 
@@ -309,6 +300,7 @@ export const runManualPurge = superAdminMutation({
   args: {
     pipelineKey: purgePipelineKeyValidator,
   },
+  returns: v.id("purgeHistory"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 

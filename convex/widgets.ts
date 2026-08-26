@@ -9,6 +9,7 @@ import { digestWidgetAccessToken } from "./chatService";
 import { allowsAnyDomain, isHostAllowed } from "./utils/widgetOriginPolicy";
 import { verifyWidgetEmbedPass } from "./utils/widgetEmbedPass";
 import { appError } from "./utils/appError";
+import * as widgetShapes from "./utils/widgetShapes";
 import {
   validateAdminImageMetadata,
   validateStoredUpload,
@@ -37,6 +38,7 @@ async function getSystemWidgetBranding(ctx: QueryCtx) {
 
 export const getWidgetsByCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: widgetShapes.widgetListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
@@ -50,6 +52,7 @@ export const getWidgetsByCompany = adminQuery({
 
 export const getPrimaryWidgetByCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: widgetShapes.widgetOrNullShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
@@ -64,6 +67,7 @@ export const getPrimaryWidgetByCompany = adminQuery({
 
 export const getGlobalWidgets = superAdminQuery({
   args: {},
+  returns: widgetShapes.widgetListShape,
   handler: async (ctx) => {
     return await ctx.db
       .query("widgets")
@@ -74,6 +78,7 @@ export const getGlobalWidgets = superAdminQuery({
 
 export const getPrimaryGlobalWidget = superAdminQuery({
   args: {},
+  returns: widgetShapes.widgetOrNullShape,
   handler: async (ctx) => {
     return await ctx.db
       .query("widgets")
@@ -143,6 +148,7 @@ export const saveWidget = adminMutation({
     // The receptionist screen opt-in: /kiosk/<id> serves nothing without it.
     kioskEnabled: v.optional(v.boolean()),
   },
+  returns: v.id("widgets"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 

@@ -1,6 +1,7 @@
 import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { adminQuery, publicQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import * as systemShapes from "./utils/systemShapes";
 import {
   buildAnalyticsIdAuditMetadata,
   buildSystemConfigPatch,
@@ -17,6 +18,7 @@ import {
 // getInternalSystemPrompt instead, so ordinary signed-in users never need it.
 export const getSystemPrompt = superAdminQuery({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     const config = await ctx.db
       .query("systemConfig")
@@ -44,6 +46,7 @@ export const updateSystemPrompt = superAdminMutation({
   args: {
     prompt: v.string(),
   },
+  returns: v.id("systemConfig"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -111,6 +114,7 @@ export const updateAnalyticsId = superAdminMutation({
   args: {
     trackingId: v.string(),
   },
+  returns: v.id("systemConfig"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -162,6 +166,7 @@ export const updateAnalyticsId = superAdminMutation({
 
 export const getPiiConfig = adminQuery({
   args: {},
+  returns: systemShapes.piiConfigShape,
   handler: async (ctx) => {
     const config = await ctx.db
       .query("systemConfig")

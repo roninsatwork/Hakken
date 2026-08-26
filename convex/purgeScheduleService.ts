@@ -1,22 +1,34 @@
+import { type Infer, v } from "convex/values";
+
 import { appError } from "./utils/appError";
 
-export type PurgeScheduleInterval = "Hourly" | "Daily" | "Weekly" | "Monthly";
-export type PurgePipelineKey =
-  | "agentLogs"
-  | "workflowLogs"
-  | "userLogins"
-  | "chatHistory"
-  | "auditLogs"
-  | "publicApiRequests"
-  | "authEvents"
-  | "aiActionRequests"
-  | "analyticsSnapshots"
-  | "webhookDeliveries"
-  | "agentRunHistory"
-  | "agentTransactions"
-  | "phoneCalls"
-  | "mailboxMessages"
-  | "purgeHistory";
+export const purgeScheduleIntervalValidator = v.union(
+  v.literal("Hourly"),
+  v.literal("Daily"),
+  v.literal("Weekly"),
+  v.literal("Monthly"),
+);
+
+export const purgePipelineKeyValidator = v.union(
+  v.literal("agentLogs"),
+  v.literal("workflowLogs"),
+  v.literal("userLogins"),
+  v.literal("chatHistory"),
+  v.literal("auditLogs"),
+  v.literal("publicApiRequests"),
+  v.literal("authEvents"),
+  v.literal("aiActionRequests"),
+  v.literal("analyticsSnapshots"),
+  v.literal("webhookDeliveries"),
+  v.literal("agentRunHistory"),
+  v.literal("agentTransactions"),
+  v.literal("phoneCalls"),
+  v.literal("mailboxMessages"),
+  v.literal("purgeHistory"),
+);
+
+export type PurgeScheduleInterval = Infer<typeof purgeScheduleIntervalValidator>;
+export type PurgePipelineKey = Infer<typeof purgePipelineKeyValidator>;
 
 export interface PipelineConfig {
   enabled: boolean;

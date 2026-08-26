@@ -2,6 +2,8 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { adminMutation, adminQuery, tenantMutation } from "./tenantFunctions";
+import { paginationResultValidator } from "convex/server";
+import { rowShape } from "./utils/rowShape";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
 import { appError } from "./utils/appError";
@@ -56,6 +58,7 @@ export const upsertForRun = adminMutation({
     labels: v.array(feedbackLabelValidator),
     comment: v.optional(v.string()),
   },
+  returns: v.id("agentRunFeedback"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -142,6 +145,7 @@ export const upsertForRunAsEndUser = tenantMutation({
     )),
     comment: v.optional(v.string()),
   },
+  returns: v.id("agentRunFeedback"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -231,6 +235,7 @@ export const getForRun = adminQuery({
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: paginationResultValidator(rowShape.agentRunFeedback),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -249,6 +254,7 @@ export const getMineForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: v.array(rowShape.agentRunFeedback),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {

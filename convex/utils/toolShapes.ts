@@ -118,8 +118,23 @@ export const agentToolListShape = v.array(v.object({
   ...rowShape.aiTools.fields,
 }));
 
+/**
+ * The shelf's groups are the connector categories plus CUSTOM for anything
+ * built here, and they are named rather than left as a record: `convex-test`'s
+ * validator has no case for records, so a record-shaped declaration checks
+ * nothing at all. Each group is optional because a shelf only carries the ones
+ * it has tools for.
+ */
 export const toolShelfShape = v.object({
-  counts: v.record(v.string(), v.number()),
+  counts: v.object({
+    KNOWLEDGE: v.optional(v.number()),
+    PROFILE: v.optional(v.number()),
+    WORKFLOW: v.optional(v.number()),
+    HTTP: v.optional(v.number()),
+    EMAIL: v.optional(v.number()),
+    VOICE: v.optional(v.number()),
+    CUSTOM: v.optional(v.number()),
+  }),
   total: v.number(),
   isCapped: v.boolean(),
 });

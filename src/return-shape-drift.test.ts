@@ -36,7 +36,7 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * cannot quietly go blind again.
  */
 
-const MISSING_SHAPE_CEILING = 159;
+const MISSING_SHAPE_CEILING = 124;
 
 /**
  * Handlers that still hand back a database row unshaped. This list may only
@@ -46,26 +46,14 @@ const MISSING_SHAPE_CEILING = 159;
  * Studio code and is excluded from this effort permanently.
  */
 const FROZEN_UNSHAPED = new Set<string>([
-  'convex/agentImprovementSuggestions.ts:getForRun',
-  'convex/agentImprovementSuggestions.ts:getRecentForAgent',
   'convex/agentLogs.ts:getForRun',
   'convex/agentMemories.ts:getForAgent',
-  'convex/agentMemoryCandidates.ts:getForRun',
-  'convex/agentMemoryCandidates.ts:getRecentForAgent',
-  'convex/agentRunFeedback.ts:getForRun',
-  'convex/agentRunFeedback.ts:getMineForAgent',
-  'convex/agentRunReflections.ts:getForRun',
-  'convex/agentRunReflections.ts:getRecentForAgent',
   'convex/agentVersions.ts:getForAgent',
   'convex/dataMigrations.ts:getStatus',
   'convex/mcpServers.ts:listServers',
   'convex/movements.ts:list',
   'convex/notifications.ts:listMine',
   'convex/plans.ts:getActivePlans',
-  'convex/widgets.ts:getGlobalWidgets',
-  'convex/widgets.ts:getPrimaryGlobalWidget',
-  'convex/widgets.ts:getPrimaryWidgetByCompany',
-  'convex/widgets.ts:getWidgetsByCompany',
 ]);
 
 const CLIENT_BUILDERS = new Set([

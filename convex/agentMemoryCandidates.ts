@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as reviewInboxShapes from "./utils/reviewInboxShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
@@ -793,6 +794,7 @@ export const generateForRun = adminMutation({
     runId: v.id("agentRuns"),
     autoApplyLowRisk: v.optional(v.boolean()),
   },
+  returns: reviewInboxShapes.candidateGenerationShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -838,6 +840,7 @@ export const decideCandidate = adminMutation({
     decision: candidateDecisionValidator,
     rejectionReason: v.optional(v.string()),
   },
+  returns: reviewInboxShapes.candidateDecisionShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const candidate = await ctx.db.get(args.candidateId);
@@ -894,6 +897,7 @@ export const getForRun = adminQuery({
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: reviewInboxShapes.candidatePageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -912,6 +916,7 @@ export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: reviewInboxShapes.candidateListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -940,6 +945,7 @@ export const getReviewInboxForAgent = adminQuery({
     agentId: v.id("agents"),
     mode: v.optional(reviewInboxModeValidator),
   },
+  returns: reviewInboxShapes.reviewInboxShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {

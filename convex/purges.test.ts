@@ -809,3 +809,41 @@ describe("Log Purge safeguards and interactive cancellation", () => {
   });
 
 });
+
+describe("the purge reads nothing was calling", () => {
+  /**
+   * The history, the running list and the dry-run counts had no test reaching
+   * them, so their declared shapes were checked by the compiler alone — and the
+   * compiler cannot see a field a handler sends that its declaration does not
+   * name.
+   */
+  test("history, running purges and preview counts all answer", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", { email: "purge@test.com", role: "SUPER_ADMIN" });
+      await ctx.db.insert("purgeHistory", {
+        pipelineKey: "agentLogs",
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        recordsPurged: 0,
+        startedAt: Date.now(),
+        actorId: superAdminId,
+      });
+      return superAdminId;
+    });
+
+    const client = t.withIdentity({ subject: superAdminId });
+
+    const history = await client.query(api.purges.getPurgeHistoryPaginated, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+    const running = await client.query(api.purges.getRunningPurges, {});
+    const preview = await client.query(api.purges.getPurgePreviewCounts, {});
+
+    // Proof each read had something to be wrong about.
+    expect(history.page.map((row) => row.actorName)).toEqual(["purge@test.com"]);
+    expect(running.map((row) => row.pipelineKey)).toEqual(["agentLogs"]);
+    expect(preview.agentLogs).toEqual({ count: 0, capped: false });
+  });
+});

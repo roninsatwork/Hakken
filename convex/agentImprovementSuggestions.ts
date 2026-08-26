@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import * as reviewInboxShapes from "./utils/reviewInboxShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { ensureAgentSkillVersionSnapshot } from "./agentSkillsService";
@@ -560,6 +561,7 @@ export const generateForRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
   },
+  returns: reviewInboxShapes.suggestionGenerationShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -651,6 +653,7 @@ export const decideSuggestion = adminMutation({
     rejectionReason: v.optional(v.string()),
     apply: v.optional(v.boolean()),
   },
+  returns: reviewInboxShapes.suggestionDecisionShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const suggestion = await ctx.db.get(args.suggestionId);
@@ -730,6 +733,7 @@ export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: reviewInboxShapes.suggestionListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -758,6 +762,7 @@ export const getForRun = adminQuery({
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: reviewInboxShapes.suggestionPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);

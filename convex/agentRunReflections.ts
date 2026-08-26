@@ -4,6 +4,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import { paginationResultValidator } from "convex/server";
+import { rowShape } from "./utils/rowShape";
 import { assertAdminCanAccessCompany } from "./authz";
 import { reflectRun } from "./agentRunReflectionService";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
@@ -15,6 +17,7 @@ export const createForRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
   },
+  returns: v.id("agentRunReflections"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -68,6 +71,7 @@ export const dismissReflection = adminMutation({
     reflectionId: v.id("agentRunReflections"),
     reason: v.optional(v.string()),
   },
+  returns: v.object({ reflectionId: v.id("agentRunReflections") }),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const reflection = await ctx.db.get(args.reflectionId);
@@ -109,6 +113,7 @@ export const getForRun = adminQuery({
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: paginationResultValidator(rowShape.agentRunReflections),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -127,6 +132,7 @@ export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: v.array(rowShape.agentRunReflections),
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
