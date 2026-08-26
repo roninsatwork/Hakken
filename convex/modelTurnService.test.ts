@@ -381,21 +381,31 @@ describe("one model turn: the wiring stays shared (source guard)", () => {
     fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
   // ai.ts split 2026-08-21 (foundation-quality plan, phase 3): the chat
   // runtime that calls the shared turn now lives in aiChat.ts. The agent
-  // runtime split again on 2026-08-26 (WP04): its registered actions stayed in
-  // agentRuntime.ts and the loop moved to agentObjectiveLoop.ts, so the agent
-  // runtime is the pair — the guard reads them together, and the negative
-  // scans below cover each file separately.
+  // runtime is three files — registered actions, the loop, and the setup and
+  // close-out around it — so the positive check reads them together: no single
+  // one of them calls all three parts of the shared turn, and pinning which
+  // file holds which call would fail on any move between the halves. What that
+  // costs is caught by the negative scans below, which read every file
+  // separately, and by the emptiness assertion, which fails if a named file
+  // stops existing rather than passing on an empty string.
   const runtimes: Array<{ label: string; files: string[] }> = [
     { label: "convex/aiChat.ts", files: ["convex/aiChat.ts"] },
     {
-      label: "convex/agentRuntime.ts + convex/agentObjectiveLoop.ts",
-      files: ["convex/agentRuntime.ts", "convex/agentObjectiveLoop.ts"],
+      label: "the agent runtime",
+      files: [
+        "convex/agentRuntime.ts",
+        "convex/agentObjectiveLoop.ts",
+        "convex/agentObjectiveLoopService.ts",
+      ],
     },
   ];
   const runtimeFiles = runtimes.flatMap((runtime) => runtime.files);
 
   test("both runtimes import and call the shared turn", () => {
     for (const { label, files } of runtimes) {
+      for (const file of files) {
+        expect(readRepoFile(file), `${file} is missing, so ${label} is being checked against nothing`).not.toBe("");
+      }
       const source = files.map(readRepoFile).join("\n");
       expect(source, `${label} must import the shared turn`).toContain('from "./modelTurnService"');
       for (const needle of ["guardModelTurn(", "runModelTurn(", "finishAssistantReply("]) {

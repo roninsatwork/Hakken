@@ -34,9 +34,12 @@ describe('Ask Sonae Safety Drift', () => {
     // shared `executeObjectiveLoop`. Each part is pinned to the safety helper it
     // owns, so a run cannot reach the model down a path that skipped one — in
     // particular, a resumed run must not be a way around tool authorization.
-    // The loop and its context builder moved to convex/agentObjectiveLoop.ts
-    // (WP04, 2026-08-26); the registered actions stayed. Each declaration is
-    // pinned in the file it lives in — the requirement set is unchanged.
+    // The runtime is three files: agentRuntime.ts keeps the registered
+    // actions, agentObjectiveLoop.ts runs the loop, and
+    // agentObjectiveLoopService.ts sets a run up and closes it out. Each
+    // declaration is pinned in the file it actually lives in, so a move shows
+    // up here as a failure rather than as a check that quietly reads nothing —
+    // which is what the emptiness assertion below is for.
     const agentSpine: Array<{ file: string; declaration: string; requirements: string[] }> = [
       {
         file: 'convex/agentRuntime.ts',
@@ -54,7 +57,7 @@ describe('Ask Sonae Safety Drift', () => {
         requirements: ['buildLoopExecutionContext', 'executeObjectiveLoop'],
       },
       {
-        file: 'convex/agentObjectiveLoop.ts',
+        file: 'convex/agentObjectiveLoopService.ts',
         declaration: 'buildLoopExecutionContext',
         requirements: ['buildAgentSystemInstruction'],
       },
@@ -81,8 +84,13 @@ describe('Ask Sonae Safety Drift', () => {
 
     // Checked across the whole runtime, not one function: the unsafe framing
     // these guard against would be just as harmful in the resumption path.
-    for (const file of ['convex/agentRuntime.ts', 'convex/agentObjectiveLoop.ts']) {
+    for (const file of [
+      'convex/agentRuntime.ts',
+      'convex/agentObjectiveLoop.ts',
+      'convex/agentObjectiveLoopService.ts',
+    ]) {
       const source = readRepoFile(file);
+      expect(source, `${file} is missing, so the framing checks below read nothing`).not.toBe('');
       expect(source).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
       expect(source).not.toContain('You MUST refer to these when answering');
     }

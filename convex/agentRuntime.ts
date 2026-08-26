@@ -44,13 +44,15 @@ import {
   parseToolArguments,
 } from "./agentRuntimeTurnService";
 import {
-  buildLoopExecutionContext,
   executeObjectiveLoop,
-  finalizeObjectiveFailure,
   runTriggeredOnAgentLoop,
+} from "./agentObjectiveLoop";
+import {
+  buildLoopExecutionContext,
+  finalizeObjectiveFailure,
   settleBatchAndContinue,
   type LoopExecutionContext,
-} from "./agentObjectiveLoop";
+} from "./agentObjectiveLoopService";
 
 
 
