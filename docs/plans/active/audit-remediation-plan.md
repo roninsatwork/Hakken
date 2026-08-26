@@ -475,15 +475,16 @@ back the exact reference that regressed within an hour of the WP14 sweep.
 ## Known open, after the 2026-08-26 close
 
 The fourteen packages are closed. What follows was found while closing them and
-was never part of the plan. **About a day and a half**, sized and ordered as
-they should be taken. Nothing here is failing, and nothing is urgent.
+was never part of the plan.
 
-Agreed with Anthony 2026-08-26: do group A, then group B. Group C was the
-largest and the only risky item, and he settled it by decision rather than by
-work — AI costs report in dollars because that is what the providers bill, and
-that is now the intended behaviour rather than an open question.
+**Groups A and B were done on 2026-08-26** (`4e5cdd3bc`, `32149f729`,
+`f038b7aa7`, `1752ddbdf`). Group C was settled by decision rather than by work.
+What is left is one newly measured population, at the bottom.
 
-### Group A — about half a day, safe
+Kept in the form they were closed, because each carried a rule as well as a
+fix, and the rules are the durable part.
+
+### Group A — done 2026-08-26 (4e5cdd3bc, 32149f729)
 
 **A1. Three status signals readable only by hue (~2h).** Failure groups rank
 worst-first by a red rail against amber ones; the job waterfall separates four
@@ -504,7 +505,7 @@ behind it (`630f0a7e7`), so budget for finding more than nothing.
 only to the parts that screen opts into, and an omitted config line is
 indistinguishable from a passing rule.*
 
-### Group B — about a day, safe but slow
+### Group B — done 2026-08-26 (f038b7aa7, 1752ddbdf)
 
 **B1 then B2, in that order — widen the catcher first, then translate**, because
 translating first means going back over the same screens.
@@ -551,6 +552,31 @@ they come from the customer's own spreadsheet import, not from a model
 provider, and Comax is a UK business selling in pounds. Those stay in pounds.
 "Dollars all over" governs what the platform *spends* on AI, not what a
 customer *earns*.
+
+### Group D — found while closing B, measured not guessed
+
+**D1. 110 single-word values are identical across both catalogues.** Both new
+guards have the same blind spot by design: the copy guard needs eight
+characters and a space, and the parity guard the same, because a single word
+matching across languages is usually correct and reading those would bury the
+signal. Most of these 110 are correct — `Email`, `Widget`, `Wiki`, `Dashboard`,
+`Sonae`, `iPhone` are the same word in Italian. Perhaps twenty or thirty are
+not, and telling them apart needs a judgement per word rather than a rule.
+
+Two were fixed on sight because they were visible on the Italian rules screen
+while it was open: `Priority` and `Status` were hardcoded English in the table
+header, and the four row tooltips were untranslated. That is the shape of the
+whole population — small, visible, and invisible to both guards.
+
+**D2. A governance screen shows fabricated audit records.**
+`admin/audit-logs/[id]/AuditLogDetailContent.tsx` falls back to four
+hand-written rows when the real query returns nothing — including "Anthony
+(SuperAdmin)" changing a security policy, with a plausible timestamp and
+entity id. An auditor looking at a quiet system would read four events that
+never happened. Found while widening the copy guard, which counted those rows
+as untranslated English; they should not be translated because they should not
+exist. **Not fixed:** changing what a compliance screen displays is a visible
+behaviour change and Anthony's call, not a passing tidy.
 
 ### Not work — two properties recorded so they are not mistaken for gaps
 
