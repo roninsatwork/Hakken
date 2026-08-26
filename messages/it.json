@@ -790,7 +790,7 @@
         "mau": "Identità Attive (MAU)",
         "mauSub": "Iniziatori unici mensili",
         "compute": "Network Compute",
-        "computeSub": "{count} messaggi intercettati",
+        "computeSub": "{input} IN • {output} OUT",
         "activeContext": "Iniziatori Attivi",
         "activeSub": "Interazione protocollo live",
         "logisticBurn": "Network Burn",

@@ -110,3 +110,63 @@ describe("UX Layer: Internationalization (i18n) Coverage", () => {
     ).toEqual([]);
   });
 });
+
+describe("placeholder parity between the catalogues", () => {
+  /**
+   * Key parity says both languages answer to the same names; it says nothing
+   * about the {placeholders} inside the sentences. An Italian entry that loses
+   * {count} or {platformName} renders the braces literally or drops the value —
+   * broken copy that every other check waves through. Same placeholders, both
+   * languages, every key.
+   */
+  test("every key uses the same placeholders in English and Italian", () => {
+    const en = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "messages/en.json"), "utf8"));
+    const it = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "messages/it.json"), "utf8"));
+    // Argument names only. ICU plural/select bodies nest braces whose inner
+    // words are translated text ({count, plural, one {entry} other {entries}}),
+    // so a flat regex reports translations as mismatches. Names are read where
+    // the brace depth steps from zero to one, and nowhere else.
+    const placeholders = (value: string) => {
+      const names: string[] = [];
+      let depth = 0;
+      for (let i = 0; i < value.length; i += 1) {
+        const char = value[i];
+        if (char === "{") {
+          depth += 1;
+          if (depth === 1) {
+            const match = /^\s*(\w+)/.exec(value.slice(i + 1));
+            if (match) names.push(match[1]);
+          }
+        } else if (char === "}") {
+          depth -= 1;
+        }
+      }
+      return names.sort().join(",");
+    };
+
+    const mismatches: string[] = [];
+    const walk = (enNode: unknown, itNode: unknown, trail: string) => {
+      if (typeof enNode === "string" && typeof itNode === "string") {
+        if (placeholders(enNode) !== placeholders(itNode)) {
+          mismatches.push(`${trail}: en {${placeholders(enNode)}} vs it {${placeholders(itNode)}}`);
+        }
+        return;
+      }
+      if (enNode && itNode && typeof enNode === "object" && typeof itNode === "object") {
+        for (const key of Object.keys(enNode as Record<string, unknown>)) {
+          walk(
+            (enNode as Record<string, unknown>)[key],
+            (itNode as Record<string, unknown>)[key],
+            trail ? `${trail}.${key}` : key
+          );
+        }
+      }
+    };
+    walk(en, it, "");
+
+    expect(
+      mismatches,
+      `These translations disagree about their placeholders — the sentence will render broken in one language:\n${mismatches.join("\n")}`
+    ).toEqual([]);
+  });
+});
