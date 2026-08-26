@@ -34,6 +34,46 @@ export const userRoleValidator = v.union(
   v.literal("AUDITOR")
 );
 
+/**
+ * A user row as a browser is allowed to see it: everything except the token.
+ *
+ * `tokenIdentifier` is the auth identity string, and two `tenantQuery`
+ * surfaces were handing whole user rows out with it still attached —
+ * `getAllUsers` to any admin, and `getUserById` to any colleague in the same
+ * company. It is not a password and holding it is not a login, but it is a
+ * server-side identity that had no business on the wire, and nothing declared
+ * a shape that would have stopped it.
+ *
+ * Declaring the shape alone would not have: a Convex return validator refuses
+ * an unexpected field rather than quietly dropping it, so the row has to be
+ * narrowed on the way out. `toClientUser` is that narrowing, and the validator
+ * is what makes forgetting it a failure rather than a leak.
+ */
+export const clientUserValidator = v.object({
+  _id: v.id("users"),
+  _creationTime: v.number(),
+  name: v.optional(v.string()),
+  image: v.optional(v.string()),
+  email: v.optional(v.string()),
+  emailVerificationTime: v.optional(v.number()),
+  phone: v.optional(v.string()),
+  phoneVerificationTime: v.optional(v.number()),
+  isAnonymous: v.optional(v.boolean()),
+  companyId: v.optional(v.id("companies")),
+  impersonatingCompanyId: v.optional(v.id("companies")),
+  role: v.optional(userRoleValidator),
+  planOverrideId: v.optional(v.id("plans")),
+  messagesUsedThisPeriod: v.optional(v.number()),
+  createdAt: v.optional(v.number()),
+  lastLoginAt: v.optional(v.number()),
+  loginCount30d: v.optional(v.number()),
+});
+
+export function toClientUser(user: Doc<"users">) {
+  const { tokenIdentifier: _tokenIdentifier, ...rest } = user;
+  return rest;
+}
+
 export type CurrentUser = {
   userId: Id<"users">;
   user: Doc<"users">;

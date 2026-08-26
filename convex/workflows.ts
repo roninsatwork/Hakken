@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery, internalMutation, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
 import { appError } from "./utils/appError";
 import { superAdminAction, superAdminMutation, superAdminQuery } from "./tenantFunctions";
@@ -23,10 +23,46 @@ function workflowInputTooLargeResponse() {
   });
 }
 
+/**
+ * A workflow as the editor is allowed to see it: everything but the secret.
+ *
+ * `webhookSecret` is what a caller signs a trigger with, and the schema's own
+ * note says a leaked one can be replayed into unbounded runs. Both read
+ * surfaces were handing whole rows out with it attached. Super-admin only, so
+ * this was never wide open — but the editor has no use for the secret, and a
+ * value that never leaves the server cannot leak from a screen.
+ *
+ * Declaring the shape is not enough on its own: a Convex return validator
+ * refuses an unexpected field rather than dropping it, so the row is narrowed
+ * on the way out and the validator makes forgetting that a failure.
+ */
+const clientWorkflowValidator = v.object({
+  _id: v.id("workflows"),
+  _creationTime: v.number(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  isActive: v.boolean(),
+  triggerType: v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE")),
+  nodes: v.optional(v.string()),
+  edges: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  createdBy: v.optional(v.id("users")),
+  companyId: v.optional(v.id("companies")),
+  webhookWindowStart: v.optional(v.number()),
+  webhookCountInWindow: v.optional(v.number()),
+});
+
+function toClientWorkflow(workflow: Doc<"workflows">) {
+  const { webhookSecret: _webhookSecret, ...rest } = workflow;
+  return rest;
+}
+
 export const list = superAdminQuery({
   args: {},
+  returns: v.array(clientWorkflowValidator),
   handler: async (ctx) => {
-    return await ctx.db.query("workflows").order("desc").take(10000);
+    return (await ctx.db.query("workflows").order("desc").take(10000)).map(toClientWorkflow);
   },
 });
 
@@ -53,11 +89,12 @@ export const getPaginatedWorkflows = superAdminQuery({
 
 export const get = superAdminQuery({
   args: { id: v.id("workflows") },
+  returns: clientWorkflowValidator,
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
 
-    return workflow;
+    return toClientWorkflow(workflow);
   },
 });
 

@@ -240,6 +240,7 @@ import type * as users from "../users.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_appError from "../utils/appError.js";
 import type * as utils_authEventTypes from "../utils/authEventTypes.js";
+import type * as utils_authIdentityPurge from "../utils/authIdentityPurge.js";
 import type * as utils_boundedRequestBody from "../utils/boundedRequestBody.js";
 import type * as utils_companyModules from "../utils/companyModules.js";
 import type * as utils_coreModules from "../utils/coreModules.js";
@@ -552,6 +553,7 @@ declare const fullApi: ApiFromModules<{
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/appError": typeof utils_appError;
   "utils/authEventTypes": typeof utils_authEventTypes;
+  "utils/authIdentityPurge": typeof utils_authIdentityPurge;
   "utils/boundedRequestBody": typeof utils_boundedRequestBody;
   "utils/companyModules": typeof utils_companyModules;
   "utils/coreModules": typeof utils_coreModules;
