@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatTaskDue, groupTasks, type TaskGroup } from "@/src/lib/taskGrouping";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
@@ -29,13 +30,13 @@ const TASK_PAGE_SIZE = 30;
  */
 export default function TasksPage() {
   const t = useTranslations("tasks");
+  const action = useAdminAction({ scope: "tasks-create" });
 
   const [mineOnly, setMineOnly] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAssignee, setNewAssignee] = useState<string>("");
   const [newDue, setNewDue] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
 
   const { results: tasks, status, loadMore } = usePaginatedQuery(
     api.tasks.listTasks,
@@ -48,18 +49,15 @@ export default function TasksPage() {
   const reopenTask = useMutation(api.tasks.reopenTask);
   const cancelTask = useMutation(api.tasks.cancelTask);
 
-  // Read after mount so the server and first client render agree on grouping.
-  const [now, setNow] = useState(0);
+  // Read once per render pass so every row groups against the same instant,
+  // and ticked so a list left open does not go on calling yesterday today.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const tick = setTimeout(() => setNow(Date.now()), 0);
     const interval = setInterval(() => setNow(Date.now()), 60_000);
-    return () => {
-      clearTimeout(tick);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
-  const grouped = groupTasks(tasks, now || Date.now());
+  const grouped = groupTasks(tasks, now);
   const nameFor = (userId?: Id<"users">) =>
     team?.find((member) => member._id === userId)?.name
     || team?.find((member) => member._id === userId)?.email
@@ -67,24 +65,22 @@ export default function TasksPage() {
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
-    if (!newTitle.trim() || isSaving) return;
+    if (!newTitle.trim()) return;
 
-    setIsSaving(true);
-    try {
-      await createTask({
-        title: newTitle.trim(),
-        ...(newAssignee ? { assigneeUserId: newAssignee as Id<"users"> } : {}),
-        ...(newDue ? { dueAt: new Date(`${newDue}T12:00:00`).getTime() } : {}),
-      });
-      setNewTitle("");
-      setNewAssignee("");
-      setNewDue("");
-      setIsAdding(false);
-    } catch (error) {
-      console.error("Failed to create task", error);
-    } finally {
-      setIsSaving(false);
-    }
+    await action.run(
+      async () => {
+        await createTask({
+          title: newTitle.trim(),
+          ...(newAssignee ? { assigneeUserId: newAssignee as Id<"users"> } : {}),
+          ...(newDue ? { dueAt: new Date(`${newDue}T12:00:00`).getTime() } : {}),
+        });
+        setNewTitle("");
+        setNewAssignee("");
+        setNewDue("");
+        setIsAdding(false);
+      },
+      { fallbackMessage: t("createFailed") },
+    );
   };
 
   return (
@@ -185,7 +181,7 @@ export default function TasksPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!newTitle.trim() || isSaving}
+                  disabled={!newTitle.trim() || action.isBusy()}
                   className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   {t("create")}

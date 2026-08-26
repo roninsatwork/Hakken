@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -49,7 +50,7 @@ export default function AgentRuleEditContent({
   const router = useRouter();
   const updateRule = useMutation(api.aiRules.updateRule);
   const [draft, setDraft] = useState<RuleDraft | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-agent-rule-edit" });
 
   const updateDraft = (updates: Partial<RuleDraft>) => {
     setDraft((current) => ({ ...(current ?? createRuleDraft(rule)), ...updates }));
@@ -58,23 +59,22 @@ export default function AgentRuleEditContent({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = draft ?? createRuleDraft(rule);
-    if (!form.name.trim() || !form.trigger.trim() || !form.instruction.trim() || isSubmitting) return;
+    if (!form.name.trim() || !form.trigger.trim() || !form.instruction.trim()) return;
 
-    setIsSubmitting(true);
-    try {
-      await updateRule({
-        id: ruleId,
-        name: form.name.trim(),
-        trigger: form.trigger.trim(),
-        instruction: form.instruction.trim(),
-        priority: form.priority,
-        isActive: form.isActive,
-      });
-      router.push(`/admin/agents/${agentId}/rules`);
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+    await action.run(
+      async () => {
+        await updateRule({
+          id: ruleId,
+          name: form.name.trim(),
+          trigger: form.trigger.trim(),
+          instruction: form.instruction.trim(),
+          priority: form.priority,
+          isActive: form.isActive,
+        });
+        router.push(`/admin/agents/${agentId}/rules`);
+      },
+      { fallbackMessage: tCommon("errors.default") },
+    );
   };
 
   const priorityClasses = {
@@ -182,10 +182,10 @@ export default function AgentRuleEditContent({
         <div className="flex justify-end pt-4 border-t border-border-dim mt-2">
           <WriteButton
             type="submit"
-            disabled={!form.name.trim() || !form.trigger.trim() || !form.instruction.trim() || isSubmitting}
+            disabled={!form.name.trim() || !form.trigger.trim() || !form.instruction.trim() || action.isBusy()}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{t("edit.submit")}</span>
           </WriteButton>
         </div>

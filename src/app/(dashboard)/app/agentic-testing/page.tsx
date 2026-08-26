@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/src/ui/components/layout/Header";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import dynamic from "next/dynamic";
 
 const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
@@ -42,28 +43,21 @@ export default function AgenticTestingSandbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const agents = useQuery(api.agents.list);
-  const [selectedAgentId, setSelectedAgentId] = useState<Id<"agents"> | "any" | null>(null);
+  const [chosenAgentId, setChosenAgentId] = useState<Id<"agents"> | "any" | null>(null);
+  const selectedAgentId = chosenAgentId ?? agents?.[0]?._id ?? null;
 
   const createThread = useMutation(api.chat.createThread);
   const sendMessage = useMutation(api.chat.sendMessage);
   const routeAgentIntent = useAction(api.orchestrator.routeAgentIntent);
-  
+  const action = useAdminAction({ scope: "app-agentic-testing" });
+
   const messages = useQuery(api.chat.getMessages, activeThreadId ? { threadId: activeThreadId } : "skip");
 
   useEffect(() => {
-    if (agents && agents.length > 0 && selectedAgentId === null) {
-       setSelectedAgentId(agents[0]?._id);
-    }
-  }, [agents, selectedAgentId]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isSubmitting) {
-      setLoadingPhase(0);
-      interval = setInterval(() => {
-        setLoadingPhase((prev) => (prev + 1) % HOLLYWOOD_PHASES.length);
-      }, 1500);
-    }
+    if (!isSubmitting) return;
+    const interval = setInterval(() => {
+      setLoadingPhase((prev) => (prev + 1) % HOLLYWOOD_PHASES.length);
+    }, 1500);
     return () => clearInterval(interval);
   }, [isSubmitting]);
 
@@ -85,12 +79,13 @@ export default function AgenticTestingSandbox() {
     if (!content.trim() || isSubmitting || !selectedAgentId) return;
 
     setIsSubmitting(true);
-    let targetThreadId = activeThreadId;
+    setLoadingPhase(0);
+    const promptCopy = content.trim();
 
-    try {
-      const promptCopy = content.trim();
+    const outcome = await action.run(async () => {
+      let targetThreadId = activeThreadId;
 
-      // ** AUTO-ROUTING ORCHESTRATOR PATH ** 
+      // ** AUTO-ROUTING ORCHESTRATOR PATH **
       let finalAgentId: Id<"agents"> | undefined = selectedAgentId !== "any" ? selectedAgentId : undefined;
 
       if (selectedAgentId === "any") {
@@ -109,18 +104,16 @@ export default function AgenticTestingSandbox() {
       }
 
       setContent(""); // optimistic clear
-      
-      await sendMessage({ 
-        threadId: targetThreadId, 
+
+      await sendMessage({
+        threadId: targetThreadId,
         content: promptCopy,
         dynamicAgentId: selectedAgentId === "any" ? (finalAgentId ?? null) : finalAgentId,
       });
+    }, { fallbackMessage: t("sendFailed") });
 
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    if (!outcome.ok && outcome.message) setContent(promptCopy);
+    setIsSubmitting(false);
   };
 
   const handleReset = () => {
@@ -194,7 +187,7 @@ export default function AgenticTestingSandbox() {
                       <div
                         role="button"
                         onClick={() => {
-                          setSelectedAgentId("any");
+                          setChosenAgentId("any");
                           setAgentDropdownOpen(false);
                         }}
                         className={`flex items-center justify-between w-full p-3.5 rounded-[12px] text-left transition-colors cursor-pointer mb-1 ${selectedAgentId === "any" ? 'bg-indigo-500/10' : 'hover:bg-foreground/5'}`}
@@ -219,7 +212,7 @@ export default function AgenticTestingSandbox() {
                         key={agent._id}
                         role="button"
                         onClick={() => {
-                          setSelectedAgentId(agent._id);
+                          setChosenAgentId(agent._id);
                           setAgentDropdownOpen(false);
                         }}
                         className={`flex items-center justify-between w-full p-3.5 rounded-[12px] text-left transition-colors cursor-pointer ${selectedAgentId === agent._id ? 'bg-indigo-500/10' : 'hover:bg-foreground/5'}`}

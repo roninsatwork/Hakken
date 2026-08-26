@@ -14,6 +14,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 const loadCompanyRuleDeleteDialog = () => import("./CompanyRuleDeleteDialog");
 const CompanyRuleDeleteDialog = dynamic(() =>
@@ -33,7 +34,7 @@ export default function CompanyAiRulesPage() {
   const pageSize = TABLE_PAGE_SIZE;
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
   const [hasOpenedDeleteDialog, setHasOpenedDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-rules" });
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -53,16 +54,11 @@ export default function CompanyAiRulesPage() {
   const totalPages = rulesData?.totalPages || 1;
 
   const handleDeleteRule = async () => {
-    if (!deleteId || isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteRuleMutation({ id: deleteId });
-      setDeleteId(null);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsDeleting(false);
-    }
+    if (!deleteId) return;
+    const outcome = await action.run(() => deleteRuleMutation({ id: deleteId }), {
+      fallbackMessage: t("deleteFailed"),
+    });
+    if (outcome.ok) setDeleteId(null);
   };
 
   return (
@@ -96,7 +92,12 @@ export default function CompanyAiRulesPage() {
         onPageChange={setPage}
         getRowHref={(rule) => `/admin/companies/${companyId}/ai/rules/${rule._id}`}
         getEditHref={(rule) => `/admin/companies/${companyId}/ai/rules/${rule._id}`}
-        onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
+        onToggleActive={(rule) => {
+          void action.run(() => toggleActive({ id: rule._id, isActive: !rule.isActive }), {
+            key: rule._id,
+            fallbackMessage: t("toggleFailed"),
+          });
+        }}
         onDelete={(rule) => {
           void loadCompanyRuleDeleteDialog();
           setHasOpenedDeleteDialog(true);
@@ -116,8 +117,8 @@ export default function CompanyAiRulesPage() {
       {hasOpenedDeleteDialog ? (
         <CompanyRuleDeleteDialog
           isOpen={deleteId !== null}
-          isDeleting={isDeleting}
-          onClose={() => !isDeleting && setDeleteId(null)}
+          isDeleting={action.isBusy()}
+          onClose={() => !action.isBusy() && setDeleteId(null)}
           onConfirm={handleDeleteRule}
         />
       ) : null}

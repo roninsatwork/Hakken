@@ -15,6 +15,7 @@ import { SearchBar } from "@/src/ui/components/screens/Table";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
@@ -27,6 +28,7 @@ export default function RulesDashboard() {
   const t = useTranslations("ai.rules");
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
+  const action = useAdminAction({ scope: "admin-ai-rules" });
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -34,7 +36,6 @@ export default function RulesDashboard() {
   const pageSize = TABLE_PAGE_SIZE;
 
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -53,16 +54,11 @@ export default function RulesDashboard() {
   const totalPages = rulesData?.totalPages || 1;
 
   const handleDeleteRule = async () => {
-    if (!deleteId || isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteRuleMutation({ id: deleteId });
-      setDeleteId(null);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDeleting(false);
-    }
+    if (!deleteId || action.isBusy()) return;
+    const outcome = await action.run(() => deleteRuleMutation({ id: deleteId }), {
+      fallbackMessage: t("deleteFailed"),
+    });
+    if (outcome.ok) setDeleteId(null);
   };
 
   return (
@@ -100,7 +96,12 @@ export default function RulesDashboard() {
         onPageChange={setPage}
         getRowHref={(rule) => `/admin/ai/rules/${rule._id}`}
         getEditHref={(rule) => `/admin/ai/rules/${rule._id}`}
-        onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
+        onToggleActive={(rule) => {
+          void action.run(() => toggleActive({ id: rule._id, isActive: !rule.isActive }), {
+            key: rule._id,
+            fallbackMessage: t("toggleFailed"),
+          });
+        }}
         onDelete={(rule) => {
           void loadRuleDeleteDialog();
           setDeleteId(rule._id);
@@ -118,7 +119,7 @@ export default function RulesDashboard() {
 
       {deleteId !== null && (
         <RuleDeleteDialog
-          isDeleting={isDeleting}
+          isDeleting={action.isBusy()}
           onClose={() => setDeleteId(null)}
           onConfirm={handleDeleteRule}
           labels={{

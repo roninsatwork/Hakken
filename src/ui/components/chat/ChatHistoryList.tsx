@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
 import { formatThreadStamp, groupThreadsByDay } from "@/src/lib/threadGrouping";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 /** One sidebar page. Small enough to load instantly, big enough to scroll. */
 export const THREAD_PAGE_SIZE = 25;
@@ -32,41 +33,34 @@ export default function ChatHistoryList() {
 
   const renameThread = useMutation(api.chat.renameThread);
   const deleteThread = useMutation(api.chat.deleteThread);
+  const renameAction = useAdminAction({ scope: "assistant-history-rename" });
+  const deleteAction = useAdminAction({ scope: "assistant-history-delete" });
   const pathname = usePathname();
   const router = useRouter();
   const [editingId, setEditingId] = useState<Id<"threads"> | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [isRenaming, setIsRenaming] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Id<"threads"> | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
+  // Read once per render pass rather than per row, so every row in the pass
+  // groups against the same instant, and ticked so a sidebar left open does
+  // not go on filing yesterday's conversations under Today.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Read once per render pass rather than per row, and only after mount, so
-  // the server and the first client render agree on the grouping.
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    setNow(Date.now());
     const interval = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  const grouped = groupThreadsByDay(threads, now || Date.now());
+  const grouped = groupThreadsByDay(threads, now);
 
   const handleRenameSubmit = async (threadId: Id<"threads">) => {
-    if (!editTitle.trim() || isRenaming) return;
-    setIsRenaming(true);
-    try {
-      await renameThread({ threadId, title: editTitle.trim() });
-      setEditingId(null);
-    } catch (error) {
-      console.error("Warning: Failed to rename thread", error);
-    } finally {
-      setIsRenaming(false);
-    }
+    if (!editTitle.trim()) return;
+    await renameAction.run(
+      async () => {
+        await renameThread({ threadId, title: editTitle.trim() });
+        setEditingId(null);
+      },
+      { fallbackMessage: t("renameFailed") },
+    );
   };
 
   return (
@@ -169,10 +163,10 @@ export default function ChatHistoryList() {
                           Button variant wears the brand as a background. */}
                       <button
                         onClick={() => handleRenameSubmit(thread._id)}
-                        disabled={isRenaming}
+                        disabled={renameAction.isBusy()}
                         className="w-6 h-6 rounded bg-brand flex items-center justify-center text-white active:scale-95 transition-all shadow-sm"
                       >
-                        {isRenaming ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-[14px] h-[14px]" />}
+                        {renameAction.isBusy() ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-[14px] h-[14px]" />}
                       </button>
                     </div>
                   ) : (
@@ -254,7 +248,7 @@ export default function ChatHistoryList() {
       </div>
 
       {/* Sonae Modal Overlay for Deletion - Escaped via Portal */}
-      {mounted && typeof document !== "undefined" && createPortal(
+      {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {threadToDelete && (
             <motion.div 
@@ -288,32 +282,30 @@ export default function ChatHistoryList() {
                       recipes are different shapes and shades. */}
                   <button
                     onClick={() => setThreadToDelete(null)}
-                    disabled={isDeleting}
+                    disabled={deleteAction.isBusy()}
                     className="flex-1 py-3.5 rounded-[16px] bg-white/5 hover:bg-white/10 text-[14px] font-medium text-foreground transition-all"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={async () => {
                       if (!threadToDelete) return;
-                      setIsDeleting(true);
                       const deletedId = threadToDelete;
-                      try {
-                        await deleteThread({ threadId: deletedId });
-                        if (pathname.includes(deletedId)) {
-                          router.push("/app/assistant");
-                        }
-                        setThreadToDelete(null);
-                      } catch (error) {
-                        console.error("Failed to delete thread", error);
-                      } finally {
-                        setIsDeleting(false);
-                      }
+                      await deleteAction.run(
+                        async () => {
+                          await deleteThread({ threadId: deletedId });
+                          if (pathname.includes(deletedId)) {
+                            router.push("/app/assistant");
+                          }
+                          setThreadToDelete(null);
+                        },
+                        { fallbackMessage: t("deleteFailed") },
+                      );
                     }}
-                    disabled={isDeleting}
+                    disabled={deleteAction.isBusy()}
                     className="flex-1 py-3.5 rounded-[16px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-[14px] font-medium text-red-400 transition-all flex items-center justify-center gap-2"
                   >
-                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Erase</span>}
+                    {deleteAction.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Erase</span>}
                   </button>
                 </div>
               </motion.div>

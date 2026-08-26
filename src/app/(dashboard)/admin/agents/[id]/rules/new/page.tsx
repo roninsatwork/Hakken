@@ -11,6 +11,7 @@ import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_component
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 export default function NewAgentRulePage() {
   const t = useTranslations("admin.agents.details.rules.form");
@@ -25,27 +26,26 @@ export default function NewAgentRulePage() {
   const [trigger, setTrigger] = useState("");
   const [instruction, setInstruction] = useState("");
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "CRITICAL">("NORMAL");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-agent-rule-create" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting) return;
+    if (!name.trim() || !trigger.trim() || !instruction.trim()) return;
 
-    setIsSubmitting(true);
-    try {
-      await createRule({
-        agentId,
-        name: name.trim(),
-        trigger: trigger.trim(),
-        instruction: instruction.trim(),
-        priority,
-        isActive: true,
-      });
-      router.push(`/admin/agents/${agentId}/rules`);
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+    await action.run(
+      async () => {
+        await createRule({
+          agentId,
+          name: name.trim(),
+          trigger: trigger.trim(),
+          instruction: instruction.trim(),
+          priority,
+          isActive: true,
+        });
+        router.push(`/admin/agents/${agentId}/rules`);
+      },
+      { fallbackMessage: tCommon("errors.default") },
+    );
   };
 
   const priorityClasses = {
@@ -153,10 +153,10 @@ export default function NewAgentRulePage() {
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
           <WriteButton
             type="submit"
-            disabled={!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting}
+            disabled={!name.trim() || !trigger.trim() || !instruction.trim() || action.isBusy()}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+            {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
             <span>{t("create.submit")}</span>
           </WriteButton>
         </div>

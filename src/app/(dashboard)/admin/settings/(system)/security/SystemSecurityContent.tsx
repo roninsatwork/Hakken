@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -55,6 +56,7 @@ type SystemSecurityContentProps = {
  */
 export function SystemSecurityContent({ currentPiiConfig }: SystemSecurityContentProps) {
   const t = useTranslations("admin.settings");
+  const action = useAdminAction({ scope: "admin-system-security" });
   const updatePiiConfig = useMutation(api.system.updatePiiConfig);
 
   const [piiData, setPiiData] = useState<PiiConfig>({});
@@ -69,15 +71,15 @@ export function SystemSecurityContent({ currentPiiConfig }: SystemSecurityConten
 
   const handleSave = async () => {
     setIsSaving(true);
-    try {
-      await updatePiiConfig({ configStr: JSON.stringify(piiData) });
+    const outcome = await action.run(
+      () => updatePiiConfig({ configStr: JSON.stringify(piiData) }),
+      { fallbackMessage: t("piiSaveFailed") }
+    );
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   // Built here rather than at module scope so every key is a literal the

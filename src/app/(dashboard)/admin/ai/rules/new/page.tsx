@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { BrainCircuit, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
@@ -24,31 +25,30 @@ export default function NewRulePage() {
   const t = useTranslations("ai.rules.form");
   const router = useRouter();
   const createRule = useMutation(api.aiRules.createRule);
+  const action = useAdminAction({ scope: "admin-ai-rules-new" });
 
   const [name, setName] = useState("");
   const [trigger, setTrigger] = useState("");
   const [instruction, setInstruction] = useState("");
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "CRITICAL">("NORMAL");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting) return;
+    if (!name.trim() || !trigger.trim() || !instruction.trim() || action.isBusy()) return;
 
-    setIsSubmitting(true);
-    try {
-      await createRule({
-        name: name.trim(),
-        trigger: trigger.trim(),
-        instruction: instruction.trim(),
-        priority,
-        isActive: true,
-      });
-      router.push("/admin/ai/rules");
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () =>
+        createRule({
+          name: name.trim(),
+          trigger: trigger.trim(),
+          instruction: instruction.trim(),
+          priority,
+          isActive: true,
+        }),
+      { fallbackMessage: t("createFailed") },
+    );
+
+    if (outcome.ok) router.push("/admin/ai/rules");
   };
 
   const priorityClasses = {
@@ -158,10 +158,10 @@ export default function NewRulePage() {
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
           <WriteButton
             type="submit"
-            disabled={!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting}
+            disabled={!name.trim() || !trigger.trim() || !instruction.trim() || action.isBusy()}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+            {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
             <span>{t("create")}</span>
           </WriteButton>
         </div>

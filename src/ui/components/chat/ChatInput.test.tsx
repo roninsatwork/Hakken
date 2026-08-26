@@ -1,8 +1,13 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { PropsWithChildren } from 'react'
+import { render as renderBare, screen, fireEvent, waitFor } from '@testing-library/react'
+import { PropsWithChildren, type ReactElement } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Id } from '@/convex/_generated/dataModel'
+import { ToastProvider } from '@/src/context/ToastContext'
 import ChatInput from './ChatInput'
+
+// The composer reports failures through the house action runner, which reads
+// the toast context the root layout always supplies.
+const render = (ui: ReactElement) => renderBare(ui, { wrapper: ToastProvider })
 
 // --- Mocking Dependencies ---
 

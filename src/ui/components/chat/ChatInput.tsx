@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTranslations } from "next-intl";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
@@ -48,6 +49,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   const t = useTranslations("ai.assistant.welcome");
   const tComposer = useTranslations("ai.assistant.composer");
   const tControls = useTranslations("ai.assistant.controls");
+  const action = useAdminAction({ scope: "assistant-composer-send" });
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,14 +97,6 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   
   const modelRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
-
-  // Set default model automatically
-  useEffect(() => {
-    if (!selectedModelId && activeModels.length > 0) {
-       const defModel = activeModels.find((model) => model.isDefault) || activeModels[0];
-       setSelectedModelId(defModel.modelId);
-    }
-  }, [activeModels, selectedModelId]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -177,7 +171,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const selectedModelData = activeModels.find((model) => model.modelId === selectedModelId);
+  const defaultModel = activeModels.find((model) => model.isDefault) || activeModels[0];
+  const effectiveSelectedModelId = selectedModelId || defaultModel?.modelId || null;
+  const selectedModelData = activeModels.find((model) => model.modelId === effectiveSelectedModelId);
 
   // On this path only Google models act on the thinking setting — the other
   // adapters ignore it — so the control is only offered where it does
@@ -195,21 +191,22 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     }
 
     setIsSubmitting(true);
-      const textSnapshot = content.trim();
-      const filesSnapshot = [...pendingFiles];
-      setContent("");
-      setPendingFiles([]);
-  
-      if (onOptimisticMessage) onOptimisticMessage(textSnapshot || "Analyzed attached documents.");
-  
-      try {
+    const textSnapshot = content.trim();
+    const filesSnapshot = [...pendingFiles];
+    setContent("");
+    setPendingFiles([]);
+
+    if (onOptimisticMessage) onOptimisticMessage(textSnapshot || "Analyzed attached documents.");
+
+    const outcome = await action.run(
+      async () => {
         let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
-  
+
         if (filesSnapshot.length > 0) {
           const statusText = `Encrypting & Uploading ${filesSnapshot.length} file(s)...`;
           setUploadStatus(statusText);
           if (onUploadStateChange) onUploadStateChange(statusText);
-          
+
           uploadedFileIds = [];
           for (const file of filesSnapshot) {
              const postUrl = await generateUploadUrl();
@@ -237,36 +234,40 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
           const parsingText = "Parsing Intelligence Data...";
           setUploadStatus(parsingText);
           if (onUploadStateChange) onUploadStateChange(parsingText);
-          
+
           // Clear file upload status to allow progressive loading hook to take over
           setUploadStatus(null);
         }
-  
+
         await sendMessage({
-        threadId,
-        content: textSnapshot || "Analyzed attached documents.",
-        modelId: selectedModelId || undefined,
-        // A model that ignores the thinking setting is never sent one, so the
-        // request matches what the screen offered.
-        thinkingLevel: isAutonomousMode
-          ? "SWARM"
-          : resolveThinkingLevelForModel({
-              remembered: selectedThinkingId,
-              modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
-            }),
-        fileIds: uploadedFileIds,
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setContent(textSnapshot); // revert
+          threadId,
+          content: textSnapshot || "Analyzed attached documents.",
+          modelId: effectiveSelectedModelId || undefined,
+          // A model that ignores the thinking setting is never sent one, so the
+          // request matches what the screen offered.
+          thinkingLevel: isAutonomousMode
+            ? "SWARM"
+            : resolveThinkingLevelForModel({
+                remembered: selectedThinkingId,
+                modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+              }),
+          fileIds: uploadedFileIds,
+        });
+      },
+      { fallbackMessage: tComposer("sendFailed") },
+    );
+
+    // An empty message means a repeat submit the runner turned away, not a
+    // failure; the send already in flight owns the text, so nothing is put back.
+    if (!outcome.ok && outcome.message) {
+      setContent(textSnapshot);
       setPendingFiles(filesSnapshot);
-      if (onOptimisticMessage) onOptimisticMessage(null);
-    } finally {
-      setIsSubmitting(false);
-      setUploadStatus(null);
-      if (onUploadStateChange) onUploadStateChange(null);
-      if (onOptimisticMessage) onOptimisticMessage(null);
     }
+
+    setIsSubmitting(false);
+    setUploadStatus(null);
+    if (onUploadStateChange) onUploadStateChange(null);
+    if (onOptimisticMessage) onOptimisticMessage(null);
   };
 
   return (
@@ -466,10 +467,10 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                               setSelectedModelId(model.modelId);
                               setModelDropdownOpen(false);
                             }}
-                            className={`flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                            className={`flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-left transition-colors ${effectiveSelectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                           >
-                            <span className={`text-[14px] font-medium truncate pr-3 ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
-                            {selectedModelId === model.modelId && (
+                            <span className={`text-[14px] font-medium truncate pr-3 ${effectiveSelectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
+                            {effectiveSelectedModelId === model.modelId && (
                               <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                             )}
                           </button>

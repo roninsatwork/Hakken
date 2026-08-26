@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
@@ -30,6 +31,7 @@ function getPurgeCutoffDate(retentionDays: number): string {
 export function RetentionRulesSection() {
   const t = useTranslations('admin.settings');
   const locale = useLocale();
+  const action = useAdminAction({ scope: "admin-retention-rules" });
 
   const getOrdinalSuffix = (day: number) => {
     if (locale === "it") return `${day}°`;
@@ -324,8 +326,11 @@ export function RetentionRulesSection() {
                 dayOfMonth: configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1,
               },
             };
-            await updatePurgeConfigs({ configStr: JSON.stringify(updated) });
-            setIsConfigModalOpen(false);
+            const outcome = await action.run(
+              () => updatePurgeConfigs({ configStr: JSON.stringify(updated) }),
+              { fallbackMessage: t('purges.saveFailed') }
+            );
+            if (outcome.ok) setIsConfigModalOpen(false);
           }}
           confirmModalOpen={isConfirmModalOpen}
           confirmModalPipeline={confirmModalPipeline}
@@ -338,12 +343,12 @@ export function RetentionRulesSection() {
           confirmManualPurge={async () => {
             if (!confirmModalPipeline) return;
             setIsManualRunning(true);
-            try {
-              await manualPurgeMutation({ pipelineKey: confirmModalPipeline });
-              setIsConfirmModalOpen(false);
-            } finally {
-              setIsManualRunning(false);
-            }
+            const outcome = await action.run(
+              () => manualPurgeMutation({ pipelineKey: confirmModalPipeline }),
+              { fallbackMessage: t('purges.runFailed') }
+            );
+            if (outcome.ok) setIsConfirmModalOpen(false);
+            setIsManualRunning(false);
           }}
           isManualRunning={isManualRunning}
           cancelModalOpen={isCancelModalOpen}
@@ -352,14 +357,12 @@ export function RetentionRulesSection() {
           confirmCancelPurge={async () => {
             if (!cancelModalHistoryId) return;
             setIsCancelRunning(true);
-            try {
-              await cancelPurgeMutation({ historyId: cancelModalHistoryId });
-              setIsCancelModalOpen(false);
-            } catch (error) {
-              console.error("Failed to cancel active purge execution:", error);
-            } finally {
-              setIsCancelRunning(false);
-            }
+            const outcome = await action.run(
+              () => cancelPurgeMutation({ historyId: cancelModalHistoryId }),
+              { fallbackMessage: t('purges.cancelFailed') }
+            );
+            setIsCancelRunning(false);
+            if (outcome.ok) setIsCancelModalOpen(false);
           }}
           isCancelRunning={isCancelRunning}
         />

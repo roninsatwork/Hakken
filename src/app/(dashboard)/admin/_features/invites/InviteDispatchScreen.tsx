@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -9,6 +9,7 @@ import { Mail, ShieldCheck, Loader2, Send } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { LAYER } from "@/src/ui/lib/layers";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
@@ -90,6 +91,8 @@ export function InviteDispatchScreen({
   const t = useTranslations("admin.invites");
   const tx = (key: keyof InviteScreenText) => text?.[key] ?? t(key);
   const { platformName } = useSystemSettings();
+  const templateAction = useAdminAction({ scope: "admin-invites-template" });
+  const sendAction = useAdminAction({ scope: "admin-invites-send" });
   const activeTemplate = useQuery(api.invites.getActiveTemplate);
   const saveTemplate = useMutation(api.invites.saveTemplate);
   const dispatchInvite = useAction(api.invites.dispatchInviteEmail);
@@ -107,28 +110,31 @@ export function InviteDispatchScreen({
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (activeTemplate) {
-      setFormData({
-         subject: activeTemplate.subject,
-         headline: activeTemplate.headline,
-         body: activeTemplate.body,
-         ctaText: activeTemplate.ctaText,
-      });
-    }
-  }, [activeTemplate]);
+  // Adopted during render rather than in an effect, as the settings form does:
+  // an effect paints the empty form for a frame before replacing it, and the
+  // sentinel is the template itself — Convex hands back a new reference on
+  // every server change, which is exactly when the form should re-seed.
+  const [seenTemplate, setSeenTemplate] = useState<typeof activeTemplate>(undefined);
+  if (activeTemplate && activeTemplate !== seenTemplate) {
+    setSeenTemplate(activeTemplate);
+    setFormData({
+       subject: activeTemplate.subject,
+       headline: activeTemplate.headline,
+       body: activeTemplate.body,
+       ctaText: activeTemplate.ctaText,
+    });
+  }
 
   const handleSaveTemplate = async () => {
     setIsSaving(true);
-    try {
-      await saveTemplate(formData);
+    const outcome = await templateAction.run(() => saveTemplate(formData), {
+      fallbackMessage: t("templateSaveFailed"),
+    });
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-       console.error(error);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   const handleSendInvite = async (e: FormEvent) => {
@@ -138,23 +144,26 @@ export function InviteDispatchScreen({
     setSendSuccess(false);
     setSendError(null);
 
-    try {
-      await dispatchInvite({
+    const outcome = await sendAction.run(
+      () => dispatchInvite({
          email: inviteEmail,
          role,
          companyId,
          template: formData,
-      });
-      setSendSuccess(true);
-      setInviteEmail("");
-      setTimeout(() => setSendSuccess(false), 3000);
-    } catch (e: unknown) {
-      console.error(e);
-      setSendError(tx("sendError"));
+      }),
+      { fallbackMessage: tx("sendError"), suppressErrorToast: true },
+    );
+    setIsSending(false);
+
+    if (!outcome.ok) {
+      setSendError(outcome.message);
       setTimeout(() => setSendError(null), 5000);
-    } finally {
-      setIsSending(false);
+      return;
     }
+
+    setSendSuccess(true);
+    setInviteEmail("");
+    setTimeout(() => setSendSuccess(false), 3000);
   };
 
   if (activeTemplate === undefined) {

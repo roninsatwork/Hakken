@@ -31,6 +31,7 @@ import { GenericNode } from "@/src/ui/components/workflows/GenericNode";
 import { WorkflowSidebar } from "@/src/ui/components/workflows/WorkflowSidebar";
 import { ConfigDrawer } from "@/src/ui/components/workflows/ConfigDrawer";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type {
   UpdatableWorkflowNodeData,
   WorkflowCanvasEdge,
@@ -95,6 +96,7 @@ const nodeTypes: NodeTypes = {
 function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage, handleSave, handleManualRun }: FlowCanvasWithProviderProps) {
   const t = useTranslations('admin.workflows.designer');
   const deleteAgent = useMutation(api.agents.deleteAgent);
+  const { run } = useAdminAction({ scope: "admin-workflow-designer" });
 
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowCanvasNode>(parseWorkflowNodesJson(workflow.nodes));
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowCanvasEdge>(parseWorkflowEdgesJson(workflow.edges));
@@ -145,12 +147,16 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
   const onNodesDelete = useCallback(
     (deletedNodes: WorkflowCanvasNode[]) => {
       deletedNodes.forEach((node) => {
-        if (node.type === 'agentNode' && node.data?.isInline && node.data?._agentId) {
-          deleteAgent({ id: node.data._agentId }).catch(console.error);
+        const agentId = node.data?._agentId;
+        if (node.type === 'agentNode' && node.data?.isInline && agentId) {
+          void run(() => deleteAgent({ id: agentId }), {
+            key: `delete-agent:${agentId}`,
+            fallbackMessage: t('alerts.deleteAgentFailed'),
+          });
         }
       });
     },
-    [deleteAgent]
+    [deleteAgent, run, t]
   );
 
   const handleUpdateNodeData = (nodeId: string, newData: UpdatableWorkflowNodeData) => {

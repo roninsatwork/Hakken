@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Activity, RefreshCcw } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import { lazy, Suspense, useCallback, useMemo, useState, useEffect } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { lazy, Suspense, useCallback, useMemo, useEffect } from "react";
 
 const PropertiesRunRows = lazy(() => import("./PropertiesRunRows"));
 
@@ -19,39 +20,38 @@ function PropertiesRunsEmptyState() {
 }
 
 export default function PropertiesLogsPage() {
+  const t = useTranslations("properties.logs");
   const latestRunsQuery = useQuery(api.properties.getLatestRuns);
   const latestRuns = useMemo(() => latestRunsQuery ?? [], [latestRunsQuery]);
   const syncRun = useAction(api.apify.syncRunStatus);
-  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const { run: runAction, isBusy } = useAdminAction({ scope: "app-properties-logs" });
+  const syncFailedMessage = t("syncFailed");
 
-  const handleSync = useCallback(async (runId: string) => {
-    setSyncingId(runId);
-    try {
-      await syncRun({ runId });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSyncingId(null);
-    }
-  }, [syncRun]);
+  const handleSync = useCallback(async (runId: string, isAutomatic = false) => {
+    await runAction(() => syncRun({ runId }), {
+      key: runId,
+      suppressErrorToast: isAutomatic,
+      fallbackMessage: syncFailedMessage,
+    });
+  }, [runAction, syncRun, syncFailedMessage]);
 
   const renderSyncControl = useCallback((runId: string) => (
     <button
       onClick={() => handleSync(runId)}
-      disabled={syncingId === runId}
+      disabled={isBusy(runId)}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-border-dim text-secondary hover:text-foreground transition-colors text-[11px] font-bold uppercase tracking-widest hover:border-brand/30"
     >
-      <RefreshCcw className={`w-3.5 h-3.5 ${syncingId === runId ? "animate-spin" : ""}`} />
+      <RefreshCcw className={`w-3.5 h-3.5 ${isBusy(runId) ? "animate-spin" : ""}`} />
       Sync Status
     </button>
-  ), [handleSync, syncingId]);
+  ), [handleSync, isBusy]);
 
   // Auto-sync PENDING runs every 30 seconds
   useEffect(() => {
     const syncPending = () => {
       latestRuns.forEach((run) => {
         if (run.status === "PENDING") {
-          handleSync(run.runId);
+          handleSync(run.runId, true);
         }
       });
     };

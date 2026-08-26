@@ -8,6 +8,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -60,9 +61,9 @@ export default function EditToolContent({ RuleCheckboxes, tool, toolId }: EditTo
   const tFields = useTranslations("admin.aiTools.new.fields");
   const router = useRouter();
   const updateTool = useMutation(api.aiTools.updateTool);
+  const action = useAdminAction({ scope: "admin-ai-tools-edit" });
 
   const [draft, setDraft] = useState<ToolDraft | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateDraft = (updates: Partial<ToolDraft>) => {
     if (!tool) return;
@@ -73,32 +74,31 @@ export default function EditToolContent({ RuleCheckboxes, tool, toolId }: EditTo
     e.preventDefault();
     if (!tool) return;
     const form = draft ?? createToolDraft(tool);
-    if (!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting) return;
+    if (!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || action.isBusy()) return;
 
-    setIsSubmitting(true);
-    try {
-      await updateTool({
-        id: toolId,
-        // One box on screen, two fields behind it: the assistant's name for
-        // this tool, and the label shown in lists. An administrator should not
-        // have to type the same words twice; a friendlier label can be edited
-        // later without touching what the assistant calls it.
-        modelName: form.modelName.trim(),
-        name: form.modelName.trim(),
-        description: form.description.trim(),
-        handlerMapping: form.handlerMapping.trim(),
-        requiredRole: form.requiredRole,
-        inputSchema: form.inputSchema.trim() || undefined,
-        outputSchema: form.outputSchema.trim() || undefined,
-        sideEffectLevel: form.sideEffectLevel,
-        confirmationRequired: form.confirmationRequired,
-        isActive: form.isActive,
-      });
-      router.push(`/admin/ai/tools`);
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () =>
+        updateTool({
+          id: toolId,
+          // One box on screen, two fields behind it: the assistant's name for
+          // this tool, and the label shown in lists. An administrator should not
+          // have to type the same words twice; a friendlier label can be edited
+          // later without touching what the assistant calls it.
+          modelName: form.modelName.trim(),
+          name: form.modelName.trim(),
+          description: form.description.trim(),
+          handlerMapping: form.handlerMapping.trim(),
+          requiredRole: form.requiredRole,
+          inputSchema: form.inputSchema.trim() || undefined,
+          outputSchema: form.outputSchema.trim() || undefined,
+          sideEffectLevel: form.sideEffectLevel,
+          confirmationRequired: form.confirmationRequired,
+          isActive: form.isActive,
+        }),
+      { fallbackMessage: t("saveFailed") },
+    );
+
+    if (outcome.ok) router.push(`/admin/ai/tools`);
   };
 
   const roleClasses = {
@@ -267,10 +267,10 @@ export default function EditToolContent({ RuleCheckboxes, tool, toolId }: EditTo
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
           <WriteButton
             type="submit"
-	            disabled={!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting}
+	            disabled={!form.modelName.trim() || !form.description.trim() || !form.handlerMapping.trim() || action.isBusy()}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
-             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+             {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{t("save")}</span>
           </WriteButton>
         </div>

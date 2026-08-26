@@ -13,6 +13,7 @@ import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRu
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 const loadAgentRuleDeleteModal = () => import("./AgentRuleDeleteModal");
 const AgentRuleDeleteModal = lazy(loadAgentRuleDeleteModal);
@@ -31,8 +32,8 @@ export default function AgentRulesPage() {
   const pageSize = TABLE_PAGE_SIZE;
 
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [hasOpenedDeleteModal, setHasOpenedDeleteModal] = useState(false);
+  const action = useAdminAction({ scope: "admin-agent-rules" });
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -52,16 +53,11 @@ export default function AgentRulesPage() {
   const totalPages = rulesData?.totalPages || 1;
 
   const handleDeleteRule = async () => {
-    if (!deleteId || isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteRuleMutation({ id: deleteId });
-      setDeleteId(null);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDeleting(false);
-    }
+    if (!deleteId) return;
+    const outcome = await action.run(() => deleteRuleMutation({ id: deleteId }), {
+      fallbackMessage: t("deleteFailed"),
+    });
+    if (outcome.ok) setDeleteId(null);
   };
 
   const openDeleteModal = (id: Id<"aiRules">) => {
@@ -103,7 +99,12 @@ export default function AgentRulesPage() {
         onPageChange={setPage}
         getRowHref={(rule) => `/admin/agents/${agentId}/rules/${rule._id}`}
         getEditHref={(rule) => `/admin/agents/${agentId}/rules/${rule._id}`}
-        onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
+        onToggleActive={(rule) => {
+          void action.run(() => toggleActive({ id: rule._id, isActive: !rule.isActive }), {
+            key: rule._id,
+            fallbackMessage: t("toggleFailed"),
+          });
+        }}
         onDelete={(rule) => openDeleteModal(rule._id)}
         labels={{
           priority: "Priority",
@@ -121,7 +122,7 @@ export default function AgentRulesPage() {
         <Suspense fallback={null}>
           <AgentRuleDeleteModal
             isOpen={deleteId !== null}
-            isDeleting={isDeleting}
+            isDeleting={action.isBusy()}
             onClose={() => setDeleteId(null)}
             onConfirm={handleDeleteRule}
             title={t("deleteModal.title")}

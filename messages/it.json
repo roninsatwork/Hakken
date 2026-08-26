@@ -1298,7 +1298,8 @@
         "deleteWarning": "Questa azione non può essere annullata.",
         "cancel": "Annulla",
         "deleteConfirm": "Elimina la regola",
-        "deleteFailed": "Impossibile eliminare la regola. Riprova."
+        "deleteFailed": "Impossibile eliminare la regola. Riprova.",
+        "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova."
       },
       "chatEvalNew": {
         "title": "Crea una valutazione dalla chat",
@@ -2641,7 +2642,8 @@
               "placeholder": "Per esempio: Indirizzo dell'ufficio"
             }
           },
-          "deleteFailed": "Impossibile eliminare la regola. Riprova."
+          "deleteFailed": "Impossibile eliminare la regola. Riprova.",
+          "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova."
         },
         "knowledge": {
           "title": "Grafo della Conoscenza",
@@ -3818,7 +3820,9 @@
             "success": "Politica aggiornata con successo."
           }
         },
-        "cancelFailed": "Impossibile annullare l'eliminazione. Riprova."
+        "cancelFailed": "Impossibile annullare l'eliminazione. Riprova.",
+        "saveFailed": "Impossibile salvare la regola di conservazione. Riprova.",
+        "runFailed": "Impossibile avviare l'eliminazione. Riprova."
       },
       "nav": {
         "identity": "Identità",
@@ -5132,7 +5136,8 @@
         "rule": "Nome regola / Trigger",
         "status": "Stato"
       },
-      "deleteFailed": "Impossibile eliminare la regola. Riprova."
+      "deleteFailed": "Impossibile eliminare la regola. Riprova.",
+      "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova."
     },
     "models": {
       "title": "Inventario Modelli Grid",

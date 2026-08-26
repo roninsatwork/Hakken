@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { api } from "@/convex/_generated/api";
 import { Trophy, Gamepad2, Play, Crown, Clock, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
@@ -18,6 +19,7 @@ const RoninCanvas = dynamic(loadRoninCanvas, { ssr: false });
 
 export default function RoninArcadePage() {
   const t = useTranslations("arcade");
+  const action = useAdminAction({ scope: "arcade-ronins-run-score" });
   const [currentPage, setCurrentPage] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -105,16 +107,17 @@ export default function RoninArcadePage() {
   };
 
   const handleGameOver = async (score: number) => {
-    try {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
-      if (score > 0) {
-        await submitScore({ game: "ronin", score });
-      }
-    } catch (e) {
-      console.error("Failed to submit score", e);
-    }
+    await action.run(
+      async () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+        if (score > 0) {
+          await submitScore({ game: "ronin", score });
+        }
+      },
+      { fallbackMessage: t("scoreFailed") },
+    );
   };
 
   return (

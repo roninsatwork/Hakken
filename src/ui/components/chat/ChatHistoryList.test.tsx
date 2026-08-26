@@ -1,9 +1,15 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as renderBare, screen, fireEvent } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { vi, describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
 import ChatHistoryList, { THREAD_PAGE_SIZE } from "./ChatHistoryList";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import * as nextNavigation from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
+import { ToastProvider } from "@/src/context/ToastContext";
+
+// Rename and delete report failures through the house action runner, which
+// reads the toast context the root layout always supplies.
+const render = (ui: ReactElement) => renderBare(ui, { wrapper: ToastProvider });
 
 // The screen reads the configured platform name, so copy is branded per
 // deployment rather than carrying a hardcoded product name.

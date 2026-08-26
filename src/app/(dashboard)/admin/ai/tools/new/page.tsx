@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -16,6 +17,7 @@ export default function RegisterToolPage() {
   const router = useRouter();
   const t = useTranslations("admin.aiTools.new");
   const createTool = useMutation(api.aiTools.createTool);
+  const action = useAdminAction({ scope: "admin-ai-tools-new" });
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -26,35 +28,33 @@ export default function RegisterToolPage() {
   const [isActive, setIsActive] = useState(true);
   const [inputSchema, setInputSchema] = useState('{\n  "type": "object",\n  "properties": {}\n}');
   const [outputSchema, setOutputSchema] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !description.trim() || !handlerMapping.trim() || isSubmitting) return;
+    if (!name.trim() || !description.trim() || !handlerMapping.trim() || action.isBusy()) return;
 
-    setIsSubmitting(true);
-    try {
-      await createTool({
-        // One box on screen, two fields behind it: the assistant's name for
-        // this tool, and the label shown in lists. An administrator should not
-        // have to type the same words twice; a friendlier label can be edited
-        // later without touching what the assistant calls it.
-        modelName: name.trim(),
-        name: name.trim(),
-        description: description.trim(),
-        handlerMapping: handlerMapping.trim(),
-        requiredRole,
-        sideEffectLevel,
-        confirmationRequired,
-        isActive,
-        inputSchema: inputSchema.trim() || undefined,
-        outputSchema: outputSchema.trim() || undefined,
-      });
-      router.push("/admin/ai/tools");
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () =>
+        createTool({
+          // One box on screen, two fields behind it: the assistant's name for
+          // this tool, and the label shown in lists. An administrator should not
+          // have to type the same words twice; a friendlier label can be edited
+          // later without touching what the assistant calls it.
+          modelName: name.trim(),
+          name: name.trim(),
+          description: description.trim(),
+          handlerMapping: handlerMapping.trim(),
+          requiredRole,
+          sideEffectLevel,
+          confirmationRequired,
+          isActive,
+          inputSchema: inputSchema.trim() || undefined,
+          outputSchema: outputSchema.trim() || undefined,
+        }),
+      { fallbackMessage: t("createFailed") },
+    );
+
+    if (outcome.ok) router.push("/admin/ai/tools");
   };
 
   const roleClasses = {
@@ -190,10 +190,10 @@ export default function RegisterToolPage() {
         <div className="flex justify-end pt-6 border-t border-border-dim mt-2">
           <WriteButton
             type="submit"
-            disabled={!name.trim() || !description.trim() || !handlerMapping.trim() || isSubmitting}
+            disabled={!name.trim() || !description.trim() || !handlerMapping.trim() || action.isBusy()}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
-             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
+             {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
             <span>{t("submit")}</span>
           </WriteButton>
         </div>

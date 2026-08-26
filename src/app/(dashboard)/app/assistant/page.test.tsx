@@ -1,9 +1,14 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as renderBare, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { ToastProvider } from "@/src/context/ToastContext";
 import AssistantWelcomePage from "./page";
+
+// Starting a thread reports failures through the house action runner, which
+// reads the toast context the root layout always supplies.
+const render = (ui: React.ReactElement) => renderBare(ui, { wrapper: ToastProvider });
 
 type HookMock = {
   mockImplementation: (implementation: (...args: unknown[]) => unknown) => void;

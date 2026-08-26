@@ -4,7 +4,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/src/ui/components/screens/Button";
 import {
@@ -40,6 +39,7 @@ import {
 } from "lucide-react";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useTranslations } from "next-intl";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 function matchesCompanyRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -57,17 +57,16 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const impersonateCompany = useMutation(api.users.impersonateCompany);
-  const [isImpersonating, setIsImpersonating] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-impersonate" });
 
   const handleImpersonate = async () => {
-    setIsImpersonating(true);
-    try {
-      await impersonateCompany({ companyId });
-      router.push("/app");
-    } catch (e) {
-      console.error(e);
-      setIsImpersonating(false);
-    }
+    await action.run(
+      async () => {
+        await impersonateCompany({ companyId });
+        router.push("/app");
+      },
+      { fallbackMessage: t("impersonateFailed") },
+    );
   };
 
   if (company === undefined) {
@@ -307,10 +306,10 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
                 <Button
                   variant="brand"
                   onClick={handleImpersonate}
-                  disabled={isImpersonating}
+                  disabled={action.isBusy()}
                   className="px-5 py-2 flex items-center gap-2 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
                 >
-                  {isImpersonating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+                  {action.isBusy() ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
                   {t("impersonate")}
                 </Button>
             )}

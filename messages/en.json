@@ -1298,7 +1298,8 @@
         "deleteWarning": "This action cannot be undone.",
         "cancel": "Cancel",
         "deleteConfirm": "Delete Rule",
-        "deleteFailed": "The rule could not be deleted. Try again."
+        "deleteFailed": "The rule could not be deleted. Try again.",
+        "toggleFailed": "The rule could not be switched. Try again."
       },
       "chatEvalNew": {
         "title": "Create Eval From Chat",
@@ -2641,7 +2642,8 @@
               "placeholder": "For example: Office address"
             }
           },
-          "deleteFailed": "The rule could not be deleted. Try again."
+          "deleteFailed": "The rule could not be deleted. Try again.",
+          "toggleFailed": "The rule could not be switched. Try again."
         },
         "knowledge": {
           "title": "Knowledge Base",
@@ -3818,7 +3820,9 @@
             "success": "Policy successfully updated."
           }
         },
-        "cancelFailed": "The purge could not be cancelled. Try again."
+        "cancelFailed": "The purge could not be cancelled. Try again.",
+        "saveFailed": "The retention rule could not be saved. Try again.",
+        "runFailed": "The purge could not be started. Try again."
       },
       "nav": {
         "identity": "Identity",
@@ -5132,7 +5136,8 @@
         "rule": "Rule Name / Trigger",
         "status": "Status"
       },
-      "deleteFailed": "The rule could not be deleted. Try again."
+      "deleteFailed": "The rule could not be deleted. Try again.",
+      "toggleFailed": "The rule could not be switched. Try again."
     },
     "models": {
       "title": "AI Models",

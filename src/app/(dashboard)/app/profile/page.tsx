@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Field } from "@/src/ui/components/screens/Field";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ProfileFormData = {
   name: string;
@@ -27,7 +28,8 @@ export default function MyProfilePage() {
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
   const imageInputRef = React.useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const saveAction = useAdminAction({ scope: "profile-save" });
+  const photoAction = useAdminAction({ scope: "profile-photo" });
 
   const [formData, setFormData] = useState<ProfileFormData>({
     name: "",
@@ -37,7 +39,6 @@ export default function MyProfilePage() {
     storageId: "",
   });
 
-  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const planStatus = useQuery(api.plans.getMyCompanyPlanStatus);
@@ -61,48 +62,47 @@ export default function MyProfilePage() {
     const validation = validateUploadFile(file, "adminImage");
     if (!validation.allowed) return;
 
-    setIsUploading(true);
-    try {
-      // 1. Get short-lived upload URL from Convex
-      const postUrl = await generateUploadUrl();
+    await photoAction.run(
+      async () => {
+        // 1. Get short-lived upload URL from Convex
+        const postUrl = await generateUploadUrl();
 
-      // 2. POST the file to the URL
-      const result = await fetch(postUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
+        // 2. POST the file to the URL
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const { storageId } = await result.json() as { storageId: Id<"_storage"> };
 
-      // 3. Save the storage ID to form state and generate a local preview URL
-      const localPreviewUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, storageId, image: localPreviewUrl });
-    } catch (error) {
-      console.error("Upload failed", error);
-    } finally {
-      setIsUploading(false);
-      if (imageInputRef.current) imageInputRef.current.value = "";
-    }
+        // 3. Save the storage ID to form state and generate a local preview URL
+        const localPreviewUrl = URL.createObjectURL(file);
+        setFormData({ ...formData, storageId, image: localPreviewUrl });
+      },
+      { fallbackMessage: t("photoFailed") },
+    );
+
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
     setSaveSuccess(false);
 
-    try {
-      await updateProfile({
-        name: formData.name,
-        phone: formData.phone,
-        image: formData.image,
-        ...(formData.storageId ? { storageId: formData.storageId } : {}),
-      });
+    const outcome = await saveAction.run(
+      () =>
+        updateProfile({
+          name: formData.name,
+          phone: formData.phone,
+          image: formData.image,
+          ...(formData.storageId ? { storageId: formData.storageId } : {}),
+        }),
+      { fallbackMessage: t("saveFailed") },
+    );
+
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error("Failed to update profile", err);
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -132,11 +132,11 @@ export default function MyProfilePage() {
             <button
               form="profile-form"
               type="submit"
-              disabled={isSaving}
+              disabled={saveAction.isBusy()}
               className="px-5 py-2 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all text-[13px] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-[14px] h-[14px]" />
-              {isSaving ? t('saving') : t('saveChanges')}
+              {saveAction.isBusy() ? t('saving') : t('saveChanges')}
             </button>
           </div>
         </header>
@@ -198,10 +198,10 @@ export default function MyProfilePage() {
                     <button
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      disabled={isUploading}
+                      disabled={photoAction.isBusy()}
                       className="px-3 py-1.5 rounded-[8px] bg-foreground/10 text-foreground text-[12px] font-medium hover:bg-foreground/20 transition-all disabled:opacity-50"
                     >
-                      {isUploading ? t('fields.photo.uploading') : t('fields.photo.upload')}
+                      {photoAction.isBusy() ? t('fields.photo.uploading') : t('fields.photo.upload')}
                     </button>
                     <p className="text-[10px] text-secondary">{t('fields.photo.hint')}</p>
                   </div>

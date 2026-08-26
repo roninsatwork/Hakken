@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AssistantComposer } from "./_components/AssistantComposer";
@@ -37,6 +38,8 @@ export default function AssistantWelcomePage() {
   const tCommon = useTranslations("common");
   const settings = useSystemSettings();
   const router = useRouter();
+  const startAction = useAdminAction({ scope: "assistant-welcome-start" });
+  const voiceAction = useAdminAction({ scope: "assistant-welcome-voice" });
 
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -187,13 +190,16 @@ export default function AssistantWelcomePage() {
   const handleStartVoice = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    try {
-      const threadId = await createThread({});
-      router.push(`/app/assistant/${threadId}?voice=1`);
-    } catch (error) {
-      console.error(error);
-      setIsSubmitting(false);
-    }
+    const outcome = await voiceAction.run(
+      async () => {
+        const threadId = await createThread({});
+        router.push(`/app/assistant/${threadId}?voice=1`);
+      },
+      { fallbackMessage: tCommon("errors.default") },
+    );
+    // An empty message means a repeat press the runner turned away, not a
+    // failure; the attempt in flight is still going to navigate.
+    if (!outcome.ok && outcome.message) setIsSubmitting(false);
   };
 
   const handleToggleRecording = () => {
@@ -214,58 +220,64 @@ export default function AssistantWelcomePage() {
     setContent("");
     setPendingFiles([]);
 
-    try {
-      const threadId = await createThread({});
-      let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
+    const outcome = await startAction.run(
+      async () => {
+        const threadId = await createThread({});
+        let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
 
-      if (filesSnapshot.length > 0) {
-        setUploadStatus(`Encrypting & Uploading ${filesSnapshot.length} file(s)...`);
-        uploadedFileIds = [];
+        if (filesSnapshot.length > 0) {
+          setUploadStatus(`Encrypting & Uploading ${filesSnapshot.length} file(s)...`);
+          uploadedFileIds = [];
 
-        for (const file of filesSnapshot) {
-          const postUrl = await generateUploadUrl();
-          const result = await fetch(postUrl, {
-            method: "POST",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
-          const { storageId } = await result.json();
-
-          // A document becomes knowledge; a photo does not — it rides on the
-          // message as inline evidence for this turn only.
-          if (!file.type.startsWith("image/")) {
-            await saveChatDocument({
-              storageId,
-              threadId,
-              title: file.name,
-              format: file.type,
+          for (const file of filesSnapshot) {
+            const postUrl = await generateUploadUrl();
+            const result = await fetch(postUrl, {
+              method: "POST",
+              headers: { "Content-Type": file.type },
+              body: file,
             });
+            const { storageId } = await result.json();
+
+            // A document becomes knowledge; a photo does not — it rides on the
+            // message as inline evidence for this turn only.
+            if (!file.type.startsWith("image/")) {
+              await saveChatDocument({
+                storageId,
+                threadId,
+                title: file.name,
+                format: file.type,
+              });
+            }
+
+            uploadedFileIds.push(storageId);
           }
 
-          uploadedFileIds.push(storageId);
+          setUploadStatus("Parsing Intelligence Data...");
+          setUploadStatus(null);
         }
 
-        setUploadStatus("Parsing Intelligence Data...");
-        setUploadStatus(null);
-      }
+        await sendMessage({
+          threadId,
+          content: textSnapshot || "Analyzed attached documents.",
+          modelId: effectiveSelectedModelId || undefined,
+          // A model that ignores the thinking setting is never sent one, so
+          // the request matches what the screen offered.
+          thinkingLevel: isAutonomousMode
+            ? "SWARM"
+            : resolveThinkingLevelForModel({
+                remembered: selectedThinkingId,
+                modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+              }),
+          fileIds: uploadedFileIds,
+        });
+        router.push(`/app/assistant/${threadId}`);
+      },
+      { fallbackMessage: tCommon("errors.default") },
+    );
 
-      await sendMessage({
-        threadId,
-        content: textSnapshot || "Analyzed attached documents.",
-        modelId: effectiveSelectedModelId || undefined,
-        // A model that ignores the thinking setting is never sent one, so
-        // the request matches what the screen offered.
-        thinkingLevel: isAutonomousMode
-          ? "SWARM"
-          : resolveThinkingLevelForModel({
-              remembered: selectedThinkingId,
-              modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
-            }),
-        fileIds: uploadedFileIds,
-      });
-      router.push(`/app/assistant/${threadId}`);
-    } catch (error) {
-      console.error(error);
+    // An empty message means a repeat submit the runner turned away, not a
+    // failure; the attempt in flight still owns the text and the navigation.
+    if (!outcome.ok && outcome.message) {
       setContent(textSnapshot);
       setPendingFiles(filesSnapshot);
       setIsSubmitting(false);
