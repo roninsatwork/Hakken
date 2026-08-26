@@ -36,7 +36,7 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * cannot quietly go blind again.
  */
 
-const MISSING_SHAPE_CEILING = 297;
+const MISSING_SHAPE_CEILING = 284;
 
 /**
  * Handlers that still hand back a database row unshaped. This list may only

@@ -276,6 +276,7 @@ import type * as utils_uploadPolicy from "../utils/uploadPolicy.js";
 import type * as utils_userShapes from "../utils/userShapes.js";
 import type * as utils_widgetEmbedPass from "../utils/widgetEmbedPass.js";
 import type * as utils_widgetOriginPolicy from "../utils/widgetOriginPolicy.js";
+import type * as utils_wikiShapes from "../utils/wikiShapes.js";
 import type * as utils_workflowTypes from "../utils/workflowTypes.js";
 import type * as vertexProviderService from "../vertexProviderService.js";
 import type * as voicePreview from "../voicePreview.js";
@@ -598,6 +599,7 @@ declare const fullApi: ApiFromModules<{
   "utils/userShapes": typeof utils_userShapes;
   "utils/widgetEmbedPass": typeof utils_widgetEmbedPass;
   "utils/widgetOriginPolicy": typeof utils_widgetOriginPolicy;
+  "utils/wikiShapes": typeof utils_wikiShapes;
   "utils/workflowTypes": typeof utils_workflowTypes;
   vertexProviderService: typeof vertexProviderService;
   voicePreview: typeof voicePreview;

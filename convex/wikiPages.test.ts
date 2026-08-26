@@ -1090,3 +1090,107 @@ describe("hubs survive their own success", () => {
     expect(hub!.content).not.toContain("[[product-number-299]]");
   });
 });
+
+describe("every wiki door hands back the shape it declares", () => {
+  /**
+   * Eleven of the thirteen client-callable doors here had no test that reached
+   * them, so their declared shapes were checked by the compiler and by nothing
+   * at run time — and the compiler cannot see a field the handler sends but the
+   * declaration does not name. That is the failure a validator exists to catch,
+   * and it only fires when something calls the door.
+   *
+   * Each door is read with real content behind it, and the count of what came
+   * back is asserted, so a door that returned nothing cannot pass by having
+   * nothing to be wrong about.
+   */
+  const seedWiki = async (t: ReturnType<typeof convexTest>) => {
+    const companyId = await t.run(async (ctx) =>
+      ctx.db.insert("companies", { name: "Shape Corp", createdAt: Date.now() }));
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "shapes@test.com", role: "SUPER_ADMIN", createdAt: Date.now() }));
+
+    // The platform shelf holds nothing company-specific, so its page is a
+    // policy rather than a customer — the same door, a kind it will accept.
+    for (const scope of [{ companyId, kind: "CUSTOMER" as const }, { companyId: undefined, kind: "POLICY" as const }]) {
+      await t.mutation(internal.wikiPages.applyRewriteInternal, {
+        ...scope,
+        subjectKey: "riverside-hotels",
+        title: "riverside-hotels",
+        content: "Prefers email. Twelve rooms on the refurbishment plan, see [[winter-rates]].",
+        source: "PHONE_CALL:call-7",
+      });
+      await t.mutation(internal.wikiPages.applyRewriteInternal, {
+        ...scope,
+        subjectKey: "riverside-hotels",
+        title: "riverside-hotels",
+        content: "Prefers email. Refurbishment finished; asking about winter rates.",
+        source: "EMAIL:msg-12",
+      });
+    }
+
+    return { companyId, admin: t.withIdentity({ subject: adminId }) };
+  };
+
+  const paginationOpts = { numItems: 10, cursor: null };
+
+  test("the company doors", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, admin } = await seedWiki(t);
+
+    const list = await admin.query(api.wikiPages.listPagesForCompany, { companyId, paginationOpts });
+    const map = await admin.query(api.wikiPages.listPagesForMapForCompany, { companyId });
+    const search = await admin.query(api.wikiPages.searchPagesForCompany, { companyId, term: "riverside" });
+    const exported = await admin.query(api.wikiPages.getExportForCompany, { companyId });
+    const detail = await admin.query(api.wikiPages.getPageDetailForCompany, {
+      companyId,
+      pageId: map[0].pageId,
+    });
+
+    expect({
+      list: list.page.length,
+      map: map.length,
+      search: search.length,
+      exported: exported.length,
+      detailRevisions: detail?.revisions.length ?? 0,
+    }).toEqual({ list: 1, map: 1, search: 1, exported: 1, detailRevisions: 1 });
+  });
+
+  test("the platform doors", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { admin } = await seedWiki(t);
+
+    const list = await admin.query(api.wikiPages.listPagesForGlobal, { paginationOpts });
+    const map = await admin.query(api.wikiPages.listPagesForMapForGlobal, {});
+    const search = await admin.query(api.wikiPages.searchPagesForGlobal, { term: "riverside" });
+    const exported = await admin.query(api.wikiPages.getExportForGlobal, {});
+    const detail = await admin.query(api.wikiPages.getPageDetailForGlobal, { pageId: map[0].pageId });
+
+    expect({
+      list: list.page.length,
+      map: map.length,
+      search: search.length,
+      exported: exported.length,
+      detailRevisions: detail?.revisions.length ?? 0,
+    }).toEqual({ list: 1, map: 1, search: 1, exported: 1, detailRevisions: 1 });
+  });
+
+  test("clearing a company wiki reports what it removed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, admin } = await seedWiki(t);
+
+    expect(await admin.mutation(api.wikiPages.clearWikiForCompany, { companyId }))
+      .toEqual({ deleted: 1, remaining: 0 });
+  });
+
+  test("a person writes a platform goal", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { admin } = await seedWiki(t);
+
+    const pageId = await admin.mutation(api.wikiPages.createGoalPageForGlobal, {
+      title: "Ship the framework",
+      content: "One baseline every product forks from.",
+    });
+
+    expect(await t.run(async (ctx) => (await ctx.db.get(pageId))?.kind)).toBe("GOAL");
+  });
+});

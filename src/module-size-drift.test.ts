@@ -44,7 +44,7 @@ const FROZEN: Record<string, number> = {
   'convex/schema.ts': 4450,
   'convex/agentEvalFixtures.ts': 2000,
   'convex/salesDataResearch.ts': 2000,
-  'convex/wikiPages.ts': 1900,
+  'convex/wikiPages.ts': 1850,
   'convex/knowledge.ts': 1800,
   'convex/aiModels.ts': 1550,
   'convex/agents.ts': 1400,

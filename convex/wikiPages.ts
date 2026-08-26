@@ -7,6 +7,7 @@ import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
+import * as wikiShapes from "./utils/wikiShapes";
 import {
   WIKI_PAGE_MAX_CHARS,
   extractWikiLinkSlugs,
@@ -1111,82 +1112,10 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
  * `links` so the edges can be drawn. Not the body — a thousand pages of
  * prose is not a picture, and the map never renders a word of it.
  */
-const wikiMapRowValidator = v.object({
-  pageId: v.id("wikiPages"),
-  kind: wikiKindValidator,
-  title: v.string(),
-  subjectKey: v.string(),
-  links: v.array(v.string()),
-  usageCount: v.number(),
-  updatedAt: v.number(),
-});
-
-/** The receipts a page's source list shows. */
-const wikiPageSourceValidator = v.object({
-  kind: v.union(
-    v.literal("DOCUMENT"),
-    v.literal("PHONE_CALL"),
-    v.literal("EMAIL"),
-    v.literal("HUMAN"),
-    v.literal("CHAT")
-  ),
-  ref: v.string(),
-  label: v.string(),
-  addedAt: v.number(),
-});
-
-/**
- * One page in full, as its own screen reads it: the prose, its pinned
- * corrections, its receipts, its history, and the links in both directions
- * with the sentence that makes each one.
- *
- * `searchText` — the title, key and body concatenated for the search index —
- * never leaves: it is a duplicate of what is already here, and shipping it
- * would double the size of every page read for nothing. Neither does
- * `lastTendedAt`, which is the nightly pass's note to itself.
- */
-const wikiPageDetailValidator = v.object({
-  pageId: v.id("wikiPages"),
-  kind: wikiKindValidator,
-  title: v.string(),
-  subjectKey: v.string(),
-  content: v.string(),
-  pinnedCorrections: v.array(v.object({ text: v.string(), pinnedAt: v.number() })),
-  sources: v.array(wikiPageSourceValidator),
-  revisions: v.array(
-    v.object({ content: v.string(), source: v.string(), createdAt: v.number() })
-  ),
-  resolvedLinks: v.array(
-    v.object({
-      key: v.string(),
-      slug: v.string(),
-      pageId: v.id("wikiPages"),
-      title: v.string(),
-      excerpt: v.string(),
-    })
-  ),
-  backlinks: v.array(
-    v.object({
-      pageId: v.id("wikiPages"),
-      title: v.string(),
-      subjectKey: v.string(),
-      kind: wikiKindValidator,
-      quote: v.string(),
-    })
-  ),
-  lastVerifiedAt: v.union(v.number(), v.null()),
-  openQuestionCount: v.number(),
-  lastRewriteSource: v.string(),
-  updatedAt: v.number(),
-  createdAt: v.number(),
-  usageCount: v.number(),
-  lastUsedAt: v.union(v.number(), v.null()),
-});
-
 export const listCompanyPages = moduleQuery({
   module: CORE_MODULES.wiki,
   args: { search: v.optional(v.string()) },
-  returns: v.array(wikiMapRowValidator),
+  returns: wikiShapes.wikiMapShape,
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return [];
@@ -1205,7 +1134,7 @@ export const listCompanyPages = moduleQuery({
 export const getPageDetail = moduleQuery({
   module: CORE_MODULES.wiki,
   args: { pageId: v.id("wikiPages") },
-  returns: v.union(v.null(), wikiPageDetailValidator),
+  returns: wikiShapes.wikiPageDetailOrNullShape,
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return null;
@@ -1259,6 +1188,7 @@ async function searchRows(ctx: QueryCtx, companyId: WikiScope, term: string) {
 
 export const searchPagesForCompany = adminQuery({
   args: { companyId: v.id("companies"), term: v.string() },
+  returns: wikiShapes.wikiSearchHitsShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await searchRows(ctx, args.companyId, args.term);
@@ -1267,6 +1197,7 @@ export const searchPagesForCompany = adminQuery({
 
 export const searchPagesForGlobal = adminQuery({
   args: { term: v.string() },
+  returns: wikiShapes.wikiSearchHitsShape,
   handler: async (ctx, args) => {
     assertPlatformWikiRead(ctx.user);
     return await searchRows(ctx, undefined, args.term);
@@ -1305,6 +1236,7 @@ async function exportRows(ctx: QueryCtx, companyId: WikiScope) {
 
 export const getExportForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: wikiShapes.wikiExportShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await exportRows(ctx, args.companyId);
@@ -1313,6 +1245,7 @@ export const getExportForCompany = adminQuery({
 
 export const getExportForGlobal = adminQuery({
   args: {},
+  returns: wikiShapes.wikiExportShape,
   handler: async (ctx) => {
     assertPlatformWikiRead(ctx.user);
     return await exportRows(ctx, undefined);
@@ -1341,6 +1274,7 @@ export const listPagesForGlobal = adminQuery({
     search: v.optional(v.string()),
     kind: v.optional(wikiKindValidator),
   },
+  returns: wikiShapes.wikiPageListShape,
   handler: async (ctx, args) => {
     assertPlatformWikiRead(ctx.user);
     return await listPagesRows(ctx, undefined, args.paginationOpts, args.search, args.kind);
@@ -1349,6 +1283,7 @@ export const listPagesForGlobal = adminQuery({
 
 export const getPageDetailForGlobal = adminQuery({
   args: { pageId: v.id("wikiPages") },
+  returns: wikiShapes.wikiPageDetailOrNullShape,
   handler: async (ctx, args) => {
     assertPlatformWikiRead(ctx.user);
     return await pageDetailFor(ctx, undefined, args.pageId);
@@ -1385,6 +1320,7 @@ async function listPagesForMap(ctx: QueryCtx, companyId: WikiScope) {
 
 export const listPagesForMapForCompany = adminQuery({
   args: { companyId: v.id("companies") },
+  returns: wikiShapes.wikiMapShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await listPagesForMap(ctx, args.companyId);
@@ -1393,6 +1329,7 @@ export const listPagesForMapForCompany = adminQuery({
 
 export const listPagesForMapForGlobal = adminQuery({
   args: {},
+  returns: wikiShapes.wikiMapShape,
   handler: async (ctx) => {
     assertPlatformWikiRead(ctx.user);
     return await listPagesForMap(ctx, undefined);
@@ -1406,6 +1343,7 @@ export const listPagesForCompany = adminQuery({
     search: v.optional(v.string()),
     kind: v.optional(wikiKindValidator),
   },
+  returns: wikiShapes.wikiPageListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await listPagesRows(ctx, args.companyId, args.paginationOpts, args.search, args.kind);
@@ -1414,6 +1352,7 @@ export const listPagesForCompany = adminQuery({
 
 export const getPageDetailForCompany = adminQuery({
   args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  returns: wikiShapes.wikiPageDetailOrNullShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await pageDetailFor(ctx, args.companyId, args.pageId);
@@ -1585,6 +1524,7 @@ export const deletePageForGlobal = adminMutation({
  */
 export const clearWikiForCompany = adminMutation({
   args: { companyId: v.id("companies") },
+  returns: wikiShapes.wikiClearShape,
   handler: async (ctx, args): Promise<{ deleted: number; remaining: number }> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const pages = await ctx.db
@@ -1743,6 +1683,7 @@ async function applyGoalCreate(
 
 export const createGoalPageForCompany = adminMutation({
   args: { companyId: v.id("companies"), title: v.string(), content: v.string() },
+  returns: v.id("wikiPages"),
   handler: async (ctx, args): Promise<Id<"wikiPages">> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await applyGoalCreate(ctx, { userId: ctx.userId, ...args });
@@ -1751,6 +1692,7 @@ export const createGoalPageForCompany = adminMutation({
 
 export const createGoalPageForGlobal = adminMutation({
   args: { title: v.string(), content: v.string() },
+  returns: v.id("wikiPages"),
   handler: async (ctx, args): Promise<Id<"wikiPages">> => {
     assertPlatformWikiWrite(ctx.user);
     return await applyGoalCreate(ctx, { companyId: undefined, userId: ctx.userId, ...args });
