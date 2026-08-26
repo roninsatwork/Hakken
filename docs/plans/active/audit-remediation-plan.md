@@ -379,7 +379,7 @@ Update this table (and nothing else in this section) as work proceeds. States:
 
 | Package | State | Notes |
 |---|---|---|
-| WP01 real-auth CI | blocked on Anthony | verified 2026-08-25: all five specs pass against a real Convex deployment in 15.7s. Still needs the dedicated test deployment + 2 GitHub secrets before the CI job can run |
+| WP01 real-auth CI | done, automation declined (commit pending) | the suite exists and is proven — all five specs passed against a real Convex deployment in 15.7s on 2026-08-25, and `npm run test:e2e:real-auth` runs them any time at no cloud cost. Anthony declined the dedicated test deployment on 2026-08-26 (a second paid deployment with its own auth keys, to automate a check he does by hand). The CI job is unhooked from pull requests and left on the Actions "Run workflow" button, so no PR fails for want of secrets |
 | WP11 split quality-drift | done (commit eba6cb1c4) | 38 tests before and after; 8 files + src/test/driftUtils.ts |
 | WP02 backend appError | done (commits 2f4f4b46c, 457c0721d) | all 444 converted; allowlist 92 files down to 2 (frozen movement demo + a doc comment); CONFLICT added to the code union |
 | WP05 take(10000) | done (commits d8c5efe3d, 8e5e3c385, f1b58bb35, 0d491e02e) | 51 sites -> 38; register 124 -> 83 entries and now accurate both ways; every truncated-read-becomes-stored-truth site fixed. What remains needs the pipeline redesign (see Waiting on Anthony) or a count rollup |
@@ -409,8 +409,10 @@ appError ratio within ~7% of stated).
 - Every row in the status table reads `done` or `blocked on Anthony`.
 - `npm run check` is green on the final tree.
 - Move this file to `docs/plans/` archive per house convention **only when
-  Anthony says the effort is closed** — WP01 stays open until his secrets
-  land and the CI job has run green on a real PR.
+  Anthony says the effort is closed**. WP01 no longer holds it open: he
+  declined the test deployment on 2026-08-26 and the job now waits on a button
+  instead of on him.
 - Give Anthony a plain-English closing summary: what changed, what he must
-  still do (WP01 secrets — the softQuery decision was made and built
-  2026-08-26), and what was deliberately left alone.
+  still do (nothing, as of 2026-08-26 — both open decisions came back: softQuery
+  approved and built, the WP01 test deployment declined), and what was
+  deliberately left alone.

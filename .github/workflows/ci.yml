@@ -13,6 +13,8 @@ on:
     branches:
       - dev
       - main
+  # The real-auth smoke job runs only from here — see its comment for why.
+  workflow_dispatch:
 
 # Only the newest commit on a branch is worth testing. Without this, pushing
 # three times in ten minutes runs the whole suite three times and nobody ever
@@ -35,7 +37,12 @@ jobs:
     # The trade is wall-clock, deliberately taken: the browser subset now waits
     # for the unit suite rather than running beside it. The bill is what was
     # hurting, not the wait.
+    #
+    # Sits out manual runs: that button exists for the real-auth smoke alone,
+    # and billing forty minutes of lint and tests alongside it is the same
+    # double-charge this job was merged to stop.
     name: Checks
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -156,14 +163,27 @@ jobs:
     # whenever the e2e flag is on. This job is the only one that signs in through
     # real Convex Auth against a real deployment.
     #
-    # PRs into main only. It deploys to a real deployment and CI minutes are
-    # metered — see "What A Push Costs" in AGENTS.md.
+    # ON DEMAND ONLY — press "Run workflow" on the Actions tab. It ran on PRs
+    # into main until 2026-08-26, when Anthony weighed what it needs against
+    # what it buys and declined: a target deployment it can reinstall over and
+    # leave the test-login door open on cannot be dev, and a dedicated one is a
+    # second paid deployment carrying its own copies of every metered key
+    # (Anthropic, OpenAI, Google, Resend, Apify, Firecrawl, Twilio) — the chat
+    # spec spends real model tokens on every run. He verifies sign-in himself.
     #
-    # It fails loudly when its two secrets are absent rather than skipping: a
-    # gate that quietly passes when unconfigured is the exact honesty gap this
-    # job exists to close.
+    # Left wired rather than deleted because it is proven — it passed 5/5
+    # against a real deployment in 15.7s on 2026-08-25 — and because the same
+    # specs run locally any time, with no cloud cost at all:
+    #
+    #   LOCAL_TEST_AUTH_SECRET=<any string> npm run test:e2e:real-auth
+    #
+    # It still fails loudly when its two secrets are absent rather than
+    # skipping: pressing this button is an explicit request for the check, and
+    # a run that quietly passes unconfigured is the exact honesty gap the job
+    # exists to close. To turn it back on for PRs, add the secrets named below
+    # and restore the pull_request condition.
     name: Real Auth Smoke (real Convex)
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 

@@ -63,7 +63,12 @@ nothing but metered minutes. Deduplicated 2026-08-26.
 Coverage is enforced on `dev` too, not just on the way to `main`, because `dev`
 previously accumulated changes with no coverage enforcement at all.
 
-**Real Auth Smoke** — only on PRs into `main`, against a real Convex deployment:
+**Real Auth Smoke** — on demand only, against a real Convex deployment. Press
+"Run workflow" on the Actions tab; nothing triggers it automatically. It gated
+PRs into `main` until 2026-08-26, when Anthony declined the deployment it needs
+(see "Its deployment and secrets" below) and it was unhooked rather than left
+to fail every PR for want of two secrets. The same specs run locally at no
+cloud cost with `npm run test:e2e:real-auth`. Steps, when it does run:
 
 1. `npx convex env set` (enable local test auth on the test deployment)
 2. `npx convex deploy` (push the PR's functions to the test deployment)
@@ -95,8 +100,17 @@ every pull request.
 #### Its deployment and secrets
 
 The job needs a **dedicated Convex test deployment**. Never production, never the
-staging deployment: the job deploys the pull request's functions to it, seeds
-identities into it, and clears data out of it.
+staging deployment, and — asked directly on 2026-08-26 — never `dev` either: the
+job deploys the pull request's functions over whatever it points at, seeds
+identities into it, clears data out of it, and leaves the test-login door
+switched on there permanently. Pointed at `dev` that lands on Anthony's own
+working data while he is using it.
+
+**Not currently configured, by decision.** A dedicated deployment is a second
+paid deployment plus its own auth keys, and the check it buys duplicates one
+Anthony performs by hand before he ships. He declined it on 2026-08-26 and the
+job was switched to manual. Nothing below is wrong — it is what to do if that
+decision is ever revisited.
 
 Two repository secrets, added under Settings → Secrets and variables → Actions:
 
