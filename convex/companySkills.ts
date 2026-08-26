@@ -8,6 +8,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import { appError } from "./utils/appError";
+import * as companySkillShapes from "./utils/companySkillShapes";
 import { MAX_SKILLS_PER_COMPANY } from "./utils/skillLimits";
 import { parseStoredStringArray, stableStringify } from "./utils/lang";
 
@@ -164,6 +165,7 @@ export const getSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: companySkillShapes.companySkillSummaryShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -221,6 +223,7 @@ export const getRuntimePreviewForCompany = adminQuery({
     companyId: v.id("companies"),
     limit: v.optional(v.number()),
   },
+  returns: companySkillShapes.companySkillRuntimePreviewShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const limit = Math.min(Math.max(args.limit ?? 5, 1), 10);
@@ -257,6 +260,7 @@ export const getSkillsForCompany = adminQuery({
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: companySkillShapes.companySkillPageShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const searchTerm = args.searchTerm?.trim();
@@ -316,6 +320,7 @@ export const searchImportableGlobalSkills = adminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: companySkillShapes.importableGlobalSkillPageShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const searchTerm = args.searchTerm?.trim();
@@ -432,6 +437,7 @@ export const getImportableGlobalSkills = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: companySkillShapes.importableGlobalSkillListShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const activeSkills = await ctx.db
@@ -461,6 +467,7 @@ export const getBindingsForSkill = adminQuery({
   args: {
     skillId: v.id("companySkills"),
   },
+  returns: companySkillShapes.companySkillBindingListShape,
   handler: async (ctx, args) => {
     const { skill } = await requireSkillAccess(ctx, args.skillId);
     return await ctx.db
@@ -498,6 +505,7 @@ export const importGlobalSkill = adminMutation({
     companyId: v.id("companies"),
     skillId: v.id("agentSkills"),
   },
+  returns: companySkillShapes.companySkillStampShape,
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const globalSkill = await ctx.db.get(args.skillId);
@@ -662,6 +670,7 @@ export const updateSkill = adminMutation({
     recommendedKnowledgeJson: v.optional(v.string()),
     versionLabel: v.optional(v.string()),
   },
+  returns: companySkillShapes.companySkillStampShape,
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
     if (skill.status === "ARCHIVED") throw appError("INVALID_INPUT", "Archived skills cannot be edited.");
@@ -727,6 +736,7 @@ export const archiveSkill = adminMutation({
   args: {
     skillId: v.id("companySkills"),
   },
+  returns: companySkillShapes.companySkillArchiveShape,
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
     if (skill.status === "ARCHIVED") return { skillId: args.skillId };
@@ -857,6 +867,7 @@ export const setBinding = adminMutation({
     surfaceId: v.optional(v.string()),
     isEnabled: v.boolean(),
   },
+  returns: v.id("companySkillBindings"),
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
     if (skill.status === "ARCHIVED") throw appError("INVALID_INPUT", "Archived skills cannot be bound to surfaces.");

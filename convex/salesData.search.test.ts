@@ -607,3 +607,24 @@ describe("the other three tables", () => {
     expect(frequency.customerTypes).toEqual([]);
   });
 });
+
+describe("the import history read with an import behind it", () => {
+  /**
+   * `listImports` was only ever called by a test asserting it refuses the wrong
+   * workspace, so it always answered with an empty list — nothing to be wrong
+   * about, and a declared shape nothing could check.
+   */
+  test("it names the file, its counts and who imported it", async () => {
+    const client = await signedIn();
+
+    const imports = await client.query(api.salesData.listImports, {});
+
+    expect(imports).toHaveLength(1);
+    expect(imports[0]).toMatchObject({
+      fileName: "sample.xlsx",
+      status: "COMPLETED",
+      periodLabels: ["2026-01"],
+      importedByName: "buyer@test.com",
+    });
+  });
+});

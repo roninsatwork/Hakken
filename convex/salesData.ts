@@ -12,6 +12,7 @@ import {
 } from "./tenantFunctions";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { SALES_DATA_MODULE_KEY } from "./utils/salesDataModule";
+import * as salesDataShapes from "./utils/salesDataShapes";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 
@@ -95,6 +96,7 @@ export async function getCurrentImport(
  */
 export const getSectionOverview = tenantQuery({
   args: {},
+  returns: salesDataShapes.salesSectionOverviewShape,
   handler: async (ctx) => {
     const companyId = ctx.companyId;
     if (!companyId) {
@@ -130,6 +132,7 @@ export const getSectionOverview = tenantQuery({
 /** The import history, newest first. Small by nature — one row per upload. */
 export const listImports = tenantQuery({
   args: { limit: v.optional(v.number()) },
+  returns: salesDataShapes.salesImportListShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const limit = Math.min(Math.max(args.limit ?? 20, 1), 100);
@@ -389,6 +392,7 @@ export async function paginatePage<T>(
  */
 export const listSalesRows = tenantQuery({
   args: { ...tableQueryArgs, ...salesFilterArgs },
+  returns: salesDataShapes.salesRowPageShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -450,6 +454,7 @@ export const listSalesRows = tenantQuery({
  */
 export const listSalesFilterOptions = tenantQuery({
   args: {},
+  returns: salesDataShapes.salesFilterOptionsShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -504,6 +509,7 @@ export const listTableFilterOptions = tenantQuery({
   args: {
     table: v.union(v.literal("categories"), v.literal("interest"), v.literal("frequency")),
   },
+  returns: salesDataShapes.tableFilterOptionsShape,
   handler: async (ctx, args) => {
     const empty = {
       customerTypes: [] as string[],
@@ -554,6 +560,7 @@ export const listTableFilterOptions = tenantQuery({
 
 export const listCategoryLinks = tenantQuery({
   args: { ...tableQueryArgs, ...customerTypeFilterArgs },
+  returns: salesDataShapes.categoryLinkPageShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -583,6 +590,7 @@ export const listCategoryLinks = tenantQuery({
 
 export const listAreasOfInterest = tenantQuery({
   args: { ...tableQueryArgs, ...customerTypeFilterArgs },
+  returns: salesDataShapes.areaOfInterestPageShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -623,6 +631,7 @@ export const listAreasOfInterest = tenantQuery({
  */
 export const listFrequencies = tenantQuery({
   args: { ...tableQueryArgs, ...frequencyFilterArgs },
+  returns: salesDataShapes.frequencyPageShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -666,6 +675,7 @@ export function emptyPage(paginationOpts: { cursor: string | null }) {
 
 export const generateUploadUrl = tenantMutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     await requireSalesDataCompany(ctx);
     return await ctx.storage.generateUploadUrl();

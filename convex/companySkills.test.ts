@@ -267,3 +267,36 @@ describe("Company Skills", () => {
     ).rejects.toThrow("Approval policy must be valid JSON.");
   });
 });
+
+describe("the importable-skill search nothing was calling", () => {
+  test("it pages the central catalogue and leaves out what is already taken", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Search Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-search@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      await ctx.db.insert("agentSkills", {
+        name: "Research Briefing",
+        description: "Turn broad questions into sourced briefings.",
+        category: "RESEARCH",
+        status: "ACTIVE",
+        riskLevel: "MEDIUM",
+        instruction: "Separate facts, judgments, and open questions.",
+        createdBy: adminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { adminId, companyId };
+    });
+
+    const found = await t.withIdentity({ subject: adminId })
+      .query(api.companySkills.searchImportableGlobalSkills, { companyId, paginationOpts });
+
+    // Proof this read something rather than passing on an empty page.
+    expect(found.page.map((skill) => skill.name)).toEqual(["Research Briefing"]);
+  });
+});

@@ -237,6 +237,7 @@ import type * as userManagementService from "../userManagementService.js";
 import type * as userMemories from "../userMemories.js";
 import type * as userMemorySuggestionActions from "../userMemorySuggestionActions.js";
 import type * as users from "../users.js";
+import type * as utils_agentShapes from "../utils/agentShapes.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_aiModelShapes from "../utils/aiModelShapes.js";
 import type * as utils_analyticsAccess from "../utils/analyticsAccess.js";
@@ -246,6 +247,7 @@ import type * as utils_authIdentityPurge from "../utils/authIdentityPurge.js";
 import type * as utils_boundedRequestBody from "../utils/boundedRequestBody.js";
 import type * as utils_companyModules from "../utils/companyModules.js";
 import type * as utils_companyShapes from "../utils/companyShapes.js";
+import type * as utils_companySkillShapes from "../utils/companySkillShapes.js";
 import type * as utils_connectorOAuthUrls from "../utils/connectorOAuthUrls.js";
 import type * as utils_coreModules from "../utils/coreModules.js";
 import type * as utils_evalFixtureShapes from "../utils/evalFixtureShapes.js";
@@ -264,6 +266,7 @@ import type * as utils_providerContentTypes from "../utils/providerContentTypes.
 import type * as utils_readCoverage from "../utils/readCoverage.js";
 import type * as utils_rowShape from "../utils/rowShape.js";
 import type * as utils_salesDataModule from "../utils/salesDataModule.js";
+import type * as utils_salesDataShapes from "../utils/salesDataShapes.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_skillBundleService from "../utils/skillBundleService.js";
 import type * as utils_skillContracts from "../utils/skillContracts.js";
@@ -563,6 +566,7 @@ declare const fullApi: ApiFromModules<{
   userMemories: typeof userMemories;
   userMemorySuggestionActions: typeof userMemorySuggestionActions;
   users: typeof users;
+  "utils/agentShapes": typeof utils_agentShapes;
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/aiModelShapes": typeof utils_aiModelShapes;
   "utils/analyticsAccess": typeof utils_analyticsAccess;
@@ -572,6 +576,7 @@ declare const fullApi: ApiFromModules<{
   "utils/boundedRequestBody": typeof utils_boundedRequestBody;
   "utils/companyModules": typeof utils_companyModules;
   "utils/companyShapes": typeof utils_companyShapes;
+  "utils/companySkillShapes": typeof utils_companySkillShapes;
   "utils/connectorOAuthUrls": typeof utils_connectorOAuthUrls;
   "utils/coreModules": typeof utils_coreModules;
   "utils/evalFixtureShapes": typeof utils_evalFixtureShapes;
@@ -590,6 +595,7 @@ declare const fullApi: ApiFromModules<{
   "utils/readCoverage": typeof utils_readCoverage;
   "utils/rowShape": typeof utils_rowShape;
   "utils/salesDataModule": typeof utils_salesDataModule;
+  "utils/salesDataShapes": typeof utils_salesDataShapes;
   "utils/security": typeof utils_security;
   "utils/skillBundleService": typeof utils_skillBundleService;
   "utils/skillContracts": typeof utils_skillContracts;

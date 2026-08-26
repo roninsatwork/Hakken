@@ -1908,3 +1908,41 @@ describe("risk ratings bind", () => {
     expect(logs).toHaveLength(0);
   });
 });
+
+describe("the inherited-model read nothing was calling", () => {
+  test("it names the model an agent falls back to for both jobs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", {
+        modelId: "openrouter:vendor/inherited",
+        providerKey: "openrouter",
+        providerModelId: "vendor/inherited",
+        displayName: "Vendor Inherited",
+        friendlyName: "Vendor Inherited",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["agent", "workflow"],
+        lastSyncedAt: Date.now(),
+      });
+      for (const useCase of ["agent", "workflow"]) {
+        await ctx.db.insert("aiModelDefaults", {
+          scope: "global",
+          useCase,
+          providerKey: "openrouter",
+          modelId: "openrouter:vendor/inherited",
+          updatedAt: Date.now(),
+        });
+      }
+      return ctx.db.insert("users", { email: "inherited@test.com", role: "SUPER_ADMIN" });
+    });
+
+    const inherited = await t.withIdentity({ subject: adminId })
+      .query(api.agents.getInheritedAgentModels, {});
+
+    expect({
+      agent: inherited.agent?.displayName,
+      workflow: inherited.workflow?.displayName,
+    }).toEqual({ agent: "Vendor Inherited", workflow: "Vendor Inherited" });
+  });
+});

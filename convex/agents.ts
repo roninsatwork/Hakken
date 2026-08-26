@@ -31,6 +31,8 @@ import { clampAgentApprovalExpiryHours } from "./approvalExpiryService";
 import { getAgentTemplateById, getAgentTemplates } from "./agentTemplates";
 import { seedFixturesForTemplate } from "./agentEvalFixtures";
 import { appError } from "./utils/appError";
+import * as agentShapes from "./utils/agentShapes";
+import { evalFixtureTypes as EVAL_FIXTURE_TYPE_ORDER, type EvalFixtureType as AgentEvalFixtureType } from "./utils/skillContracts";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 const AGENT_CATALOG_LIMIT = 500;
@@ -72,30 +74,6 @@ const BLOCKING_READINESS_CHECK_KEYS = new Set<AgentReadinessCheckKey>([
   "smokeEval",
   "releaseGate",
 ]);
-type AgentEvalFixtureType =
-  | "HAPPY_PATH"
-  | "APPROVAL_PAUSE"
-  | "REJECTED_ACTION"
-  | "PROMPT_INJECTION"
-  | "TENANT_BOUNDARY"
-  | "BAD_TOOL_ARGS"
-  | "CANCELLATION"
-  | "REPLAYED_FAILURE"
-  | "TOOL_PLAN"
-  | "COST_LATENCY_BUDGET";
-
-const EVAL_FIXTURE_TYPE_ORDER: AgentEvalFixtureType[] = [
-  "HAPPY_PATH",
-  "TOOL_PLAN",
-  "APPROVAL_PAUSE",
-  "REJECTED_ACTION",
-  "PROMPT_INJECTION",
-  "TENANT_BOUNDARY",
-  "BAD_TOOL_ARGS",
-  "CANCELLATION",
-  "REPLAYED_FAILURE",
-  "COST_LATENCY_BUDGET",
-];
 
 const agentBuilderIntentValidator = v.object({
   objective: v.optional(v.string()),
@@ -757,6 +735,7 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
 
 export const list = superAdminQuery({
   args: {},
+  returns: agentShapes.agentListShape,
   handler: async (ctx) => {
     const allAgents = await ctx.db
       .query("agents")
@@ -777,6 +756,7 @@ export const list = superAdminQuery({
  */
 export const getInheritedAgentModels = superAdminQuery({
   args: {},
+  returns: agentShapes.inheritedAgentModelsShape,
   handler: async (ctx) => {
     const describe = async (inherited: Awaited<ReturnType<typeof resolveInheritedModelForUseCase>>) => {
       if (!inherited) return null;
@@ -800,6 +780,7 @@ export const getPaginatedAgents = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
+  returns: agentShapes.agentPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     const result = searchTerm
@@ -822,6 +803,7 @@ export const getPaginatedAgents = superAdminQuery({
 
 export const get = superAdminQuery({
   args: { id: v.id("agents") },
+  returns: agentShapes.agentDetailShape,
   handler: async (ctx, args) => {
     const agent = await ctx.db.get(args.id);
     if (!agent) throw appError("NOT_FOUND", "Agent not found");
@@ -852,6 +834,7 @@ export const get = superAdminQuery({
 // already scoped.
 export const getAgentReadiness = adminQuery({
   args: { id: v.id("agents") },
+  returns: agentShapes.agentReadinessShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.id);
@@ -902,6 +885,7 @@ export const createAgent = superAdminMutation({
     isActive: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
+  returns: v.id("agents"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -998,6 +982,7 @@ export const createAgent = superAdminMutation({
 
 export const getAgentTemplatesForCreation = superAdminQuery({
   args: {},
+  returns: agentShapes.agentTemplateListShape,
   handler: async () => {
     return getAgentTemplates();
   },
@@ -1021,6 +1006,7 @@ export const createAgentFromTemplate = superAdminMutation({
     includeRecommendedTools: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
+  returns: v.id("agents"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const template = getAgentTemplateById(args.templateId);
@@ -1115,6 +1101,7 @@ export const updateAgent = superAdminMutation({
     releaseGateSuitePresetId: v.optional(v.id("agentEvalSuitePresets")),
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
   },
+  returns: v.id("agents"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1344,6 +1331,7 @@ export const createInlineAgent = superAdminMutation({
   args: { 
     workflowId: v.id("workflows"),
   },
+  returns: v.id("agents"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
