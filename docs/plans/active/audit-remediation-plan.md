@@ -722,9 +722,11 @@ appError ratio within ~7% of stated).
   the fault they were written for. All of that is corrected above. The lesson
   is not "check twice"; it is that a claim about a guard is worth exactly as
   much as the probe that made it fail.
-- Anthony's side is one item, not none: whether "Real Auth Smoke" is a required
-  status check in GitHub branch protection. If it is, PRs into `main` will wait
-  on a job nothing triggers. That setting is not visible from this repository.
+- **Anthony's side is now nothing.** The open question was whether "Real Auth
+  Smoke" is a required status check, because if it were, PRs into `main` would
+  wait forever on a job nothing triggers. Checked in his browser on 2026-08-26:
+  the repository has no classic branch protection and no rulesets at all, so no
+  check is required of any branch and nothing waits on that job.
 - `npm run check` is green on the final tree.
 - Move this file to `docs/plans/` archive per house convention **only when
   Anthony says the effort is closed**. WP01 no longer holds it open: he
