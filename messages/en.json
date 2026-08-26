@@ -621,7 +621,8 @@
       "searchSuccess": "Search started successfully! Gathering the full property details can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can track the progress in the Logs tab."
     },
     "logs": {
-      "empty": "No extraction jobs have been dispatched yet."
+      "empty": "No extraction jobs have been dispatched yet.",
+      "syncFailed": "The run status could not be refreshed. Try again."
     },
     "detail": {
       "notFoundTitle": "Property Not Found",
@@ -1212,7 +1213,8 @@
           "greeting": "Greeting",
           "integration": "Integration",
           "features": "Features"
-        }
+        },
+        "impersonateFailed": "Could not step into this workspace. Try again."
       },
       "profile": {
         "saveSuccess": "Profile successfully updated.",
@@ -1295,7 +1297,8 @@
         "deleteBody": "This rule will be removed from the workspace rule set.",
         "deleteWarning": "This action cannot be undone.",
         "cancel": "Cancel",
-        "deleteConfirm": "Delete Rule"
+        "deleteConfirm": "Delete Rule",
+        "deleteFailed": "The rule could not be deleted. Try again."
       },
       "chatEvalNew": {
         "title": "Create Eval From Chat",
@@ -1614,7 +1617,8 @@
           "saveAgentFailed": "Failed to synchronize agent configuration.",
           "promoteFailed": "Failed to promote agent to global fleet.",
           "dispatchFailed": "Failed to dispatch manual execution.",
-          "autoConfigureFailed": "AI Configuration failed. Please try again or construct the payload manually."
+          "autoConfigureFailed": "AI Configuration failed. Please try again or construct the payload manually.",
+          "deleteAgentFailed": "The agent behind that step could not be deleted."
         },
         "analyzing": "Analyzing Graph Context...",
         "library": {
@@ -2129,7 +2133,8 @@
             "label": "What it gives back (JSON)"
           }
         },
-        "submit": "Add tool"
+        "submit": "Add tool",
+        "createFailed": "The tool could not be created. Try again."
       },
       "shelf": {
         "headerTitle": "Tools",
@@ -2209,7 +2214,8 @@
         "inputLabel": "What it needs (JSON)",
         "outputLabel": "What it gives back (JSON)",
         "outputPlaceholder": "Optional: '{\"type\":\"object\",\"properties\":{}}'",
-        "save": "Save changes"
+        "save": "Save changes",
+        "saveFailed": "The tool could not be saved. Try again."
       },
       "connector": {
         "loading": "Loading...",
@@ -2634,7 +2640,8 @@
               "label": "What to call this rule",
               "placeholder": "For example: Office address"
             }
-          }
+          },
+          "deleteFailed": "The rule could not be deleted. Try again."
         },
         "knowledge": {
           "title": "Knowledge Base",
@@ -3810,7 +3817,8 @@
             "save": "Save Policy",
             "success": "Policy successfully updated."
           }
-        }
+        },
+        "cancelFailed": "The purge could not be cancelled. Try again."
       },
       "nav": {
         "identity": "Identity",
@@ -4001,7 +4009,11 @@
         "beforeYouRun": "Before you run",
         "beforeYouRunBody": "This action is audited and should only be run when the notes on this page match the issue you are fixing.",
         "cancel": "Cancel"
-      }
+      },
+      "logoUploadFailed": "The logo could not be uploaded. Try again.",
+      "logoRemoveFailed": "The logo could not be removed. Try again.",
+      "piiSaveFailed": "The redaction settings were not saved. Try again.",
+      "saveFailed": "The settings were not saved. Try again."
     },
     "auditLogs": {
       "title": "System Audit Logs",
@@ -4624,7 +4636,8 @@
       "roleQuestion": "What they will be",
       "standardUser": "Standard User",
       "companyAdmin": "Company Admin",
-      "systemSuperAdmin": "System Super Admin"
+      "systemSuperAdmin": "System Super Admin",
+      "templateSaveFailed": "The template could not be saved. Try again."
     },
     "ruleSafety": {
       "reviewRule": "Review this rule before saving.",
@@ -4899,13 +4912,16 @@
         "mediumName": "Deep thinking",
         "mediumDescription": "Reasons it through before answering",
         "highName": "Maximum thinking",
-        "highDescription": "The longest, most careful reasoning"
+        "highDescription": "The longest, most careful reasoning",
+        "sendFailed": "Your message was not sent. Try again."
       },
       "history": {
         "today": "Today",
         "yesterday": "Yesterday",
         "earlier": "Earlier",
-        "showOlder": "Show older conversations"
+        "showOlder": "Show older conversations",
+        "deleteFailed": "The conversation could not be deleted. Try again.",
+        "renameFailed": "The conversation could not be renamed. Try again."
       },
       "you": "You asked",
       "copy": "Copy",
@@ -5107,13 +5123,16 @@
         "save": "Save changes",
         "newTitle": "Add a rule",
         "newSubtitle": "Tell the assistant what to do when someone says something in particular.",
-        "create": "Create rule"
+        "create": "Create rule",
+        "saveFailed": "The rule could not be saved. Try again.",
+        "createFailed": "The rule could not be created. Try again."
       },
       "table": {
         "priority": "Priority",
         "rule": "Rule Name / Trigger",
         "status": "Status"
-      }
+      },
+      "deleteFailed": "The rule could not be deleted. Try again."
     },
     "models": {
       "title": "AI Models",
@@ -5769,7 +5788,10 @@
           "uploading": "Uploading...",
           "hint": "JPG or PNG, max 2MB."
         }
-      }
+      },
+      "saveFailed": "Your profile was not saved. Try again.",
+      "photoFailed": "The photo could not be uploaded. Try again.",
+      "photoLabel": "Profile photo"
     },
     "logins": {
       "tabs": {
@@ -6208,7 +6230,8 @@
       "WORKFLOW": "Raised by a workflow"
     },
     "openCount": "{count} open",
-    "openSource": "View source"
+    "openSource": "View source",
+    "createFailed": "The task could not be created. Try again."
   },
   "notifications": {
     "title": "Notifications",
@@ -6936,13 +6959,15 @@
     "selectIdentity": "Select Runtime Identity",
     "noAgents": "No agents registered.",
     "autoRoute": "Automatically routes your prompt to the best agent",
-    "airGapped": "Air-gapped Testing Environment"
+    "airGapped": "Air-gapped Testing Environment",
+    "sendFailed": "The test message was not sent. Try again."
   },
   "arcade": {
     "title": "RONIN'S RUN",
     "playNow": "PLAY NOW",
     "controls": "USE ARROW KEYS TO MOVE",
     "leaderboardTitle": "Global Leaderboard",
-    "leaderboardSubtitle": "Top users in the matrix"
+    "leaderboardSubtitle": "Top users in the matrix",
+    "scoreFailed": "Your score could not be saved. Try again."
   }
 }

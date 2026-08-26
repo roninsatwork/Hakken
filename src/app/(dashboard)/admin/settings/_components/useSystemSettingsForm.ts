@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { normalizeFontKey } from "@/src/lib/themeFonts";
 import type { SystemSettingsFormData } from "./types";
 
@@ -59,15 +61,24 @@ export function pickSettingsFields(
  * from a CSS variable.
  */
 export function useSystemSettingsForm(fields: SettingsFieldList) {
+  const t = useTranslations("admin.settings");
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);
+  const action = useAdminAction({ scope: "admin-system-settings" });
 
   const [formData, setFormData] = useState<SystemSettingsFormData>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    if (!currentSettings) return;
+  // Adopted during render rather than in an effect, per the React docs on
+  // deriving state from props: an effect would paint the empty form first and
+  // then replace it. The sentinel is the settings object itself — Convex hands
+  // back a new reference on every server change, which is exactly when the
+  // form should re-seed.
+  const [seenSettings, setSeenSettings] = useState<typeof currentSettings>(undefined);
+
+  if (currentSettings && currentSettings !== seenSettings) {
+    setSeenSettings(currentSettings);
     setFormData({
       ...currentSettings,
       // Fonts are stored as named keys (src/lib/themeFonts.ts); legacy rows
@@ -104,19 +115,19 @@ export function useSystemSettingsForm(fields: SettingsFieldList) {
       lightInfo: currentSettings.lightInfo || "#38BDF8",
       lightRing: currentSettings.lightRing || "#FF5A1F",
     });
-  }, [currentSettings]);
+  }
 
   const save = async () => {
     setIsSaving(true);
-    try {
-      await updateSettings(pickSettingsFields(formData, fields));
+    const outcome = await action.run(
+      () => updateSettings(pickSettingsFields(formData, fields)),
+      { fallbackMessage: t("saveFailed") },
+    );
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   return {

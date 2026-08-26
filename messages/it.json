@@ -621,7 +621,8 @@
       "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
     },
     "logs": {
-      "empty": "Nessun processo di estrazione è stato ancora avviato."
+      "empty": "Nessun processo di estrazione è stato ancora avviato.",
+      "syncFailed": "Impossibile aggiornare lo stato dell'esecuzione. Riprova."
     },
     "detail": {
       "notFoundTitle": "Immobile non trovato",
@@ -1212,7 +1213,8 @@
           "greeting": "Saluto",
           "integration": "Integrazione",
           "features": "Funzionalità"
-        }
+        },
+        "impersonateFailed": "Impossibile accedere a questo spazio di lavoro. Riprova."
       },
       "profile": {
         "saveSuccess": "Profilo aggiornato con successo.",
@@ -1295,7 +1297,8 @@
         "deleteBody": "Questa regola sarà rimossa dall'insieme di regole dello spazio di lavoro.",
         "deleteWarning": "Questa azione non può essere annullata.",
         "cancel": "Annulla",
-        "deleteConfirm": "Elimina la regola"
+        "deleteConfirm": "Elimina la regola",
+        "deleteFailed": "Impossibile eliminare la regola. Riprova."
       },
       "chatEvalNew": {
         "title": "Crea una valutazione dalla chat",
@@ -1614,7 +1617,8 @@
           "saveAgentFailed": "Impossibile sincronizzare la configurazione dell'agent.",
           "promoteFailed": "Impossibile promuovere l'agent alla flotta globale.",
           "dispatchFailed": "Impossibile avviare l'esecuzione manuale.",
-          "autoConfigureFailed": "Configurazione AI non riuscita. Riprova o costruisci il payload manualmente."
+          "autoConfigureFailed": "Configurazione AI non riuscita. Riprova o costruisci il payload manualmente.",
+          "deleteAgentFailed": "Impossibile eliminare l'agente associato a quel passaggio."
         },
         "analyzing": "Analisi del Contesto del Grafo...",
         "library": {
@@ -2129,7 +2133,8 @@
             "label": "Cosa restituisce (JSON)"
           }
         },
-        "submit": "Add tool"
+        "submit": "Add tool",
+        "createFailed": "Impossibile creare lo strumento. Riprova."
       },
       "shelf": {
         "headerTitle": "Strumenti",
@@ -2209,7 +2214,8 @@
         "inputLabel": "Di cosa ha bisogno (JSON)",
         "outputLabel": "Cosa restituisce (JSON)",
         "outputPlaceholder": "Facoltativo: '{\"type\":\"object\",\"properties\":{}}'",
-        "save": "Salva le modifiche"
+        "save": "Salva le modifiche",
+        "saveFailed": "Impossibile salvare lo strumento. Riprova."
       },
       "connector": {
         "loading": "Caricamento...",
@@ -2634,7 +2640,8 @@
               "label": "Come chiamare questa regola",
               "placeholder": "Per esempio: Indirizzo dell'ufficio"
             }
-          }
+          },
+          "deleteFailed": "Impossibile eliminare la regola. Riprova."
         },
         "knowledge": {
           "title": "Grafo della Conoscenza",
@@ -3810,7 +3817,8 @@
             "save": "Salva Politica",
             "success": "Politica aggiornata con successo."
           }
-        }
+        },
+        "cancelFailed": "Impossibile annullare l'eliminazione. Riprova."
       },
       "nav": {
         "identity": "Identità",
@@ -4001,7 +4009,11 @@
         "beforeYouRun": "Prima di eseguire",
         "beforeYouRunBody": "Questa azione è verificata e va eseguita solo quando le note su questa pagina corrispondono al problema che stai risolvendo.",
         "cancel": "Annulla"
-      }
+      },
+      "logoUploadFailed": "Impossibile caricare il logo. Riprova.",
+      "logoRemoveFailed": "Impossibile rimuovere il logo. Riprova.",
+      "piiSaveFailed": "Le impostazioni di oscuramento non sono state salvate. Riprova.",
+      "saveFailed": "Le impostazioni non sono state salvate. Riprova."
     },
     "auditLogs": {
       "title": "Registro Eventi di Sistema",
@@ -4624,7 +4636,8 @@
       "roleQuestion": "Cosa saranno",
       "standardUser": "Utente standard",
       "companyAdmin": "Amministratore aziendale",
-      "systemSuperAdmin": "Super amministratore di sistema"
+      "systemSuperAdmin": "Super amministratore di sistema",
+      "templateSaveFailed": "Impossibile salvare il modello. Riprova."
     },
     "ruleSafety": {
       "reviewRule": "Rivedi questa regola prima di salvare.",
@@ -4899,13 +4912,16 @@
         "mediumName": "Riflessione approfondita",
         "mediumDescription": "Ragiona con calma prima di rispondere",
         "highName": "Riflessione massima",
-        "highDescription": "Il ragionamento più lungo e accurato"
+        "highDescription": "Il ragionamento più lungo e accurato",
+        "sendFailed": "Il messaggio non è stato inviato. Riprova."
       },
       "history": {
         "today": "Oggi",
         "yesterday": "Ieri",
         "earlier": "Prima",
-        "showOlder": "Mostra conversazioni precedenti"
+        "showOlder": "Mostra conversazioni precedenti",
+        "deleteFailed": "Impossibile eliminare la conversazione. Riprova.",
+        "renameFailed": "Impossibile rinominare la conversazione. Riprova."
       },
       "you": "Hai chiesto",
       "copy": "Copia",
@@ -5107,13 +5123,16 @@
         "save": "Salva modifiche",
         "newTitle": "Aggiungi una regola",
         "newSubtitle": "Di' all'assistente cosa fare quando qualcuno dice qualcosa in particolare.",
-        "create": "Crea la regola"
+        "create": "Crea la regola",
+        "saveFailed": "Impossibile salvare la regola. Riprova.",
+        "createFailed": "Impossibile creare la regola. Riprova."
       },
       "table": {
         "priority": "Priorità",
         "rule": "Nome regola / Trigger",
         "status": "Stato"
-      }
+      },
+      "deleteFailed": "Impossibile eliminare la regola. Riprova."
     },
     "models": {
       "title": "Inventario Modelli Grid",
@@ -5769,7 +5788,10 @@
           "uploading": "Caricamento sicuro...",
           "hint": "JPG o PNG, max 2MB."
         }
-      }
+      },
+      "saveFailed": "Il profilo non è stato salvato. Riprova.",
+      "photoFailed": "Impossibile caricare la foto. Riprova.",
+      "photoLabel": "Foto del profilo"
     },
     "logins": {
       "tabs": {
@@ -6208,7 +6230,8 @@
       "WORKFLOW": "Creata da un flusso"
     },
     "openCount": "{count} aperte",
-    "openSource": "Vedi origine"
+    "openSource": "Vedi origine",
+    "createFailed": "Impossibile creare l'attività. Riprova."
   },
   "notifications": {
     "title": "Notifiche",
@@ -6936,13 +6959,15 @@
     "selectIdentity": "Seleziona identità runtime",
     "noAgents": "Nessun agente registrato.",
     "autoRoute": "Indirizza automaticamente la tua richiesta all'agente migliore",
-    "airGapped": "Ambiente di test isolato"
+    "airGapped": "Ambiente di test isolato",
+    "sendFailed": "Il messaggio di prova non è stato inviato. Riprova."
   },
   "arcade": {
     "title": "RONIN'S RUN",
     "playNow": "GIOCA ORA",
     "controls": "USA LE FRECCE PER MUOVERTI",
     "leaderboardTitle": "Classifica globale",
-    "leaderboardSubtitle": "I migliori utenti nella matrice"
+    "leaderboardSubtitle": "I migliori utenti nella matrice",
+    "scoreFailed": "Impossibile salvare il punteggio. Riprova."
   }
 }
