@@ -8,6 +8,7 @@ import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import { appError } from "./utils/appError";
+import * as knowledgeShapes from "./utils/knowledgeShapes";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { adminMutation, tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
 import {
@@ -389,7 +390,7 @@ async function requeueKnowledgeDocument(
   document: Doc<"knowledgeDocuments">,
   options: { scheduleWebsiteQueue?: boolean } = {}
 ) {
-  const nextStatus = document.format === "url" ? "pending" : "processing";
+  const nextStatus: Doc<"knowledgeDocuments">["status"] = document.format === "url" ? "pending" : "processing";
   const scheduleWebsiteQueue = options.scheduleWebsiteQueue ?? true;
 
   await ctx.db.patch(document._id, {
@@ -415,6 +416,7 @@ async function requeueKnowledgeDocument(
 
 export const generateUploadUrl = adminMutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
   },
@@ -425,6 +427,7 @@ export const getDocuments = tenantQuery({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
+  returns: knowledgeShapes.documentListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     
@@ -483,6 +486,7 @@ export const getPaginatedDocuments = tenantQuery({
     agentId: v.optional(v.id("agents")),
     paginationOpts: paginationOptsValidator,
   },
+  returns: knowledgeShapes.documentPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -542,6 +546,7 @@ export const getWebsiteDocuments = tenantQuery({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
+  returns: knowledgeShapes.documentListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -608,7 +613,7 @@ export const getQualitySummary = softQuery({
     topicCoverage: null,
     flaggedDocuments: [],
   },
-  returns: v.object({ totals: v.object({ documents: v.number(), ready: v.number(), pending: v.number(), processing: v.number(), failed: v.number(), flagged: v.number(), embeddingDrift: v.number(), sampledChunks: v.number(), readyCoverage: v.number() }), topicCoverage: v.union(v.null(), v.object({ score: v.number(), terms: v.array(v.object({ term: v.string(), covered: v.boolean() })), coveredCount: v.number(), totalCount: v.number(), readyDocumentCount: v.number(), recommendation: v.string() })), flaggedDocuments: v.array(v.object({ documentId: v.id("knowledgeDocuments"), title: v.string(), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")), format: v.string(), sourceUrl: v.optional(v.string()), createdAt: v.number(), lastQueuedAt: v.optional(v.number()), lastIngestionStartedAt: v.optional(v.number()), lastIngestedAt: v.optional(v.number()), lastIngestionError: v.optional(v.string()), chunkCount: v.number(), flag: v.union(v.literal("FAILED"), v.literal("READY_WITHOUT_CHUNKS"), v.literal("EMBEDDING_MODEL_DRIFT"), v.literal("STALE_INGESTION")), embeddingDrift: v.optional(v.union(v.null(), v.object({ storedModelId: v.optional(v.string()), storedProviderKey: v.string(), storedProviderModelId: v.optional(v.string()), storedDimensions: v.optional(v.number()), activeModelId: v.string(), activeProviderKey: v.string(), activeProviderModelId: v.string(), activeDimensions: v.optional(v.number()) }))) })) }),
+  returns: knowledgeShapes.qualitySummaryShape,
   handler: async (ctx, args) => {
     const documents = await getKnowledgeDocumentsForScope(ctx, args);
     const now = Date.now();
@@ -721,6 +726,7 @@ export const inspectDocument = tenantQuery({
   args: {
     documentId: v.id("knowledgeDocuments"),
   },
+  returns: knowledgeShapes.documentInspectionShape,
   handler: async (ctx, args) => {
     const document = await ctx.db.get(args.documentId);
     if (!document) throw appError("NOT_FOUND", "Document not found");
@@ -792,6 +798,7 @@ export const testRetrieval = tenantQuery({
     agentId: v.optional(v.id("agents")),
     query: v.string(),
   },
+  returns: knowledgeShapes.retrievalTestShape,
   handler: async (ctx, args) => {
     const trimmedQuery = args.query.trim();
     const tokens = getRetrievalTokens(trimmedQuery);
@@ -889,6 +896,7 @@ export const saveDocument = tenantMutation({
      */
     deferIngestion: v.optional(v.boolean()),
   },
+  returns: v.id("knowledgeDocuments"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
@@ -938,6 +946,7 @@ export const saveChatDocument = tenantMutation({
     title: v.string(),
     format: v.string(),
   },
+  returns: v.id("knowledgeDocuments"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -1046,6 +1055,7 @@ export const deleteDocument = tenantMutation({
 
 export const retryDocumentIngestion = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
+  returns: knowledgeShapes.documentRequeueShape,
   handler: async (ctx, args) => {
     const document = await ctx.db.get(args.documentId);
     if (!document) throw appError("NOT_FOUND", "Document not found");
@@ -1074,6 +1084,7 @@ export const repairFlaggedDocuments = tenantMutation({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
+  returns: knowledgeShapes.documentRepairShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const documents = await getRepairableKnowledgeDocumentsForScope(ctx, args);
@@ -1300,6 +1311,7 @@ export const saveManualText = tenantMutation({
     textContent: v.string(),
     wikiReview: v.optional(v.boolean()),
   },
+  returns: v.id("knowledgeDocuments"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
@@ -1485,6 +1497,7 @@ export const queueWebsiteUrls = tenantMutation({
     forceRefresh: v.optional(v.boolean()),
     wikiReview: v.optional(v.boolean()),
   },
+  returns: v.array(v.id("knowledgeDocuments")),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
@@ -1543,6 +1556,7 @@ export const deleteWebsiteBulk = tenantMutation({
     agentId: v.optional(v.id("agents")),
     rootDomain: v.string(),
   },
+  returns: v.number(),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);

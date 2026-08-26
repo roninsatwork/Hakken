@@ -36,7 +36,7 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * cannot quietly go blind again.
  */
 
-const MISSING_SHAPE_CEILING = 325;
+const MISSING_SHAPE_CEILING = 297;
 
 /**
  * Handlers that still hand back a database row unshaped. This list may only
@@ -46,8 +46,6 @@ const MISSING_SHAPE_CEILING = 325;
  * Studio code and is excluded from this effort permanently.
  */
 const FROZEN_UNSHAPED = new Set<string>([
-  'convex/agentEvalFixtures.ts:getForRun',
-  'convex/agentEvalFixtures.ts:getRecentForAgent',
   'convex/agentImprovementSuggestions.ts:getForRun',
   'convex/agentImprovementSuggestions.ts:getRecentForAgent',
   'convex/agentLogs.ts:getForRun',
@@ -67,9 +65,6 @@ const FROZEN_UNSHAPED = new Set<string>([
   'convex/companyMemories.ts:getPreviewForCompany',
   'convex/companySkills.ts:getBindingsForSkill',
   'convex/dataMigrations.ts:getStatus',
-  'convex/knowledge.ts:getDocuments',
-  'convex/knowledge.ts:getPaginatedDocuments',
-  'convex/knowledge.ts:getWebsiteDocuments',
   'convex/mcpServers.ts:listServers',
   'convex/movements.ts:list',
   'convex/notifications.ts:listMine',

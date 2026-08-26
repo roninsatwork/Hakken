@@ -22,6 +22,8 @@ const whole = <T extends keyof typeof schema.tables>(table: T) =>
   ({ ...schema.tables[table].validator.fields, _creationTime: v.number() });
 
 export const rowShape = {
+  agentEvalFixtures: v.object({ ...whole("agentEvalFixtures"), _id: v.id("agentEvalFixtures") }),
+  agentEvalSuitePresets: v.object({ ...whole("agentEvalSuitePresets"), _id: v.id("agentEvalSuitePresets") }),
   agentLogs: v.object({ ...whole("agentLogs"), _id: v.id("agentLogs") }),
   agentSkillBindings: v.object({ ...whole("agentSkillBindings"), _id: v.id("agentSkillBindings") }),
   agentSkillVersions: v.object({ ...whole("agentSkillVersions"), _id: v.id("agentSkillVersions") }),
@@ -31,6 +33,7 @@ export const rowShape = {
   companies: v.object({ ...whole("companies"), _id: v.id("companies") }),
   companyEvalCases: v.object({ ...whole("companyEvalCases"), _id: v.id("companyEvalCases") }),
   companyMemories: v.object({ ...whole("companyMemories"), _id: v.id("companyMemories") }),
+  knowledgeDocuments: v.object({ ...whole("knowledgeDocuments"), _id: v.id("knowledgeDocuments") }),
   logins: v.object({ ...whole("logins"), _id: v.id("logins") }),
   phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
   plans: v.object({ ...whole("plans"), _id: v.id("plans") }),

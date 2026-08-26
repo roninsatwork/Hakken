@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { v } from "convex/values";
+import { type Infer, v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -9,6 +9,8 @@ import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import type { AgentTemplate } from "./agentTemplates";
 import { appError, appErrorMessage } from "./utils/appError";
+import { evalFixtureTypeValidator, type EvalFixtureType } from "./utils/skillContracts";
+import * as evalShapes from "./utils/evalFixtureShapes";
 
 const EVAL_FIXTURE_DETAIL_LIMIT = 200;
 const EVAL_FIXTURE_TEXT_LIMIT = 2000;
@@ -31,37 +33,8 @@ const BLOCKED_ACTION_POLICY_ASSERTIONS = new Set([
   "tenant_boundary",
 ]);
 type EvalFixtureSeedCtx = Pick<MutationCtx, "db">;
-type SmokeEvalGradingMode = "CONTRACT_ONLY" | "MODEL_GRADED";
+type SmokeEvalGradingMode = Infer<typeof evalShapes.smokeEvalGradingModeShape>;
 
-const evalFixtureTypeValidator = v.union(
-  v.literal("HAPPY_PATH"),
-  v.literal("APPROVAL_PAUSE"),
-  v.literal("REJECTED_ACTION"),
-  v.literal("PROMPT_INJECTION"),
-  v.literal("TENANT_BOUNDARY"),
-  v.literal("BAD_TOOL_ARGS"),
-  v.literal("CANCELLATION"),
-  v.literal("REPLAYED_FAILURE"),
-  v.literal("TOOL_PLAN"),
-  v.literal("COST_LATENCY_BUDGET")
-);
-
-const smokeEvalGradingModeValidator = v.union(
-  v.literal("CONTRACT_ONLY"),
-  v.literal("MODEL_GRADED")
-);
-
-type EvalFixtureType =
-  | "HAPPY_PATH"
-  | "APPROVAL_PAUSE"
-  | "REJECTED_ACTION"
-  | "PROMPT_INJECTION"
-  | "TENANT_BOUNDARY"
-  | "BAD_TOOL_ARGS"
-  | "CANCELLATION"
-  | "REPLAYED_FAILURE"
-  | "TOOL_PLAN"
-  | "COST_LATENCY_BUDGET";
 
 type SmokeEvalRunResult = {
   runId: Id<"agentRuns">;
@@ -485,6 +458,7 @@ export const createFromRun = adminMutation({
     fixtureType: v.optional(evalFixtureTypeValidator),
     tags: v.optional(v.array(v.string())),
   },
+  returns: v.id("agentEvalFixtures"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -647,6 +621,7 @@ export const createManual = adminMutation({
   // TypeScript stops following it and widens a caller's `fixtureId` to a plain
   // id, which then makes `db.get` return every document type at once. Saying
   // what comes back keeps callers — and their tests — precisely typed.
+  returns: v.object({ fixtureId: v.id("agentEvalFixtures"), sourceRunId: v.optional(v.id("agentRuns")) }),
   handler: async (
     ctx,
     args
@@ -747,6 +722,7 @@ export const updateFixture = adminMutation({
     tags: v.optional(v.array(v.string())),
     sampleCount: v.optional(v.number()),
   },
+  returns: v.id("agentEvalFixtures"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
@@ -811,6 +787,7 @@ export const archiveFixture = adminMutation({
   args: {
     fixtureId: v.id("agentEvalFixtures"),
   },
+  returns: v.id("agentEvalFixtures"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
@@ -1038,8 +1015,9 @@ export const runSmokeEval = adminMutation({
   args: {
     agentId: v.id("agents"),
     fixtureId: v.optional(v.id("agentEvalFixtures")),
-    gradingMode: v.optional(smokeEvalGradingModeValidator),
+    gradingMode: v.optional(evalShapes.smokeEvalGradingModeShape),
   },
+  returns: evalShapes.smokeEvalRunShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -1077,8 +1055,9 @@ export const runEvalSuite = adminMutation({
     fixtureIds: v.optional(v.array(v.id("agentEvalFixtures"))),
     suiteTag: v.optional(v.string()),
     suitePresetId: v.optional(v.id("agentEvalSuitePresets")),
-    gradingMode: v.optional(smokeEvalGradingModeValidator),
+    gradingMode: v.optional(evalShapes.smokeEvalGradingModeShape),
   },
+  returns: evalShapes.evalSuiteRunShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -1203,6 +1182,7 @@ export const listSuitePresets = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: evalShapes.suitePresetListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -1226,6 +1206,7 @@ export const getReleaseCandidateComparison = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: evalShapes.releaseCandidateComparisonShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -1315,7 +1296,7 @@ export const getReleaseCandidateComparison = adminQuery({
       const isCurrent = latestRun ? latestRun.startedAt >= fixture.updatedAt : false;
       const latestGradingMode = latestRecord?.gradingMode ?? "CONTRACT_ONLY";
       const previousGradingMode = previousRecord?.gradingMode ?? "CONTRACT_ONLY";
-      const status = !latestRun
+      const status: Infer<typeof evalShapes.releaseGateEntryStatusShape> = !latestRun
         ? "NOT_RUN"
         : !isCurrent
         ? "STALE"
@@ -1403,6 +1384,7 @@ export const saveSuitePreset = adminMutation({
     isReleaseGate: v.optional(v.boolean()),
     requiresModelGrading: v.optional(v.boolean()),
   },
+  returns: v.id("agentEvalSuitePresets"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -1506,6 +1488,7 @@ export const archiveSuitePreset = adminMutation({
   args: {
     presetId: v.id("agentEvalSuitePresets"),
   },
+  returns: v.id("agentEvalSuitePresets"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const preset = await ctx.db.get(args.presetId);
@@ -1599,6 +1582,7 @@ export const runRehearsalEval = adminMutation({
     agentId: v.id("agents"),
     fixtureId: v.id("agentEvalFixtures"),
   },
+  returns: v.object({ scheduled: v.boolean() }),
   handler: async (ctx, args): Promise<{ scheduled: boolean }> => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -1785,6 +1769,7 @@ export const getForRun = adminQuery({
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: evalShapes.evalFixturePageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -1816,6 +1801,7 @@ export const getCheckDetail = adminQuery({
     fixtureId: v.id("agentEvalFixtures"),
     limit: v.optional(v.number()),
   },
+  returns: evalShapes.checkDetailShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
@@ -1875,6 +1861,7 @@ export const getSmokeEvalHistory = adminQuery({
     agentId: v.id("agents"),
     limit: v.optional(v.number()),
   },
+  returns: evalShapes.smokeEvalHistoryShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
@@ -1906,7 +1893,7 @@ export const getSmokeEvalHistory = adminQuery({
       const fixtureIdValue = metadata.fixtureId;
       const fixtureId = typeof fixtureIdValue === "string" ? fixtureIdValue as Id<"agentEvalFixtures"> : undefined;
       const fixture = fixtureId ? await ctx.db.get(fixtureId) : null;
-      const gradingMode = metadata.gradingMode === "MODEL_GRADED" ? "MODEL_GRADED" : "CONTRACT_ONLY";
+      const gradingMode: Infer<typeof evalShapes.smokeEvalGradingModeShape> = metadata.gradingMode === "MODEL_GRADED" ? "MODEL_GRADED" : "CONTRACT_ONLY";
 
       return {
         runId: run._id,
@@ -1976,6 +1963,7 @@ export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
+  returns: evalShapes.evalFixtureListShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
