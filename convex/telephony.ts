@@ -23,6 +23,7 @@ import {
   TWILIO_AUTH_TOKEN_SECRET_REF,
   TWILIO_VOICE_CONNECTOR_KEY,
 } from "./toolConnectorDefinitions";
+import { rowShape } from "./utils/rowShape";
 
 /**
  * Sonae answering the phone.
@@ -784,6 +785,7 @@ export const getCallForCompany = adminQuery({
   // A string, not an id: the value arrives from the address bar and a
   // mistyped link must read as "not found", exactly as the tenant door does.
   args: { companyId: v.id("companies"), callId: v.string() },
+  returns: v.union(rowShape.phoneCalls, v.null()),
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     const callId = ctx.db.normalizeId("phoneCalls", args.callId);

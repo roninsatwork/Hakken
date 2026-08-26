@@ -19,6 +19,7 @@ import {
 } from "./utils/inventoryRollupService";
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
@@ -115,6 +116,7 @@ export const getCompanyOptions = superAdminQuery({
 
 export const getCompanyById = superAdminQuery({
   args: { id: v.id("companies") },
+  returns: v.union(rowShape.companies, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
   },

@@ -14,6 +14,7 @@ import { normalizeEnabledModules } from "./utils/companyModules";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 import { superAdminMutation, superAdminQuery, tenantQuery, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 const PLAN_CATALOG_LIMIT = 100;
 const BILLING_RESET_BATCH_SIZE = 500;
@@ -63,6 +64,7 @@ export const getCompanyPlanStatus = softQuery({
 
 export const getPlans = tenantQuery({
   args: {},
+  returns: v.array(rowShape.plans),
   handler: async (ctx) => {
     // Anyone authenticated can read available plans
     return await ctx.db.query("plans").order("asc").take(PLAN_CATALOG_LIMIT);

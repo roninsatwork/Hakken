@@ -25,20 +25,10 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * and `toClientWorkflow` are those narrowings.
  */
 
-const MISSING_SHAPE_CEILING = 455;
+const MISSING_SHAPE_CEILING = 445;
 
 /** Handlers that still return a database row unshaped. This list may only shrink. */
 const FROZEN_UNSHAPED = new Set<string>([
-  'convex/agentLogs.ts:getLogById',
-  'convex/aiRules.ts:getRuleById',
-  'convex/aiTools.ts:getTools',
-  'convex/aiTools.ts:getToolById',
-  'convex/companies.ts:getCompanyById',
-  'convex/companyEvals.ts:getCaseById',
-  'convex/companyMemories.ts:getMemoryById',
-  'convex/plans.ts:getPlans',
-  'convex/scheduler.ts:getSchedule',
-  'convex/telephony.ts:getCallForCompany',
 ]);
 
 const CLIENT_BUILDERS = new Set([

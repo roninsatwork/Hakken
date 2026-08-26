@@ -8,6 +8,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 const CASE_NAME_MAX_CHARS = 140;
 const PROMPT_MAX_CHARS = 4000;
@@ -457,6 +458,7 @@ export const getCaseById = adminQuery({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
+  returns: rowShape.companyEvalCases,
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
     if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");

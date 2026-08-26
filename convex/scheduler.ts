@@ -8,6 +8,7 @@ import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
 import { WIKI_STAFF } from "./wikiStaff";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 const SCHEDULE_LIST_LIMIT = 100;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
@@ -82,6 +83,7 @@ export const createSchedule = superAdminMutation({
 
 export const getSchedule = superAdminQuery({
   args: { scheduleId: v.id("schedules") },
+  returns: v.union(rowShape.schedules, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.scheduleId);
   },

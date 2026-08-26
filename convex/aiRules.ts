@@ -11,6 +11,7 @@ import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
 import { tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();
@@ -242,6 +243,7 @@ export const seedPricingRule = internalMutation({
 // Fetch a single rule for the Edit screen
 export const getRuleById = tenantQuery({
   args: { id: v.id("aiRules") },
+  returns: v.union(rowShape.aiRules, v.null()),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const rule = await ctx.db.get(args.id);

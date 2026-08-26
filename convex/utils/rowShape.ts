@@ -1,0 +1,34 @@
+import { v } from "convex/values";
+
+import schema from "../schema";
+
+/**
+ * The declared shape of a whole row, taken from the schema rather than copied.
+ *
+ * Some surfaces genuinely hand back a complete record — a detail screen that
+ * shows every field of one thing. Those still need a declared shape, because a
+ * surface that declares nothing is a surface where a new column added to the
+ * table silently starts travelling to the browser. That is how
+ * `users.tokenIdentifier` and `workflows.webhookSecret` reached screens that
+ * had no use for them.
+ *
+ * Hand-writing the field list would have created a second copy of the schema
+ * to keep in step, and the copy always loses. Deriving it means a column added
+ * to the table is declared here the same day, and a column that should *not*
+ * travel has to be omitted deliberately rather than forgotten — which is the
+ * decision worth making explicit.
+ */
+const whole = <T extends keyof typeof schema.tables>(table: T) =>
+  ({ ...schema.tables[table].validator.fields, _creationTime: v.number() });
+
+export const rowShape = {
+  agentLogs: v.object({ ...whole("agentLogs"), _id: v.id("agentLogs") }),
+  aiRules: v.object({ ...whole("aiRules"), _id: v.id("aiRules") }),
+  aiTools: v.object({ ...whole("aiTools"), _id: v.id("aiTools") }),
+  companies: v.object({ ...whole("companies"), _id: v.id("companies") }),
+  companyEvalCases: v.object({ ...whole("companyEvalCases"), _id: v.id("companyEvalCases") }),
+  companyMemories: v.object({ ...whole("companyMemories"), _id: v.id("companyMemories") }),
+  phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
+  plans: v.object({ ...whole("plans"), _id: v.id("plans") }),
+  schedules: v.object({ ...whole("schedules"), _id: v.id("schedules") }),
+};

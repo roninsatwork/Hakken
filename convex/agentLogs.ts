@@ -11,6 +11,7 @@ import {
 } from "./agentLogGroupingService";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
+import { rowShape } from "./utils/rowShape";
 
 /** A single job's exchange. Far above any real run, low enough to bound the read. */
 const AGENT_RUN_LOG_LIMIT = 500;
@@ -231,6 +232,7 @@ export const getForRun = adminQuery({
 
 export const getLogById = adminQuery({
   args: { id: v.id("agentLogs") },
+  returns: v.union(rowShape.agentLogs, v.null()),
   handler: async (ctx, args) => {
     const { user } = ctx;
     const log = await ctx.db.get(args.id);

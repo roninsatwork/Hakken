@@ -49,9 +49,7 @@ const FROZEN: Record<string, number> = {
   'convex/salesDataResearchJobs.ts': 1070,
   'convex/analytics.ts': 1063,
   'convex/workflowEngine.ts': 1047,
-  'convex/companyMemories.ts': 1035,
   'convex/purges.ts': 1018,
-  'convex/aiTools.ts': 1007,
 };
 
 const lineCount = (file: string) => {

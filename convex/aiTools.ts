@@ -5,8 +5,6 @@ import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import {
-  CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE,
-  isConnectorOAuthAvailable,
   isExecutableToolMapping,
   normalizeToolExecutionPolicy,
   validateToolJsonSchemaString,
@@ -14,9 +12,15 @@ import {
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
 import { assertSafeSecretRefs } from "./connectorSecretPolicy";
 import { appError } from "./utils/appError";
+import {
+  assertConnectorOAuthAvailable,
+  buildOAuthAuthorizationUrl,
+  buildOAuthState,
+} from "./utils/connectorOAuthUrls";
 import { normaliseToolModelName } from "./toolModelName";
 import { internal } from "./_generated/api";
 import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { rowShape } from "./utils/rowShape";
 
 const TOOL_CATALOG_LIMIT = 250;
 const AGENT_TOOL_BINDING_LIMIT = 250;
@@ -226,36 +230,6 @@ function resolveConnectorTenantAvailability(args: {
  * guessable, which would have let anyone complete somebody else's pending
  * connection.
  */
-function buildOAuthState(connectorId: Id<"toolConnectors">, now: number) {
-  const random = crypto.getRandomValues(new Uint8Array(24));
-  const hex = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `connector:${connectorId}:${now}:${hex}`;
-}
-
-/**
- * Where the Connect button sends the administrator: the deployment's own
- * authorize route (`connectorOAuth.ts`), absolute because the admin screen
- * runs on the app origin and the route on the Convex site origin. Only the
- * state travels — provider, scopes and credentials are resolved server-side
- * from the pending connection it names.
- */
-function buildOAuthAuthorizationUrl(args: { state: string }) {
-  const siteUrl = (process.env.CONVEX_SITE_URL ?? "").replace(/\/+$/, "");
-  const params = new URLSearchParams({ state: args.state });
-  return `${siteUrl}/api/connectors/oauth/authorize?${params.toString()}`;
-}
-
-/**
- * Whether this connector can be taken through an OAuth flow today: the
- * provider's client credentials and the token encryption key must be
- * configured on this deployment.
- */
-function assertConnectorOAuthAvailable(provider: string) {
-  if (!isConnectorOAuthAvailable(provider)) {
-    throw appError("NOT_CONFIGURED", CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE);
-  }
-}
-
 export const getConnectorMarketplace = adminQuery({
   args: {},
   handler: async (ctx) => {
@@ -734,6 +708,7 @@ export const validateConnectorConfiguration = adminMutation({
 // Fetch all registered AI system tools
 export const getTools = superAdminQuery({
   args: {},
+  returns: v.array(rowShape.aiTools),
   handler: async (ctx) => {
     // Tools are strictly globally configured by admins
     return await ctx.db.query("aiTools").order("desc").take(TOOL_CATALOG_LIMIT);
@@ -791,6 +766,7 @@ export const getPaginatedTools = superAdminQuery({
 
 export const getToolById = superAdminQuery({
   args: { id: v.id("aiTools") },
+  returns: v.union(rowShape.aiTools, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
   },
