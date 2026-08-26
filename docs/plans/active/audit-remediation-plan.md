@@ -598,6 +598,67 @@ not a number.
 
 ---
 
+## The external auditor's rescore (2026-08-26 evening) and the drift it exposes
+
+An external code auditor rescored the tree at `9bca72d0` and returned 8.5/10,
+up from the 8/10 of the original review. **Its numbers were checked against the
+code before anything was done with them, and they held.** Ten figures verified
+independently: 863 `appError` sites; four plain-`Error` survivors, all inside
+frozen `convex/movements.ts`; `agentSkills.ts` at 2,458 lines; `agentRuntime.ts`
+at 1,212; `KnowledgeManager.tsx` at 663; `ConfigDrawer.tsx` at 521;
+`SidebarNavigation.tsx` at 604; 101 `movement:` scripts; 234 PascalCase
+component files; the theme baseline at 1,052; `src/ui/atoms/` absent; six files
+carrying `console.error` under `src/app`. Nothing in it was invented.
+
+**This is a different failure mode from the three reviews above, and worth
+naming as its own.** Those found claims the code did not support. This one is
+accurate about the code and wrong about the intent: of the five things holding
+the score at 8.5, four are positions taken deliberately, and an auditor has no
+way to see a decision. It will find them again on every run, and the score
+cannot move without either reversing a decision or handing the decisions over.
+
+### The four standing decisions an auditor cannot see
+
+Hand this list to any future audit run as part of its brief. Each is a
+deliberate position, not unfinished work.
+
+1. **The real-login end-to-end job runs on a button, not on every pipeline.**
+   Anthony declined the dedicated test deployment on 2026-08-26, on cost. The
+   specs exist, are tagged, and passed 5/5 against a real deployment on
+   2026-08-25. An auditor reading only the workflow file sees a mocked pipeline
+   and scores an honesty gap.
+2. **The broad analytics reads are registered, not hidden.** Writing an honest
+   reason for each read *was* the deliverable of WP05. An auditor counting
+   register entries reads the completed work as outstanding debt.
+3. **Return validators were scoped to the client-facing surface.** All 41
+   public and soft surfaces declare one, plus 20 more added on 2026-08-26.
+   Dividing instead by all ~900 declarations — 325 of them `internalQuery` and
+   `internalMutation` that no client can reach — produces a coverage figure
+   against a denominator no package ever adopted.
+4. **The movement scripts CLI was dropped on value, not on boundary.** It
+   touches no screen. It was dropped because every movement runbook is written
+   against the current command names.
+
+### What Anthony asked for on 2026-08-26, having read that
+
+He asked for all of it closed **except the CI item**, which stays as it is.
+Sizes measured rather than estimated, because two of the four are far larger
+than the auditor's one-line description suggests:
+
+| Item | What closing it actually means | Measured size |
+|---|---|---|
+| E1 `agentSkills.ts` at 2,458 lines | ~770 lines of unexported helpers and starter data lift out with no API path moving; the fattest endpoint bodies then follow into a service file | contained — the one genuine fault on the list |
+| E2 Movement scripts | a dispatcher, **with every existing `movement:` command name still resolving**, or the runbooks go stale — which is the reason it was dropped | contained |
+| E3 Broad analytics reads | 38 registered reads paged or rolled up for real; the two 20,000-row platform-overview scans need a rollup table, not a smaller cap | days, and it moves numbers on screen |
+| E4 Return validators | a declared shape on ~800 further declarations, or the builders made to require one | the largest item on the plan by a wide margin |
+
+**Progress against E1–E4 is recorded in the status table below**, in rows of
+their own. The rule from the three earlier reviews stands and applies to these
+four exactly as it applied to the fourteen: a row may say done when a probe
+sits behind the claim.
+
+---
+
 ## Per-package status
 
 Update this table (and nothing else in this section) as work proceeds. States:
@@ -623,6 +684,10 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | WP09 naming ratchet | **done** (2026-08-26: f883b61a8) | freeze verified entry for entry. The structural exemption matched on basename anywhere under src/, so `error.tsx` or `template.tsx` passed as an ordinary component name — scoped to the router tree and probed. The headline figure compared two populations (302 counted test files, 7 excludes them); the honest figure for what the rule governs is 234 vs 7 today. The doc insertion that swallowed the Shared Components section is repaired |
 | WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
 | WP14 small sweep | **done** (2026-08-26: d8468bb5a, f0366eb21) | `<html lang>` and the CI dedupe were real. The softQuery enforcement was a dead test — it and the public-register test it was copied from matched 0 of 41 declarations; both fixed and proven to read all 41. knip never ran dependency analysis (`--include files` excluded the very checks the config enabled); it runs them now, clean. The coverage nudge moved to its own module with five tests and now writes to the run summary (0893fecaf), and it fired for the first time once real coverage was measured — two floors rose behind it. It remains unreachable from `npm run check`, which only `npm run gate` and CI call. Docs: 7 dead paths at 9 sites fixed, plus 15 guides repointed after the splits |
+| E1 agentSkills.ts size | **in progress** | the one genuine fault on the auditor's list. 2,458 lines, of which ~770 are unexported helpers, parsers and starter data that move without any Convex API path moving |
+| E2 movement scripts dispatcher | todo | reopened by Anthony 2026-08-26 after being dropped. Every existing `movement:` name must still resolve or the runbooks go stale — that risk was the reason for the drop, so it is the acceptance condition, not a nicety |
+| E3 broad analytics reads | todo | 38 registered reads. The chat hot path is already properly paged; `moneyView`'s take-then-filter and the two 20,000-row platform-overview scans are the named ones. Moves numbers on screen, so each needs its own proof |
+| E4 return validators beyond the client surface | todo | ~800 declarations without a declared shape, 325 of them internal. Largest item on the plan. Scope and order to be set before any of it is written, not discovered midway |
 
 ---
 
