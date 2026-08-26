@@ -19,6 +19,14 @@ detail within a package*, the prompt file wins.**
 
 ## Non-negotiable working rules
 
+0. **Posture Studio is untouchable** (Anthony, 2026-08-26: "don't touch the
+   posture studio"). That is the movement area under its customer-facing name:
+   `src/app/(dashboard)/demos/**`, `convex/movements.ts`, the movement libs and
+   the sidebar block gated on `POSTURE_STUDIO_MODULE_KEY`. Every remaining
+   package excludes those paths — the demo freeze in `AGENTS.md` now carries his
+   direct instruction on top. Mechanical import-path fixes that keep the build
+   green remain allowed, nothing else.
+
 These come from standing agreements with Anthony (the owner). Violating them is
 worse than not doing the work.
 
@@ -302,12 +310,16 @@ command is run.
 
 ## Found in passing
 
-**A flaky test, noted rather than chased.** `convex/wikiDistillActions.test.ts`
-("only companies with unread documents get a round…") failed one full-suite run
-on 2026-08-26 with convex-test's "did not complete after 10000 timer pumps",
-then passed four consecutive isolated runs. It references nothing WP04 touched,
-so it is load timing, not a regression. If it recurs in CI it wants a look at
-the sweep's scheduled-function chain rather than a bigger timeout.
+**The wiki sweeps' tests flake under full-suite load — now a pattern, not a
+one-off.** Two different files failed one full-suite run each on 2026-08-26
+with convex-test's "did not complete after 10000 timer pumps", and each passed
+immediately in isolation: `wikiDistillActions.test.ts` (during WP04) and
+`wikiTendingActions.test.ts` (during WP09). Both are wiki sweep dispatchers
+driving scheduled-function chains through `finishAllScheduledFunctions`. Nothing
+either package touched references them. Two strikes says the sweeps'
+scheduled-function chains are load-sensitive in convex-test — worth one focused
+look at how their dispatchers reschedule, rather than a bigger timeout, and
+worth knowing about before anyone trusts a red CI run at face value.
 
 Faults noticed while doing something else, fixed under rule 4 rather than left.
 Each row says what was wrong, what it would have cost a user, and where it was
@@ -338,12 +350,12 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | WP07 return validators | done (commits 871e52ae3, f73f1a4d9, 8508ee79b, 693264a86) | all 41 public surfaces + chat; 8 validators to 55. Leaks closed on getMessages, getSwarmLogs, getThreadDocuments, getLatestRuns, getActiveTemplate |
 | WP13 atoms consolidation | done (commit 19574af4f) | 4 modules moved, 87 files repointed, placement rule written down, shadowing verified |
 | WP04 god-components | in progress | unblocked 2026-08-25: frozen counts may split with the file, total unchanged |
-| WP03 useAdminAction | todo | KnowledgeManager waits for WP04 |
+| WP03 useAdminAction | done (commit HEAD) | 15 pages migrated, 34 files on the hook, 0 hand-rolled remain; 3 real faults fixed in passing |
 | WP06 app→admin imports | done (commit 4ba970fd8) | 4 components + 2 hidden dependencies promoted to src/ui/components/governance/; ESLint rule verified by probe |
-| WP08 app i18n | todo | Italian must be real translations, en/it parity enforced |
-| WP10 palette + formatters | todo | mind the oklab/html2canvas constraint |
+| WP08 app i18n | done (commit c09f3bcc7) | 150 keys per language, real Italian; floors raised 139→156, 22→29, app floor added at 36; plus copy ratchet + placeholder parity guards (d1d0805c7) |
+| WP10 palette + formatters | done | dashboards on chartPalette.ts; formatters deduped to src/lib; TimeframeDropdown reclassified as theme-plan chrome, not chart colours |
 | WP09 naming ratchet | todo | baseline frozen only after WP13/04/06 land |
-| WP12 movement CLI | todo | packaging only; demo stays frozen |
+| WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
 | WP14 small sweep | todo | spec in this file |
 
 ---

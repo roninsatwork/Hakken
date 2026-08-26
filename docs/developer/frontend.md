@@ -54,6 +54,18 @@ Use dense, scannable layouts for operational screens. Admin and SaaS surfaces sh
 
 ## Shared Components
 
+## File Naming
+
+Component files are **PascalCase**, matching the component they export:
+`Button.tsx`, `KnowledgeManager.tsx`, `SidebarNavTrees.tsx`. Hooks keep their
+own convention (`useAdminAction.ts` — the `use` prefix is the rule), and Next's
+structural names (`page.tsx`, `layout.tsx`, kebab-case route segments) are the
+framework's, not ours. Measured on 2026-08-26 this was already the tree's
+overwhelming practice — 302 PascalCase component files against 7 stragglers —
+so the rule writes down what won rather than imposing something new.
+`src/file-naming-drift.test.ts` enforces it: the seven pre-rule files are
+frozen on a shrink-only list, and any new non-conforming file fails the build.
+
 Prefer existing shared components before creating page-local variants:
 
 - Feedback: `SonaeModal`, `SonaeEmptyState`, admin modal and confirmation wrappers.
