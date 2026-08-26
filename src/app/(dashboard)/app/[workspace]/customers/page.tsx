@@ -380,7 +380,7 @@ function ClearDatabaseButton() {
     if (outcome.ok) {
       setState("cleared");
       setMessage(t("clearDone"));
-    } else {
+    } else if (!outcome.deduplicated) {
       setState("error");
       if (outcome.message) setMessage(outcome.message);
     }

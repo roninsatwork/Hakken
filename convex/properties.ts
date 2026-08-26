@@ -158,6 +158,7 @@ export const getProperty = moduleQuery({
 export const deleteProperty = moduleMutation({
   module: PROPERTIES_MODULE_KEY,
   args: { id: v.id("properties") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = ctx;
 
@@ -172,6 +173,8 @@ export const deleteProperty = moduleMutation({
     }
 
     await ctx.db.delete(args.id);
+
+    return null;
   },
 });
 

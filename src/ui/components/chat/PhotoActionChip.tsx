@@ -53,7 +53,12 @@ export function PhotoActionChip({
       () => confirmProposal({ messageId: message._id, widgetAccessToken }),
       { suppressErrorToast: true, fallbackMessage: labels.failed },
     );
-    if (!outcome.ok && outcome.message) setFailed(outcome.message);
+    // The chip's own label, not the server's sentence. This renders on the
+    // embedded widget, where the reader may be on a page in any language and
+    // the backend answers in English — a translated label is the one thing
+    // that surface can guarantee. The real sentence still reaches error
+    // tracking through the runner.
+    if (!outcome.ok) setFailed(labels.failed);
   };
 
   return (

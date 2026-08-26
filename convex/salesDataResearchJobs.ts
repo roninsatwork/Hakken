@@ -1027,7 +1027,7 @@ export const startResearchJob = tenantMutation({
       mode: args.mode,
     });
     if (!job) {
-      throw appError("CONFLICT", "There is no imported spreadsheet to research against.");
+      throw appError("NOT_FOUND", "There is no imported spreadsheet to research against.");
     }
 
     const items = await loadItems(ctx, job._id);

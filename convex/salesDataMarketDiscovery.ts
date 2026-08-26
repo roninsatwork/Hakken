@@ -709,7 +709,7 @@ export const startMarketDiscoveryJob = tenantMutation({
     if (running) return { started: false, alreadyRunning: true, jobId: running._id };
 
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw appError("CONFLICT", "Import a workbook first so the customer type can be checked.");
+    if (!currentImport) throw appError("NOT_FOUND", "Import a workbook first so the customer type can be checked.");
 
     const accounts = await ctx.db
       .query("salesDataAccounts")
@@ -723,7 +723,7 @@ export const startMarketDiscoveryJob = tenantMutation({
         customerTypeKey: normalizeKey(customerType),
         targetGroupCount: GROUPS_PER_CUSTOMER_TYPE,
       }));
-    if (customerTypes.length === 0) throw appError("CONFLICT", "Import a workbook with customer types first.");
+    if (customerTypes.length === 0) throw appError("NOT_FOUND", "Import a workbook with customer types first.");
 
     const totalTargetGroupCount = customerTypes.reduce(
       (total, type) => total + type.targetGroupCount,

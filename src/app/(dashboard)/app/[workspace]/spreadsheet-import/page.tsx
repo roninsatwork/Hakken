@@ -586,7 +586,7 @@ function ClearAllButton() {
     if (outcome.ok) {
       setState("cleared");
       setMessage(t("clearAllDone"));
-    } else {
+    } else if (!outcome.deduplicated) {
       setState("error");
       if (outcome.message) setMessage(outcome.message);
     }

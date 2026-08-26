@@ -48,7 +48,18 @@ import { reportError } from '@/src/lib/reportError';
 
 export type AdminActionOutcome<TResult> =
   | { ok: true; data: TResult }
-  | { ok: false; message: string };
+  /**
+   * `deduplicated` marks the one `ok: false` where nothing actually went
+   * wrong: a repeat click arrived while the first was still running, and the
+   * call in flight owns the outcome.
+   *
+   * It carries an empty message, and callers that only render `message` were
+   * therefore fine. Callers that flip to an error *state* were not — the CRM
+   * clear button showed an error box with no text inside it on a fast double
+   * click. Telling the two apart at the source beats asking every caller to
+   * infer it from an empty string.
+   */
+  | { ok: false; message: string; deduplicated?: true };
 
 export type AdminActionRunOptions = {
   /**
@@ -151,7 +162,7 @@ export function useAdminAction(options: { scope?: string } = {}): AdminActionRun
         // A repeat click on something already running. Nothing went wrong, so
         // there is nothing to tell the user — the call in flight owns the
         // outcome.
-        return { ok: false, message: '' };
+        return { ok: false, message: '', deduplicated: true };
       }
 
       inFlight.current.add(busyKey);

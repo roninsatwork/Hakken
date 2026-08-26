@@ -1374,7 +1374,7 @@ export const startCustomerResearch = tenantMutation({
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
+    if (!currentImport) throw appError("NOT_FOUND", "There is no imported data to research against.");
 
     const subject = await resolveResearchSubject(ctx, {
       companyId,
@@ -1678,7 +1678,7 @@ export const startCustomerResearchSweep = tenantMutation({
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
+    if (!currentImport) throw appError("NOT_FOUND", "There is no imported data to research against.");
 
     const agent = await resolveResearchAgent(ctx, companyId);
 
@@ -1751,7 +1751,7 @@ export const startProspectingSweep = tenantMutation({
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) throw appError("CONFLICT", "There is no imported data to research against.");
+    if (!currentImport) throw appError("NOT_FOUND", "There is no imported data to research against.");
 
     const agent = await resolveResearchAgent(ctx, companyId);
 

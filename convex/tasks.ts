@@ -172,6 +172,7 @@ export const listTasks = moduleQuery({
 export const countOpenTasks = moduleQuery({
   module: CORE_MODULES.tasks,
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const { companyId } = ctx;
     if (!companyId) return 0;
@@ -363,6 +364,7 @@ export const confirmPhotoAction = publicMutation({
 export const completeTask = moduleMutation({
   module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
@@ -380,12 +382,15 @@ export const completeTask = moduleMutation({
       taskId: args.taskId,
       companyId: task.companyId,
     });
+
+    return null;
   },
 });
 
 export const reopenTask = moduleMutation({
   module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
@@ -405,12 +410,15 @@ export const reopenTask = moduleMutation({
       taskId: args.taskId,
       companyId: task.companyId,
     });
+
+    return null;
   },
 });
 
 export const cancelTask = moduleMutation({
   module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
@@ -426,6 +434,8 @@ export const cancelTask = moduleMutation({
       taskId: args.taskId,
       companyId: task.companyId,
     });
+
+    return null;
   },
 });
 

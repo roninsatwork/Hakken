@@ -162,7 +162,7 @@ export const startOpportunityReport = tenantMutation({
 
     const currentImport = await getCurrentImport(ctx, companyId);
     if (!currentImport) {
-      throw appError("CONFLICT", "Import a workbook first — the report prices its six months of sales.");
+      throw appError("NOT_FOUND", "Import a workbook first — the report prices its six months of sales.");
     }
 
     const agent = await resolveOpportunityAgent(ctx, companyId);

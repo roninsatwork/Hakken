@@ -242,6 +242,7 @@ export function KnowledgeManager({
         });
 
         if (!outcome.ok) {
+          if (outcome.deduplicated) return false;
           updateQueueEntry(key, { status: "failed", error: outcome.message });
           return false;
         }

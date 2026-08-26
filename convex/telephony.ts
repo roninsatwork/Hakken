@@ -751,6 +751,7 @@ export const getCallForCompany = adminQuery({
 export const getCompanyPhoneNumber = moduleQuery({
   module: CORE_MODULES.calls,
   args: {},
+  returns: v.union(v.null(), v.string()),
   handler: async (ctx): Promise<string | null> => {
     const { companyId } = ctx;
     if (!companyId) return null;
