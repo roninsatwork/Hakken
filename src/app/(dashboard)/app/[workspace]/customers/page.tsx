@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { formatMoneyGBP } from "@/src/lib/currency";
 import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -292,7 +293,7 @@ function CustomerList() {
                           {/* A dash, never £0.00. Zero reads as "a customer who
                               bought nothing", which is a different and worse
                               claim than "not a customer". */}
-                          {isProspect ? "—" : formatMoney(customer.totalRevenue)}
+                          {isProspect ? "—" : formatMoneyGBP(customer.totalRevenue)}
                         </Td>
                       </tr>
                     );
@@ -664,10 +665,3 @@ function ResearchRow() {
   );
 }
 
-function formatMoney(value: number) {
-  return value.toLocaleString("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    minimumFractionDigits: 2,
-  });
-}

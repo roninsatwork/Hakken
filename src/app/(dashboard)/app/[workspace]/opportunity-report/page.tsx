@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { formatExactGBP } from "@/src/lib/currency";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -55,15 +56,6 @@ type Report = NonNullable<
 type Prospect = Report["prospects"][number];
 type Gap = Report["gaps"][number];
 
-/** Exact pounds, never compacted: the figures must match the working. */
-function formatPounds(value: number) {
-  return value.toLocaleString("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 /**
  * How far along the fixed phase order is. The percentages are the honest
@@ -524,7 +516,7 @@ function TotalCard({
       <div className="flex items-baseline justify-between gap-x-5 gap-y-1 flex-wrap">
         <div className="flex items-baseline gap-3 flex-wrap">
           <span className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-            {formatPounds(headline.totalOpportunityGBP)}
+            {formatExactGBP(headline.totalOpportunityGBP)}
           </span>
           <span className="text-[12.5px] text-secondary">{t("totalTitle")}</span>
           <span className="text-[12px] text-muted">{t("totalSub")}</span>
@@ -609,7 +601,7 @@ function SectionTabs({
                 isEmpty ? "text-muted" : isActive ? accent.text : "text-foreground"
               }`}
             >
-              {formatPounds(section.totalGBP)}
+              {formatExactGBP(section.totalGBP)}
             </span>
           </button>
         );
@@ -653,7 +645,7 @@ function SectionBlock({
         </div>
         {showHeading && (
           <span className="text-[18px] font-semibold text-foreground tabular-nums">
-            {formatPounds(section.totalGBP)}
+            {formatExactGBP(section.totalGBP)}
           </span>
         )}
       </div>
@@ -742,18 +734,18 @@ function ChainCard({
     chain.prospects.length > 0 && chain.gaps.length > 0
       ? t("chainSummaryBoth", {
           sites: chain.prospects.length,
-          sitesValue: formatPounds(chain.prospectTotalGBP),
+          sitesValue: formatExactGBP(chain.prospectTotalGBP),
           gaps: chain.gaps.length,
-          gapsValue: formatPounds(chain.gapTotalGBP),
+          gapsValue: formatExactGBP(chain.gapTotalGBP),
         })
       : chain.prospects.length > 0
         ? t("chainSummaryProspectsOnly", {
             sites: chain.prospects.length,
-            sitesValue: formatPounds(chain.prospectTotalGBP),
+            sitesValue: formatExactGBP(chain.prospectTotalGBP),
           })
         : t("chainSummaryGapsOnly", {
             gaps: chain.gaps.length,
-            gapsValue: formatPounds(chain.gapTotalGBP),
+            gapsValue: formatExactGBP(chain.gapTotalGBP),
           });
 
   return (
@@ -762,7 +754,7 @@ function ChainCard({
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <h2 className="text-[16px] font-semibold text-foreground">{chain.name}</h2>
           <span className="text-[16px] font-semibold text-foreground tabular-nums">
-            {formatPounds(chain.totalGBP)}
+            {formatExactGBP(chain.totalGBP)}
           </span>
         </div>
         <p className="text-[13px] text-secondary mt-1">{summary}</p>
@@ -822,7 +814,7 @@ function ChainProspects({
           <SectionBadge kind="new" />
         </h3>
         <span className="text-[14px] font-medium text-foreground tabular-nums">
-          {formatPounds(chain.prospectTotalGBP)}
+          {formatExactGBP(chain.prospectTotalGBP)}
         </span>
       </div>
       {allUnsized && unsized[0] ? (
@@ -875,7 +867,7 @@ function ChainProspects({
                   <PricingCell prospect={prospect} />
                 </Td>
                 <Td className="text-right tabular-nums text-foreground">
-                  {prospect.estimateGBP !== null ? formatPounds(prospect.estimateGBP) : "—"}
+                  {prospect.estimateGBP !== null ? formatExactGBP(prospect.estimateGBP) : "—"}
                 </Td>
               </tr>
             ))}
@@ -945,7 +937,7 @@ function ProspectBasket({
           {t("basketTitle")}
         </h3>
         <span className="text-[14px] font-medium text-foreground tabular-nums">
-          {formatPounds(totalGBP)}
+          {formatExactGBP(totalGBP)}
         </span>
       </div>
       <p className="text-[12.5px] text-muted mb-4">
@@ -1007,7 +999,7 @@ function BasketRow({
             {category.category}
           </span>
           <span className="text-[13px] text-secondary tabular-nums">
-            {formatPounds(totalGBP * share)}
+            {formatExactGBP(totalGBP * share)}
           </span>
         </div>
         <div className={`text-[11.5px] text-muted ${products.length > 0 ? "pl-5" : ""}`}>
@@ -1027,7 +1019,7 @@ function BasketRow({
                 {humaniseProduct(product.description)}
               </span>
               <span className="text-[12px] text-muted tabular-nums shrink-0">
-                {formatPounds(product.spendGBP)}
+                {formatExactGBP(product.spendGBP)}
               </span>
             </div>
           ))}
@@ -1060,7 +1052,7 @@ function PricingCell({ prospect }: { prospect: Prospect }) {
         <span className="text-[11.5px] text-muted pl-3.5">
           {t(`pricingMath${unit}`, {
             count: prospect.size ?? 0,
-            rate: formatPounds(prospect.ratePerUnitGBP ?? 0),
+            rate: formatExactGBP(prospect.ratePerUnitGBP ?? 0),
           })}
         </span>
       )}
@@ -1109,7 +1101,7 @@ function ChainGaps({
           <SectionBadge kind="upsell" />
         </h3>
         <span className="text-[14px] font-medium text-foreground tabular-nums">
-          {formatPounds(chain.gapTotalGBP)}
+          {formatExactGBP(chain.gapTotalGBP)}
         </span>
       </div>
       <p className="text-[12.5px] text-muted mb-4">{t("gapsPricingNote")}</p>
@@ -1122,7 +1114,7 @@ function ChainGaps({
                 {account.accountName}
               </span>
               <span className="text-[13px] font-medium text-secondary tabular-nums">
-                {formatPounds(account.totalGBP)}
+                {formatExactGBP(account.totalGBP)}
               </span>
             </div>
             <div className="flex flex-col gap-3">
@@ -1176,7 +1168,7 @@ function GapRow({
             {gap.category}
           </span>
           <span className="text-[13px] text-secondary tabular-nums">
-            {formatPounds(gap.estimateGBP)}
+            {formatExactGBP(gap.estimateGBP)}
           </span>
         </div>
         <div className={`text-[11.5px] text-muted ${products.length > 0 ? "pl-5" : ""}`}>
@@ -1203,7 +1195,7 @@ function GapRow({
                 {humaniseProduct(product.description)}
               </span>
               <span className="text-[12px] text-muted tabular-nums shrink-0">
-                {formatPounds(product.spendGBP)}
+                {formatExactGBP(product.spendGBP)}
               </span>
             </div>
           ))}
@@ -1252,7 +1244,7 @@ function CategoryChart({ report }: { report: Report }) {
             <SectionBadge kind="upsell" />
           </h3>
           <span className="text-[14px] font-medium text-foreground tabular-nums">
-            {formatPounds(totalGBP)}
+            {formatExactGBP(totalGBP)}
           </span>
         </div>
         <div className="flex flex-col gap-3.5">
@@ -1269,7 +1261,7 @@ function CategoryChart({ report }: { report: Report }) {
                 />
               </div>
               <span className="text-right text-[13px] text-foreground tabular-nums">
-                {formatPounds(row.value)}
+                {formatExactGBP(row.value)}
               </span>
             </div>
           ))}

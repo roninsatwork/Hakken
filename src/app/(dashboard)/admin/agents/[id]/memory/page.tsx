@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { formatUpToGBP } from "@/src/lib/currency";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -126,7 +127,7 @@ function getReviewTypeLabel(value: string) {
 
 function formatCostGBP(value?: number) {
   if (typeof value !== "number") return null;
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 4 }).format(value);
+  return formatUpToGBP(value);
 }
 
 function formatPatchValue(value: unknown, unpreviewableLabel: string) {
