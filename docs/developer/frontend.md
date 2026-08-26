@@ -52,19 +52,28 @@ System settings can override branding, fonts, colors, and text sizing in support
 
 Use dense, scannable layouts for operational screens. Admin and SaaS surfaces should prioritize tables, tabs, forms, filters, and compact evidence over decorative hero sections. Cards should represent repeated items or framed tools, not every page section.
 
-## Shared Components
-
 ## File Naming
 
 Component files are **PascalCase**, matching the component they export:
 `Button.tsx`, `KnowledgeManager.tsx`, `SidebarNavTrees.tsx`. Hooks keep their
 own convention (`useAdminAction.ts` — the `use` prefix is the rule), and Next's
 structural names (`page.tsx`, `layout.tsx`, kebab-case route segments) are the
-framework's, not ours. Measured on 2026-08-26 this was already the tree's
-overwhelming practice — 302 PascalCase component files against 7 stragglers —
-so the rule writes down what won rather than imposing something new.
+framework's, not ours.
+
+Measured on 2026-08-26, of the component files the rule governs — non-test
+`.tsx` under `src/` — 230 were PascalCase against 7 stragglers, alongside 202
+structural names. So the rule writes down what had already won rather than
+imposing something new. (An earlier figure of 302 counted test files, which the
+guard excludes; it described a different population from the one being ruled
+on.)
+
 `src/file-naming-drift.test.ts` enforces it: the seven pre-rule files are
 frozen on a shrink-only list, and any new non-conforming file fails the build.
+The structural exemption applies inside `src/app/` only — outside the router
+tree, `error.tsx` or `template.tsx` is an ordinary component with an ordinary
+name, and is held to the rule like any other.
+
+## Shared Components
 
 Prefer existing shared components before creating page-local variants:
 

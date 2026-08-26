@@ -37,8 +37,20 @@ const FROZEN = new Set([
   'src/e2e/convexReactMock.tsx',
 ]);
 
-function conforms(basename: string): boolean {
-  if (STRUCTURAL.has(basename)) return true;
+/**
+ * Next.js reserves these names, but only where Next reads them: inside the app
+ * router tree. Matching on the basename alone exempted them anywhere under
+ * `src/` — and `error`, `template`, `default`, `icon` and `loading` are all
+ * attractive names for an ordinary component, so the rule had a hole shaped
+ * like its own exemption list.
+ */
+function isStructural(file: string, basename: string): boolean {
+  if (!STRUCTURAL.has(basename)) return false;
+  return file.startsWith('src/app/') || basename === 'middleware';
+}
+
+function conforms(file: string, basename: string): boolean {
+  if (isStructural(file, basename)) return true;
   if (/^use[A-Z]/.test(basename)) return true;
   return /^[A-Z][A-Za-z0-9]*$/.test(basename);
 }
@@ -47,7 +59,7 @@ describe('component file naming holds', () => {
   const nonConforming = walkFiles(path.join(repoRoot, 'src'), new Set(['.tsx']))
     .map((file) => relativePath(file).replaceAll(path.sep, '/'))
     .filter((file) => !file.endsWith('.test.tsx'))
-    .filter((file) => !conforms(path.basename(file, '.tsx')));
+    .filter((file) => !conforms(file, path.basename(file, '.tsx')));
 
   test('no new non-PascalCase component file appears', () => {
     const offenders = nonConforming.filter((file) => !FROZEN.has(file));

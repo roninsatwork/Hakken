@@ -93,9 +93,15 @@ function countDrift() {
 /*
  * History: ~2,039 before the theme compliance plan; 1,231 recorded
  * 2026-08-10 after Phases 2 and 4 migrated the top offender screens and
- * extracted the movements/chart palettes.
+ * extracted the movements/chart palettes; 1,052 recorded 2026-08-26.
+ *
+ * The 2026-08-26 drop is bookkeeping, not a migration. The count had been
+ * 1,052 for some time while the baseline still read 1,231, leaving 179 units
+ * of slack — room for that many new hardcoded colours to land without
+ * anything failing. A ratchet with slack in it is not a ratchet, and the
+ * palette work that should have lowered it left it alone deliberately.
  */
-const DRIFT_BASELINE = 1231;
+const DRIFT_BASELINE = 1052;
 
 /**
  * Files allowed to keep a local `get*Color`-style helper: one maps patch
