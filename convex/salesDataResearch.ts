@@ -30,6 +30,7 @@ import {
   recordCompletedToolCall,
 } from "./aiToolIdempotencyService";
 import { appError } from "./utils/appError";
+import * as salesResearchShapes from "./utils/salesResearchShapes";
 
 /**
  * What the research agent is allowed to read and write.
@@ -601,6 +602,7 @@ async function writeCustomerField(
  */
 export const listCustomerResearch = tenantQuery({
   args: { accountNameKey: v.string() },
+  returns: salesResearchShapes.customerResearchShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const rows = await loadResearchRows(ctx, companyId, args.accountNameKey);
@@ -1127,6 +1129,7 @@ export const recordProspect = internalMutation({
  */
 export const getProspect = tenantQuery({
   args: { prospectKey: v.string() },
+  returns: salesResearchShapes.prospectProfileShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const prospect = await ctx.db
@@ -1169,6 +1172,7 @@ export const getProspect = tenantQuery({
  */
 export const listGroupProspects = tenantQuery({
   args: { groupName: v.string() },
+  returns: salesResearchShapes.groupProspectListShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const groupNameKey = normalizeKey(args.groupName);
@@ -1198,6 +1202,7 @@ export const listGroupProspects = tenantQuery({
  */
 export const dismissProspect = tenantMutation({
   args: { prospectKey: v.string() },
+  returns: salesResearchShapes.prospectDismissalShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const prospect = await ctx.db
@@ -1371,6 +1376,7 @@ async function queueResearchRun(
 /** Research one customer, from the button on their profile. */
 export const startCustomerResearch = tenantMutation({
   args: { accountNameKey: v.string() },
+  returns: salesResearchShapes.researchStartShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -1675,6 +1681,7 @@ export const provisionResearchWorkers = internalMutation({
  */
 export const startCustomerResearchSweep = tenantMutation({
   args: {},
+  returns: salesResearchShapes.sweepStartShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -1748,6 +1755,7 @@ export const startProspectingSweep = tenantMutation({
     /** Only the groups nobody has looked at yet. Off by default; see above. */
     unsearchedOnly: v.optional(v.boolean()),
   },
+  returns: salesResearchShapes.sweepStartShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -1851,6 +1859,7 @@ export const decideResearchFinding = tenantMutation({
     researchId: v.id("salesDataCustomerResearch"),
     decision: v.union(v.literal("accept"), v.literal("discard")),
   },
+  returns: salesResearchShapes.researchDecisionShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const row = await ctx.db.get(args.researchId);

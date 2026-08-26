@@ -8,6 +8,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
 import { appError } from "./utils/appError";
+import * as companyEvalShapes from "./utils/companyEvalShapes";
 import { rowShape } from "./utils/rowShape";
 
 const CASE_NAME_MAX_CHARS = 140;
@@ -368,6 +369,7 @@ export const getSummary = adminQuery({
     // list added to and edited by hand rather than written for it.
     companyId: v.optional(v.id("companies")),
   },
+  returns: companyEvalShapes.evalSummaryShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -422,6 +424,7 @@ export const getCasesForCompany = adminQuery({
       v.union(v.literal("PASSED"), v.literal("FAILED"), v.literal("NOT_RUN"))
     ),
   },
+  returns: companyEvalShapes.evalCasePageShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const status = (args.status ?? "ACTIVE") as Doc<"companyEvalCases">["status"];
@@ -471,6 +474,7 @@ export const getRunsForCase = adminQuery({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
+  returns: companyEvalShapes.evalRunListShape,
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
     if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");
@@ -503,6 +507,7 @@ export const createCase = adminMutation({
     forbiddenClaimsJson: v.optional(v.string()),
     sampleCount: v.optional(v.number()),
   },
+  returns: v.id("companyEvalCases"),
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const now = Date.now();
@@ -581,6 +586,7 @@ export const updateCase = adminMutation({
     forbiddenClaimsJson: v.optional(v.string()),
     sampleCount: v.optional(v.number()),
   },
+  returns: v.id("companyEvalCases"),
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
     if (!evalCase || evalCase.status !== "ACTIVE") throw appError("NOT_FOUND", "Eval case not found");
@@ -651,6 +657,7 @@ export const createStarterCases = adminMutation({
   args: {
     companyId: v.id("companies"),
   },
+  returns: companyEvalShapes.starterCasesShape,
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const now = Date.now();
@@ -721,6 +728,7 @@ export const deleteCase = adminMutation({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
+  returns: companyEvalShapes.caseDeletionShape,
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
     if (!evalCase) throw appError("NOT_FOUND", "Check not found");
@@ -850,6 +858,7 @@ export const getBatchEstimate = adminQuery({
     companyId: v.optional(v.id("companies")),
     mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
   },
+  returns: companyEvalShapes.batchEstimateShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 

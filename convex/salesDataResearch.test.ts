@@ -1853,3 +1853,37 @@ describe("provisioning the two workers", () => {
     expect(state.fillerPrompt).toContain("pupils for a school, bedrooms for a care home");
   });
 });
+
+describe("the prospect profile read", () => {
+  /**
+   * `getProspect` had no caller anywhere — no test and no screen — so its
+   * declared shape was checked by the compiler alone, and the compiler cannot
+   * see a field a handler sends that the declaration does not name.
+   */
+  test("it answers with the prospect, and with nothing for an unknown key", async () => {
+    const { t, comax } = await seed();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("salesDataProspects", {
+        companyId: comax.companyId,
+        prospectKey: "seaview-lodge",
+        siteName: "Seaview Lodge",
+        groupName: "Daish's Hotels",
+        groupNameKey: "daishs-hotels",
+        customerType: "HOTELS",
+        customerTypeKey: "hotels",
+        town: "Eastbourne",
+        status: "NEW",
+        origin: "EXISTING_CHAIN",
+        foundAt: 1,
+      });
+    });
+
+    const client = t.withIdentity({ subject: comax.userId });
+
+    expect(await client.query(api.salesDataResearch.getProspect, { prospectKey: "seaview-lodge" }))
+      .toMatchObject({ siteName: "Seaview Lodge", town: "Eastbourne", status: "NEW", postcode: null });
+    expect(await client.query(api.salesDataResearch.getProspect, { prospectKey: "no-such-site" }))
+      .toBeNull();
+  });
+});

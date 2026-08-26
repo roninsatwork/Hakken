@@ -471,3 +471,27 @@ describe("Company Evals", () => {
     expect(run.resolvedDriftCount).toBe(0);
   });
 });
+
+describe("the starter checks door", () => {
+  test("it reports how many it wrote, and writes none the second time", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Starter Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "starter@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      return { adminId, companyId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    const first = await client.mutation(api.companyEvals.createStarterCases, { companyId });
+    const second = await client.mutation(api.companyEvals.createStarterCases, { companyId });
+
+    expect(first.created).toBeGreaterThan(0);
+    expect(second).toEqual({ created: 0 });
+  });
+});

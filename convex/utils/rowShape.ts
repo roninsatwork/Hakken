@@ -32,6 +32,7 @@ export const rowShape = {
   aiTools: v.object({ ...whole("aiTools"), _id: v.id("aiTools") }),
   companies: v.object({ ...whole("companies"), _id: v.id("companies") }),
   companyEvalCases: v.object({ ...whole("companyEvalCases"), _id: v.id("companyEvalCases") }),
+  companyEvalRuns: v.object({ ...whole("companyEvalRuns"), _id: v.id("companyEvalRuns") }),
   companyMemories: v.object({ ...whole("companyMemories"), _id: v.id("companyMemories") }),
   companySkillBindings: v.object({ ...whole("companySkillBindings"), _id: v.id("companySkillBindings") }),
   companySkills: v.object({ ...whole("companySkills"), _id: v.id("companySkills") }),

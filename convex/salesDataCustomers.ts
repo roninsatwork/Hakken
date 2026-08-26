@@ -15,6 +15,7 @@ import {
   searchTerms,
 } from "./salesData";
 import { extraFieldForType } from "./salesDataCustomerFields";
+import * as salesCustomerShapes from "./utils/salesCustomerShapes";
 import { supersedeResearchForFields } from "./salesDataResearch";
 import { RESEARCHABLE_FIELDS, type ResearchField } from "./salesDataResearchService";
 import { appError } from "./utils/appError";
@@ -329,6 +330,7 @@ export async function resolveSubject(
  */
 export const listCustomers = tenantQuery({
   args: { paginationOpts: paginationOptsValidator, ...customerFilterArgs },
+  returns: salesCustomerShapes.customerListPageShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -469,6 +471,7 @@ export const listCustomers = tenantQuery({
 /** The values behind the customer list's two dropdowns. */
 export const listCustomerFilterOptions = tenantQuery({
   args: {},
+  returns: salesCustomerShapes.customerFilterOptionsShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -510,6 +513,7 @@ export { extraFieldForType };
  */
 export const getCustomer = tenantQuery({
   args: { accountNameKey: v.string() },
+  returns: salesCustomerShapes.customerProfileShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -571,6 +575,7 @@ export const getCustomer = tenantQuery({
 /** The other accounts in the same chain, for the profile's chain list. */
 export const listChainMembers = tenantQuery({
   args: { accountNameKey: v.string() },
+  returns: salesCustomerShapes.chainMemberListShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -640,6 +645,7 @@ export const saveCustomerDetails = tenantMutation({
     pupils: v.optional(v.number()),
     notes: v.optional(v.string()),
   },
+  returns: v.id("salesDataCustomers"),
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const userId = ctx.userId;
@@ -743,6 +749,7 @@ function periodValue(row: Doc<"salesDataRows">, index: number): number | undefin
  */
 export const listCustomerSalesByMonth = tenantQuery({
   args: { accountNameKey: v.string() },
+  returns: salesCustomerShapes.customerSalesByMonthShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -792,6 +799,7 @@ export const listCustomerSalesByMonth = tenantQuery({
 /** The product lines behind one month for one customer. */
 export const listCustomerSalesForMonth = tenantQuery({
   args: { accountNameKey: v.string(), periodIndex: v.number() },
+  returns: salesCustomerShapes.customerSalesForMonthShape,
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -844,6 +852,7 @@ const CUSTOMER_ROW_LIMIT = 1000;
 /** How many customers the workspace has, for the heading. */
 export const countCustomers = tenantQuery({
   args: {},
+  returns: salesCustomerShapes.customerCountsShape,
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
