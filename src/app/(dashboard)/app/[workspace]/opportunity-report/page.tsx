@@ -15,6 +15,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import {
+  CHART_EXPORT_BACKGROUND,
+} from "@/src/ui/components/charts/chartPalette";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import Header from "@/src/ui/components/layout/Header";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
@@ -129,7 +133,7 @@ export default function OpportunityReportPage() {
       const canvas = await html2canvas(pdfRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: "#0d0d0d",
+        backgroundColor: CHART_EXPORT_BACKGROUND,
       });
       const link = document.createElement("a");
       link.download = `opportunity-report-${new Date().toISOString().split("T")[0]}.png`;
@@ -230,6 +234,7 @@ export default function OpportunityReportPage() {
 function RunBar({ report }: { report: Report | null }) {
   const t = useTranslations("salesData.opportunityReport");
   const startReport = useMutation(api.salesOpportunityReports.startOpportunityReport);
+  const action = useAdminAction({ scope: "app-opportunity-report-start" });
   const [message, setMessage] = useState<string | null>(null);
   const isRunning = report?.status === "RUNNING";
 
@@ -249,11 +254,14 @@ function RunBar({ report }: { report: Report | null }) {
 
   const onPress = async () => {
     setMessage(null);
-    try {
-      const result = await startReport({});
-      if (result.alreadyRunning) setMessage(t("alreadyRunning"));
-    } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+    const outcome = await action.run(() => startReport({}), {
+      suppressErrorToast: true,
+      fallbackMessage: t("startFailed"),
+    });
+    if (outcome.ok) {
+      if (outcome.data.alreadyRunning) setMessage(t("alreadyRunning"));
+    } else if (outcome.message) {
+      setMessage(outcome.message);
     }
   };
 

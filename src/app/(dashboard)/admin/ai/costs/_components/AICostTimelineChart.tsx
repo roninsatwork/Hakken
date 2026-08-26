@@ -1,4 +1,7 @@
 import { motion } from "framer-motion";
+import {
+  CHART_SERIES_ROSE,
+} from "@/src/ui/components/charts/chartPalette";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
@@ -41,8 +44,8 @@ export function AICostTimelineChart({
                 <AreaChart data={timeline}>
                   <defs>
                     <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                      <stop offset="5%" stopColor={CHART_SERIES_ROSE} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={CHART_SERIES_ROSE} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
@@ -73,7 +76,7 @@ export function AICostTimelineChart({
                   <Area isAnimationActive={false}
                     type="monotone"
                     dataKey="cost"
-                    stroke="#f43f5e"
+                    stroke={CHART_SERIES_ROSE}
                     strokeWidth={3}
                     fillOpacity={1}
                     fill="url(#colorCost)"

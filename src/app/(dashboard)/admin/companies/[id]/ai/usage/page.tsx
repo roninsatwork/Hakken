@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  CHART_SERIES_EMERALD,
+  CHART_SERIES_VIOLET,
+} from "@/src/ui/components/charts/chartPalette";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -228,12 +232,12 @@ export default function CompanyAiUsagePage() {
                     <AreaChart data={data.timeline}>
                       <defs>
                         <linearGradient id="colorInternal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                          <stop offset="5%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0.1} />
+                          <stop offset="95%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorExternal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          <stop offset="5%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0.1} />
+                          <stop offset="95%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis
@@ -267,7 +271,7 @@ export default function CompanyAiUsagePage() {
                         yAxisId="left"
                         type="monotone"
                         dataKey="internalMessages"
-                        stroke="#8b5cf6"
+                        stroke={CHART_SERIES_VIOLET}
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorInternal)"
@@ -276,7 +280,7 @@ export default function CompanyAiUsagePage() {
                         yAxisId="left"
                         type="monotone"
                         dataKey="externalMessages"
-                        stroke="#10b981"
+                        stroke={CHART_SERIES_EMERALD}
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorExternal)"

@@ -8,6 +8,11 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { ArrowRight, LayoutDashboard, MailPlus, Users } from "lucide-react";
+import {
+  CHART_ENGAGEMENT_NONE,
+  CHART_ENGAGEMENT_RAMP,
+  CHART_PRIMARY_BLUE,
+} from "@/src/ui/components/charts/chartPalette";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
@@ -84,12 +89,12 @@ function describeLastSeen(lastSeenAt?: number) {
  * against this card's own surface.
  */
 const SIGN_IN_BANDS = [
-  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: "#4d4d52" },
-  { key: "oneSession", labelKey: "bands.oneSession", fill: "#256abf" },
-  { key: "twoSessions", labelKey: "bands.twoSessions", fill: "#3987e5" },
-  { key: "threeSessions", labelKey: "bands.threeSessions", fill: "#6da7ec" },
-  { key: "fourSessions", labelKey: "bands.fourSessions", fill: "#9ec5f4" },
-  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: "#cde2fb" },
+  { key: "didNotSignIn", labelKey: "bands.didNotSignIn", fill: CHART_ENGAGEMENT_NONE },
+  { key: "oneSession", labelKey: "bands.oneSession", fill: CHART_ENGAGEMENT_RAMP[0] },
+  { key: "twoSessions", labelKey: "bands.twoSessions", fill: CHART_ENGAGEMENT_RAMP[1] },
+  { key: "threeSessions", labelKey: "bands.threeSessions", fill: CHART_ENGAGEMENT_RAMP[2] },
+  { key: "fourSessions", labelKey: "bands.fourSessions", fill: CHART_ENGAGEMENT_RAMP[3] },
+  { key: "fivePlusSessions", labelKey: "bands.fivePlusSessions", fill: CHART_ENGAGEMENT_RAMP[4] },
 ] as const;
 
 function formatDay(day: string, locale = "en-GB") {
@@ -320,7 +325,7 @@ export default function CompanyDashboardPage() {
                     left blank, so the gap is visible as a gap. */}
                 <Bar dataKey="questions" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                   {engagement.daily.map((entry) => (
-                    <Cell key={entry.day} fill={entry.questions > 0 ? "#3987e5" : "#4d4d52"} />
+                    <Cell key={entry.day} fill={entry.questions > 0 ? CHART_PRIMARY_BLUE : CHART_ENGAGEMENT_NONE} />
                   ))}
                 </Bar>
               </BarChart>

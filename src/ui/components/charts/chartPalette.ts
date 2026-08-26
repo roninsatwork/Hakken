@@ -13,16 +13,28 @@ export const CHART_SERIES_TEAL = "#14b8a6";
 export const CHART_SERIES_ORANGE = "#f97316";
 export const CHART_SERIES_SLATE = "#94a3b8";
 
-/** Canonical series order. Charts may slice or reorder for local needs. */
+/**
+ * Canonical series order. Charts may slice or reorder for local needs.
+ *
+ * Ordered so no two adjacent series are a red/green pair. The owner cannot
+ * tell red from green, and the previous order put emerald at index 1 directly
+ * before rose at index 2 — the first two slices of every pie and the first two
+ * bars of every stack, in the one combination he cannot read. The engagement
+ * ramp below was designed around that from the start; this had not been.
+ *
+ * Reordering reshuffles the colours of existing charts once. That is the cost,
+ * and it is worth paying: the alternative is a legend that only works for
+ * other people.
+ */
 export const CHART_SERIES_PALETTE = [
   CHART_SERIES_VIOLET,
-  CHART_SERIES_EMERALD,
-  CHART_SERIES_ROSE,
-  CHART_SERIES_BLUE,
   CHART_SERIES_AMBER,
+  CHART_SERIES_BLUE,
+  CHART_SERIES_ROSE,
   CHART_SERIES_TEAL,
   CHART_SERIES_ORANGE,
   CHART_SERIES_SLATE,
+  CHART_SERIES_EMERALD,
 ] as const;
 
 /**

@@ -7,6 +7,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  CHART_SERIES_ROSE,
+  CHART_SERIES_VIOLET,
+} from "@/src/ui/components/charts/chartPalette";
 import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -37,12 +41,12 @@ export function OrganizationUsagePlot({
       <AreaChart data={timeline}>
         <defs>
           <linearGradient id="colorCostOrg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
-            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+            <stop offset="5%" stopColor={CHART_SERIES_ROSE} stopOpacity={0.2} />
+            <stop offset="95%" stopColor={CHART_SERIES_ROSE} stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorMsgOrg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
-            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+            <stop offset="5%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0.1} />
+            <stop offset="95%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#888888" }} dy={10} />
@@ -86,7 +90,7 @@ export function OrganizationUsagePlot({
           yAxisId="left"
           type="monotone"
           dataKey="cost"
-          stroke="#f43f5e"
+          stroke={CHART_SERIES_ROSE}
           strokeWidth={3}
           fillOpacity={1}
           fill="url(#colorCostOrg)"
@@ -96,7 +100,7 @@ export function OrganizationUsagePlot({
           yAxisId="right"
           type="monotone"
           dataKey="messages"
-          stroke="#8b5cf6"
+          stroke={CHART_SERIES_VIOLET}
           strokeWidth={3}
           fillOpacity={1}
           fill="url(#colorMsgOrg)"
