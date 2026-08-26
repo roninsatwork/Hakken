@@ -7,7 +7,7 @@ Read this before changing purge schedules, retention floors, purge recursion, pu
 ## Product Surface
 
 - `src/app/(dashboard)/admin/settings/page.tsx` includes the Settings `purges` tab.
-- `src/app/(dashboard)/admin/settings/_components/PurgesSettingsSection.tsx` renders pipeline configuration, manual purge actions, cancellation, and recent purge history.
+- `src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx` renders pipeline configuration, manual purge actions, cancellation, and recent purge history.
 - `convex/purges.ts` owns unified purge configuration, history, manual runs, scheduled dispatch, recursive deletion, and cancellation.
 - `convex/purgeScheduleService.ts` owns purge defaults, parsing, retention validation, cutoff calculation, and next-run calculation.
 - `convex/auditLogs.ts` owns the older audit-specific purge config, dispatcher, and recursive audit-log deletion.

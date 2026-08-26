@@ -155,3 +155,23 @@ if (coverageFailures.length > 0) {
   for (const failure of coverageFailures) console.error(`- ${failure}`);
   process.exit(1);
 }
+
+// `nextRatchet` was written as the target the floors should climb to, and then
+// nothing read it — the file promised a ratchet-up that never happened. When
+// the measured platform coverage clears a target, say so loudly; raising
+// `current` (and `floor`) in coverage-thresholds.json stays a deliberate,
+// reviewed edit rather than something this script does behind anyone's back.
+if (config.nextRatchet) {
+  const ready = rows.filter(
+    ({ metric, actual }) =>
+      config.nextRatchet[metric] !== undefined && actual >= config.nextRatchet[metric],
+  );
+  if (ready.length > 0) {
+    console.log("\nCoverage has cleared its next ratchet target:");
+    for (const { metric, actual } of ready) {
+      console.log(
+        `- ${metric}: platform ${formatPercent(actual)} ≥ target ${formatPercent(config.nextRatchet[metric])} — raise current/floor in coverage-thresholds.json`,
+      );
+    }
+  }
+}

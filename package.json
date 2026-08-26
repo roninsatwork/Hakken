@@ -165,7 +165,6 @@
     "@tensorflow/tfjs-converter": "^4.22.0",
     "@tensorflow/tfjs-core": "^4.22.0",
     "@xyflow/react": "^12.11.0",
-    "apify-client": "^2.23.3",
     "clsx": "^2.1.1",
     "convex": "^1.40.0",
     "convex-helpers": "^0.1.120",
@@ -188,7 +187,6 @@
     "react-webcam": "^7.2.0",
     "recharts": "^3.8.1",
     "remark-gfm": "^4.0.1",
-    "resend": "^6.12.4",
     "tailwind-merge": "^3.6.0",
     "three": "^0.184.0"
   },

@@ -43,7 +43,7 @@ The editor initializes new company widgets with the current form defaults when n
 
 The shared widget configuration component map is:
 
-- `src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs.tsx` renders the sticky tab rail for `Appearance`, `Welcome Screen`, `Conversation Starters`, `Greeting`, and `Integration`.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetConfigScreen.tsx` renders the sticky tab rail for `Appearance`, `Welcome Screen`, `Conversation Starters`, `Greeting`, and `Integration`.
 - `src/app/(dashboard)/admin/_features/widget-config/WidgetPanel.tsx` is the common section frame used by the company widget editor panels.
 - `src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState.tsx` shows the unconfigured-widget state and calls the same create/update handler used by publishing.
 - `src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection.tsx` edits the public widget name, primary color text/color inputs, logo upload/removal, input placeholder, sound notifications, and popup preview toggle.

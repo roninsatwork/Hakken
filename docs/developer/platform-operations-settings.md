@@ -8,7 +8,7 @@ Platform operations settings cover API keys, webhook delivery internals, mainten
 - Each section is its own route and saves only itself: `(system)/identity`, `(system)/identity/aesthetics`, `(system)/security`, `(system)/security/retention`, and `(system)/options` plus `self-improvement`, `approvals`.
 - `src/app/(dashboard)/admin/settings/page.tsx` is now only an entry point: it forwards `/admin/settings` and every legacy `?tab=` link to the route that replaced it, using `_components/settingsTabs.ts`.
 - `src/app/(dashboard)/admin/settings/_components/useSystemSettingsForm.ts` holds the `systemSettings` document for the three screens that write it (Core Identity, Global Aesthetics, Developer Diagnostics), each with its own save.
-- `src/app/(dashboard)/admin/settings/_components/PurgesSettingsSection.tsx` renders unified purge configuration, manual purge confirmation, cancellation, and recent purge history.
+- `src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx` renders unified purge configuration, manual purge confirmation, cancellation, and recent purge history.
 - `src/app/(dashboard)/admin/settings/analytics/page.tsx` manages the global analytics tracking id and renders seven-day analytics data-health checks.
 - `src/app/(dashboard)/admin/settings/api-keys/page.tsx` manages tenant-scoped API keys.
 - `src/app/(dashboard)/admin/settings/scripts/page.tsx` lists allowlisted maintenance scripts.

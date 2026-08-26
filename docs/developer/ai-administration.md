@@ -37,7 +37,7 @@ Company AI routes use the same backend tables but pass a company id and apply co
 - `src/app/(dashboard)/admin/companies/[id]/ai/unanswered/page.tsx` renders company unanswered Wiki demand.
 - `src/app/(dashboard)/admin/companies/[id]/ai/saved-answers/page.tsx` redirects to the company Wiki pages route; saved answers were folded into Wiki pages with chat receipts.
 - `src/app/(dashboard)/admin/companies/[id]/ai/money/page.tsx` renders company-scoped money view.
-- `src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx` expose company chat-log review paths.
+- `src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx` expose company chat-log review paths.
 - `src/app/(dashboard)/admin/companies/[id]/calls/**` and `src/app/(dashboard)/admin/companies/[id]/mailbox/page.tsx` expose company calls and mailbox operations to platform operators.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the company widget.
 

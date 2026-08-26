@@ -102,3 +102,17 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 The 2026-07-30 documentation coverage audit found no high-priority missing developer guide pair for the main routed product families, non-generated Convex module families, schema-backed platform areas, shared frontend modules, or operator-facing scripts reviewed in that pass. It did find stale index coverage for active plans, which is now tracked in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).
 
 Future documentation upkeep should still treat newly changed implementation areas and active plans as audit targets. Coverage can drift when routes, Convex modules, workflows, scripts, settings, public website pages, or operator procedures change.
+
+## Tooling Notes
+
+`knip` checks for orphaned files and, since 2026-08-26, unused and unlisted
+dependencies — its `ignoreDependencies` was `.*`, which switched that half of
+the tool off entirely. It now names five exceptions, each with a reason:
+`tailwindcss` (used by the CSS build, invisible to import analysis), `esbuild`
+and `playwright` (imported by the frozen movement-debug scripts, whose
+manifest entries are transitive and whose files are out of bounds), and
+`google-auth-library` and `ws` (dependencies of `services/voice-relay`, which
+carries its own `package.json`). Two genuinely dead dependencies found by
+switching it on — `apify-client`, replaced by the plain-fetch `apifyRest`, and
+the `resend` npm package, superseded by the `@auth/core` provider — were
+removed the same day.

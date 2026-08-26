@@ -84,11 +84,11 @@ Prefer existing shared components before creating page-local variants:
   `src/ui/components/charts/ChartTooltip.tsx`.
 - Workflows: `WorkflowSidebar`, `ConfigDrawer`, `AgentEditorModal`, node components, and workflow types.
 - Settings: `JsonSchemaBuilder`, settings sections, white-label components.
-- Navigation: `Header`, `SidebarNavigation`, `src/ui/components/layout/ThemeToggle.tsx`, and `src/ui/components/TimeframeDropdown.tsx`.
+- Navigation: `Header`, `SidebarNavigation`, and the workspace switcher in the sidebar. Theme selection lives in the profile's preferences, not a standalone toggle.
 
-`src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`. `src/ui/components/layout/FluidBackground.tsx` is used by the public landing and login routes for the animated background layer.
+`src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`. 
 
-`src/app/(dashboard)/demos/movements/_components/Robot.tsx` is the generated `gltfjsx` component for the frozen movement demo; keep it inside that demo boundary. `src/ui/components/header.tsx` and `src/ui/components/footer.tsx` are legacy public-shell components and are not the authenticated dashboard header/footer. Prefer `src/ui/components/layout/Header.tsx` and the route-specific dashboard shell for active app work.
+The movement demo's generated `gltfjsx` avatar components live inside the demo boundary; keep them there. The authenticated dashboard header is `src/ui/components/layout/Header.tsx`; the old public-shell `header.tsx`/`footer.tsx` pair no longer exists.
 
 Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use Sonae modal or inline feedback patterns.
 

@@ -6,7 +6,7 @@ Read this before changing audit log schema, audit feed behavior, audit detail ro
 
 ## Product Surface
 
-- `src/app/(dashboard)/admin/settings/_components/AuditLogsTable.tsx` renders the audit feed inside System Settings.
+- `src/ui/components/governance/AuditLogsTable.tsx` renders the audit feed inside System Settings.
 - `src/app/(dashboard)/admin/audit-logs/[id]/page.tsx` renders one audit log detail from the recent feed.
 - `convex/auditLogs.ts` owns the internal log helper, audit purge config, audit purge dispatcher, recursive audit purge, and recent log reads.
 - `convex/auditLogService.ts` owns audit purge config helpers, monthly schedule calculations, cutoff calculation, serialization, and actor-name enrichment.
@@ -126,7 +126,7 @@ Focused tests include:
 - `convex/auditLogs.test.ts` for super-admin access, non-super-admin empty/null behavior, config update, and actor-name enrichment in recent logs.
 - `convex/auditLogService.test.ts` for default config parsing, persisted config parsing, next/following monthly schedule calculations, cutoff calculation, serialization, and actor-name fallbacks.
 - Feature-specific tests that assert audit rows in modules such as users, companies, agents, API keys, releases, workflows, widgets, knowledge, settings, maintenance scripts, and purges.
-- `src/app/(dashboard)/admin/settings/_components/AuditLogsTable.test.tsx` for loading, empty/mock, search, and row rendering behavior.
+- `src/ui/components/governance/AuditLogsTable.test.tsx` for loading, empty/mock, search, and row rendering behavior.
 
 For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
 

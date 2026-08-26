@@ -308,23 +308,11 @@ jobs:
       - name: Run browser tests
         run: npm run test:e2e
 
-      - name: Run coverage
-        run: npm run test:coverage
-
-      # No skip-if-missing escape hatch: a missing coverage summary means the
-      # coverage run failed, which must fail the gate rather than pass it.
-      - name: Check coverage thresholds
-        run: npm run coverage:check
-
-      - name: Upload coverage report
-        # Only when something failed. A 28MB upload after every green check was
-        # paid for and never opened.
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          if-no-files-found: ignore
+      # Coverage is not run here. The Checks job runs the full unit suite with
+      # coverage and enforces the thresholds on every PR — including PRs into
+      # main — and both jobs block the merge, so a second run here re-tested
+      # the same commit for several metered minutes and could only ever agree.
+      # This job's value on a main PR is the full browser suite above.
 
       - name: Upload Playwright report
         if: failure()

@@ -54,8 +54,11 @@ instead of running beside it.
 **Full Gate** — only on PRs into `main`, adding the browser suite:
 
 1. `npm run test:e2e`
-2. `npm run test:coverage`
-3. `npm run coverage:check`
+
+Coverage is not repeated here: the Checks job runs the full unit suite with
+coverage and enforces the thresholds on every PR — including PRs into `main` —
+and both jobs block the merge, so a second run on the same commit bought
+nothing but metered minutes. Deduplicated 2026-08-26.
 
 Coverage is enforced on `dev` too, not just on the way to `main`, because `dev`
 previously accumulated changes with no coverage enforcement at all.

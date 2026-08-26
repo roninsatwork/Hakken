@@ -333,6 +333,46 @@ fixed. Add to this as you go.
 
 ---
 
+## The softQuery proposal (WP14 item 5 — Anthony's decision, not built)
+
+**What Alessandro saw.** Twelve of the forty-one `public*` declarations carry
+the identical copy-pasted reason: *"Returns an empty result rather than
+throwing when the caller lacks a session or the required role… Role filtering
+happens inside the handler."* These are not really public endpoints — they are
+authenticated queries that deliberately soft-fail so screens can render an
+empty state instead of an error. Calling them `public` blurs the register:
+a reviewer scanning for genuinely unauthenticated surface has to read twelve
+reasons to find the ones that matter (the widget, kiosk and sign-in paths).
+
+**The proposal.** A fourth builder in `convex/tenantFunctions.ts`:
+
+    softQuery({
+      args,
+      returns,
+      empty,            // what to return when there is no qualifying caller
+      minimumRole?,     // e.g. "SUPER_ADMIN" — checked for you
+      handler(ctx, args) // ctx.user is present and role-checked when it runs
+    })
+
+It resolves the caller itself; if there is no session or the role falls short
+it returns `empty` without invoking the handler. The twelve soft queries
+migrate, their hand-rolled `if (!current) return 0`-style preludes disappear,
+and `public*` shrinks to the twenty-nine genuinely public declarations, each
+with a reason that is actually about being public.
+
+**What the enforcement test gains.** `authzEnforcement.test.ts` can then hold
+three honest registers instead of two: public (reason required, list shrinks),
+soft (empty-on-unauthorised by construction), guarded (throws). Today the
+soft twelve sit in the public register diluting it.
+
+**Why it is his call.** The builders in `tenantFunctions.ts` are the
+crown-jewel layer — the one place authorisation happens — and adding a builder
+there changes what a reviewer must understand about every query in the system.
+The migration itself is mechanical (twelve sites, each shedding two lines),
+but the layer it touches is the one we do not change quietly.
+
+**Cost if approved:** about half a day including the register test changes.
+
 ## Per-package status
 
 Update this table (and nothing else in this section) as work proceeds. States:

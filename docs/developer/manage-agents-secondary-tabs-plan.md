@@ -58,7 +58,7 @@ Rationale:
 Primary files:
 
 - `src/app/(dashboard)/admin/agents/[id]/layout.tsx`
-- `src/app/(dashboard)/admin/_components/AdminDetailTabs.tsx`
+- `src/ui/components/screens/DetailTabs.tsx`
 - `src/app/(dashboard)/admin/agents/[id]/layout.test.tsx`
 - `messages/en.json`
 - `messages/it.json`

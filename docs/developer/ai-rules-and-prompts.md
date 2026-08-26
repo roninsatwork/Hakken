@@ -29,7 +29,7 @@ Shared UI:
 
 - `src/app/(dashboard)/admin/_components/AdminRulesTable.tsx` renders the reusable rule table.
 - `src/app/(dashboard)/admin/_components/AiRuleSafetyWarning.tsx` detects risky rule or prompt wording client-side and displays warning categories.
-- `src/app/(dashboard)/admin/_lib/pagination.ts` supplies the 15-row admin page size used by rule lists.
+- `src/ui/components/screens/pagination.ts` supplies the 15-row admin page size used by rule lists.
 
 ## Backend Modules
 

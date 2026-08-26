@@ -24,9 +24,11 @@
     "**/*.testFixtures.ts"
   ],
   "ignoreDependencies": [
-    ".*"
+    "tailwindcss",
+    "esbuild",
+    "playwright",
+    "google-auth-library",
+    "ws"
   ],
-  "ignoreBinaries": [
-    ".*"
-  ]
+  "ignoreBinaries": []
 }
