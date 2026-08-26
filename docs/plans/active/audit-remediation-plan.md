@@ -369,30 +369,71 @@ role is empty, a qualifying caller reaches the handler, a signed-in write
 lands. Browser-checked signed in on governance (audit widget, plan badge) and
 the agent knowledge screen (quality summary) — real data, no console errors.
 
+## The review of the remediation (2026-08-26)
+
+Anthony asked whether the packages marked done were actually done. Eight
+independent readers were pointed at the fourteen packages and the prompt files
+that specify them, each told to assume the claim was overstated and to prove it
+against the code. Read-only: no builds, no suite, greps and reads and
+`git show`.
+
+**Two packages survived intact — WP11 and WP13. Every other package was
+overstated, three seriously.** Weighted against the effort table, honest
+completion is about **70%**, not the 100% reported.
+
+The pattern is consistent and worth naming, because it will recur: *the work
+was done and the proof was not*. Counts were taken with a grep narrower than
+the claim it supported ("0 hand-rolled remain" measured two setter names, and
+88 sites survive). Guards were written, reported as enforcement, and never
+shown to fire — one matched nothing at all. Sites were "fixed" by lowering a
+literal to a named constant, which the register scored as a fix because the
+register matches the literal. And an allowlist grew, against a rule this file
+calls non-negotiable.
+
+What that means for the guards in this repo generally: **a guard that reads
+files and finds no work must fail, or it is indistinguishable from one that
+works.** Two of the reason tests, the analytics `getGlobalAnalytics` split, the
+knowledge-delete confirmation check and the copy-catalogue matcher were all
+silently reading nothing. Every guard added from here counts what it saw and
+asserts that number.
+
+Fixed during the review (commit d8468bb5a): the dead reason guards, the SSRF
+diagnoses this effort swallowed, a red-and-green risk signal in a customer
+report, the wrong message on a failed note delete, one hardcoded English
+fallback, and four claims in prose that the code contradicted. Everything else
+is recorded in the table below and left for Anthony to schedule — the larger
+items are new work, not touch-ups.
+
+Not re-verified by the review: anything needing a build or a live run. The full
+gate was green after the fixes (697 files, 6,089 tests, exit 0).
+
+---
+
 ## Per-package status
 
 Update this table (and nothing else in this section) as work proceeds. States:
-`todo`, `in progress`, `blocked on Anthony`, `done (commit <sha>)`.
+`todo`, `in progress`, `blocked on Anthony`, `done (commit <sha>)`,
+`partial — see review`.
 
 **Baseline recorded 2026-08-25:** `npm run check` green on `b6755c3c0` —
 687 test files, 6,068 tests, exit 0.
 
 | Package | State | Notes |
 |---|---|---|
-| WP01 real-auth CI | done, automation declined (commit pending) | the suite exists and is proven — all five specs passed against a real Convex deployment in 15.7s on 2026-08-25, and `npm run test:e2e:real-auth` runs them any time at no cloud cost. Anthony declined the dedicated test deployment on 2026-08-26 (a second paid deployment with its own auth keys, to automate a check he does by hand). The CI job is unhooked from pull requests and left on the Actions "Run workflow" button, so no PR fails for want of secrets |
-| WP11 split quality-drift | done (commit eba6cb1c4) | 38 tests before and after; 8 files + src/test/driftUtils.ts |
-| WP02 backend appError | done (commits 2f4f4b46c, 457c0721d) | all 444 converted; allowlist 92 files down to 2 (frozen movement demo + a doc comment); CONFLICT added to the code union |
-| WP05 take(10000) | done (commits d8c5efe3d, 8e5e3c385, f1b58bb35, 0d491e02e) | 51 sites -> 38; register 124 -> 83 entries and now accurate both ways; every truncated-read-becomes-stored-truth site fixed. What remains needs the pipeline redesign (see Waiting on Anthony) or a count rollup |
-| WP07 return validators | done (commits 871e52ae3, f73f1a4d9, 8508ee79b, 693264a86) | all 41 public surfaces + chat; 8 validators to 55. Leaks closed on getMessages, getSwarmLogs, getThreadDocuments, getLatestRuns, getActiveTemplate |
-| WP13 atoms consolidation | done (commit 19574af4f) | 4 modules moved, 87 files repointed, placement rule written down, shadowing verified |
-| WP04 god-components | done (commits 11315686e, 612c5d098, 485717201, 5e880976c) | all four split; loop file over ~500 by design, suite unchanged |
-| WP03 useAdminAction | done (commit 443576630) | 15 pages migrated, 34 files on the hook, 0 hand-rolled remain; 3 real faults fixed in passing |
-| WP06 app→admin imports | done (commit 4ba970fd8) | 4 components + 2 hidden dependencies promoted to src/ui/components/governance/; ESLint rule verified by probe |
-| WP08 app i18n | done (commit c09f3bcc7) | 150 keys per language, real Italian; floors raised 139→156, 22→29, app floor added at 36; plus copy ratchet + placeholder parity guards (d1d0805c7) |
-| WP10 palette + formatters | done | dashboards on chartPalette.ts; formatters deduped to src/lib; TimeframeDropdown reclassified as theme-plan chrome, not chart colours |
-| WP09 naming ratchet | done (commit bf1019e2e) | measured properly it was 302 Pascal vs 7; rule written down, ratcheted, probe-verified |
+| WP01 real-auth CI | partial — see review | the five specs exist, are tagged, and passed against a real deployment in 15.7s on 2026-08-25. **The chat spec asserts the send, not the reply** — the indicator it waited for renders whenever the last message is the user's own (corrected in d8468bb5a; strengthening it needs a live run). Automation declined by Anthony 2026-08-26; job moved to manual (f8c852771). Untested: whether "Real Auth Smoke" is a required status check in GitHub branch protection — if it is, remove it there |
+| WP11 split quality-drift | **done** (commit eba6cb1c4) | verified independently: 38 tests before and after with identical titles, 80 assertions both sides, nothing skipped, allowlist byte-identical. The one inaccuracy is the Found-in-passing row below — six references across four docs, not five |
+| WP02 backend appError | partial — see review | true: zero plain `throw new Error(` outside the frozen demo, allowlist 92→2, CONFLICT added, every code a union member. Not true: **54 raw `ConvexError` throws named in the spec are untouched**; `SalesDataImportError` and two sibling Error subclasses still reach production as "Server Error" (sales spreadsheet import); 21 sites read `error.message` directly and bypass the helper, five of them storing or displaying the JSON; the NOT_YET_CONVERTED list is a plain Set with nothing enforcing shrink-only, and the guard is blind to every throw shape except the literal `throw new Error(`. One regression it caused is fixed in d8468bb5a |
+| WP05 take(10000) | partial — see review | the nightly paging rebuild is real and proven (1,100 messages across pages, ceiling refuses rather than storing a short day). But **7 of the 13 removed sites were cosmetic** — `.take(10000)` became `.take(MODEL_CATALOG_LIMIT)` (2,000), still truncating, just invisible to a register that matches the literal. Register absolutes were wrong: 88→47, not 124→83 (the 41 delta is right). **Truncation still becomes stored truth in two places**: the snapshot's model catalogue prices missing models at the default and writes the cost permanently, and `recomputeLoginCounts` writes short counts after only a `console.warn`. Seven register entries carry a justification that is now false (they cite a 10,000 ceiling that is 250,000, and call three range-scoped reads today-scoped), so a busy period can still first appear as a short number on the platform overview, global AI costs and MAU. `getGlobalAnalytics` moved to `superAdminQuery` and the guard splitting on `query({` now reads an empty body. `moneyView.ts` task dropped |
+| WP07 return validators | mostly done — see review | 41 of 41 public and soft surfaces declare a validator, the soft migration lost none of them, the claimed leak closures are real and field-shaped, and there is no `v.any()` in a returns position. Gaps: **`settings.ts` spreads the whole systemSettings row to unauthenticated visitors on the login screen** (pricing, sales contact, sender address, and every future column); 7 of 10 client-called `chat.ts` functions have no validator, `getThreads` among them, shipping whole thread rows including `widgetAccessTokenHash`; four more validators are whole-table spreads that widen with the schema. And **the builders pass `returns?: GenericValidator`, which collapses Convex's own type constraint** — so typecheck cannot catch consumer drift on any guarded surface, contrary to the claim. 12 httpActions have no returns slot at all |
+| WP13 atoms consolidation | **done** (commit 19574af4f) | verified independently: folder gone, zero references in src/ or scripts/, placement rule is a real developer doc (`docs/developer/screen-kit.md`), no shadowed kit names. Four references remain in completed-plan files, deliberately, as record |
+| WP04 god-components | partial — see review | four targets shrank (agentRuntime −57%, ConfigDrawer −54%, Sidebar −36%) and nothing was lost — every extracted component is imported and rendered, exports byte-identical. But **KnowledgeManager fell only 21%, to 1,156 lines**, and the splits created two new files over the target: `ConfigDrawerPanels.tsx` at 818 (ten independent panels, trivially separable, never mentioned) and `agentObjectiveLoop.ts` at 1,482, described as "over ~500" when it is three times that. **Rule 5 was broken**: `allowedProviderSdkImportFiles` gained an entry so the split would pass — an allowlist grew. A fourth guard (knowledge deletes stay confirmation-gated) now reads a file the dialog left, and passes only because unrelated state stayed behind. Four live developer docs still point at the pre-split files. 1,719 lines of extracted UI have no direct test |
+| WP03 useAdminAction | **overstated** — see review | the 15 migrations are correct and the three faults fixed in passing are real. But **"0 hand-rolled remain" is false**: it measured two literal setter names. 88 hand-rolled try/catch-around-a-mutation sites survive across 55 files, none calling `reportError`; **24 tell the user nothing at all**, including failed task create, failed profile save, failed rule delete, failed PII config write and failed system settings save. 15 more sit in `src/ui/`, including the personal-data erase panel WP06 had moved out of the swept area the day before. No guard exists to bind a new page. Two faults the commit itself introduced are fixed in d8468bb5a |
+| WP06 app→admin imports | partial — see review | the move is clean and verified: no import from app to admin remains, directly or transitively, and the ESLint rule is real, `error`-level, and runs in CI. But **it misses the exact form the violation was written in** — a dynamic `import()`, which `no-restricted-imports` does not inspect; the fixed page still uses that shape, so reverting the fix would pass. Relative paths escape it too, and there is no import-graph test as the sibling Convex rule has |
+| WP08 app i18n | partial — see review | parity is exact (5,051 keys each, zero orphans), the Italian is genuinely translated (1 of 178 added keys identical, a proper noun), and the placeholder-parity guard is correct. But **the copy guard does not bind new pages**: it matches `>text<` within a single line and Prettier puts JSX copy on its own line, so a brand-new all-English page scores zero. 42 multi-word English strings survive across 17 `/app` files, including thirteen section headings on the reports board — the spec's headline page. 117 prose values are byte-identical across both catalogues repo-wide (pre-existing, unguarded) |
+| WP10 palette + formatters | partial (commit 10ee18be0) | the sha was missing from this table, not the work. But `chartPalette.ts` **pre-dated this package** (Anthony's own commit, 2026-08-10); WP10 added 29 lines and migrated three files. Five chart files still hardcode palette constants, one re-declaring the whole engagement ramp verbatim with no export wrapper to excuse it. The theme-drift baseline still reads 1,231 against an actual 1,055 — 176 units of slack, against rule 5. `formatCurrencyGBP` has one consumer and five sibling GBP formatters remain: moved, not deduped |
+| WP09 naming ratchet | mostly done (commit bf1019e2e) | the freeze is honest — exactly 7 non-conforming files, entry for entry, and the guard genuinely fails on a new one. But **"302 Pascal vs 7" compares two different populations**: 302 counts test files, the 7 excludes them; the honest figure for what the rule governs is 230 vs 7. The doc insertion left `## Shared Components` with no body and filed its list under `## File Naming`. `STRUCTURAL` matches on basename with no route-position check, so `error.tsx` or `template.tsx` passes anywhere |
 | WP12 movement CLI | dropped (Anthony, 2026-08-26) | dropped on value, not boundary: it touches no screen, only re-packages the ~120 movement dev commands — but every movement runbook is written against the current names, and renaming the tooling around an area he said to leave alone buys a tidier list at the risk of stale runbooks mid-showcase |
-| WP14 small sweep | done (commits bd43c4941, 88ce9f083) | docs repointed, CI dedupe, ratchet nudge, knip on (2 dead deps removed), lang bound; softQuery approved by Anthony and built — 13 doors migrated, public register 41→28, behavioural tests pin the empty/role/write contract |
+| WP14 small sweep | partial — see review | `<html lang>` binds the resolved locale (confirmed) and the CI dedupe is real. But **the softQuery enforcement was a dead test** — it and the public-register test it was copied from matched 0 of 41 declarations and asserted `[] === []`; fixed and proven in d8468bb5a, and the migration itself has no authorisation regression (all 13 checked against their pre-migration versions). **knip never runs dependency analysis**: `check:orphans` passes `--include files`, which excludes exactly the checks the narrowed config enables, so the two dead deps were a one-off manual find and nothing stops a third. The coverage nudge is real code but dormant, unreachable from `npm run check`, and prints where nobody looks. Docs are not clean: 7 dead source paths at 9 sites survive, including a copy-paste page sample importing three components that do not exist |
 
 ---
 
@@ -406,7 +447,9 @@ appError ratio within ~7% of stated).
 
 ## When it is all done
 
-- Every row in the status table reads `done` or `blocked on Anthony`.
+- Every row in the status table reads `done` or `blocked on Anthony`. As of the
+  2026-08-26 review, ten read `partial` — see the review section for what each
+  one is missing. The effort is not closed.
 - `npm run check` is green on the final tree.
 - Move this file to `docs/plans/` archive per house convention **only when
   Anthony says the effort is closed**. WP01 no longer holds it open: he
