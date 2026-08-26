@@ -186,7 +186,8 @@
     "src/ui/components/screens/TableControls.tsx": 3,
     "src/ui/components/workflows/AgentEditorModal.tsx": 7,
     "src/ui/components/workflows/ConfigDrawer.tsx": 2,
-    "src/ui/components/workflows/ConfigDrawerPanels.tsx": 5
+    "src/ui/components/workflows/ConfigDrawerDataPanels.tsx": 1,
+    "src/ui/components/workflows/ConfigDrawerEntryPanels.tsx": 4
   },
   "headings": {
     "src/app/(dashboard)/_features/auth-diagnostics/AuthDiagnosticsPage.tsx": 1,

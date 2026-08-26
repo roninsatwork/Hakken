@@ -131,7 +131,8 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/ui/components/screens/DataTable.tsx', 1],
   ['src/ui/components/screens/Field.tsx', 2],
   ['src/ui/components/workflows/AgentNode.tsx', 1],
-  ['src/ui/components/workflows/ConfigDrawerPanels.tsx', 7],
+  ['src/ui/components/workflows/ConfigDrawerDataPanels.tsx', 2],
+  ['src/ui/components/workflows/ConfigDrawerHumanPanels.tsx', 5],
 ]);
 
 const SCAN_ROOTS = ['src/app/(dashboard)', 'src/ui'];

@@ -8,18 +8,9 @@ import { convexHttpActionsUrl } from "@/src/lib/convexHttpActionsUrl";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import {
-  ActionPanel,
-  ApprovalPanel,
-  CodePanel,
-  DatabasePanel,
-  EmailPanel,
-  IteratorPanel,
-  LogicPanel,
-  MergePanel,
-  TriggerPanel,
-  WaitPanel,
-} from "./ConfigDrawerPanels";
+import { ActionPanel, CodePanel, TriggerPanel } from "./ConfigDrawerEntryPanels";
+import { DatabasePanel, IteratorPanel, LogicPanel, MergePanel } from "./ConfigDrawerDataPanels";
+import { ApprovalPanel, EmailPanel, WaitPanel } from "./ConfigDrawerHumanPanels";
 import type {
   WorkflowActionConfig,
   WorkflowApprovalConfig,
