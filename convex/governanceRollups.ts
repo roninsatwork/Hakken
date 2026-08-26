@@ -5,6 +5,7 @@ import {
   dayKeysBack,
   foldEstateRows,
   foldWindowIntoBuckets,
+  governanceWindowTruncated,
 } from "./governanceRollupService";
 import type { SideEffectLevel } from "./conformanceService";
 import {
@@ -36,7 +37,8 @@ const RECENT_DAYS = 2;
 /**
  * Ceiling on one window read. Two days of normal traffic is a few hundred
  * rows; this is a runaway backstop, and hitting it marks the buckets truncated
- * rather than silently under-counting.
+ * rather than silently under-counting. Every read it caps is taken one row past
+ * it, so a full read is distinguishable from a cut-short one.
  */
 const WINDOW_ROW_LIMIT = 8000;
 
@@ -54,31 +56,51 @@ export const rebuildGovernanceRollups = internalMutation({
     const now = Date.now();
     const windowStart = Date.parse(`${dayKey(now - (RECENT_DAYS - 1) * DAY_MS)}T00:00:00.000Z`);
 
-    const [runs, calls, approvalsByStatus, agents, widgets, workflows] = await Promise.all([
+    const [scannedRuns, scannedCalls, scannedApprovals, scannedAgents, scannedWidgets, scannedWorkflows] = await Promise.all([
       ctx.db
         .query("agentRuns")
         .withIndex("by_started", (q) => q.gte("startedAt", windowStart))
-        .take(WINDOW_ROW_LIMIT),
+        .take(WINDOW_ROW_LIMIT + 1),
       ctx.db
         .query("agentToolCalls")
         .withIndex("by_started", (q) => q.gte("startedAt", windowStart))
-        .take(WINDOW_ROW_LIMIT),
+        .take(WINDOW_ROW_LIMIT + 1),
       Promise.all(
         APPROVAL_STATUSES.map((status) =>
           ctx.db
             .query("agentRunApprovals")
             .withIndex("by_status_requested", (q) => q.eq("status", status).gte("requestedAt", windowStart))
-            .take(WINDOW_ROW_LIMIT),
+            .take(WINDOW_ROW_LIMIT + 1),
         ),
       ),
-      ctx.db.query("agents").take(ESTATE_LIMIT),
-      ctx.db.query("widgets").take(ESTATE_LIMIT),
-      ctx.db.query("workflows").take(ESTATE_LIMIT),
+      ctx.db.query("agents").take(ESTATE_LIMIT + 1),
+      ctx.db.query("widgets").take(ESTATE_LIMIT + 1),
+      ctx.db.query("workflows").take(ESTATE_LIMIT + 1),
     ]);
 
-    const truncated = runs.length >= WINDOW_ROW_LIMIT || calls.length >= WINDOW_ROW_LIMIT;
+    // Read one past the cap so a full read can be told from a short one. The
+    // flag below used `>= ESTATE_LIMIT` against a plain `.take(ESTATE_LIMIT)`,
+    // which calls an estate of exactly 500 partial when it is complete — wrong
+    // in the harmless direction, but it is the shape the `+ 1` probe replaced
+    // everywhere else, and leaving one behind is how the pattern erodes.
+    const agents = scannedAgents.slice(0, ESTATE_LIMIT);
+    const widgets = scannedWidgets.slice(0, ESTATE_LIMIT);
+    const workflows = scannedWorkflows.slice(0, ESTATE_LIMIT);
+
+    const truncated = governanceWindowTruncated(
+      {
+        runs: scannedRuns.length,
+        calls: scannedCalls.length,
+        approvalsByStatus: scannedApprovals.map((approvals) => approvals.length),
+      },
+      WINDOW_ROW_LIMIT,
+    );
+    const runs = scannedRuns.slice(0, WINDOW_ROW_LIMIT);
+    const calls = scannedCalls.slice(0, WINDOW_ROW_LIMIT);
     const neededAPerson = new Set(
-      approvalsByStatus.flat().map((approval) => approval.runId as string),
+      scannedApprovals
+        .flatMap((approvals) => approvals.slice(0, WINDOW_ROW_LIMIT))
+        .map((approval) => approval.runId as string),
     );
     const agentsById = new Map(
       agents.map((agent) => [
@@ -152,7 +174,9 @@ export const rebuildGovernanceRollups = internalMutation({
     }
 
     const isPartial =
-      agents.length >= ESTATE_LIMIT || widgets.length >= ESTATE_LIMIT || workflows.length >= ESTATE_LIMIT;
+      scannedAgents.length > ESTATE_LIMIT
+      || scannedWidgets.length > ESTATE_LIMIT
+      || scannedWorkflows.length > ESTATE_LIMIT;
 
     const agentById = new Map(agents.map((agent) => [agent._id as string, agent]));
     const entries = [

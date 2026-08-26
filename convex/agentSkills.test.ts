@@ -323,6 +323,150 @@ describe("agent skills", () => {
     expect(analytics.skillsCounted).toBe(250);
   });
 
+  /**
+   * The binding ceiling, which is the reachable one: 250 skills is a platform
+   * that has been busy for years, 100 agents on one skill is an ordinary
+   * customer. The walk stops at 100 either way — what must not happen is the
+   * health panel presenting that hundred as the number of agents carrying the
+   * skill.
+   */
+  const seedSkillWithBindings = async (t: ReturnType<typeof convexTest>, bindingCount: number) =>
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const adminId = await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+      const skillId = await ctx.db.insert("agentSkills", {
+        name: "Popular skill",
+        category: "GENERAL",
+        status: "ACTIVE",
+        riskLevel: "LOW",
+        instruction: "Do the thing.",
+        createdBy: adminId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const versionId = await ctx.db.insert("agentSkillVersions", {
+        skillId,
+        versionNumber: 1,
+        snapshotHash: "hash",
+        snapshotJson: "{}",
+        instructionHash: "instruction",
+        toolRequirementHash: "tools",
+        evalHash: "evals",
+        createdAt: now,
+      });
+      for (let index = 0; index < bindingCount; index += 1) {
+        const agentId = await ctx.db.insert("agents", {
+          name: `Agent ${index}`,
+          modelId: "model-test",
+          thinkingMode: false,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+        await ctx.db.insert("agentSkillBindings", {
+          agentId,
+          skillId,
+          skillVersionId: versionId,
+          isEnabled: true,
+          assignedAt: now,
+          updatedAt: now,
+        });
+      }
+      return adminId;
+    });
+
+  test("a skill bound to more agents than one walk reads is reported as partial, not stored short in silence", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    // One past the binding limit of 100.
+    const adminId = await seedSkillWithBindings(t, 101);
+    const client = t.withIdentity({ subject: adminId });
+
+    const rebuild = await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
+    expect(rebuild.isPartial).toBe(true);
+
+    const analytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(analytics.isPartial).toBe(true);
+    // The stored totals really are short — 100 of 101 — which is exactly why the
+    // panel must be told, rather than presenting them as the whole estate.
+    expect(analytics.totals.totalBindings).toBe(100);
+    expect(analytics.totals.enabledBindings).toBe(100);
+    expect(analytics.needsAttention[0]).toMatchObject({ name: "Popular skill", boundAgents: 100 });
+  });
+
+  test("a skill bound to exactly the ceiling is complete, not partial", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    // The read takes LIMIT + 1, so landing on the cap means the walk saw
+    // everything. Deciding this with `>=` would report an honest total as
+    // partial for ever and teach the reader to ignore the caveat.
+    const adminId = await seedSkillWithBindings(t, 100);
+    const client = t.withIdentity({ subject: adminId });
+
+    const rebuild = await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
+    expect(rebuild.isPartial).toBe(false);
+
+    const analytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(analytics.isPartial).toBe(false);
+    expect(analytics.totals.totalBindings).toBe(100);
+  });
+
+  /**
+   * The page size and the whole-skill walk are different numbers.
+   *
+   * Reporting a hundred of a hundred and one is a caveat. Deleting a hundred of
+   * a hundred and one is data loss: the surplus bindings outlive the skill they
+   * point at, and nothing on any screen lists a binding whose skill is gone.
+   * The same capped read sat behind every operation that promises to touch all
+   * of a skill's agents, so upgrading left agents on old instruction text too.
+   */
+  const skillIdOf = async (t: ReturnType<typeof convexTest>) =>
+    await t.run(async (ctx) => {
+      const skill = await ctx.db.query("agentSkills").first();
+      if (!skill) throw new Error("seed did not create a skill");
+      return skill._id;
+    });
+
+  test("deleting a skill detaches every agent, not the first page of them", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await seedSkillWithBindings(t, 101);
+    const client = t.withIdentity({ subject: adminId });
+    const skillId = await skillIdOf(t);
+
+    await client.mutation(api.agentSkills.deleteSkill, { skillId });
+
+    const surviving = await t.run(async (ctx) => await ctx.db.query("agentSkillBindings").collect());
+    expect(
+      surviving,
+      "a binding outlived the skill it points at, so an agent still claims a skill that no longer exists",
+    ).toEqual([]);
+  });
+
+  test("upgrading moves every bound agent onto the new version, not the first page", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await seedSkillWithBindings(t, 101);
+    const client = t.withIdentity({ subject: adminId });
+    const skillId = await skillIdOf(t);
+
+    // Editing cuts a fresh version snapshot, so every binding is now behind.
+    await client.mutation(api.agentSkills.updateSkill, { skillId, instruction: "Do the thing differently." });
+    await client.mutation(api.agentSkills.upgradeSkillBindingsForSkill, { skillId });
+
+    const [latestVersionId, versionIds] = await t.run(async (ctx) => {
+      const latest = await ctx.db
+        .query("agentSkillVersions")
+        .withIndex("by_skill_created", (q) => q.eq("skillId", skillId))
+        .order("desc")
+        .first();
+      const bindings = await ctx.db.query("agentSkillBindings").collect();
+      return [latest?._id, bindings.map((binding) => binding.skillVersionId)];
+    });
+
+    expect(versionIds).toHaveLength(101);
+    expect(
+      versionIds.filter((id) => id !== latestVersionId),
+      "an agent past the page boundary kept running the old instruction text with nothing saying so",
+    ).toEqual([]);
+  });
+
   test("searching with a status filter fills the page instead of thinning it after the fact", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

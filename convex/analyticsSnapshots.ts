@@ -435,17 +435,49 @@ export const generateDailySnapshots = internalAction({
   },
 });
 
-// Migration helper to seed past data
+/**
+ * Migration helper to seed past data, one day at a time.
+ *
+ * A day the generator refuses — a catalogue it could not read whole, a day
+ * larger than it can total — is one day this run leaves unwritten, not the end
+ * of the run. The refusals exist so a wrong number is never stored; letting the
+ * first one abort the loop turns a documented operator step into a step that
+ * cannot be completed at all while the condition holds, and leaves every earlier
+ * date unattempted.
+ *
+ * The skipped dates come back with their reasons, because a date silently absent
+ * from a backfill is indistinguishable from a day with no activity.
+ */
 export const seedHistoricalSnapshots = internalAction({
     args: { daysBack: v.number() },
     handler: async (ctx, args) => {
         const now = new Date();
+        const completed: string[] = [];
+        const skipped: Array<{ date: string; reason: string }> = [];
+
         for (let i = args.daysBack; i >= 1; i--) {
             const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
             const dateStr = target.toISOString().split("T")[0];
-            await ctx.runAction(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: dateStr });
-            console.log(`Dispatched snapshot job for ${dateStr}`);
+            try {
+                await ctx.runAction(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: dateStr });
+                completed.push(dateStr);
+                console.log(`Dispatched snapshot job for ${dateStr}`);
+            } catch (error) {
+                const reason = error instanceof Error ? error.message : String(error);
+                skipped.push({ date: dateStr, reason });
+                console.error(`[Analytics] Snapshot job for ${dateStr} was refused and skipped: ${reason}`);
+            }
         }
+
+        if (skipped.length > 0) {
+            console.error(
+                `[Analytics] Backfill finished with ${skipped.length} of ${args.daysBack} dates unwritten: ${skipped
+                    .map((entry) => entry.date)
+                    .join(", ")}. Fix what they report and re-run; the analytics health check lists them as missing until then.`
+            );
+        }
+
+        return { requested: args.daysBack, completed, skipped };
     }
 });
 

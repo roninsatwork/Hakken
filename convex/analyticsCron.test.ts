@@ -2,9 +2,10 @@
 // analyticsSnapshots / systemHealth / platformAlerts (foundation-quality
 // plan, phase 3). It still covers all three; split it when next touched.
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { MODEL_CATALOG_LIMIT } from "./aiModelService";
 
 describe("analytics cron snapshots", () => {
   test("empty days create one global zero snapshot and duplicate generation is skipped", async () => {
@@ -196,6 +197,62 @@ describe("analytics cron snapshots", () => {
 
     expect(catalogue.isPartial).toBe(false);
     expect(catalogue.models).toHaveLength(1);
+  });
+
+  // The backfill is printed as an operator step. A day the generator refuses is
+  // a day it must leave alone and carry on from — refusing the whole run makes
+  // the step impossible to complete while the condition holds, and takes every
+  // date after the first refusal down with it.
+  test("the historical backfill skips a date it cannot write and reports it, instead of dying on the first refusal", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const today = new Date();
+    const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const dates = [3, 2, 1].map((daysAgo) =>
+      new Date(todayStart - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    );
+
+    await t.run(async (ctx) => {
+      // One past the catalogue cap, so every date's cost would be priced from a
+      // catalogue the read could not finish and every date is refused.
+      for (let index = 0; index < MODEL_CATALOG_LIMIT + 1; index += 1) {
+        await ctx.db.insert("aiModels", {
+          modelId: `model-${index}`,
+          displayName: `Model ${index}`,
+          isEnabled: true,
+          isDefault: index === 0,
+          lastSyncedAt: 0,
+        });
+      }
+      // The middle date already has its snapshot, so its generator returns
+      // rather than refusing — work this run only reaches if the refusal before
+      // it did not end the loop.
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: dates[1],
+        type: "global",
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+      });
+    });
+
+    const reported: string[] = [];
+    const errorSpy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      reported.push(args.map((arg) => String(arg)).join(" "));
+    });
+
+    const result = await t.action(internal.analyticsSnapshots.seedHistoricalSnapshots, { daysBack: 3 });
+
+    errorSpy.mockRestore();
+
+    expect(result.completed).toEqual([dates[1]]);
+    expect(result.skipped.map((entry) => entry.date)).toEqual([dates[0], dates[2]]);
+    expect(result.skipped[0].reason).toContain("model catalogue is larger than");
+    // Visible to whoever ran it: two absent dates and no explanation is the
+    // failure this reporting exists to prevent.
+    expect(reported.join("\n")).toContain(dates[0]);
+    expect(reported.join("\n")).toContain(dates[2]);
+
+    // Refused means not written, still: the skip must not become a half-day.
+    const snapshots = await t.run(async (ctx) => ctx.db.query("analyticsDailySnapshots").collect());
+    expect(snapshots.map((snapshot) => snapshot.date)).toEqual([dates[1]]);
   });
 
   test("a day larger than one page is totalled whole, not to the first page", async () => {

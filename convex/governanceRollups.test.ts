@@ -302,3 +302,106 @@ describe("the machinery is safe to re-run", () => {
     expect(activity.timeline.at(-1)).toMatchObject({ finished: 0, waited: 0, unfinished: 0 });
   });
 });
+
+/**
+ * `waited` comes from the approvals reads, one per status, and those reads are
+ * capped like every other. Both writers used to decide `truncated` from the runs
+ * and calls alone — so a window with more approvals than one read returns stored
+ * a short `waited` figure and stamped it complete. On a compliance screen that is
+ * the reassuring direction to be wrong in, and nothing anywhere said so.
+ *
+ * Both cases are seeded so the shortfall is real rather than asserted: the last
+ * approval in the window belongs to a *second* run, so the run that fell past the
+ * cap is a run the bucket cannot count.
+ */
+describe("a day bucket says so when the approvals behind it were cut short", () => {
+  const seedTwoWaitingRuns = async (t: TestConvex, seeded: Seeded, approvals: number) =>
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const startedAt = now - 60 * 60 * 1000;
+      const makeRun = async () =>
+        await ctx.db.insert("agentRuns", {
+          agentId: seeded.lowAgentId,
+          companyId: seeded.companyId,
+          triggerType: "CHAT",
+          objective: "Do the thing",
+          status: "SUCCESS" as never,
+          startedAt,
+          updatedAt: startedAt,
+        });
+      const busyRunId = await makeRun();
+      const lastRunId = await makeRun();
+
+      const request = async (runId: Id<"agentRuns">, requestedAt: number) =>
+        await ctx.db.insert("agentRunApprovals", {
+          runId,
+          agentId: seeded.lowAgentId,
+          companyId: seeded.companyId,
+          status: "APPROVED",
+          message: "Send the letter?",
+          requestedAt,
+          reviewedAt: requestedAt + 1,
+        });
+
+      // One status, so a single read carries them all and its cap is what bites.
+      for (let index = 0; index < approvals - 1; index += 1) {
+        await request(busyRunId, startedAt + index);
+      }
+      // Newest, so it is the row the cap drops. The index reads ascending.
+      await request(lastRunId, startedAt + approvals);
+
+      return { busyRunId, lastRunId };
+    });
+
+  const bucketsFor = async (t: TestConvex) =>
+    await t.run(async (ctx) => await ctx.db.query("governanceDayRollups").collect());
+
+  test("the cron's rebuild marks the day rather than storing a short waited figure as complete", async () => {
+    const t = makeTest();
+    const seeded = await seedEstate(t);
+    // One past the window read's cap of 8,000.
+    await seedTwoWaitingRuns(t, seeded, 8001);
+
+    const result = await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
+    expect(result.truncated).toBe(true);
+
+    const buckets = await bucketsFor(t);
+    expect(buckets).toHaveLength(1);
+    // Two runs waited for a person; the bucket can only see the one whose
+    // approval fitted. The figure is short, so the row must not claim otherwise.
+    expect(buckets[0]).toMatchObject({ runsTotal: 2, waited: 1, truncated: true });
+
+    // And the reader is told, rather than reading a floor as a total.
+    const activity = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 2 });
+    expect(activity.truncated).toBe(true);
+  });
+
+  test("exactly the cap is a complete read, not a truncated one", async () => {
+    const t = makeTest();
+    const seeded = await seedEstate(t);
+    // Every read takes cap + 1, so landing on the cap means the window held
+    // exactly that many. Deciding with `>=` would stamp an honest day truncated
+    // and teach the reader to ignore the warning.
+    await seedTwoWaitingRuns(t, seeded, 8000);
+
+    const result = await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
+    expect(result.truncated).toBe(false);
+
+    const buckets = await bucketsFor(t);
+    expect(buckets[0]).toMatchObject({ runsTotal: 2, waited: 2, truncated: false });
+  });
+
+  test("the historical backfill marks its day for the same reason, at its own larger cap", async () => {
+    const t = makeTest();
+    const seeded = await seedEstate(t);
+    // One past the backfill's per-day cap of 10,000.
+    await seedTwoWaitingRuns(t, seeded, 10001);
+
+    await t.mutation(internal.dataMigrations.run, { name: "2026-08-18-governance-day-rollups-backfill" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const buckets = await bucketsFor(t);
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0]).toMatchObject({ runsTotal: 2, waited: 1, truncated: true });
+  });
+});

@@ -58,9 +58,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/users.ts', exportName: 'getUnassignedSuperAdmins', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'unassigned super-admin selector needs bounded role/company lookup before large admin growth' },
   { filePath: 'convex/widgets.ts', exportName: 'generateWidgetUploadUrl', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'widget upload thread lookup should be indexed and bounded in chat hardening' },
   { filePath: 'convex/workflows.ts', exportName: 'list', table: 'workflows', category: 'admin_inventory', phase: 'Phase 1', reason: 'workflow admin inventory list is scheduled for paginated indexed contracts' },
-  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentRuns', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. The governance backfill reads one day of runs at a time at 10,000 rows; it rewrites that day set-style, so it must read the day whole to converge rather than double-count. Operator-run, not on a request path' },
-  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentToolCalls', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Same one-day-per-batch backfill as the runs read above, at the same 10,000 cap' },
-  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'agentRunApprovals', category: 'maintenance', phase: 'Phase 5', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Same one-day-per-batch backfill, read once per approval status at the same 10,000 cap' },
   { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'aiModels', category: 'admin_inventory', phase: 'Phase 1', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. The model catalogue at 10,000 rows, read to price the overview. Truncation here misprices rather than under-counts, which is the same class as the snapshot catalogue read — needs the same partial marker' },
   { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day message scan at 20,000 rows — the largest unprotected read on the platform, and nothing stands behind it. A busy month shows short on the overview with no gap reported. Rank this above the 10,000-row reads when paging starts' },
   { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'logins', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day login scan at 20,000 rows, feeding the active-user figure on the same screen. Same exposure as the message scan above' },
@@ -114,7 +111,7 @@ const UNTRIAGED_READ_THRESHOLD = 1000;
  * Frozen at the measured count on 2026-08-26. Shrink-only, like every other
  * baseline in this repo — it may fall as reads are paged and may never rise.
  */
-const MID_SIZED_READ_CEILING = 129;
+const MID_SIZED_READ_CEILING = 126;
 
 const numericConstants = (() => {
   const constants = new Map<string, number>();

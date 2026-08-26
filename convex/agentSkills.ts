@@ -16,6 +16,23 @@ import { isRecord, stableStringify } from "./utils/lang";
 
 const SKILL_CATALOG_LIMIT = 250;
 const SKILL_BINDING_LIMIT = 100;
+/**
+ * The ceiling for an operation that has to touch every agent bound to one
+ * skill, rather than a page of them.
+ *
+ * `SKILL_BINDING_LIMIT` is a page size, and it is the right size where the
+ * caller loops over the whole catalogue and can say "partial". It is the wrong
+ * size for deleting a skill or moving its agents onto a new version: those
+ * promise to act on all of them, and a capped read made the promise false and
+ * silent. Deleting left the surplus bindings pointing at a skill that no longer
+ * existed; upgrading left the surplus agents running the old instruction text
+ * with nothing on screen to say so.
+ *
+ * This is deliberately far above any real population and still well inside what
+ * one Convex transaction can read and write, so the refusal below is a
+ * backstop rather than something an operator meets.
+ */
+const SKILL_BINDING_WALK_LIMIT = 2000;
 const TOOL_LOOKUP_LIMIT = 500;
 const SKILL_TEXT_LIMIT = 8000;
 const SKILL_JSON_LIMIT = 24000;
@@ -254,6 +271,39 @@ const starterSkillDefinitions: StarterSkillDefinition[] = [
   },
 ];
 
+
+/**
+ * Every binding for one skill, or a refusal naming what would have been missed.
+ *
+ * For callers that act on all of them. Reading one past the ceiling is what
+ * makes the difference detectable: `.take(n)` returning n rows cannot tell a
+ * skill with exactly n agents from one with far more, so the cap has to be
+ * exceeded to be seen.
+ *
+ * It throws rather than returning a flag because the callers are mid-write. A
+ * flag they could ignore is how this went wrong in the first place — and
+ * refusing before the first `delete` or `patch` means a refusal leaves the
+ * skill exactly as it was, rather than half-detached.
+ */
+async function readEverySkillBinding(
+  ctx: Pick<MutationCtx, "db">,
+  skillId: Id<"agentSkills">,
+  action: string,
+) {
+  const bindings = await ctx.db
+    .query("agentSkillBindings")
+    .withIndex("by_skill_enabled", (q) => q.eq("skillId", skillId))
+    .take(SKILL_BINDING_WALK_LIMIT + 1);
+
+  if (bindings.length > SKILL_BINDING_WALK_LIMIT) {
+    throw appError(
+      "INVALID_INPUT",
+      `This skill is bound to more than ${SKILL_BINDING_WALK_LIMIT} agents, which is more than one ${action} can safely cover. Detach some agents from it first.`,
+    );
+  }
+
+  return bindings;
+}
 
 function hashString(value: string) {
   let hash = 5381;
@@ -1046,10 +1096,7 @@ export async function refreshSkillBindingsAndEvalFixtures(ctx: Pick<MutationCtx,
 }) {
   const skill = await ctx.db.get(args.skillId);
   if (!skill) throw appError("NOT_FOUND", "Skill not found.");
-  const bindings = await ctx.db
-    .query("agentSkillBindings")
-    .withIndex("by_skill_enabled", (q) => q.eq("skillId", args.skillId))
-    .take(SKILL_BINDING_LIMIT);
+  const bindings = await readEverySkillBinding(ctx, args.skillId, "upload");
   let seededEvalFixtureCount = 0;
 
   for (const binding of bindings) {
@@ -1207,6 +1254,12 @@ export const searchActiveSkills = superAdminQuery({
  * It reports `skillsCounted` and `isPartial` rather than presenting a truncated
  * walk as a complete count. That distinction is the whole point: the previous
  * version stopped at 250 skills and said nothing.
+ *
+ * `isPartial` covers both ceilings, not just the catalogue one. A skill bound to
+ * more than `SKILL_BINDING_LIMIT` agents is the reachable case — 100 is a number
+ * a real customer passes — and every binding total below is short the moment one
+ * does. Marked rather than refused: the panel already carries the caveat, and one
+ * over-bound skill should not blank the health of the whole catalogue.
  */
 export async function computeAgentSkillRollup(ctx: Pick<MutationCtx, "db">) {
   {
@@ -1215,8 +1268,9 @@ export async function computeAgentSkillRollup(ctx: Pick<MutationCtx, "db">) {
       .withIndex("by_category_created")
       .order("desc")
       .take(SKILL_CATALOG_LIMIT + 1);
-    const isPartial = skills.length > SKILL_CATALOG_LIMIT;
-    if (isPartial) skills.length = SKILL_CATALOG_LIMIT;
+    const catalogueIsPartial = skills.length > SKILL_CATALOG_LIMIT;
+    if (catalogueIsPartial) skills.length = SKILL_CATALOG_LIMIT;
+    let bindingsIsPartial = false;
     const latestVersionPairs = await Promise.all(skills.map(async (skill) => {
       const latestVersion = await ctx.db
         .query("agentSkillVersions")
@@ -1249,10 +1303,12 @@ export async function computeAgentSkillRollup(ctx: Pick<MutationCtx, "db">) {
 
     for (const skill of skills) {
       const latestVersion = latestVersionBySkillId.get(skill._id);
-      const bindings = await ctx.db
+      const scannedBindings = await ctx.db
         .query("agentSkillBindings")
         .withIndex("by_skill_enabled", (q) => q.eq("skillId", skill._id))
-        .take(SKILL_BINDING_LIMIT);
+        .take(SKILL_BINDING_LIMIT + 1);
+      if (scannedBindings.length > SKILL_BINDING_LIMIT) bindingsIsPartial = true;
+      const bindings = scannedBindings.slice(0, SKILL_BINDING_LIMIT);
       let skillEnabledBindings = 0;
       let skillOutdatedBindings = 0;
       let skillNeedsSmokeBindings = 0;
@@ -1327,7 +1383,7 @@ export async function computeAgentSkillRollup(ctx: Pick<MutationCtx, "db">) {
       highRiskNeedsSmokeBindings,
       needsAttention: needsAttention.slice(0, 8),
       skillsCounted: skills.length,
-      isPartial,
+      isPartial: catalogueIsPartial || bindingsIsPartial,
     };
   }
 }
@@ -1707,10 +1763,7 @@ export const updateSkill = superAdminMutation({
       updatedAt: now,
     });
     const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, skillId);
-    const pinnedBindingCount = await ctx.db
-      .query("agentSkillBindings")
-      .withIndex("by_skill_enabled", (q) => q.eq("skillId", skillId))
-      .take(SKILL_BINDING_LIMIT);
+    const pinnedBindingCount = await readEverySkillBinding(ctx, skillId, "edit");
     await ctx.db.insert("auditLogs", {
       actorId: userId,
       actionType: "UPDATE_AGENT_SKILL",
@@ -1846,10 +1899,7 @@ async function rollAgentsOntoLatestSkillVersion(
   skillId: Id<"agentSkills">,
   latestVersionId: Id<"agentSkillVersions">,
 ) {
-  const bindings = await ctx.db
-    .query("agentSkillBindings")
-    .withIndex("by_skill_enabled", (q) => q.eq("skillId", skillId))
-    .take(SKILL_BINDING_LIMIT);
+  const bindings = await readEverySkillBinding(ctx, skillId, "upload");
 
   const now = Date.now();
   let moved = 0;
@@ -2012,10 +2062,7 @@ export const deleteSkill = superAdminMutation({
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw appError("NOT_FOUND", "Skill not found.");
 
-    const bindings = await ctx.db
-      .query("agentSkillBindings")
-      .withIndex("by_skill_enabled", (q) => q.eq("skillId", args.skillId))
-      .take(SKILL_BINDING_LIMIT);
+    const bindings = await readEverySkillBinding(ctx, args.skillId, "deletion");
     for (const binding of bindings) await ctx.db.delete(binding._id);
 
     const versions = await ctx.db
@@ -2172,10 +2219,7 @@ export const upgradeSkillBindingsForSkill = superAdminMutation({
     const now = Date.now();
     const latestVersionId = await ensureAgentSkillVersionSnapshot(ctx, args.skillId);
     const requestedBindingIds = new Set(args.bindingIds ?? []);
-    const bindings = await ctx.db
-      .query("agentSkillBindings")
-      .withIndex("by_skill_enabled", (q) => q.eq("skillId", args.skillId))
-      .take(SKILL_BINDING_LIMIT);
+    const bindings = await readEverySkillBinding(ctx, args.skillId, "upgrade");
     const targetBindings = bindings.filter((binding) =>
       binding.skillVersionId !== latestVersionId
       && (requestedBindingIds.size === 0 || requestedBindingIds.has(binding._id))

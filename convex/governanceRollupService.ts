@@ -64,6 +64,33 @@ export type DayBucketRow = {
   truncated: boolean;
 };
 
+/**
+ * Did any read behind a day bucket come back short?
+ *
+ * Every read that feeds a bucket belongs here, not just the two that fill its
+ * biggest columns. `waited` is built from the approvals reads, one per status,
+ * and a bucket whose approvals were cut short under-counts the runs that stopped
+ * for a person — on a compliance screen, the reassuring direction to be wrong in.
+ * Both callers left those five reads out of the answer while writing
+ * `truncated: false` beside a `waited` figure they had just shortened.
+ *
+ * Counts come from reads of `limit + 1` and are compared strictly, so a read
+ * that came back exactly full is not mistaken for one that was cut short — the
+ * same probe the login scan and the snapshot catalogue use. The limit is passed
+ * rather than baked in because the cron window and the backfill day have
+ * different ones.
+ */
+export function governanceWindowTruncated(
+  scanned: { runs: number; calls: number; approvalsByStatus: number[] },
+  limit: number,
+) {
+  return (
+    scanned.runs > limit ||
+    scanned.calls > limit ||
+    scanned.approvalsByStatus.some((approvals) => approvals > limit)
+  );
+}
+
 const emptyBucket = (companyKey: string, date: string): DayBucketRow => ({
   companyKey,
   date,

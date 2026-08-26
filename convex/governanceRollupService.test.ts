@@ -5,6 +5,7 @@ import {
   dayKeysBack,
   foldEstateRows,
   foldWindowIntoBuckets,
+  governanceWindowTruncated,
   mergeBucketsForWindow,
   mergeEstateRows,
   scopeKeysFor,
@@ -189,5 +190,42 @@ describe("scope keys", () => {
 
   it("the window's spine is every day, oldest first", () => {
     expect(dayKeysBack(NOW, 2)).toEqual([dayKey(NOW - DAY), dayKey(NOW)]);
+  });
+});
+
+describe("deciding whether the reads behind a bucket were cut short", () => {
+  const LIMIT = 100;
+  const complete = { runs: 3, calls: 3, approvalsByStatus: [1, 0, 0, 0, 0] };
+
+  it("a window inside every cap is complete", () => {
+    expect(governanceWindowTruncated(complete, LIMIT)).toBe(false);
+  });
+
+  it("landing exactly on a cap is complete, because the reads take one row past it", () => {
+    expect(
+      governanceWindowTruncated(
+        { runs: LIMIT, calls: LIMIT, approvalsByStatus: [LIMIT, LIMIT, LIMIT, LIMIT, LIMIT] },
+        LIMIT,
+      ),
+    ).toBe(false);
+  });
+
+  it("one row past the runs cap is truncated", () => {
+    expect(governanceWindowTruncated({ ...complete, runs: LIMIT + 1 }, LIMIT)).toBe(true);
+  });
+
+  it("one row past the calls cap is truncated", () => {
+    expect(governanceWindowTruncated({ ...complete, calls: LIMIT + 1 }, LIMIT)).toBe(true);
+  });
+
+  // The five approvals reads build `waited`, and each has its own cap. Any one
+  // of them overrunning shortens the column, which is the case both writers
+  // left out of the answer entirely.
+  it("one row past any single approval status is truncated", () => {
+    for (let status = 0; status < 5; status += 1) {
+      const approvalsByStatus = [0, 0, 0, 0, 0];
+      approvalsByStatus[status] = LIMIT + 1;
+      expect(governanceWindowTruncated({ runs: 1, calls: 1, approvalsByStatus }, LIMIT)).toBe(true);
+    }
   });
 });

@@ -14,7 +14,7 @@ import { buildGapProducts } from "./salesOpportunityService";
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { dayKey as governanceDayKey } from "./governanceActivityService";
-import { foldWindowIntoBuckets } from "./governanceRollupService";
+import { foldWindowIntoBuckets, governanceWindowTruncated } from "./governanceRollupService";
 import {
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
@@ -144,26 +144,37 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
     const DAY_ROW_LIMIT = 10000;
 
-    const [runs, calls, approvalsByStatus, agents] = await Promise.all([
+    const [scannedRuns, scannedCalls, scannedApprovals, agents] = await Promise.all([
       ctx.db
         .query("agentRuns")
         .withIndex("by_started", (q) => q.gte("startedAt", dayStart).lt("startedAt", dayEnd))
-        .take(DAY_ROW_LIMIT),
+        .take(DAY_ROW_LIMIT + 1),
       ctx.db
         .query("agentToolCalls")
         .withIndex("by_started", (q) => q.gte("startedAt", dayStart).lt("startedAt", dayEnd))
-        .take(DAY_ROW_LIMIT),
+        .take(DAY_ROW_LIMIT + 1),
       Promise.all(
         (["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"] as const).map((status) =>
           ctx.db
             .query("agentRunApprovals")
             .withIndex("by_status_requested", (q) =>
               q.eq("status", status).gte("requestedAt", dayStart).lt("requestedAt", dayEnd))
-            .take(DAY_ROW_LIMIT),
+            .take(DAY_ROW_LIMIT + 1),
         ),
       ),
       ctx.db.query("agents").take(500),
     ]);
+
+    const truncated = governanceWindowTruncated(
+      {
+        runs: scannedRuns.length,
+        calls: scannedCalls.length,
+        approvalsByStatus: scannedApprovals.map((approvals) => approvals.length),
+      },
+      DAY_ROW_LIMIT,
+    );
+    const runs = scannedRuns.slice(0, DAY_ROW_LIMIT);
+    const calls = scannedCalls.slice(0, DAY_ROW_LIMIT);
 
     const agentsById = new Map(
       agents.map((agent) => [
@@ -186,9 +197,13 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
         startedAt: call.startedAt,
         sideEffectLevel: call.sideEffectLevel,
       })),
-      neededAPerson: new Set(approvalsByStatus.flat().map((approval) => approval.runId as string)),
+      neededAPerson: new Set(
+        scannedApprovals
+          .flatMap((approvals) => approvals.slice(0, DAY_ROW_LIMIT))
+          .map((approval) => approval.runId as string),
+      ),
       agentsById,
-      truncated: runs.length >= DAY_ROW_LIMIT || calls.length >= DAY_ROW_LIMIT,
+      truncated,
     });
 
     const now = Date.now();
