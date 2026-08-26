@@ -689,8 +689,10 @@ untidy codebase; it is one untidy codebase per product, forever.
 
 ### How it gets done
 
-One file at a time, smallest first, because the shapes within a file tend to
-repeat and the second is cheap once the first is written. After each file:
+One file at a time, **largest first** — the shapes within a file repeat, so the
+second surface in a file is far cheaper than the first, and the ten heaviest
+files hold 130 of the 362. `convex/movements.ts` holds 11 of them and is
+excluded: it is frozen Posture Studio code and stays untouched. After each file:
 typecheck, its own suite, and the ceiling in `return-shape-drift.test.ts`
 ratcheted down to the new measured figure. The ceiling never rises, so a batch
 that is abandoned halfway still leaves the population smaller than it found it.
