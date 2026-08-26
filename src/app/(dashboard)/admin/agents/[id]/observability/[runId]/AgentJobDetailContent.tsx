@@ -35,12 +35,33 @@ import {
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
+import { FAILED_HATCH } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityStyles";
 
 const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   thinking: "bg-secondary/40",
   tool: "bg-brand",
   waiting: "bg-warning/70",
   failed: "bg-destructive",
+};
+
+/**
+ * The four tones are four warm hues, which is a weak way to separate them and
+ * an unusable one for a reader who cannot tell red from green.
+ *
+ * Rather than recolour a timeline that reads well otherwise, the one state that
+ * must never be missed is given the texture the seven-day chart already uses
+ * for the same meaning — so a failed step is identifiable by shape, in
+ * greyscale, and in a screenshot. Each bar also names its own state, which is
+ * what a screen reader gets, and what a hover confirms.
+ */
+const FAILED_TONE: WaterfallRow["tone"] = "failed";
+
+/** The word for each tone, so a bar is never only a colour. */
+const TONE_KEY: Record<WaterfallRow["tone"], string> = {
+  thinking: "toneThinking",
+  tool: "toneTool",
+  waiting: "toneWaiting",
+  failed: "toneFailed",
 };
 
 type RunDetail = NonNullable<FunctionReturnType<typeof api.agentRuns.getRunDetail>>;
@@ -336,9 +357,16 @@ export function AgentJobDetailContent({
                 </span>
                 <span className="h-[22px] rounded-[6px] bg-white/[0.03] border border-border-dim/60 relative">
                   <span
+                    title={t(TONE_KEY[row.tone])}
                     className={`absolute top-[3px] bottom-[3px] rounded-[4px] ${TONE_CLASS[row.tone]}`}
-                    style={{ left: `${row.offsetPercent}%`, width: `${row.widthPercent}%` }}
-                  />
+                    style={{
+                      left: `${row.offsetPercent}%`,
+                      width: `${row.widthPercent}%`,
+                      ...(row.tone === FAILED_TONE ? FAILED_HATCH : {}),
+                    }}
+                  >
+                    <span className="sr-only">{t(TONE_KEY[row.tone])}</span>
+                  </span>
                 </span>
                 <span className="text-[11.5px] text-muted tabular-nums text-right">
                   {formatDuration(row.durationMs)}

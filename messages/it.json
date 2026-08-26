@@ -3370,6 +3370,7 @@
             "failures": {
               "title": "Cosa sta andando storto",
               "hint": "Lo stesso fallimento raggruppato, il peggiore per primo.",
+              "worst": "Causa principale",
               "none": "Niente è fallito. Ogni lavoro in questo periodo è finito.",
               "started": "Iniziato {first} · successo l'ultima volta {last}",
               "seeJob": "Vedi un lavoro a cui è successo",
@@ -3477,7 +3478,11 @@
               "worked": "Riuscito",
               "failed": "Fallito",
               "notRecorded": "Non registrato"
-            }
+            },
+            "toneThinking": "Sta ragionando",
+            "toneTool": "Sta usando uno strumento",
+            "toneWaiting": "In attesa di una persona",
+            "toneFailed": "Non riuscito"
           }
         },
         "manualRun": {

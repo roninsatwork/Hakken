@@ -27,6 +27,7 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { FAILED_HATCH } from "../../_lib/observabilityStyles";
 
 /** How many jobs the "latest" list shows before sending the reader to Activity. */
 const LATEST_JOB_COUNT = 6;
@@ -39,19 +40,6 @@ const SLOW_TAIL_MIN_JOBS = 20;
 
 /** Four gridlines, so the scale reads top, two thirds, one third, nothing. */
 const AXIS_FRACTIONS = [1, 2 / 3, 1 / 3, 0];
-
-/**
- * Diagonal cut-outs in the card colour, worn by the failed share of a bar and
- * by the legend swatch that names it.
- *
- * The two are matched on purpose. A legend is only usable if its swatch can be
- * found in the chart, and hue cannot do that here: the owner cannot tell red
- * from green. Texture survives greyscale, a screenshot and an export.
- */
-const FAILED_HATCH = {
-  backgroundImage:
-    "repeating-linear-gradient(135deg, transparent 0 2px, var(--color-card) 2px 3px)",
-} as const;
 
 /**
  * Whole-number ticks, with duplicates removed.
@@ -167,7 +155,14 @@ function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
               key={`${record.subject}-${record.at}-${index}`}
               className="border-t border-border-dim/40 first:border-t-0 py-1.5 flex items-baseline gap-x-3"
             >
-              <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-success" : "bg-foreground/25"}`} />
+              {/* Decoration, not the signal: the detail beside it already reads
+                  "saved · …" or "looked for, not published", so the dot repeats
+                  in colour what the row says in words. Hidden from screen
+                  readers for the same reason. */}
+              <span
+                aria-hidden="true"
+                className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-success" : "bg-foreground/25"}`}
+              />
               <span className="text-[12px] font-medium text-foreground whitespace-nowrap">{record.subject}</span>
               <span className="text-[12px] text-secondary truncate min-w-0">{record.detail}</span>
             </div>
@@ -627,14 +622,24 @@ function FailureGroups({
             >
               {/* The worst one is red; the rest are amber. All-red made every
                   row read as equally urgent, which is the same as none of them
-                  reading as urgent. */}
+                  reading as urgent.
+                  Red against amber is a hard pair for the reader this platform
+                  is built for, so the rank is carried by the word below and the
+                  colour only agrees with it. */}
               <span
                 className={`w-1 self-stretch rounded-[3px] shrink-0 ${
                   index === 0 ? "bg-destructive" : "bg-warning"
                 }`}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-medium text-foreground">{group.label}</p>
+                <p className="text-[13.5px] font-medium text-foreground">
+                  {group.label}
+                  {index === 0 && (
+                    <span className="ml-2 align-middle text-[10.5px] font-semibold uppercase tracking-wide text-destructive">
+                      {t("worst")}
+                    </span>
+                  )}
+                </p>
                 <p className="text-[11.5px] text-muted mt-0.5">
                   {t("started", { first: label(formatRelativeTime(group.firstSeenAt, now)), last: label(formatRelativeTime(group.lastSeenAt, now)) })}
                 </p>

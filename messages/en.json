@@ -3370,6 +3370,7 @@
             "failures": {
               "title": "What is going wrong",
               "hint": "The same failure grouped together, worst first.",
+              "worst": "Biggest cause",
               "none": "Nothing has failed. Every job in this period finished.",
               "started": "Started {first} · last happened {last}",
               "seeJob": "See a job this happened to",
@@ -3477,7 +3478,11 @@
               "worked": "Worked",
               "failed": "Failed",
               "notRecorded": "Not recorded"
-            }
+            },
+            "toneThinking": "Thinking",
+            "toneTool": "Using a tool",
+            "toneWaiting": "Waiting for a person",
+            "toneFailed": "Failed"
           }
         },
         "manualRun": {
