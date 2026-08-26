@@ -108,7 +108,7 @@ export default function AgentRulesPage() {
         onDelete={(rule) => openDeleteModal(rule._id)}
         labels={{
           priority: "Priority",
-          rule: "Rule Name / Trigger",
+          rule: t("ruleColumn"),
           status: "Status",
           activate: t("table.tooltips.activate"),
           deactivate: t("table.tooltips.deactivate"),

@@ -189,16 +189,16 @@ export default function CompanyAiUsagePage() {
             />
             <MetricBlock
               icon={Layers}
-              title={"Monthly Quota"}
+              title={t("monthlyQuota")}
               value={(planStatus?.messagesUsed ?? 0).toLocaleString()}
               sub={planStatus ? `Limit: ${planStatus.messageLimit === -1 ? 'Unlimited' : (planStatus.messageLimit ?? 0).toLocaleString()}` : "Fetching..."}
               delay={0.2}
             />
             <MetricBlock
               icon={BrainCircuit}
-              title={"Knowledge Assets"}
+              title={t("knowledgeAssets")}
               value={(data.aggregates.knowledgeDocuments ?? 0).toLocaleString()}
-              sub={"PROPRIETARY RAG VECTORS"}
+              sub={t("knowledgeAssetsSub").toUpperCase()}
               delay={0.3}
             />
             <MetricBlock
@@ -260,7 +260,7 @@ export default function CompanyAiUsagePage() {
                         content={
                           <ChartTooltip
                             seriesLabel={(entry) =>
-                              entry.dataKey === "internalMessages" ? "Internal Executions" : "External Widget Traffic"
+                              entry.dataKey === "internalMessages" ? t("internalExecutions") : t("externalWidgetTraffic")
                             }
                           />
                         }

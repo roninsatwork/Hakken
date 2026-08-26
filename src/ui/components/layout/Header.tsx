@@ -168,8 +168,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
           clearTimeout(deadline);
           recordLogin({
             device: navigator.userAgent,
-            ip: data?.ip || "Unknown IP",
-            location: data?.city ? `${data.city}, ${data.country_name}` : "Unknown Location",
+            ip: data?.ip || tc("unknownIp"),
+            location: data?.city ? `${data.city}, ${data.country_name}` : tc("unknownLocation"),
           });
         });
     }

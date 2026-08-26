@@ -71,7 +71,9 @@
       "description": "Something went wrong while loading this section. The error has been logged. You can retry, and if it keeps happening please contact your administrator.",
       "reference": "Reference: {digest}",
       "retry": "Try again"
-    }
+    },
+    "unknownIp": "Unknown IP",
+    "unknownLocation": "Unknown Location"
   },
   "landing": {
     "getStarted": "Get Started",
@@ -1554,7 +1556,12 @@
         "subtitle": "Connect different data sources for the agent knowledgebase",
         "emptyDescription": "Upload PDF, Word or Markdown files — or drop a whole OKF folder — so the AI can securely learn about this company.",
         "deleteDescription": "Are you sure you want to remove <b>{title}</b> from this workspace's memory?"
-      }
+      },
+      "monthlyQuota": "Monthly Quota",
+      "knowledgeAssets": "Knowledge Assets",
+      "knowledgeAssetsSub": "Proprietary RAG vectors",
+      "internalExecutions": "Internal Executions",
+      "externalWidgetTraffic": "External Widget Traffic"
     },
     "workflows": {
       "title": "Workflows",
@@ -2763,7 +2770,8 @@
             }
           },
           "deleteFailed": "The rule could not be deleted. Try again.",
-          "toggleFailed": "The rule could not be switched. Try again."
+          "toggleFailed": "The rule could not be switched. Try again.",
+          "ruleColumn": "Rule Name / Trigger"
         },
         "knowledge": {
           "title": "Knowledge Base",

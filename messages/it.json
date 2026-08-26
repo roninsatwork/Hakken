@@ -71,7 +71,9 @@
       "description": "Si è verificato un errore durante il caricamento di questa sezione. L’errore è stato registrato. Puoi riprovare e, se il problema persiste, contatta il tuo amministratore.",
       "reference": "Riferimento: {digest}",
       "retry": "Riprova"
-    }
+    },
+    "unknownIp": "IP sconosciuto",
+    "unknownLocation": "Posizione sconosciuta"
   },
   "landing": {
     "getStarted": "Inizia ora",
@@ -1554,7 +1556,12 @@
         "subtitle": "Collega diverse fonti di dati per la base di conoscenza dell'agente",
         "emptyDescription": "Carica file PDF, Word o Markdown — o trascina un'intera cartella OKF — così l'AI può imparare in modo sicuro su questa azienda.",
         "deleteDescription": "Sei sicuro di voler rimuovere <b>{title}</b> dalla memoria di questo spazio di lavoro?"
-      }
+      },
+      "monthlyQuota": "Quota mensile",
+      "knowledgeAssets": "Risorse di conoscenza",
+      "knowledgeAssetsSub": "Vettori RAG proprietari",
+      "internalExecutions": "Esecuzioni interne",
+      "externalWidgetTraffic": "Traffico del widget esterno"
     },
     "workflows": {
       "title": "Workflow Autonomi",
@@ -2763,7 +2770,8 @@
             }
           },
           "deleteFailed": "Impossibile eliminare la regola. Riprova.",
-          "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova."
+          "toggleFailed": "Impossibile cambiare lo stato della regola. Riprova.",
+          "ruleColumn": "Nome della regola / Attivazione"
         },
         "knowledge": {
           "title": "Grafo della Conoscenza",

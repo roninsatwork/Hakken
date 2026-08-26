@@ -95,8 +95,16 @@ describe("UX Layer: Internationalization (i18n) Coverage", () => {
     const missing: string[] = [];
     for (const file of collectFiles(path.join(process.cwd(), 'src'))) {
       const source = fs.readFileSync(file, 'utf-8');
-      const namespaces = [...source.matchAll(/useTranslations\(\s*"([^"]+)"\s*\)/g)].map((m) => m[1]);
-      if (namespaces.length !== 1) continue;
+      // Both quote styles. Matching only double quotes meant a file holding one
+      // of each — `useTranslations("a.b")` beside `useTranslations('a')` —
+      // counted as single-namespace, and every `t("…")` in it was then checked
+      // against whichever one happened to be double-quoted. That is not a
+      // near-miss: on the company usage screen it reported five keys missing
+      // that were present, under a namespace no call there uses. A file with
+      // two translators cannot be checked this way and is skipped, which is
+      // what the count below is for.
+      const namespaces = [...source.matchAll(/useTranslations\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1]);
+      if (new Set(namespaces).size !== 1) continue;
 
       for (const match of source.matchAll(/\bt\(\s*"([^"]+)"/g)) {
         const dotted = `${namespaces[0]}.${match[1]}`;
