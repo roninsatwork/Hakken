@@ -24,6 +24,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery, assertTenantAccess, requireTenant } from "./tenantFunctions";
+import { rowShape } from "./utils/rowShape";
 import type { TenantIdentity } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import {
@@ -94,6 +95,7 @@ async function requireOwnServer(
 /** The servers this workspace has connected. */
 export const listServers = adminQuery({
   args: {},
+  returns: v.array(rowShape.mcpServers),
   handler: async (ctx) => {
     const companyId = requireTenant(ctx);
 
@@ -107,6 +109,7 @@ export const listServers = adminQuery({
 /** One server, by id. */
 export const getServer = adminQuery({
   args: { id: v.id("mcpServers") },
+  returns: rowShape.mcpServers,
   handler: async (ctx, args) => await requireOwnServer(ctx, args.id),
 });
 
@@ -124,6 +127,7 @@ export const createServer = adminMutation({
     authMode: authModeValidator,
     secretRef: v.optional(v.string()),
   },
+  returns: v.id("mcpServers"),
   handler: async (ctx, args) => {
     const companyId = requireTenant(ctx);
 

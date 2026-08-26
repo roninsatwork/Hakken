@@ -237,6 +237,7 @@ import type * as userManagementService from "../userManagementService.js";
 import type * as userMemories from "../userMemories.js";
 import type * as userMemorySuggestionActions from "../userMemorySuggestionActions.js";
 import type * as users from "../users.js";
+import type * as utils_agentRunShapes from "../utils/agentRunShapes.js";
 import type * as utils_agentShapes from "../utils/agentShapes.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_aiModelShapes from "../utils/aiModelShapes.js";
@@ -578,6 +579,7 @@ declare const fullApi: ApiFromModules<{
   userMemories: typeof userMemories;
   userMemorySuggestionActions: typeof userMemorySuggestionActions;
   users: typeof users;
+  "utils/agentRunShapes": typeof utils_agentRunShapes;
   "utils/agentShapes": typeof utils_agentShapes;
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/aiModelShapes": typeof utils_aiModelShapes;

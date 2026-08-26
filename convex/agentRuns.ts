@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { v } from "convex/values";
+import { type Infer, v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -7,6 +7,8 @@ import { buildAgentRunAuditMetadata } from "./auditLogService";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
+import schema from "./schema";
+import * as agentRunShapes from "./utils/agentRunShapes";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import {
   getNextStepIndex,
@@ -26,23 +28,8 @@ export const AGENT_RUN_DETAIL_LIMIT = 500;
 const ROW_MARKER_LIMIT = 5;
 const PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH = 4000;
 
-const agentRunStatusValidator = v.union(
-  v.literal("QUEUED"),
-  v.literal("RUNNING"),
-  v.literal("PENDING_APPROVAL"),
-  v.literal("SUCCESS"),
-  v.literal("FAILED"),
-  v.literal("CANCELLED")
-);
-
-const agentRunTriggerValidator = v.union(
-  v.literal("CHAT"),
-  v.literal("MANUAL"),
-  v.literal("SCHEDULE"),
-  v.literal("WEBHOOK"),
-  v.literal("WORKFLOW"),
-  v.literal("EVENT")
-);
+const agentRunStatusValidator = schema.tables.agentRuns.validator.fields.status;
+const agentRunTriggerValidator = schema.tables.agentRuns.validator.fields.triggerType;
 
 const agentRunStepKindValidator = v.union(
   v.literal("OBSERVE"),
@@ -220,7 +207,7 @@ function buildToolCallDetail(
     argumentsPreview,
     rawArgumentsPreview: canViewRawArguments ? buildPreview(toolCall.argumentsJson) : undefined,
     redactedArgumentsPreview: buildPreview(toolCall.redactedArgumentsJson),
-    argumentViewMode: canViewRawArguments ? "RAW" : "REDACTED",
+    argumentViewMode: canViewRawArguments ? "RAW" as const : "REDACTED" as const,
     rawArgumentsAvailable: Boolean(toolCall.argumentsJson),
     status: toolCall.status,
     requiredRole: toolCall.requiredRole,
@@ -384,7 +371,7 @@ function buildReplayTimelineDiff(args: {
     const statusChanged = sourceStep?.status !== replayStep?.status;
     const outputChanged = sourceOutput !== replayOutput;
     const errorChanged = sourceError !== replayError;
-    const changeType = !sourceStep
+    const changeType: Infer<typeof agentRunShapes.replayChangeTypeShape> = !sourceStep
       ? "ADDED"
       : !replayStep
         ? "REMOVED"
@@ -428,6 +415,7 @@ export const getPageForAgent = adminQuery({
     paginationOpts: paginationOptsValidator,
     status: v.optional(agentRunStatusValidator),
   },
+  returns: agentRunShapes.agentRunListPageShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
@@ -518,6 +506,7 @@ export const getForAgent = adminQuery({
     paginationOpts: paginationOptsValidator,
     status: v.optional(agentRunStatusValidator),
   },
+  returns: agentRunShapes.runPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const baseQuery = args.status
@@ -549,6 +538,7 @@ export const getForAgent = adminQuery({
  */
 export const getWorkingAgentIds = adminQuery({
   args: {},
+  returns: agentRunShapes.workingAgentIdsShape,
   handler: async (ctx) => {
     const { user } = ctx;
     const live = (
@@ -575,6 +565,7 @@ export const getRunDetail = adminQuery({
   args: {
     runId: v.id("agentRuns"),
   },
+  returns: agentRunShapes.runDetailShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
@@ -884,6 +875,7 @@ export const getAnalyticsForAgent = adminQuery({
     /** The window the headline numbers report on, compared against the one before it. */
     lookbackDays: v.optional(v.number()),
   },
+  returns: agentRunShapes.agentAnalyticsShape,
   handler: async (ctx, args) => await readAgentAnalytics(ctx, args),
 });
 
@@ -892,6 +884,7 @@ export const getRunObservatory = adminQuery({
     lookbackDays: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
+  returns: agentRunShapes.runObservatoryShape,
   handler: async (ctx, args) => await readRunObservatory(ctx, args),
 });
 
@@ -900,6 +893,7 @@ export const replayRun = adminMutation({
     runId: v.id("agentRuns"),
     mode: v.optional(replayModeValidator),
   },
+  returns: agentRunShapes.runReplayShape,
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);

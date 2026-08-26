@@ -786,7 +786,7 @@ export async function readRunObservatory(
   const completedRuns = successfulRuns + failedRuns;
 
   return {
-    scope: user.role === "SUPER_ADMIN" ? "platform" : "company",
+    scope: user.role === "SUPER_ADMIN" ? "platform" as const : "company" as const,
     lookbackDays,
     sampledRuns: recentRuns.length,
     sampledToolCalls: sampledToolCalls.length,
