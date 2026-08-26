@@ -929,6 +929,10 @@
           "needAttention": "{count} need attention",
           "nobodyAdded": "{count} with nobody added"
         },
+        "coverage": {
+          "title": "Some figures are incomplete",
+          "body": "The last {windowDays} days were busier than this screen can read in one go, so the totals below are at least this high rather than exact."
+        },
         "cards": {
           "revenueTitle": "Projected monthly revenue",
           "spendNoPlans": "AI spend {spend} · no plans priced yet",
@@ -6964,6 +6968,7 @@
       "saving": "Saving…",
       "cancel": "Cancel"
     },
+    "partial": "This month was busier than this screen reads in one go, so these counts are at least this high rather than exact.",
     "honesty": "Every number is a count of real recorded events. The hours line is an estimate built from the visible assumption above - change it to match how long these would really take your team.",
     "saveFailed": "The assumptions could not be saved. Try again."
   },

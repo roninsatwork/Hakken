@@ -182,6 +182,12 @@ export function MoneyViewScreen({
         )}
       </div>
 
+      {/* A month too busy to read in one pass used to come back looking quiet.
+          The counts still show; they just stop claiming to be totals. */}
+      {view.partial ? (
+        <p className="text-[12.5px] text-secondary max-w-2xl">{t("partial")}</p>
+      ) : null}
+
       <p className="text-[12.5px] text-muted max-w-2xl">{t("honesty")}</p>
     </div>
   );

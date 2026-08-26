@@ -50,12 +50,34 @@ export const getPlatformOverview = superAdminQuery({
     const cutoff = now - WINDOW_DAYS * DAY_MS;
     const dayKeys = buildDayKeys(now, WINDOW_DAYS);
 
-    const [companies, users, plans, models] = await Promise.all([
-      ctx.db.query("companies").take(COMPANY_LIMIT),
-      ctx.db.query("users").take(USER_LIMIT),
-      ctx.db.query("plans").take(PLAN_LIMIT),
-      ctx.db.query("aiModels").take(MODEL_LIMIT),
+    /**
+     * Every read here is capped, and a cap that is reached is indistinguishable
+     * from a cap that is not — `.take(n)` returning n rows cannot tell a busy
+     * month from an exhausted one. So each asks for one row more than it wants:
+     * getting it back is the only evidence the window was cut short.
+     *
+     * The figures are still shown when that happens. Refusing the whole screen
+     * over an incomplete month helps nobody, and the numbers stay directionally
+     * true. What changes is that the screen now says so, rather than presenting
+     * a short month as a quiet one.
+     */
+    const incomplete: string[] = [];
+    const capped = <T,>(label: string, limit: number, rows: T[]) => {
+      if (rows.length <= limit) return rows;
+      incomplete.push(label);
+      return rows.slice(0, limit);
+    };
+
+    const [companyRows, userRows, planRows, modelRows] = await Promise.all([
+      ctx.db.query("companies").take(COMPANY_LIMIT + 1),
+      ctx.db.query("users").take(USER_LIMIT + 1),
+      ctx.db.query("plans").take(PLAN_LIMIT + 1),
+      ctx.db.query("aiModels").take(MODEL_LIMIT + 1),
     ]);
+    const companies = capped("companies", COMPANY_LIMIT, companyRows);
+    const users = capped("users", USER_LIMIT, userRows);
+    const plans = capped("plans", PLAN_LIMIT, planRows);
+    const models = capped("models", MODEL_LIMIT, modelRows);
 
     const planById = new Map(plans.map((plan) => [plan._id as Id<"plans">, plan]));
     const { modelMap } = buildModelCostContext(models);
@@ -72,29 +94,36 @@ export const getPlatformOverview = superAdminQuery({
     }
     const companyIdByUser = new Map(clientUsers.map((person) => [person._id as string, person.companyId]));
 
-    const messages = await ctx.db
+    const messages = capped("messages", MESSAGE_LIMIT, await ctx.db
       .query("messages")
       .withIndex("by_createdAt", (q) => q.gte("createdAt", cutoff))
-      .take(MESSAGE_LIMIT);
+      .take(MESSAGE_LIMIT + 1));
 
-    const logins = await ctx.db
+    const logins = capped("logins", LOGIN_LIMIT, await ctx.db
       .query("logins")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .take(LOGIN_LIMIT);
+      .take(LOGIN_LIMIT + 1));
 
     // There is no by-started index across every status, so this asks per status
     // and merges — the same approach the run observatory takes.
+    const runStatuses = ["QUEUED", "RUNNING", "PENDING_APPROVAL", "SUCCESS", "FAILED", "CANCELLED"] as const;
     const runsByStatus = await Promise.all(
-      (["QUEUED", "RUNNING", "PENDING_APPROVAL", "SUCCESS", "FAILED", "CANCELLED"] as const).map((status) =>
+      runStatuses.map((status) =>
         ctx.db
           .query("agentRuns")
           .withIndex("by_status_started", (q) => q.eq("status", status).gte("startedAt", cutoff))
-          .take(RUN_LIMIT)
+          .take(RUN_LIMIT + 1)
       )
     );
-    const runs = runsByStatus.flat();
+    const runs = runsByStatus
+      .map((rows, index) => capped(`runs:${runStatuses[index]}`, RUN_LIMIT, rows))
+      .flat();
 
-    const invitations = await ctx.db.query("invitations").take(INVITATION_LIMIT);
+    const invitations = capped(
+      "invitations",
+      INVITATION_LIMIT,
+      await ctx.db.query("invitations").take(INVITATION_LIMIT + 1),
+    );
 
     const daily = new Map(dayKeys.map((key) => [key, {
       day: key,
@@ -112,8 +141,21 @@ export const getPlatformOverview = superAdminQuery({
 
     let aiSpendGBP = 0;
 
+    /**
+     * Only client seats count as active seats.
+     *
+     * Platform staff were excluded from the seat total and not from the active
+     * count, so their own messages and sign-ins landed in the numerator of a
+     * fraction they had been removed from the denominator of. A local database
+     * showed "4 of 3" seats in use, at 133% — and every deployment where anyone
+     * from Ronins had signed in was overstating client engagement by exactly
+     * the amount the comment above says must never be counted.
+     *
+     * `companyIdByUser` holds every client user, including those not yet in a
+     * company, so membership is the right test and a missing company is not.
+     */
     const noteActivity = (userId: string | undefined, at: number) => {
-      if (!userId) return;
+      if (!userId || !companyIdByUser.has(userId)) return;
       activeUserIds.add(userId);
       lastSeenByUser.set(userId, Math.max(lastSeenByUser.get(userId) ?? 0, at));
       if (at < recentCutoff) return;
@@ -233,6 +275,10 @@ export const getPlatformOverview = superAdminQuery({
 
     return {
       windowDays: WINDOW_DAYS,
+      coverage: {
+        complete: incomplete.length === 0,
+        incomplete,
+      },
       clients: {
         total: companies.length,
         healthy: portfolio.filter((client) => client.state === "HEALTHY").length,

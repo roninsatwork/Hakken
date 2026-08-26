@@ -929,6 +929,10 @@
           "needAttention": "{count} richiedono attenzione",
           "nobodyAdded": "{count} senza nessuno aggiunto"
         },
+        "coverage": {
+          "title": "Alcuni dati sono incompleti",
+          "body": "Gli ultimi {windowDays} giorni sono stati più intensi di quanto questa schermata riesca a leggere in una sola volta, quindi i totali qui sotto sono almeno di questa entità, non esatti."
+        },
         "cards": {
           "revenueTitle": "Ricavi mensili previsti",
           "spendNoPlans": "Spesa AI {spend} · nessun piano ha ancora un prezzo",
@@ -6964,6 +6968,7 @@
       "saving": "Salvataggio…",
       "cancel": "Annulla"
     },
+    "partial": "Questo mese è stato più intenso di quanto questa schermata riesca a leggere in una sola volta, quindi questi conteggi sono almeno di questa entità, non esatti.",
     "honesty": "Ogni numero è un conteggio di eventi reali registrati. La riga delle ore è una stima costruita sull'ipotesi visibile sopra - modificala perché rispecchi quanto tempo servirebbe davvero al tuo team.",
     "saveFailed": "Impossibile salvare le ipotesi. Riprova."
   },

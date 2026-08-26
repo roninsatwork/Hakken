@@ -56,6 +56,7 @@ vi.mock("next/link", () => ({
 
 const overview = {
   windowDays: 30,
+  coverage: { complete: true, incomplete: [] as string[] },
   clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
   money: { projectedMrrGBP: 400, aiSpendGBP: 12.5, spendAsPercentOfRevenue: 3.1 },
   seats: { total: 12, active: 4, utilisation: 33 },
@@ -177,5 +178,29 @@ describe("AdminDashboardPage", () => {
     render(<AdminDashboardPage />);
 
     expect(screen.getByText("No clients yet.")).toBeInTheDocument();
+  });
+
+  /**
+   * A month too busy to read in one pass used to be shown as a quiet one.
+   * The figures still render — they are directionally true, and a blank screen
+   * helps nobody — but the reader is told they are floors.
+   */
+  it("says when the month was too busy to read in full", () => {
+    fixture = {
+      ...overview,
+      coverage: { complete: false, incomplete: ["messages", "logins"] },
+    };
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("Some figures are incomplete")).toBeInTheDocument();
+    // The numbers are still there; only the claim to exactness is gone.
+    expect(screen.getByText("£400.00")).toBeInTheDocument();
+  });
+
+  it("stays quiet when the month was read in full", () => {
+    fixture = { ...overview };
+    render(<AdminDashboardPage />);
+
+    expect(screen.queryByText("Some figures are incomplete")).not.toBeInTheDocument();
   });
 });

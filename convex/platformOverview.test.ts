@@ -263,4 +263,83 @@ describe("platform overview", () => {
 
     expect(overview.seats.active).toBe(0);
   });
+
+  /**
+   * A cap that is reached looks exactly like a cap that is not.
+   *
+   * Every read on this screen is bounded, and until 2026-08-26 a window busier
+   * than its bound was shown as a quiet one: the numbers came back short and
+   * nothing anywhere said so. The plan cap is the cheapest of them to exceed
+   * honestly, so it is the one this proves against — the mechanism is shared by
+   * all of them.
+   */
+  test("says so when a window was cut short by a cap, and still reports the figures", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdmin } = await seedPlatform(t);
+
+    await t.run(async (ctx) => {
+      // PLAN_LIMIT is 100; seedPlatform already made one.
+      for (let index = 0; index < 100; index += 1) {
+        await ctx.db.insert("plans", {
+          name: `Filler ${index}`,
+          messageLimit: 1,
+          priceGBP: 0,
+          isActive: false,
+          createdAt: Date.now(),
+        });
+      }
+    });
+
+    const client = t.withIdentity({ subject: superAdmin });
+    const overview = await client.query(api.platformOverview.getPlatformOverview, {});
+
+    expect(overview.coverage.complete).toBe(false);
+    expect(overview.coverage.incomplete).toContain("plans");
+    // Still answers. An incomplete month is worth more than a blank screen.
+    expect(overview.clients.total).toBe(3);
+  });
+
+  test("says the window was complete when nothing hit a cap", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdmin } = await seedPlatform(t);
+
+    const client = t.withIdentity({ subject: superAdmin });
+    const overview = await client.query(api.platformOverview.getPlatformOverview, {});
+
+    expect(overview.coverage.complete).toBe(true);
+    expect(overview.coverage.incomplete).toEqual([]);
+  });
+
+  /**
+   * Seats in use cannot exceed seats.
+   *
+   * Platform staff were removed from the seat total and left in the active
+   * count, so their own messages and sign-ins inflated a fraction they were not
+   * part of. A local database read "4 of 3 seats in use, 133% used".
+   */
+  test("counts only client seats as seats in use, never platform staff", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdmin, active, paying } = await seedPlatform(t);
+
+    await t.run(async (ctx) => {
+      const threadId = await ctx.db.insert("threads", {
+        companyId: paying, userId: active, title: "A thread", createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      // The sign-in loop already refuses a non-client. The message and run
+      // loops did not, which is where platform staff actually leaked in.
+      for (const userId of [superAdmin, active]) {
+        await ctx.db.insert("messages", {
+          threadId, role: "user", content: "A question", createdAt: Date.now() - DAY_MS,
+          companyId: paying, userId,
+        });
+      }
+    });
+
+    const client = t.withIdentity({ subject: superAdmin });
+    const overview = await client.query(api.platformOverview.getPlatformOverview, {});
+
+    expect(overview.seats.active).toBe(1);
+    expect(overview.seats.active).toBeLessThanOrEqual(overview.seats.total);
+    expect(overview.seats.utilisation).toBeLessThanOrEqual(100);
+  });
 });

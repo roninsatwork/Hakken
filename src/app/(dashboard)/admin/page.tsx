@@ -50,6 +50,7 @@ type PortfolioRow = {
 
 type PlatformOverview = {
   windowDays: number;
+  coverage: { complete: boolean; incomplete: string[] };
   clients: { total: number; healthy: number; needsAttention: number; unused: number };
   money: { projectedMrrGBP: number; aiSpendGBP: number; spendAsPercentOfRevenue: number | null };
   seats: { total: number; active: number; utilisation: number };
@@ -277,6 +278,21 @@ export default function AdminDashboardPage() {
           <span className={cn("text-[15px] font-semibold", allWell ? "text-[#10b981]" : "text-[#f59e0b]")}>
             {headline}
           </span>
+        </div>
+      ) : null}
+
+      {/* A month too busy to read in one pass used to look like a quiet one.
+          The figures still show — they are directionally true and refusing the
+          screen helps nobody — but they no longer claim to be exact. */}
+      {overview && !overview.coverage.complete ? (
+        <div className="flex items-start gap-3 rounded-[10px] border border-border-dim bg-card/40 px-4 py-3">
+          <AlertTriangle className="mt-[2px] h-[18px] w-[18px] shrink-0 text-secondary" />
+          <div>
+            <div className="text-[13px] font-semibold text-foreground">{t("coverage.title")}</div>
+            <div className="mt-1 text-[12px] text-secondary">
+              {t("coverage.body", { windowDays: overview.windowDays })}
+            </div>
+          </div>
         </div>
       ) : null}
 

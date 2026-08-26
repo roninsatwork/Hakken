@@ -58,9 +58,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/users.ts', exportName: 'getUnassignedSuperAdmins', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'unassigned super-admin selector needs bounded role/company lookup before large admin growth' },
   { filePath: 'convex/widgets.ts', exportName: 'generateWidgetUploadUrl', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'widget upload thread lookup should be indexed and bounded in chat hardening' },
   { filePath: 'convex/workflows.ts', exportName: 'list', table: 'workflows', category: 'admin_inventory', phase: 'Phase 1', reason: 'workflow admin inventory list is scheduled for paginated indexed contracts' },
-  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'aiModels', category: 'admin_inventory', phase: 'Phase 1', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. The model catalogue at 10,000 rows, read to price the overview. Truncation here misprices rather than under-counts, which is the same class as the snapshot catalogue read — needs the same partial marker' },
-  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day message scan at 20,000 rows — the largest unprotected read on the platform, and nothing stands behind it. A busy month shows short on the overview with no gap reported. Rank this above the 10,000-row reads when paging starts' },
-  { filePath: 'convex/platformOverview.ts', exportName: 'getPlatformOverview', table: 'logins', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. A 30-day login scan at 20,000 rows, feeding the active-user figure on the same screen. Same exposure as the message scan above' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentRuns', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Health signals read at 10,000 rows. Truncation understates a problem count, which is the safe direction for an alert that already exists — but it can also hide one, so it is listed rather than excused' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentLogs', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Recent agent logs at 10,000 rows, read for the error-rate signal' },
   { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentRunApprovals', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'Invisible to this register until 2026-08-26, when the matcher started resolving constants instead of matching the digits 10000. Pending approvals at 10,000 rows, read for the waiting-on-a-person signal' },
@@ -110,8 +107,13 @@ const UNTRIAGED_READ_THRESHOLD = 1000;
 /**
  * Frozen at the measured count on 2026-08-26. Shrink-only, like every other
  * baseline in this repo — it may fall as reads are paged and may never rise.
+ *
+ * Lowered from 126 to 118 the same day, when the money view's four
+ * read-then-filter counts and the platform overview's caps moved to the
+ * read-one-past pattern. Eight units of slack in a ratchet is eight reads that
+ * could appear without anything noticing.
  */
-const MID_SIZED_READ_CEILING = 126;
+const MID_SIZED_READ_CEILING = 118;
 
 const numericConstants = (() => {
   const constants = new Map<string, number>();
