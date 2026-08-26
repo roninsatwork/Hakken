@@ -141,13 +141,37 @@ Uploads should use the central upload policies in `src/lib/constants/uploads.ts`
 
 Shared frontend helpers should stay boring and reusable. `src/hooks/useDebounce.ts` is the shared delayed-search hook used by admin search surfaces. `src/hooks/useSmoothStreamText.ts` owns the display-only progressive reveal used by dashboard and embedded-widget assistant replies; its pure pacing rules live in `src/lib/streamReveal.ts`, while completed history renders immediately. `src/lib/chatTelemetry.ts` contains display-only token and approximate GBP chat-cost helpers for chat-log screens; it uses simple model-name heuristics and fixed rates, so do not treat it as billing authority. `src/lib/convexHttpActionsUrl.ts` resolves the Convex HTTP Actions site origin for workflow webhook examples from `CONVEX_SITE_URL`, with the `.cloud` to `.site` fallback kept only for default Convex deployments.
 
+### The React Compiler Bails Out Of A Component With try/catch/finally
+
+A `try/catch` or `try/finally` anywhere in a component makes
+`eslint-plugin-react-hooks` stop analysing that component, which silences
+`react-hooks/purity` and `react-hooks/set-state-in-effect` for the whole file.
+Take the block away — migrating a hand-rolled error path onto `useAdminAction`,
+for instance — and every violation it was masking lights up at once. Nine files
+hit this on 2026-08-26.
+
+They are pre-existing bugs, not new ones, and both rules are `error` here with
+no suppression comment anywhere in `src/`. The three fixes that already have
+precedent in this codebase:
+
+- Seeding state from a prop or query in an effect → derive the value instead,
+  or adopt it during render behind a sentinel (`useSystemSettingsForm.ts`).
+- `useState(0)` plus a `value || Date.now()` fallback → `useState(() => Date.now())`.
+- A helper used by an effect but declared below it → hoist it to module level.
+
+**A render-time sentinel must be a stable value, not the object.** Keying on the
+document itself re-seeds the form on every server change, overwriting whatever
+the person is typing — and against any caller that returns a fresh object per
+read it never settles at all, which rendered the model pricing screen until
+React gave up. Key on the record's id.
+
 ## Localization
 
 User-visible dashboard copy is localized through `next-intl` and dictionaries in `messages/en.json` and `messages/it.json`. `src/i18n/request.ts` reads the `locale` cookie, defaults to `en`, and imports the matching message dictionary for `NextIntlClientProvider` in `src/app/layout.tsx`. The profile preferences UI writes that cookie and reloads the page when the user switches between English and Italian.
 
 When editing localized UI, keep English and Italian keys in parity. `src/i18n.test.ts` verifies the message key structures match exactly. Some older pages still contain inline strings; reduce drift when touching those pages instead of expanding hardcoded copy.
 
-The current root layout still renders `<html lang="en">` even when `next-intl` resolves another locale. Treat that as accessibility/i18n implementation debt: do not document dynamic HTML language metadata as live until the layout binds the resolved locale to the `lang` attribute.
+`src/app/layout.tsx` binds the resolved locale to `<html lang>` — the same value it hands `NextIntlClientProvider`, so the two cannot disagree. It rendered a hardcoded `"en"` until 2026-08-26.
 
 ## Responsive And Accessibility Rules
 
