@@ -406,26 +406,33 @@ export default function RoninArcadePage() {
 
         {/* Leaderboard Table (Hidden when playing) */}
         {!isPlaying && (
-          <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl">
-           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-border-dim/50 bg-background/50">
-             <div className="flex items-center gap-3">
-               <Trophy className="w-5 h-5 text-brand" />
-               <div>
-                  <h3 className="text-[15px] font-semibold text-foreground tracking-wide">{t("leaderboardTitle")}</h3>
-                  <p className="text-[13px] text-secondary mt-0.5">{t("leaderboardSubtitle")}</p>
-               </div>
-             </div>
-           </div>
-
-           <DataTable
+          <DataTable
              rows={
                (status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0
                  ? undefined
                  : paginatedItems
              }
              rowKey={(entry) => entry._id}
-             variant="bare"
              headerVariant="strip"
+             /*
+               The card is the table's own, rather than a bordered div wrapped
+               around it. Wrapping put the search box inside the card as well as
+               inside its own bordered box — the box-in-a-box the shared table
+               floor forbids — because the controls row renders above the shell,
+               not inside it. Handing the heading to `cardHeader` puts it back
+               where it was, at the top of the same border as the rows.
+             */
+             cardHeader={
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-border-dim/50 bg-background/50">
+                 <div className="flex items-center gap-3">
+                   <Trophy className="w-5 h-5 text-brand" />
+                   <div>
+                     <h3 className="text-[15px] font-semibold text-foreground tracking-wide">{t("leaderboardTitle")}</h3>
+                     <p className="text-[13px] text-secondary mt-0.5">{t("leaderboardSubtitle")}</p>
+                   </div>
+                 </div>
+               </div>
+             }
              search={{
                value: scoreSearch,
                onChange: setScoreSearch,
@@ -510,7 +517,6 @@ export default function RoninArcadePage() {
                },
              ]}
            />
-          </div>
         )}
 
       </div>
