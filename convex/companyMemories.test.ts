@@ -568,3 +568,48 @@ describe("Outcome-weighted company ranking (self-improvement, Phase 2)", () => {
     expect(result.always.map((match) => match.memoryId)).toContain(alwaysId);
   });
 });
+
+describe("the memory reads nothing was calling", () => {
+  /**
+   * The preview and the candidate queue had no test reaching them, so their
+   * declared shapes were checked by the compiler alone — and the compiler
+   * cannot see a field a handler sends that its declaration does not name.
+   */
+  test("the preview and the candidate queue both answer with rows", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Preview Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "preview@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      return { adminId, companyId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    await client.mutation(api.companyMemories.createMemory, {
+      companyId,
+      title: "Reporting tone",
+      content: "Summaries lead with what is blocked.",
+      applyMode: "ALWAYS",
+    });
+    await client.mutation(api.companyMemories.createCandidate, {
+      companyId,
+      title: "Invoice wording",
+      content: "Invoices are addressed to the finance contact, not the site.",
+      applyMode: "WHEN_RELEVANT",
+    });
+
+    const preview = await client.query(api.companyMemories.getPreviewForCompany, { companyId });
+    const candidates = await client.query(api.companyMemories.getCandidatesForCompany, {
+      companyId,
+      paginationOpts,
+    });
+
+    expect(preview.map((memory) => memory.title)).toEqual(["Reporting tone"]);
+    expect(candidates.page.map((candidate) => candidate.title)).toEqual(["Invoice wording"]);
+  });
+});

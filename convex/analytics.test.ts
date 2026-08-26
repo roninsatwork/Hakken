@@ -617,3 +617,67 @@ describe("Analytics MRR Strict Isolation", () => {
     });
   });
 });
+
+describe("the platform-wide analytics read", () => {
+  /**
+   * `getGlobalAnalytics` had no test reaching it, and its declared shape was
+   * a field short: every person on the platform board carries the workspace
+   * they belong to, and no fixture here produced one, so the suite stayed green
+   * while the real screen refused to load. This reads it with a person who has
+   * a company and a person who has none, which is what makes both branches of
+   * that field real.
+   */
+  test("the boards name each person's workspace, including those with none", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const superAdminId = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const companyId = await ctx.db.insert("companies", { name: "Board Co", createdAt: now });
+      const inCompany = await ctx.db.insert("users", {
+        email: "in-company@test.com",
+        name: "In Company",
+        role: "USER",
+        companyId,
+        createdAt: now,
+      });
+      const independent = await ctx.db.insert("users", {
+        email: "independent@test.com",
+        name: "Independent Person",
+        role: "USER",
+        createdAt: now,
+      });
+
+      for (const userId of [inCompany, independent]) {
+        const threadId = await ctx.db.insert("threads", {
+          userId,
+          title: "Costed Thread",
+          createdAt: now,
+          updatedAt: now,
+        });
+        await ctx.db.insert("messages", {
+          threadId,
+          role: "assistant",
+          content: "A costed answer",
+          userId,
+          companyId: userId === inCompany ? companyId : undefined,
+          inputTokens: 1_000_000,
+          outputTokens: 500_000,
+          modelUsed: "sonae-test-model",
+          analyticsDimensionsVersion: 1,
+          createdAt: now,
+        });
+      }
+
+      return ctx.db.insert("users", { email: "board-super@test.com", role: "SUPER_ADMIN", createdAt: now });
+    });
+
+    const analytics = await t.withIdentity({ subject: superAdminId })
+      .query(api.analytics.getGlobalAnalytics, { timeframe: "30d" });
+
+    // Proof this read something: an empty board would have nothing to be wrong about.
+    expect(analytics.topUsers.length).toBeGreaterThan(0);
+    expect(analytics.topUsers.map((leader) => leader.companyName).sort())
+      .toEqual(["Board Co", "External Web Traffic", "Independent"]);
+  });
+});

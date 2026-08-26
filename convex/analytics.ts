@@ -14,6 +14,7 @@ import {
     resolveTimestampRange,
   mergeSnapshotModelMetrics } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
+import * as analyticsShapes from "./utils/analyticsShapes";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
@@ -54,6 +55,7 @@ export const getGlobalAICosts = superAdminQuery({
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
+  returns: analyticsShapes.globalAiCostsShape,
   handler: async (ctx, args) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
@@ -137,6 +139,7 @@ export const getGlobalAICosts = superAdminQuery({
 
 export const getPlatformOverview = superAdminQuery({
   args: {},
+  returns: analyticsShapes.platformOverviewShape,
   handler: async (ctx) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
@@ -212,6 +215,7 @@ export const getPlatformOverview = superAdminQuery({
 
 export const getUserCostOverview = adminQuery({
   args: { userId: v.id("users") },
+  returns: analyticsShapes.userCostOverviewShape,
   handler: async (ctx, args) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
@@ -277,6 +281,7 @@ export const getUserCostThreads = adminQuery({
     userId: v.id("users"),
     paginationOpts: paginationOptsValidator,
   },
+  returns: analyticsShapes.userCostThreadsShape,
   handler: async (ctx, args) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
@@ -345,6 +350,7 @@ export const getCompanyMetrics = adminQuery({
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
+  returns: analyticsShapes.companyMetricsShape,
   handler: async (ctx, args) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
@@ -658,6 +664,7 @@ export const getCompanyMetrics = adminQuery({
 
 export const getGlobalInventoryMetrics = superAdminQuery({
   args: {},
+  returns: analyticsShapes.globalInventoryMetricsShape,
   handler: async (ctx) => {
 
     const rollup = await getGlobalInventoryRollup(ctx);
@@ -681,6 +688,7 @@ export const getGlobalAnalytics = superAdminQuery({
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
+  returns: analyticsShapes.globalAnalyticsShape,
   handler: async (ctx, args) => {
     const coverage = createCoverage();
     const aiModelsFetch = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);

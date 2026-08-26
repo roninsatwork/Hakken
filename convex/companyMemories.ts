@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { appError } from "./utils/appError";
+import * as companyMemoryShapes from "./utils/companyMemoryShapes";
 import { normalizeContent, normalizeTitle } from "./utils/memoryText";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import {
@@ -105,6 +106,7 @@ export const getSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
+  returns: companyMemoryShapes.memorySummaryShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -141,6 +143,7 @@ export const getPreviewForCompany = adminQuery({
     companyId: v.id("companies"),
     limit: v.optional(v.number()),
   },
+  returns: companyMemoryShapes.memoryListShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
     const limit = getRuntimeMemoryLimit(args.limit);
@@ -370,6 +373,7 @@ export const getForCompany = adminQuery({
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
+  returns: companyMemoryShapes.memoryPageShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -411,6 +415,7 @@ export const getCandidatesForCompany = adminQuery({
     status: v.optional(candidateStatusValidator),
     paginationOpts: paginationOptsValidator,
   },
+  returns: companyMemoryShapes.memoryCandidatePageShape,
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
@@ -463,6 +468,7 @@ export const createMemory = adminMutation({
     sourceType: v.optional(memorySourceTypeValidator),
     sourceIdsJson: v.optional(v.string()),
   },
+  returns: v.id("companyMemories"),
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     await assertNoRejectedCandidateMatch(ctx, args.companyId, args.content);
@@ -770,6 +776,7 @@ export const createCandidate = adminMutation({
     reason: v.optional(v.string()),
     confidence: v.optional(v.number()),
   },
+  returns: v.id("companyMemoryCandidates"),
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     await assertNoRejectedCandidateMatch(ctx, args.companyId, args.content);
@@ -812,6 +819,7 @@ export const approveCandidate = adminMutation({
   args: {
     candidateId: v.id("companyMemoryCandidates"),
   },
+  returns: v.id("companyMemories"),
   handler: async (ctx, args) => {
     const candidate = await ctx.db.get(args.candidateId);
     if (!candidate) throw appError("NOT_FOUND", "Memory candidate not found");
