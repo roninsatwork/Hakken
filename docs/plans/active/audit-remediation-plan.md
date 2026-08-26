@@ -474,41 +474,85 @@ back the exact reference that regressed within an hour of the WP14 sweep.
 
 ## Known open, after the 2026-08-26 close
 
-**Names that say GBP over values that are USD.** Model spend is billed by the
-providers in dollars and stored with no conversion anywhere in the codebase, so
-the eighteen screens printing `$` are correct — while the columns holding it
-are called `costGBP`, `totalCostGBP`, `maxCostGBP` and `totalGBP`. The symbol
-is right and the names are wrong. This is the most dangerous item on the list
-precisely because the obvious reading is the wrong one: it invites someone to
-"fix" the symbol to match the name, or to sum model spend into a sterling
-report. `src/lib/currency.ts` carries a warning; the columns are unrenamed.
+The fourteen packages are closed. What follows was found while closing them and
+was never part of the plan. **About two and a half days**, sized and ordered as
+they should be taken. Nothing here is failing, and nothing is urgent.
 
-**About 120 catalogue values are byte-identical across both languages**, 56 of
-them full English sentences, all under `admin.*` and `ai.*`. Unguarded, so the
-population can grow.
+Agreed with Anthony 2026-08-26: do group A, then group B, and leave group C
+until he asks for it.
 
-**What the copy guard still cannot read**, stated because precision was bought
-with coverage: single words below the eight-character threshold, strings passed
-as function arguments (`setUploadStatus("Parsing Intelligence Data…")` in the
-assistant page is real and invisible), props whose name carries no copy word,
-and copy assembled across statements.
+### Group A — about half a day, safe
 
-**Three colour-only signals outside the two that were fixed.** Failure groups
-rank worst-first by a red rail against amber ones; the job waterfall separates
-four states by warm hue alone; the saved-record dots are unlabelled. None is
+**A1. Three status signals readable only by hue (~2h).** Failure groups rank
+worst-first by a red rail against amber ones; the job waterfall separates four
+states by warm hue alone; the saved-record dots carry no label. None is
 green-versus-red, so none breaches the standing rule, and all three are outside
-what the new guard can see.
+what `status-colour-drift.test.ts` can see — it reads bare swatches, and these
+have children. Each wants a word or a shape, not a new rule.
 
-**A limit of the return-shape constraint, measured rather than assumed.** It
-catches a handler returning the wrong type or missing a field, but not one
-returning an *extra* field, because the generic infers the handler's own type
-first. Extra fields are caught at runtime by `convex-test`, so the cover is
-real only where a test exercises the happy path — true for seven of the
-fourteen surfaces added on 2026-08-26.
+**A2. Four screens skip the search assertions of the shared table floor (~2h).**
+`app/settings/team`, `admin/_features/wiki/WikiDiaryScreen`,
+`admin/agents/[id]`, and `admin/connections` all have a search box and all pass
+no `searchPlaceholder` to `itBehavesLikeAStandardTableScreen`, so three
+assertions — including the nested-border one — silently do not run for them.
+The arcade screen had exactly this gap and turned out to have a real fault
+behind it (`630f0a7e7`), so budget for finding more than nothing.
 
-**And one property of this document.** No per-package percentages were ever
-recorded, so the "about 70%" figure in the review section above cannot be
-reproduced by anyone; treat it as a band, not a number.
+*The shape worth remembering beyond these four: a shared floor holds a screen
+only to the parts that screen opts into, and an omitted config line is
+indistinguishable from a passing rule.*
+
+### Group B — about a day, safe but slow
+
+**B1 then B2, in that order — widen the catcher first, then translate**, because
+translating first means going back over the same screens.
+
+**B1. Widen what the copy guard can read.** Known blind spots, disclosed rather
+than discovered: single words below the eight-character threshold; strings
+passed as function arguments (`setUploadStatus("Parsing Intelligence Data…")`
+in the assistant page is real and invisible today); copy assembled across
+statements; and — found by probe on 2026-08-26 — **any property whose name is
+not in `COPY_NAMES` or matching `COPY_NAME_SUFFIX`.** A sentence held under
+`note`, `blurb`, `intro` or `sub` passes untouched; `sub={"PROPRIETARY RAG
+VECTORS"}` on the admin usage page is a live example. **The frozen 102 is
+therefore a floor, not a total** — expect 150–200 once the guard reads more.
+
+**B2. About 120 catalogue values are byte-identical across both languages**, 56
+of them full English sentences, all under `admin.*` and `ai.*`. Admin only —
+nothing a customer sees. Unguarded, so the population can grow; the fix is a
+translation pass plus a guard that freezes the count.
+
+### Group C — about a day, holds live data, do not start unasked
+
+**C1. Names that say GBP over values that are USD.** Model spend is billed by
+the providers in dollars and stored with no conversion anywhere in the
+codebase, so the eighteen screens printing `$` are correct — while the columns
+holding it are called `costGBP`, `totalCostGBP`, `maxCostGBP` and `totalGBP`.
+The symbol is right and the names are wrong.
+
+This is last for two reasons. It is the only item touching records that already
+exist rather than only code, so it is the only one where getting it wrong costs
+something. And the visible benefit is nil: the screens are already correct.
+Doing nothing is a defensible permanent answer.
+
+It is nonetheless first in danger, because the obvious reading is the wrong
+one — it invites someone to "fix" the symbol to match the name, or to sum model
+spend into a sterling report. I made the first of those mistakes myself on
+2026-08-26 before tracing the pricing back. `src/lib/currency.ts` now carries
+the warning; the columns are unrenamed.
+
+### Not work — two properties recorded so they are not mistaken for gaps
+
+**A measured limit of the return-shape constraint.** It catches a handler
+returning the wrong type or missing a field, but not one returning an *extra*
+field, because the generic infers the handler's own type first. Extra fields
+are caught at runtime by `convex-test`, so that cover is real only where a test
+exercises the happy path — true for seven of the fourteen surfaces added on
+2026-08-26.
+
+**No per-package percentages were ever recorded**, so the "about 70%" figure in
+the review section above cannot be reproduced by anyone; treat it as a band,
+not a number.
 
 ---
 
