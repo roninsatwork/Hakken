@@ -52,6 +52,11 @@ describe("OWASP: Broken Access Control - Settings", () => {
     );
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
+    const plainUserId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "plain@test.com", role: "USER", createdAt: Date.now() })
+    );
+    const userClient = t.withIdentity({ subject: plainUserId });
+
     expect(await t.query(api.settings.get, {})).toMatchObject({
       platformName: "Sonae",
       brandColorHex: "#E26D28",
@@ -89,15 +94,33 @@ describe("OWASP: Broken Access Control - Settings", () => {
 
     expect(settings).toMatchObject({
       platformName: "Sonae Ops Updated",
+      brandColorHex: "#123456",
+      lightBg: "#ffffff",
+      darkBg: "#000000",
+      diagnosticRoutingEnabled: true,
+    });
+
+    // The login screen is unauthenticated, so what this query returns is what a
+    // stranger receives. It used to be the whole row — including what the
+    // platform charges and who to contact about it — because the validator
+    // spread every column and inherited each new one automatically.
+    expect(settings).not.toHaveProperty("monthlyBasePrice");
+    expect(settings).not.toHaveProperty("monthlySeatPrice");
+    expect(settings).not.toHaveProperty("currencySymbol");
+    expect(settings).not.toHaveProperty("salesContactEmail");
+    expect(settings).not.toHaveProperty("emailSenderAddress");
+    expect(settings).not.toHaveProperty("emailSenderName");
+
+    // The screens that edit those fields read them from the admin door.
+    await expect(t.query(api.settings.getForAdmin, {})).rejects.toThrow();
+    await expect(userClient.query(api.settings.getForAdmin, {})).rejects.toThrow();
+    expect(await superAdminClient.query(api.settings.getForAdmin, {})).toMatchObject({
+      platformName: "Sonae Ops Updated",
       currencySymbol: "$",
       monthlyBasePrice: 100,
       monthlySeatPrice: 10,
       emailSenderName: "Sonae Ops",
       emailSenderAddress: "ops@example.com",
-      brandColorHex: "#123456",
-      lightBg: "#ffffff",
-      darkBg: "#000000",
-      diagnosticRoutingEnabled: true,
     });
     expect(settingsRows).toHaveLength(1);
     expect(auditLogs.map((log) => log.actionType)).toEqual(["UPDATE_SYSTEM_PREFERENCES", "UPDATE_SYSTEM_PREFERENCES"]);

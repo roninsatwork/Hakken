@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import {
   publicQuery,
   superAdminMutation,
+  superAdminQuery,
 } from "./tenantFunctions";
 import {
   buildSettingsAuditMetadata,
@@ -14,6 +15,8 @@ import {
   DEFAULT_SETTINGS,
   isStorageLogoReference,
   mergeSettingsWithDefaults,
+  pickPublicSettings,
+  PUBLIC_SETTINGS_FIELDS,
   resolvePlatformName,
 } from "./settingsService";
 
@@ -30,14 +33,18 @@ export async function getPlatformName(ctx: Pick<QueryCtx, "db">): Promise<string
 }
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
+const publicSettingsFields = Object.fromEntries(
+  PUBLIC_SETTINGS_FIELDS.map((field) => [field, schema.tables.systemSettings.validator.fields[field]]),
+) as Pick<typeof schema.tables.systemSettings.validator.fields, (typeof PUBLIC_SETTINGS_FIELDS)[number]>;
+
 export const get = publicQuery({
-  reason: "Branding and theme load on the login screen, before anyone is signed in.",
+  reason: "Branding and theme load on the login screen, before anyone is signed in. Trimmed to PUBLIC_SETTINGS_FIELDS — pricing, sales contact and sender addresses are on getForAdmin.",
   args: {},
-  returns: v.object({ _id: v.optional(v.id("systemSettings")), _creationTime: v.optional(v.number()), ...schema.tables.systemSettings.validator.fields }),
+  returns: v.object(publicSettingsFields),
   handler: async (ctx) => {
     const settings = await ctx.db.query("systemSettings").first();
     if (!settings) {
-      return DEFAULT_SETTINGS;
+      return pickPublicSettings(DEFAULT_SETTINGS);
     }
     
     // Auto-resolve storage URLs if IDs are stored
@@ -51,10 +58,44 @@ export const get = publicQuery({
        fullLogoDark = await ctx.storage.getUrl(fullLogoDark as Id<"_storage">) || fullLogoDark;
     }
     
-    return mergeSettingsWithDefaults({
+    return pickPublicSettings(mergeSettingsWithDefaults({
        settings,
        logoUrlLight: fullLogoLight,
        logoUrlDark: fullLogoDark,
+    }));
+  },
+});
+
+/**
+ * The whole row, for the screens that edit it.
+ *
+ * Split out on 2026-08-26 so the login screen stops carrying the pricing and
+ * the contact addresses. Same resolution of stored logo ids, same defaults —
+ * only the door differs.
+ */
+export const getForAdmin = superAdminQuery({
+  args: {},
+  returns: v.object({ _id: v.optional(v.id("systemSettings")), _creationTime: v.optional(v.number()), ...schema.tables.systemSettings.validator.fields }),
+  handler: async (ctx) => {
+    const settings = await ctx.db.query("systemSettings").first();
+    if (!settings) {
+      return DEFAULT_SETTINGS;
+    }
+
+    let fullLogoLight = settings.logoUrlLight;
+    if (isStorageLogoReference(fullLogoLight)) {
+      fullLogoLight = await ctx.storage.getUrl(fullLogoLight as Id<"_storage">) || fullLogoLight;
+    }
+
+    let fullLogoDark = settings.logoUrlDark;
+    if (isStorageLogoReference(fullLogoDark)) {
+      fullLogoDark = await ctx.storage.getUrl(fullLogoDark as Id<"_storage">) || fullLogoDark;
+    }
+
+    return mergeSettingsWithDefaults({
+      settings,
+      logoUrlLight: fullLogoLight,
+      logoUrlDark: fullLogoDark,
     });
   },
 });

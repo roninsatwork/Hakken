@@ -80,6 +80,53 @@ export function buildSettingsInsertRecord<T extends SettingsPatchInput>(patch: P
   };
 }
 
+/**
+ * The settings fields the login screen may have, and nothing else.
+ *
+ * `settings.get` is a `publicQuery` — the branding has to load before anyone
+ * signs in — and it declared its return type as the whole `systemSettings`
+ * row spread wholesale. So an anonymous visitor received the monthly base and
+ * seat prices, the sales contact address, the platform's email sender address,
+ * and every column added to the table afterwards, automatically. Declaring the
+ * whole row is not a narrowing, it is a licence.
+ *
+ * Branding and theme genuinely have to be public. `diagnosticRoutingEnabled`
+ * stays because the sidebar reads it from the same context on every page and
+ * it reveals nothing beyond the existence of a developer menu. Pricing,
+ * contact and sender addresses do not — they are on the admin query.
+ */
+export const PUBLIC_SETTINGS_FIELDS = [
+  "platformName",
+  "logoUrlLight",
+  "logoUrlDark",
+  "brandColorHex",
+  "fontFamily",
+  "headingFontFamily",
+  "bodyFontFamily",
+  "fontSizeBase",
+  "headingSizeGlobal",
+  "subTextSizeGlobal",
+  "borderRadius",
+  "diagnosticRoutingEnabled",
+  "lightBg", "lightFg", "lightCardBg", "lightCardFg", "lightBorder", "lightMuted",
+  "lightMutedFg", "lightSuccess", "lightDestructive", "lightWarning", "lightInfo",
+  "lightRing", "lightSidebarBg",
+  "darkBg", "darkFg", "darkCardBg", "darkCardFg", "darkBorder", "darkMuted",
+  "darkMutedFg", "darkSuccess", "darkDestructive", "darkWarning", "darkInfo",
+  "darkRing", "darkSidebarBg",
+] as const;
+
+/** Trim a merged settings object to the fields safe to serve unauthenticated. */
+export function pickPublicSettings<T extends Record<string, unknown>>(settings: T) {
+  const picked: Record<string, unknown> = {};
+
+  for (const field of PUBLIC_SETTINGS_FIELDS) {
+    if (field in settings) picked[field] = settings[field];
+  }
+
+  return picked as Pick<T, (typeof PUBLIC_SETTINGS_FIELDS)[number] & keyof T>;
+}
+
 export function mergeSettingsWithDefaults(args: {
   settings?: Doc<"systemSettings"> | null;
   logoUrlLight?: string;

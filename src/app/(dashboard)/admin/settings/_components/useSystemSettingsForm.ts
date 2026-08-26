@@ -62,7 +62,7 @@ export function pickSettingsFields(
  */
 export function useSystemSettingsForm(fields: SettingsFieldList) {
   const t = useTranslations("admin.settings");
-  const currentSettings = useQuery(api.settings.get);
+  const currentSettings = useQuery(api.settings.getForAdmin);
   const updateSettings = useMutation(api.settings.update);
   const action = useAdminAction({ scope: "admin-system-settings" });
 
