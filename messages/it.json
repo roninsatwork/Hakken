@@ -1870,7 +1870,7 @@
     "toolServers": {
       "title": "Server di strumenti",
       "subtitle": "Sistemi collegati a questo spazio di lavoro e gli strumenti che offrono ai tuoi agenti.",
-      "hint": "Un server di strumenti \u00e8 un indirizzo che pubblica il proprio elenco di strumenti. Collegane uno e i suoi strumenti diventano disponibili per i tuoi agenti, senza che nessuno debba scrivere un'integrazione. Nulla viene attivato in automatico: collega un server, chiedigli cosa offre, aggiungi quegli strumenti e poi attivalo.",
+      "hint": "Un server di strumenti è un indirizzo che pubblica il proprio elenco di strumenti. Collegane uno e i suoi strumenti diventano disponibili per i tuoi agenti, senza che nessuno debba scrivere un'integrazione. Nulla viene attivato in automatico: collega un server, chiedigli cosa offre, aggiungi quegli strumenti e poi attivalo.",
       "searchPlaceholder": "Cerca per nome o indirizzo",
       "empty": "Nessun server collegato.",
       "never": "Non ancora verificato",
@@ -1912,11 +1912,11 @@
         "whatToDo": "Verifica che l'indirizzo sia corretto e, se il server richiede un accesso, che il riferimento alla credenziale sia configurato su questo ambiente. Poi riprova."
       },
       "notices": {
-        "connected": "{name} \u00e8 collegato. Verifica la connessione per vedere cosa offre.",
-        "toolsAdded": "{count, plural, =0 {Nessuno strumento aggiunto da {name}: verifica prima la connessione.} =1 {1 strumento aggiunto da {name}. Resta disattivato finch\u00e9 non lo attivi.} other {# strumenti aggiunti da {name}. Restano disattivati finch\u00e9 non li attivi.}}",
-        "switchedOn": "{name} \u00e8 attivo.",
-        "switchedOff": "{name} \u00e8 disattivato.",
-        "disconnected": "{name} \u00e8 stato scollegato, insieme ai suoi strumenti."
+        "connected": "{name} è collegato. Verifica la connessione per vedere cosa offre.",
+        "toolsAdded": "{count, plural, =0 {Nessuno strumento aggiunto da {name}: verifica prima la connessione.} =1 {1 strumento aggiunto da {name}. Resta disattivato finché non lo attivi.} other {# strumenti aggiunti da {name}. Restano disattivati finché non li attivi.}}",
+        "switchedOn": "{name} è attivo.",
+        "switchedOff": "{name} è disattivato.",
+        "disconnected": "{name} è stato scollegato, insieme ai suoi strumenti."
       },
       "modal": {
         "title": "Collega un server di strumenti",
@@ -1926,7 +1926,7 @@
         "secretRef": "Riferimento alla credenziale",
         "secretHint": "Lascia vuoto se il server non richiede accesso. Se lo richiede, inserisci il riferimento alla credenziale, mai la credenziale stessa.",
         "disconnectTitle": "Scollegare questo server?",
-        "disconnectConfirm": "{name} verr\u00e0 scollegato.",
+        "disconnectConfirm": "{name} verrà scollegato.",
         "disconnectDetail": "I suoi strumenti vengono rimossi dalla libreria e gli agenti che li usano li perdono."
       },
       "placeholders": {
@@ -1935,7 +1935,7 @@
         "secretRef": "Ad esempio: vault/finance/token"
       },
       "errors": {
-        "unknown": "Qualcosa \u00e8 andato storto. Riprova."
+        "unknown": "Qualcosa è andato storto. Riprova."
       }
     },
     "aiTools": {
@@ -4174,8 +4174,8 @@
           "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa.",
           "noTarget": "Niente in particolare",
           "changesTitle": "Cosa è successo",
-        "fieldColumn": "Cosa",
-        "valueColumn": "Valore",
+          "fieldColumn": "Cosa",
+          "valueColumn": "Valore",
           "noChangesDetail": "Questa voce registra che qualcosa è accaduto, e nulla di più.",
           "valuesNotRecorded": "Registrata prima che si conservassero i valori precedenti e successivi, quindi i valori non sono noti.",
           "nothing": "niente",
@@ -5179,7 +5179,8 @@
           "bulkDeleteFailed": "Eliminazione del dominio del sito non riuscita.",
           "retryFailed": "Nuovo tentativo di elaborazione non riuscito.",
           "repairFailed": "Riparazione dei documenti segnalati non riuscita.",
-          "deleteFailed": "Eliminazione del documento non riuscita."
+          "deleteFailed": "Eliminazione del documento non riuscita.",
+          "saveTextFailed": "Impossibile salvare il testo."
         },
         "progress": {
           "uploadingBatch": "Caricamento {current} di {total}...",
@@ -5864,7 +5865,9 @@
       "lineProduct": "Prodotto",
       "lineValue": "Valore",
       "chainHeading": "Altri in {chain}",
-      "lineEmpty": "Nessuna voce."
+      "lineEmpty": "Nessuna voce.",
+      "saveFailed": "Impossibile salvare i dettagli.",
+      "findDetailsFailed": "Impossibile avviare la ricerca."
     },
     "tablesTitle": "Importazioni da fogli di calcolo",
     "tablesSubtitle": "Da {fileName} — {rows} righe di vendita.",

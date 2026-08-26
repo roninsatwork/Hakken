@@ -2,6 +2,7 @@
 
 import { lazy, Suspense, useState, type FormEvent } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, DownloadCloud, Loader2, PlugZap, Power, Server, Trash2, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -51,6 +52,7 @@ export default function ToolServersPage() {
   const [form, setForm] = useState({ name: "", url: "", secretRef: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   /** The connect form's own error, shown inside that form. Row actions use `notice`. */
+  const action = useAdminAction({ scope: "admin-tool-servers" });
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<Id<"mcpServers"> | null>(null);
   /**
@@ -104,13 +106,13 @@ export default function ToolServersPage() {
     setBusyId(id);
     setNotice(null);
     setChecked(null);
-    try {
-      setNotice(describe(await work()));
-    } catch (err) {
-      setNotice({ ok: false, text: err instanceof Error ? err.message : t("errors.unknown") });
-    } finally {
-      setBusyId(null);
-    }
+    const outcome = await action.run(async () => describe(await work()), {
+      key: String(id),
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.unknown"),
+    });
+    setNotice(outcome.ok ? outcome.data : outcome.message ? { ok: false, text: outcome.message } : null);
+    setBusyId(null);
   };
 
   const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
@@ -119,7 +121,7 @@ export default function ToolServersPage() {
 
     setIsSubmitting(true);
     setError("");
-    try {
+    const outcome = await action.run(async () => {
       await createServer({
         name: form.name.trim(),
         url: form.url.trim(),
@@ -131,11 +133,9 @@ export default function ToolServersPage() {
       setForm({ name: "", url: "", secretRef: "" });
       setIsAddOpen(false);
       setNotice({ ok: true, text: t("notices.connected", { name: form.name.trim() }) });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.unknown"));
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, { key: "add-server", suppressErrorToast: true, fallbackMessage: t("errors.unknown") });
+    if (!outcome.ok && outcome.message) setError(outcome.message);
+    setIsSubmitting(false);
   };
 
   const activateDialogs = () => {

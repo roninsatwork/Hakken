@@ -1,7 +1,7 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { lazy, Suspense, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   TerminalSquare,
@@ -27,16 +27,14 @@ export default function SystemPromptPage() {
 
   const [promptValue, setPromptValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const action = useAdminAction({ scope: "admin-system-prompt" });
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const hasLoadedPromptRef = useRef(false);
-
-  useEffect(() => {
-    if (currentPrompt !== undefined && !hasLoadedPromptRef.current) {
-      hasLoadedPromptRef.current = true;
-      setPromptValue(currentPrompt || "");
-    }
-  }, [currentPrompt]);
+  const [hasLoadedPrompt, setHasLoadedPrompt] = useState(false);
+  if (currentPrompt !== undefined && !hasLoadedPrompt) {
+    setHasLoadedPrompt(true);
+    setPromptValue(currentPrompt || "");
+  }
 
   const hasUnsavedChanges = currentPrompt !== undefined && promptValue !== currentPrompt;
 
@@ -46,18 +44,17 @@ export default function SystemPromptPage() {
     setIsSaving(true);
     setSaveStatus("idle");
 
-    try {
+    const outcome = await action.run(async () => {
       await updatePrompt({ prompt: promptValue });
+    }, { key: "save", suppressErrorToast: true, fallbackMessage: t("error.defaultMsg") });
+    if (outcome.ok) {
       setSaveStatus("success");
-      // Reset success status after exactly 3.5s for seamless fluid feedback
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: unknown) {
-      console.error("Failed to commit System Prompt protocol:", error);
+    } else {
       setSaveStatus("error");
-      setErrorMessage(getErrorMessage(error, t("error.defaultMsg")));
-    } finally {
-      setIsSaving(false);
+      if (outcome.message) setErrorMessage(outcome.message);
     }
+    setIsSaving(false);
   };
 
   const handleRevert = () => {

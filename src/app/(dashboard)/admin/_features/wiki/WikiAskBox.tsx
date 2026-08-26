@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import Link from "next/link";
 import { useAction } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -9,7 +10,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
-import { getErrorMessage } from "@/src/lib/errors";
 
 /**
  * The Ask box (watch-it-think plan, phase 3): ask this brain a question
@@ -30,6 +30,7 @@ export function WikiAskBox({
 
   const [question, setQuestion] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const action = useAdminAction({ scope: "admin-wiki-ask" });
   const [error, setError] = useState("");
   const [result, setResult] = useState<{
     answer: string;
@@ -42,16 +43,16 @@ export function WikiAskBox({
     setIsAsking(true);
     setError("");
     setResult(null);
-    try {
-      const answer = companyId
-        ? await askCompany({ companyId, question: trimmed })
-        : await askGlobal({ question: trimmed });
-      setResult(answer);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, t("error")));
-    } finally {
-      setIsAsking(false);
-    }
+    const outcome = await action.run(
+      () =>
+        companyId
+          ? askCompany({ companyId, question: trimmed })
+          : askGlobal({ question: trimmed }),
+      { key: "wiki-ask", suppressErrorToast: true, fallbackMessage: t("error") }
+    );
+    if (outcome.ok) setResult(outcome.data);
+    else if (outcome.message) setError(outcome.message);
+    setIsAsking(false);
   };
 
   return (

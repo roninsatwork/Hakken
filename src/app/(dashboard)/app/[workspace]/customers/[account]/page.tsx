@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -236,6 +237,7 @@ function DetailsForm({
           : "",
   }));
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const action = useAdminAction({ scope: "app-customer-details" });
   const [error, setError] = useState<string | null>(null);
 
   // Which fields on this form the agent filled in, so each can show where its
@@ -277,7 +279,7 @@ function DetailsForm({
 
     setStatus("saving");
     setError(null);
-    try {
+    const outcome = await action.run(async () => {
       await save({
         accountNameKey: customer.accountNameKey,
         addressLine1: fields.addressLine1,
@@ -296,10 +298,12 @@ function DetailsForm({
         ...(customer.extraField === "bedrooms" ? { bedrooms: extra } : {}),
         ...(customer.extraField === "pupils" ? { pupils: extra } : {}),
       });
+    }, { key: "save-details", suppressErrorToast: true, fallbackMessage: t("saveFailed") });
+    if (outcome.ok) {
       setStatus("saved");
-    } catch (caught) {
+    } else {
       setStatus("error");
-      setError(caught instanceof Error ? caught.message : String(caught));
+      if (outcome.message) setError(outcome.message);
     }
   };
 
@@ -732,16 +736,20 @@ function FindDetailsButton({ accountNameKey }: { accountNameKey: string }) {
   const [state, setState] = useState<"idle" | "starting" | "started" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
+  const findAction = useAdminAction({ scope: "app-customer-find-details" });
   const onClick = async () => {
     setState("starting");
     setMessage(null);
-    try {
-      await start({ accountNameKey });
+    const outcome = await findAction.run(() => start({ accountNameKey }), {
+      suppressErrorToast: true,
+      fallbackMessage: t("findDetailsFailed"),
+    });
+    if (outcome.ok) {
       setState("started");
       setMessage(t("findDetailsStarted"));
-    } catch (caught) {
+    } else {
       setState("error");
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+      if (outcome.message) setMessage(outcome.message);
     }
   };
 

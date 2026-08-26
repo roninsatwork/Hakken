@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useMutation, useQuery } from "convex/react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -57,16 +58,21 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
   const [ownerId, setOwnerId] = useState("");
   const [risk, setRisk] = useState<AiSystemRisk | "">("");
   const [isSaving, setIsSaving] = useState(false);
+  const action = useAdminAction({ scope: "governance-register" });
   const [error, setError] = useState("");
 
   // Reset to whatever the record says whenever a different row is opened, so a
-  // half-typed purpose cannot follow the reader onto the next system.
-  useEffect(() => {
+  // half-typed purpose cannot follow the reader onto the next system. During
+  // render rather than in an effect: the effect ran after paint, so the next
+  // system flashed the previous one's half-typed text for a frame.
+  const [shownEntry, setShownEntry] = useState<typeof entry | null>(null);
+  if (entry !== shownEntry) {
+    setShownEntry(entry);
     setPurpose(entry?.purpose ?? "");
     setOwnerId("");
     setRisk(entry && entry.risk !== "UNRATED" ? entry.risk : "");
     setError("");
-  }, [entry]);
+  }
 
   if (!entry) return null;
 
@@ -82,7 +88,7 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
     setIsSaving(true);
     setError("");
 
-    try {
+    const outcome = await action.run(async () => {
       await updateAgent({
         id: entry.id as Id<"agents">,
         // Only what actually changed. Sending every field would rewrite the
@@ -91,13 +97,10 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
         ...(ownerId ? { ownerId: ownerId as Id<"users"> } : {}),
         ...(risk !== "" && risk !== entry.risk ? { riskLevel: risk as "LOW" | "MEDIUM" | "HIGH" } : {}),
       });
-
-      onClose();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("saveFailed"));
-    } finally {
-      setIsSaving(false);
-    }
+    }, { key: "save-entry", suppressErrorToast: true, fallbackMessage: t("saveFailed") });
+    if (outcome.ok) onClose();
+    else if (outcome.message) setError(outcome.message);
+    setIsSaving(false);
   };
 
   return (

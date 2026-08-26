@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Blocks, Info } from "lucide-react";
@@ -8,7 +9,6 @@ import { Blocks, Info } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
-import { getErrorMessage } from "@/src/lib/errors";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -44,11 +44,17 @@ export function CompanyFeaturesContent({
   const [page, setPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-features" });
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  // Adopt the server's answer whenever it changes, during render rather than
+  // in an effect — the effect version painted a frame of the stale selection
+  // first.
+  const [seenModules, setSeenModules] = useState<typeof enabledModules | null>(null);
+  if (enabledModules !== undefined && enabledModules !== seenModules) {
+    setSeenModules(enabledModules);
     setSelected(enabledModules ?? []);
-  }, [enabledModules]);
+  }
 
   const toggle = (key: string) => {
     setSelected((previous) =>
@@ -73,15 +79,17 @@ export function CompanyFeaturesContent({
   const handleSave = async () => {
     setIsSaving(true);
     setError("");
-    try {
-      await setCompanyModules({ id: companyId, enabledModules: selected });
+    const outcome = await action.run(
+      () => setCompanyModules({ id: companyId, enabledModules: selected }),
+      { key: "save-features", suppressErrorToast: true, fallbackMessage: "Failed to update features" }
+    );
+    if (outcome.ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to update features"));
-    } finally {
-      setIsSaving(false);
+    } else if (outcome.message) {
+      setError(outcome.message);
     }
+    setIsSaving(false);
   };
 
   return (

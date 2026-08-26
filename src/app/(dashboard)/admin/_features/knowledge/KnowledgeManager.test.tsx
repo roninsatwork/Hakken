@@ -2,14 +2,16 @@ import React from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { act, fireEvent, render as renderBase, screen } from "@testing-library/react";
 import messages from "../../../../../../messages/en.json";
+import { ToastProvider } from "@/src/context/ToastContext";
 
-// The screen resolves its copy through the catalogue, so it renders inside
-// the same intl provider the root layout supplies.
+// The screen resolves its copy through the catalogue and now runs its writes
+// through useAdminAction, so it renders inside the same intl and toast
+// providers the root layout supplies.
 function render(ui: React.ReactElement) {
   return renderBase(ui, {
     wrapper: ({ children }: { children: React.ReactNode }) => (
       <NextIntlClientProvider locale="en" messages={messages}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </NextIntlClientProvider>
     ),
   });

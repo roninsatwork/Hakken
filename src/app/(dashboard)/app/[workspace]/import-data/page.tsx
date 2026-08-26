@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
@@ -77,6 +78,7 @@ export default function SalesDataImportPage() {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const action = useAdminAction({ scope: "app-import-data" });
   const [error, setError] = useState("");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
 
@@ -94,7 +96,7 @@ export default function SalesDataImportPage() {
     setError("");
     setOutcome(null);
 
-    try {
+    const uploaded = await action.run(async () => {
       const uploadUrl = await generateUploadUrl();
       const response = await fetch(uploadUrl, {
         method: "POST",
@@ -103,12 +105,21 @@ export default function SalesDataImportPage() {
       });
       if (!response.ok) throw new Error(t("errors.uploadFailed"));
 
-      const { storageId: uploaded } = (await response.json()) as {
+      const { storageId: uploadedId } = (await response.json()) as {
         storageId: Id<"_storage">;
       };
 
-      const inspected = await inspectWorkbook({ storageId: uploaded });
-      setStorageId(uploaded);
+      const inspected = await inspectWorkbook({ storageId: uploadedId });
+      return { uploadedId, inspected };
+    }, {
+      key: "upload",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.uploadFailed"),
+    });
+
+    if (uploaded.ok) {
+      const { uploadedId, inspected } = uploaded.data;
+      setStorageId(uploadedId);
       setFileName(file.name);
       setWorksheets(inspected.worksheets);
 
@@ -121,12 +132,11 @@ export default function SalesDataImportPage() {
         areasOfInterest: Math.min(2, last),
         frequency: Math.min(3, last),
       });
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("errors.uploadFailed"));
+    } else {
+      if (uploaded.message) setError(uploaded.message);
       reset();
-    } finally {
-      setIsUploading(false);
     }
+    setIsUploading(false);
   };
 
   const handleImport = async () => {
@@ -135,17 +145,19 @@ export default function SalesDataImportPage() {
     setIsImporting(true);
     setError("");
 
-    try {
-      const result = await runImport({ storageId, fileName, sheetMapping: mapping });
-      setOutcome(result);
+    const imported = await action.run(
+      () => runImport({ storageId, fileName, sheetMapping: mapping }),
+      { key: "import", suppressErrorToast: true, fallbackMessage: t("errors.importFailed") }
+    );
+    if (imported.ok) {
+      setOutcome(imported.data);
       setWorksheets(null);
       setStorageId(null);
       if (fileInput.current) fileInput.current.value = "";
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("errors.importFailed"));
-    } finally {
-      setIsImporting(false);
+    } else if (imported.message) {
+      setError(imported.message);
     }
+    setIsImporting(false);
   };
 
   const duplicateChoice =

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useAction, useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { FileUp, Globe, Loader2, Type, FolderOpen } from "lucide-react";
@@ -8,7 +9,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-import { getErrorMessage } from "@/src/lib/errors";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
@@ -41,6 +41,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const [textBody, setTextBody] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const action = useAdminAction({ scope: "admin-wiki-import" });
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const vaultInputRef = useRef<HTMLInputElement>(null);
@@ -49,13 +50,14 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
     setIsBusy(true);
     setError("");
     setFeedback("");
-    try {
-      setFeedback(await work());
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, t("errors.generic")));
-    } finally {
-      setIsBusy(false);
-    }
+    const outcome = await action.run(work, {
+      key: "wiki-import",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.generic"),
+    });
+    if (outcome.ok) setFeedback(outcome.data);
+    else if (outcome.message) setError(outcome.message);
+    setIsBusy(false);
   };
 
   const importWebsite = () =>

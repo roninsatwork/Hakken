@@ -1,7 +1,7 @@
 "use client";
 
-import { getErrorMessage } from "@/src/lib/errors";
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { lazy, Suspense, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
@@ -27,21 +27,20 @@ export default function AgentSystemPromptPage() {
   const [promptValue, setPromptValue] = useState("");
   const [jobValue, setJobValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const action = useAdminAction({ scope: "admin-agent-prompt" });
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
 
   const currentPrompt = agent?.systemPrompt ?? "";
   const currentJob = agent?.standingObjective ?? "";
   const isLoaded = agent !== undefined;
 
-  useEffect(() => {
-    if (!agent || initializedAgentIdRef.current === agent._id) return;
-
-    initializedAgentIdRef.current = agent._id;
+  const [seenAgentId, setSeenAgentId] = useState<Id<"agents"> | null>(null);
+  if (agent && agent._id !== seenAgentId) {
+    setSeenAgentId(agent._id);
     setPromptValue(agent.systemPrompt ?? "");
     setJobValue(agent.standingObjective ?? "");
-  }, [agent]);
+  }
 
   const hasUnsavedChanges = isLoaded && (promptValue !== currentPrompt || jobValue !== currentJob);
 
@@ -51,17 +50,17 @@ export default function AgentSystemPromptPage() {
     setIsSaving(true);
     setSaveStatus("idle");
 
-    try {
+    const outcome = await action.run(async () => {
       await updateAgent({ id: agentId, systemPrompt: promptValue, standingObjective: jobValue });
+    }, { key: "save", suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") });
+    if (outcome.ok) {
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: unknown) {
-      console.error("Failed to commit System Prompt protocol:", error);
+    } else {
       setSaveStatus("error");
-      setErrorMessage(getErrorMessage(error, t("errors.saveFailed")));
-    } finally {
-      setIsSaving(false);
+      if (outcome.message) setErrorMessage(outcome.message);
     }
+    setIsSaving(false);
   };
 
   const handleRevert = () => {

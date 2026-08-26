@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader2, NotebookPen, Plus, Trash2 } from "lucide-react";
@@ -24,20 +25,21 @@ export function AssistantNoteTab() {
 
   const [draft, setDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const action = useAdminAction({ scope: "profile-assistant-note" });
   const [error, setError] = useState("");
 
   const handleAdd = async () => {
     if (isSaving || !draft.trim()) return;
     setIsSaving(true);
     setError("");
-    try {
-      await addNote({ content: draft });
-      setDraft("");
-    } catch {
-      setError(t("addFailed"));
-    } finally {
-      setIsSaving(false);
-    }
+    const outcome = await action.run(() => addNote({ content: draft }), {
+      key: "add-note",
+      suppressErrorToast: true,
+      fallbackMessage: t("addFailed"),
+    });
+    if (outcome.ok) setDraft("");
+    else if (outcome.message) setError(outcome.message);
+    setIsSaving(false);
   };
 
   return (
@@ -73,7 +75,15 @@ export function AssistantNoteTab() {
               </div>
               <Button
                 variant="icon"
-                onClick={() => void deleteNote({ memoryId: note.memoryId })}
+                onClick={() =>
+                  void action.run(() => deleteNote({ memoryId: note.memoryId }), {
+                    key: note.memoryId,
+                    suppressErrorToast: true,
+                    fallbackMessage: t("addFailed"),
+                  }).then((outcome) => {
+                    if (!outcome.ok && outcome.message) setError(outcome.message);
+                  })
+                }
                 aria-label={t("delete")}
                 title={t("delete")}
                 className="rounded-lg hover:text-destructive hover:bg-destructive/10 shrink-0"

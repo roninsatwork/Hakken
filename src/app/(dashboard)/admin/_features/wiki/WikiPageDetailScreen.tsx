@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
@@ -12,7 +13,6 @@ import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControl
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-import { getErrorMessage } from "@/src/lib/errors";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiLocalGraph } from "./WikiLocalGraph";
@@ -74,6 +74,7 @@ export function WikiPageDetailScreen({
   const [newPin, setNewPin] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success">("idle");
+  const action = useAdminAction({ scope: "admin-wiki-page" });
   const [errorMessage, setErrorMessage] = useState("");
 
   // The draft follows the page until the person starts typing.
@@ -95,15 +96,18 @@ export function WikiPageDetailScreen({
     setIsSaving(true);
     setErrorMessage("");
     setSaveStatus("idle");
-    try {
-      await work();
+    const outcome = await action.run(work, {
+      key: "wiki-save",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.save"),
+    });
+    if (outcome.ok) {
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3000);
-    } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, t("errors.save")));
-    } finally {
-      setIsSaving(false);
+    } else if (outcome.message) {
+      setErrorMessage(outcome.message);
     }
+    setIsSaving(false);
   };
 
   if (detail === undefined) {

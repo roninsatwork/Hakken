@@ -1,5 +1,12 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as renderBase, screen, waitFor } from "@testing-library/react";
+import { ToastProvider } from "@/src/context/ToastContext";
+import type { ReactElement, ReactNode } from "react";
+
+const render = (ui: ReactElement) =>
+  renderBase(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => <ToastProvider>{children}</ToastProvider>,
+  });
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -129,7 +136,10 @@ describe("CompanyFeaturesPage", () => {
     (useQuery as unknown as HookMock).mockImplementation(() => undefined);
     const { container } = render(<CompanyFeaturesPage />);
 
-    expect(container).toBeEmptyDOMElement();
+    // The toast provider always mounts its (empty) live region; the page's own
+    // output is what must be absent.
+    expect(container.querySelector('[role="alert"]')).toBeEmptyDOMElement();
+    expect(container.children).toHaveLength(1);
   });
 
   it("reflects what the company already has switched on", async () => {

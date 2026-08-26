@@ -4174,8 +4174,8 @@
           "noChangeRecorded": "Nothing was recorded beyond the action itself.",
           "noTarget": "Nothing in particular",
           "changesTitle": "What happened",
-        "fieldColumn": "What",
-        "valueColumn": "Value",
+          "fieldColumn": "What",
+          "valueColumn": "Value",
           "noChangesDetail": "This entry records that something happened, and nothing further about it.",
           "valuesNotRecorded": "Recorded before before-and-after values were kept, so the values are not known.",
           "nothing": "nothing",
@@ -5179,7 +5179,8 @@
           "bulkDeleteFailed": "Failed to delete website root.",
           "retryFailed": "Failed to retry ingestion.",
           "repairFailed": "Failed to repair flagged documents.",
-          "deleteFailed": "Failed to delete document."
+          "deleteFailed": "Failed to delete document.",
+          "saveTextFailed": "The text could not be saved."
         },
         "progress": {
           "uploadingBatch": "Uploading {current} of {total}...",
@@ -5864,7 +5865,9 @@
       "lineProduct": "Product",
       "lineValue": "Value",
       "chainHeading": "Others in {chain}",
-      "lineEmpty": "No line items."
+      "lineEmpty": "No line items.",
+      "saveFailed": "The details could not be saved.",
+      "findDetailsFailed": "The search could not be started."
     },
     "tablesTitle": "Spreadsheet Imports",
     "tablesSubtitle": "From {fileName} — {rows} sales rows.",
@@ -6168,8 +6171,8 @@
         "meta": "Learned from {documents, plural, =1 {1 document} other {# documents}} and {conversations, plural, =1 {1 conversation} other {# conversations}} · last taught by {source}, {date}",
         "related": "Related pages",
         "backlinks": "{count, plural, =1 {What links here — 1 page} other {What links here — # pages}}",
-      "backlinkPageColumn": "Page",
-      "backlinkQuoteColumn": "What it says",
+        "backlinkPageColumn": "Page",
+        "backlinkQuoteColumn": "What it says",
         "foldSources": "{count, plural, =1 {Where this came from · 1 source} other {Where this came from · # sources}}",
         "foldHistory": "{count, plural, =1 {History · 1 change} other {History · # changes}}",
         "foldPin": "Pin a fact",

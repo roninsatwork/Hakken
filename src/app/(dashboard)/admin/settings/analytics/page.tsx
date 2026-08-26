@@ -1,6 +1,7 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { 
   Activity,
   AlertTriangle,
@@ -14,7 +15,6 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { getErrorMessage } from "@/src/lib/errors";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -37,15 +37,16 @@ export default function AnalyticsPage() {
   
   const [trackingId, setTrackingId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const action = useAdminAction({ scope: "admin-analytics-settings" });
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   // Sync state once data loads
-  useEffect(() => {
-    if (currentId !== undefined) {
-      setTrackingId(currentId || "");
-    }
-  }, [currentId]);
+  const [seenId, setSeenId] = useState<typeof currentId | null>(null);
+  if (currentId !== undefined && currentId !== seenId) {
+    setSeenId(currentId);
+    setTrackingId(currentId || "");
+  }
 
   const hasUnsavedChanges = currentId !== undefined && trackingId !== currentId;
   const healthIssueCount = health
@@ -64,17 +65,17 @@ export default function AnalyticsPage() {
     setIsSaving(true);
     setSaveStatus("idle");
     
-    try {
+    const outcome = await action.run(async () => {
       await updateId({ trackingId: trackingId.trim() });
+    }, { key: "save", suppressErrorToast: true, fallbackMessage: t("saveFailedFallback") });
+    if (outcome.ok) {
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: unknown) {
-      console.error("Failed to save analytics configuration:", error);
+    } else {
       setSaveStatus("error");
-      setErrorMessage(getErrorMessage(error, t("saveFailedFallback")));
-    } finally {
-      setIsSaving(false);
+      if (outcome.message) setErrorMessage(outcome.message);
     }
+    setIsSaving(false);
   };
 
   const handleRevert = () => {

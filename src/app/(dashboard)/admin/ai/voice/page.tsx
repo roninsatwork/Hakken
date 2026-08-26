@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 import { AudioLines, Check, Loader2, Play, Square } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -9,7 +10,6 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { getErrorMessage } from "@/src/lib/errors";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -32,6 +32,7 @@ export default function SpokenVoicePage() {
   const setSpokenVoice = useMutation(api.voiceSettings.setSpokenVoice);
   const mintPreview = useAction(api.voicePreview.mintVoicePreviewTicket);
 
+  const action = useAdminAction({ scope: "admin-ai-voice" });
   const [savingVoice, setSavingVoice] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -49,15 +50,18 @@ export default function SpokenVoicePage() {
     setSavingVoice(voice);
     setErrorMessage("");
     setSaveStatus("idle");
-    try {
-      await setSpokenVoice({ voice });
+    const outcome = await action.run(() => setSpokenVoice({ voice }), {
+      key: voice,
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.save"),
+    });
+    if (outcome.ok) {
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, t("errors.save")));
-    } finally {
-      setSavingVoice(null);
+    } else if (outcome.message) {
+      setErrorMessage(outcome.message);
     }
+    setSavingVoice(null);
   };
 
   const stopPreview = () => previewCleanupRef.current();
@@ -67,7 +71,7 @@ export default function SpokenVoicePage() {
     setErrorMessage("");
     setPreviewVoice(voice);
     setPreviewPhase("connecting");
-    try {
+    const outcome = await action.run(async () => {
       const [session, { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage }, { decodePcm16Base64 }] =
         await Promise.all([
           mintPreview({ voice }),
@@ -152,8 +156,13 @@ export default function SpokenVoicePage() {
         setErrorMessage(t("errors.preview"));
         cleanup();
       });
-    } catch (error: unknown) {
-      setErrorMessage(getErrorMessage(error, t("errors.preview")));
+    }, {
+      key: `preview:${voice}`,
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.preview"),
+    });
+    if (!outcome.ok) {
+      if (outcome.message) setErrorMessage(outcome.message);
       setPreviewVoice((current) => (current === voice ? null : current));
     }
   };

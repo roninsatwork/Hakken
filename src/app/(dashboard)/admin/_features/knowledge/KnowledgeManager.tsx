@@ -1,6 +1,8 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { reportError } from "@/src/lib/reportError";
 import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import Link from "next/link";
@@ -113,6 +115,7 @@ export function KnowledgeManager({
   const repairFlaggedDocuments = useMutation(api.knowledge.repairFlaggedDocuments);
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
 
+  const action = useAdminAction({ scope: "admin-knowledge" });
   const [activeTab, setActiveTab] = useState<KnowledgeTab>("Website");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -253,7 +256,7 @@ export function KnowledgeManager({
           updateQueueEntry(key, { status: "queued" });
           return true;
         } catch (err: unknown) {
-          console.error(err);
+          reportError(err, { scope: "admin-knowledge" });
           updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, t("errors.uploadFailed")) });
           return false;
         }
@@ -266,7 +269,7 @@ export function KnowledgeManager({
       try {
         await startKnowledgeFileQueue({});
       } catch (err: unknown) {
-        console.error(err);
+        reportError(err, { scope: "admin-knowledge" });
         setFileError(getErrorMessage(err, t("errors.processingNotStarted")));
       }
     }
@@ -336,7 +339,7 @@ export function KnowledgeManager({
   const handleSaveText = async () => {
     if (!textTitle.trim() || !textContent.trim()) return;
     setIsSavingText(true);
-    try {
+    await action.run(async () => {
       await saveManualText({
         ...scopeArgs,
         title: textTitle.trim(),
@@ -345,11 +348,8 @@ export function KnowledgeManager({
       setTextTitle("");
       setTextContent("");
       setActiveTab("File");
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSavingText(false);
-    }
+    }, { key: "save-text", fallbackMessage: t("errors.saveTextFailed") });
+    setIsSavingText(false);
   };
 
   const handleMapUrl = async (event: KeyboardEvent<HTMLInputElement>) => {
@@ -359,61 +359,58 @@ export function KnowledgeManager({
     setIsMapping(true);
     setMappedUrls([]);
     setWebsiteError("");
-    try {
+    const outcome = await action.run(async () => {
       let cleanedUrl = websiteUrl.trim();
       if (!cleanedUrl.startsWith("http")) cleanedUrl = `https://${cleanedUrl}`;
-      const links = await mapWebsite({ url: cleanedUrl });
-      setMappedUrls(links);
-    } catch (err: unknown) {
-      console.error("Map error", err);
-      setWebsiteError(getErrorMessage(err, t("errors.mapFailed")));
-    } finally {
-      setIsMapping(false);
-    }
+      return await mapWebsite({ url: cleanedUrl });
+    }, { key: "map", suppressErrorToast: true, fallbackMessage: t("errors.mapFailed") });
+    if (outcome.ok) setMappedUrls(outcome.data);
+    else if (outcome.message) setWebsiteError(outcome.message);
+    setIsMapping(false);
   };
 
   const handleQueueMappedUrls = async () => {
     if (mappedUrls.length === 0) return;
     setIsQueueing(true);
     setWebsiteError("");
-    try {
-      await queueWebsiteUrls({ ...scopeArgs, urls: mappedUrls });
+    const outcome = await action.run(() => queueWebsiteUrls({ ...scopeArgs, urls: mappedUrls }), {
+      key: "queue",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.queueFailed"),
+    });
+    if (outcome.ok) {
       setMappedUrls([]);
       setWebsiteUrl("");
-    } catch (err: unknown) {
-      console.error(err);
-      setWebsiteError(t("errors.queueFailed"));
-    } finally {
-      setIsQueueing(false);
+    } else if (outcome.message) {
+      setWebsiteError(outcome.message);
     }
+    setIsQueueing(false);
   };
 
   const handleRefreshRoot = async (root: string) => {
     setRefreshingRoots((prev) => ({ ...prev, [root]: true }));
     setWebsiteError("");
-    try {
+    const outcome = await action.run(async () => {
       const links = await mapWebsite({ url: root });
       await queueWebsiteUrls({ ...scopeArgs, urls: links, forceRefresh: true });
-    } catch (err: unknown) {
-      console.error("Refresh error", err);
-      setWebsiteError(t("errors.refreshFailed", { root, message: getErrorMessage(err, t("errors.unknown")) }));
-    } finally {
-      setRefreshingRoots((prev) => ({ ...prev, [root]: false }));
+    }, { key: `refresh:${root}`, suppressErrorToast: true, fallbackMessage: t("errors.unknown") });
+    if (!outcome.ok && outcome.message) {
+      setWebsiteError(t("errors.refreshFailed", { root, message: outcome.message }));
     }
+    setRefreshingRoots((prev) => ({ ...prev, [root]: false }));
   };
 
   const handleConfirmBulkDelete = async () => {
     if (!rootToDelete) return;
     setIsDeletingBulk(true);
-    try {
-      await deleteWebsiteBulk({ ...scopeArgs, rootDomain: rootToDelete });
-      setRootToDelete(null);
-    } catch (err: unknown) {
-      console.error(err);
-      setWebsiteError(t("errors.bulkDeleteFailed"));
-    } finally {
-      setIsDeletingBulk(false);
-    }
+    const outcome = await action.run(() => deleteWebsiteBulk({ ...scopeArgs, rootDomain: rootToDelete }), {
+      key: "bulk-delete",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.bulkDeleteFailed"),
+    });
+    if (outcome.ok) setRootToDelete(null);
+    else if (outcome.message) setWebsiteError(outcome.message);
+    setIsDeletingBulk(false);
   };
 
   const handleRunRetrievalTest = (event: FormEvent<HTMLFormElement>) => {
@@ -424,43 +421,40 @@ export function KnowledgeManager({
   const handleRetryDocument = async (documentId: Id<"knowledgeDocuments">) => {
     setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: true }));
     setQualityActionError("");
-    try {
-      await retryDocumentIngestion({ documentId });
-    } catch (err: unknown) {
-      console.error(err);
-      setQualityActionError(getErrorMessage(err, t("errors.retryFailed")));
-    } finally {
-      setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: false }));
-    }
+    const outcome = await action.run(() => retryDocumentIngestion({ documentId }), {
+      key: `retry:${documentId}`,
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.retryFailed"),
+    });
+    if (!outcome.ok && outcome.message) setQualityActionError(outcome.message);
+    setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: false }));
   };
 
   const handleRepairFlaggedDocuments = async () => {
     if (isBulkRepairing) return;
     setIsBulkRepairing(true);
     setQualityActionError("");
-    try {
-      await repairFlaggedDocuments(scopeArgs);
-    } catch (err: unknown) {
-      console.error(err);
-      setQualityActionError(getErrorMessage(err, t("errors.repairFailed")));
-    } finally {
-      setIsBulkRepairing(false);
-    }
+    const outcome = await action.run(() => repairFlaggedDocuments(scopeArgs), {
+      key: "bulk-repair",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.repairFailed"),
+    });
+    if (!outcome.ok && outcome.message) setQualityActionError(outcome.message);
+    setIsBulkRepairing(false);
   };
 
   const handleConfirmDocumentDelete = async () => {
     if (!documentToDelete || isDeletingDocument) return;
     setIsDeletingDocument(true);
     setDocumentDeleteError("");
-    try {
-      await deleteDocument({ documentId: documentToDelete._id });
-      setDocumentToDelete(null);
-    } catch (err: unknown) {
-      console.error(err);
-      setDocumentDeleteError(getErrorMessage(err, t("errors.deleteFailed")));
-    } finally {
-      setIsDeletingDocument(false);
-    }
+    const outcome = await action.run(() => deleteDocument({ documentId: documentToDelete._id }), {
+      key: "delete-document",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.deleteFailed"),
+    });
+    if (outcome.ok) setDocumentToDelete(null);
+    else if (outcome.message) setDocumentDeleteError(outcome.message);
+    setIsDeletingDocument(false);
   };
 
   const loadedWebsiteDocuments = useMemo(() => websiteDocuments ?? [], [websiteDocuments]);

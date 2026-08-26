@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import Link from "next/link";
 import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { Loader2, Plus, Trash2, Wrench, X } from "lucide-react";
@@ -63,6 +64,7 @@ export default function ToolsPage() {
   const [deleteId, setDeleteId] = useState<Id<"aiTools"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [addingKey, setAddingKey] = useState<string | null>(null);
+  const action = useAdminAction({ scope: "admin-ai-tools" });
   const [error, setError] = useState("");
 
   // Searching looks across every group — a name you half-remember should not
@@ -83,27 +85,27 @@ export default function ToolsPage() {
     if (addingKey) return;
     setAddingKey(key);
     setError("");
-    try {
-      await installConnector({ key });
-    } catch {
-      setError(t("addFailed"));
-    } finally {
-      setAddingKey(null);
-    }
+    const outcome = await action.run(() => installConnector({ key }), {
+      key: `add:${key}`,
+      suppressErrorToast: true,
+      fallbackMessage: t("addFailed"),
+    });
+    if (!outcome.ok && outcome.message) setError(outcome.message);
+    setAddingKey(null);
   };
 
   const handleDeleteTool = async (id: Id<"aiTools">) => {
     if (isDeleting) return;
     setIsDeleting(true);
     setError("");
-    try {
-      await deleteToolMutation({ id });
-      setDeleteId(null);
-    } catch {
-      setError(t("removeFailed"));
-    } finally {
-      setIsDeleting(false);
-    }
+    const outcome = await action.run(() => deleteToolMutation({ id }), {
+      key: `delete:${id}`,
+      suppressErrorToast: true,
+      fallbackMessage: t("removeFailed"),
+    });
+    if (outcome.ok) setDeleteId(null);
+    else if (outcome.message) setError(outcome.message);
+    setIsDeleting(false);
   };
 
   const describeConnection = (entry: (typeof connections)[number]) => {
