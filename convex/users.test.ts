@@ -1348,3 +1348,82 @@ describe("purgeOrphanedAuthIdentities", () => {
     expect(remaining.invitations).toHaveLength(1);
   });
 });
+
+describe("the sign-in identity never leaves the server", () => {
+  /**
+   * `tokenIdentifier` is a server-side identity, and it reached screens twice.
+   * `toClientUser` is what drops it and the return validators are what make
+   * forgetting to call it a failure — but neither is worth anything unless a
+   * test seeds a user who actually has one. None did: every fixture in this
+   * file creates users without the field, so removing the narrowing from a
+   * people surface left the whole suite green.
+   *
+   * Each surface below is read with rows that carry the field, and the count
+   * of rows read is asserted, so a query that returns nothing cannot pass this
+   * by having nothing to leak.
+   */
+  const seedPeople = async (t: ReturnType<typeof convexTest>) => t.run(async (ctx) => {
+    const companyId = await ctx.db.insert("companies", { name: "Identity Corp", createdAt: Date.now() });
+    const otherCompanyId = await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() });
+    const superAdminId = await ctx.db.insert("users", {
+      email: "super@identity.test",
+      role: "SUPER_ADMIN",
+      tokenIdentifier: "identity|super",
+      createdAt: Date.now(),
+    });
+    const adminId = await ctx.db.insert("users", {
+      email: "admin@identity.test",
+      role: "ADMIN",
+      companyId,
+      tokenIdentifier: "identity|admin",
+      createdAt: Date.now(),
+    });
+    const memberId = await ctx.db.insert("users", {
+      email: "member@identity.test",
+      role: "USER",
+      companyId,
+      tokenIdentifier: "identity|member",
+      createdAt: Date.now(),
+    });
+
+    return { companyId, otherCompanyId, superAdminId, adminId, memberId };
+  });
+
+  const carriesIdentity = (rows: unknown[]) =>
+    rows.filter((row) => row !== null && typeof row === "object" && "tokenIdentifier" in row);
+
+  test("no people surface hands one back, and each one read real rows", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, otherCompanyId, superAdminId, memberId } = await seedPeople(t);
+
+    const paginationOpts = { numItems: 10, cursor: null };
+    const superAdmin = t.withIdentity({ subject: superAdminId });
+
+    const readings: Array<{ surface: string; rows: unknown[] }> = [
+      { surface: "getAllUsers", rows: await superAdmin.query(api.users.getAllUsers) },
+      { surface: "getUserById", rows: [await superAdmin.query(api.users.getUserById, { id: memberId })] },
+      { surface: "getPaginatedUsers", rows: (await superAdmin.query(api.users.getPaginatedUsers, { paginationOpts })).page },
+      { surface: "getUsersByCompany", rows: (await superAdmin.query(api.users.getUsersByCompany, { companyId, paginationOpts })).page },
+      { surface: "getSuperAdmins", rows: (await superAdmin.query(api.users.getSuperAdmins, { paginationOpts })).page },
+      { surface: "getUnassignedSuperAdmins", rows: await superAdmin.query(api.users.getUnassignedSuperAdmins, { companyId: otherCompanyId }) },
+      { surface: "listDirectoryUsers", rows: (await superAdmin.query(api.users.listDirectoryUsers, { paginationOpts })).page },
+    ];
+
+    // Proof the assertion below had something to read: a surface that returned
+    // nothing would pass it by having nothing to leak.
+    expect(readings.filter((reading) => reading.rows.length === 0)).toEqual([]);
+    expect(readings).toHaveLength(7);
+
+    expect(readings.flatMap((reading) =>
+      carriesIdentity(reading.rows).map(() => reading.surface)
+    )).toEqual([]);
+  });
+
+  test("the fixtures really do carry one, so the check above can fail", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { memberId } = await seedPeople(t);
+
+    const stored = await t.run(async (ctx) => ctx.db.get(memberId));
+    expect(stored?.tokenIdentifier).toBe("identity|member");
+  });
+});

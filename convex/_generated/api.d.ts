@@ -271,6 +271,7 @@ import type * as utils_skillShapes from "../utils/skillShapes.js";
 import type * as utils_starterSkills from "../utils/starterSkills.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
 import type * as utils_uploadPolicy from "../utils/uploadPolicy.js";
+import type * as utils_userShapes from "../utils/userShapes.js";
 import type * as utils_widgetEmbedPass from "../utils/widgetEmbedPass.js";
 import type * as utils_widgetOriginPolicy from "../utils/widgetOriginPolicy.js";
 import type * as utils_workflowTypes from "../utils/workflowTypes.js";
@@ -590,6 +591,7 @@ declare const fullApi: ApiFromModules<{
   "utils/starterSkills": typeof utils_starterSkills;
   "utils/templateParser": typeof utils_templateParser;
   "utils/uploadPolicy": typeof utils_uploadPolicy;
+  "utils/userShapes": typeof utils_userShapes;
   "utils/widgetEmbedPass": typeof utils_widgetEmbedPass;
   "utils/widgetOriginPolicy": typeof utils_widgetOriginPolicy;
   "utils/workflowTypes": typeof utils_workflowTypes;

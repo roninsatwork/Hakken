@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { clientUserValidator, getActiveCompanyId, getCurrentUser, toClientUser, userRoleValidator } from "./authz";
 import { drainRows, purgeAuthIdentity } from "./utils/authIdentityPurge";
+import * as userShapes from "./utils/userShapes";
 import { appError } from "./utils/appError";
 import {
   assertCanCreateManagedUser,
@@ -102,6 +103,7 @@ export const getPaginatedUsers = tenantQuery({
      */
     scope: v.optional(v.union(v.literal("workspace"), v.literal("platform"))),
   },
+  returns: userShapes.clientUserWithCompanyPageShape,
   handler: async (ctx, args) => {
     const { user: caller } = ctx;
     if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
@@ -112,13 +114,14 @@ export const getPaginatedUsers = tenantQuery({
       const companyNames = new Map<string, string>();
 
       return await Promise.all(users.map(async (user) => {
+        const client = toClientUser(user);
         if (!user.companyId) {
-          return { ...user, companyName: null };
+          return { ...client, companyName: null };
         }
 
         const cachedName = companyNames.get(user.companyId);
         if (cachedName) {
-          return { ...user, companyName: cachedName };
+          return { ...client, companyName: cachedName };
         }
 
         const company = await ctx.db.get(user.companyId);
@@ -126,7 +129,7 @@ export const getPaginatedUsers = tenantQuery({
           companyNames.set(user.companyId, company.name);
         }
 
-        return { ...user, companyName: company?.name ?? null };
+        return { ...client, companyName: company?.name ?? null };
       }));
     };
     const withCompanyNames = async (pageResult: UserPaginationResult) => ({
@@ -203,6 +206,7 @@ export const getUsersByCompany = tenantQuery({
     companyId: v.id("companies"),
     paginationOpts: paginationOptsValidator
   },
+  returns: userShapes.clientUserPageShape,
   handler: async (ctx, args) => {
     const { user: caller } = ctx;
     if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
@@ -210,11 +214,12 @@ export const getUsersByCompany = tenantQuery({
     const activeCompanyId = getActiveCompanyId(caller);
 
     if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && activeCompanyId === args.companyId)) {
-       return await ctx.db
+       const page = await ctx.db
          .query("users")
          .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
          .order("desc")
          .paginate(args.paginationOpts);
+       return { ...page, page: page.page.map(toClientUser) };
     }
     
     throw appError("UNAUTHORIZED", "Unauthorized");
@@ -223,12 +228,14 @@ export const getUsersByCompany = tenantQuery({
 
 export const getSuperAdmins = superAdminQuery({
   args: { paginationOpts: paginationOptsValidator },
+  returns: userShapes.clientUserPageShape,
   handler: async (ctx, args) => {
-    return await ctx.db
+    const page = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("role"), "SUPER_ADMIN"))
       .order("desc")
       .paginate(args.paginationOpts);
+    return { ...page, page: page.page.map(toClientUser) };
   },
 });
 
@@ -263,6 +270,7 @@ export const addUser = tenantMutation({
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
+  returns: v.id("users"),
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
     if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
@@ -311,6 +319,7 @@ export const updateUser = tenantMutation({
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
+  returns: v.id("users"),
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
     if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
@@ -452,6 +461,7 @@ export const updateMyProfile = tenantMutation({
     image: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
   },
+  returns: v.id("users"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
@@ -479,6 +489,7 @@ export const getLogins = tenantQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string())
   },
+  returns: userShapes.loginPageShape,
   handler: async (ctx, args) => {
     const current = ctx;
 
@@ -514,6 +525,7 @@ export const getUserLogins = tenantQuery({
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string())
   },
+  returns: userShapes.loginPageShape,
   handler: async (ctx, args) => {
     // Basic verification
     const { userId: callerId, user: caller } = ctx;
@@ -716,6 +728,7 @@ export const impersonateCompany = superAdminMutation({
 
 export const getUnassignedSuperAdmins = superAdminQuery({
   args: { companyId: v.id("companies") },
+  returns: userShapes.clientUserListShape,
   handler: async (ctx, args) => {
     const superAdmins = await ctx.db
       .query("users")
@@ -723,7 +736,7 @@ export const getUnassignedSuperAdmins = superAdminQuery({
       .collect();
 
     // Filter out those already assigned to this specific company
-    return superAdmins.filter((user) => user.companyId !== args.companyId);
+    return superAdmins.filter((user) => user.companyId !== args.companyId).map(toClientUser);
   },
 });
 
@@ -874,6 +887,7 @@ export const listDirectoryUsers = superAdminQuery({
     sortBy: v.optional(v.union(v.literal("lastLogin"), v.literal("loginCount"))),
     direction: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
+  returns: userShapes.directoryUserPageShape,
   handler: async (ctx, args) => {
     const search = args.searchTerm?.trim() ?? "";
     const activity = (args.activity ?? "any") as DirectoryActivity;
@@ -1198,6 +1212,7 @@ export const purgeOrphanedAuthIdentities = internalMutation({
  */
 export const getAccountablePeople = adminQuery({
   args: {},
+  returns: userShapes.accountablePeopleShape,
   handler: async (ctx) => {
     const users = await ctx.db.query("users").take(500);
 

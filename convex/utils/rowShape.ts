@@ -31,6 +31,7 @@ export const rowShape = {
   companies: v.object({ ...whole("companies"), _id: v.id("companies") }),
   companyEvalCases: v.object({ ...whole("companyEvalCases"), _id: v.id("companyEvalCases") }),
   companyMemories: v.object({ ...whole("companyMemories"), _id: v.id("companyMemories") }),
+  logins: v.object({ ...whole("logins"), _id: v.id("logins") }),
   phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
   plans: v.object({ ...whole("plans"), _id: v.id("plans") }),
   schedules: v.object({ ...whole("schedules"), _id: v.id("schedules") }),
