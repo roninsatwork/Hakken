@@ -62,6 +62,7 @@ describe("AgentDashboard", () => {
       sampleRows: transactions,
       sampleRowText: "Drafted this week's exam questions",
       emptyText: "admin.agents.details.dashboard.table.noTransactions",
+      searchPlaceholder: "admin.agents.details.dashboard.table.searchPlaceholder",
     });
   });
 });

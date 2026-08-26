@@ -69,6 +69,7 @@ describe("WikiDiaryScreen", () => {
       sampleRows: entries,
       sampleRowText: "Returns and refunds",
       emptyText: "aiDiary.empty",
+      searchPlaceholder: "aiDiary.searchPlaceholder",
     });
   });
 });

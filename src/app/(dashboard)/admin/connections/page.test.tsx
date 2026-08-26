@@ -62,6 +62,7 @@ describe("ConnectionsPage", () => {
       sampleRows: connections,
       sampleRowText: "anthony@ronins.co.uk",
       emptyText: "connections.noConnections",
+      searchPlaceholder: "connections.searchPlaceholder",
       tableCount: 2,
       tableIndex: 0,
     });
