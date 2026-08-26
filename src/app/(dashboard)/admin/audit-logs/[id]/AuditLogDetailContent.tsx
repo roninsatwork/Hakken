@@ -15,47 +15,26 @@ export type AuditLogRow = {
   metadata?: string;
 };
 
-const MOCK_LOG_BASE_TIMESTAMP = new Date("2026-01-01T12:00:00.000Z").getTime();
-
-const fallbackLogs: AuditLogRow[] = [
-  {
-    _id: "mock-log-1a2b3c",
-    actionType: "UPDATE_COMPANY",
-    actorName: "Anthony (SuperAdmin)",
-    entityId: "comp_291039",
-    timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 5,
-    metadata: '{"field":"security_policy","status":"enforced"}',
-  },
-  {
-    _id: "mock-log-4d5e6f",
-    actionType: "TOGGLE_PII",
-    actorName: "System Subroutine",
-    entityId: "system_global",
-    timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 120,
-    metadata: '{"rule":"maskCreditCards","newState":true}',
-  },
-  {
-    _id: "mock-log-7g8h9i",
-    actionType: "DELETE_USER",
-    actorName: "Anthony (SuperAdmin)",
-    entityId: "usr_malicious_99",
-    timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 60 * 24,
-    metadata: '{"reason":"TOS Violation","email":"spam@fake.com"}',
-  },
-  {
-    _id: "mock-log-xjx9a1",
-    actionType: "CREATE_INVITE",
-    actorName: "Regional Admin",
-    entityId: "inv_91823",
-    timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 60 * 48,
-    metadata: '{"role":"USER","companyId":"comp_812"}',
-  },
-];
-
+/**
+ * An audit record shows what happened, or it shows nothing.
+ *
+ * This screen used to fall back to four hand-written rows whenever the real
+ * query came back empty — a super-admin enforcing a security policy, a user
+ * deleted for a terms violation, each with a plausible actor, timestamp and
+ * reference. On a quiet system, or a fresh one, an auditor read four events
+ * that never happened. Convincing placeholder data is the wrong kind of
+ * placeholder for a record whose entire purpose is to be trustworthy, and no
+ * amount of labelling it "sample" would fix that, because the screen renders
+ * one record at a time with nothing around it to carry the caveat.
+ *
+ * The empty path was already built and already worded: an id that matches
+ * nothing shows "Log Not Found", which is both true and the same thing an
+ * auditor needs to hear when a record has been purged. It simply could not be
+ * reached while the fallback stood in front of it.
+ */
 export default function AuditLogDetailContent({ id, logs }: { id: string; logs: AuditLogRow[] }) {
   const t = useTranslations("admin.auditLogs.detailPage");
-  const activeLogs: AuditLogRow[] = logs.length > 0 ? logs : fallbackLogs;
-  const log = activeLogs.find((entry) => entry._id === id);
+  const log = logs.find((entry) => entry._id === id);
 
   return (
     <div className="flex flex-col gap-6 w-full antialiased pb-20">

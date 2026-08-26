@@ -45,13 +45,36 @@ describe("legacy AuditLogDetail", () => {
     expect(screen.getByText(/security_policy/)).toBeInTheDocument();
   });
 
-  it("keeps the existing empty-database fallback record", () => {
-    vi.mocked(useParams).mockReturnValue({ id: "mock-log-1a2b3c" });
-    vi.mocked(useQuery).mockReturnValue([] as unknown as ReturnType<typeof useQuery>);
-    render(<AuditLogDetail />);
-    expect(screen.getByText("Anthony (SuperAdmin)")).toBeInTheDocument();
-    expect(screen.getByText("UPDATE_COMPANY")).toBeInTheDocument();
-  });
+  /**
+   * This test used to assert the opposite, and that is the point of keeping it.
+   *
+   * The screen carried four hand-written records and showed them whenever the
+   * real query came back empty — a super-admin enforcing a security policy, a
+   * user deleted for a terms violation, each with a plausible actor, timestamp
+   * and reference. A test named "keeps the existing empty-database fallback
+   * record" held that in place, so the invention was not an oversight anybody
+   * would trip over: it was pinned.
+   *
+   * An empty audit trail is a fact about the system, and the only honest thing
+   * to render. The ids below are the ones the fabricated rows used, so this
+   * fails the moment any of them come back.
+   */
+  it.each(["mock-log-1a2b3c", "mock-log-4d5e6f", "mock-log-7g8h9i", "mock-log-xjx9a1"])(
+    "invents no record for %s when the audit trail is empty",
+    (fabricatedId) => {
+      vi.mocked(useParams).mockReturnValue({ id: fabricatedId });
+      vi.mocked(useQuery).mockReturnValue([] as unknown as ReturnType<typeof useQuery>);
+      render(<AuditLogDetail />);
+
+      expect(
+        screen.getByText("admin.auditLogs.detailPage.error.title"),
+        "an empty audit trail must read as empty, not as four events that never happened"
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Anthony (SuperAdmin)")).not.toBeInTheDocument();
+      expect(screen.queryByText("UPDATE_COMPANY")).not.toBeInTheDocument();
+      expect(screen.queryByText(/security_policy/)).not.toBeInTheDocument();
+    }
+  );
 
   it("keeps the existing not-found state", () => {
     vi.mocked(useParams).mockReturnValue({ id: "missing" });

@@ -93,7 +93,7 @@ const carriesCopy = (name: string) =>
   !NOT_COPY.has(name) && !name.startsWith('data-') && !/^on[A-Z]/.test(name);
 
 /**
- * 29 files, 112 sentences.
+ * 28 files, 108 sentences.
  *
  * The customer area under `app/` was translated on 2026-08-26 and is absent
  * from the list; what remains is the admin area, the chat and workflow kit, and
@@ -116,8 +116,15 @@ const carriesCopy = (name: string) =>
  * translated the same day — a table heading, the usage screen's five panel
  * labels, and the two location fallbacks in the header.
  *
- * The other ten are English on purpose, and are the reason this list is not a
- * to-do list:
+ * Four more went the same day by deletion rather than translation, which is why
+ * the number is 28 and 108. They were four hand-written audit records the
+ * detail screen displayed whenever the real query came back empty. This guard
+ * is what found them: it could not tell an invented record from untranslated
+ * copy, and counting them as copy is what made someone look. They are gone, and
+ * an empty audit trail now reads as empty.
+ *
+ * The remaining six from that widening are English on purpose, and are the
+ * reason this list is not a to-do list:
  *
  *   - `agents/[id]/layout.tsx` (1), `agents/[id]/memory/page.tsx` (2) and
  *     `runs/_components/RunsTable.tsx` (3) hold the *reason* written into an
@@ -128,13 +135,8 @@ const carriesCopy = (name: string) =>
  *   - `ai/voice/page.tsx` (1) and `chat/RealtimeVoiceOverlay.tsx` (2) are
  *     instructions addressed to a model, not to a person — "Say so plainly."
  *     They are prompt text. Translating them changes what the model is told.
- *   - `audit-logs/[id]/AuditLogDetailContent.tsx` (4) is fabricated fallback
- *     data shown when the real audit query returns nothing. Those four should
- *     not be translated because they should not exist; flagged separately
- *     2026-08-26 as a governance screen inventing records.
  *
- * A future reader should shrink this list by fixing the last group and leaving
- * the first two alone.
+ * Both groups should be left alone.
  */
 const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils.ts', 2],
@@ -145,7 +147,6 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/admin/agents/new/page.tsx', 1],
   ['src/app/(dashboard)/admin/ai/costs/_components/AICostDistributionCharts.tsx', 1],
   ['src/app/(dashboard)/admin/ai/voice/page.tsx', 1],
-  ['src/app/(dashboard)/admin/audit-logs/[id]/AuditLogDetailContent.tsx', 4],
   ['src/app/(dashboard)/admin/companies/CompanyDialogs.tsx', 1],
   ['src/app/(dashboard)/admin/companies/[id]/ai/usage/page.tsx', 2],
   ['src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx', 21],
@@ -305,8 +306,8 @@ describe('screen copy stays in the catalogue', () => {
    * checking it, so a new entry slipped in unremarked. A file's count may split
    * when the file splits, but the total may not rise.
    */
-  const FROZEN_FILE_CEILING = 29;
-  const FROZEN_SENTENCE_CEILING = 112;
+  const FROZEN_FILE_CEILING = 28;
+  const FROZEN_SENTENCE_CEILING = 108;
 
   test('the frozen list only shrinks', () => {
     const sentences = [...FROZEN.values()].reduce((sum, count) => sum + count, 0);
