@@ -16,10 +16,15 @@ export function formatCurrencyGBP(value: number): string {
  * Sterling at a stated precision, uncompacted.
  *
  * `formatCurrencyGBP` compacts (£1.2k) and stops at two decimals, which is
- * right for a headline and wrong for a per-message cost of £0.00042. Screens
- * needing the small end were hand-rolling `Intl` — and one of them prefixed a
- * dollar sign to a sterling figure sitting beside a pound icon, which is what
- * hand-rolled currency gets you eventually.
+ * right for a headline and wrong for a per-message cost of £0.00042, so the
+ * screens needing the small end were hand-rolling `Intl`.
+ *
+ * A caution for anyone extending this file: not every cost on the platform is
+ * sterling. Model spend is billed by the providers in US dollars and stored
+ * without conversion, so the screens showing it print a dollar sign correctly
+ * — even though the columns holding it are named `costGBP`, `totalCostGBP`
+ * and `maxCostGBP`. Those names are wrong, not the symbol. Do not "fix" a
+ * dollar sign into a pound one on the strength of a field name.
  */
 export function formatPreciseGBP(value: number, fractionDigits = 5): string {
   return new Intl.NumberFormat("en-GB", {
