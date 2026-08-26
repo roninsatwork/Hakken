@@ -267,6 +267,7 @@ import type * as utils_skillLearningService from "../utils/skillLearningService.
 import type * as utils_skillLimits from "../utils/skillLimits.js";
 import type * as utils_skillMarkdownService from "../utils/skillMarkdownService.js";
 import type * as utils_skillNormalization from "../utils/skillNormalization.js";
+import type * as utils_skillShapes from "../utils/skillShapes.js";
 import type * as utils_starterSkills from "../utils/starterSkills.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
 import type * as utils_uploadPolicy from "../utils/uploadPolicy.js";
@@ -585,6 +586,7 @@ declare const fullApi: ApiFromModules<{
   "utils/skillLimits": typeof utils_skillLimits;
   "utils/skillMarkdownService": typeof utils_skillMarkdownService;
   "utils/skillNormalization": typeof utils_skillNormalization;
+  "utils/skillShapes": typeof utils_skillShapes;
   "utils/starterSkills": typeof utils_starterSkills;
   "utils/templateParser": typeof utils_templateParser;
   "utils/uploadPolicy": typeof utils_uploadPolicy;

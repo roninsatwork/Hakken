@@ -25,7 +25,7 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * and `toClientWorkflow` are those narrowings.
  */
 
-const MISSING_SHAPE_CEILING = 362;
+const MISSING_SHAPE_CEILING = 339;
 
 /** Handlers that still return a database row unshaped. This list may only shrink. */
 const FROZEN_UNSHAPED = new Set<string>([

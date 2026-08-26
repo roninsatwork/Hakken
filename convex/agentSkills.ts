@@ -8,11 +8,12 @@ import { emptyAgentSkillRollup, getAgentSkillRollup, replaceAgentSkillRollup } f
 import { appError } from "./utils/appError";
 import { MAX_SKILLS_PER_AGENT } from "./utils/skillLimits";
 import { stableStringify } from "./utils/lang";
-import { SKILL_BINDING_LIMIT, SKILL_CATALOG_LIMIT, STARTER_SKILL_CATEGORY, skillRiskLevelValidator, skillStatusValidator } from "./utils/skillContracts";
+import { SKILL_BINDING_LIMIT, SKILL_CATALOG_LIMIT, STARTER_SKILL_CATEGORY, markdownSkillDraftValidator, skillRiskLevelValidator, skillStatusValidator } from "./utils/skillContracts";
 import { starterSkillDefinitions } from "./utils/starterSkills";
 import { buildSkillPatch, normalizeCategory, parseStringArray } from "./utils/skillNormalization";
 import { buildSkillBundle, buildSkillPatchFromBundle } from "./utils/skillBundleService";
 import { parseSkillMarkdown } from "./utils/skillMarkdownService";
+import * as skillShapes from "./utils/skillShapes";
 import { truncateLearningText } from "./utils/skillLearningService";
 import {
   addMarkdownImportCatalogWarnings,
@@ -25,14 +26,12 @@ import {
   seedSkillEvalFixtures,
 } from "./agentSkillsService";
 
-
-
-
 export const previewSkillMarkdownImport = superAdminMutation({
   args: {
     markdown: v.string(),
     filename: v.optional(v.string()),
   },
+  returns: markdownSkillDraftValidator,
   handler: async (ctx, args) => {
     const draft = parseSkillMarkdown(args.markdown, args.filename);
     return await addMarkdownImportCatalogWarnings(ctx, draft);
@@ -45,6 +44,7 @@ export const getPaginatedSkills = superAdminQuery({
     searchTerm: v.optional(v.string()),
     status: v.optional(skillStatusValidator),
   },
+  returns: skillShapes.skillPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     if (searchTerm) {
@@ -91,6 +91,7 @@ export const getPaginatedSkills = superAdminQuery({
  */
 export const getActiveSkills = superAdminQuery({
   args: {},
+  returns: skillShapes.skillListShape,
   handler: async (ctx) => {
     return await ctx.db
       .query("agentSkills")
@@ -121,6 +122,7 @@ export const searchActiveSkills = superAdminQuery({
     riskLevel: v.optional(skillRiskLevelValidator),
     excludeSkillIds: v.optional(v.array(v.id("agentSkills"))),
   },
+  returns: skillShapes.skillPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     const category = args.category?.trim() ? normalizeCategory(args.category) : undefined;
@@ -161,6 +163,7 @@ export const searchActiveSkills = superAdminQuery({
 
 export const getSkillCatalogAnalytics = superAdminQuery({
   args: {},
+  returns: skillShapes.skillCatalogAnalyticsShape,
   handler: async (ctx) => {
     const rollup = await getAgentSkillRollup(ctx);
     const totals = rollup ?? { ...emptyAgentSkillRollup, computedAt: null };
@@ -192,6 +195,7 @@ export const getSkillCatalogAnalytics = superAdminQuery({
 /** Recompute the Skill Center counts now. Also runs on a schedule. */
 export const rebuildSkillCatalogRollup = superAdminMutation({
   args: {},
+  returns: skillShapes.skillRollupRebuildShape,
   handler: async (ctx) => {
     const totals = await computeAgentSkillRollup(ctx);
     await replaceAgentSkillRollup(ctx, totals, Date.now());
@@ -210,6 +214,7 @@ export const rebuildSkillCatalogRollupInternal = internalMutation({
 
 export const getSkill = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
+  returns: skillShapes.skillDetailShape,
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
     if (!skill) return null;
@@ -225,6 +230,7 @@ export const getSkill = superAdminQuery({
 
 export const exportSkillBundle = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
+  returns: skillShapes.skillBundleExportShape,
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw appError("NOT_FOUND", "Skill not found.");
@@ -244,6 +250,7 @@ export const exportSkillBundle = superAdminQuery({
 
 export const getSkillLearningAnalytics = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
+  returns: skillShapes.skillLearningAnalyticsShape,
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw appError("NOT_FOUND", "Skill not found.");
@@ -324,6 +331,7 @@ export const getSkillLearningAnalytics = superAdminQuery({
 
 export const getBindingsForSkill = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
+  returns: skillShapes.skillBindingRowsShape,
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw appError("NOT_FOUND", "Skill not found.");
@@ -383,6 +391,7 @@ export const createSkill = superAdminMutation({
     defaultRulesJson: v.optional(v.string()),
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
+  returns: v.id("agentSkills"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const now = Date.now();
@@ -428,6 +437,7 @@ export const createSkill = superAdminMutation({
 
 export const seedStarterSkills = superAdminMutation({
   args: {},
+  returns: skillShapes.starterSkillSeedShape,
   handler: async (ctx) => {
     const { userId } = ctx;
     const now = Date.now();
@@ -514,6 +524,7 @@ export const updateSkill = superAdminMutation({
     defaultRulesJson: v.optional(v.string()),
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
+  returns: v.id("agentSkills"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const existing = await ctx.db.get(args.skillId);
@@ -549,6 +560,7 @@ export const cloneSkill = superAdminMutation({
     skillId: v.id("agentSkills"),
     name: v.optional(v.string()),
   },
+  returns: skillShapes.skillVersionStampShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const source = await ctx.db.get(args.skillId);
@@ -606,6 +618,7 @@ export const importSkillBundle = superAdminMutation({
     bundleJson: v.string(),
     name: v.optional(v.string()),
   },
+  returns: skillShapes.skillVersionStampShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const patch = buildSkillPatchFromBundle(args.bundleJson, args.name);
@@ -658,6 +671,7 @@ export const importSkillMarkdown = superAdminMutation({
     recommendedToolMappingsJson: v.optional(v.string()),
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
+  returns: skillShapes.skillMarkdownImportShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const patch = buildSkillPatch({
@@ -772,6 +786,7 @@ export const importSkillMarkdown = superAdminMutation({
  */
 export const deleteSkill = superAdminMutation({
   args: { skillId: v.id("agentSkills") },
+  returns: skillShapes.skillDeletionShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
@@ -808,6 +823,7 @@ export const deleteSkill = superAdminMutation({
 
 export const archiveSkill = superAdminMutation({
   args: { skillId: v.id("agentSkills") },
+  returns: v.id("agentSkills"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
@@ -831,6 +847,7 @@ export const archiveSkill = superAdminMutation({
 
 export const getForAgent = adminQuery({
   args: { agentId: v.id("agents") },
+  returns: skillShapes.agentSkillRowsShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -877,6 +894,7 @@ export const upgradeSkillBindingToLatest = superAdminMutation({
     bindingId: v.id("agentSkillBindings"),
     seedEvalFixtures: v.optional(v.boolean()),
   },
+  returns: skillShapes.skillBindingUpgradeShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
@@ -927,6 +945,7 @@ export const upgradeSkillBindingsForSkill = superAdminMutation({
     bindingIds: v.optional(v.array(v.id("agentSkillBindings"))),
     seedEvalFixtures: v.optional(v.boolean()),
   },
+  returns: skillShapes.skillBindingBulkUpgradeShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
@@ -997,6 +1016,7 @@ export const bindSkillToAgent = superAdminMutation({
     isEnabled: v.optional(v.boolean()),
     seedEvalFixtures: v.optional(v.boolean()),
   },
+  returns: skillShapes.skillBindingShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const agent = await ctx.db.get(args.agentId);
@@ -1086,6 +1106,7 @@ export const setBindingEnabled = superAdminMutation({
     bindingId: v.id("agentSkillBindings"),
     isEnabled: v.boolean(),
   },
+  returns: v.id("agentSkillBindings"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);

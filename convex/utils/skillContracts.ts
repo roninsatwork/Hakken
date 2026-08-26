@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { type Infer, v } from "convex/values";
 
 export const SKILL_CATALOG_LIMIT = 250;
 export const SKILL_BINDING_LIMIT = 100;
@@ -24,21 +24,10 @@ export const SKILL_TEXT_LIMIT = 8000;
 export const SKILL_JSON_LIMIT = 24000;
 export const SKILL_MARKDOWN_LIMIT = 24000;
 export const STARTER_SKILL_CATEGORY = "STARTER";
-export const SKILL_BUNDLE_FORMAT = "sonae.agentSkillBundle.v1";
+export const SKILL_BUNDLE_FORMAT = "sonae.agentSkillBundle.v1" as const;
 
 export type SkillStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 export type SkillRiskLevel = "LOW" | "MEDIUM" | "HIGH";
-export type EvalFixtureType =
-  | "HAPPY_PATH"
-  | "APPROVAL_PAUSE"
-  | "REJECTED_ACTION"
-  | "PROMPT_INJECTION"
-  | "TENANT_BOUNDARY"
-  | "BAD_TOOL_ARGS"
-  | "CANCELLATION"
-  | "REPLAYED_FAILURE"
-  | "TOOL_PLAN"
-  | "COST_LATENCY_BUDGET";
 
 export const skillStatusValidator = v.union(
   v.literal("DRAFT"),
@@ -51,6 +40,21 @@ export const skillRiskLevelValidator = v.union(
   v.literal("MEDIUM"),
   v.literal("HIGH")
 );
+
+export const evalFixtureTypeValidator = v.union(
+  v.literal("HAPPY_PATH"),
+  v.literal("APPROVAL_PAUSE"),
+  v.literal("REJECTED_ACTION"),
+  v.literal("PROMPT_INJECTION"),
+  v.literal("TENANT_BOUNDARY"),
+  v.literal("BAD_TOOL_ARGS"),
+  v.literal("CANCELLATION"),
+  v.literal("REPLAYED_FAILURE"),
+  v.literal("TOOL_PLAN"),
+  v.literal("COST_LATENCY_BUDGET")
+);
+
+export type EvalFixtureType = Infer<typeof evalFixtureTypeValidator>;
 
 export const evalFixtureTypes: EvalFixtureType[] = [
   "HAPPY_PATH",
@@ -65,14 +69,16 @@ export const evalFixtureTypes: EvalFixtureType[] = [
   "COST_LATENCY_BUDGET",
 ];
 
-export type SuggestedEvalFixture = {
-  type: EvalFixtureType;
-  objective: string;
-  expectedFinalOutputRubric: string;
-  expectedToolMappings?: string[];
-  expectedBlockedActionsJson?: string;
-  tags?: string[];
-};
+export const suggestedEvalFixtureValidator = v.object({
+  type: evalFixtureTypeValidator,
+  objective: v.string(),
+  expectedFinalOutputRubric: v.string(),
+  expectedToolMappings: v.optional(v.array(v.string())),
+  expectedBlockedActionsJson: v.optional(v.string()),
+  tags: v.optional(v.array(v.string())),
+});
+
+export type SuggestedEvalFixture = Infer<typeof suggestedEvalFixtureValidator>;
 
 export type StarterSkillDefinition = {
   name: string;
@@ -90,20 +96,22 @@ export type ParsedMarkdownSection = {
   body: string;
 };
 
-export type MarkdownSkillDraft = {
-  sourceFilename?: string;
-  sourceHash: string;
-  name: string;
-  description?: string;
-  category: string;
-  riskLevel: SkillRiskLevel;
-  instruction: string;
-  requiredToolMappingsJson: string;
-  recommendedToolMappingsJson: string;
-  suggestedEvalFixturesJson: string;
-  validation: {
-    errors: string[];
-    warnings: string[];
-    suggestions: string[];
-  };
-};
+export const markdownSkillDraftValidator = v.object({
+  sourceFilename: v.optional(v.string()),
+  sourceHash: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  category: v.string(),
+  riskLevel: skillRiskLevelValidator,
+  instruction: v.string(),
+  requiredToolMappingsJson: v.string(),
+  recommendedToolMappingsJson: v.string(),
+  suggestedEvalFixturesJson: v.string(),
+  validation: v.object({
+    errors: v.array(v.string()),
+    warnings: v.array(v.string()),
+    suggestions: v.array(v.string()),
+  }),
+});
+
+export type MarkdownSkillDraft = Infer<typeof markdownSkillDraftValidator>;

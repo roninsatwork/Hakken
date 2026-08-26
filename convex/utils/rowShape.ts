@@ -23,6 +23,9 @@ const whole = <T extends keyof typeof schema.tables>(table: T) =>
 
 export const rowShape = {
   agentLogs: v.object({ ...whole("agentLogs"), _id: v.id("agentLogs") }),
+  agentSkillBindings: v.object({ ...whole("agentSkillBindings"), _id: v.id("agentSkillBindings") }),
+  agentSkillVersions: v.object({ ...whole("agentSkillVersions"), _id: v.id("agentSkillVersions") }),
+  agentSkills: v.object({ ...whole("agentSkills"), _id: v.id("agentSkills") }),
   aiRules: v.object({ ...whole("aiRules"), _id: v.id("aiRules") }),
   aiTools: v.object({ ...whole("aiTools"), _id: v.id("aiTools") }),
   companies: v.object({ ...whole("companies"), _id: v.id("companies") }),

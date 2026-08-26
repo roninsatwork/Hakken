@@ -1,7 +1,14 @@
+import { v } from "convex/values";
+
 import type { Doc } from "../_generated/dataModel";
 import { appError } from "./appError";
 import { isRecord, stableStringify } from "./lang";
-import { SKILL_BUNDLE_FORMAT, SKILL_JSON_LIMIT } from "./skillContracts";
+import {
+  SKILL_BUNDLE_FORMAT,
+  SKILL_JSON_LIMIT,
+  skillRiskLevelValidator,
+  suggestedEvalFixtureValidator,
+} from "./skillContracts";
 import {
   buildSkillPatch,
   hashValue,
@@ -22,6 +29,33 @@ export function getBundleRecord(value: unknown, field: string) {
   if (!isRecord(value)) throw appError("INVALID_INPUT", `${field} must be an object.`);
   return value;
 }
+/**
+ * `recommendedKnowledge` and `defaultRules` are whatever JSON the author stored
+ * against the skill, so the bundle carries them through without a shape of
+ * their own — there is nothing in the schema to derive one from.
+ */
+export const skillBundleValidator = v.object({
+  format: v.literal(SKILL_BUNDLE_FORMAT),
+  exportedAt: v.number(),
+  source: v.object({
+    skillId: v.id("agentSkills"),
+    versionNumber: v.optional(v.number()),
+    snapshotHash: v.optional(v.string()),
+  }),
+  skill: v.object({
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    riskLevel: skillRiskLevelValidator,
+    instruction: v.string(),
+    requiredToolMappings: v.array(v.string()),
+    recommendedToolMappings: v.array(v.string()),
+    recommendedKnowledge: v.optional(v.any()),
+    defaultRules: v.optional(v.any()),
+    suggestedEvalFixtures: v.array(suggestedEvalFixtureValidator),
+  }),
+});
+
 export function buildSkillBundle(skill: Doc<"agentSkills">, latestVersion: Doc<"agentSkillVersions"> | null) {
   return {
     format: SKILL_BUNDLE_FORMAT,
