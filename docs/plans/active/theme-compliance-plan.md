@@ -92,7 +92,7 @@ with form state and save in
 Drift totals (grep-rough, excluding tests, `(public)`, e2e): **~2,039 sites**
 — ~796 hardcoded hex + ~1,243 raw palette classes. Semantic tones: danger
 ~557, warning ~334, success ~262, info ~219. Eighteen `getStatusColor`-style
-helpers across 15 files re-derive the same mapping; `src/ui/atoms/` has no
+helpers across 15 files re-derive the same mapping; `src/ui/components/screens/` has no
 badge/pill atom. The `demos/movements` pose palette (`#f6ccbe`/`#a8d5ba`,
 251 occurrences, ~12 files) is domain visualization, not theme drift.
 
@@ -206,14 +206,14 @@ sidebar independently themable; tsc/eslint/tests green; `npx convex dev
 
 ## Phase 2 — one StatusPill, four tones (2 days)
 
-- [ ] **2.1 Build `src/ui/atoms/StatusPill.tsx`**:
+- [ ] **2.1 Build `src/ui/components/screens/StatusPill.tsx`**:
   `tone: "success" | "warning" | "danger" | "info" | "neutral"`, optional
   icon slot, sizes `sm | md`. Renders the established recipe
   (`border-{tone}/20 bg-{tone}/10 text-{tone}`) from the tokens (success,
   warning, destructive, info, muted). ~400 of the drift sites are exactly
   this pattern (`bg-*-500/10` ×249, `border-*-500/20` ×161). Unit-test the
   tone → class mapping.
-- [ ] **2.2 One shared tone map** (`src/ui/atoms/statusTone.ts`):
+- [ ] **2.2 One shared tone map** (`src/ui/components/screens/statusTone.ts`):
   `toneForStatus(status: string): Tone` covering the union of the 18
   `getStatusColor`/`getRiskColor`/`getOutcomeColor` helpers (15 files — find
   them with `grep -rn "getStatusColor\|getRiskColor\|getOutcomeColor" src`).

@@ -180,10 +180,11 @@
     "src/ui/components/screens/TableControls.tsx": 3,
     "src/ui/components/TimeframeDropdown.tsx": 3,
     "src/ui/components/workflows/AgentEditorModal.tsx": 7,
-    "src/ui/components/workflows/ConfigDrawer.tsx": 7,
+    "src/ui/components/workflows/ConfigDrawer.tsx": 2,
     "src/ui/components/governance/PersonalDataPanel.tsx": 2,
     "src/ui/components/governance/GovernanceActivity.tsx": 1,
-    "src/app/(dashboard)/admin/_features/knowledge/KnowledgeModals.tsx": 4
+    "src/app/(dashboard)/admin/_features/knowledge/KnowledgeModals.tsx": 4,
+    "src/ui/components/workflows/ConfigDrawerPanels.tsx": 5
   },
   "headings": {
     "src/app/(dashboard)/_features/auth-diagnostics/AuthDiagnosticsPage.tsx": 1,
