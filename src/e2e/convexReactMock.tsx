@@ -124,11 +124,12 @@ function observabilityAnalyticsFixture(lookbackDays: number) {
     modelStats: [],
     versionStats: [],
     toolStats: [
-      { handlerMapping: "rightmove.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
-      { handlerMapping: "records.save", calls: 964, successes: 964, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
-      { handlerMapping: "email.send", calls: 212, successes: 210, failures: 0, approvalsRequired: 3, denied: 0, cancelled: 0, notImplemented: 2 },
-      { handlerMapping: "postcode.lookup", calls: 148, successes: 148, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
+      { handlerMapping: "rightmove.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 1_450 },
+      { handlerMapping: "records.save", calls: 964, successes: 964, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 120 },
+      { handlerMapping: "email.send", calls: 212, successes: 210, failures: 0, approvalsRequired: 3, denied: 0, cancelled: 0, notImplemented: 2, typicalMs: 640 },
+      { handlerMapping: "postcode.lookup", calls: 148, successes: 148, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 85 },
     ],
+    failureGroupsOmitted: 0,
     failureReasons: [
       { reason: "The property search timed out", count: 42 },
       { reason: "Gave up before finishing the job", count: 8 },
@@ -387,7 +388,6 @@ const companyFixture = {
   description: "Deterministic company workspace for e2e coverage.",
   systemPrompt: "Keep responses tenant-safe for E2E Company.",
   createdAt: now,
-  updatedAt: now,
 };
 
 const models = Array.from({ length: 18 }, (_, index) => ({
@@ -399,8 +399,9 @@ const models = Array.from({ length: 18 }, (_, index) => ({
   isEnabled: index < 16,
   providerKey: "google",
   providerModelId: index === 0 ? "e2e-primary-model" : `e2e-model-${index + 1}`,
-  inputTokenCostGBP: 0.000001,
-  outputTokenCostGBP: 0.000003,
+  lastSyncedAt: now,
+  standardInputCostBelow200k: 0.000001,
+  outputResponseCost: 0.000003,
 }));
 
 const modelProviders = [
@@ -410,19 +411,16 @@ const modelProviders = [
     providerKey: "google",
     displayName: "Google Vertex AI",
     isEnabled: true,
+    createdAt: now,
+    updatedAt: now,
   },
 ];
 
 const inviteTemplateFixture = {
-  _id: "invite_template_e2e",
-  _creationTime: now,
   subject: "Join E2E Company on Sonae",
   headline: "Your workspace is ready",
   body: "Use this invitation to join the deterministic E2E workspace.",
   ctaText: "Join Workspace",
-  isActive: true,
-  createdAt: now,
-  updatedAt: now,
 };
 
 const modelDefaultUseCases = [
@@ -449,36 +447,106 @@ const rules = [
     _creationTime: now,
     name: "Global Safety Rule",
     trigger: "Every prompt",
-    content: "Keep responses tenant-safe.",
-    priority: 10,
+    instruction: "Keep responses tenant-safe.",
+    priority: "NORMAL",
     isActive: true,
-    scope: "GLOBAL",
     createdAt: now,
   },
 ];
 
-const analytics = {
+/**
+ * Three different questions, three different answers.
+ *
+ * One object used to stand in for all three. It matched none of them: the
+ * distribution chart reads `calls` and got `value`, the token chart reads
+ * `inputTokens` and `outputTokens` and got a single `tokens`, and none of the
+ * three carried the `coverage` every analytics answer now returns. Those charts
+ * drew nothing in every browser run and nobody could tell, because a blank
+ * chart and an untested chart look identical.
+ */
+const analyticsCoverage = { complete: true, incomplete: [] as string[] };
+
+const analyticsTopAgents = [
+  { id: "agent_e2e", name: "E2E Assistant", avatar: "", cost: 4.2, interactions: 12 },
+];
+const analyticsTopCompanies = [
+  { id: companyId, name: "E2E Company", logo: "", cost: 8.1, messages: 24 },
+];
+const analyticsModelDistribution = [
+  { name: "E2E Primary Model", cost: 12.34, calls: 42 },
+];
+const analyticsProviderDistribution = [
+  { providerKey: "google", cost: 12.34, calls: 42 },
+];
+const analyticsPlanDistribution = [
+  { planId: "plan_pro_e2e", name: "Pro", companies: 2, mrr: 2400 },
+];
+const analyticsSystemIntegrity = { totalProvisionedUsers: 2, totalProvisionedCompanies: 2 };
+
+const companyMetricsFixture = {
+  coverage: analyticsCoverage,
+  timeline: [
+    { date: "2026-06-01", cost: 6.12, messages: 21, inputTokens: 6_000, outputTokens: 4_000, internalMessages: 9, externalMessages: 12 },
+    { date: "2026-06-02", cost: 6.22, messages: 21, inputTokens: 6_000, outputTokens: 5_000, internalMessages: 8, externalMessages: 13 },
+  ],
   aggregates: {
     aggregationType: "day",
     activeUsers: 4,
     mau: 4,
     mrr: 2400,
+    knowledgeDocuments: 3,
     totalCostGBP: 12.34567,
-    totalInputTokens: 12000,
+    totalInputTokens: 12_000,
     totalMessages: 42,
-    totalOutputTokens: 9000,
-    totalTokens: 21000,
+    totalOutputTokens: 9_000,
+    totalTokens: 21_000,
+    costPerActiveUser: 3.0864,
+    avgCostPerMessage: 0.2939,
   },
-  modelDistribution: [{ name: "E2E Primary Model", value: 42, cost: 12.34 }],
-  planDistribution: [{ planId: "plan_pro_e2e", name: "Pro", companies: 2, mrr: 2400 }],
-  systemIntegrity: { totalProvisionedCompanies: 2 },
-  timeline: [
-    { date: "2026-06-01", cost: 6.12, messages: 21, tokens: 10000 },
-    { date: "2026-06-02", cost: 6.22, messages: 21, tokens: 11000 },
+  topUsers: [
+    { id: userId, name: "E2E User", image: "", email: "user.e2e@example.com", cost: 2.1, messages: 6 },
   ],
-  topAgents: [{ id: "agent_e2e", name: "E2E Assistant", cost: 4.2, messages: 12 }],
-  topCompanies: [{ id: companyId, name: "E2E Company", cost: 8.1, messages: 24 }],
-  topUsers: [{ id: userId, name: "E2E User", email: "user.e2e@example.com", cost: 2.1, messages: 6 }],
+  topAgents: analyticsTopAgents,
+  topCompanies: analyticsTopCompanies,
+  modelDistribution: analyticsModelDistribution,
+  providerDistribution: analyticsProviderDistribution,
+};
+
+const globalAnalyticsFixture = {
+  coverage: analyticsCoverage,
+  timeline: [
+    { date: "2026-06-01", cost: 6.12, messages: 21, inputTokens: 6_000, outputTokens: 4_000 },
+    { date: "2026-06-02", cost: 6.22, messages: 21, inputTokens: 6_000, outputTokens: 5_000 },
+  ],
+  aggregates: {
+    aggregationType: "day",
+    activeUsers: 4,
+    mau: 4,
+    totalCostGBP: 12.34567,
+    totalInputTokens: 12_000,
+    totalMessages: 42,
+    totalOutputTokens: 9_000,
+    totalTokens: 21_000,
+    costPerActiveUser: 3.0864,
+    avgCostPerMessage: 0.2939,
+  },
+  topCompanies: analyticsTopCompanies,
+  // The platform leaderboard names each person's workspace; the company one
+  // cannot, because everyone on it is already in the same workspace.
+  topUsers: [
+    { id: userId, name: "E2E User", image: "", email: "user.e2e@example.com", cost: 2.1, messages: 6, companyName: "E2E Company" },
+  ],
+  topAgents: analyticsTopAgents,
+  modelDistribution: analyticsModelDistribution,
+  providerDistribution: analyticsProviderDistribution,
+  planDistribution: analyticsPlanDistribution,
+  systemIntegrity: analyticsSystemIntegrity,
+};
+
+const globalInventoryFixture = {
+  aggregates: { mrr: 2400 },
+  planDistribution: analyticsPlanDistribution,
+  systemIntegrity: analyticsSystemIntegrity,
 };
 
 const makeMovementPose = () => {
@@ -640,7 +708,6 @@ const movementFixture = {
   primaryCue: "Roll down one segment at a time.",
   bodyFocus: ["ribcage", "pelvis"],
   createdAt: now,
-  updatedAt: now,
 };
 
 function workflowFixture(id = workflowId, name = "E2E Workflow") {
@@ -927,23 +994,11 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     });
   }
   if (path === "aiModels:getProviders") return modelProviders;
-  if (path === "aiModels:getOffsetPaginatedModels") {
-    const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
-    const statusFilter = queryArgs.statusFilter;
-    const providerFilter = String(queryArgs.providerFilter || "all");
-    const filtered = models.filter((model) => {
-      const matchesSearch = !searchTerm || model.displayName.toLowerCase().includes(searchTerm) || model.modelId.includes(searchTerm);
-      const matchesStatus =
-        statusFilter === "active" ? model.isEnabled : statusFilter === "inactive" ? !model.isEnabled : true;
-      const matchesProvider = providerFilter === "all" || model.providerKey === providerFilter;
-      return matchesSearch && matchesStatus && matchesProvider;
-    });
-    return pageData(filtered, Number(queryArgs.page || 1), Number(queryArgs.pageSize || 15));
-  }
   if (path === "aiRules:getOffsetPaginatedRules") {
     const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
     const filtered = searchTerm ? rules.filter((rule) => rule.name.toLowerCase().includes(searchTerm)) : rules;
-    return pageData(filtered, Number(queryArgs.page || 1), Number(queryArgs.pageSize || 15));
+    const paged = pageData(filtered, Number(queryArgs.page || 1), Number(queryArgs.pageSize || 15));
+    return { data: paged.data, totalCount: paged.totalCount, totalPages: paged.totalPages };
   }
   if (path === "invites:getActiveTemplate") return inviteTemplateFixture;
   if (path === "invites:getInvitesByCompany") return [];
@@ -953,23 +1008,42 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         key: "sonae-knowledge",
         name: "Knowledge search",
         description: "Lets an agent search the documents you have uploaded, and quote from them.",
+        category: "KNOWLEDGE",
         availability: "AVAILABLE",
         executableToolCount: 1,
         totalToolCount: 1,
         authMode: "NONE",
+        tenantAvailability: "GLOBAL",
         requiredScopes: ["knowledge:read"],
         requiredSecretRefs: [],
         toolDefinitions: [],
-        installation: { _id: "connector_e2e", installStatus: "INSTALLED", testStatus: "SUCCESS" },
+        // An installed connector is the whole stored row, not a summary of it.
+        installation: {
+          key: "sonae-knowledge",
+          name: "Knowledge search",
+          description: "Lets an agent search the documents you have uploaded, and quote from them.",
+          category: "KNOWLEDGE",
+          authMode: "NONE",
+          tenantAvailability: "GLOBAL",
+          installStatus: "INSTALLED",
+          testStatus: "SUCCESS",
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+          _id: "connector_e2e",
+          _creationTime: now,
+        },
       },
       {
         key: "http-rest",
         name: "Call an API",
         description: "Lets an agent call another system over the web. You set the address and the credentials; the agent only chooses what to ask for.",
+        category: "HTTP",
         availability: "AVAILABLE",
         executableToolCount: 1,
         totalToolCount: 1,
         authMode: "SECRET_REF",
+        tenantAvailability: "GLOBAL",
         requiredScopes: ["http:request"],
         requiredSecretRefs: ["base_url", "auth_header"],
         toolDefinitions: [],
@@ -981,37 +1055,67 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     return {
       connector: {
         _id: "connector_e2e",
+        _creationTime: now,
         key: "sonae-knowledge",
         name: "Sonae Knowledge",
         description: "Search approved tenant knowledge through the governed RAG path.",
+        category: "KNOWLEDGE",
+        authMode: "NONE",
         configuredSecretRefs: [],
         enabledToolMappings: ["knowledge.search"],
         isActive: true,
         tenantAvailability: "GLOBAL",
         installStatus: "INSTALLED",
         testStatus: "SUCCESS",
+        createdAt: now,
+        updatedAt: now,
       },
       definition: {
         key: "sonae-knowledge",
         name: "Knowledge search",
         description: "Lets an agent search the documents you have uploaded, and quote from them.",
+        category: "KNOWLEDGE",
+        authMode: "NONE",
+        tenantAvailability: "GLOBAL",
+        requiredScopes: ["knowledge:read"],
         requiredSecretRefs: [],
         toolDefinitions: [
           {
             name: "Knowledge Search",
             description: "Searches your approved documents and returns short quotes with their source.",
             handlerMapping: "knowledge.search",
+            modelName: "knowledge_search",
+            requiredRole: "ADMIN",
+            sideEffectLevel: "READ",
+            confirmationRequired: false,
           },
         ],
       },
       company: null,
       canManageTenantScope: true,
-      tools: [{ _id: "tool_e2e", name: "Knowledge Search", isActive: true }],
+      tools: [{
+        _id: "tool_e2e",
+        _creationTime: now,
+        name: "Knowledge Search",
+        description: "Searches your approved documents.",
+        handlerMapping: "knowledge.search",
+        requiredRole: "ADMIN",
+        isActive: true,
+        createdAt: now,
+      }],
       secretRefs: [],
       oauthConnections: [],
       oauthConnection: null,
       testLogs: [
-        { _id: "log_e2e", status: "SUCCESS", message: "Connection test passed.", testedAt: now - 60000 },
+        {
+          _id: "log_e2e",
+          _creationTime: now,
+          connectorId: "connector_e2e",
+          key: "sonae-knowledge",
+          status: "SUCCESS",
+          message: "Connection test passed.",
+          testedAt: now - 60000,
+        },
       ],
     };
   }
@@ -1105,7 +1209,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         sideEffectLevel: "READ",
         confirmationRequired: false,
         isActive: true,
-        provider: "apify",
+        createdAt: now,
       },
     ];
   }
@@ -1138,6 +1242,8 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         useCase,
         companyDefault: companyOverrides[useCase]
           ? {
+              _id: `company_default_${useCase}`,
+              updatedAt: now,
               modelId: companyOverrides[useCase].modelId,
               providerKey: companyOverrides[useCase].providerKey,
               model: {
@@ -1164,6 +1270,16 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
           },
         },
       })),
+      modelPickerOptions: models.map((model) => ({
+        modelId: model.modelId,
+        displayName: model.displayName,
+        providerKey: model.providerKey,
+        supportedUseCases: modelDefaultUseCases,
+      })),
+      providerNames: modelProviders.map((provider) => ({
+        providerKey: provider.providerKey,
+        displayName: provider.displayName,
+      })),
     };
   }
   if (path === "widgets:getWidgetsByCompany") {
@@ -1187,7 +1303,6 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         enableGreeting: true,
         conversationStarters: ["What can you help with?"],
         createdAt: now,
-        updatedAt: now,
       },
     ];
   }
@@ -1211,14 +1326,13 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       enableGreeting: true,
       conversationStarters: ["What can you help with?"],
       createdAt: now,
-      updatedAt: now,
     };
   }
   if (path === "plans:getActivePlans" || path === "plans:getPlans") {
     return [{ _id: "plan_e2e", _creationTime: now, name: "Pro", description: "E2E plan", priceGBP: 99, messageLimit: 1000, isActive: true, createdAt: now }];
   }
   if (path === "plans:getMyCompanyPlanStatus") {
-    return { planName: "Pro", messagesUsed: 42, messageLimit: 1000, isUnlimited: false };
+    return { planName: "Pro", messagesUsed: 42, messageLimit: 1000 };
   }
   if (path === "workflows:list") {
     return [workflowFixture()];
@@ -1232,7 +1346,6 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       {
         _id: "schedule_e2e",
         _creationTime: now,
-        companyId,
         name: "E2E Morning Schedule",
         workflowId,
         workflowName: "E2E Workflow",
@@ -1244,14 +1357,14 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
           timeLocal: "09:00",
           timezone: "UTC",
         }),
-        cronExpression: "0 9 * * *",
         isActive: true,
         createdAt: now,
-        updatedAt: now,
       },
     ];
   }
-  if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics" || path === "analytics:getGlobalInventoryMetrics") return analytics;
+  if (path === "analytics:getCompanyMetrics") return companyMetricsFixture;
+  if (path === "analytics:getGlobalAnalytics") return globalAnalyticsFixture;
+  if (path === "analytics:getGlobalInventoryMetrics") return globalInventoryFixture;
   if (path === "movements:get") {
     return queryArgs.id === movementId ? movementFixture : null;
   }
@@ -1308,8 +1421,12 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   // fixture answers with one page rather than a bare list of runs.
   if (path === "agentRuns:getPageForAgent") {
     return {
-      page: observabilityRunFixtures().map((run, index) => ({
+      // This door narrows on the way out — the run list shows what a run did,
+      // not which agent or company row it hangs off. Spreading the whole
+      // fixture here sent four fields the real answer does not carry.
+      page: observabilityRunFixtures().map(({ _creationTime, agentId, companyId, updatedAt, ...run }, index) => ({
         ...run,
+        isRehearsal: false,
         markers: {
           feedback: index === 1 ? { rating: "NEGATIVE", labels: ["TOO_SLOW"], comment: "too slow" } : null,
           reflected: index === 1,
@@ -1319,7 +1436,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         },
       })),
       isDone: true,
-      continueCursor: null,
+      continueCursor: "",
     };
   }
   if (path === "agentLogs:getJobGroups") return observabilityLogGroupsFixture();
@@ -1336,8 +1453,11 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       description: "Deterministic agent used to inspect the agent detail screens",
       modelId: "e2e-primary-model",
       isActive: true,
+      thinkingMode: false,
       createdAt: now,
       updatedAt: now,
+      populatedRules: [],
+      populatedKnowledge: [],
     };
   }
   // The dashboard reads every field off this object, so the generic empty-array
@@ -1371,8 +1491,8 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     return {
       daysBack: 7,
       checkedDates: ["2026-08-15", "2026-08-21"],
-      snapshotCoverage: { missingGlobalDates: [], duplicateSnapshotGroups: [], totalSnapshots: 0 },
-      messageDimensions: { missingDimensions: 0, mismatched: 0, missingThreads: 0, scanned: 0, examples: [] },
+      snapshotCoverage: { missingGlobalDates: [], duplicateSnapshotGroups: [], totalSnapshots: 0, dates: [] },
+      messageDimensions: { missingDimensions: 0, mismatched: 0, missingThreads: 0, scanned: 0, examples: [], windowStartDate: "2026-08-15" },
       liveToday: { date: "2026-08-21", assistantMessages: 0, agentTransactions: 0 },
     };
   }
@@ -1437,6 +1557,30 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
 
+  // The catalogue pages by cursor through `getPaginatedModels`. It used to be
+  // an offset query called `getOffsetPaginatedModels`, and when it was replaced
+  // this stand-in kept the old name — so the screen fell to the empty
+  // catch-all below and every browser test looked at a catalogue of nothing.
+  if (path === "aiModels:getPaginatedModels") {
+    const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
+    const statusFilter = queryArgs.statusFilter;
+    const providerFilter = String(queryArgs.providerFilter || "all");
+    return {
+      results: models.filter((model) => {
+        const matchesSearch = !searchTerm
+          || model.displayName.toLowerCase().includes(searchTerm)
+          || model.modelId.includes(searchTerm);
+        const matchesStatus =
+          statusFilter === "active" ? model.isEnabled : statusFilter === "inactive" ? !model.isEnabled : true;
+        const matchesProvider = providerFilter === "all" || model.providerKey === providerFilter;
+        return matchesSearch && matchesStatus && matchesProvider;
+      }),
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+
   if (path === "agentRuns:getForAgent") {
     return {
       results: observabilityRunFixtures(),
@@ -1449,7 +1593,7 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   // The sidebar pages its conversation list now.
   if (path === "chat:getThreads") {
     return {
-      results: [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }],
+      results: [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", updatedAt: now }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,
@@ -1495,8 +1639,8 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   if (path === "users:getPaginatedUsers") {
     return {
       results: [
-        { _id: superAdminId, _creationTime: now, name: "E2E Super Admin", email: "super.e2e@example.com", role: "SUPER_ADMIN", createdAt: now },
-        { _id: userId, _creationTime: now, name: "E2E User", email: "user.e2e@example.com", role: "USER", companyId, createdAt: now },
+        { _id: superAdminId, _creationTime: now, name: "E2E Super Admin", email: "super.e2e@example.com", role: "SUPER_ADMIN", createdAt: now, companyName: null },
+        { _id: userId, _creationTime: now, name: "E2E User", email: "user.e2e@example.com", role: "USER", companyId, createdAt: now, companyName: "E2E Company" },
       ],
       status: "Exhausted",
       loadMore: async () => {},
@@ -1505,7 +1649,7 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   }
   if (path === "companies:getPaginatedCompanies") {
     return {
-      results: [{ ...companyFixture, userCount: 2 }],
+      results: [{ ...companyFixture, userCount: 2, userCountIsCapped: false }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,
@@ -1513,7 +1657,7 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   }
   if (path === "agents:getPaginatedAgents") {
     return {
-      results: [{ _id: "agent_e2e", _creationTime: now, name: "E2E Assistant", modelId: "e2e-primary-model", isActive: true, createdAt: now, updatedAt: now }],
+      results: [{ _id: "agent_e2e", _creationTime: now, name: "E2E Assistant", modelId: "e2e-primary-model", isActive: true, createdAt: now, updatedAt: now, thinkingMode: false }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,
