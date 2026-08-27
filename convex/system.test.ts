@@ -161,24 +161,39 @@ describe("OWASP: Broken Access Control - System", () => {
 
     const adminClient = t.withIdentity({ subject: adminId });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
+    // `maskCharacter` is not a masking switch and nothing reads it. It used to
+    // be stored and handed back regardless, because the write never read what
+    // it was given; it is dropped now.
     const configStr = JSON.stringify({ enabled: false, maskCharacter: "#" });
 
     expect(await adminClient.query(api.system.getPiiConfig, {})).toMatchObject({ enabled: false });
     await expect(adminClient.mutation(api.system.updatePiiConfig, { configStr })).rejects.toThrow("Unauthorized");
     await expect(superAdminClient.mutation(api.system.updatePiiConfig, { configStr })).resolves.toBe(true);
-    expect(await adminClient.query(api.system.getPiiConfig, {})).toMatchObject({
+    expect(await adminClient.query(api.system.getPiiConfig, {})).toEqual({
       enabled: false,
-      maskCharacter: "#",
+      maskEmails: true,
+      maskCreditCards: true,
+      maskPhones: false,
+      maskNinos: true,
     });
 
     const auditLog = await t.run(async (ctx) => ctx.db.query("auditLogs").first());
 
+    // The record says what was stored, not what was submitted. Those were the
+    // same thing while the write stored whatever it was handed; now that it
+    // normalises, the audit trail has to follow the switches that took effect.
     expect(auditLog).toMatchObject({
       actionType: "UPDATE_PII_FIREWALL",
       actorId: superAdminId,
       entityType: "systemConfig",
       entityId: "PII_REDACTION_CONFIG",
-      metadata: configStr,
+      metadata: JSON.stringify({
+        enabled: false,
+        maskEmails: true,
+        maskCreditCards: true,
+        maskPhones: false,
+        maskNinos: true,
+      }),
     });
   });
 });

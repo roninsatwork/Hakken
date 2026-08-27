@@ -8,6 +8,7 @@ import {
   buildSystemConfigWrite,
   buildSystemPromptAuditMetadata,
   GOOGLE_ANALYTICS_CONFIG_KEY,
+  normalizeSystemPiiConfigForUpdate,
   parseSystemPiiConfig,
   PII_REDACTION_CONFIG_KEY,
   SYSTEM_PROMPT_CONFIG_KEY,
@@ -185,6 +186,10 @@ export const updatePiiConfig = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
+    // Read before it is written down, exactly as the retention screen does.
+    // What is stored is always five complete switches.
+    const configStr = JSON.stringify(normalizeSystemPiiConfigForUpdate(args.configStr));
+
     const existingConfig = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", PII_REDACTION_CONFIG_KEY))
@@ -193,14 +198,14 @@ export const updatePiiConfig = superAdminMutation({
     const now = Date.now();
     if (existingConfig) {
       await ctx.db.patch(existingConfig._id, buildSystemConfigPatch({
-        value: args.configStr,
+        value: configStr,
         now,
         userId,
       }));
     } else {
       await ctx.db.insert("systemConfig", buildSystemConfigWrite({
         key: PII_REDACTION_CONFIG_KEY,
-        value: args.configStr,
+        value: configStr,
         now,
         userId,
       }));
@@ -212,7 +217,7 @@ export const updatePiiConfig = superAdminMutation({
       entityType: "systemConfig",
       entityId: PII_REDACTION_CONFIG_KEY,
       timestamp: now,
-      metadata: args.configStr
+      metadata: configStr
     });
 
     return true;
