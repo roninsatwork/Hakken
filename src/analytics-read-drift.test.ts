@@ -520,7 +520,7 @@ describe('Analytics And Platform Read Drift', () => {
       { filePath: 'convex/agents.ts', exportName: 'getForCompanyInternal' },
       { filePath: 'convex/agents.ts', exportName: 'createInlineAgent' },
       { filePath: 'convex/aiModels.ts', exportName: 'getModels' },
-      { filePath: 'convex/aiModels.ts', exportName: 'getOffsetPaginatedModels' },
+      { filePath: 'convex/aiModels.ts', exportName: 'getPaginatedModels' },
       { filePath: 'convex/aiModels.ts', exportName: 'resolveModelForExecution' },
       { filePath: 'convex/aiModels.ts', exportName: 'setDefaultModel' },
       { filePath: 'convex/aiModels.ts', exportName: 'getAllModelsInternal' },
@@ -537,6 +537,10 @@ describe('Analytics And Platform Read Drift', () => {
       { filePath: 'convex/widgets.ts', exportName: 'getWidgetsByCompany' },
       { filePath: 'convex/widgets.ts', exportName: 'getGlobalWidgets' },
     ];
+    const missingCatalogueExports = catalogueExports
+      .filter(({ filePath, exportName }) => !readRepoFile(filePath).includes(`export const ${exportName} =`))
+      .map(({ filePath, exportName }) => `${filePath}:${exportName}`);
+
     const broadCatalogueReads = catalogueExports.flatMap(({ filePath, exportName }) => {
       const contents = extractExportBody(filePath, exportName);
 
@@ -546,6 +550,10 @@ describe('Analytics And Platform Read Drift', () => {
       });
     });
 
+    expect(
+      missingCatalogueExports,
+      `These catalogue exports do not exist, so nothing about them is being checked. A renamed export must be renamed here too — an entry that matches nothing reads as coverage and is not:\n${missingCatalogueExports.join('\n')}`
+    ).toEqual([]);
     expect(
       staleCatalogueExceptions,
       `Configuration catalogue broad-read exceptions should be retired or moved to a later phase:\n${staleCatalogueExceptions.join('\n')}`
