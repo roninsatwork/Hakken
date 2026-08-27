@@ -247,3 +247,65 @@ describe("Movements API Authentication Hardening", () => {
     expect(searchAndFilterPage.page.map((movement) => movement.title)).toEqual(["Evening Roll Up"]);
   });
 });
+
+describe("the debug-session reads, from the owner's side", () => {
+  /**
+   * These three were only ever called by the wrong owner, where they correctly
+   * answer with nothing — so nothing exercised the answer that actually carries
+   * data, and their declared shapes were checked by the compiler alone. No
+   * screen calls them either, so the browser could not stand in for a test.
+   *
+   * `samplesJson` is the raw capture blob and the list deliberately replaces it
+   * with a short preview. That narrowing is the one thing here worth pinning.
+   */
+  test("a session is listed with a preview, fetched whole, and fetched by id", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const ownerId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "coach@pilates.com", role: "USER" }));
+    const owner = t.withIdentity({ subject: ownerId });
+
+    const movementId = await owner.mutation(api.movements.create, {
+      title: "Roll Down",
+      difficulty: "Beginner",
+      poseData: "[1, 2, 3]",
+      poseDataFormat: "legacy-inline-json",
+      frameCount: 1,
+      durationMs: 1000,
+      captureFps: 30,
+      schemaVersion: 1,
+      spineGoal: "rollDown",
+      primaryCue: "Peel the spine off the wall.",
+      bodyFocus: ["pelvis"],
+    });
+
+    const samplesJson = JSON.stringify(Array.from({ length: 200 }, (_, index) => ({ index })));
+    const sessionId = await owner.mutation(api.movements.saveDebugTrackingSession, {
+      movementId,
+      trigger: "manual-debug-save",
+      sampleCount: 200,
+      durationMs: 100,
+      startedAt: 1,
+      endedAt: 2,
+      baselineSummary: "baseline",
+      warningSummary: "none",
+      samplesJson,
+    });
+
+    const listed = await owner.query(api.movements.listDebugTrackingSessions, { movementId });
+    const byIds = await owner.query(api.movements.getDebugTrackingSessions, { ids: [sessionId] });
+    const one = await owner.query(api.movements.getDebugTrackingSession, { id: sessionId });
+
+    // Proof each read had something to be wrong about.
+    expect(listed).toHaveLength(1);
+    expect(byIds).toHaveLength(1);
+    expect(one?._id).toBe(sessionId);
+
+    // The list sends a preview and not the blob; the single reads send it whole.
+    expect(listed[0]).not.toHaveProperty("samplesJson");
+    expect(listed[0].samplesPreview).toBe(samplesJson.slice(0, 800));
+    expect(samplesJson.length).toBeGreaterThan(800);
+    expect(one?.samplesJson).toBe(samplesJson);
+    expect(byIds[0].samplesJson).toBe(samplesJson);
+  });
+});
