@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import * as movementShapes from "./utils/movementShapes";
 
 const movementDifficultyValidator = v.union(
   v.literal("Beginner"),
@@ -101,6 +102,7 @@ function getMovementStorageId(movement: { poseStorageId?: Id<"_storage">; poseDa
 
 export const list = tenantQuery({
   args: {},
+  returns: movementShapes.movementListShape,
   handler: async (ctx) => {
     return await ctx.db
       .query("movements")
@@ -114,6 +116,7 @@ export const listReplayAlignmentRecordings = tenantQuery({
   args: {
     limit: v.optional(v.number()),
   },
+  returns: movementShapes.replayAlignmentListShape,
   handler: async (ctx, args) => {
     const limit = Math.max(1, Math.min(args.limit ?? 50, 100));
     const movements = await ctx.db
@@ -139,6 +142,7 @@ export const getPaginated = tenantQuery({
     searchTerm: v.optional(v.string()),
     spineGoal: v.optional(movementSpineGoalValidator),
   },
+  returns: movementShapes.movementPageShape,
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
 
@@ -168,6 +172,7 @@ export const getPaginated = tenantQuery({
 
 export const get = tenantQuery({
   args: { id: v.id("movements") },
+  returns: movementShapes.movementOrNullShape,
   handler: async (ctx, args) => {
     const movement = await ctx.db.get(args.id);
     return movementIsOwnedByUser(movement, ctx.userId) ? movement : null;
@@ -189,6 +194,7 @@ export const create = tenantMutation({
     primaryCue: v.optional(v.string()),
     bodyFocus: v.optional(v.array(movementBodyFocusValidator)),
   },
+  returns: v.id("movements"),
   handler: async (ctx, args) => {
     return await ctx.db.insert("movements", {
       title: args.title,
@@ -258,6 +264,7 @@ export const remove = tenantMutation({
 
 export const generateUploadUrl = tenantMutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
   },
@@ -265,6 +272,7 @@ export const generateUploadUrl = tenantMutation({
 
 export const getFileUrl = tenantQuery({
   args: { movementId: v.id("movements") },
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const movement = await ctx.db.get(args.movementId);
     if (!movementIsOwnedByUser(movement, ctx.userId)) return null;
@@ -288,6 +296,7 @@ export const saveDebugTrackingSession = tenantMutation({
     captureStartReadiness: v.optional(movementStartReadinessValidator),
     samplesJson: v.string(),
   },
+  returns: v.id("movementDebugSessions"),
   handler: async (ctx, args) => {
     const movement = await ctx.db.get(args.movementId);
     if (!movementIsOwnedByUser(movement, ctx.userId)) throw new Error("Movement not found");
@@ -314,6 +323,7 @@ export const listDebugTrackingSessions = tenantQuery({
     movementId: v.optional(v.id("movements")),
     limit: v.optional(v.number()),
   },
+  returns: movementShapes.debugSessionListShape,
   handler: async (ctx, args) => {
     const limit = Math.max(1, Math.min(args.limit ?? 10, 50));
     if (args.movementId) {
@@ -346,6 +356,7 @@ export const getDebugTrackingSession = tenantQuery({
   args: {
     id: v.id("movementDebugSessions"),
   },
+  returns: movementShapes.debugSessionOrNullShape,
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.id);
     return session?.createdBy === ctx.userId ? session : null;
@@ -356,9 +367,11 @@ export const getDebugTrackingSessions = tenantQuery({
   args: {
     ids: v.array(v.id("movementDebugSessions")),
   },
+  returns: movementShapes.debugSessionRowsShape,
   handler: async (ctx, args) => {
     const limitedIds = args.ids.slice(0, 20);
     const sessions = await Promise.all(limitedIds.map((id) => ctx.db.get(id)));
-    return sessions.filter((session) => session?.createdBy === ctx.userId);
+    return sessions.filter((session): session is NonNullable<typeof session> =>
+      session?.createdBy === ctx.userId);
   },
 });

@@ -269,6 +269,7 @@ import type * as utils_memoryRetrieval from "../utils/memoryRetrieval.js";
 import type * as utils_memoryText from "../utils/memoryText.js";
 import type * as utils_messageEvidence from "../utils/messageEvidence.js";
 import type * as utils_modelPricing from "../utils/modelPricing.js";
+import type * as utils_movementShapes from "../utils/movementShapes.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_platformShapes from "../utils/platformShapes.js";
 import type * as utils_providerContentTypes from "../utils/providerContentTypes.js";
@@ -616,6 +617,7 @@ declare const fullApi: ApiFromModules<{
   "utils/memoryText": typeof utils_memoryText;
   "utils/messageEvidence": typeof utils_messageEvidence;
   "utils/modelPricing": typeof utils_modelPricing;
+  "utils/movementShapes": typeof utils_movementShapes;
   "utils/pii": typeof utils_pii;
   "utils/platformShapes": typeof utils_platformShapes;
   "utils/providerContentTypes": typeof utils_providerContentTypes;

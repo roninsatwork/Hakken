@@ -36,18 +36,17 @@ import { repoRoot, walkFiles, relativePath } from './test/driftUtils';
  * cannot quietly go blind again.
  */
 
-const MISSING_SHAPE_CEILING = 11;
+const MISSING_SHAPE_CEILING = 0;
 
 /**
- * Handlers that still hand back a database row unshaped. This list may only
- * shrink; each one leaves as its file gains declared shapes.
+ * Handlers that still hand back a database row unshaped.
  *
- * `convex/movements.ts:list` is the entry that stays. It is frozen Posture
- * Studio code and is excluded from this effort permanently.
+ * Empty, and the ceiling above is zero: every client-callable declaration in
+ * `convex/` says what it returns. The list stays because the rule it feeds is
+ * the one that matters — a new handler posting a raw row fails here rather than
+ * joining a count. It may only shrink, which from empty means it may not grow.
  */
-const FROZEN_UNSHAPED = new Set<string>([
-  'convex/movements.ts:list',
-]);
+const FROZEN_UNSHAPED = new Set<string>([]);
 
 const CLIENT_BUILDERS = new Set([
   'query', 'mutation', 'action',

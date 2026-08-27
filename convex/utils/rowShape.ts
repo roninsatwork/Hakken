@@ -59,6 +59,8 @@ export const rowShape = {
   purgeHistory: v.object({ ...whole("purgeHistory"), _id: v.id("purgeHistory") }),
   widgets: v.object({ ...whole("widgets"), _id: v.id("widgets") }),
   messages: v.object({ ...whole("messages"), _id: v.id("messages") }),
+  movements: v.object({ ...whole("movements"), _id: v.id("movements") }),
+  movementDebugSessions: v.object({ ...whole("movementDebugSessions"), _id: v.id("movementDebugSessions") }),
   notifications: v.object({ ...whole("notifications"), _id: v.id("notifications") }),
   phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
   plans: v.object({ ...whole("plans"), _id: v.id("plans") }),
