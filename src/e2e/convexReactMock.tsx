@@ -1069,6 +1069,10 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     });
     return {
       windowDays: 30,
+      // The screen reads this before anything else and renders nothing without
+      // it. Complete, because the fixture is a small deterministic workspace
+      // that no read here could truncate.
+      coverage: { complete: true, incomplete: [] },
       clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
       money: { projectedMrrGBP: 400, aiSpendGBP: 12.54, spendAsPercentOfRevenue: 3.1 },
       seats: { total: 12, active: 4, utilisation: 33 },
