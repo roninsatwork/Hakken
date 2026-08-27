@@ -57,7 +57,22 @@ const CLIENT_BUILDERS = new Set([
   'publicQuery', 'publicMutation', 'publicAction',
   'softQuery', 'softMutation',
   'moduleQuery', 'moduleMutation',
-  'governanceQuery', 'governanceMutation',
+  'governanceQuery', 'governanceMutation', 'governanceAction',
+]);
+
+/**
+ * Everything `tenantFunctions.ts` exports that is not a builder.
+ *
+ * The list above is a hand-written set, and a hand-written set of names is
+ * exactly the thing that goes quietly out of date. `governanceAction` was
+ * missing from it for a day: three client-callable declarations were invisible,
+ * and the population read 11 when it was 14. So the list is checked against the
+ * module that defines the builders, and anything new there must be classified
+ * either as a builder above or as one of these.
+ */
+const NOT_A_BUILDER = new Set([
+  'assertTenantAccess',
+  'requireTenant',
 ]);
 
 type Declaration = { id: string; hasShape: boolean; returnsRawRow: boolean };
@@ -210,6 +225,18 @@ describe('client-callable return shapes hold', () => {
       .map((declaration) => [declaration.id.split(':')[1], declaration.returnsRawRow]));
 
     expect(read).toEqual({ wrapped: true, inline: true, narrowed: false, nestedRead: false });
+  });
+
+  test('the builder list knows every builder tenantFunctions exports', () => {
+    // A builder missing from CLIENT_BUILDERS is not a smaller count — it is a
+    // blind spot, and it reads exactly like a clean one.
+    const source = fs.readFileSync(path.join(repoRoot, 'convex/tenantFunctions.ts'), 'utf8');
+    const exported = Array.from(source.matchAll(/^export (?:function|const) (\w+)/gm))
+      .map((match) => match[1]);
+
+    expect(exported.length).toBeGreaterThan(15);
+    expect(exported.filter((name) => !CLIENT_BUILDERS.has(name) && !NOT_A_BUILDER.has(name)))
+      .toEqual([]);
   });
 
   test('the population without a declared shape only shrinks', () => {

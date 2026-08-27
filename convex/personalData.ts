@@ -165,6 +165,7 @@ export const collectPage = internalQuery({
 
 export const produceSubjectAccess = governanceAction({
   args: { email: v.string() },
+  returns: governanceShapes.subjectAccessShape,
   handler: async (ctx, args): Promise<SubjectAccessResult> => {
     const found = await ctx.runQuery(internal.personalData.findByEmail, { email: args.email });
     if (!found) {
@@ -365,6 +366,7 @@ export const erase = superAdminAction({
 /** What the screens show before anyone presses anything. */
 export const retainedExceptions = governanceAction({
   args: {},
+  returns: governanceShapes.retainedExceptionListShape,
   handler: async (): Promise<Array<{ table: string; reason: string }>> =>
     rulesFor("RETAIN").map((rule) => ({ table: rule.table, reason: rule.reason })),
 });

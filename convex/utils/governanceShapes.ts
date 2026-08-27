@@ -308,3 +308,85 @@ export const workflowNodeConfigShape = v.object({
   agentOutputFields: v.optional(v.string()),
   agentAllowInternet: v.optional(v.boolean()),
 });
+
+/**
+ * The three `governanceAction` surfaces.
+ *
+ * These were invisible until 2026-08-27: `governanceAction` was missing from the
+ * drift guard's builder list, so three client-callable declarations were never
+ * counted and the population read 11 when it was 14. The guard now checks its
+ * own list against the builders `tenantFunctions.ts` actually exports.
+ */
+
+const aiSystemEntryLikeShape = v.object({
+  id: v.string(),
+  kind: v.string(),
+  name: v.string(),
+  purpose: v.string(),
+  ownerName: v.string(),
+  risk: v.string(),
+  humanApproves: v.boolean(),
+  facesPublic: v.boolean(),
+  model: v.optional(v.string()),
+  lastActiveAt: v.optional(v.number()),
+  missing: v.array(v.string()),
+});
+
+export const evidencePackShape = v.object({
+  register: v.array(aiSystemEntryLikeShape),
+  runs: v.array(v.object({
+    id: v.string(),
+    at: v.number(),
+    agentName: v.string(),
+    lines: v.array(v.string()),
+    blockedCount: v.number(),
+  })),
+  decisions: v.array(v.object({
+    id: v.string(),
+    at: v.number(),
+    agentName: v.string(),
+    status: v.string(),
+    decidedBy: v.string(),
+    reason: v.string(),
+  })),
+  policies: v.array(v.object({
+    id: v.string(),
+    name: v.string(),
+    priority: v.string(),
+    instruction: v.string(),
+    scope: v.string(),
+  })),
+  models: v.array(v.string()),
+  summary: v.string(),
+  counts: v.object({
+    systems: v.number(),
+    runs: v.number(),
+    decisions: v.number(),
+    policies: v.number(),
+    blocked: v.number(),
+  }),
+  runsOmitted: v.number(),
+  scope: v.union(v.literal("PLATFORM"), v.literal("WORKSPACE")),
+});
+
+export const subjectAccessShape = v.object({
+  person: v.object({
+    userId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    role: v.string(),
+  }),
+  sections: v.array(v.object({
+    table: v.string(),
+    treatment: v.string(),
+    reason: v.string(),
+    /** Whole rows from whichever table the rule names; there is no one shape. */
+    rows: v.array(v.any()),
+    truncated: v.optional(v.boolean()),
+  })),
+});
+
+export const retainedExceptionListShape = v.array(v.object({
+  table: v.string(),
+  reason: v.string(),
+}));

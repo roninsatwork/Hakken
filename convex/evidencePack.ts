@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
+import * as governanceShapes from "./utils/governanceShapes";
 import { governanceAction } from "./tenantFunctions";
 import {
   isWithin,
@@ -258,6 +259,7 @@ export const produce = governanceAction({
     from: v.number(),
     to: v.number(),
   },
+  returns: governanceShapes.evidencePackShape,
   handler: async (ctx, args): Promise<ProducedEvidencePack> => {
     /**
      * Whose evidence this is.
