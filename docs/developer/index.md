@@ -17,6 +17,7 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Function And Feature Coverage Matrix](./function-and-feature-coverage-matrix.md)
 - [Route Reference](./route-reference.md)
 - [Convex API And Schema Reference](./convex-api-and-schema-reference.md)
+- [Convex Environment Variables Reference](./convex-environment-variables.md)
 - [Operational Scripts Reference](./operational-scripts-reference.md)
 
 ## Product Areas
