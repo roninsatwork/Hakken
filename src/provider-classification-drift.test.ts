@@ -22,6 +22,10 @@ describe('Provider Classification Drift', () => {
       // Same layer as the adapter above: this is where naming the provider is
       // the point, because the behaviour under test is that provider's.
       'convex/vertexProviderService.test.ts',
+      // Names the GEMINI_API_KEY variable that still sits in the Convex
+      // deployment. The variable is the fact being documented; the doc cannot
+      // describe it without spelling its name.
+      'docs/developer/convex-environment-variables.md',
       'docs/plans/completed/code-quality-95-plan.md',
       'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',

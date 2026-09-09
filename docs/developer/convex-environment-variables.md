@@ -83,7 +83,7 @@ Notes:
 | `ANTHROPIC_API_KEY` | Anthropic (Claude) models for chat and the agent runtime. |
 | `OPENAI_API_KEY` | OpenAI models, including real-time voice sessions (`convex/aiVoiceSession.ts`). |
 | `OPENROUTER_API_KEY` | Models routed through OpenRouter. |
-| `GOOGLE_CLIENT_EMAIL` | Service-account identity for Google Vertex AI (Gemini models and embeddings). |
+| `GOOGLE_CLIENT_EMAIL` | Service-account identity for Google Vertex AI (Google models and embeddings). |
 | `GOOGLE_PRIVATE_KEY` | That service account's private key. |
 | `GEMINI_API_KEY` | **Read by nothing in the codebase.** Google models authenticate with the Vertex service account above. Safe to remove once confirmed nothing outside this repository uses it. |
 
