@@ -111,11 +111,12 @@ A trail that can be silently shortened, with no record of the shortening, fails 
 review on its own. The purge writes a summary entry — how many, how old, under
 which rule — and the purge skips its own summary entries when it runs.
 
-**Failed sign-ins are recorded for everyone. Successful sign-ins stay
-role-limited for now.** Repeated failures against an account is the first thing
-anyone looks for and it is currently invisible. Recording every successful
-sign-in for every user would swamp the trail with routine noise before the
-filtering is good enough to cope, so that waits for Phase 4.
+**The application records only server-verified sign-in outcomes.** A browser
+cannot prove that a code failed or succeeded, and accepting its email-address
+claim created forgeable, unauthenticated audit rows. Convex Auth enforces its own
+failed-attempt limit; successful one-time-code verification is recorded by the
+server-side auth callback. Provider and platform logs remain the source for
+failed-attempt investigation until there is a trusted server hook for it.
 
 **Reads are recorded only where the read is the sensitive act.** Opening a
 person's data, downloading a document, exporting the trail, producing an evidence
@@ -175,15 +176,18 @@ recorded about what changed" unless the underlying entry genuinely holds nothing
 records it removed, how old they were, and under which retention setting. The
 purge skips its own summaries so the record of deletion cannot itself be deleted.
 
-**Failed sign-ins are recorded** — for every account, not only administrators —
-with the address they came from. An entry for the attempt, not the account, so a
-run of attempts against an account that does not exist is visible too.
+**Failed sign-in audit rows were removed.** The original implementation accepted
+an arbitrary address from an unauthenticated browser, so the rows were evidence
+of what a caller claimed rather than evidence of an authentication failure. The
+auth provider still rate-limits wrong codes; only its trusted successful callback
+writes `ONE_TIME_CODE_VERIFIED` to the auth trail.
 
 Ending impersonation gets its own action name. Today stopping shows as
 "IMPERSONATE_COMPANY — None (Reverted)", which reads as starting.
 
-**Done when.** A retention run and a failed sign-in both appear in the trail, and
-running the purge twice does not remove the record of the first run.
+**Done when.** A retention run appears in the trail, running the purge twice does
+not remove the record of the first run, and no browser can forge sign-in outcome
+rows.
 
 ## Phase 3 — Governance and agent activity
 
@@ -269,7 +273,7 @@ leaves zero rows behind.
 
 So refusals are recorded everywhere the platform refuses by *returning* a denial
 rather than throwing, which is most of the places that matter: API requests,
-blocked widget embeds, the assistant's own safety refusals, failed sign-ins, and
+blocked widget embeds, the assistant's own safety refusals, and
 refused agent approvals. The one uncovered case is an ordinary admin mutation
 called by somebody without the role for it.
 
@@ -304,12 +308,20 @@ ago starts acting.
   doing eventually and not now. It is meaningful only once the trail is complete
   enough to be worth protecting, and it is a much larger piece of work than
   anything above.
-- **Alerting on the trail.** Noticing five failed sign-ins and telling somebody
-  is a monitoring product. Record it properly first; deciding what is worth
-  waking someone for is a separate conversation.
-- **A second retention rule for security entries.** Keeping sign-in failures
-  longer than ordinary changes is a real requirement in some sectors, and it is
-  configuration nobody has asked for yet.
+- **Alerting on provider failures.** Noticing repeated failed sign-ins and telling
+  somebody is a monitoring product. It needs a trusted provider-side signal;
+  browser-submitted telemetry is not evidence.
+- **A second retention rule for security entries.** Keeping trusted provider
+  failure signals longer than ordinary changes is a real requirement in some
+  sectors, and it is configuration nobody has asked for yet.
+
+## Decision update
+
+- **2026-09-10 — remove client-reported sign-in outcomes.** The browser-facing
+  `recordFailed` and `recordVerified` mutations could write arbitrary email
+  addresses into security trails. Successful code use now comes from Convex
+  Auth's verified callback; failed attempts remain provider-enforced and are not
+  copied into the audit trail without a trusted server signal.
 
 ## Where the estimates are soft
 

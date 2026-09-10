@@ -213,6 +213,30 @@ describe("Public API key governance", () => {
     const requestLogs = await t.run(async (ctx) => ctx.db.query("publicApiRequests").collect());
     expect(requestLogs.map((log) => log.status)).toEqual(["AUTHORIZED", "AUTHORIZED", "RATE_LIMITED"]);
     expect(requestLogs.every((log) => log.companyId === companyId)).toBe(true);
+
+    // A rejected row must not displace a success from the quota window.
+    for (let index = 0; index < 8; index++) {
+      await expect(t.mutation(internal.apiKeys.authenticatePublicRequest, {
+        apiKey: created.apiKey, requiredScope: "run:read", method: "GET",
+        path: "/api/public/v1/ping", now: 10_300 + index,
+      })).resolves.toMatchObject({ ok: false, statusCode: 429 });
+    }
+    const concurrentRefusals = await Promise.all(Array.from({ length: 4 }, () =>
+      t.mutation(internal.apiKeys.authenticatePublicRequest, {
+        apiKey: created.apiKey, requiredScope: "run:read", method: "GET",
+        path: "/api/public/v1/ping", now: 11_000,
+      })
+    ));
+    expect(concurrentRefusals.every((result) => !result.ok && result.statusCode === 429)).toBe(true);
+    // At the exact boundary only the first success has expired.
+    await expect(t.mutation(internal.apiKeys.authenticatePublicRequest, {
+      apiKey: created.apiKey, requiredScope: "run:read", method: "GET",
+      path: "/api/public/v1/ping", now: 70_000,
+    })).resolves.toMatchObject({ ok: true });
+    await expect(t.mutation(internal.apiKeys.authenticatePublicRequest, {
+      apiKey: created.apiKey, requiredScope: "run:read", method: "GET",
+      path: "/api/public/v1/ping", now: 70_001,
+    })).resolves.toMatchObject({ ok: false, statusCode: 429 });
   });
 });
 
@@ -330,5 +354,54 @@ describe("what the audit trail learns about API keys", () => {
     const refusals = await trailFor(t, "API_REQUEST_REFUSED");
     expect(refusals).toHaveLength(1);
     expect(JSON.parse(refusals[0].metadata ?? "{}")).toMatchObject({ keyPrefix: "none given" });
+  });
+
+  test("missing and malformed keys cannot grow request or audit logs without bound", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < 30; index += 1) {
+      const result = await t.mutation(internal.apiKeys.authenticatePublicRequest, {
+        apiKey: index % 2 === 0 ? undefined : "not-an-api-key",
+        requiredScope: "agent:run",
+        method: "POST",
+        path: "/api/public/v1/agent-runs",
+        now: 1_000 + index,
+      });
+      expect(result).toMatchObject({ ok: false, statusCode: 401 });
+    }
+
+    const state = await t.run(async (ctx) => ({
+      requests: await ctx.db.query("publicApiRequests").collect(),
+      refusals: (await ctx.db.query("auditLogs").collect())
+        .filter((log) => log.actionType === "API_REQUEST_REFUSED"),
+    }));
+    expect(state.requests).toHaveLength(20);
+    expect(state.refusals).toHaveLength(5);
+  });
+
+  test("a leaked key prefix cannot restore unbounded refusal logging", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { created } = await makeKey(t);
+    const keyPrefix = created.apiKey.split("_").slice(0, 2).join("_");
+
+    for (let index = 0; index < 30; index += 1) {
+      const result = await t.mutation(internal.apiKeys.authenticatePublicRequest, {
+        apiKey: `${keyPrefix}_${String(index).padStart(64, "0")}`,
+        requiredScope: "agent:run",
+        method: "POST",
+        path: "/api/public/v1/agent-runs",
+        now: 1_000 + index,
+      });
+      expect(result).toMatchObject({ ok: false, statusCode: 401 });
+    }
+
+    const state = await t.run(async (ctx) => ({
+      requests: (await ctx.db.query("publicApiRequests").collect())
+        .filter((request) => request.status === "UNAUTHORIZED"),
+      refusals: (await ctx.db.query("auditLogs").collect())
+        .filter((log) => log.actionType === "API_REQUEST_REFUSED"),
+    }));
+    expect(state.requests).toHaveLength(20);
+    expect(state.refusals).toHaveLength(5);
   });
 });

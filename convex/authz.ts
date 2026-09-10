@@ -267,10 +267,10 @@ export async function requireCompanyAccess(
 /**
  * Scoped company access for anyone reading or writing admin surfaces.
  *
- * The oversight roles are company-scoped exactly as `ADMIN` is: a read-only or
- * auditor account attached to one company cannot read another's records. What
- * they may do once inside is decided by the guard the function declared, not
- * here — this answers "whose data", not "may they change it".
+ * Calls to this helper scope oversight roles to their attached company,
+ * exactly as ADMIN is scoped. This is a per-surface boundary, not a global
+ * definition of those roles: platform-wide readers such as the audit trail
+ * deliberately use their own policy and do not call this helper.
  */
 export function assertAdminCanAccessCompany(
   user: Doc<"users">,

@@ -9,6 +9,7 @@ import { superAdminAction, superAdminMutation, superAdminQuery } from "./tenantF
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { constantTimeEqual } from "./utils/security";
 import { getErrorMessage } from "./utils/lang";
+import { readBoundedBody } from "./utils/boundedRequestBody";
 
 
 
@@ -16,7 +17,7 @@ const PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH = 20_000;
 
 function workflowInputTooLargeResponse() {
   return new Response(JSON.stringify({
-    error: `Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} characters.`,
+    error: `Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} bytes.`,
   }), {
     status: 413,
     headers: { "Content-Type": "application/json" },
@@ -412,16 +413,15 @@ export const handleWebhook = httpAction(async (ctx, request) => {
        return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing webhook secret" }), { status: 401 });
     }
 
-    const contentLengthHeader = request.headers.get("content-length");
-    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : undefined;
-    if (contentLength !== undefined && Number.isFinite(contentLength) && contentLength > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
-      return workflowInputTooLargeResponse();
+    const body = await readBoundedBody(request, PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH);
+    if (!body.ok) {
+      if (body.reason === "too_large") return workflowInputTooLargeResponse();
+      return new Response(JSON.stringify({ error: "Unable to read workflow input." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
-
-    const payload = await request.text();
-    if (payload.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
-      return workflowInputTooLargeResponse();
-    }
+    const payload = body.text;
 
     // Only after the secret has been proven: a caller without the secret must
     // not be able to spend a workflow's hourly allowance.

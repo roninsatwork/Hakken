@@ -25,10 +25,10 @@ describe("how often one address may ask for a magic link", () => {
     await expect(request(t)).resolves.toMatchObject({ allowed: false });
   });
 
-  test("a refusal is recorded and sends no further mail", async () => {
+  test("repeated refusals produce only one log per address and window", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR + 2; index++) {
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR + 20; index++) {
       await request(t);
     }
 
@@ -39,8 +39,25 @@ describe("how often one address may ask for a magic link", () => {
     // The requests stop being recorded as requests once the limit is reached,
     // so the count cannot climb its own way past the throttle.
     expect(requested).toHaveLength(SIGN_IN_MAX_REQUESTS_PER_HOUR);
-    expect(throttled).toHaveLength(2);
+    expect(throttled).toHaveLength(1);
+    await expect(request(t)).resolves.toMatchObject({ logged: false, allowed: false });
     expect(throttled[0].reasonCode).toBe("too_many_requests");
+  });
+
+  test("records a fresh refusal after the previous sampling window expires", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authEvents", {
+        email: "someone@example.com", eventType: "MAGIC_LINK_THROTTLED",
+        timestamp: Date.now() - SIGN_IN_REQUEST_WINDOW_MS - 1000,
+      });
+    });
+    for (let index = 0; index < SIGN_IN_MAX_REQUESTS_PER_HOUR; index++) await request(t);
+    await expect(request(t)).resolves.toMatchObject({ allowed: false, logged: true });
+    await expect(request(t)).resolves.toMatchObject({ allowed: false, logged: false });
+    const rows = await t.run(async (ctx) => await ctx.db.query("authEvents")
+      .withIndex("by_type", q => q.eq("eventType", "MAGIC_LINK_THROTTLED")).collect());
+    expect(rows).toHaveLength(2);
   });
 
   test("counts one address at a time", async () => {

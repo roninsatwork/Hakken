@@ -838,7 +838,10 @@ export const runTriggeredAgentObjective = internalAction({
       // Always-on memories: the agent's own, and the company's — which this
       // path, like the chat path, never read.
       const [triggeredAgentAlways, triggeredCompanyAlways, triggeredEmailBranding] = await Promise.all([
-        ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
+        ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, {
+          agentId: args.agentId,
+          companyId: args.companyId,
+        }),
         args.companyId
           ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: args.companyId })
           : Promise.resolve([]),

@@ -347,9 +347,11 @@ export const sendMessage = publicMutation({
     const rateLimitNow = Date.now();
     const recentMessages = await ctx.db
       .query("messages")
-      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .withIndex("by_thread_role_created", (q) =>
+        q.eq("threadId", args.threadId).eq("role", "user")
+      )
       .order("desc")
-      .take(15); // Only need to look at the last 15 to find 10 user messages
+      .take(10);
 
     assertWithinMessageRateLimit(recentMessages, rateLimitNow);
 

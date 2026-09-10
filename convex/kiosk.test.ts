@@ -29,6 +29,7 @@ async function seedKioskWidget(t: ReturnType<typeof convexTest>, kioskEnabled: b
 
 describe("the receptionist screen", () => {
   beforeEach(() => {
+    vi.stubEnv("CONVEX_SITE_URL", "https://voice-platform.test");
     vi.stubEnv("VOICE_RELAY_URL", "wss://relay.example/live");
     vi.stubEnv("VOICE_RELAY_SECRET", "kiosk-test-secret");
   });

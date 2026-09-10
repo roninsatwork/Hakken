@@ -98,23 +98,34 @@ export const recordMagicLinkRequestAttempt = publicMutation({
      */
     const recentRequests = await ctx.db
       .query("authEvents")
-      .withIndex("by_email", (q) =>
-        q.eq("email", email).gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
+      .withIndex("by_email_type_timestamp", (q) =>
+        q.eq("email", email).eq("eventType", "MAGIC_LINK_REQUESTED")
+          .gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
       )
       .order("desc")
-      .filter((q) => q.eq(q.field("eventType"), "MAGIC_LINK_REQUESTED"))
       .take(SIGN_IN_MAX_REQUESTS_PER_HOUR);
 
     if (!isWithinHourlySignInLimit(recentRequests.map((event) => event.timestamp), now)) {
-      await logAuthEvent(ctx, {
-        email,
-        eventType: "MAGIC_LINK_THROTTLED",
-        timestamp: now,
-        provider: args.provider,
-        reasonCode: "too_many_requests",
-      });
+      // Keep evidence of the refusal without writing a row for every retry.
+      // The indexed read and insert share this mutation's transaction.
+      const previousRefusal = await ctx.db
+        .query("authEvents")
+        .withIndex("by_email_type_timestamp", (q) =>
+          q.eq("email", email).eq("eventType", "MAGIC_LINK_THROTTLED")
+            .gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
+        )
+        .first();
+      if (!previousRefusal) {
+        await logAuthEvent(ctx, {
+          email,
+          eventType: "MAGIC_LINK_THROTTLED",
+          timestamp: now,
+          provider: args.provider,
+          reasonCode: "too_many_requests",
+        });
+      }
 
-      return { logged: true, allowed: false };
+      return { logged: !previousRefusal, allowed: false };
     }
 
     await logAuthEvent(ctx, {

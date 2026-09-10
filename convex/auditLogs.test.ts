@@ -164,6 +164,107 @@ describe("audit trail tenancy", () => {
     expect(options.workspaces).toEqual([]);
   });
 
+  test("a read-only user is scoped to their own workspace", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const seeded = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", {
+        name: "Acme",
+        createdAt: Date.now(),
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
+      });
+      const companyBId = await ctx.db.insert("companies", {
+        name: "Other",
+        createdAt: Date.now(),
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
+      });
+      const readOnlyId = await ctx.db.insert("users", {
+        email: "readonly@acme.test",
+        name: "Acme Reader",
+        role: "READ_ONLY",
+        companyId: companyAId,
+      });
+      const userAId = await ctx.db.insert("users", {
+        email: "user@acme.test",
+        name: "Acme User",
+        role: "USER",
+        companyId: companyAId,
+      });
+      const userBId = await ctx.db.insert("users", {
+        email: "user@other.test",
+        name: "Other User",
+        role: "USER",
+        companyId: companyBId,
+      });
+
+      const logAId = await ctx.db.insert("auditLogs", {
+        actorId: userAId,
+        actionType: "UPDATE_COMPANY",
+        entityType: "companies",
+        companyId: companyAId,
+        timestamp: 200,
+      });
+      const logBId = await ctx.db.insert("auditLogs", {
+        actorId: userBId,
+        actionType: "DELETE_USER",
+        entityType: "users",
+        companyId: companyBId,
+        timestamp: 100,
+      });
+
+      return { companyAId, companyBId, readOnlyId, userAId, userBId, logAId, logBId };
+    });
+
+    const client = t.withIdentity({ subject: seeded.readOnlyId });
+
+    const recent = await client.query(api.auditLogs.getRecentLogs, {});
+    expect(recent.map((log) => log.companyId)).toEqual([seeded.companyAId]);
+
+    const pageArgs = { paginationOpts: { numItems: 10, cursor: null } };
+    const page = await client.query(api.auditLogs.getAuditPage, pageArgs);
+    expect(page.page.map((log) => log.companyId)).toEqual([seeded.companyAId]);
+    expect(
+      (await client.query(api.auditLogs.getAuditPage, { ...pageArgs, companyId: seeded.companyBId })).page,
+    ).toEqual([]);
+
+    const options = await client.query(api.auditLogs.getAuditFilterOptions, {});
+    expect(options.actions).toEqual(["UPDATE_COMPANY"]);
+    expect(options.people.map((person) => person.id)).toEqual(
+      expect.arrayContaining([seeded.readOnlyId, seeded.userAId]),
+    );
+    expect(options.people.map((person) => person.id)).not.toContain(seeded.userBId);
+    expect(options.workspaces).toEqual([]);
+
+    const exported = await client.mutation(api.auditLogs.getAuditExport, {});
+    expect(exported.rows).toHaveLength(1);
+    expect(exported.rows[0].workspace).toBe("Acme");
+    expect((await client.mutation(api.auditLogs.getAuditExport, { companyId: seeded.companyBId })).rows).toEqual(
+      [],
+    );
+
+    await expect(client.query(api.auditLogs.getAuditEntry, { id: seeded.logAId })).resolves.toMatchObject({
+      companyId: seeded.companyAId,
+    });
+    await expect(client.query(api.auditLogs.getAuditEntry, { id: seeded.logBId })).resolves.toBeNull();
+
+    const exportEntries = await t.run(async (ctx) => {
+      const acmeLogs = await ctx.db
+        .query("auditLogs")
+        .withIndex("by_company", (q) => q.eq("companyId", seeded.companyAId))
+        .take(20);
+      const otherLogs = await ctx.db
+        .query("auditLogs")
+        .withIndex("by_company", (q) => q.eq("companyId", seeded.companyBId))
+        .take(20);
+      return {
+        acmeExports: acmeLogs.filter((log) => log.actionType === "EXPORT_AUDIT_TRAIL"),
+        otherExports: otherLogs.filter((log) => log.actionType === "EXPORT_AUDIT_TRAIL"),
+      };
+    });
+    expect(exportEntries.acmeExports).toHaveLength(2);
+    expect(exportEntries.otherExports).toHaveLength(0);
+  });
+
   test("an ordinary user sees nothing at all", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

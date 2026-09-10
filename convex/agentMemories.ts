@@ -1,6 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import * as agentRecordShapes from "./utils/agentRecordShapes";
 import { assertAdminCanAccessCompany } from "./authz";
@@ -265,33 +265,54 @@ function toRuntimeAgentMemory(memory: Doc<"agentMemories">, score: number) {
 export const getAlwaysMemoriesInternal = internalQuery({
   args: {
     agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const [stamped, unstamped] = await Promise.all([
-      ctx.db
-        .query("agentMemories")
-        .withIndex("by_agent_active_applymode_updated", (q) =>
-          q.eq("agentId", args.agentId).eq("isActive", true).eq("applyMode", "ALWAYS")
-        )
-        .order("desc")
-        .take(MAX_ALWAYS_MEMORIES),
-      ctx.db
-        .query("agentMemories")
-        .withIndex("by_agent_active_applymode_updated", (q) =>
-          q.eq("agentId", args.agentId).eq("isActive", true).eq("applyMode", undefined)
-        )
-        .order("desc")
-        .take(MAX_ALWAYS_MEMORIES),
-    ]);
-
-    const memories = [
-      ...stamped,
-      ...unstamped.filter((memory) => resolveAgentApplyMode(memory) === "ALWAYS"),
-    ].slice(0, MAX_ALWAYS_MEMORIES);
+    const companyScoped = args.companyId
+      ? await getAlwaysMemoriesForScope(ctx, args.agentId, args.companyId)
+      : [];
+    const platformScoped = await getAlwaysMemoriesForScope(ctx, args.agentId, undefined);
+    const memories = [...companyScoped, ...platformScoped]
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .slice(0, MAX_ALWAYS_MEMORIES);
 
     return memories.map((memory, index) => toRuntimeAgentMemory(memory, rankScore(index, memories.length)));
   },
 });
+
+async function getAlwaysMemoriesForScope(
+  ctx: Pick<QueryCtx, "db">,
+  agentId: Id<"agents">,
+  companyId: Id<"companies"> | undefined,
+) {
+  const [stamped, unstamped] = await Promise.all([
+    ctx.db
+      .query("agentMemories")
+      .withIndex("by_agent_company_active_applymode_updated", (q) =>
+        q.eq("agentId", agentId)
+          .eq("companyId", companyId)
+          .eq("isActive", true)
+          .eq("applyMode", "ALWAYS")
+      )
+      .order("desc")
+      .take(MAX_ALWAYS_MEMORIES),
+    ctx.db
+      .query("agentMemories")
+      .withIndex("by_agent_company_active_applymode_updated", (q) =>
+        q.eq("agentId", agentId)
+          .eq("companyId", companyId)
+          .eq("isActive", true)
+          .eq("applyMode", undefined)
+      )
+      .order("desc")
+      .take(MAX_ALWAYS_MEMORIES),
+  ]);
+
+  return [
+    ...stamped,
+    ...unstamped.filter((memory) => resolveAgentApplyMode(memory) === "ALWAYS"),
+  ];
+}
 
 /**
  * The WHEN_RELEVANT memories matching this message.
@@ -316,12 +337,12 @@ export const searchMemoryInternal = internalQuery({
 
     const matches = await ctx.db
       .query("agentMemories")
-      .withSearchIndex("search_content", (q) => {
-        const search = q.search("normalizedContent", searchQuery)
+      .withSearchIndex("search_content", (q) =>
+        q.search("normalizedContent", searchQuery)
           .eq("agentId", args.agentId)
-          .eq("isActive", true);
-        return args.companyId ? search.eq("companyId", args.companyId) : search;
-      })
+          .eq("companyId", args.companyId)
+          .eq("isActive", true)
+      )
       // Room to drop the ALWAYS matches, which the system instruction already
       // carries and which would otherwise reach the model twice.
       .take(limit * 2);
@@ -476,29 +497,38 @@ export async function insertAgentMemory(ctx: MutationCtx, args: {
  */
 export async function assertAgentAlwaysCapacity(
   ctx: MutationCtx,
-  agentId: Id<"agents">,
-  applyMode: MemoryApplyMode,
-  excludeMemoryId?: Id<"agentMemories">,
+  args: {
+    agentId: Id<"agents">;
+    companyId: Id<"companies"> | undefined;
+    applyMode: MemoryApplyMode;
+    excludeMemoryId?: Id<"agentMemories">;
+  },
 ) {
-  if (applyMode !== "ALWAYS") return;
+  if (args.applyMode !== "ALWAYS") return;
 
   const [stamped, unstamped] = await Promise.all([
     ctx.db
       .query("agentMemories")
-      .withIndex("by_agent_active_applymode_updated", (q) =>
-        q.eq("agentId", agentId).eq("isActive", true).eq("applyMode", "ALWAYS")
+      .withIndex("by_agent_company_active_applymode_updated", (q) =>
+        q.eq("agentId", args.agentId)
+          .eq("companyId", args.companyId)
+          .eq("isActive", true)
+          .eq("applyMode", "ALWAYS")
       )
       .take(MAX_ALWAYS_MEMORIES + 1),
     ctx.db
       .query("agentMemories")
-      .withIndex("by_agent_active_applymode_updated", (q) =>
-        q.eq("agentId", agentId).eq("isActive", true).eq("applyMode", undefined)
+      .withIndex("by_agent_company_active_applymode_updated", (q) =>
+        q.eq("agentId", args.agentId)
+          .eq("companyId", args.companyId)
+          .eq("isActive", true)
+          .eq("applyMode", undefined)
       )
       .take(MAX_ALWAYS_MEMORIES + 1),
   ]);
 
   const existing = [...stamped, ...unstamped.filter((memory) => resolveAgentApplyMode(memory) === "ALWAYS")]
-    .filter((memory) => memory._id !== excludeMemoryId);
+    .filter((memory) => memory._id !== args.excludeMemoryId);
 
   if (existing.length >= MAX_ALWAYS_MEMORIES) {
     throw appError("INVALID_INPUT", 
@@ -526,13 +556,18 @@ export const createMemory = adminMutation({
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw appError("NOT_FOUND", "Agent not found");
     if (user.role === "ADMIN" && !user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
-    await assertAgentAlwaysCapacity(ctx, args.agentId, args.applyMode);
+    const companyId = user.role === "ADMIN" ? user.companyId : undefined;
+    await assertAgentAlwaysCapacity(ctx, {
+      agentId: args.agentId,
+      companyId,
+      applyMode: args.applyMode,
+    });
 
     return await insertAgentMemory(ctx, {
       agentId: args.agentId,
       // An admin's memory belongs to their company; a super admin writing on an
       // agent directly leaves it unscoped, as the runtime already allows.
-      companyId: user.role === "ADMIN" ? user.companyId : undefined,
+      companyId,
       applyMode: args.applyMode,
       content: args.content,
       createdBy: userId,
@@ -552,7 +587,12 @@ export const updateMemory = adminMutation({
     const memory = await ctx.db.get(args.memoryId);
     if (!memory || memory.isActive === false) throw appError("NOT_FOUND", "Memory not found");
     assertAdminCanAccessCompany(user, memory.companyId);
-    await assertAgentAlwaysCapacity(ctx, memory.agentId, args.applyMode, args.memoryId);
+    await assertAgentAlwaysCapacity(ctx, {
+      agentId: memory.agentId,
+      companyId: memory.companyId,
+      applyMode: args.applyMode,
+      excludeMemoryId: args.memoryId,
+    });
 
     const normalizedContent = validateMemoryContent(args.content);
     const now = Date.now();
@@ -597,7 +637,12 @@ export const restoreMemory = adminMutation({
     if (!memory) throw appError("NOT_FOUND", "Memory not found");
     if (memory.isActive !== false) throw appError("INVALID_INPUT", "This memory is already in use.");
     assertAdminCanAccessCompany(user, memory.companyId);
-    await assertAgentAlwaysCapacity(ctx, memory.agentId, resolveAgentApplyMode(memory), args.memoryId);
+    await assertAgentAlwaysCapacity(ctx, {
+      agentId: memory.agentId,
+      companyId: memory.companyId,
+      applyMode: resolveAgentApplyMode(memory),
+      excludeMemoryId: args.memoryId,
+    });
 
     const now = Date.now();
     await ctx.db.patch(args.memoryId, {

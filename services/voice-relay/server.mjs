@@ -10,9 +10,10 @@
  * live native-audio model, which costs a fraction of the alternatives per
  * spoken minute.
  *
- * It is deliberately small and stateless: no database, no user records, no
+ * It is deliberately small: no local database, user records, or durable
  * storage. Everything it needs to run a session arrives in a signed ticket
- * minted by the platform, and it refuses anything else.
+ * minted by the platform, whose one-time id is redeemed with the platform
+ * before provider access begins.
  *
  * Run it anywhere that speaks WebSocket. On Google Cloud Run in the same
  * project the credentials come from the environment with no key file at all.
@@ -30,7 +31,9 @@ import { WebSocket, WebSocketServer } from "ws";
 import {
   buildSetup,
   buildToolResponse,
+  classifyUpgradePath,
   createCallerRouter,
+  createTicketReplayGuard,
   readToolCalls,
 } from "./protocol.mjs";
 import {
@@ -62,6 +65,11 @@ const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "";
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1";
 // A session that outlives this is a session nobody is talking to.
 const MAX_SESSION_MS = 15 * 60 * 1000;
+// A signed ticket can carry a large company prompt, but microphone frames and
+// control messages are small. Keep the unauthenticated parser well below ws's
+// 100MB default.
+const MAX_CALLER_PAYLOAD_BYTES = 128 * 1024;
+const PRE_AUTH_TIMEOUT_MS = 5_000;
 // The caller starts talking the instant the socket opens, while this relay is
 // still fetching its Google token. That audio is held rather than dropped, but
 // only so much of it: if Vertex never opens, this is a leak.
@@ -93,8 +101,9 @@ const server = createServer((request, response) => {
   response.end("This endpoint speaks WebSocket.");
 });
 
-const relay = new WebSocketServer({ noServer: true });
-const phoneDoor = new WebSocketServer({ noServer: true });
+const relay = new WebSocketServer({ noServer: true, maxPayload: MAX_CALLER_PAYLOAD_BYTES });
+const phoneDoor = new WebSocketServer({ noServer: true, maxPayload: MAX_CALLER_PAYLOAD_BYTES });
+const replayGuard = createTicketReplayGuard();
 let sessionCount = 0;
 
 // Two doors, one loop. A browser connects to the root and speaks the session
@@ -106,10 +115,16 @@ let sessionCount = 0;
 // answering) happens once, in one place.
 server.on("upgrade", (request, socket, head) => {
   const path = new URL(request.url ?? "/", "http://relay.local").pathname;
-  if (path === "/twilio") {
+  const door = classifyUpgradePath(path);
+  if (door === "phone") {
     phoneDoor.handleUpgrade(request, socket, head, (connection) =>
       phoneDoor.emit("connection", connection, request)
     );
+    return;
+  }
+  if (door !== "relay") {
+    socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+    socket.destroy();
     return;
   }
   relay.handleUpgrade(request, socket, head, (connection) =>
@@ -126,13 +141,22 @@ relay.on("connection", (browser) => {
   // Owns the ticket-then-conversation ordering, and holds whatever the caller
   // says while Vertex is still being opened. See protocol.mjs for why that
   // ordering has to be decided synchronously.
-  const router = createCallerRouter({ secret: RELAY_SECRET, maxHeldFrames: MAX_HELD_FRAMES });
+  const router = createCallerRouter({
+    secret: RELAY_SECRET,
+    maxHeldFrames: MAX_HELD_FRAMES,
+    claimTicket: (ticket) => replayGuard.claim(ticket),
+  });
 
   say("caller connected");
+  const ticketTimer = setTimeout(
+    () => shutdown(4401, "Ticket was not presented in time."),
+    PRE_AUTH_TIMEOUT_MS
+  );
 
   const shutdown = (code, reason) => {
     if (closing) return;
     closing = true;
+    clearTimeout(ticketTimer);
     clearTimeout(sessionTimer);
     say(`closing (${code}): ${reason}`);
     try {
@@ -194,6 +218,23 @@ relay.on("connection", (browser) => {
   };
 
   const openVertex = async (ticket, rawTicket) => {
+    try {
+      const redemption = await fetch(ticket.redemptionUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticket: rawTicket }),
+        signal: AbortSignal.timeout(PRE_AUTH_TIMEOUT_MS),
+      });
+      if (!redemption.ok) {
+        shutdown(4401, redemption.status === 409 ? "Ticket already used." : "Ticket redemption refused.");
+        return;
+      }
+    } catch (error) {
+      console.warn(`[session ${id}] ticket redemption failed:`, error?.message ?? error);
+      shutdown(1011, "Ticket redemption unavailable.");
+      return;
+    }
+
     let token;
     try {
       token = await auth.getAccessToken();
@@ -243,6 +284,7 @@ relay.on("connection", (browser) => {
     const decision = router.receive(data, isBinary);
     switch (decision.kind) {
       case "ticket":
+        clearTimeout(ticketTimer);
         say("ticket accepted");
         void openVertex(decision.ticket, decision.rawTicket);
         return;
@@ -277,6 +319,11 @@ phoneDoor.on("connection", (phone) => {
 
   say("phone stream connected");
 
+  const startTimer = setTimeout(
+    () => shutdown("The provider did not start the call in time."),
+    PRE_AUTH_TIMEOUT_MS
+  );
+
   // The same ceiling the browser door has. A caller who never hangs up —
   // or a line that never delivers its end-of-call — must not hold a model
   // session open for the rest of the day.
@@ -300,6 +347,7 @@ phoneDoor.on("connection", (phone) => {
   const shutdown = (reason) => {
     if (closing) return;
     closing = true;
+    clearTimeout(startTimer);
     clearTimeout(callTimer);
     say(`closing: ${reason}`);
     // The hang-up itself finishes the last exchange: whatever was said since
@@ -323,6 +371,7 @@ phoneDoor.on("connection", (phone) => {
     // The provider's `start` carries the pass the platform minted when it
     // answered the call. Only then is there a session to open.
     if (frame.kind === "start") {
+      clearTimeout(startTimer);
       streamSid = frame.streamSid;
       callSid = frame.callSid;
       ticket = frame.ticket;

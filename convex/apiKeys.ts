@@ -272,27 +272,40 @@ export const revoke = adminMutation({
  */
 const API_REFUSAL_AUDIT_LIMIT = 5;
 const API_REFUSAL_AUDIT_WINDOW_MS = 15 * 60 * 1000;
+const REFUSED_API_REQUEST_LOG_LIMIT = 20;
 
 async function isWithinApiRefusalAuditLimit(
   ctx: MutationCtx,
   apiKeyId: Id<"apiKeys"> | undefined,
   now: number,
 ) {
-  // A request that never matched a key has nothing to count against. The API's
-  // own log still records every one of them.
-  if (!apiKeyId) return true;
-
   const recent = await ctx.db
     .query("auditLogs")
-    .withIndex("by_timestamp", (q) => q.gt("timestamp", now - API_REFUSAL_AUDIT_WINDOW_MS))
-    .order("desc")
-    .take(200);
+    .withIndex("by_action_entity_timestamp", (q) =>
+      q.eq("actionType", "API_REQUEST_REFUSED")
+        .eq("entityId", apiKeyId)
+        .gt("timestamp", now - API_REFUSAL_AUDIT_WINDOW_MS)
+    )
+    .take(API_REFUSAL_AUDIT_LIMIT);
 
-  const refusals = recent.filter(
-    (log) => log.actionType === "API_REQUEST_REFUSED" && log.entityId === apiKeyId,
-  );
+  return recent.length < API_REFUSAL_AUDIT_LIMIT;
+}
 
-  return refusals.length < API_REFUSAL_AUDIT_LIMIT;
+async function isWithinRefusedRequestLogLimit(
+  ctx: MutationCtx,
+  apiKeyId: Id<"apiKeys"> | undefined,
+  status: PublicApiRequestStatus,
+  now: number,
+) {
+  const recent = await ctx.db
+    .query("publicApiRequests")
+    .withIndex("by_api_key_status_requested", (q) =>
+      q.eq("apiKeyId", apiKeyId)
+        .eq("status", status)
+        .gt("requestedAt", now - API_REFUSAL_AUDIT_WINDOW_MS)
+    )
+    .take(REFUSED_API_REQUEST_LOG_LIMIT);
+  return recent.length < REFUSED_API_REQUEST_LOG_LIMIT;
 }
 
 export const authenticatePublicRequest = internalMutation({
@@ -309,18 +322,24 @@ export const authenticatePublicRequest = internalMutation({
     const keyPrefix = providedApiKey ? getKeyPrefixFromSecret(providedApiKey) : undefined;
 
     const deny = async (status: PublicApiRequestStatus, statusCode: number, error: string, apiKey?: Doc<"apiKeys">) => {
-      await logPublicApiRequest(ctx, {
-        companyId: apiKey?.companyId,
-        apiKeyId: apiKey?._id,
-        keyPrefix,
-        method: args.method,
-        path: args.path,
-        requiredScope: args.requiredScope,
-        status,
-        statusCode,
-        error,
-        requestedAt: now,
-      });
+      // Refusals keep a bounded sample per matched key and status; missing,
+      // malformed and unknown keys share the undefined-key bucket. Even a
+      // leaked prefix therefore cannot turn every bad request into a DB write.
+      const persistRequest = await isWithinRefusedRequestLogLimit(ctx, apiKey?._id, status, now);
+      if (persistRequest) {
+        await logPublicApiRequest(ctx, {
+          companyId: apiKey?.companyId,
+          apiKeyId: apiKey?._id,
+          keyPrefix,
+          method: args.method,
+          path: args.path,
+          requiredScope: args.requiredScope,
+          status,
+          statusCode,
+          error,
+          requestedAt: now,
+        });
+      }
 
       /*
        * A refused request reaches the audit trail as well as the API's own log.
@@ -330,10 +349,10 @@ export const authenticatePublicRequest = internalMutation({
        * was being used would never reach it — and a key being refused is the
        * security event, where a key being accepted is routine traffic.
        *
-       * Throttled per key prefix. This runs on an unauthenticated path, so a
+       * Throttled per key, with unmatched requests sharing one global bucket.
+       * This runs on an unauthenticated path, so a
        * caller hammering the API with a bad key could otherwise write unbounded
-       * rows into the trail and bury everything else in it. The API's own log
-       * keeps every one regardless.
+       * rows into the trail and bury everything else in it.
        *
        * See docs/plans/active/audit-trail-plan.md.
        */
@@ -389,14 +408,16 @@ export const authenticatePublicRequest = internalMutation({
       return await deny("FORBIDDEN", 403, `API key is missing required scope: ${args.requiredScope}.`, apiKey);
     }
 
-    const recentRequests = await ctx.db
+    // Count successes in the window, not the last N log entries: refusals
+    // must never evict successful requests and reopen the allowance.
+    const recentAuthorizedRequests = await ctx.db
       .query("publicApiRequests")
-      .withIndex("by_api_key_requested", (q) => q.eq("apiKeyId", apiKey._id))
-      .order("desc")
+      .withIndex("by_api_key_status_requested", (q) =>
+        q.eq("apiKeyId", apiKey._id)
+          .eq("status", "AUTHORIZED")
+          .gt("requestedAt", now - API_KEY_RATE_WINDOW_MS)
+      )
       .take(apiKey.rateLimitPerMinute);
-    const recentAuthorizedRequests = recentRequests.filter((request) =>
-      request.status === "AUTHORIZED" && request.requestedAt > now - API_KEY_RATE_WINDOW_MS
-    );
     if (recentAuthorizedRequests.length >= apiKey.rateLimitPerMinute) {
       return await deny("RATE_LIMITED", 429, "API key rate limit exceeded.", apiKey);
     }

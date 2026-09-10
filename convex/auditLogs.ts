@@ -66,10 +66,10 @@ export const getRecentLogs = softQuery({
      * Widening this query beyond super admins made the scope question real:
      * `GOVERNANCE_READ_ROLES` includes `ADMIN`, and a company administrator
      * reading the unscoped trail would have seen every other tenant's
-     * activity. Platform-wide reach belongs to the two platform roles; anyone
+     * activity. Platform-wide reach belongs to the platform administrator role; anyone
      * else sees their own workspace and nothing else.
      */
-    const platformWide = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY";
+    const platformWide = ctx.user.role === "SUPER_ADMIN";
     const companyId = ctx.companyId;
 
     if (!platformWide && !companyId) return [];
@@ -168,7 +168,7 @@ export const getAuditPage = publicQuery({
       return empty;
     }
 
-    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
+    const platformWide = role === "SUPER_ADMIN";
     const companyId = getActiveCompanyId(current.user);
     if (!platformWide && !companyId) return empty;
 
@@ -249,7 +249,7 @@ export const getAuditFilterOptions = publicQuery({
       return empty;
     }
 
-    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
+    const platformWide = role === "SUPER_ADMIN";
     const companyId = getActiveCompanyId(current.user);
     if (!platformWide && !companyId) return empty;
 
@@ -333,9 +333,10 @@ export const getAuditExport = publicMutation({
       return empty;
     }
 
-    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
+    const platformWide = role === "SUPER_ADMIN";
     const scopeCompanyId = getActiveCompanyId(current.user);
     if (!platformWide && !scopeCompanyId) return empty;
+    const exportCompanyId = platformWide ? args.companyId : scopeCompanyId;
 
     const from = args.from ?? 0;
     const to = args.to ?? Number.MAX_SAFE_INTEGER;
@@ -392,7 +393,7 @@ export const getAuditExport = publicMutation({
       actorId: current.userId,
       entityType: "auditLogs",
       entityId: "EXPORT",
-      ...(args.companyId ? { companyId: args.companyId } : {}),
+      ...(exportCompanyId ? { companyId: exportCompanyId } : {}),
       timestamp: Date.now(),
       metadata: JSON.stringify({
         recordsTaken: rows.length,
@@ -433,7 +434,7 @@ export const getAuditEntry = publicQuery({
     // A workspace administrator may only open their own workspace's records.
     // Without this the deep link would be a way around the scoping the list
     // applies, which is the sort of hole an audit surface cannot have.
-    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
+    const platformWide = role === "SUPER_ADMIN";
     if (!platformWide && log.companyId !== getActiveCompanyId(current.user)) return null;
 
     /*

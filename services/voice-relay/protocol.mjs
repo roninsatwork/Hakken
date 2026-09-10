@@ -30,7 +30,43 @@ export function readTicket(raw, secret, now = Date.now()) {
     throw new Error("Ticket expired.");
   }
   if (!payload.model) throw new Error("Ticket names no model.");
+  if (typeof payload.jti !== "string" || payload.jti.length < 16 || payload.jti.length > 128) {
+    throw new Error("Ticket has no usable one-time id.");
+  }
+  if (typeof payload.redemptionUrl !== "string" || !payload.redemptionUrl) {
+    throw new Error("Ticket has no redemption endpoint.");
+  }
   return payload;
+}
+
+/**
+ * Stops an immediate replay on this process. Convex performs the durable
+ * cross-instance redemption; this closes the local race before any network
+ * request or provider authentication begins.
+ */
+export function createTicketReplayGuard({ now = () => Date.now(), maxEntries = 10_000 } = {}) {
+  const claimed = new Map();
+  return {
+    claim(ticket) {
+      const current = now();
+      for (const [ticketId, expiresAt] of claimed) {
+        if (expiresAt < current) claimed.delete(ticketId);
+      }
+      if (claimed.has(ticket.jti) || claimed.size >= maxEntries) return false;
+      claimed.set(ticket.jti, ticket.expiresAt);
+      return true;
+    },
+    get size() {
+      return claimed.size;
+    },
+  };
+}
+
+/** Maps the only public WebSocket paths to their protocol doors. */
+export function classifyUpgradePath(path) {
+  if (path === "/twilio") return "phone";
+  if (path === "/" || path === "/live") return "relay";
+  return null;
 }
 
 /** The setup Vertex expects before any audio flows. */
@@ -141,7 +177,12 @@ export function buildToolResponse(results) {
  * So the flag flips here, synchronously, and audio that arrives before Vertex
  * is ready is held rather than dropped or misread.
  */
-export function createCallerRouter({ secret, now = () => Date.now(), maxHeldFrames = 200 }) {
+export function createCallerRouter({
+  secret,
+  now = () => Date.now(),
+  maxHeldFrames = 200,
+  claimTicket = () => true,
+}) {
   let ticketAccepted = false;
   let vertexOpen = false;
   const held = [];
@@ -162,6 +203,7 @@ export function createCallerRouter({ secret, now = () => Date.now(), maxHeldFram
         try {
           rawTicket = JSON.parse(data.toString()).ticket;
           ticket = readTicket(rawTicket, secret, now());
+          if (!claimTicket(ticket)) throw new Error("Ticket already used.");
         } catch (error) {
           return { kind: "refused", reason: error?.message ?? "Refused." };
         }

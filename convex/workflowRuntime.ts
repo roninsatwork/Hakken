@@ -32,6 +32,7 @@ import {
 } from "./workflowRuntimeService";
 import { decideStepFailure } from "./workflowRetryService";
 import { appError } from "./utils/appError";
+import { fetchWorkflowAction } from "./utils/safeWorkflowHttp";
 
 async function executeAgentRuntimeNode(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
@@ -60,8 +61,8 @@ async function executeApiActionRuntimeNode(args: {
   globalStatePayload: Record<string, unknown>;
 }) {
   const { url, fetchOptions } = buildActionRequest(args.currentNodeData, args.globalStatePayload);
-  const res = await fetch(url, fetchOptions);
-  return buildActionResponseOutput(res.status, await res.text());
+  const response = await fetchWorkflowAction(url, fetchOptions);
+  return buildActionResponseOutput(response.status, response.body);
 }
 
 function executeCodeRuntimeNode(args: {

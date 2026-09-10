@@ -21,6 +21,52 @@ async function openWidgetThread(t: ReturnType<typeof convexTest>, widgetId: Id<"
 }
 
 describe("Message Quotas Enforcements", () => {
+  test("assistant rows cannot hide user messages from the per-minute rate limit", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userId, threadId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Rate Co", createdAt: now });
+      const userId = await ctx.db.insert("users", {
+        email: "rate@test.com",
+        role: "USER",
+        companyId,
+        createdAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId,
+        title: "Rate limited",
+        createdAt: now,
+        updatedAt: now,
+      });
+      for (let index = 0; index < 9; index += 1) {
+        await ctx.db.insert("messages", {
+          threadId,
+          role: "user",
+          content: `user ${index}`,
+          createdAt: now - index,
+        });
+        await ctx.db.insert("messages", {
+          threadId,
+          role: "assistant",
+          content: `assistant ${index}`,
+          createdAt: now - index,
+        });
+      }
+      return { userId, threadId };
+    });
+    const client = t.withIdentity({ subject: userId });
+
+    await expect(client.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "the tenth user message",
+    })).resolves.toBe(true);
+    await expect(client.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "the eleventh user message",
+    })).rejects.toThrow("429 Too Many Requests");
+  });
+
   test("Message limits strictly reject API drain when exhausted", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

@@ -49,8 +49,56 @@ function lookup(t: ReturnType<typeof convexTest>, body: unknown) {
     });
 }
 
+function redeem(t: ReturnType<typeof convexTest>, ticket: string) {
+    return t.fetch("/api/voice/redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticket }),
+    });
+}
+
 beforeEach(() => {
     vi.stubEnv("VOICE_RELAY_SECRET", SECRET);
+});
+
+describe("one-time voice ticket redemption", () => {
+    test("one ticket opens only one relay connection", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const ticket = mintTicket({
+            model: "test-provider-model",
+            jti: "ticket-id-1234567890",
+            redemptionUrl: "https://platform.test/api/voice/redeem",
+            expiresAt: Date.now() + 60_000,
+        });
+
+        const [first, second] = await Promise.all([redeem(t, ticket), redeem(t, ticket)]);
+        expect([first.status, second.status].sort()).toEqual([200, 409]);
+        const rows = await t.run(async (ctx) => ctx.db.query("voiceTicketRedemptions").collect());
+        expect(rows).toHaveLength(1);
+        expect(rows[0].ticketId).toBe("ticket-id-1234567890");
+    });
+
+    test("forged, expired, and legacy tickets cannot be redeemed", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const forged = mintTicket({
+            model: "test-provider-model",
+            jti: "ticket-id-1234567890",
+            expiresAt: Date.now() + 60_000,
+        }, "wrong-secret");
+        const expired = mintTicket({
+            model: "test-provider-model",
+            jti: "ticket-id-1234567890",
+            expiresAt: Date.now() - 1,
+        });
+        const legacy = mintTicket({
+            model: "test-provider-model",
+            expiresAt: Date.now() + 60_000,
+        });
+
+        expect((await redeem(t, forged)).status).toBe(401);
+        expect((await redeem(t, expired)).status).toBe(401);
+        expect((await redeem(t, legacy)).status).toBe(401);
+    });
 });
 
 describe("the relay asking for company knowledge", () => {

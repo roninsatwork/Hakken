@@ -123,6 +123,42 @@ describe("Sonae auth user provisioning", () => {
     );
   });
 
+  test("records one-time-code verification from the trusted auth callback", async () => {
+    const t = setup();
+
+    await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Code Corp", createdAt: NOW });
+      const userId = await ctx.db.insert("users", {
+        email: "code@example.com",
+        role: "USER",
+        companyId,
+        createdAt: NOW,
+      });
+
+      await createOrUpdateSonaeAuthUser(
+        ctx,
+        {
+          provider: { id: "one-time-code", type: "email" },
+          profile: { email: "code@example.com", emailVerified: true },
+        },
+        NOW + 1000
+      );
+
+      const events = await ctx.db
+        .query("authEvents")
+        .withIndex("by_email", (q) => q.eq("email", "code@example.com"))
+        .collect();
+      expect(events).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: "ONE_TIME_CODE_VERIFIED",
+          userId,
+          provider: "one-time-code",
+        }),
+      ]));
+      expect(events.some((event) => event.eventType === "MAGIC_LINK_VERIFIED")).toBe(false);
+    });
+  });
+
   test("accepts a pending invite for a Google sign-in, which never sets emailVerified", async () => {
     const t = setup();
 

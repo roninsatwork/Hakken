@@ -142,9 +142,9 @@ See [Gmail Mailbox](./gmail-mailbox.md).
 
 | Variable | What it is for |
 | --- | --- |
-| `VOICE_RELAY_URL` | Endpoint of the live voice relay that carries Google speech-to-speech sessions (assistant voice, voice preview, kiosk receptionist). |
-| `VOICE_RELAY_SECRET` | Signs the short-lived tickets that admit a browser to that relay. |
-| `TELEPHONY_STREAM_URL` | The relay's media-stream URL for phone-call audio. |
+| `VOICE_RELAY_URL` | Endpoint of the live voice relay that carries Google speech-to-speech sessions (assistant voice, voice preview, kiosk receptionist). Use the relay root or `/live`. |
+| `VOICE_RELAY_SECRET` | Signs the short-lived, one-time tickets that admit a caller to the relay and its platform redemption endpoint. |
+| `TELEPHONY_STREAM_URL` | The relay's `/twilio` media-stream URL for phone-call audio. |
 | `TELEPHONY_PUBLIC_URL` | Public webhook URL given to Twilio for inbound voice calls. |
 | `TELEPHONY_STATUS_PUBLIC_URL` | Public callback URL Twilio reports call status changes to. |
 | `TELEPHONY_NUMBER_OWNERS` | JSON object mapping inbound phone numbers to the company that owns them, e.g. `{"+441234567890": "<companyId>"}`. An unmapped number is refused. |

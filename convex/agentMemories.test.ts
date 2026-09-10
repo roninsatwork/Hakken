@@ -104,6 +104,11 @@ describe("Agent Memories", () => {
       applyMode: "WHEN_RELEVANT",
       content: "The facilities team prefers concise weekly summaries.",
     });
+    const platformMatches = await t.query(internal.agentMemories.searchMemoryInternal, {
+      agentId,
+      queryText: "team",
+    });
+    expect(platformMatches).toEqual([]);
 
     const adminAClient = t.withIdentity({ subject: adminAId });
     const adminBClient = t.withIdentity({ subject: adminBId });
@@ -374,7 +379,7 @@ describe("Agent Memories", () => {
   test("an Always memory reaches the agent even when the message shares no words with it", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { agentId, adminId } = await t.run(async (ctx) => {
+    const { agentId, adminId, companyId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Agent Co", createdAt: Date.now() });
       const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
       const agentId = await ctx.db.insert("agents", {
@@ -385,7 +390,7 @@ describe("Agent Memories", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-      return { agentId, adminId };
+      return { agentId, adminId, companyId };
     });
     const adminClient = t.withIdentity({ subject: adminId });
 
@@ -400,24 +405,68 @@ describe("Agent Memories", () => {
       content: "Returns are accepted within 30 days of purchase.",
     });
 
-    const always = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId });
+    const always = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId, companyId });
     expect(always.map((memory) => memory.content)).toEqual(["Never promise a delivery date."]);
 
     // Nothing in this message overlaps either memory. The old lookup added
     // importance to the score before filtering, so it returned both regardless.
     const unrelated = await t.query(internal.agentMemories.searchMemoryInternal, {
       agentId,
+      companyId,
       queryText: "Can someone help me reset my password?",
     });
     expect(unrelated).toEqual([]);
 
     const onTopic = await t.query(internal.agentMemories.searchMemoryInternal, {
       agentId,
+      companyId,
       queryText: "What is the returns policy?",
     });
     expect(onTopic.map((memory) => memory.content)).toEqual([
       "Returns are accepted within 30 days of purchase.",
     ]);
+  });
+
+  test("Always memories never cross company boundaries on a shared agent", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { agentId, companyAId, companyBId, adminAId, adminBId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const adminAId = await ctx.db.insert("users", { email: "a@example.com", role: "ADMIN", companyId: companyAId });
+      const adminBId = await ctx.db.insert("users", { email: "b@example.com", role: "ADMIN", companyId: companyBId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Shared agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { agentId, companyAId, companyBId, adminAId, adminBId };
+    });
+
+    await t.withIdentity({ subject: adminAId }).mutation(api.agentMemories.createMemory, {
+      agentId,
+      applyMode: "ALWAYS",
+      content: "Company A private instruction.",
+    });
+    await t.withIdentity({ subject: adminBId }).mutation(api.agentMemories.createMemory, {
+      agentId,
+      applyMode: "ALWAYS",
+      content: "Company B private instruction.",
+    });
+
+    const companyA = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, {
+      agentId,
+      companyId: companyAId,
+    });
+    const companyB = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, {
+      agentId,
+      companyId: companyBId,
+    });
+    expect(companyA.map((memory) => memory.content)).toEqual(["Company A private instruction."]);
+    expect(companyB.map((memory) => memory.content)).toEqual(["Company B private instruction."]);
   });
 
   test("the sixth Always memory is refused, and says why", async () => {
@@ -466,7 +515,7 @@ describe("Agent Memories", () => {
   test("a removed memory stops applying and can be put back", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { agentId, adminId } = await t.run(async (ctx) => {
+    const { agentId, adminId, companyId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Restore Co", createdAt: Date.now() });
       const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
       const agentId = await ctx.db.insert("agents", {
@@ -477,7 +526,7 @@ describe("Agent Memories", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-      return { agentId, adminId };
+      return { agentId, adminId, companyId };
     });
     const adminClient = t.withIdentity({ subject: adminId });
 
@@ -488,7 +537,7 @@ describe("Agent Memories", () => {
     });
 
     await adminClient.mutation(api.agentMemories.deleteMemory, { memoryId });
-    expect(await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId })).toEqual([]);
+    expect(await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId, companyId })).toEqual([]);
 
     const removedPage = await adminClient.query(api.agentMemories.getForAgent, {
       agentId,
@@ -498,7 +547,7 @@ describe("Agent Memories", () => {
     expect(removedPage.page.map((memory) => memory._id)).toEqual([memoryId]);
 
     await adminClient.mutation(api.agentMemories.restoreMemory, { memoryId });
-    const restored = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId });
+    const restored = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId, companyId });
     expect(restored.map((memory) => memory.content)).toEqual(["Write plainly and never use jargon."]);
   });
 
@@ -696,7 +745,7 @@ describe("Outcome-weighted ranking (self-improvement, Phase 2)", () => {
       })
     );
 
-    const always = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId });
+    const always = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId, companyId });
     expect(always.map((memory) => memory.id)).toContain(alwaysId);
   });
 

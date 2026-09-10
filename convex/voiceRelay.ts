@@ -1,6 +1,8 @@
-import { httpAction } from "./_generated/server";
+import { readBoundedBody } from "./utils/boundedRequestBody";
+import { httpAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { v } from "convex/values";
 
 /**
  * The door the voice relay knocks on when a spoken session reaches for the
@@ -35,6 +37,15 @@ const MAX_BODY_BYTES = 128 * 1024;
  * a session may last instead, which the relay enforces at the socket.
  */
 const MAX_SESSION_MS = 15 * 60 * 1000;
+const REDEMPTION_CLEANUP_BATCH = 20;
+
+type VoiceTicketPayload = {
+  threadId?: string;
+  companyId?: string | null;
+  expiresAt?: number;
+  jti?: string;
+  redemptionUrl?: string;
+};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -73,12 +84,103 @@ export async function ticketIsAuthentic(payloadPart: string, signaturePart: stri
   );
 }
 
+async function readAuthenticTicket(ticket: string, secret: string): Promise<VoiceTicketPayload | null> {
+  const [payloadPart, signaturePart] = ticket.split(".");
+  if (!payloadPart || !signaturePart) return null;
+
+  try {
+    if (!(await ticketIsAuthentic(payloadPart, signaturePart, secret))) return null;
+    return JSON.parse(base64UrlToText(payloadPart)) as VoiceTicketPayload;
+  } catch {
+    return null;
+  }
+}
+
+export const redeemVoiceTicketInternal = internalMutation({
+  args: {
+    ticketId: v.string(),
+    expiresAt: v.number(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    if (args.ticketId.length < 16 || args.ticketId.length > 128 || args.expiresAt < now) {
+      return false;
+    }
+
+    const existing = await ctx.db
+      .query("voiceTicketRedemptions")
+      .withIndex("by_ticket_id", (q) => q.eq("ticketId", args.ticketId))
+      .first();
+    if (existing) return false;
+
+    const expired = await ctx.db
+      .query("voiceTicketRedemptions")
+      .withIndex("by_expires_at", (q) => q.lt("expiresAt", now))
+      .take(REDEMPTION_CLEANUP_BATCH);
+    for (const redemption of expired) await ctx.db.delete(redemption._id);
+
+    await ctx.db.insert("voiceTicketRedemptions", {
+      ticketId: args.ticketId,
+      expiresAt: args.expiresAt,
+      redeemedAt: now,
+    });
+    return true;
+  },
+});
+
+/** The relay calls this once before it spends a provider connection. */
+export const handleVoiceTicketRedemption = httpAction(async (ctx, request) => {
+  const secret = process.env.VOICE_RELAY_SECRET?.trim();
+  if (!secret) return jsonResponse({ error: "The voice relay is not configured." }, 503);
+
+  const bounded = await readBoundedBody(request, MAX_BODY_BYTES);
+  if (!bounded.ok) {
+    return jsonResponse(
+      { error: bounded.reason === "too_large" ? "Body too large." : "Body must be JSON." },
+      bounded.reason === "too_large" ? 413 : 400,
+    );
+  }
+
+  let ticket = "";
+  try {
+    const body = JSON.parse(bounded.text) as { ticket?: unknown };
+    ticket = typeof body.ticket === "string" ? body.ticket : "";
+  } catch {
+    return jsonResponse({ error: "Body must be JSON." }, 400);
+  }
+
+  const payload = await readAuthenticTicket(ticket, secret);
+  if (
+    !payload ||
+    typeof payload.jti !== "string" ||
+    typeof payload.expiresAt !== "number" ||
+    payload.expiresAt < Date.now()
+  ) {
+    return jsonResponse({ error: "Refused." }, 401);
+  }
+
+  const redeemed = await ctx.runMutation(internal.voiceRelay.redeemVoiceTicketInternal, {
+    ticketId: payload.jti,
+    expiresAt: payload.expiresAt,
+  });
+  return redeemed
+    ? jsonResponse({ ok: true })
+    : jsonResponse({ error: "Ticket already used." }, 409);
+});
+
 export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
   const secret = process.env.VOICE_RELAY_SECRET?.trim();
   if (!secret) return jsonResponse({ error: "The voice relay is not configured." }, 503);
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return jsonResponse({ error: "Body too large." }, 413);
+  const bounded = await readBoundedBody(request, MAX_BODY_BYTES);
+  if (!bounded.ok) {
+    return jsonResponse(
+      { error: bounded.reason === "too_large" ? "Body too large." : "Body must be JSON." },
+      bounded.reason === "too_large" ? 413 : 400,
+    );
+  }
+  const raw = bounded.text;
 
   let body: { ticket?: unknown; query?: unknown };
   try {
@@ -89,23 +191,8 @@ export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
 
   const ticket = typeof body.ticket === "string" ? body.ticket : "";
   const query = typeof body.query === "string" ? body.query : "";
-  const [payloadPart, signaturePart] = ticket.split(".");
-  if (!payloadPart || !signaturePart) return jsonResponse({ error: "Refused." }, 401);
-
-  let authentic = false;
-  try {
-    authentic = await ticketIsAuthentic(payloadPart, signaturePart, secret);
-  } catch {
-    authentic = false;
-  }
-  if (!authentic) return jsonResponse({ error: "Refused." }, 401);
-
-  let payload: { threadId?: string; companyId?: string | null; expiresAt?: number };
-  try {
-    payload = JSON.parse(base64UrlToText(payloadPart)) as typeof payload;
-  } catch {
-    return jsonResponse({ error: "Refused." }, 401);
-  }
+  const payload = await readAuthenticTicket(ticket, secret);
+  if (!payload) return jsonResponse({ error: "Refused." }, 401);
 
   if (typeof payload.expiresAt !== "number" || payload.expiresAt + MAX_SESSION_MS < Date.now()) {
     return jsonResponse({ error: "Session expired." }, 401);

@@ -14,7 +14,7 @@ import { appError } from "./utils/appError";
 import * as tailShapes from "./utils/tailShapes";
 import { tenantAction } from "./tenantFunctions";
 import { v } from "convex/values";
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { internal } from "./_generated/api";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
@@ -31,6 +31,7 @@ import {
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
+import { getActiveCompanyId } from "./authz";
 
 const REALTIME_SESSION_RATE_LIMIT_PER_MINUTE = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -78,10 +79,20 @@ export const searchKnowledgeForVoice = tenantAction({
   },
   returns: v.any(),
   handler: async (ctx, args): Promise<{ context: string }> => {
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+    const companyId = getActiveCompanyId(ctx.user);
+    if (
+      !thread ||
+      thread.userId !== ctx.userId ||
+      (thread.companyId !== undefined && thread.companyId !== companyId)
+    ) {
+      throw appError("UNAUTHORIZED", "Unauthorized");
+    }
+
     return await ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
       threadId: args.threadId,
       query: args.query,
-      ...(ctx.user.companyId ? { fallbackCompanyId: ctx.user.companyId } : {}),
+      ...(companyId ? { fallbackCompanyId: companyId } : {}),
     });
   },
 });
@@ -365,7 +376,18 @@ export const VOICE_KNOWLEDGE_TOOL_DECLARATION = {
 
 /** Signs a session's pass. Only ever called on the server, never the page. */
 export function signVoiceTicket(payload: Record<string, unknown>, secret: string) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const siteUrl = process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "");
+  if (!siteUrl) {
+    throw appError(
+      "NOT_CONFIGURED",
+      "Live voice ticket redemption needs CONVEX_SITE_URL on this deployment."
+    );
+  }
+  const encoded = Buffer.from(JSON.stringify({
+    ...payload,
+    jti: randomUUID(),
+    redemptionUrl: `${siteUrl}/api/voice/redeem`,
+  })).toString("base64url");
   return `${encoded}.${createHmac("sha256", secret).update(encoded).digest("base64url")}`;
 }
 
@@ -481,10 +503,25 @@ export const createRealtimeVoiceSession = tenantAction({
     | { transport: "google-relay"; relayUrl: string; ticket: string; model: string; expiresAt: number }
   > => {
     const { userId, user } = ctx;
+    const activeCompanyId = getActiveCompanyId(user);
+
+    // A thread id is an object capability only after ownership and active
+    // company agree. Voice loads the thread's prompts, memories and knowledge,
+    // so this check must happen before even the rate-limit reservation.
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
+      threadId: args.threadId,
+    });
+    if (
+      !thread ||
+      thread.userId !== userId ||
+      (thread.companyId !== undefined && thread.companyId !== activeCompanyId)
+    ) {
+      throw appError("UNAUTHORIZED", "Unauthorized");
+    }
 
     await ctx.runMutation(internal.aiActionRequests.reserve, {
       actorId: userId,
-      ...(user.companyId ? { companyId: user.companyId } : {}),
+      ...(activeCompanyId ? { companyId: activeCompanyId } : {}),
       actionName: "realtimeVoiceSession",
       windowMs: RATE_LIMIT_WINDOW_MS,
       maxRequests: REALTIME_SESSION_RATE_LIMIT_PER_MINUTE,
@@ -508,11 +545,7 @@ export const createRealtimeVoiceSession = tenantAction({
       );
     }
 
-    const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
-      threadId: args.threadId,
-    });
-    if (!thread) throw appError("NOT_FOUND", "Thread not found");
-    const companyId = thread.companyId ?? user.companyId;
+    const companyId = thread.companyId ?? activeCompanyId;
 
     // The same company voice the typed assistant uses, plus the speech style.
     const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding, userMemories] =
@@ -592,8 +625,9 @@ ${REALTIME_VOICE_STYLE}`;
         { companyId: companyId ?? undefined }
       );
 
-      const payload = Buffer.from(
-        JSON.stringify({
+      const expiresAt = Date.now() + 60_000;
+      const ticket = signVoiceTicket(
+        {
           model: modelConfig.providerModelId,
           voice: args.voice ?? companyVoice,
           instructions,
@@ -616,17 +650,17 @@ ${REALTIME_VOICE_STYLE}`;
           ],
           companyId: companyId ?? null,
           threadId: args.threadId,
-          expiresAt: Date.now() + 60_000,
-        })
-      ).toString("base64url");
-      const signature = createHmac("sha256", relaySecret).update(payload).digest("base64url");
+          expiresAt,
+        },
+        relaySecret
+      );
 
       return {
         transport: "google-relay" as const,
         relayUrl,
-        ticket: `${payload}.${signature}`,
+        ticket,
         model: modelConfig.providerModelId,
-        expiresAt: Date.now() + 60_000,
+        expiresAt,
       };
     }
 

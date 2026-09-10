@@ -32,6 +32,10 @@ export const MAX_ATTEMPTS = 5;
 /** How many codes one address may ask for in the window. */
 export const MAX_REQUESTS_PER_WINDOW = 5;
 export const REQUEST_WINDOW_MS = 15 * 60 * 1000;
+export const MAX_EMAIL_LENGTH = 320;
+/** Backstop against an attacker rotating through invented addresses. */
+export const MAX_GLOBAL_REQUESTS_PER_MINUTE = 60;
+export const GLOBAL_REQUEST_WINDOW_MS = 60 * 1000;
 
 /**
  * A code made from cryptographic randomness rather than `Math.random`.
@@ -60,7 +64,8 @@ export function normaliseCode(entered: string): string {
 }
 
 export function normaliseEmail(email: string): string {
-  return email.trim().toLowerCase();
+  const normalized = email.trim().toLowerCase();
+  return normalized.length <= MAX_EMAIL_LENGTH ? normalized : "";
 }
 
 export type CodeRecord = {

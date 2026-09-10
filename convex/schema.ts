@@ -613,6 +613,7 @@ export default defineSchema({
   })
     .index("by_actor", ["actorId", "timestamp"])
     .index("by_company", ["companyId", "timestamp"])
+    .index("by_action_entity_timestamp", ["actionType", "entityId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
 
   apiKeys: defineTable({
@@ -665,6 +666,7 @@ export default defineSchema({
   })
     .index("by_company_requested", ["companyId", "requestedAt"])
     .index("by_api_key_requested", ["apiKeyId", "requestedAt"])
+    .index("by_api_key_status_requested", ["apiKeyId", "status", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
 
   aiActionRequests: defineTable({
@@ -682,6 +684,15 @@ export default defineSchema({
     .index("by_actor_action_requested", ["actorId", "actionName", "requestedAt"])
     .index("by_company_action_requested", ["companyId", "actionName", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
+
+  /** One successful admission per signed live-voice ticket, shared by every relay instance. */
+  voiceTicketRedemptions: defineTable({
+    ticketId: v.string(),
+    expiresAt: v.number(),
+    redeemedAt: v.number(),
+  })
+    .index("by_ticket_id", ["ticketId"])
+    .index("by_expires_at", ["expiresAt"]),
 
   /**
    * A phone call Sonae answered.
@@ -844,6 +855,7 @@ export default defineSchema({
     reasonCode: v.optional(v.string()),
   })
     .index("by_email", ["email", "timestamp"])
+    .index("by_email_type_timestamp", ["email", "eventType", "timestamp"])
     .index("by_company", ["companyId", "timestamp"])
     .index("by_type", ["eventType", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
@@ -1644,7 +1656,7 @@ export default defineSchema({
     .index("by_agent_active_updated", ["agentId", "isActive", "updatedAt"])
     .index("by_company_active_updated", ["companyId", "isActive", "updatedAt"])
     .index("by_agent_company_active_updated", ["agentId", "companyId", "isActive", "updatedAt"])
-    .index("by_agent_active_applymode_updated", ["agentId", "isActive", "applyMode", "updatedAt"])
+    .index("by_agent_company_active_applymode_updated", ["agentId", "companyId", "isActive", "applyMode", "updatedAt"])
     .index("by_source_run", ["sourceRunId"])
     .searchIndex("search_content", {
       searchField: "normalizedContent",
@@ -2179,6 +2191,8 @@ export default defineSchema({
     agentId: v.optional(v.id("agents")), // Sandbox tracking
     widgetId: v.optional(v.id("widgets")), // To link threads directly to a widget
     widgetAccessTokenHash: v.optional(v.string()),
+    /** Upload URLs already issued to this anonymous conversation. */
+    widgetUploadUrlCount: v.optional(v.number()),
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     /**
@@ -2267,6 +2281,7 @@ export default defineSchema({
     streamUpdatedAt: v.optional(v.number()),
   })
     .index("by_thread", ["threadId", "createdAt"])
+    .index("by_thread_role_created", ["threadId", "role", "createdAt"])
     .index("by_createdAt", ["createdAt"])
     .index("by_role_created", ["role", "createdAt"])
     .index("by_company_role_created", ["companyId", "role", "createdAt"])

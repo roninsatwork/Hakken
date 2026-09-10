@@ -277,7 +277,10 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   // read nowhere on this path, so giving a company a memory did nothing on any
   // widget with an agent attached.
   const [agentAlwaysMemories, companyAlwaysMemories, emailBranding] = await Promise.all([
-    ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
+    ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, {
+      agentId: args.agentId,
+      companyId: owner.companyId,
+    }),
     owner.companyId
       ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: owner.companyId })
       : Promise.resolve([]),

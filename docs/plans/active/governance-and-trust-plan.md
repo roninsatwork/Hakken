@@ -438,10 +438,12 @@ them before the recipient clicks.
   message the platform sends rather than arriving as a stock template.
 - Short expiry, single use, and a limit on attempts before the code is
   invalidated and a fresh one must be requested.
-- Requests are rate limited per address, so the sign-in form cannot be used to
-  post mail to someone repeatedly.
-- Both the request and the successful sign-in are recorded in the audit trail,
-  the same as any other sign-in.
+- Requests are rate limited per address and globally, so repeated requests and
+  address rotation cannot create unbounded rows or mail attempts through this
+  public surface.
+- Requests are recorded by the throttle, and successful sign-in is recorded by
+  the trusted server-side auth callback. The browser cannot claim that an
+  arbitrary address succeeded or failed.
 
 **Done when.** Someone can sign in by typing a code on a device that never
 received the email, expired and reused codes are refused with a plain message,

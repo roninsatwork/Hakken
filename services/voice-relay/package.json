@@ -2,7 +2,7 @@
   "name": "sonae-voice-relay",
   "private": true,
   "version": "1.0.0",
-  "description": "The live voice relay: browser or phone on one side, Vertex on the other. Stateless; everything arrives in a signed ticket.",
+  "description": "The live voice relay: browser or phone on one side, Vertex on the other, with one-time platform tickets.",
   "type": "module",
   "main": "server.mjs",
   "scripts": {

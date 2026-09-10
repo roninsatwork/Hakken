@@ -1,14 +1,13 @@
 "use node";
 
-import { createHmac } from "node:crypto";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { publicAction } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import {
   buildSpokenSessionInstructions,
-  VOICE_KNOWLEDGE_TOOL_NAME,
-  VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
+  signVoiceTicket,
+  VOICE_KNOWLEDGE_TOOL_DECLARATION,
 } from "./aiVoiceSession";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
@@ -90,40 +89,29 @@ export const createKioskVoiceSession = publicAction({
       { companyId: access.companyId }
     );
 
-    const payload = Buffer.from(
-      JSON.stringify({
+    const expiresAt = Date.now() + 60_000;
+    const ticket = signVoiceTicket(
+      {
         model: modelConfig.providerModelId,
         voice: args.voice ?? companyVoice,
         instructions,
         // The knowledge door, signed into the ticket rather than sent by the
         // page — a browser that could choose its own tools could choose
         // others.
-        tools: [
-          {
-            name: VOICE_KNOWLEDGE_TOOL_NAME,
-            description: VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                query: { type: "STRING", description: "What to look up, in a few words." },
-              },
-              required: ["query"],
-            },
-          },
-        ],
+        tools: [VOICE_KNOWLEDGE_TOOL_DECLARATION],
         companyId: access.companyId ?? null,
         threadId: args.threadId,
-        expiresAt: Date.now() + 60_000,
-      })
-    ).toString("base64url");
-    const signature = createHmac("sha256", relaySecret).update(payload).digest("base64url");
+        expiresAt,
+      },
+      relaySecret
+    );
 
     return {
       ok: true,
       relayUrl,
-      ticket: `${payload}.${signature}`,
+      ticket,
       model: modelConfig.providerModelId,
-      expiresAt: Date.now() + 60_000,
+      expiresAt,
     };
   },
 });

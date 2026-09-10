@@ -78,6 +78,7 @@ export async function createOrUpdateSonaeAuthUser(
   const { email, name, image } = getAuthIdentity(args);
   const provider = args.provider?.id;
   const isEmailProvider = args.provider?.type === "email";
+  const isOneTimeCodeProvider = provider === "one-time-code";
   /*
    * Google never sets `profile.emailVerified`, so reading only that flag meant
    * `acceptPendingInvite` never ran for a Google sign-in and the invitation
@@ -98,10 +99,14 @@ export async function createOrUpdateSonaeAuthUser(
    */
   const isOAuthProvider = args.provider?.type === "oauth" || args.provider?.type === "oidc";
   const isVerifiedEmail = args.profile?.emailVerified === true || isOAuthProvider;
-  const isMagicLinkRequest = isEmailProvider && !isVerifiedEmail;
+  const isMagicLinkRequest = isEmailProvider && !isVerifiedEmail && !isOneTimeCodeProvider;
   // The same acceptance, reached two ways. Recording a Google sign-in as
   // MAGIC_LINK_VERIFIED would put a link that was never sent on the auth trail.
-  const verifiedEventType = isOAuthProvider ? "OAUTH_VERIFIED" : "MAGIC_LINK_VERIFIED";
+  const verifiedEventType = isOAuthProvider
+    ? "OAUTH_VERIFIED"
+    : isOneTimeCodeProvider
+      ? "ONE_TIME_CODE_VERIFIED"
+      : "MAGIC_LINK_VERIFIED";
 
   if (!email) {
     throw appError("INVALID_INPUT", "Invalid login: No email provided.");

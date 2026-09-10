@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
-import { WIDGET_THREADS_PER_HOUR } from "./widgets";
+import { WIDGET_THREADS_PER_HOUR, WIDGET_UPLOAD_URL_LIMIT } from "./widgets";
 
 /** Shared with the mutations under test through the environment, the same way
  * a real deployment shares the secret between the Next server and Convex. */
@@ -386,21 +386,24 @@ describe("Widget Authorization", () => {
       storageId,
     });
 
-    await t.run(async (ctx) => {
-      for (let i = 0; i < 10; i++) {
-        await ctx.db.insert("messages", {
+    // The first URL above plus these remaining URLs exhaust issuance even when
+    // the caller never finalizes or attaches any of them.
+    for (let index = 1; index < WIDGET_UPLOAD_URL_LIMIT; index += 1) {
+      await expect(
+        t.mutation(api.widgets.generateWidgetUploadUrl, {
+          widgetId,
           threadId,
-          role: "user",
-          content: `attachment ${i}`,
-          attachments: [storageId],
-          createdAt: Date.now() + i,
-        });
-      }
-    });
+          widgetAccessToken: accessToken,
+        })
+      ).resolves.toContain("http");
+    }
 
     await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: accessToken })).rejects.toThrow(
       "Upload quota exceeded for this conversation thread"
     );
+
+    expect((await t.run(async (ctx) => ctx.db.get(threadId)))?.widgetUploadUrlCount)
+      .toBe(WIDGET_UPLOAD_URL_LIMIT);
 
     const { thread, auditLogs } = await t.run(async (ctx) => ({
       thread: await ctx.db.get(threadId),

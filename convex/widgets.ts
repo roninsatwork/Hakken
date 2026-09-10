@@ -282,6 +282,9 @@ export const deleteWidget = adminMutation({
   },
 });
 
+/** A conversation may place at most this many files into storage. */
+export const WIDGET_UPLOAD_URL_LIMIT = 10;
+
 export const generateWidgetUploadUrl = publicMutation({
   reason: "Anonymous widget visitors attach files; validated against the widget upload policy.",
   args: { 
@@ -302,16 +305,15 @@ export const generateWidgetUploadUrl = publicMutation({
       throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
-    // Rate limiting: Count the number of messages with attachments in this thread
-    const threadMessages = await ctx.db
-      .query("messages")
-      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
-      .collect();
-
-    const totalUploads = threadMessages.filter((m) => m.attachments && m.attachments.length > 0).length;
-    if (totalUploads >= 10) {
+    // Count issuance, not later attachment messages. The upload POST stores the
+    // bytes before finalizeWidgetUpload runs, and an abusive caller can skip
+    // finalization entirely. This counter is reserved in the same mutation as
+    // the URL, so concurrent requests cannot all take the last slot.
+    const issuedUploadUrls = thread.widgetUploadUrlCount ?? 0;
+    if (issuedUploadUrls >= WIDGET_UPLOAD_URL_LIMIT) {
       throw appError("INVALID_INPUT", "Upload quota exceeded for this conversation thread");
     }
+    await ctx.db.patch(thread._id, { widgetUploadUrlCount: issuedUploadUrls + 1 });
 
     // Generate an upload URL for widget file attachments (supports anonymous visitors)
     return await ctx.storage.generateUploadUrl();
@@ -455,6 +457,7 @@ export const createWidgetThread = publicMutation({
       agentId: widget.agentId,
       widgetId: args.widgetId,
       widgetAccessTokenHash: await digestWidgetAccessToken(accessToken),
+      widgetUploadUrlCount: 0,
       sourceUrl: args.sourceUrl,
       title: "Widget Interaction",
       createdAt: now,

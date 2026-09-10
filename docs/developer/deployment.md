@@ -242,10 +242,10 @@ and relay values are present.
 
 Google live voice relay sessions require:
 
-- `VOICE_RELAY_URL` for the relay endpoint.
+- `VOICE_RELAY_URL` for the relay endpoint, using its `/` or `/live` browser path.
 - `VOICE_RELAY_SECRET` for signing relay tickets.
 - `TELEPHONY_STREAM_URL` when the same relay is used for phone-call media
-  streaming.
+  streaming; this URL must use the relay's `/twilio` path.
 
 Inbound Twilio-style calls require:
 

@@ -4,7 +4,9 @@ import {
   buildAudioFrame,
   buildSetup,
   buildToolResponse,
+  classifyUpgradePath,
   createCallerRouter,
+  createTicketReplayGuard,
   isCallerFrameAllowed,
   readTicket,
   readToolCalls,
@@ -22,6 +24,8 @@ function validTicket(overrides = {}) {
   return mintTicket({
     model: "test-provider-model",
     expiresAt: 2_000,
+    jti: "ticket-id-1234567890",
+    redemptionUrl: "https://platform.test/api/voice/redeem",
     instructions: "Be brief.",
     ...overrides,
   });
@@ -51,9 +55,31 @@ describe("the ticket", () => {
     expect(() => readTicket(mintTicket({ expiresAt: 2_000 }), SECRET, 1_000)).toThrow(/model/i);
   });
 
+  test("refuses legacy tickets that cannot be redeemed once", () => {
+    expect(() => readTicket(mintTicket({
+      model: "test-provider-model",
+      expiresAt: 2_000,
+      redemptionUrl: "https://platform.test/api/voice/redeem",
+    }), SECRET, 1_000)).toThrow(/one-time id/i);
+    expect(() => readTicket(mintTicket({
+      model: "test-provider-model",
+      expiresAt: 2_000,
+      jti: "ticket-id-1234567890",
+    }), SECRET, 1_000)).toThrow(/redemption endpoint/i);
+  });
+
   test("refuses junk rather than throwing something unreadable", () => {
     expect(() => readTicket("", SECRET, 1_000)).toThrow(/malformed/i);
     expect(() => readTicket(undefined, SECRET, 1_000)).toThrow(/malformed/i);
+  });
+});
+
+describe("the public WebSocket doors", () => {
+  test("only the browser and Twilio paths are admitted", () => {
+    expect(classifyUpgradePath("/")).toBe("relay");
+    expect(classifyUpgradePath("/live")).toBe("relay");
+    expect(classifyUpgradePath("/twilio")).toBe("phone");
+    expect(classifyUpgradePath("/anything-else")).toBeNull();
   });
 });
 
@@ -116,6 +142,27 @@ describe("the order a call arrives in", () => {
       kind: "ticket",
     });
     expect(router.receive(Buffer.from([1, 2, 3, 4]), true).kind).not.toBe("refused");
+  });
+
+  test("one replay guard refuses the same ticket on a second connection", () => {
+    const guard = createTicketReplayGuard({ now: () => 1_000 });
+    const first = createCallerRouter({
+      secret: SECRET,
+      now: () => 1_000,
+      claimTicket: (ticket) => guard.claim(ticket),
+    });
+    const second = createCallerRouter({
+      secret: SECRET,
+      now: () => 1_000,
+      claimTicket: (ticket) => guard.claim(ticket),
+    });
+    const frame = JSON.stringify({ ticket: validTicket() });
+
+    expect(first.receive(frame, false)).toMatchObject({ kind: "ticket" });
+    expect(second.receive(frame, false)).toMatchObject({
+      kind: "refused",
+      reason: "Ticket already used.",
+    });
   });
 
   /*

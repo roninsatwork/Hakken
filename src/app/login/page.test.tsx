@@ -30,7 +30,6 @@ vi.mock("@/convex/_generated/api", () => ({
     },
     oneTimeCodes: {
       requestCode: "requestCode",
-      recordVerified: "recordVerified",
     },
   },
 }));
@@ -276,4 +275,3 @@ describe("LoginPage one-time code", () => {
     await waitFor(() => expect(screen.getByText(/not right/)).toBeInTheDocument());
   });
 });
-

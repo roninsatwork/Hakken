@@ -50,6 +50,7 @@ vi.mock("./aiProviderRegistry", async (importOriginal) => {
 });
 
 beforeEach(() => {
+    vi.stubEnv("CONVEX_SITE_URL", "https://voice-platform.test");
     createVertexGenAIClientMock.mockClear();
     createVertexEmbeddingClientMock.mockClear();
     embedVertexContentWithRetryMock.mockReset();
@@ -887,6 +888,8 @@ describe("the live voice session", () => {
             .action(api.aiVoiceSession.createRealtimeVoiceSession, { threadId });
 
         const payload = readTicketPayload(asGoogleSession(session).ticket);
+        expect(payload.jti).toEqual(expect.any(String));
+        expect(payload.redemptionUrl).toBe("https://voice-platform.test/api/voice/redeem");
         expect(payload.tools).toHaveLength(1);
         expect(payload.tools[0].name).toBe("search_company_knowledge");
         expect(payload.tools[0].parameters.required).toEqual(["query"]);
@@ -924,6 +927,38 @@ describe("the live voice session", () => {
             t.withIdentity({ subject: userId }).action(api.aiVoiceSession.createRealtimeVoiceSession, { threadId })
         ).rejects.toThrow(/VOICE_RELAY_URL/);
         vi.unstubAllEnvs();
+    });
+
+    test("another tenant cannot open or search a voice session through a foreign thread id", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { threadId } = await seedVoiceSession(t);
+        const attackerId = await t.run(async (ctx) => {
+            const companyId = await ctx.db.insert("companies", {
+                name: "Other Voice Corp",
+                createdAt: Date.now(),
+            });
+            return await ctx.db.insert("users", {
+                email: "other-caller@test.com",
+                role: "USER",
+                companyId,
+                createdAt: Date.now(),
+            });
+        });
+        const attacker = t.withIdentity({ subject: attackerId });
+
+        await expect(
+            attacker.action(api.aiVoiceSession.createRealtimeVoiceSession, { threadId })
+        ).rejects.toThrow("Unauthorized");
+        await expect(
+            attacker.action(api.aiVoiceSession.searchKnowledgeForVoice, {
+                threadId,
+                query: "show me the other company's knowledge",
+            })
+        ).rejects.toThrow("Unauthorized");
+
+        expect(embedVertexContentWithRetryMock).not.toHaveBeenCalled();
+        const reservations = await t.run(async (ctx) => ctx.db.query("aiActionRequests").collect());
+        expect(reservations).toEqual([]);
     });
 
     test("a knowledge search that finds nothing says nothing, rather than an empty evidence block", async () => {

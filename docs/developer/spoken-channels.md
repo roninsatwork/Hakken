@@ -31,13 +31,15 @@ Voice dictation through `src/hooks/useVoiceToText.ts` remains a separate turn-ba
 - includes company instructions, rules, skills, memories, and the spoken style in the session instructions
 - declares a knowledge-search tool for live lookup
 
-Google live-audio sessions use the relay ticket path. `signVoiceTicket` signs a compact payload with the relay secret; the browser sends that ticket to the relay. The page never receives provider credentials.
+Google live-audio sessions use the relay ticket path. `signVoiceTicket` signs a compact payload with the relay secret, a random one-time id, and the platform redemption endpoint; the browser sends that ticket to the relay. The relay claims it locally and redeems it through `/api/voice/redeem` before opening Vertex, so the same ticket cannot start a second session on the same instance or another instance. The page never receives provider credentials.
+
+The relay admits browser sessions only on `/` and `/live`, and phone media only on `/twilio`. Both WebSocket doors cap caller frames at 128 KB and close connections that do not present their first authentication frame within five seconds. Set `VOICE_RELAY_URL` to the relay root or `/live`, and set `TELEPHONY_STREAM_URL` to `/twilio` on the same service.
 
 `src/lib/googleLiveVoice.ts` contains tested browser-side helpers for downsampling microphone PCM to 16 kHz, parsing relay events, and formatting tool responses. `src/lib/voiceSession.ts` contains tested PCM decoding and older turn/chunk helpers still used by preview playback.
 
 ## Voice Knowledge Lookup
 
-`convex/voiceRelay.ts` exposes the HTTP endpoint the relay calls when a live voice model asks to search company knowledge. The endpoint:
+`convex/voiceRelay.ts` exposes the HTTP endpoints the relay calls to redeem a ticket and to search company knowledge. The redemption endpoint atomically records a ticket's one-time id before the relay opens a provider session. The knowledge endpoint:
 
 - requires `VOICE_RELAY_SECRET`
 - accepts a signed ticket and query as JSON
@@ -166,7 +168,7 @@ Preserve these invariants:
 - A caller hears a spoken refusal rather than a silent failure.
 - Connector phone-line settings override legacy environment ownership when both exist.
 - The full caller number appears only on call detail, not on public list/demo views.
-- Voice relay tickets are signed by the platform and verified before knowledge or transcript writes.
+- Voice relay tickets are signed by the platform, redeemed once before provider access, and verified before knowledge or transcript writes.
 - Phone calls spend from company conversation allowance, not a hidden separate unlimited budget.
 - Post-call failures must not erase the transcript.
 - Spoken voice is one company setting shared by Ask Sonae, phone, and reception.

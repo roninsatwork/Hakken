@@ -101,9 +101,10 @@ async function dial(
 }
 
 beforeEach(() => {
+    vi.stubEnv("CONVEX_SITE_URL", "https://voice-platform.test");
     vi.stubEnv("TWILIO_AUTH_TOKEN", AUTH_TOKEN);
     vi.stubEnv("TELEPHONY_PUBLIC_URL", PUBLIC_URL);
-    vi.stubEnv("TELEPHONY_STREAM_URL", "wss://relay.test/call");
+    vi.stubEnv("TELEPHONY_STREAM_URL", "wss://relay.test/twilio");
     vi.stubEnv("VOICE_RELAY_SECRET", "shared-secret");
 });
 
@@ -122,7 +123,7 @@ describe("answering the phone", () => {
         expect(response.status).toBe(200);
         const twiml = await response.text();
         expect(twiml).toContain("A.I. assistant for Ronins");
-        expect(twiml).toContain('<Stream url="wss://relay.test/call">');
+        expect(twiml).toContain('<Stream url="wss://relay.test/twilio">');
         expect(twiml).toContain('<Parameter name="ticket"');
 
         const calls = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
@@ -179,7 +180,7 @@ describe("answering the phone", () => {
         });
 
         expect(response.status).toBe(200);
-        expect(await response.text()).toContain('<Stream url="wss://relay.test/call">');
+        expect(await response.text()).toContain('<Stream url="wss://relay.test/twilio">');
         const calls = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
         expect(calls).toHaveLength(1);
         expect(calls[0].companyId).toBe(companyId);
@@ -221,7 +222,7 @@ describe("answering the phone", () => {
 
         const rightToken = await dial(t, fields, { token: "connector-token" });
         expect(rightToken.status).toBe(200);
-        expect(await rightToken.text()).toContain('<Stream url="wss://relay.test/call">');
+        expect(await rightToken.text()).toContain('<Stream url="wss://relay.test/twilio">');
     });
 
     test("a call signed with the wrong token is refused", async () => {

@@ -10,7 +10,7 @@ import {
   handlePublicRunStatus,
   handlePublicWorkflowRunTrigger,
 } from "./publicApi";
-import { handleVoiceKnowledgeLookup } from "./voiceRelay";
+import { handleVoiceKnowledgeLookup, handleVoiceTicketRedemption } from "./voiceRelay";
 import { handleCallStatus, handleCallTurns, handleIncomingCall } from "./telephony";
 import {
   handleConnectorOAuthAuthorize,
@@ -55,6 +55,15 @@ http.route({
   path: "/api/voice/knowledge",
   method: "POST",
   handler: handleVoiceKnowledgeLookup,
+});
+
+// A signed live-voice ticket opens one provider session, on one relay
+// instance. Convex owns the atomic redemption so horizontal scaling cannot
+// turn the one-minute ticket into a fan-out credential.
+http.route({
+  path: "/api/voice/redeem",
+  method: "POST",
+  handler: handleVoiceTicketRedemption,
 });
 
 // Somebody dialled the number. Verified as the telephony provider by its own

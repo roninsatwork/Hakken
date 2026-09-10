@@ -23,8 +23,6 @@ export default function LoginPage() {
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const requestOneTimeCode = useMutation(api.oneTimeCodes.requestCode);
-  const recordCodeVerified = useMutation(api.oneTimeCodes.recordVerified);
-  const recordCodeFailed = useMutation(api.oneTimeCodes.recordFailed);
   /**
    * Which way in the person chose. Neither is the default, and choosing one
    * never takes the other away — a link is right when the email is open on the
@@ -107,23 +105,10 @@ export default function LoginPage() {
 
     try {
       await signIn("one-time-code", { email, code: entered, redirectTo });
-      try {
-        await recordCodeVerified({ email });
-      } catch {
-        console.debug("Auth diagnostics skipped.");
-      }
     } catch {
       // The framework refuses a wrong or spent code without saying which, so
       // the screen says the one thing that is always true and always useful.
       setCodeError(describeVerdict({ ok: false, reason: "wrong" }));
-
-      // And the refusal is recorded. A failed sign-in left nothing behind
-      // anywhere, which made a run of attempts against an account invisible.
-      try {
-        await recordCodeFailed({ email });
-      } catch {
-        console.debug("Auth diagnostics skipped.");
-      }
     } finally {
       setIsSubmittingCode(false);
     }

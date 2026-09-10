@@ -42,12 +42,14 @@ user sees the message.
 parameter name and route aligned with the email provider callback and the verify
 page.
 
-`convex/oneTimeCodes.ts` supports typed code sign-in with public mutations for
-request, failed-attempt recording, and verified-attempt recording. The rules live
-in `convex/oneTimeCodeService.ts`: six digits, ten-minute expiry, five attempts,
-and a five-request rolling window per email. The code path is deliberately
-immune to link scanners because there is no link in the email that can spend the
-code.
+`convex/oneTimeCodes.ts` supports typed code sign-in with one public mutation for
+request throttling. The rules live in `convex/oneTimeCodeService.ts`: six digits,
+ten-minute expiry, five attempts, a five-request rolling window per email, an
+hourly per-email cap, and a 60-request-per-minute global backstop. Successful
+verification is recorded only by the trusted Convex Auth callback in
+`convex/authUserProvisioning.ts`; the browser cannot submit success or failure
+telemetry for an arbitrary address. The code path is deliberately immune to link
+scanners because there is no link in the email that can spend the code.
 
 ## Invite-Only Provisioning
 
@@ -57,6 +59,7 @@ It extracts email, name, and image from provider payloads, lowercases the email,
 
 - returns existing users and logs `USER_FOUND`
 - logs `MAGIC_LINK_STARTED` for unverified email-provider starts
+- logs `ONE_TIME_CODE_VERIFIED` only after the one-time-code provider verifies the email
 - accepts pending invites only after the provider reports a verified email
 - creates the initial super admin when `INITIAL_SUPER_ADMIN_EMAIL` matches
 - rejects new users without an invitation

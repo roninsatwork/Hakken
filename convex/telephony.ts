@@ -1,3 +1,4 @@
+import { readBoundedBody } from "./utils/boundedRequestBody";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { adminQuery, moduleQuery } from "./tenantFunctions";
 import * as governanceShapes from "./utils/governanceShapes";
@@ -191,10 +192,14 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   const streamUrl = process.env.TELEPHONY_STREAM_URL?.trim();
   const ownership = parseNumberOwnership(process.env.TELEPHONY_NUMBER_OWNERS);
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) {
-    return twimlResponse(buildRefusalTwiml("Sorry, something went wrong. Goodbye."), 413);
+  const bounded = await readBoundedBody(request, MAX_BODY_BYTES);
+  if (!bounded.ok) {
+    return twimlResponse(
+      buildRefusalTwiml("Sorry, something went wrong. Goodbye."),
+      bounded.reason === "too_large" ? 413 : 400,
+    );
   }
+  const raw = bounded.text;
 
   const params: Record<string, string> = {};
   for (const [name, value] of new URLSearchParams(raw)) params[name] = value;
@@ -396,8 +401,9 @@ export const handleCallTurns = httpAction(async (ctx, request) => {
   const secret = process.env.VOICE_RELAY_SECRET?.trim();
   if (!secret) return new Response(null, { status: 503 });
 
-  const raw = await request.text();
-  if (raw.length > MAX_TURN_BODY_BYTES) return new Response(null, { status: 413 });
+  const bounded = await readBoundedBody(request, MAX_TURN_BODY_BYTES);
+  if (!bounded.ok) return new Response(null, { status: bounded.reason === "too_large" ? 413 : 400 });
+  const raw = bounded.text;
 
   let body: { ticket?: unknown; callSid?: unknown; turns?: unknown };
   try {
@@ -559,8 +565,9 @@ export const attachCallSummary = internalMutation({
  * calls, let alone trigger model spend through the summary step.
  */
 export const handleCallStatus = httpAction(async (ctx, request) => {
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
+  const bounded = await readBoundedBody(request, MAX_BODY_BYTES);
+  if (!bounded.ok) return new Response(null, { status: bounded.reason === "too_large" ? 413 : 400 });
+  const raw = bounded.text;
 
   const params: Record<string, string> = {};
   for (const [name, value] of new URLSearchParams(raw)) params[name] = value;

@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { expect, test, describe } from "vitest";
+import { expect, test, describe, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -292,9 +292,57 @@ describe("OWASP: Broken Access Control - Workflows", () => {
 
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({
-      error: "Workflow input cannot exceed 20000 characters.",
+      error: "Workflow input cannot exceed 20000 bytes.",
     });
 
+    const executions = await t.run(async (ctx) => await ctx.db.query("workflowExecutions").collect());
+    expect(executions).toEqual([]);
+  });
+
+  test("direct workflow webhook cancels an oversized chunked stream", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const workflowId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Stream Tenant", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "stream-owner@example.com",
+        role: "SUPER_ADMIN",
+      });
+      return await ctx.db.insert("workflows", {
+        name: "Chunked Webhook Workflow",
+        companyId,
+        isActive: true,
+        triggerType: "WEBHOOK",
+        webhookSecret: "stream-secret",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
+    });
+
+    const cancel = vi.fn();
+    let reads = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        reads++;
+        if (reads === 1) controller.enqueue(new TextEncoder().encode("x".repeat(20_001)));
+        else controller.error(new Error("Oversized workflow input must not be drained"));
+      },
+      cancel,
+    }, { highWaterMark: 0 });
+
+    const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
+      method: "POST",
+      headers: { "x-sonae-secret": "stream-secret" },
+      body,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+
+    expect(response.status).toBe(413);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(reads).toBe(1);
     const executions = await t.run(async (ctx) => await ctx.db.query("workflowExecutions").collect());
     expect(executions).toEqual([]);
   });
