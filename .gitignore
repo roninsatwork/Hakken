@@ -3,6 +3,7 @@
 
 # Next.js
 /.next/
+/.next-arcade/
 /out/
 
 # Node.js
@@ -41,6 +42,7 @@ Thumbs.db
 
 # TypeScript incremental cache
 tsconfig.tsbuildinfo
+tsconfig.arcade.tsbuildinfo
 
 # Convex database exports and dumps
 dev-export/

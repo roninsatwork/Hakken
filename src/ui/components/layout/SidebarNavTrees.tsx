@@ -414,13 +414,14 @@ export function UserNavTree({
     <NavItem
       icon={Gamepad2}
       label={t('arcade')}
-      isActive={activeItem === 'Arcade' || activeItem === 'RoninsRun'}
+      isActive={activeItem === 'Arcade' || activeItem === 'RoninsRun' || activeItem === 'RoninsRun3D'}
       onClick={() => setActiveItem('Arcade')}
       hasChildren
       isOpen={openSections.arcade}
       onToggle={() => toggleSection('arcade')}
     >
       <SubNavItem label={t('roninsRun')} href="/app/arcade/ronins-run" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
+      <SubNavItem label={t('roninsRun3D')} href="/app/arcade/ronins-run-3d" isActive={activeItem === 'RoninsRun3D'} onClick={() => setActiveItem('RoninsRun3D')} />
     </NavItem>
   )}
   {/* template:remove:end */}

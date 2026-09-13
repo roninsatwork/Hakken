@@ -7,6 +7,15 @@ completed work.
 
 ## Active Plans
 
+- [Ronin's Run 3D](./active/ronins-run-3d-plan.md) — separate first-person game
+  using all four original map layouts. Playable prototype verified locally;
+  visual target remains unmet. Overall estimate 55%.
+
+- [Ronin's Run — Night Heist Plan](./active/ronins-run-night-heist-plan.md) —
+  four playable maps with saved unlocks, per-map bests, the preserved visual
+  reference and improved running animation. Final balance and release checks remain.
+  Updated 2026-09-12; overall approximately 93%; four-map progression and Spirit Power complete locally; gentler opening and louder sound verified in Chrome.
+
 - [Sonae Speaks The Standard Tool Plug](./active/tool-server-plan.md) — connect
   to a service's own published tool server and get its tools without writing an
   integration. Read-only first; the real work is that tools become tenant-shaped

@@ -359,6 +359,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/settings/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/app/agents')) return 'Agents';
   // template:remove:start arcade
+  if (pathname.startsWith('/app/arcade/ronins-run-3d')) return 'RoninsRun3D';
   if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
   // template:remove:end
   if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
@@ -393,7 +394,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     // template:remove:end
     organization: false,
     // template:remove:start arcade
-    arcade: false,
+    arcade: pathname.startsWith('/app/arcade'),
     // template:remove:end
     // template:remove:start properties
     properties: false,

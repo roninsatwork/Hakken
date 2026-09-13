@@ -1,0 +1,302 @@
+{
+  "ronin": {
+    "file": "ronin-run-v2.png",
+    "width": 1254,
+    "height": 1254,
+    "referenceHeight": 256,
+    "frames": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 313,
+        "height": 313,
+        "anchorX": 165,
+        "anchorY": 305
+      },
+      {
+        "x": 313,
+        "y": 0,
+        "width": 314,
+        "height": 313,
+        "anchorX": 165,
+        "anchorY": 305
+      },
+      {
+        "x": 627,
+        "y": 0,
+        "width": 313,
+        "height": 313,
+        "anchorX": 165,
+        "anchorY": 305
+      },
+      {
+        "x": 940,
+        "y": 0,
+        "width": 314,
+        "height": 313,
+        "anchorX": 165,
+        "anchorY": 305
+      },
+      {
+        "x": 0,
+        "y": 313,
+        "width": 313,
+        "height": 314,
+        "anchorX": 165,
+        "anchorY": 295
+      },
+      {
+        "x": 313,
+        "y": 313,
+        "width": 314,
+        "height": 314,
+        "anchorX": 165,
+        "anchorY": 295
+      },
+      {
+        "x": 627,
+        "y": 313,
+        "width": 313,
+        "height": 314,
+        "anchorX": 165,
+        "anchorY": 295
+      },
+      {
+        "x": 940,
+        "y": 313,
+        "width": 314,
+        "height": 314,
+        "anchorX": 165,
+        "anchorY": 295
+      },
+      {
+        "x": 0,
+        "y": 627,
+        "width": 313,
+        "height": 313,
+        "anchorX": 185,
+        "anchorY": 300
+      },
+      {
+        "x": 313,
+        "y": 627,
+        "width": 314,
+        "height": 313,
+        "anchorX": 185,
+        "anchorY": 300
+      },
+      {
+        "x": 627,
+        "y": 627,
+        "width": 313,
+        "height": 313,
+        "anchorX": 185,
+        "anchorY": 310
+      },
+      {
+        "x": 940,
+        "y": 627,
+        "width": 314,
+        "height": 313,
+        "anchorX": 185,
+        "anchorY": 300
+      },
+      {
+        "x": 0,
+        "y": 940,
+        "width": 313,
+        "height": 314,
+        "anchorX": 185,
+        "anchorY": 295
+      },
+      {
+        "x": 313,
+        "y": 940,
+        "width": 314,
+        "height": 314,
+        "anchorX": 185,
+        "anchorY": 295
+      },
+      {
+        "x": 627,
+        "y": 940,
+        "width": 313,
+        "height": 314,
+        "anchorX": 185,
+        "anchorY": 295
+      },
+      {
+        "x": 940,
+        "y": 940,
+        "width": 314,
+        "height": 314,
+        "anchorX": 185,
+        "anchorY": 305
+      }
+    ]
+  },
+  "patrols": {
+    "file": "patrols-walk-v1.png",
+    "width": 1254,
+    "height": 1254,
+    "frames": [
+      {
+        "x": 43,
+        "y": 50,
+        "width": 213,
+        "height": 341,
+        "anchorX": 159
+      },
+      {
+        "x": 367,
+        "y": 53,
+        "width": 205,
+        "height": 338,
+        "anchorX": 159
+      },
+      {
+        "x": 705,
+        "y": 55,
+        "width": 215,
+        "height": 333,
+        "anchorX": 175
+      },
+      {
+        "x": 997,
+        "y": 53,
+        "width": 225,
+        "height": 343,
+        "anchorX": 170
+      },
+      {
+        "x": 29,
+        "y": 407,
+        "width": 237,
+        "height": 347,
+        "anchorX": 44
+      },
+      {
+        "x": 356,
+        "y": 406,
+        "width": 221,
+        "height": 352,
+        "anchorX": 53
+      },
+      {
+        "x": 690,
+        "y": 409,
+        "width": 225,
+        "height": 350,
+        "anchorX": 36
+      },
+      {
+        "x": 982,
+        "y": 408,
+        "width": 215,
+        "height": 348,
+        "anchorX": 63
+      },
+      {
+        "x": 12,
+        "y": 784,
+        "width": 296,
+        "height": 184,
+        "anchorX": 242
+      },
+      {
+        "x": 320,
+        "y": 784,
+        "width": 304,
+        "height": 184,
+        "anchorX": 250
+      },
+      {
+        "x": 634,
+        "y": 784,
+        "width": 293,
+        "height": 184,
+        "anchorX": 235
+      },
+      {
+        "x": 948,
+        "y": 784,
+        "width": 301,
+        "height": 197,
+        "anchorX": 245
+      },
+      {
+        "x": 14,
+        "y": 984,
+        "width": 283,
+        "height": 214,
+        "anchorX": 96
+      },
+      {
+        "x": 319,
+        "y": 983,
+        "width": 284,
+        "height": 243,
+        "anchorX": 89
+      },
+      {
+        "x": 628,
+        "y": 982,
+        "width": 313,
+        "height": 241,
+        "anchorX": 69
+      },
+      {
+        "x": 941,
+        "y": 981,
+        "width": 275,
+        "height": 247,
+        "anchorX": 66
+      }
+    ]
+  },
+  "treasure": {
+    "file": "treasure-v1.png",
+    "width": 1254,
+    "height": 1254,
+    "frames": [
+      {
+        "x": 33,
+        "y": 350,
+        "width": 576,
+        "height": 629,
+        "anchorX": 287.5
+      },
+      {
+        "x": 650,
+        "y": 246,
+        "width": 579,
+        "height": 736,
+        "anchorX": 289
+      }
+    ]
+  },
+  "idle": {
+    "file": "ronin-idle-v2.png",
+    "width": 1254,
+    "height": 1254,
+    "referenceHeight": 660,
+    "frames": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 627,
+        "height": 1254,
+        "anchorX": 370,
+        "anchorY": 948
+      },
+      {
+        "x": 627,
+        "y": 0,
+        "width": 627,
+        "height": 1254,
+        "anchorX": 378,
+        "anchorY": 950
+      }
+    ]
+  }
+}

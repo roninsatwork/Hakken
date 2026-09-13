@@ -26,8 +26,8 @@ import { repoRoot } from './test/driftUtils';
  */
 describe('the Italian catalogue is translated, not copied', () => {
   /**
-   * Values that are the same in both languages on purpose. May shrink, never
-   * grow.
+   * Values that are the same in both languages on purpose. Untranslated prose
+   * must not grow; a new product name needs an explicit reason here.
    *
    * Four kinds, and each is a reason a translator would give:
    *   - a product or brand name, which does not translate;
@@ -40,7 +40,9 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['dashboard.hero.eyebrow', 'the platform tagline, which is a brand mark rather than a sentence'],
     ['sidebar.postureStudio', 'product name'],
     ['sidebar.roninsRun', 'product name'],
+    ['sidebar.roninsRun3D', 'the separate 3D game product name'],
     ['arcade.title', 'product name'],
+    ['arcade.firstPerson.title', 'the separate 3D game product name'],
     ['admin.companies.modules.postureStudio.name', 'product name'],
     ['admin.overview.providers.names.google', 'a provider brand name'],
     ['dashboard.hosting.items.0.title', 'a provider brand name'],

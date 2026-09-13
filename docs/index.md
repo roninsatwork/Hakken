@@ -45,6 +45,7 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 ### Plans
 
 - [Plans Index](./plans/index.md)
+- [Ronin's Run — Night Heist Plan](./plans/active/ronins-run-night-heist-plan.md) — four playable maps, saved campaign unlocks, Spirit Power takedowns, preserved visual reference, asset provenance and remaining play/quality acceptance checks.
 - [Admin Clone-Readiness Plan](./plans/completed/admin-clone-readiness-plan.md) — approved plan for the admin section's last hand-drawn debts: button migration onto the screen kit, collapsing mirrored screens, de-branding via `platformName`, and full admin copy externalisation into the message catalogues.
 - [Foundation Quality Plan](./plans/completed/foundation-quality-plan.md) — approved pre-clone plan for wiki/AI-runtime test coverage, `appError` conversion, splitting the `ai.ts` and `analyticsCron.ts` grab-bags, and the docs tidy-up.
 - [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.

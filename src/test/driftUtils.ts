@@ -131,6 +131,7 @@ export const ignoredRepoPathPrefixes = [
   // older commit — so this guardrail would fail on language already fixed here.
   '.claude/worktrees/',
   '.next/',
+  '.next-arcade/',
   'node_modules/',
   'package-lock.json',
   'playwright-report/',

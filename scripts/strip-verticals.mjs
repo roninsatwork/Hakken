@@ -45,6 +45,7 @@ const EXCLUDED_DIRS = new Set([
   "node_modules",
   ".git",
   ".next",
+  ".next-arcade",
   ".claude",
   "tmp",
   "coverage",

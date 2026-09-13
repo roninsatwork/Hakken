@@ -1,13 +1,12 @@
 import React from "react";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { routeParams } from "@/src/test/routeParams";
 import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
-import EditToolContent from "./EditToolContent";
-import EditToolPage, { ToolRuleCheckboxes } from "./page";
+import EditToolPage from "./page";
 
 /**
  * Written before the screen moved onto the shared field, so that it pins what
@@ -73,16 +72,15 @@ describe("EditToolPage", () => {
     vi.mocked(useQuery).mockReturnValue(savedTool as unknown as ReturnType<typeof useQuery>);
   });
 
-  const show = () =>
-    renderWithProviders(
-      <EditToolContent
-        RuleCheckboxes={ToolRuleCheckboxes}
-        tool={savedTool as unknown as Doc<"aiTools">}
-        toolId={TOOL_ID}
-      />,
-    );
+  const show = async () => {
+    await act(async () => {
+      renderWithProviders(<EditToolPage params={routeParams({ id: TOOL_ID })} />);
+      await import("./EditToolContent");
+    });
+    await screen.findByPlaceholderText(NAME);
+  };
 
-  it("keeps the tool query and exact loading state immediate", () => {
+  it("keeps the tool query and exact loading state immediate", async () => {
     vi.mocked(useQuery).mockReturnValue(undefined);
 
     const { container } = renderWithProviders(
@@ -93,8 +91,8 @@ describe("EditToolPage", () => {
     expect(container.querySelector("svg.animate-spin")).not.toBeNull();
   });
 
-  it("opens with the saved tool already in the boxes", () => {
-    show();
+  it("opens with the saved tool already in the boxes", async () => {
+    await show();
 
     expect(screen.getByPlaceholderText(NAME)).toHaveValue("check_stock");
     expect(screen.getByPlaceholderText(DESCRIPTION)).toHaveValue("Looks up how many of an item are left.");
@@ -103,7 +101,7 @@ describe("EditToolPage", () => {
   });
 
   it("saves an edit against the tool it opened, trimmed", async () => {
-    show();
+    await show();
 
     fireEvent.change(screen.getByPlaceholderText(HANDLER), { target: { value: "  api.stock.count  " } });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
@@ -122,7 +120,7 @@ describe("EditToolPage", () => {
    * is the failure mode of a draft rebuilt from the record on every keystroke.
    */
   it("keeps earlier edits when a second box is changed", async () => {
-    show();
+    await show();
 
     fireEvent.change(screen.getByPlaceholderText(HANDLER), { target: { value: "api.stock.count" } });
     fireEvent.change(screen.getByPlaceholderText(DESCRIPTION), { target: { value: "Counts stock." } });
@@ -140,7 +138,7 @@ describe("EditToolPage", () => {
    * empty string, or the tool ends up carrying a schema that parses to nothing.
    */
   it("leaves an empty schema box out of the call entirely", async () => {
-    show();
+    await show();
 
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 
@@ -152,7 +150,7 @@ describe("EditToolPage", () => {
   });
 
   it("carries the choices the form offers", async () => {
-    show();
+    await show();
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "DESTRUCTIVE" } });
     fireEvent.click(screen.getByLabelText("Require approval"));
@@ -169,22 +167,22 @@ describe("EditToolPage", () => {
     });
   });
 
-  it("will not save once a required box has been emptied", () => {
-    show();
+  it("will not save once a required box has been emptied", async () => {
+    await show();
 
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
     fireEvent.change(screen.getByPlaceholderText(HANDLER), { target: { value: "   " } });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeDisabled();
   });
 
-  it("meets the floor every form screen has to clear", () => {
-    show();
+  it("meets the floor every form screen has to clear", async () => {
+    await show();
 
     expectStandardFormScreen({ minBoxes: 5 });
   });
 
   it("returns to the tools list once the edit is saved", async () => {
-    show();
+    await show();
 
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 

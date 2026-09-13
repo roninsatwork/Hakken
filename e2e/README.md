@@ -68,6 +68,38 @@ npm run eval:movement-avatar
 
 This starts the normal Playwright app server, creates deterministic auth storage state, opens `/demos/movements/squat-proof`, and feeds synthetic skeleton poses through the same `VrmAvatar` player path used during practice. The eval fails when squat and leg-raise ownership drift, when spine ownership regresses, when the proof route stops rendering the avatar canvas, when the captured screenshot does not contain enough visible player-avatar pixels in the right-side proof region, or when squat/leg-raise screenshots become visually indistinguishable from standing. Screenshots and computed visual metrics are stored as Playwright attachments under `test-results/` and surfaced in the HTML report.
 
+## Ronin's Run 3D local browser pass
+
+Run `npx playwright test --config=playwright.arcade.config.ts` explicitly for the
+four-district first-person game. This uses a separate headless Chrome instance
+and the existing deterministic auth harness on port 3100. The dedicated
+`.next-arcade` output directory lets the normal local app remain running.
+The routine metered CI suite does not include this pass.
+After the run, `npx next typegen` restores the shared `next-env.d.ts` references
+to the normal `.next` directory without stopping the local app.
+
+The driver reads the visible minimap and sends ordinary keyboard/mouse input.
+It does not access the runtime instance, teleport, remove patrols or extend power.
+The four campaign checks use Playwright's controlled clock, advancing ordinary
+animation callbacks while steering. This removes host mouse/DOM latency from
+the route pilot without changing simulation rules. They verify complete escapes,
+treasure, stable shader counts, retry and idle/pause rendering. Their
+timings are not real-time performance measurements. Run these twice with
+`--grep 'browser campaign' --repeat-each=2` when changing the pilot.
+
+Separate real-time checks cover two minutes of uninterrupted Quiet rendering
+and movement through a flame pickup, including sampled frame intervals and
+stable shader/geometry counts. JSON samples and actual screenshots are
+Playwright attachments under ignored `test-results/`. The 390 × 844 touch check
+sends Chrome DevTools touch events to
+the actual movement/look pads and verifies release and pause; it does not inject
+game state. It remains browser emulation rather than a physical phone test.
+These are automated local browser checks, not physical touch-device or wider GPU
+certification. The optional Safari-engine pass uses
+`npx playwright test -c playwright.arcade.webkit.config.ts --grep 'art review|browser campaign|real-time flame'`.
+The Chrome touch test requires CDP and is excluded from that command. WebKit
+engine coverage does not establish physical iPhone or macOS Safari acceptance.
+
 ## Local Real Auth Lane
 
 Sonae also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `sonae_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.

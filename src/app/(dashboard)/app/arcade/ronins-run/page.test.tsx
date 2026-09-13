@@ -1,14 +1,14 @@
-import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
-import { usePaginatedQuery } from "convex/react";
-import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
-import { pagedResult } from "@/src/test/screenMocks";
-import RoninArcadePage from "./page";
+import { renderWithProviders as render } from '@/src/test/renderWithProviders';
+import { beforeEach, describe, vi } from 'vitest';
+import { usePaginatedQuery } from 'convex/react';
+import { itBehavesLikeAStandardTableScreen } from '@/src/test/standardTableScreen';
+import { pagedResult } from '@/src/test/screenMocks';
+import RoninArcadePage from './page';
 
-vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
-vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
-vi.mock("next/navigation", async () => (await import("@/src/test/screenMocks")).nextNavigation());
-vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock('convex/react', async () => (await import('@/src/test/screenMocks')).convexReact());
+vi.mock('next-intl', async () => (await import('@/src/test/screenMocks')).nextIntl());
+vi.mock('next/navigation', async () => (await import('@/src/test/screenMocks')).nextNavigation());
+vi.mock('next/link', async () => (await import('@/src/test/screenMocks')).nextLink());
 
 /*
   This page draws the app header itself rather than getting it from a layout,
@@ -16,48 +16,47 @@ vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLi
   None of that is the list under test, so the header is stubbed rather than
   wiring four more providers into every screen test that never needed them.
 */
-vi.mock("@/src/ui/components/layout/Header", () => ({
+vi.mock('@/src/ui/components/layout/Header', () => ({
   default: () => <header />,
 }));
 
-// The arcade loads a display font through next/font, which needs the Next build
-// pipeline and is not available under vitest.
-vi.mock("next/font/google", () => ({
-  Press_Start_2P: () => ({ className: "font-arcade", style: { fontFamily: "monospace" } }),
-}));
+// The simulation has separate tests; this suite exercises the leaderboard shell.
+vi.mock('next/dynamic', () => ({ default: () => () => <div data-testid="game" /> }));
 
 const scores = [
   {
-    _id: "score_top",
-    userName: "Anthony Basker",
+    _id: 'score_top',
+    userName: 'Anthony Basker',
     userAvatar: undefined,
     score: 41200,
     playedAt: Date.UTC(2026, 7, 15, 18, 30),
   },
   {
-    _id: "score_second",
-    userName: "Sam Reed",
+    _id: 'score_second',
+    userName: 'Sam Reed',
     userAvatar: undefined,
     score: 30150,
     playedAt: Date.UTC(2026, 7, 14, 20, 10),
   },
 ];
 
-describe("RoninArcadePage", () => {
+describe('RoninArcadePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("as a standard table screen", () => {
+  describe('as a standard table screen', () => {
     itBehavesLikeAStandardTableScreen({
       renderScreen: () => render(<RoninArcadePage />),
       withRows: (rows) => {
-        vi.mocked(usePaginatedQuery).mockReturnValue(pagedResult(rows) as unknown as ReturnType<typeof usePaginatedQuery>);
+        vi.mocked(usePaginatedQuery).mockReturnValue(
+          pagedResult(rows) as unknown as ReturnType<typeof usePaginatedQuery>,
+        );
       },
       sampleRows: scores,
-      sampleRowText: "Anthony Basker",
-      emptyText: "arcade.emptyScores",
-      searchPlaceholder: "arcade.searchPlaceholder",
+      sampleRowText: 'Anthony Basker',
+      emptyText: 'arcade.emptyScores',
+      searchPlaceholder: 'arcade.searchPlaceholder',
     });
   });
 });

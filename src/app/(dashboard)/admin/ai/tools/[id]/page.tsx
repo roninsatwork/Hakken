@@ -18,7 +18,7 @@ function ToolLoadingState() {
   );
 }
 
-export function ToolRuleCheckboxes({
+function ToolRuleCheckboxes({
   confirmationRequired,
   isActive,
   onConfirmationRequiredChange,

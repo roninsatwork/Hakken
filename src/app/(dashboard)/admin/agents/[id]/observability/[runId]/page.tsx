@@ -14,7 +14,7 @@ const AgentJobDetailContent = lazy(() =>
   })),
 );
 
-export function AgentJobDetailLoading() {
+function AgentJobDetailLoading() {
   return (
     <div className="w-full py-24 flex items-center justify-center text-muted">
       <Loader2 className="w-6 h-6 animate-spin" />
@@ -22,7 +22,7 @@ export function AgentJobDetailLoading() {
   );
 }
 
-export function RawButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+function RawButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return <button {...props} />;
 }
 

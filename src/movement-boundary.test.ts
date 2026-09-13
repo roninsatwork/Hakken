@@ -8,8 +8,8 @@ import { describe, expect, test } from "vitest";
  * The demo needs three.js, MediaPipe, TensorFlow and a webcam pipeline. Those
  * are large — three.js alone is ~4.3MB of client chunks — and no platform route
  * should pay for them. Today it does not: they are code-split away from the
- * ~450KB shared root bundle, purely because nothing outside the demo imports
- * them.
+ * shared root bundle. The separate Ronin's Run 3D route also owns a lazy-loaded
+ * Three.js engine; it does not need the demo's other rendering or ML packages.
  *
  * That is a property nobody can see while editing, so it silently regresses.
  * `src/ui/components/Robot.tsx` had already drifted: a generated 3D component
@@ -23,7 +23,7 @@ import { describe, expect, test } from "vitest";
 
 const repoRoot = process.cwd();
 
-/** Heavy rendering / ML dependencies that belong to the movement demo only. */
+/** Heavy dependencies kept out of the shared platform. */
 const DEMO_ONLY_PACKAGES = [
   "three",
   "three-stdlib",
@@ -41,6 +41,12 @@ const DEMO_ONLY_PACKAGES = [
 
 /** Areas that own the movement demo and may import the packages above. */
 const DEMO_AREAS = ["src/app/(dashboard)/demos/", "src/lib/movements/"];
+const ARCADE_3D_AREA = "src/app/(dashboard)/app/arcade/ronins-run-3d/";
+
+function ownsHeavyPackage(relativePath: string, packageName: string) {
+  return isDemoFile(relativePath) ||
+    (packageName === "three" && relativePath.startsWith(`${ARCADE_3D_AREA}engine/`));
+}
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
@@ -81,7 +87,7 @@ describe("movement demo boundary", () => {
 
       const contents = fs.readFileSync(filePath, "utf8");
       for (const packageName of DEMO_ONLY_PACKAGES) {
-        if (importsPackage(contents, packageName)) {
+        if (!ownsHeavyPackage(relativePath, packageName) && importsPackage(contents, packageName)) {
           violations.push(`${relativePath} imports ${packageName}`);
         }
       }
@@ -92,11 +98,30 @@ describe("movement demo boundary", () => {
       [
         "Platform code must not import the movement demo's heavy dependencies:",
         "they would be pulled into shared client chunks that every route downloads.",
-        "Keep such components inside src/app/(dashboard)/demos/ or src/lib/movements/.",
+        "Keep them in the movement demo; only Three.js is also allowed in the separate 3D arcade engine.",
         "",
         ...violations,
       ].join("\n"),
     ).toEqual([]);
+  });
+
+  test("the arcade exception allows Three.js only in its own engine", () => {
+    expect(ownsHeavyPackage(`${ARCADE_3D_AREA}engine/HeistScene.ts`, "three")).toBe(true);
+    expect(ownsHeavyPackage(`${ARCADE_3D_AREA}engine/HeistScene.ts`, "@mediapipe/tasks-vision")).toBe(false);
+    expect(ownsHeavyPackage(`${ARCADE_3D_AREA}page.tsx`, "three")).toBe(false);
+    expect(ownsHeavyPackage("src/ui/components/SharedScene.tsx", "three")).toBe(false);
+  });
+
+  test("the 3D arcade stays behind its own lazy client entry", () => {
+    const page = fs.readFileSync(path.join(repoRoot, ARCADE_3D_AREA, "page.tsx"), "utf8");
+    expect(page).toMatch(/dynamic\(\(\) => import\("\.\/FirstPersonCanvas"\),\s*\{\s*ssr: false/);
+    expect(page).not.toMatch(/from\s+["']\.\/(?:FirstPersonCanvas|engine\/)/);
+    const violations = walk(path.join(repoRoot, "src")).filter((filePath) => {
+      const relativePath = toRepoRelative(filePath);
+      if (relativePath.startsWith(ARCADE_3D_AREA) || /\.test\.tsx?$/.test(relativePath)) return false;
+      return /(?:from|import\()\s*["'`][^"'`]*\/ronins-run-3d\//.test(fs.readFileSync(filePath, "utf8"));
+    }).map(toRepoRelative);
+    expect(violations, "Shared platform code must not pull in the 3D arcade engine").toEqual([]);
   });
 
   test("platform code does not import from the demo directories", () => {

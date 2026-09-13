@@ -1,7 +1,8 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import DenseCaptureDeviceBenchmarkPage, { shareDeviceBenchmarkReport } from "./page";
+import DenseCaptureDeviceBenchmarkPage from "./page";
+import { shareDeviceBenchmarkReport } from "./deviceReport";
 
 vi.mock("@/src/ui/components/layout/Header", () => ({
   default: () => <header>Header</header>,

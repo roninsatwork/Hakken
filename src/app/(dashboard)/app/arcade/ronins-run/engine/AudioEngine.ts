@@ -1,268 +1,151 @@
-// Audio Engine using raw Web Audio API for Zero-Latency Sound Synthesis 
+import type { SoundCue } from './NightHeistSimulation';
 
-type WindowWithWebkitAudioContext = Window & {
-  webkitAudioContext?: typeof AudioContext;
-};
+export const DEFAULT_GAME_VOLUME = 0.65;
 
+/** Original procedural score and Foley. No remote audio or autoplay. */
 export class AudioEngine {
   private ctx: AudioContext | null = null;
-  private isMuted: boolean = false;
-  
-  private sirenOsc: OscillatorNode | null = null;
-  private sirenGain: GainNode | null = null;
-  private sirenActive: boolean = false;
-  private sirenPitch: number = 400; // Base siren pitch
+  private master: GainNode | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private nodes = new Set<OscillatorNode>();
+  private beat = 0;
+  private threat = 0;
+  private muted = false;
+  private volume = DEFAULT_GAME_VOLUME;
 
-  private ambientOsc: OscillatorNode[] = [];
-  private ambientGain: GainNode | null = null;
-  private ambientActive: boolean = false;
-
-  constructor() {
-    try {
-      const AudioContextConstructor = window.AudioContext || (window as WindowWithWebkitAudioContext).webkitAudioContext;
-      if (!AudioContextConstructor) return;
-      this.ctx = new AudioContextConstructor();
-    } catch {
-      console.warn("AudioContext not supported");
+  start() {
+    if (typeof AudioContext === 'undefined') return;
+    if (!this.ctx) {
+      this.ctx = new AudioContext();
+      this.master = this.ctx.createGain();
+      this.master.connect(this.ctx.destination);
     }
+    this.master!.gain.value = this.muted ? 0 : this.volume;
+    void this.ctx.resume().catch(() => {});
+    if (this.timer) return;
+    this.timer = setInterval(() => this.music(), 290);
   }
-
-  public init() {
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+  pause() {
+    this.stopMusic();
+    if (this.ctx?.state === 'running') void this.ctx.suspend().catch(() => {});
   }
-
-  // Hyoshigi Wooden Clack (Replaces chomp)
-  public playChomp() {
-    if (!this.ctx || this.isMuted) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.03);
-    
-    // very short, sharp envelope for a wood block strike
-    gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
-    
+  stopMusic() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    this.threat = 0;
+  }
+  setMuted(value: boolean) {
+    this.muted = value;
+    if (this.ctx && this.master)
+      this.master.gain.setTargetAtTime(value ? 0 : this.volume, this.ctx.currentTime, 0.03);
+  }
+  setVolume(value: number) {
+    this.volume = Math.max(0, Math.min(1, value));
+    this.setMuted(this.muted);
+  }
+  setThreat(value: number) {
+    this.threat = value;
+  }
+  private tone(
+    frequency: number,
+    duration: number,
+    volume: number,
+    type: OscillatorType = 'sine',
+    slide?: number,
+    delay = 0,
+  ) {
+    if (!this.ctx || !this.master || this.ctx.state !== 'running') return;
+    const start = this.ctx.currentTime + delay,
+      osc = this.ctx.createOscillator(),
+      gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, start);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, start + duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.05);
+    gain.connect(this.master);
+    this.nodes.add(osc);
+    osc.onended = () => {
+      osc.disconnect();
+      gain.disconnect();
+      this.nodes.delete(osc);
+    };
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
   }
-
-  // Kiai / Katana focus hum
-  public playPowerPelletLoop() {
-    if (!this.ctx || this.isMuted) return;
-    this.stopSiren(); 
-
-    this.sirenOsc = this.ctx.createOscillator();
-    this.sirenGain = this.ctx.createGain();
-    
-    this.sirenOsc.type = 'triangle';
-    this.sirenOsc.frequency.value = 400; // High frequency tension
-    
-    // Subtly ascending tension
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
-    lfo.type = 'sine';
-    lfo.frequency.value = 6; 
-    lfoGain.gain.value = 50;
-    
-    lfo.connect(lfoGain);
-    lfoGain.connect(this.sirenOsc.frequency);
-
-    this.sirenGain.gain.value = 0.02;
-
-    this.sirenOsc.connect(this.sirenGain);
-    this.sirenGain.connect(this.ctx.destination);
-
-    lfo.start();
-    this.sirenOsc.start();
-    this.sirenActive = true;
+  private music() {
+    // A sparse plucked motif. Pursuit adds a quicker low percussion layer.
+    const motif = [220, 0, 329.63, 0, 293.66, 0, 0, 261.63, 220, 0, 392, 329.63, 0, 293.66, 0, 0];
+    const note = motif[this.beat % motif.length];
+    if (note) this.tone(note, 0.8, 0.08, 'triangle');
+    if (this.beat % 4 === 0) this.tone(73.42, 0.8, 0.06, 'sine', 55);
+    if (this.threat > 0.5 && this.beat % 2 === 0) this.tone(120, 0.12, 0.12, 'sine', 45);
+    this.beat++;
   }
-
-  // Taiko Heartbeat Drone
-  public playSiren(levelIntensity: number) {
-    if (!this.ctx || this.isMuted || this.sirenActive) return;
-    
-    this.sirenOsc = this.ctx.createOscillator();
-    this.sirenGain = this.ctx.createGain();
-    
-    this.sirenOsc.type = 'sine';
-    
-    // Deep rhythmic pulse
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
-    lfo.type = 'square';
-    lfo.frequency.value = 1.5 + (levelIntensity * 0.2); 
-    lfoGain.gain.value = 0.03;
-    
-    lfo.connect(this.sirenGain.gain);
-    
-    this.sirenOsc.frequency.value = 60 + (levelIntensity * 2); // Very low pitch
-
-    this.sirenGain.gain.value = 0.04;
-
-    this.sirenOsc.connect(this.sirenGain);
-    this.sirenGain.connect(this.ctx.destination);
-
-    lfo.start();
-    this.sirenOsc.start();
-    this.sirenActive = true;
-  }
-
-  public stopSiren() {
-    if (this.sirenOsc && this.sirenActive) {
-      this.sirenOsc.stop();
-      this.sirenOsc.disconnect();
-      this.sirenOsc = null;
-      this.sirenActive = false;
+  play(cue: SoundCue) {
+    switch (cue) {
+      case 'spirit':
+        [293.66, 440, 587.33, 880].forEach((note, i) =>
+          this.tone(note, 0.65, 0.11, 'sine', note * 1.5, i * 0.09),
+        );
+        break;
+      case 'spiritWarning':
+        [0, 0.25, 0.5].forEach((delay) =>
+          this.tone(587.33, 0.12, 0.08, 'triangle', undefined, delay),
+        );
+        break;
+      case 'spiritEnd':
+        this.tone(587.33, 0.65, 0.12, 'sine', 146.83);
+        break;
+      case 'knockout':
+        this.tone(180, 0.14, 0.16, 'triangle', 50);
+        this.tone(1174.66, 0.3, 0.08, 'sine', 587.33, 0.04);
+        break;
+      case 'step':
+        this.tone(105, 0.055, 0.04, 'triangle', 60);
+        break;
+      case 'dash':
+        this.tone(240, 0.2, 0.12, 'triangle', 70);
+        break;
+      case 'seal':
+        [659.25, 880, 1318.51].forEach((note, i) =>
+          this.tone(note, 0.35, 0.1, 'sine', undefined, i * 0.085),
+        );
+        break;
+      case 'treasure':
+        [440, 554.37, 659.25].forEach((note, i) =>
+          this.tone(note, 0.4, 0.1, 'triangle', undefined, i * 0.06),
+        );
+        break;
+      case 'alert':
+        this.tone(880, 0.6, 0.1, 'sine', 440);
+        break;
+      case 'caught':
+        this.tone(110, 1, 0.16, 'sine', 48);
+        break;
+      case 'escaped':
+        [220, 329.63, 440, 659.25].forEach((note, i) =>
+          this.tone(note, 1, 0.09, 'triangle', undefined, i * 0.14),
+        );
+        break;
     }
   }
-
-  public playDeath() {
-    if (!this.ctx || this.isMuted) return;
-    this.stopSiren();
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    // Deep Gong/Bell sound
-    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 2.0);
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 2.0);
-
-    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 2.0);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start();
-    osc.stop(this.ctx.currentTime + 2.0);
-  }
-
-  public toggleMute() {
-    this.isMuted = !this.isMuted;
-    if (this.isMuted) this.stopSiren();
-    return this.isMuted;
-  }
-
-  public playEatEnemy() {
-    if (!this.ctx || this.isMuted) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    // Sword slash "shing!" ring
-    osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(2000, this.ctx.currentTime + 0.1);
-
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.2);
-  }
-
-  public playCoinInsert() {
-    if (!this.ctx || this.isMuted) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'square';
-    osc1.frequency.setValueAtTime(987.77, this.ctx.currentTime); 
-    osc1.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.1); 
-    
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(990, this.ctx.currentTime);
-    osc2.frequency.setValueAtTime(1320, this.ctx.currentTime + 0.1);
-
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
-
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc1.start(this.ctx.currentTime);
-    osc2.start(this.ctx.currentTime);
-    osc1.stop(this.ctx.currentTime + 0.6);
-    osc2.stop(this.ctx.currentTime + 0.6);
-  }
-
-  public playMenuAmbience() {
-    if (!this.ctx || this.isMuted || this.ambientActive) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-
-    this.ambientGain = this.ctx.createGain();
-    this.ambientGain.gain.setValueAtTime(0.015, this.ctx.currentTime); // Very quiet deep drone
-
-    // 3 oscillators for a thick dark synth pad
-    const freqs = [55, 110, 165]; // Low A
-    this.ambientOsc = freqs.map(freq => {
-      const osc = this.ctx!.createOscillator();
-      osc.type = 'sawtooth';
-      
-      // Slow subtle LFO for pitch drifting
-      const lfo = this.ctx!.createOscillator();
-      const lfoGain = this.ctx!.createGain();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.2 + (Math.random() * 0.2); // Very slow
-      lfoGain.gain.value = 1.5; // Slight detuning
-      
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      osc.frequency.value = freq;
-
-      // Filter to dampen the harsh sawtooth
-      const filter = this.ctx!.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 300; 
-
-      osc.connect(filter);
-      filter.connect(this.ambientGain!);
-
-      lfo.start();
-      osc.start();
-      return osc;
-    });
-
-    this.ambientGain.connect(this.ctx.destination);
-    this.ambientActive = true;
-  }
-
-  public stopMenuAmbience() {
-    if (this.ambientActive && this.ambientGain) {
-      this.ambientGain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 1);
-      setTimeout(() => {
-        this.ambientOsc.forEach(osc => {
-           try { osc.stop(); osc.disconnect(); } catch {}
-        });
-        this.ambientOsc = [];
-        this.ambientGain?.disconnect();
-        this.ambientGain = null;
-        this.ambientActive = false;
-      }, 1000);
+  dispose() {
+    this.stopMusic();
+    for (const node of this.nodes) {
+      try {
+        node.stop();
+      } catch {
+        /* Already ended. */
+      }
+      node.disconnect();
     }
+    this.nodes.clear();
+    this.master?.disconnect();
+    if (this.ctx) void this.ctx.close().catch(() => {});
+    this.ctx = null;
+    this.master = null;
   }
 }

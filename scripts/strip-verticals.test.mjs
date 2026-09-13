@@ -48,6 +48,12 @@ afterEach(() => {
 });
 
 describe("the known verticals", () => {
+  it("ignores generated Arcade bundles while still checking application source", () => {
+    write(".next-arcade/dev/bundle.js", `${START} movement\ncompiled chunk`);
+    expect(checkTree(root).errors).toEqual([]);
+    write("src/broken.ts", `${START} movement\nreal source`);
+    expect(checkTree(root).errors.length).toBeGreaterThan(0);
+  });
   it("come from the module registry, plus the moduleless demos, minus base", () => {
     const known = loadKnownVerticals(root);
 

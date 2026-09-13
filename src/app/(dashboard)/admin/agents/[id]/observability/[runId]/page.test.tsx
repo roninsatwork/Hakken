@@ -18,8 +18,7 @@ function render(ui: React.ReactElement) {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentJobDetailPage, { RawButton } from "./page";
-import { AgentJobDetailContent } from "./AgentJobDetailContent";
+import AgentJobDetailPage from "./page";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn(), useMutation: () => vi.fn() }));
 
@@ -98,16 +97,11 @@ describe("AgentJobDetailPage", () => {
   let detailFixture: unknown;
   let logsFixture: unknown;
 
-  const renderPage = () =>
-    render(
-      <AgentJobDetailContent
-        agentId={"agent_1" as React.ComponentProps<typeof AgentJobDetailContent>["agentId"]}
-        runId={"run_1" as React.ComponentProps<typeof AgentJobDetailContent>["runId"]}
-        detail={detailFixture as React.ComponentProps<typeof AgentJobDetailContent>["detail"]}
-        logs={logsFixture as React.ComponentProps<typeof AgentJobDetailContent>["logs"]}
-        RawButton={RawButton}
-      />,
-    );
+  const renderPage = async () => {
+    render(<AgentJobDetailPage />);
+    if (detailFixture === null) await screen.findByText("This job could not be found");
+    else await screen.findByRole("region", { name: "Where the time went" });
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -126,8 +120,8 @@ describe("AgentJobDetailPage", () => {
   const waterfall = () => screen.getByRole("region", { name: "Where the time went" });
   const exchange = () => screen.getByRole("region", { name: "What was actually said" });
 
-  it("leads with what the job was asked to do and how it ended", () => {
-    renderPage();
+  it("leads with what the job was asked to do and how it ended", async () => {
+    await renderPage();
 
     expect(screen.getByText("Find new three-bed listings in Bristol under £400k")).toBeInTheDocument();
     expect(screen.getByText("Why it stopped")).toBeInTheDocument();
@@ -137,7 +131,7 @@ describe("AgentJobDetailPage", () => {
     expect(screen.getAllByText("Failed").length).toBeGreaterThan(0);
   });
 
-  it("summarises generated Rightmove collection objectives without exposing tool instructions as the title", () => {
+  it("summarises generated Rightmove collection objectives without exposing tool instructions as the title", async () => {
     detailFixture = detail({
       run: {
         ...detail().run,
@@ -153,7 +147,7 @@ describe("AgentJobDetailPage", () => {
         finalOutput: "The property collection job has successfully started.",
       },
     });
-    renderPage();
+    await renderPage();
 
     expect(screen.getByRole("heading", { name: "Gather Rightmove properties" })).toBeInTheDocument();
     expect(screen.getByText("Rightmove search · up to 100 properties")).toBeInTheDocument();
@@ -163,8 +157,8 @@ describe("AgentJobDetailPage", () => {
     expect(screen.queryByText(/Use 100 as the maxProperties value/)).not.toBeInTheDocument();
   });
 
-  it("names each step in ordinary words rather than the runtime's own", () => {
-    renderPage();
+  it("names each step in ordinary words rather than the runtime's own", async () => {
+    await renderPage();
 
     const chart = within(waterfall());
     expect(chart.getByText("Read the request")).toBeInTheDocument();
@@ -180,7 +174,7 @@ describe("AgentJobDetailPage", () => {
    * given, and the result step with the runtime's own `property_search`. Read
    * together they told the reader neither which tool ran nor when.
    */
-  it("names the tool on both tool steps, never the arguments it was called with", () => {
+  it("names the tool on both tool steps, never the arguments it was called with", async () => {
     detailFixture = detail({
       steps: [
         step("s3", "TOOL_CALL", 5_900, "SUCCESS", '{"job":"jKpgGfgRfzrGgEM","settings":"{}"}'),
@@ -189,7 +183,7 @@ describe("AgentJobDetailPage", () => {
         step("s5", "TOOL_RESULT", 6_100, "SUCCESS", "property_search"),
       ],
     });
-    renderPage();
+    await renderPage();
 
     const chart = within(waterfall());
     expect(chart.getByText("Used property search")).toBeInTheDocument();
@@ -202,16 +196,16 @@ describe("AgentJobDetailPage", () => {
    * The whole point of the waterfall: one step ate the job, and the reader
    * should not have to work that out by comparing six numbers.
    */
-  it("says outright where the time went when one step dominated", () => {
-    renderPage();
+  it("says outright where the time went when one step dominated", async () => {
+    await renderPage();
 
     expect(
       screen.getByText(/of this job was spent on a step that then failed/)
     ).toBeInTheDocument();
   });
 
-  it("shows each step's real elapsed time, not the zero the runtime records", () => {
-    renderPage();
+  it("shows each step's real elapsed time, not the zero the runtime records", async () => {
+    await renderPage();
 
     const chart = within(waterfall());
     expect(chart.getByText("900ms")).toBeInTheDocument();
@@ -219,8 +213,8 @@ describe("AgentJobDetailPage", () => {
     expect(chart.getByText("25.5s")).toBeInTheDocument();
   });
 
-  it("translates raw log entries out of the runtime's vocabulary", () => {
-    renderPage();
+  it("translates raw log entries out of the runtime's vocabulary", async () => {
+    await renderPage();
 
     const raw = within(exchange());
     expect(raw.getByText("Worked out what to say")).toBeInTheDocument();
@@ -229,8 +223,8 @@ describe("AgentJobDetailPage", () => {
     expect(screen.queryByText(/TOOL DISPATCH/)).not.toBeInTheDocument();
   });
 
-  it("opens what was sent and what came back, side by side, in place", () => {
-    renderPage();
+  it("opens what was sent and what came back, side by side, in place", async () => {
+    await renderPage();
 
     expect(screen.queryByText("What we sent")).not.toBeInTheDocument();
 
@@ -241,31 +235,31 @@ describe("AgentJobDetailPage", () => {
     expect(screen.getByText("I will search Bristol.")).toBeInTheDocument();
   });
 
-  it("says a job with no steps recorded nothing, rather than drawing an empty chart", () => {
+  it("says a job with no steps recorded nothing, rather than drawing an empty chart", async () => {
     detailFixture = detail({ steps: [] });
-    renderPage();
+    await renderPage();
 
     expect(screen.getByText("No steps were recorded")).toBeInTheDocument();
   });
 
-  it("explains an empty exchange rather than leaving a blank panel", () => {
+  it("explains an empty exchange rather than leaving a blank panel", async () => {
     // Jobs that ran before log entries recorded their run have nothing to show.
     logsFixture = [];
-    renderPage();
+    await renderPage();
 
     expect(screen.getByText("Nothing was recorded for this job")).toBeInTheDocument();
   });
 
-  it("offers a way back when the job cannot be found", () => {
+  it("offers a way back when the job cannot be found", async () => {
     detailFixture = null;
-    renderPage();
+    await renderPage();
 
     expect(screen.getByText("This job could not be found")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to the overview" }));
     expect(pushMock).toHaveBeenCalledWith("/admin/agents/agent_1/observability");
   });
 
-  it("waits rather than rendering a half-built screen", () => {
+  it("waits rather than rendering a half-built screen", async () => {
     detailFixture = undefined;
     const { container } = render(<AgentJobDetailPage />);
 

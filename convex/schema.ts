@@ -374,11 +374,22 @@ export default defineSchema({
   arcadeScores: defineTable({
     userId: v.id("users"),
     companyId: v.optional(v.id("companies")),
-    game: v.string(), // e.g., "pacman"
+    game: v.string(),
     score: v.number(),
     playedAt: v.number(),
+    runId: v.optional(v.id("arcadeRuns")),
   }).index("by_game_score", ["game", "score"])
+    .index("by_company_game_score", ["companyId", "game", "score"])
+    .index("by_user_company_game_score", ["userId", "companyId", "game", "score"])
     .index("by_user", ["userId"]),
+  arcadeRuns: defineTable({
+    level: v.optional(v.union(v.literal("courtyard"), v.literal("market"), v.literal("docks"), v.literal("gardens"))),
+    userId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
+    startedAt: v.number(),
+    score: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+  }).index("by_user_started", ["userId", "startedAt"]),
   // template:remove:end
 
   plans: defineTable({

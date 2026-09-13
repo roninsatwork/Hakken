@@ -101,7 +101,8 @@ function countDrift() {
  * anything failing. A ratchet with slack in it is not a ratchet, and the
  * palette work that should have lowered it left it alone deliberately.
  */
-const DRIFT_BASELINE = 1052;
+// 2026-09-12: the Night Heist arcade replacement removes 21 colour literals.
+const DRIFT_BASELINE = 1031;
 
 /**
  * Files allowed to keep a local `get*Color`-style helper: one maps patch

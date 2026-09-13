@@ -84,6 +84,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/reports")) return [t("reports")];
   if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
   if (pathname.startsWith("/app/settings")) return [t("organization")];
+  if (pathname.startsWith("/app/arcade/ronins-run-3d")) return [t("arcade"), t("roninsRun3D")];
   if (pathname.startsWith("/app/arcade/ronins-run")) return [t("arcade"), t("roninsRun")];
   if (pathname.startsWith("/demos")) return [t("postureStudio")];
   return [dashboardLabel];
