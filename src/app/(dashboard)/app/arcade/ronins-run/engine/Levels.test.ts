@@ -4,6 +4,10 @@ import { ACTOR_RADIUS, clearPath, distance, isWalkable } from './MapData';
 import { navigationFor } from './Navigation';
 import { NightHeistSimulation } from './NightHeistSimulation';
 
+// These integration checks scan or play a whole map. Coverage on the two-core
+// CI runner can exceed Vitest's 5s unit-test default without a gameplay failure.
+const FULL_MAP_TIMEOUT_MS = 30_000;
+
 for (const level of LEVELS)
   describe(level.id, () => {
     it('places every objective and patrol on reachable painted ground', () => {
@@ -29,8 +33,7 @@ for (const level of LEVELS)
           previous = point;
         }
       }
-    // Full-map path scans need room for coverage instrumentation on slower CI runners.
-    }, 30_000);
+    }, FULL_MAP_TIMEOUT_MS);
     it('physically completes every objective route without corner snags', () => {
       const game = new NightHeistSimulation(level);
       game.start();
@@ -53,7 +56,7 @@ for (const level of LEVELS)
         seals: 3,
         treasure: true,
       });
-    });
+    }, FULL_MAP_TIMEOUT_MS);
     it('supports a full escape with live patrols and ordinary timed decoys', () => {
       const game = new NightHeistSimulation(level);
       game.start();
@@ -89,7 +92,7 @@ for (const level of LEVELS)
           })),
         }),
       ).toMatchObject({ outcome: 'escaped', seals: 3, treasure: true });
-    });
+    }, FULL_MAP_TIMEOUT_MS);
   });
 it('keeps navigation isolated when maps run or reload alongside one another', () => {
   const [courtyard, market] = LEVELS;

@@ -69,6 +69,8 @@ it("keeps the coat opening and a continuous shaped palm", () => {
   dispose(coat, {}); dispose(palm, { mat });
 });
 
+// Constructing and inspecting a complete district is an integration check;
+// coverage on the two-core CI runner takes longer than the 5s unit-test default.
 it.each(LEVELS)("keeps $id scenery finite and bounded after spatial batching", (level) => {
   const mats = palette(), root = new THREE.Group(), scene = new THREE.Scene();
   if (level.id === "courtyard") courtyardArt(level, mats, root, scene);
@@ -82,4 +84,4 @@ it.each(LEVELS)("keeps $id scenery finite and bounded after spatial batching", (
   expect(counts.triangles).toBeLessThan(1_200_000);
   expect(counts.meshes).toBeLessThan(430);
   dispose(root, mats);
-});
+}, 30_000);
