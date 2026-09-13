@@ -20,8 +20,10 @@ tmp
 bespoke-installation
 services
 messages/*.orig
-*.test.ts
-*.test.tsx
+# Docker's plain * only matches the root; nested tests also depend on the
+# development helpers excluded above, so remove tests at every depth.
+**/*.test.ts
+**/*.test.tsx
 tsconfig.tsbuildinfo
 .claude
 .github

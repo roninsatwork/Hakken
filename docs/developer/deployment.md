@@ -187,6 +187,12 @@ Next's TypeScript worker has the same 4 GiB heap allowance as the normal
 2026-09-13 release. This setting applies only to the build command; the
 separate runtime stage does not inherit it, and type checking remains enabled.
 
+The build context excludes TypeScript tests at every depth with
+`**/*.test.ts` and `**/*.test.tsx`. Docker's `*.test.ts` pattern only matches
+the context root, leaving nested tests to import development helpers that
+the image excludes. CI continues to test and type-check the complete
+checkout; the image checks the application files it ships.
+
 Deploys are serialised: `concurrency: deploy-to-cloud-run` with
 `cancel-in-progress: false`. Two pushes to `main` minutes apart used to start
 two full deploys side by side, which doubled the billed minutes and let the
