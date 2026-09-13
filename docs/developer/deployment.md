@@ -181,6 +181,12 @@ nothing read — `.dockerignore` excludes `.next` from the build context, and th
 image builds the app itself in its builder stage — so it was about five minutes
 a release spent on output that was thrown away.
 
+The Docker build command sets `NODE_OPTIONS=--max-old-space-size=4096` so
+Next's TypeScript worker has the same 4 GiB heap allowance as the normal
+`npm run typecheck`. The container's default 2 GiB heap was exhausted during the
+2026-09-13 release. This setting applies only to the build command; the
+separate runtime stage does not inherit it, and type checking remains enabled.
+
 Deploys are serialised: `concurrency: deploy-to-cloud-run` with
 `cancel-in-progress: false`. Two pushes to `main` minutes apart used to start
 two full deploys side by side, which doubled the billed minutes and let the

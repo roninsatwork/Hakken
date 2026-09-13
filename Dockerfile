@@ -36,7 +36,10 @@ ENV CONVEX_SITE_URL=$CONVEX_SITE_URL
 ARG CONVEX_DEPLOYMENT
 ENV CONVEX_DEPLOYMENT=$CONVEX_DEPLOYMENT
 
-RUN npm run build
+# Match the normal typecheck's 4 GiB heap: the container default is 2 GiB,
+# which exhausts memory in Next's TypeScript worker. Scope this to the build
+# command so the final Cloud Run image keeps its existing runtime settings.
+RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 FROM base AS runner
 WORKDIR /app
