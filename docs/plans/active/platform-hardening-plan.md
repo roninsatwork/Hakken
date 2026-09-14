@@ -1158,6 +1158,10 @@ Only start this once Phases 0–2 are done.
 
 ### P4.1 — Entity generator — DONE 2026-07-25
 
+Historical implementation record below. The September extension supersedes the
+manual schema/sidebar steps and command behaviour: see the current
+[Feature Generator guide](../../developer/feature-generator.md).
+
 `scripts/generate-entity.mjs` scaffolds a domain entity: the Convex module, its
 test, the admin page, and both locale files.
 
@@ -1287,27 +1291,22 @@ that is the recurring per-product cost.
 Extract the repeated list/detail/form patterns into data-driven components. Target
 the top 5 offenders first.
 
-### P4.3 — Template branch — rebuilt 2026-08-19 (fences only)
+### P4.3 — Template export — extended 2026-09-13
 
-**What exists today.** `npm run template:build -- --keep <verticals> --out
-<dir>` (`scripts/strip-verticals.mjs`) copies the repo into a fresh directory
-with the fenced blocks of every vertical not kept removed. `npm run
-check:fences` (the same script's `--check` mode, wired into `check:guards`)
-fails the build on any unbalanced fence or unregistered vertical name, so the
-markers can no longer rot in silence. The vertical names are read from
-`COMPANY_MODULES` in `convex/utils/companyModules.ts`, plus the moduleless
-demos `movement` and `arcade`. `scripts/strip-verticals.test.mjs` covers the
-stripping and the validation against probe repos in a temp directory.
+`npm run template:build -- --out <dir>` now creates a framework **with Arcade**
+and removes the four unselected optional areas (`movement`, `properties`,
+`salesReports`, `salesData`). `--keep` retains selected areas and `--dry-run`
+previews the result. `template.verticals.json` owns whole paths, packages,
+scripts and locale namespaces; line fences handle shared files.
 
-**What no longer exists.** The original build described below —
-`template.manifest.json`, `scripts/build-template.mjs`,
-`src/template-boundary.test.ts` — was DONE on 2026-07-25 and then removed
-whole on 2026-08-09 (`a7199b8f`, see the public-website plan: the repo is now
-cloned whole, not generated). Between those dates and 2026-08-19 the fence
-markers had no executor at all. The manifest and its file-level removal have
-not been rebuilt: today's stripper removes fenced blocks only, so a stripped
-vertical's own files stay in the tree and the output does not typecheck until
-they are deleted by hand — the build prints exactly that warning.
+The existing `check:fences` guard validates ownership and remaining references
+for all 16 combinations. `npm run template:verify -- --matrix --browser`
+installs, checks and builds generated copies and runs base browser smoke tests.
+Final verification is tracked in the [Clean Cut plan](client-product-cut-plan.md).
+See [the cloning guide](../../operator/cloning-sonae.md) for the supported workflow.
+
+The historical descriptions below record earlier implementations and evidence;
+their removal of Arcade is superseded by the current requirement to retain it.
 
 **History — the 2026-07-25 build, for the record.** `npm run template:build --
 --out <dir>` wrote the repo with `properties`, `salesReports`, `arcade` and

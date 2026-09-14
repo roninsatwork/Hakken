@@ -71,7 +71,7 @@ describe("CompanyFeaturesPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    setCompanyModules.mockResolvedValue(["salesData"]);
+    setCompanyModules.mockResolvedValue(["calls"]);
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("setCompanyModules")) {
@@ -91,10 +91,10 @@ describe("CompanyFeaturesPage", () => {
 
     // Twice on purpose: once visibly in the name column, and once as the
     // tick box's own label, which is hidden but still tied to the box.
-    const named = screen.getAllByText("modules.salesData.name");
+    const named = screen.getAllByText("modules.calls.name");
     expect(named).toHaveLength(2);
     expect(named.some((node) => node.classList.contains("sr-only"))).toBe(true);
-    expect(screen.getByRole("checkbox", { name: "modules.salesData.name" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "modules.calls.name" })).toBeInTheDocument();
   });
 
   it("carries the house search box and pagination footer", async () => {
@@ -111,10 +111,10 @@ describe("CompanyFeaturesPage", () => {
     render(<CompanyFeaturesPage />);
 
     fireEvent.change(await screen.findByPlaceholderText("featuresSearchPlaceholder"), {
-      target: { value: "salesData" },
+      target: { value: "calls" },
     });
 
-    expect(screen.getByRole("checkbox", { name: "modules.salesData.name" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "modules.calls.name" })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "modules.tasks.name" })).not.toBeInTheDocument();
   });
 
@@ -143,10 +143,10 @@ describe("CompanyFeaturesPage", () => {
   });
 
   it("reflects what the company already has switched on", async () => {
-    mockQueries({ enabledModules: ["salesData"] });
+    mockQueries({ enabledModules: ["calls"] });
     render(<CompanyFeaturesPage />);
 
-    expect(await screen.findByRole("checkbox", { name: /salesData/ })).toBeChecked();
+    expect(await screen.findByRole("checkbox", { name: /calls/ })).toBeChecked();
   });
 
   it("saves through its own mutation, not the profile save", async () => {
@@ -155,14 +155,14 @@ describe("CompanyFeaturesPage", () => {
     const save = await screen.findByRole("button", { name: /Save Features/i });
     expect(save).toBeDisabled();
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
     expect(save).toBeEnabled();
     fireEvent.click(save);
 
     await waitFor(() => {
       expect(setCompanyModules).toHaveBeenCalledWith({
         id: "company_1",
-        enabledModules: ["salesData"],
+        enabledModules: ["calls"],
       });
     });
     // The profile mutations must not fire: ticking a module should not rewrite
@@ -171,10 +171,10 @@ describe("CompanyFeaturesPage", () => {
   });
 
   it("can switch a module back off", async () => {
-    mockQueries({ enabledModules: ["salesData"] });
+    mockQueries({ enabledModules: ["calls"] });
     render(<CompanyFeaturesPage />);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {
@@ -189,7 +189,7 @@ describe("CompanyFeaturesPage", () => {
     setCompanyModules.mockRejectedValue(new Error("Unauthorized"));
     render(<CompanyFeaturesPage />);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /salesData/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {

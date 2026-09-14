@@ -300,6 +300,14 @@ build rather than reaching a user.
 
 ---
 
+## 13. Connector Authorisation And Tool Servers
+
+Gmail connector OAuth includes code exchange, encrypted token storage, refresh
+and revocation in `convex/connectorOAuth.ts`. MCP server configuration, discovery,
+tool import and governed execution are implemented in `convex/mcpServers.ts`,
+`convex/mcpDiscovery.ts` and `convex/mcpToolCall.ts`. These are capabilities in the
+code; each deployment still needs its own credentials and connection checks.
+
 # Part Three — Not Built Yet
 
 Listed so that nothing above has to be hedged. These are tracked in
@@ -308,20 +316,20 @@ Listed so that nothing above has to be hedged. These are tracked in
 | Area | Current state |
 |---|---|
 | Connector marketplace | 29 connector tools are defined with schemas and scopes; **2 are executable end-to-end** (knowledge search, company overview update). Five return an explicit "not implemented" result and the remainder are not registered. |
-| Connector OAuth | Install and status records exist, but there is no authorisation-code exchange, token storage, refresh, or revocation. Configuration validation checks local settings only — it does not contact the provider. |
-| MCP (Model Context Protocol) | Not supported. |
 | Response streaming | Built for chat: assistant and widget replies stream word by word on all providers, and agent-backed threads already did. Structured-output surfaces (reports, node-config generation, grading) still deliver whole. See `docs/plans/active/assistant-streaming-all-providers-plan.md`. |
 | Prompt caching | Not implemented. |
 | Run cancellation and resumption | Cancellation marks the record but does not interrupt an in-flight run; failed runs cannot be resumed from a checkpoint. |
 | Agent evaluations | The default readiness check validates configuration rather than model behaviour. Model-graded evaluation exists but does not exercise the full agent runtime. |
 | Behavioural rules in agents | The rule engine applies to the assistant chat path only. Agent behaviour is governed by system prompt, skills, and tool policy. |
 | Workflow resilience | Automatic retries exist, deliberately narrow: a step retries only if the error classifies as transient **and** the node type cannot repeat an externally visible effect. Today that is `agentNode` alone, up to 3 attempts, and even then not when the agent executes tools autonomously or when the failure came after the real work finished. Email, action, and database nodes never retry. No dead-letter queue and no compensating actions; anything unretryable fails to the review list. |
-| Observability | Sentry is **installed and wired** — server, edge, and client start-up hooks, plus `onRequestError` so server components and route handlers report. It **no-ops until a DSN is configured**, which has not been done, so there is no live error signal yet. Tracing, alerting, and a health endpoint beyond the in-app system health surface remain unbuilt. |
+| Observability | Sentry hooks and configurable tracing are implemented but require deployment configuration. `/api/health` provides liveness and `?deps=1` checks Convex HTTP reachability; neither proves database/function health. Live monitoring, alert delivery and release tags must be verified for each deployment. See `docs/developer/deployment.md`. |
 | Schema migrations | Schema changes are pushed ahead of the application image, but data migrations have tooling: named, resumable, idempotent backfills in `convex/dataMigrations.ts`, run one page at a time with progress recorded so a completed migration never re-runs. |
 
 ---
 
 ## Change Log
+
+* **2026-09-13** — Corrected OAuth, MCP and health-endpoint implementation claims against the code. Live deployment readiness remains a separate check.
 
 * **2026-08-23 (later)** — Three claims corrected against the code. Tenant
   isolation is now structurally enforced by function builders plus a CI test,

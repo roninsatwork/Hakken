@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { CORE_MODULES, DEFAULT_COMPANY_MODULE_KEYS, PROPERTIES_MODULE_KEY, REPORTS_MODULE_KEY } from "./utils/coreModules";
+import { CORE_MODULES, DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
+// template:remove:start properties
+import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
+// template:remove:end
+// template:remove:start salesReports
+import { REPORTS_MODULE_KEY } from "./utils/coreModules";
+// template:remove:end
 
 /**
  * A capability switched off is unreachable, not merely hidden.
@@ -104,6 +110,7 @@ describe("a withheld capability refuses by URL, not by menu", () => {
     expect(await t.mutation(api.kiosk.createKioskThread, { widgetId })).toBeNull();
   });
 
+// template:remove:start properties
   test("properties", async () => {
     const t = makeTest();
     const { memberId } = await seedCompany(t, []);
@@ -117,13 +124,16 @@ describe("a withheld capability refuses by URL, not by menu", () => {
     // The soft dashboard read stays soft: empty, not an error.
     expect(await asUser(t, memberId).query(api.properties.getLatestRuns, {})).toEqual([]);
   });
+// template:remove:end
 
+// template:remove:start salesReports
   test("reports", async () => {
     const t = makeTest();
     const { adminId } = await seedCompany(t, []);
 
     await expect(asUser(t, adminId).query(api.salesReports.getLatestReport, {})).rejects.toThrow(WITHHELD);
   });
+// template:remove:end
 
   test("wiki", async () => {
     const t = makeTest();
@@ -138,13 +148,16 @@ describe("a withheld capability refuses by URL, not by menu", () => {
 describe("who still passes", () => {
   test("the same calls succeed once the module is on", async () => {
     const t = makeTest();
-    const { memberId, adminId } = await seedCompany(t, [...DEFAULT_COMPANY_MODULE_KEYS]);
+    const { memberId, adminId: _adminId } = await seedCompany(t, [...DEFAULT_COMPANY_MODULE_KEYS]);
 
     await expect(
       asUser(t, memberId).query(api.tasks.listTasks, { paginationOpts: { numItems: 5, cursor: null } })
     ).resolves.toBeDefined();
     await expect(asUser(t, memberId).query(api.telephony.listCalls, {})).resolves.toBeDefined();
-    await expect(asUser(t, adminId).query(api.salesReports.getLatestReport, {})).resolves.toBeNull();
+// template:remove:start salesReports
+    await expect(asUser(t, _adminId).query(api.salesReports.getLatestReport, {})).resolves.toBeNull();
+// template:remove:end
+
   });
 
   test("a super admin passes with every module withheld, because the console is where withholding is administered", async () => {
@@ -258,7 +271,15 @@ describe("a plan grants capabilities", () => {
 describe("what a company is offered", () => {
   test("the registry names every core capability and the defaults grant them all", () => {
     expect(DEFAULT_COMPANY_MODULE_KEYS).toEqual(
-      expect.arrayContaining([...Object.values(CORE_MODULES), REPORTS_MODULE_KEY, PROPERTIES_MODULE_KEY])
+      expect.arrayContaining([
+        ...Object.values(CORE_MODULES),
+        // template:remove:start salesReports
+        REPORTS_MODULE_KEY,
+        // template:remove:end
+        // template:remove:start properties
+        PROPERTIES_MODULE_KEY,
+        // template:remove:end
+      ])
     );
   });
 

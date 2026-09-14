@@ -24,7 +24,7 @@ type ScriptRunResult = {
 async function executeMaintenanceScript(
   ctx: MutationCtx,
   scriptId: MaintenanceScriptId,
-  actorId: Id<"users">,
+  _actorId: Id<"users">,
 ): Promise<ScriptRunResult> {
   if (scriptId === "inventory-rollup-rebuild") {
     const result = await rebuildGlobalInventoryRollupData(ctx);
@@ -41,7 +41,7 @@ async function executeMaintenanceScript(
 
   // template:remove:start salesData
   if (scriptId === "comax-agents-provision") {
-    return await provisionComaxAgents(ctx, actorId);
+    return await provisionComaxAgents(ctx, _actorId);
   }
   // template:remove:end
 

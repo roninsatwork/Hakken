@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState, type ButtonHTMLAttributes, type ComponentType } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+// template:remove:start salesData
+import { useQuery } from "convex/react";
+// template:remove:end
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

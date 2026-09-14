@@ -29,7 +29,10 @@ import { describe, expect, test } from "vitest";
 const NOT_YET_CONVERTED = new Set([
   // The movement demo is frozen (AGENTS.md); its four throws are left alone
   // rather than converted, and go when the demo goes.
+// template:remove:start movement
   "convex/movements.ts",
+// template:remove:end
+
   // Not a throw: the phrase appears inside this module's own explanation of
   // why plain throws do not survive production.
   "convex/utils/appError.ts",
@@ -64,7 +67,11 @@ describe("appError conversion holds and spreads", () => {
    * since it was written, and nothing checked: adding a newly-unconverted file
    * passed green, which is the one thing the rule forbids.
    */
-  const NOT_YET_CONVERTED_CEILING = 2;
+  const NOT_YET_CONVERTED_CEILING = 1
+    // template:remove:start movement
+    + 1
+    // template:remove:end
+    ;
 
   test("the unconverted list only shrinks", () => {
     expect(

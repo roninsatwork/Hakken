@@ -39,12 +39,15 @@ describe("Apify actions", () => {
     });
     const client = t.withIdentity({ subject: userId });
 
+// template:remove:start properties
     await expect(
       client.action(api.apify.startRightmoveScrape, {
         listUrls: ["https://www.rightmove.co.uk/property-for-sale/find.html?locationIdentifier=REGION%5E87490"],
         maxProperties: 10,
       })
     ).rejects.toThrow("Apify API Token not configured.");
+// template:remove:end
+
     await expect(t.action(internal.apify.pollRunStatus, { runId: "run-1" })).resolves.toBeNull();
     await expect(
       t.action(internal.apify.fetchDatasetAndStore, {

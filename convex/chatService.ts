@@ -1,3 +1,4 @@
+import { billingBlocksPaidAccess } from "./billingPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
@@ -125,6 +126,9 @@ export async function resolveChatQuota(
   thread: Doc<"threads">
 ): Promise<ChatQuota> {
   const resolvingCompanyId = user ? getActiveCompanyId(user) : thread.companyId;
+  if (resolvingCompanyId && await billingBlocksPaidAccess(ctx, resolvingCompanyId)) {
+    return { messageLimit: 0, messagesUsed: 0 };
+  }
 
   if (user?.planOverrideId) {
     const userPlan = await ctx.db.get(user.planOverrideId);

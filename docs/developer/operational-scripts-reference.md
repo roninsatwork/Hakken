@@ -18,6 +18,9 @@ because a script passes locally.
 | Script | Purpose |
 | --- | --- |
 | `npm run help` | Lists platform scripts. |
+| `npm run product:recipe -- <recipe>` | Previews a complete starter recipe; `--list` shows the catalog and `--apply` writes it locally. See [Product Recipes](./product-recipes.md). |
+| `npm run framework:update -- --upstream <export>` | Compares a pristine matching export; optional review-plan and baseline-recording steps are explicit. See [Framework Updates](../operator/framework-updates.md). |
+| `npm run feature:generate -- <entity>` | Previews a complete tenant feature; `--apply` writes it locally. See [Feature Generator](./feature-generator.md). |
 | `npm run dev` | Runs the Next.js dev server after `verify:env`. |
 | `npm run convex:dev` | Runs Convex dev after `verify:env`. |
 | `npm run build` | Builds the Next.js app after `verify:env`. |
@@ -36,7 +39,8 @@ because a script passes locally.
 | `npm run check:guards` | Runs the project guard checks as a grouped command. |
 | `npm run check` | Runs environment verification, lint, typecheck, and Vitest. |
 | `npm run gate` | Runs lint, typecheck, unit tests, E2E, coverage, and coverage threshold check. |
-| `npm run setup:validate` | Validates local or production setup requirements. |
+| `npm run setup:validate` | Checks local files/environment against the providers and capabilities in `sonae.product.json`; no network calls. |
+| `npm run verify:deployment` | Reads the selected Convex deployment's environment and checks required key names using the same product rules; `--prod` selects production. |
 
 These npm lifecycle guards run automatically before their matching scripts:
 
@@ -71,6 +75,9 @@ human workflow around deterministic local auth.
 | Script | Purpose |
 | --- | --- |
 | `npm run demo:local:seed` | Seeds local demo data. |
+| `npm run product:init -- --config <file>` | Previews product defaults; `--apply` explicitly updates a clone. See [Product Setup](../operator/product-setup.md). |
+| `npm run template:build -- --out <directory>` | Writes a framework + Arcade copy; optional areas are opt-in. |
+| `npm run template:verify` | Installs and verifies temporary template copies. |
 
 Use [Local Demo Seed Runbook](../operator/local-demo-seed-runbook.md)
 and [Vertical App Packaging Checklist](../operator/vertical-app-packaging-checklist.md)

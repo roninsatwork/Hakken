@@ -1,3 +1,4 @@
+import { customerKeyForPhone } from "./customerIdentity";
 import { readBoundedBody } from "./utils/boundedRequestBody";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { adminQuery, moduleQuery } from "./tenantFunctions";
@@ -528,22 +529,10 @@ export const matchCallerToCustomer = internalMutation({
   handler: async (ctx, args): Promise<string | null> => {
     const call = await ctx.db.get(args.callId);
     if (!call) return null;
-    const caller = normalisePhoneNumber(call.fromNumber);
-    if (!caller) return null;
-
-    const customers = await ctx.db
-      .query("salesDataCustomers")
-      .withIndex("by_company_account", (q) => q.eq("companyId", call.companyId))
-      .take(2000);
-    const match = customers.find(
-      (customer) =>
-        (customer.phone && normalisePhoneNumber(customer.phone) === caller) ||
-        (customer.mobile && normalisePhoneNumber(customer.mobile) === caller)
-    );
-    if (!match) return null;
-
-    await ctx.db.patch(args.callId, { matchedCustomerKey: match.accountNameKey });
-    return match.accountNameKey;
+    const customerKey = await customerKeyForPhone(ctx, call.companyId, call.fromNumber);
+    if (!customerKey) return null;
+    await ctx.db.patch(args.callId, { matchedCustomerKey: customerKey });
+    return customerKey;
   },
 });
 

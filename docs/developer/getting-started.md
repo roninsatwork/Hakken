@@ -2,6 +2,11 @@
 
 Follow these steps to set up the Sonae development environment on your local machine.
 
+For a new product clone, start with [Product Setup](../operator/product-setup.md).
+Then use the [Feature Generator](./feature-generator.md) to add product records,
+forms, relationships and tenant access from a previewable command.
+It previews product defaults and provider requirements before applying local file changes.
+
 ## Prerequisites
 
 - **Node.js**: `24.18.0` (`.nvmrc` / `.node-version`).

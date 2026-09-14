@@ -337,6 +337,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
   if (pathname.startsWith('/admin/settings/api-keys')) return 'API Keys';
   if (pathname.startsWith('/admin/settings/plans')) return 'Plans';
+  if (pathname.startsWith('/admin/settings/billing')) return 'PlatformBilling';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
   if (isSystemSettingsRoute(pathname)) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
@@ -355,6 +356,7 @@ function getActiveItemFromPathname(pathname: string) {
   // template:remove:end
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
+  if (pathname.startsWith('/app/settings/billing')) return 'Billing';
   if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
   if (pathname.startsWith('/app/settings/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/app/agents')) return 'Agents';
@@ -557,6 +559,7 @@ export default function SidebarNavigation() {
                     toggleSection={toggleSection}
                     isAuditor={isAuditor}
                     canSeeAdminSections={canSeeAdminSections}
+                    canManageBilling={isSuperAdmin && !user?.impersonatingCompanyId}
                     pendingApprovals={pendingApprovals}
                     pendingWorkflowApprovals={pendingWorkflowApprovals}
                   />

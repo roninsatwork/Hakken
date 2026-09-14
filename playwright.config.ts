@@ -57,6 +57,7 @@ export default defineConfig({
         /admin\/routes\.spec\.ts/,
         /admin\/tables\.spec\.ts/,
         /admin-roles\.spec\.ts/,
+        /billing\.spec\.ts/,
         /exports\.spec\.ts/,
       ],
     },

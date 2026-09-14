@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ProductHero } from "./_components/home/ProductHero";
 import { WhatSonaeIs } from "./_components/home/WhatSonaeIs";
+// template:remove:start properties,salesReports,movement,salesData
 import { DemosIntro } from "./_components/home/DemosIntro";
+// template:remove:end
+
 import { WhoItsFor } from "./_components/home/WhoItsFor";
+// template:remove:start properties,salesReports,movement,salesData
 import { ProductPanels } from "./_components/home/ProductPanels";
+// template:remove:end
+
 import { ContactLink } from "./_components/ContactLink";
 
 export const metadata: Metadata = {
@@ -18,7 +24,7 @@ export default function HomePage() {
 
       <WhatSonaeIs />
 
-      {/* template:remove:start properties */}
+      {/* template:remove:start properties,salesReports,movement,salesData */}
       <DemosIntro />
       <ProductPanels />
       {/* template:remove:end */}

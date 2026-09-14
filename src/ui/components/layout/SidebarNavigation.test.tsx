@@ -5,7 +5,9 @@ import { fireEvent } from "@testing-library/react";
 import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+// template:remove:start movement
 import { POSTURE_STUDIO_MODULE_KEY } from "@/convex/utils/coreModules";
+// template:remove:end
 import SidebarNavigation from "./SidebarNavigation";
 
 const setIsSidebarOpen = vi.hoisted(() => vi.fn());
@@ -86,6 +88,7 @@ const labels: Record<string, string> = {
   agents: "Agents",
   ai: "Artificial Intelligence",
   analytics: "Analytics",
+  billing: "Billing",
   apiKeys: "API Keys",
   authDiagnostics: "Auth Diagnostics",
   chatLogs: "Chat Logs",
@@ -377,3 +380,27 @@ describe("SidebarNavigation guarded queries", () => {
   });
 });
 
+
+
+describe("Billing navigation belongs to the correct frontend", () => {
+  beforeEach(() => { vi.clearAllMocks(); useMutationMock.mockReturnValue(vi.fn()); });
+  it("gives company admins a direct Billing link in the user frontend", () => {
+    vi.mocked(usePathname).mockReturnValue("/app/settings/billing");
+    useQueryMock.mockImplementation(ref => ref === "users:getMe" ? { role: "ADMIN", companyId: "company" } : undefined);
+    render(<SidebarNavigation />);
+    expect(screen.getByRole("link", { name: "Billing" })).toHaveAttribute("href", "/app/settings/billing");
+    expect(document.querySelector('a[href^="/admin"]')).toBeNull();
+  });
+  it("gives super admins their private oversight link", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/settings/billing");
+    useQueryMock.mockImplementation(ref => ref === "users:getMe" ? { role: "SUPER_ADMIN" } : undefined);
+    render(<SidebarNavigation />);
+    expect(screen.getByRole("link", { name: "Billing" })).toHaveAttribute("href", "/admin/settings/billing");
+  });
+  it.each(["USER", "READ_ONLY", "AUDITOR"])("does not expose Billing to %s", role => {
+    vi.mocked(usePathname).mockReturnValue(role === "USER" ? "/app" : "/admin/settings");
+    useQueryMock.mockImplementation(ref => ref === "users:getMe" ? { role } : undefined);
+    render(<SidebarNavigation />);
+    expect(screen.queryByRole("link", { name: "Billing" })).not.toBeInTheDocument();
+  });
+});

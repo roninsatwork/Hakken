@@ -11,8 +11,11 @@ Sonae is a reusable foundation for agentic applications with:
 - Tenant-scoped users, companies, roles, plans, audit logs, and knowledge.
 - Configurable agents with model defaults, system prompts, tools, approval policy, knowledge, runs, versions, memory, eval fixtures, and improvement suggestions.
 - A durable agent runtime that records steps, model calls, tool calls, approvals, final output, failures, cost, and latency.
-- An allowlisted tool dispatcher for internal handlers and connector-backed handler stubs.
-- Connector marketplace foundations for install state, secret references, OAuth lifecycle scaffolding, diagnostics, generated connector tools, and connection-test logs.
+- An allowlisted tool dispatcher for internal and connector-backed handlers; execution support is handler-specific.
+- Connector install state, secret references, Gmail OAuth code exchange, encrypted token storage, refresh/revocation, diagnostics and connection logs (`convex/connectorOAuth.ts`).
+- MCP tool-server configuration, discovery/import and governed execution (`convex/mcpServers.ts`, `convex/mcpToolCall.ts`); see [Tool Servers](./tool-servers.md).
+- [Product Setup](../operator/product-setup.md) for previewing and applying clone identity and provider requirements.
+- [Feature Generator](./feature-generator.md) for complete tenant-scoped CRUD, forms, relationships and access/navigation wiring.
 - Workflow orchestration for agent, API, code, database, logic, wait, approval, iterator, merge, and email nodes.
 - Admin screens for agents, runs, approvals, tools/connectors, workflows, schedules, models, knowledge, companies, users, widgets, reports, and settings.
 - English/Italian localization and test coverage for core backend contracts, auth-sensitive behavior, locale parity, and admin drift rules.

@@ -16,80 +16,35 @@ Sonae is organized around these layers:
 
 Keep new work inside the layer that owns the behavior. A route should not contain business rules that belong in Convex services, and a provider adapter should not leak vendor-specific request shapes into app or admin pages.
 
-## Add A New Admin Section
+## Add Product Records Or An Admin Section
 
-Use this path when adding a super-admin or platform-admin feature.
+Start with [Product Recipes](./product-recipes.md) for a complete starting workflow,
+or the [Feature Generator](./feature-generator.md) for a single tenant-scoped record:
 
-1. Add the route under `src/app/(dashboard)/admin/<section>/page.tsx`.
-2. Take the table, header, form fields, and confirmation modal from the screen kit in `src/ui/components/screens/` before writing any of them locally. `docs/developer/screen-kit.md` describes the parts and the build checks that enforce them.
-3. Keep backend reads/writes in Convex queries and mutations. Use `requireSuperAdmin`, `requireCurrentUser`, or the relevant auth helper inside the Convex handler.
-4. Add the route to the admin tree in `src/ui/components/layout/SidebarNavTrees.tsx` and add matching translation keys in both `messages/en.json` and `messages/it.json`.
-5. Preserve the admin pagination standard: use `TABLE_PAGE_SIZE` from `src/ui/components/screens/pagination.ts`, which is 15 rows per page, unless the product requirement explicitly says otherwise.
-6. Add a focused unit test for reusable logic or UI and extend Playwright route coverage when the new page is high value.
-
-Minimal page shape. The header sits above the table, not inside it, and the table comes from `DataTable` whole rather than assembled from the kit's loose parts — `scripts/check-screen-kit.mjs` fails the build on either mistake:
-
-```tsx
-"use client";
-
-import { useState } from "react";
-import { Boxes } from "lucide-react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-
-export default function AdminExamplePage() {
-  const [page, setPage] = useState(1);
-  const examples = useQuery(api.examples.listExamples, { page, pageSize: TABLE_PAGE_SIZE });
-
-  return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <PageHeader
-        icon={<Boxes className="h-6 w-6 text-brand" />}
-        title="Example"
-        description="Manage example records."
-      />
-
-      <DataTable
-        rows={examples?.items}
-        rowKey={(example) => example._id}
-        empty={{
-          icon: <Boxes className="h-8 w-8 text-muted/30" />,
-          label: "No examples yet.",
-        }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages: examples?.totalPages ?? 1,
-          totalCount: examples?.totalCount ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: examples === undefined,
-          onPageChange: setPage,
-        }}
-        columns={[
-          { key: "name", header: "Name", cell: (example) => example.name },
-        ]}
-      />
-    </div>
-  );
-}
+```bash
+npm run feature:generate -- supplier --field name:string
+npm run feature:generate -- supplier --field name:string --apply
 ```
 
-For a create or edit dialog, build the body from the field helpers in `src/ui/components/screens/ModalForm.tsx` — `ModalField`, `ModalTextAreaField`, `ModalFormError`, and `ModalFormActions` — and use `ConfirmationModal` from `src/ui/components/screens/ConfirmationModal.tsx` for anything destructive.
+The preview lists the complete change. Applying generates forms, details, indexed
+search/cursor pagination, backend role/tenant checks, edit revisions, relationship
+validation, locale entries, tests and access/navigation wiring. Generated staff
+screens allow company ADMIN/SUPER_ADMIN writes and READ_ONLY reads. They do not
+provide ordinary-user access or a public portal.
 
-Backend shape:
+For a platform-only section, choose the appropriate existing auth wrapper in
+`convex/authz.ts` and review its permissions explicitly. Do not weaken the generated
+company boundary or reuse a platform-wide query for tenant data. Use object-form
+Convex functions with argument and return validators and indexed bounded reads.
 
-```ts
-export const listExamples = query({
-  args: { page: v.number(), pageSize: v.number() },
-  handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-    // Query, filter, and paginate here or through a service helper.
-  },
-});
-```
+Read [Screen Kit](./screen-kit.md) before building a custom screen. Use `PageHeader`
+with `divider` for a top-level page, `DetailLayout` for tabbed sections and
+`DetailHeader` for individual records. Keep the header above `DataTable`, use
+15-row pages and shared field/action/feedback components, and supply both locales.
+Follow an existing screen and the current generator instead of copying incomplete
+CRUD snippets. Agree product validation and any schema migration before adding
+real data. Keep `.sonae/framework.json` with the clone and follow
+[Framework Updates](../operator/framework-updates.md) for later core changes.
 
 ## Add A New Workflow Node Type
 

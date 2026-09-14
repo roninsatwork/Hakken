@@ -1,3 +1,4 @@
+import ratchets from "../code-ratchets.json";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
@@ -26,18 +27,7 @@ import { describe, expect, test } from "vitest";
  * coverage-thresholds.json.
  */
 
-const FLOORS: Array<{ root: string; floor: number }> = [
-  // Raised to the measured counts on 2026-08-26, twice. The first raise
-  // (139→156, 22→29, and the customer root joining at 36) was correct that
-  // morning; the day's later work then added translated components and left
-  // seven units of slack between the floors and the truth — room for that many
-  // screens to leave the catalogue with nothing failing. A ratchet with slack
-  // in it is not a ratchet, which is the same finding a review made about the
-  // theme baseline the same afternoon.
-  { root: "src/app/(dashboard)/admin", floor: 158 },
-  { root: "src/ui", floor: 31 },
-  { root: "src/app/(dashboard)/app", floor: 39 },
-];
+const FLOORS: Array<{ root: string; floor: number }> = ratchets.i18nFloors;
 
 const repoRoot = process.cwd();
 

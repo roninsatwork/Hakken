@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
@@ -338,7 +339,7 @@ describe("the dressing every reply wears", () => {
     });
     expect(dressed).toMatch(/^Hi Anthony,/);
     expect(dressed).toContain("Thank you for your email.");
-    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain(`Ask ${DEFAULT_SETTINGS.platformName}`);
     expect(dressed).toContain("Ronins AI assistant");
     // The EU AI Act's transparency duty, guaranteed in code.
     expect(dressed).toContain("written by AI and may contain mistakes");
@@ -352,7 +353,7 @@ describe("the dressing every reply wears", () => {
       companyName: "Ronins",
     });
     expect(dressed.match(/Hi Priya,/g)).toHaveLength(1);
-    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain(`Ask ${DEFAULT_SETTINGS.platformName}`);
     expect(dressed).toContain("written by AI");
   });
 
@@ -373,7 +374,7 @@ describe("the dressing every reply wears", () => {
     });
     expect(dressed).toMatch(/^Buongiorno Marco,/);
     expect(dressed).toContain("Grazie per la sua email.");
-    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain(`Ask ${DEFAULT_SETTINGS.platformName}`);
     expect(dressed).toContain("Ronins Assistente IA");
     // The transparency duty holds in every language, with exact wording.
     expect(dressed).toContain("scritta da un'IA e potrebbe contenere errori");

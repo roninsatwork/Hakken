@@ -1,3 +1,4 @@
+import { billingBlocksPaidAccess, billingConfig } from "./billingPolicy";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -28,6 +29,10 @@ export const getMyCompanyPlanStatus = softQuery({
   handler: async (ctx) => {
     const user = ctx.user;
 
+    if (user.companyId && await billingBlocksPaidAccess(ctx, user.companyId)) {
+      return { planName: "Payment required", messageLimit: 0, messagesUsed: 0 };
+    }
+
     // Check Override first
     if (user.planOverrideId) {
        const userPlan = await ctx.db.get(user.planOverrideId);
@@ -56,6 +61,9 @@ export const getCompanyPlanStatus = softQuery({
       return null; // Unauthorized
     }
 
+    if (await billingBlocksPaidAccess(ctx, args.companyId)) {
+      return { planName: "Payment required", messageLimit: 0, messagesUsed: 0 };
+    }
     const company = await ctx.db.get(args.companyId);
     const plan = company?.planId ? await ctx.db.get(company.planId) : null;
 
@@ -164,6 +172,12 @@ export const deletePlan = superAdminMutation({
   args: { id: v.id("plans") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const billing = await ctx.db.query("billingAccounts").withIndex("by_plan", q => q.eq("offer.planId", args.id)).first();
+    const checkout = await ctx.db.query("billingCheckouts").withIndex("by_plan", q => q.eq("offer.planId", args.id)).first();
+    const override = await ctx.db.query("users").withIndex("by_plan_override", q => q.eq("planOverrideId", args.id)).first();
+    if (billing || checkout || override || (await billingConfig(ctx)).offers.some(o => o.planId === args.id)) {
+      throw appError("CONFLICT", "This plan is referenced by billing or a user override and cannot be deleted.");
+    }
     // Ensure we don't delete plans strictly assigned to companies
     const companiesAssigned = await ctx.db
       .query("companies")

@@ -8,6 +8,11 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 
 ## Core Guides
 
+- [Product Setup After Cloning](../operator/product-setup.md)
+- [Optional Stripe Billing](../operator/stripe-billing.md)
+- [Generate a Product Feature](./feature-generator.md)
+- [Product Recipes](./product-recipes.md)
+- [Reviewed Framework Updates](../operator/framework-updates.md)
 - [Getting Started](./getting-started.md)
 - [Architecture](./architecture.md)
 - [Frontend](./frontend.md)

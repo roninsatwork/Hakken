@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
@@ -8,6 +8,7 @@ import { Save, Loader2, PoundSterling } from "lucide-react";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { CompanyBillingCard } from "@/src/ui/components/billing/CompanyBillingCard";
 import { useTranslations } from "next-intl";
 
 type CompanyOverviewContentProps = {
@@ -18,7 +19,7 @@ type CompanyOverviewContentProps = {
     messagesUsed: number;
     messageLimit: number;
   } | null | undefined;
-  user: Pick<Doc<"users">, "role"> | null | undefined;
+  user: Pick<Doc<"users">, "role" | "impersonatingCompanyId"> | null | undefined;
   activePlans: Doc<"plans">[];
 };
 
@@ -34,6 +35,7 @@ export default function CompanyOverviewContent({
   const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
   const action = useAdminAction({ scope: "admin-company-profile" });
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const billing = useQuery(api.billingAdmin.getCompany, isSuperAdmin && !user?.impersonatingCompanyId ? { companyId } : "skip");
 
   const [nameVal, setNameVal] = useState("");
   const [descVal, setDescVal] = useState("");
@@ -69,7 +71,7 @@ export default function CompanyOverviewContent({
           description: descVal,
           overview: overviewVal,
         });
-        if (isSuperAdmin) {
+        if (isSuperAdmin && !billing?.managed && planIdVal !== (company.planId || "")) {
           if (planIdVal) await assignPlanToCompany({ id: companyId, planId: planIdVal as Id<"plans"> });
           else await assignPlanToCompany({ id: companyId, planId: undefined });
         }
@@ -91,6 +93,7 @@ export default function CompanyOverviewContent({
 
   return (
     <div className="flex flex-col gap-6 w-full">
+      {isSuperAdmin && !user?.impersonatingCompanyId && <CompanyBillingCard companyId={companyId} />}
       <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl p-6 shadow-sm flex flex-col gap-6">
         <div className="flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -125,6 +128,7 @@ export default function CompanyOverviewContent({
                 <span className="text-[11px] text-brand/80 font-mono tracking-widest uppercase">{t("superAdminOnly")}</span>
               </div>
               <select
+                  disabled={billing === undefined || billing?.managed || isSaving}
                 value={planIdVal}
                 onChange={(event) => setPlanIdVal(event.target.value)}
                 className="w-full py-2.5 px-4 bg-background/50 border border-border-dim rounded-[10px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all appearance-none cursor-pointer"

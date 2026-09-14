@@ -139,6 +139,7 @@ function getOptionalStringToolArg(args: Record<string, unknown>, key: string) {
 }
 
 /** A list of lines, dropping whatever in it is not a usable line. */
+// template:remove:start salesData
 function getOptionalStringArrayToolArg(args: Record<string, unknown>, key: string) {
   const value = args[key];
   if (!Array.isArray(value)) return undefined;
@@ -148,6 +149,8 @@ function getOptionalStringArrayToolArg(args: Record<string, unknown>, key: strin
     .filter((entry) => entry.length > 0);
   return lines.length > 0 ? lines : undefined;
 }
+// template:remove:end
+
 
 /**
  * A yes/no argument, however the model chose to spell it.

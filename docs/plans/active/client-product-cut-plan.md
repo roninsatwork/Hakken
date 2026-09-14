@@ -1,151 +1,94 @@
 # The Clean Cut — turning a clone into a client's own product
 
-**Agreed 2026-08-23.** When Ronins builds a client-owned product on Sonae, the
-client should receive *their* product — not a copy of everything Ronins has ever
-built with a few menu items hidden. This plan closes the gap between those two
-things.
+**Agreed 2026-08-23; scope updated 2026-09-13.** A new application receives
+Sonae's framework **including Arcade**, plus the optional product areas explicitly
+selected for that application. The source Sonae repository keeps everything.
 
-It serves the client-owned lane described in [PRODUCT.md](../../../PRODUCT.md).
+This serves the client-owned lane in [PRODUCT.md](../../../PRODUCT.md).
+The operator instructions are [Build a new application from Sonae](../../operator/cloning-sonae.md).
 
----
+## Agreed scope
 
-## The goal, in one sentence
+Arcade is a permanent part of the framework. The four removable areas are:
 
-Clone the repository, run one command naming what the client bought, and what
-comes out is a working product containing only that.
+| Name | Application area |
+| --- | --- |
+| `movement` | Posture Studio and its capture, replay, models and tooling |
+| `properties` | Property search and Rightmove-specific processing |
+| `salesReports` | Sales and board reports |
+| `salesData` | Sales imports, customer CRM, research and opportunity reports |
 
-The cut happens **after** the clone, on the copy. The Sonae working tree is
-never modified — Ronins keeps the full framework, the client gets the subset.
+Authentication, tenants, administration, agents, workflows, tasks, calls,
+reception, wiki and generic connectors remain in the framework. Calls and email
+continue to work without the optional CRM; customer matching then returns no match.
 
----
+## Implementation
 
-## What already exists
+`npm run template:build -- --out ../new-app` writes a new framework + Arcade
+application outside the source checkout. `--keep` adds optional areas and
+`--dry-run` previews the cut without writing anything.
 
-More of this is built than it first appears.
+`template.verticals.json` declares ownership of whole files, routes, tests,
+assets, exclusive packages and scripts. The existing line fences remove each
+area's contributions to shared files. Multiple owners retain shared code until
+all its owners are removed. Registry entries, locales, generated API references,
+snapshots, allowlists and code-quality limits are adjusted to the retained code.
 
-**A registry of what the optional parts are.** Each optional product area is a
-"vertical" — currently `salesReports`, `properties`, `salesData`, `movement`,
-and `arcade`, with `base` meaning the platform itself. Verticals that a
-workspace can switch on are declared in `convex/utils/companyModules.ts`; the
-two demo verticals with no workspace switch (`movement`, `arcade`) are named in
-the cut script.
+The exporter excludes credentials, local recordings, caches and build output;
+respects Git ignores; rejects symlinks and existing output directories; and
+stages the result before publishing it locally. It rebuilds the dependency lock
+from the existing lock without lifecycle scripts or network requests and starts
+a fresh Git repository with no history, remote, hooks or commits.
 
-**Markers around the lines a vertical leaves in shared files.** A vertical
-cannot keep entirely to itself — it puts an entry in the menu, a table in the
-schema, a route in the router. Those lines carry a start and end comment naming
-the vertical that owns them. They nest correctly, so a marker inside another
-marker behaves.
+The source guard validates ownership and checks imports, backend function calls
+and table references for all 16 combinations of the four optional areas. A new
+optional module with no owned paths fails the guard. Arcade paths cannot be
+assigned to a removable area.
 
-**A script that acts on them.** `scripts/strip-verticals.mjs --keep base,X --out <dir>`
-copies the repository to a new directory with every marked block for an unkept
-vertical removed, and prints a report. It never touches the working tree.
+## Verification and acceptance
 
-**A gate that stops the markers rotting.** `--check` validates every marker —
-each start has an end, nesting closes in order, each names a real vertical — and
-runs as part of the standard build checks. So a half-written marker fails the
-day it is written, not the day someone tries to build a client product.
+**Completed locally 2026-09-13. Overall: 100%. Verification: 100%.**
 
-## What is missing
+- [x] Declare ownership for the four optional areas and protect Arcade.
+- [x] Remove owned paths and shared contributions from copies only.
+- [x] Prune exclusive packages and keep a reproducible lockfile.
+- [x] Add ownership/reference checks to the existing source guard.
+- [x] Document preview, export, configuration and verification.
+- [x] Verify the framework + Arcade copy installs, checks, builds and starts
+  (4,130 tests, 19 browser smoke checks and two Arcade browser checks passed).
+- [x] Verify each optional area builds independently with the framework.
+- [x] Complete source regression checks and production build (6,428 tests passed).
 
-**Whole folders are never removed.** The script only removes marked *lines
-inside* files. There are no file- or folder-level markers, so every vertical's
-own directory survives the cut untouched. The script's own report says so.
+The five generated configurations passed locked installation, source guards, lint,
+type checks, tests and production builds:
 
-The practical effect is that a client build today still ships with:
+| Generated application (all include Arcade) | Passing tests | Build |
+| --- | ---: | --- |
+| Framework | 4,130 | Passed |
+| Framework + Sales Reports | 4,142 | Passed |
+| Framework + Properties | 4,158 | Passed |
+| Framework + Posture Studio | 6,025 | Passed |
+| Framework + Sales Data | 4,493 | Passed |
 
-| Area | Roughly |
-|---|---|
-| The movement demo (`src/app/(dashboard)/demos`, `src/lib/movements`) | ~394 files |
-| Property tools (`src/app/(dashboard)/app/properties` plus ~9 backend modules) | ~18 files |
-| The sales-data workspace (~24 backend modules) | ~24 files |
-| The arcade (`src/app/(dashboard)/app/arcade`) | ~8 files |
+Sonae itself passed environment verification, full lint, `npm run check` (6,428
+tests) and its production build. After the final removal-boundary adjustments,
+55 focused regression tests, targeted lint and all 16 boundary combinations
+passed. The base copy additionally passed 19 browser smoke checks and two Arcade
+checks covering touch controls and rendering all four districts. The local
+frontend was restored on port 3000 after the source build.
 
-Of 662 non-test files under `src/`, around 260 belong to the movement and demo
-areas alone — very close to four in every ten. A client who bought a customer
-service assistant receives all of it.
+`npm run template:verify -- --matrix --browser` creates temporary copies,
+installs locked dependencies, runs guards/lint/types/tests, builds the base and
+each optional area, and runs the base browser smoke suite. These checks use
+placeholder backend URLs and browser fixtures. They do not deploy a backend or
+prove a customer's live provider settings.
 
-Beyond size, three things matter more than the file count:
-
-- **It reads badly.** A client browsing their own repository finds another
-  client's work in it.
-- **It carries risk.** Code that ships is code that can break, be scanned, or
-  raise a question in a security review.
-- **It undermines the story.** "This is your product" is weaker when four in ten
-  files are somebody else's demo.
-
----
-
-## The approach
-
-Extend what exists rather than replace it. Two changes.
-
-**1. Let a vertical own whole paths, not only lines.**
-
-Add a declaration mapping each vertical to the directories and files it owns
-outright. Keep it beside the existing registry so the two lists are read
-together and cannot drift. A path may be owned by exactly one vertical; `base`
-owns nothing, because the platform is what remains.
-
-**2. Teach the cut to delete owned paths.**
-
-When a vertical is not kept, its owned paths are not copied. Line-level markers
-continue to work exactly as now — the two mechanisms are complementary, because
-a vertical needs both: its own folder removed, and its few lines pulled out of
-the shared menu and schema.
-
-**3. Extend the existing gate to cover the new declaration.**
-
-`--check` must also verify that every declared path exists, that no path is
-claimed by two verticals, and — the one that matters — that nothing left behind
-still refers to something removed. A cut that produces a product which does not
-build is worse than no cut at all.
-
----
-
-## Phases
-
-**Phase 1 — Declare ownership.** Write the path map for all five verticals.
-Nothing behaves differently yet. Ends when the declaration lists every folder
-and file identified above and the check confirms each path exists.
-
-**Phase 2 — Cut the paths.** Teach the script to skip unkept verticals' owned
-paths, and report what it removed. Ends when a cut keeping only `base` produces
-a directory with no movement, arcade, property, or sales-data folders in it.
-
-**Phase 3 — Prove the result runs.** The real test is not what was removed but
-whether what remains works. Ends when a `base`-only cut installs, typechecks,
-lints, passes its tests, and starts.
-
-**Phase 4 — Guard it.** Add the leftover-reference check to the standard build
-gates, so a future vertical that forgets to declare its folder fails
-immediately.
-
-**Phase 5 — Write it down.** One page in the operator guides: clone, cut, verify,
-hand over. Fold it into the existing
-[Vertical App Packaging Checklist](../../operator/vertical-app-packaging-checklist.md).
-
----
-
-## Acceptance
-
-The plan is done when all of the following are true:
-
-1. A cut keeping only `base` produces a product with none of the four optional
-   areas present as files.
-2. That product installs, typechecks, lints, passes tests, and starts.
-3. A cut keeping `base` plus one vertical produces that vertical working, and
-   the other three absent.
-4. A vertical added later that declares no owned paths fails the build check
-   rather than silently shipping to a client.
-5. The Sonae working tree is byte-identical before and after any cut.
-
----
+The source must remain byte-identical before and after an export. Regression
+tests verify this on probe repositories, alongside destination safety and secret
+exclusion. Sonae's own runtime behaviour and optional applications remain intact.
 
 ## Out of scope
 
-- **Rebranding.** Naming and theming a client build is separate work, already
-  partly handled by the platform-name settings.
-- **Removing verticals from Sonae itself.** This plan cuts *copies*. The
-  movement demo stays in Sonae until Anthony says otherwise.
-- **Splitting the repository.** No separate framework package or submodule. One
-  repository, cut on the way out.
+Rebranding, creating a customer's hosted backend, provider configuration,
+publishing, and splitting Sonae into separate repositories remain separate work.
+The frozen movement implementation is unchanged.

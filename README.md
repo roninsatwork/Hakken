@@ -11,6 +11,11 @@ here defers to it.
 
 The **[/docs](./docs/index.md)** folder is the documentation hub. It is organized by audience and lifecycle:
 
+- **[Product Setup](./docs/operator/product-setup.md)**: Preview/apply product defaults after cloning.
+- **[Feature Generator](./docs/developer/feature-generator.md)**: Add complete tenant features, forms and relationships.
+- **[Product Recipes](./docs/developer/product-recipes.md)**: Service desk, project tracker and knowledge assistant starting points.
+- **[Framework Updates](./docs/operator/framework-updates.md)**: Review incoming framework changes without overwriting product work.
+- **[Optional Stripe Billing](./docs/operator/stripe-billing.md)**: Configure monthly company subscriptions in a clone; disabled by default.
 - **[Getting Started](./docs/developer/getting-started.md)**: Local setup and environment.
 - **[System Architecture](./docs/developer/architecture.md)**: Tech stack and system design.
 - **[Frontend Development](./docs/developer/frontend.md)**: Design system and Sonae Modal Protocol.
@@ -117,3 +122,10 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 - `npm run typecheck`: Runs TypeScript without emitting files.
 - `npm run test:run`: Runs the Vitest suite once.
 - `npm run demo:local:seed`: Seeds a local demo tenant, demo users, model defaults, knowledge tool, draft agent, starter knowledge, eval fixtures, and sample app build plans when `LOCAL_DEMO_SEED_ENABLED=1` and `LOCAL_DEMO_SEED_SECRET` are configured for Convex.
+# Cloning the framework
+
+Run `npm ci`, then preview with `npm run template:build -- --dry-run`.
+Create a new application with `npm run template:build -- --out ../my-new-app`.
+The framework and Arcade are always kept; use `--keep` to include Posture Studio,
+Properties, Sales Reports or Sales Data. See the [clone guide](docs/operator/cloning-sonae.md)
+for module names, safeguards and verification.

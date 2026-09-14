@@ -24,6 +24,7 @@ import { appError } from "./utils/appError";
 
 /** Every job the crons dispatch, and how to run it. */
 const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
+  "stripe-billing-reconciliation": (ctx) => ctx.runMutation(internal.billingSync.scheduleReconciliation, {}),
   "workflow-schedule-dispatcher": (ctx) =>
     ctx.runMutation(internal.workflowEngine.scheduleDispatcher, {}),
   "gmail-mailbox-watcher": (ctx) => ctx.runAction(internal.gmailWatcher.pollMailboxes, {}),
@@ -97,6 +98,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "wiki-freshness-sweep": 1440,
   "wiki-weekly-report": 10080,
   "reset-billing-cycles": 44640,
+  "stripe-billing-reconciliation": 5,
   "wiki-exam-growth": 44640,
 };
 

@@ -12,12 +12,11 @@ import {
   WIKI_PAGE_MAX_CHARS,
   extractWikiLinkSlugs,
   linkKeyFor,
-  normaliseEmail,
   normaliseTopicSlug,
   parseSourceKey,
   renderPageForReading,
 } from "./wikiRewriteService";
-import { normalisePhoneNumber } from "./telephonyService";
+import { customerKeyForPhone, customerKeyForEmail } from "./customerIdentity";
 
 const wikiKindValidator = v.union(
   v.literal("CUSTOMER"),
@@ -1734,42 +1733,14 @@ export const getRenderedPageForPhoneNumber = internalQuery({
     ctx,
     args
   ): Promise<{ subjectKey: string; pageText: string } | null> => {
-    const caller = normalisePhoneNumber(args.phoneNumber);
-    if (!caller) return null;
-    const customers = await ctx.db
-      .query("salesDataCustomers")
-      .withIndex("by_company_account", (q) => q.eq("companyId", args.companyId))
-      .take(2000);
-    const match = customers.find(
-      (customer) =>
-        (customer.phone && normalisePhoneNumber(customer.phone) === caller) ||
-        (customer.mobile && normalisePhoneNumber(customer.mobile) === caller)
-    );
-    if (!match) return null;
-    const page = await getPage(ctx, args.companyId, "CUSTOMER", match.accountNameKey);
+    const customerKey = await customerKeyForPhone(ctx, args.companyId, args.phoneNumber);
+    if (!customerKey) return null;
+    const page = await getPage(ctx, args.companyId, "CUSTOMER", customerKey);
     if (!page) return null;
-    return { subjectKey: match.accountNameKey, pageText: await renderWithNeighbours(ctx, page) };
+    return { subjectKey: customerKey, pageText: await renderWithNeighbours(ctx, page) };
   },
 });
 
-/** One matching rule for every email door: either address column, normalised. */
-async function matchEmailToCustomerKey(
-  ctx: QueryCtx,
-  companyId: Id<"companies">,
-  email: string | undefined | null
-): Promise<string | null> {
-  const sender = normaliseEmail(email);
-  if (!sender) return null;
-  const customers = await ctx.db
-    .query("salesDataCustomers")
-    .withIndex("by_company_account", (q) => q.eq("companyId", companyId))
-    .take(2000);
-  const match = customers.find(
-    (customer) =>
-      normaliseEmail(customer.email) === sender || normaliseEmail(customer.accountsEmail) === sender
-  );
-  return match?.accountNameKey ?? null;
-}
 
 /**
  * The widget door's read (wiki plan, phase 2): a visitor who gave their
@@ -1791,7 +1762,7 @@ export const getRenderedPageForWidgetThread = internalQuery({
     );
     if (!gateway) return null;
     const email = /<([^<>]+@[^<>]+)>/.exec(gateway.content.split("\n")[0] ?? "")?.[1];
-    const subjectKey = await matchEmailToCustomerKey(ctx, thread.companyId, email);
+    const subjectKey = await customerKeyForEmail(ctx, thread.companyId, email);
     if (!subjectKey) return null;
     const page = await getPage(ctx, thread.companyId, "CUSTOMER", subjectKey);
     return page ? await renderWithNeighbours(ctx, page) : null;
@@ -1810,7 +1781,7 @@ export const getRenderedCustomerPageInternal = internalQuery({
 export const matchEmailSenderToCustomer = internalQuery({
   args: { companyId: v.id("companies"), email: v.string() },
   handler: async (ctx, args): Promise<string | null> => {
-    return await matchEmailToCustomerKey(ctx, args.companyId, args.email);
+    return await customerKeyForEmail(ctx, args.companyId, args.email);
   },
 });
 

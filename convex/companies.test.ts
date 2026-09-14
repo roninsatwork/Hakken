@@ -429,22 +429,22 @@ describe("OWASP: Broken Access Control - Companies", () => {
           .withIdentity({ subject: superAdminId })
           .mutation(api.companies.setCompanyModules, {
             id: companyId,
-            enabledModules: ["salesData"],
+            enabledModules: ["calls"],
           })
-      ).resolves.toEqual(["salesData"]);
+      ).resolves.toEqual(["calls"]);
 
       const { company, auditLogs } = await t.run(async (ctx) => ({
         company: await ctx.db.get(companyId),
         auditLogs: await ctx.db.query("auditLogs").collect(),
       }));
 
-      expect(company?.enabledModules).toEqual(["salesData"]);
+      expect(company?.enabledModules).toEqual(["calls"]);
       expect(auditLogs[0]).toMatchObject({
         actorId: superAdminId,
         actionType: "UPDATE_COMPANY_MODULES",
         entityId: companyId,
         entityType: "companies",
-        metadata: JSON.stringify({ previousModules: [], newModules: ["salesData"] }),
+        metadata: JSON.stringify({ previousModules: [], newModules: ["calls"] }),
       });
     });
 
@@ -454,7 +454,7 @@ describe("OWASP: Broken Access Control - Companies", () => {
       await expect(
         t.withIdentity({ subject: adminId }).mutation(api.companies.setCompanyModules, {
           id: companyId,
-          enabledModules: ["salesData"],
+          enabledModules: ["calls"],
         })
       ).rejects.toThrowError(/Unauthorized|Forbidden|super/i);
 
@@ -470,9 +470,9 @@ describe("OWASP: Broken Access Control - Companies", () => {
           .withIdentity({ subject: superAdminId })
           .mutation(api.companies.setCompanyModules, {
             id: companyId,
-            enabledModules: ["salesData", "not-a-real-module"],
+            enabledModules: ["calls", "not-a-real-module"],
           })
-      ).resolves.toEqual(["salesData"]);
+      ).resolves.toEqual(["calls"]);
     });
 
     test("modules can be switched back off", async () => {
@@ -481,7 +481,7 @@ describe("OWASP: Broken Access Control - Companies", () => {
 
       await client.mutation(api.companies.setCompanyModules, {
         id: companyId,
-        enabledModules: ["salesData"],
+        enabledModules: ["calls"],
       });
       await client.mutation(api.companies.setCompanyModules, {
         id: companyId,

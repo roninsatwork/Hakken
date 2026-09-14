@@ -18,12 +18,25 @@ import { ContactLink } from "../ContactLink";
  * Real build times, supplied by Anthony. Anything still null renders no badge
  * at all, because an invented figure is worse than no figure.
  */
+// template:remove:start properties
 const PROPERTIES_BUILD_TIME: string | null = "Built in one sprint";
+// template:remove:end
+
+// template:remove:start salesReports
 const REPORTS_BUILD_TIME: string | null = "Built in one sprint";
+// template:remove:end
+
+// template:remove:start movement
 const STUDIO_BUILD_TIME: string | null = "Built in 4 sprints";
+// template:remove:end
+
+// template:remove:start salesData
 const SALES_BUILD_TIME: string | null = "Built in one sprint";
+// template:remove:end
+
 
 /* Representative listings for the library screen — shape and density are real. */
+// template:remove:start properties
 const LISTINGS = [
   { price: "£425,000", addr: "Ash Road, Guildford", meta: "3 bed · semi-detached", tag: "New" },
   { price: "£380,000", addr: "Wodeland Avenue", meta: "2 bed · terraced", tag: "Chain free" },
@@ -38,7 +51,10 @@ const LISTINGS = [
   { price: "£274,950", addr: "Guildford Park Road", meta: "1 bed · flat", tag: "Reduced" },
   { price: "£489,000", addr: "Cline Road", meta: "3 bed · detached", tag: "New" },
 ];
+// template:remove:end
 
+
+// template:remove:start salesReports
 const PIPELINE = [
   { m: "May", v: 46 },
   { m: "Jun", v: 58 },
@@ -46,7 +62,10 @@ const PIPELINE = [
   { m: "Aug", v: 72 },
   { m: "Sep", v: 88 },
 ];
+// template:remove:end
 
+
+// template:remove:start salesReports
 const RISKS = [
   {
     level: "Critical",
@@ -67,6 +86,8 @@ const RISKS = [
     action: "Confirm the start date and close it.",
   },
 ];
+// template:remove:end
+
 
 /*
  * The opportunity report screen. Names and figures are invented, and the sector
@@ -74,12 +95,16 @@ const RISKS = [
  * real is the shape: three streams of work priced into one table, and a line on
  * every row saying how that figure was reached.
  */
+// template:remove:start salesData
 const OPPORTUNITY_TABS = [
   "Upsell existing customers",
   "Prospects in their groups",
   "Suspects — new groups",
 ];
+// template:remove:end
 
+
+// template:remove:start salesData
 const OPPORTUNITY_ROWS = [
   {
     site: "Marden Court",
@@ -117,7 +142,10 @@ const OPPORTUNITY_ROWS = [
     how: "Two categories missing against the group's own buying mix.",
   },
 ];
+// template:remove:end
 
+
+// template:remove:start movement
 /* Joint readout for the capture screen — a real motion-capture output shape. */
 const JOINTS = [
   { name: "Hip flexion", value: "92°" },
@@ -126,6 +154,7 @@ const JOINTS = [
   { name: "Shoulder abduction", value: "63°" },
   { name: "Neck tilt", value: "6°" },
 ];
+
 
 /*
  * Figure geometry lifted from the in-app Posture Studio information page, so
@@ -165,6 +194,7 @@ const BONES: [JointName, JointName][] = [
   ["ankleR", "heelR"], ["heelR", "toeR"], ["ankleR", "toeR"],
 ];
 
+
 const SILHOUETTE =
   "M210 30 C 187 30 174 47 174 70 C 174 86 180 99 189 107 " +
   "C 168 114 152 124 143 140 C 128 166 116 224 104 292 C 100 312 122 318 130 300 " +
@@ -175,6 +205,7 @@ const SILHOUETTE =
   "C 252 540 250 508 254 470 C 260 430 264 356 260 300 C 258 276 260 250 262 214 " +
   "C 270 236 280 268 290 300 C 298 318 320 312 316 292 C 304 224 292 166 277 140 " +
   "C 268 124 252 114 231 107 C 240 99 246 86 246 70 C 246 47 233 30 210 30 Z";
+
 
 /* Deterministic pseudo-random, so the dot field is identical on server and client. */
 function seeded(seed: number) {
@@ -267,8 +298,11 @@ function handPoints(wx: number, wy: number, dir: 1 | -1) {
 }
 
 const FACE_POINTS = facePoints();
+
 const HAND_L = handPoints(J.wristL[0], J.wristL[1], -1);
+
 const HAND_R = handPoints(J.wristR[0], J.wristR[1], 1);
+// template:remove:end
 
 export function ProductPanels() {
   const rootRef = useRef<HTMLDivElement>(null);

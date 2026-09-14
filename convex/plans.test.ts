@@ -211,7 +211,7 @@ describe("Plans Authorization", () => {
     });
 
     await expect(superAdminClient.mutation(api.plans.deletePlan, { id: planId })).rejects.toThrow(
-      "Cannot delete this plan. It is actively assigned to 1 companies."
+      "referenced by billing or a user override"
     );
 
     await t.run(async (ctx) => {
@@ -236,6 +236,8 @@ describe("Plans Authorization", () => {
     expect(companyAfterReset?.messagesUsedThisPeriod).toBe(0);
     expect(userAfterReset?.messagesUsedThisPeriod).toBe(0);
 
+    await expect(superAdminClient.mutation(api.plans.deletePlan, { id: planId })).rejects.toThrow("user override");
+    await t.run(ctx => ctx.db.patch(userId, { planOverrideId: undefined }));
     await expect(superAdminClient.mutation(api.plans.deletePlan, { id: planId })).resolves.toBeNull();
     expect(await t.run(async (ctx) => ctx.db.get(planId))).toBeNull();
   });

@@ -15,7 +15,10 @@ import { validateSafeUrl } from "./utils/security";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantAction } from "./tenantFunctions";
-import { RIGHTMOVE_ACTOR_ID, collectUrls } from "./apifyActors";
+import { collectUrls } from "./apifyActors";
+// template:remove:start properties
+import { RIGHTMOVE_ACTOR_ID } from "./apifyActors";
+// template:remove:end
 import { appError } from "./utils/appError";
 
 type ApifyRun = Doc<"apifyRuns">;
@@ -224,6 +227,7 @@ async function startApifyActor(
     return run.id;
 }
 
+// template:remove:start properties
 export const startRightmoveScrape = tenantAction({
   args: {
     listUrls: v.array(v.string()),
@@ -262,6 +266,7 @@ export const startRightmoveScrape = tenantAction({
     });
   },
 });
+// template:remove:end
 
 export const pollRunStatus = internalAction({
   args: { runId: v.string() },

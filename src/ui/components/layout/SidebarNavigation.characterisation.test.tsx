@@ -1,4 +1,6 @@
 import React from "react";
+import fs from "node:fs";
+import path from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -145,6 +147,19 @@ function captureAllReachableNavigation() {
   return { sections: [...sections].sort(), links: [...links].sort() };
 }
 
+/** Generated product links are checked against the explicit registry, while
+ * the snapshots continue to cover every framework link and section. */
+function frameworkNavigation(navigation: ReturnType<typeof captureAllReachableNavigation>, role: string) {
+  const registryPath = path.join(process.cwd(), "product.entities.json");
+  const entities: { table: string; route: string }[] = fs.existsSync(registryPath)
+    ? JSON.parse(fs.readFileSync(registryPath, "utf8")).entities : [];
+  const expected = entities.map(entity => `${entity.table} -> /admin/${entity.route}`);
+  const actual = navigation.links.filter(link => expected.includes(link));
+  const allowed = ["ADMIN", "SUPER_ADMIN", "READ_ONLY"].includes(role);
+  expect(actual.sort()).toEqual(allowed ? expected.sort() : []);
+  return { ...navigation, links: navigation.links.filter(link => !expected.includes(link)) };
+}
+
 function renderFor(role: string, pathname: string) {
   useQueryMock.mockImplementation((queryRef: unknown) => {
     if (queryRef === "users:getMe") return { role };
@@ -168,15 +183,15 @@ describe("sidebar navigation characterisation", () => {
   });
 
   it("super admin navigation is unchanged", () => {
-    expect(renderFor("SUPER_ADMIN", "/admin")).toMatchSnapshot();
+    expect(frameworkNavigation(renderFor("SUPER_ADMIN", "/admin"), "SUPER_ADMIN")).toMatchSnapshot();
   });
 
   it("company admin navigation is unchanged", () => {
-    expect(renderFor("ADMIN", "/app")).toMatchSnapshot();
+    expect(frameworkNavigation(renderFor("ADMIN", "/app"), "ADMIN")).toMatchSnapshot();
   });
 
   it("standard user navigation is unchanged", () => {
-    expect(renderFor("USER", "/app")).toMatchSnapshot();
+    expect(frameworkNavigation(renderFor("USER", "/app"), "USER")).toMatchSnapshot();
   });
 
   // Snapshot updated 2026-08-18, on purpose: capability sections (Tasks,

@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
@@ -120,7 +121,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
 
     expect(await t.query(api.invites.getActiveTemplate, {})).toBeNull();
     expect(await superAdminClient.query(api.invites.getActiveTemplate, {})).toMatchObject({
-      subject: "You have been invited to Sonae Workspace",
+      subject: `You have been invited to ${DEFAULT_SETTINGS.platformName} Workspace`,
       ctaText: "Accept Invitation",
     });
 

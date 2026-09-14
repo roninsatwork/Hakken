@@ -2,8 +2,10 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+// template:remove:start properties
 import { RIGHTMOVE_ACTOR_ID } from "./apifyActors";
 
+// template:remove:end
 describe("Apify webhook persistence", () => {
   test("records run starts and maps terminal webhook statuses onto Apify runs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -20,7 +22,7 @@ describe("Apify webhook persistence", () => {
 
     await t.mutation(internal.webhooks.recordRunStart, {
       runId: "run-1",
-      actorId: RIGHTMOVE_ACTOR_ID,
+      actorId: "generic-actor",
       startedBy: userId,
       companyId,
     });
@@ -31,7 +33,7 @@ describe("Apify webhook persistence", () => {
     );
     expect(run).toMatchObject({
       runId: "run-1",
-      actorId: RIGHTMOVE_ACTOR_ID,
+      actorId: "generic-actor",
       startedBy: userId,
       companyId,
       status: "COMPLETED",
@@ -57,10 +59,13 @@ describe("Apify webhook persistence", () => {
       ctx.db.query("apifyRuns").withIndex("by_runId", (q) => q.eq("runId", "run-other")).unique()
     );
     expect(otherRun).toMatchObject({ status: "COMPLETED", propertiesScraped: 0 });
+    // template:remove:start properties
     const strays = await t.run(async (ctx) =>
       ctx.db.query("properties").filter((q) => q.eq(q.field("runId"), "run-other")).collect()
     );
     expect(strays).toHaveLength(0);
+    // template:remove:end
+
 
     await t.mutation(internal.webhooks.updateRunStatus, { runId: "run-1", status: "RUNNING" });
     run = await t.run(async (ctx) =>
@@ -81,6 +86,7 @@ describe("Apify webhook persistence", () => {
     ).resolves.toBeNull();
   });
 
+// template:remove:start properties
   test("stores Rightmove data as idempotent company-scoped property records", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -156,6 +162,7 @@ describe("Apify webhook persistence", () => {
       })
     ).rejects.toThrow("Run not found");
   });
+// template:remove:end
 });
 
 /**
@@ -208,7 +215,7 @@ describe("Apify webhook request body limits", () => {
     );
     await t.mutation(internal.webhooks.recordRunStart, {
       runId: "run-capped",
-      actorId: RIGHTMOVE_ACTOR_ID,
+      actorId: "generic-actor",
       startedBy,
     });
 

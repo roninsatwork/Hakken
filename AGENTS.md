@@ -2,6 +2,10 @@
 
 This is the repo-level handoff for future coding agents. Treat this file as the first local project guide to read after the user's latest instructions.
 
+## Billing Framework Handoff
+
+Before changing billing, read the [approved billing experience and handoff](docs/plans/active/optional-billing-starter-proposal.md#approved-billing-experience--2026-09-14) and [Stripe operator guide](docs/operator/stripe-billing.md). Company admins use **Billing in the user frontend** (`/app/settings/billing`) and have **zero access to platform Admin**. Super-admin setup and oversight live at `/admin/settings/billing`; Stripe owns hosted payments, invoices and customer financial management. Each clone uses one operator-owned Stripe account. Saved backend settings override the JSON clone defaults; credentials stay in the backend environment. Keep paid-company and covered-user counts distinct from revenue or per-seat billing. The [dated verification record](docs/plans/active/product-building-foundations-plan.md#billing-experience-verification--2026-09-14) separates local implementation from live Stripe acceptance and deployment; never treat one as proof of the other.
+
 ## Current Branch Rules
 
 - Daily development happens on `dev`.
@@ -131,6 +135,7 @@ npm run dev
 npm run convex:dev
 ```
 
+<!-- template:remove:start movement -->
 ## Movement Demo Freeze
 
 Do not refactor, redesign, or expand the movement demo unless the user explicitly asks or a quality gate is broken by it.
@@ -169,6 +174,8 @@ Replay Studio is the motion source of truth. If avatar motion is broken, fix the
 All previous movement/replay plans were retired on 2026-07-20. The single source of truth is `docs/plans/active/movement-definitive-plan.md`: acceptance is the automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation. Retired plans (for example `docs/plans/completed/replay-studio-agent-repair-harness-plan.md` and `docs/plans/completed/replay-lab-visual-acceptance-tightening-plan.md`) remain useful background on the record-once repair loop and rendered-proof discipline, but they no longer gate work. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
 
 When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
+
+<!-- template:remove:end -->
 
 ## Project Guardrails
 

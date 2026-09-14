@@ -7,8 +7,14 @@ import { CapabilityGate } from "./CapabilityGate";
 import TasksLayout from "../tasks/layout";
 import CallsLayout from "../calls/layout";
 import ReceptionLayout from "../reception/layout";
+// template:remove:start properties
 import PropertiesLayout from "../properties/layout";
+
+// template:remove:end
+// template:remove:start salesReports
 import ReportsLayout from "../reports/layout";
+
+// template:remove:end
 import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
@@ -26,8 +32,12 @@ const SECTIONS = [
   { name: "tasks", Layout: TasksLayout, key: "tasks" },
   { name: "calls", Layout: CallsLayout, key: "calls" },
   { name: "reception", Layout: ReceptionLayout, key: "reception" },
+  // template:remove:start properties
   { name: "properties", Layout: PropertiesLayout, key: "properties" },
+  // template:remove:end
+  // template:remove:start salesReports
   { name: "reports", Layout: ReportsLayout, key: "reports" },
+  // template:remove:end
 ] as const;
 
 describe("capability section gates", () => {

@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { describe, expect, test } from "vitest";
 import {
   buildAnalyticsHealthPlatformAlertDecision,
@@ -86,7 +87,7 @@ describe("platform alert service", () => {
       alertType: "analyticsHealth",
       shouldAlert: false,
       signals: [],
-      subject: "[Sonae] Platform alerts healthy: analytics health",
+      subject: `[${DEFAULT_SETTINGS.platformName}] Platform alerts healthy: analytics health`,
     });
     expect(decision.summary).toContain("clean");
   });
@@ -113,7 +114,7 @@ describe("platform alert service", () => {
 
     expect(decision.shouldAlert).toBe(true);
     expect(decision.signals.map((signal) => signal.count)).toEqual([1, 1, 2, 1, 3]);
-    expect(decision.subject).toBe("[Sonae] Platform alert: analytics health (8 signals)");
+    expect(decision.subject).toBe(`[${DEFAULT_SETTINGS.platformName}] Platform alert: analytics health (8 signals)`);
     expect(decision.signals.map((signal) => signal.key)).toEqual([
       "missingGlobalSnapshots",
       "duplicateSnapshots",
@@ -130,7 +131,7 @@ describe("platform alert service", () => {
       alertType: "systemHealth",
       shouldAlert: false,
       signals: [],
-      subject: "[Sonae] Platform alerts healthy: system health",
+      subject: `[${DEFAULT_SETTINGS.platformName}] Platform alerts healthy: system health`,
     });
     expect(decision.summary).toContain("clean");
   });
@@ -182,7 +183,7 @@ describe("platform alert service", () => {
     }));
 
     expect(decision.shouldAlert).toBe(true);
-    expect(decision.subject).toBe("[Sonae] Platform alert: system health (3 signals)");
+    expect(decision.subject).toBe(`[${DEFAULT_SETTINGS.platformName}] Platform alert: system health (3 signals)`);
     expect(decision.signals.map((signal) => signal.key)).toEqual(["agentErrorLogs", "failedScheduledExecutions"]);
     expect(decision.signals[0].details[0]).toContain("Sales Agent");
     expect(decision.signals[1].details[0]).toContain("Daily Workflow");
@@ -223,7 +224,7 @@ describe("platform alert service", () => {
       "agentCostBudgetPressure",
       "tenantMessageBudgetPressure",
     ]);
-    expect(decision.subject).toBe("[Sonae] Platform alert: system health (2 signals)");
+    expect(decision.subject).toBe(`[${DEFAULT_SETTINGS.platformName}] Platform alert: system health (2 signals)`);
   });
 
   /* ---------------------------------------------------------------------

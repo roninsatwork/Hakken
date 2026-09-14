@@ -1,12 +1,15 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+// template:remove:start properties
 import { producesPropertyListings } from "./apifyActors";
+// template:remove:end
 import { readBoundedJson } from "./utils/boundedRequestBody";
 import { constantTimeEqual } from "./utils/security";
 import { appError } from "./utils/appError";
 
 
+// template:remove:start properties
 const getUrlValue = (value: unknown) => {
   if (typeof value === "string") return value;
   if (typeof value === "object" && value !== null && "url" in value) {
@@ -15,6 +18,7 @@ const getUrlValue = (value: unknown) => {
   }
   return "";
 };
+// template:remove:end
 
 export const processApifyWebhook = httpAction(async (ctx, request) => {
   // Validate dynamic shared webhook secret to prevent spoofing
@@ -148,75 +152,68 @@ export const storeRightmoveData = internalMutation({
 
     if (!run) throw appError("NOT_FOUND", "Run not found");
 
-    // Only the Rightmove scraper's results are property listings. Anything else
-    // an agent starts through the generic Apify tool has a shape nobody here
-    // has seen, and forcing it into the properties table would invent records
-    // out of whichever fields happened to line up. The run is still recorded as
-    // finished, so the job is not silently lost.
-    if (!producesPropertyListings(run.actorId)) {
+    // template:remove:start properties
+    if (producesPropertyListings(run.actorId)) {
+      for (const itemStr of args.items) {
+        const item = JSON.parse(itemStr);
+        const rightmoveId = String(item.id || item.url || Date.now());
+
+        // Check for existing property to prevent duplicates
+        const existing = await ctx.db.query("properties")
+          .withIndex("by_rightmoveId", q => q.eq("rightmoveId", rightmoveId))
+          .filter(q => q.eq(q.field("companyId"), run.companyId))
+          .first();
+
+        const propertyData = {
+          runId: args.runId,
+          rightmoveId,
+          address: item.address || item.displayAddress || "Unknown",
+          price: typeof item.price === 'number' ? item.price : parseInt(String(item.price).replace(/[^0-9]/g, '')) || 0,
+          currency: "GBP",
+          bedrooms: item.bedrooms || 0,
+          bathrooms: item.bathrooms || 0,
+          propertyType: item.propertyType || "Unknown",
+          url: item.url || "",
+          imageUrl: (Array.isArray(item.images) && item.images.length > 0) ? (getUrlValue(item.images[0]) || item.mainImage || "") : (item.mainImage || ""),
+          images: Array.isArray(item.images) ? item.images.map(getUrlValue).filter(Boolean) : [],
+          description: item.description || item.summary || "",
+          features: Array.isArray(item.features) ? item.features : [],
+          floorplans: Array.isArray(item.floorplans) ? item.floorplans.map(getUrlValue).filter(Boolean) : [],
+          epcRating: item.epcRating || item.epc?.rating || "",
+          latitude: item.coordinates?.latitude || item.location?.latitude || undefined,
+          longitude: item.coordinates?.longitude || item.location?.longitude || undefined,
+          agentName: item.agent?.name || item.branch?.name || (typeof item.agent === 'string' ? item.agent : ""),
+          agentPhone: item.agentPhone || item.agent?.phone || item.branch?.phone || "",
+          agentProfileUrl: item.agentProfileUrl || "",
+          addedOn: item.addedOn || "",
+          firstVisibleDate: item.firstVisibleDate || "",
+          listingUpdateDate: item.listingUpdateDate || "",
+          listingUpdateReason: item.listingUpdateReason || "",
+          productLabel: item.productLabel || "",
+          sizeSqFeetMin: String(item.sizeSqFeetMin || ""),
+          sizeSqFeetMax: String(item.sizeSqFeetMax || ""),
+          companyId: run.companyId,
+          scrapedAt: Date.now(),
+        };
+
+        if (existing) {
+          // Upsert: Update existing property with fresh data
+          await ctx.db.patch(existing._id, propertyData);
+        } else {
+          // Insert: Brand new property
+          await ctx.db.insert("properties", propertyData);
+        }
+      }
+
       await ctx.db.patch(run._id, {
         status: "COMPLETED",
         completedAt: Date.now(),
-        propertiesScraped: 0,
+        propertiesScraped: args.items.length,
       });
       return;
     }
-
-    for (const itemStr of args.items) {
-      const item = JSON.parse(itemStr);
-      const rightmoveId = String(item.id || item.url || Date.now());
-      
-      // Check for existing property to prevent duplicates
-      const existing = await ctx.db.query("properties")
-        .withIndex("by_rightmoveId", q => q.eq("rightmoveId", rightmoveId))
-        .filter(q => q.eq(q.field("companyId"), run.companyId))
-        .first();
-
-      const propertyData = {
-        runId: args.runId,
-        rightmoveId,
-        address: item.address || item.displayAddress || "Unknown",
-        price: typeof item.price === 'number' ? item.price : parseInt(String(item.price).replace(/[^0-9]/g, '')) || 0,
-        currency: "GBP",
-        bedrooms: item.bedrooms || 0,
-        bathrooms: item.bathrooms || 0,
-        propertyType: item.propertyType || "Unknown",
-        url: item.url || "",
-        imageUrl: (Array.isArray(item.images) && item.images.length > 0) ? (getUrlValue(item.images[0]) || item.mainImage || "") : (item.mainImage || ""),
-        images: Array.isArray(item.images) ? item.images.map(getUrlValue).filter(Boolean) : [],
-        description: item.description || item.summary || "",
-        features: Array.isArray(item.features) ? item.features : [],
-        floorplans: Array.isArray(item.floorplans) ? item.floorplans.map(getUrlValue).filter(Boolean) : [],
-        epcRating: item.epcRating || item.epc?.rating || "",
-        latitude: item.coordinates?.latitude || item.location?.latitude || undefined,
-        longitude: item.coordinates?.longitude || item.location?.longitude || undefined,
-        agentName: item.agent?.name || item.branch?.name || (typeof item.agent === 'string' ? item.agent : ""),
-        agentPhone: item.agentPhone || item.agent?.phone || item.branch?.phone || "",
-        agentProfileUrl: item.agentProfileUrl || "",
-        addedOn: item.addedOn || "",
-        firstVisibleDate: item.firstVisibleDate || "",
-        listingUpdateDate: item.listingUpdateDate || "",
-        listingUpdateReason: item.listingUpdateReason || "",
-        productLabel: item.productLabel || "",
-        sizeSqFeetMin: String(item.sizeSqFeetMin || ""),
-        sizeSqFeetMax: String(item.sizeSqFeetMax || ""),
-        companyId: run.companyId,
-        scrapedAt: Date.now(),
-      };
-
-      if (existing) {
-        // Upsert: Update existing property with fresh data
-        await ctx.db.patch(existing._id, propertyData);
-      } else {
-        // Insert: Brand new property
-        await ctx.db.insert("properties", propertyData);
-      }
-    }
-
-    await ctx.db.patch(run._id, {
-      status: "COMPLETED",
-      completedAt: Date.now(),
-      propertiesScraped: args.items.length,
-    });
+    // template:remove:end
+    // Generic jobs finish without interpreting their results as property listings.
+    await ctx.db.patch(run._id, { status: "COMPLETED", completedAt: Date.now(), propertiesScraped: 0 });
   },
 });

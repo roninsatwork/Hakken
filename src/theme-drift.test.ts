@@ -1,3 +1,4 @@
+import ratchets from "../code-ratchets.json";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -102,7 +103,7 @@ function countDrift() {
  * palette work that should have lowered it left it alone deliberately.
  */
 // 2026-09-12: the Night Heist arcade replacement removes 21 colour literals.
-const DRIFT_BASELINE = 1031;
+const DRIFT_BASELINE = ratchets.theme;
 
 /**
  * Files allowed to keep a local `get*Color`-style helper: one maps patch
@@ -139,6 +140,7 @@ describe("status colour helpers stay consolidated", () => {
  * combination the safelist does not carry, which would otherwise ship as a
  * silently unstyled element.
  */
+// template:remove:start movement
 describe("movement palette safelist", () => {
   const MOVEMENTS_ROOT = join(SRC_ROOT, "app/(dashboard)/demos/movements");
   const PALETTE_PATH = join(MOVEMENTS_ROOT, "_lib/movementPalette.ts");
@@ -178,6 +180,8 @@ describe("movement palette safelist", () => {
     ).toEqual([]);
   });
 });
+// template:remove:end
+
 
 describe("theme drift ratchet", () => {
   it(`hardcoded colour count never rises above the baseline (${DRIFT_BASELINE})`, () => {

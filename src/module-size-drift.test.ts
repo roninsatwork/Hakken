@@ -1,3 +1,4 @@
+import ratchets from "../code-ratchets.json";
 import path from 'path';
 import fs from 'fs';
 import { describe, expect, test } from 'vitest';
@@ -40,29 +41,7 @@ const BAND = 50;
 
 const bandFor = (lines: number) => Math.ceil(lines / BAND) * BAND;
 
-const FROZEN: Record<string, number> = {
-  'convex/schema.ts': 4450,
-  'convex/agentEvalFixtures.ts': 2000,
-  'convex/salesDataResearch.ts': 2000,
-  'convex/wikiPages.ts': 1850,
-  'convex/knowledge.ts': 1800,
-  'convex/aiModels.ts': 1550,
-  'convex/agents.ts': 1400,
-  'convex/salesDataMarketDiscovery.ts': 1400,
-  'convex/agentRuns.ts': 1350,
-  'convex/users.ts': 1250,
-  'convex/agentRuntime.ts': 1250,
-  'convex/aiToolExecutionService.ts': 1200,
-  'convex/agentSkills.ts': 1200,
-  'convex/salesData.ts': 1200,
-  'convex/agentMemoryCandidates.ts': 1200,
-  'convex/agentObjectiveLoop.ts': 1150,
-  'convex/dataMigrations.ts': 1100,
-  'convex/salesDataResearchJobs.ts': 1100,
-  'convex/analytics.ts': 1100,
-  'convex/workflowEngine.ts': 1050,
-  'convex/purges.ts': 1050,
-};
+const FROZEN: Record<string, number> = ratchets.moduleSize;
 
 const lineCount = (file: string) => {
   const contents = fs.readFileSync(path.join(repoRoot, file), 'utf8');

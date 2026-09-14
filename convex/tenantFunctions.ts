@@ -1,3 +1,4 @@
+import { billingBlocksPaidAccess } from "./billingPolicy";
 import {
   customAction,
   customCtx,
@@ -275,7 +276,7 @@ export async function effectiveModulesFor(
   if (!company) return [];
 
   const own = normalizeEnabledModules(company.enabledModules);
-  if (!company.planId) return own;
+  if (!company.planId || await billingBlocksPaidAccess(ctx, company._id)) return own;
 
   const plan = await ctx.db.get(company.planId);
   const granted = normalizeEnabledModules(plan?.grantedModules);

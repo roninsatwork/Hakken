@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { getFunctionName } from "convex/server";
+import { billingSettingsFixture, companyBillingFixture, customerBillingFixture, billingActionFixtures } from "./billingFixtures";
 
 type E2ERole = "super-admin" | "company-admin" | "user" | "read-only" | "auditor";
 type FunctionReference = Parameters<typeof getFunctionName>[0];
@@ -439,7 +440,10 @@ const modelDefaultUseCases = [
 const workflowId = "workflow_e2e";
 const createdWorkflowId = "workflow_e2e_created";
 const widgetId = "widget_e2e";
+// template:remove:start movement
 const movementId = "movement_e2e_roll_down";
+// template:remove:end
+
 
 const rules = [
   {
@@ -549,6 +553,7 @@ const globalInventoryFixture = {
   systemIntegrity: analyticsSystemIntegrity,
 };
 
+// template:remove:start movement
 const makeMovementPose = () => {
   const pose = Array.from({ length: 33 }, (_, landmarkIndex) => ({
     x: 0.45 + landmarkIndex * 0.002,
@@ -579,7 +584,10 @@ const makeMovementPose = () => {
 
   return pose;
 };
+// template:remove:end
 
+
+// template:remove:start movement
 const movementFrames = [
   makeMovementPose(),
   (() => {
@@ -611,7 +619,10 @@ const movementFrames = [
   landmarks,
   worldLandmarks: landmarks.map((landmark) => ({ ...landmark })),
 }));
+// template:remove:end
 
+
+// template:remove:start movement
 const movementDebugSamples = movementFrames.map((frame, frameIndex) => {
   const squatDepth = frameIndex === 1 ? 0.38 : 0;
   const leftKneeLift = frameIndex === 2 ? 0.42 : 0;
@@ -671,7 +682,10 @@ const movementDebugSamples = movementFrames.map((frame, frameIndex) => {
     },
   };
 });
+// template:remove:end
 
+
+// template:remove:start movement
 const movementDebugSessionFixture = {
   _id: "movement_debug_e2e_replay",
   _creationTime: now,
@@ -687,7 +701,10 @@ const movementDebugSessionFixture = {
   trigger: "manual-debug-save",
   warningSummary: "none",
 };
+// template:remove:end
 
+
+// template:remove:start movement
 const movementFixture = {
   _id: movementId,
   _creationTime: now,
@@ -709,6 +726,8 @@ const movementFixture = {
   bodyFocus: ["ribcage", "pelvis"],
   createdAt: now,
 };
+// template:remove:end
+
 
 function workflowFixture(id = workflowId, name = "E2E Workflow") {
   return {
@@ -974,6 +993,10 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   useMockRevision();
 
   if (path === "users:getMe") return hasHydrated ? getCurrentUser() : undefined;
+  if (path === "billing:getStatus") return !hasHydrated ? undefined : getCurrentUser()?.role === "ADMIN" ? customerBillingFixture : null;
+  if (path === "billingAdmin:getSettings") return billingSettingsFixture;
+  if (path === "billingAdmin:getCompany") return companyBillingFixture;
+  if (path === "billingAdmin:getPlan") return { name: "Pro", active: true };
   if (path === "settings:get") return settings;
   // The admin settings forms read the wider row through their own door. Without
   // this they fell to the catch-all below, which builds a fresh array on every
@@ -1365,10 +1388,14 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "analytics:getCompanyMetrics") return companyMetricsFixture;
   if (path === "analytics:getGlobalAnalytics") return globalAnalyticsFixture;
   if (path === "analytics:getGlobalInventoryMetrics") return globalInventoryFixture;
-  if (path === "movements:get") {
+  // template:remove:start movement
+if (path === "movements:get") {
     return queryArgs.id === movementId ? movementFixture : null;
   }
-  if (path === "movements:listReplayAlignmentRecordings") {
+// template:remove:end
+
+  // template:remove:start movement
+if (path === "movements:listReplayAlignmentRecordings") {
     return [
       {
         ...movementFixture,
@@ -1376,7 +1403,10 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       },
     ];
   }
-  if (path === "movements:listDebugTrackingSessions") {
+// template:remove:end
+
+  // template:remove:start movement
+if (path === "movements:listDebugTrackingSessions") {
     return [
       {
         ...movementDebugSessionFixture,
@@ -1385,16 +1415,27 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       },
     ];
   }
-  if (path === "movements:getDebugTrackingSession") {
+// template:remove:end
+
+  // template:remove:start movement
+if (path === "movements:getDebugTrackingSession") {
     return queryArgs.id === movementDebugSessionFixture._id ? movementDebugSessionFixture : null;
   }
-  if (path === "movements:getDebugTrackingSessions") {
+// template:remove:end
+
+  // template:remove:start movement
+if (path === "movements:getDebugTrackingSessions") {
     const ids = Array.isArray(queryArgs.ids) ? queryArgs.ids : [];
     return ids.includes(movementDebugSessionFixture._id) ? [movementDebugSessionFixture] : [];
   }
-  if (path === "movements:getFileUrl") {
+// template:remove:end
+
+  // template:remove:start movement
+if (path === "movements:getFileUrl") {
     return null;
   }
+// template:remove:end
+
   // Gated on hydration, like `users:getMe` above. These read `localStorage`,
   // which the server cannot see, so answering before the browser has taken over
   // means the server and the first client render disagree — and React resolves
@@ -1534,7 +1575,8 @@ export function useMutation(functionReference: FunctionReference) {
 }
 
 export function useAction(functionReference: FunctionReference) {
-  void functionReference;
+  const path = functionPath(functionReference);
+  if (billingActionFixtures[path]) return billingActionFixtures[path];
   return async () => true;
 }
 
@@ -1556,6 +1598,11 @@ export function useConvex() {
 export function usePaginatedQuery(functionReference: FunctionReference, args?: unknown) {
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+  if (path === "billingAdmin:listCompanies") {
+    const matches = (!queryArgs.status || queryArgs.status === companyBillingFixture.status)
+      && (!queryArgs.searchTerm || companyBillingFixture.companyName.toLowerCase().includes(String(queryArgs.searchTerm).toLowerCase()));
+    return { results: matches ? [companyBillingFixture] : [], status: "Exhausted", loadMore: async () => {}, isLoading: false };
+  }
 
   // The catalogue pages by cursor through `getPaginatedModels`. It used to be
   // an offset query called `getOffsetPaginatedModels`, and when it was replaced
@@ -1671,7 +1718,8 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
       isLoading: false,
     };
   }
-  if (path === "movements:getPaginated") {
+  // template:remove:start movement
+if (path === "movements:getPaginated") {
     const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
     const spineGoal = typeof queryArgs.spineGoal === "string" ? queryArgs.spineGoal : null;
     const matchesSearch = !searchTerm || movementFixture.title.toLowerCase().includes(searchTerm);
@@ -1685,6 +1733,8 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
       isLoading: false,
     };
   }
+// template:remove:end
+
   if (path === "aiTools:getPaginatedTools") {
     return {
       results: [

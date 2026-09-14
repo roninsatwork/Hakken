@@ -44,6 +44,9 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 
 ### Plans
 
+- [Product-building foundations after cloning](./plans/active/product-building-foundations-plan.md)
+- [Optional Billing Starter and Current Handoff](./plans/active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin billing and dated verification; see the operator guide for setup.
+
 - [Plans Index](./plans/index.md)
 - [Ronin's Run — Night Heist Plan](./plans/active/ronins-run-night-heist-plan.md) — four playable maps, saved campaign unlocks, Spirit Power takedowns, preserved visual reference, asset provenance and remaining play/quality acceptance checks.
 - [Admin Clone-Readiness Plan](./plans/completed/admin-clone-readiness-plan.md) — approved plan for the admin section's last hand-drawn debts: button migration onto the screen kit, collapsing mirrored screens, de-branding via `platformName`, and full admin copy externalisation into the message catalogues.
@@ -92,7 +95,7 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Sonae Speaks The Standard Tool Plug](./plans/active/tool-server-plan.md) — active plan for connecting Sonae to a service's own published tool server, so its tools arrive without an integration being written.
 - [Knowing When It Breaks — PARKED](./plans/active/monitoring-plan.md) — parked plan for real error monitoring across both halves of the product.
-- [The Clean Cut — Turning A Clone Into A Client's Own Product](./plans/active/client-product-cut-plan.md) — active plan for cutting a cloned repository down to the verticals a client actually bought, folders included.
+- [The Clean Cut — Turning A Clone Into A Client's Own Product](./plans/active/client-product-cut-plan.md) — delivered locally 2026-09-13: verified framework + Arcade exports with four optional areas, folders and dependencies included.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
 
@@ -188,6 +191,12 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Local Demo Seed Runbook](./operator/local-demo-seed-runbook.md)
 - [Local Test Auth Runbook](./operator/local-test-auth-runbook.md)
 - [Vertical App Packaging Checklist](./operator/vertical-app-packaging-checklist.md)
+- [Build a new application from Sonae](./operator/cloning-sonae.md)
+- [Product Setup After Cloning](./operator/product-setup.md)
+- [Optional Stripe Billing](./operator/stripe-billing.md)
+- [Generate a Product Feature](./developer/feature-generator.md)
+- [Product Recipes](./developer/product-recipes.md)
+- [Reviewed Framework Updates](./operator/framework-updates.md)
 - [Movement Demo Pitch Runbook](./operator/movement-demo-pitch-runbook.md)
 - [Movement Demo Manual Smoke Checklist](./operator/movement-demo-manual-smoke-checklist.md)
 - [Movement Demo Live Rehearsal Notes Template](./operator/movement-demo-live-rehearsal-notes-template.md)

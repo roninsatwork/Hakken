@@ -28,11 +28,11 @@ describe("company service helpers", () => {
     // A typo stored here would read as a module nobody can find, so it is
     // dropped at the boundary rather than persisted.
     const record = buildCompanyRecord(
-      { name: "Acme", enabledModules: ["salesData", "not-a-module", "salesData"] },
+      { name: "Acme", enabledModules: ["calls", "not-a-module", "calls"] },
       123
     );
 
-    expect(record.enabledModules).toEqual(["salesData"]);
+    expect(record.enabledModules).toEqual(["calls"]);
   });
 
   test("builds company profile patches", () => {

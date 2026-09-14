@@ -1,23 +1,19 @@
 import { convexTest } from "convex-test";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { expect, test, describe } from "vitest";
-import { api, internal } from "./_generated/api";
+import { api } from "./_generated/api";
+// template:remove:start salesData
+import { internal } from "./_generated/api";
+// template:remove:end
 import schema from "./schema";
 
 /**
- * Tenant-isolation proofs for the product verticals — properties, the Apify
- * scraper runs behind them, the Rightmove SSRF guard, and the module-gated
- * sales data import.
- *
- * These were part of `bola.test.ts` until the template split (P4.3). They are
- * the same tests, moved: the template drops the properties vertical, so a
- * template built from a file mixing platform and vertical proofs would either
- * carry tests for tables it does not have, or lose the platform proofs along
- * with them. Splitting by owner means the template takes whole files and never
- * edits a test.
+ * Product-specific tenant-isolation proofs. Optional boundaries retain each
+ * proof with its application; generic Apify isolation remains in apify.test.ts.
  */
 describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
 
+  // template:remove:start properties
   test("Properties are strictly isolated to the tenant (BOLA)", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     
@@ -81,7 +77,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       client.mutation(api.properties.deleteProperty, { id: propBId })
     ).rejects.toThrowError(/Unauthorized/);
   });
+// template:remove:end
 
+
+  // template:remove:start properties
   test("Apify runs are tenant-isolated and admin list is protected", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     
@@ -145,7 +144,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     const allRuns = await clientSuper.query(api.properties.getAllRunsAdmin);
     expect(allRuns.length).toBe(2);
   });
+// template:remove:end
 
+
+  // template:remove:start properties
   test("startRightmoveScrape rejects unsafe SSRF loopback URLs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -170,6 +172,8 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       })
     ).rejects.toThrowError(/SSRF Prevention/);
   });
+// template:remove:end
+
 
   /**
    * Sales Data is the first surface gated by a company module, so there are two
@@ -178,6 +182,7 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
    * second matters because hiding the navigation is not a control — someone who
    * types the URL, or calls the query directly, must still be refused.
    */
+  // template:remove:start salesData
   async function seedSalesData(t: ReturnType<typeof convexTest>) {
     return await t.run(async (ctx) => {
       const withModule = await ctx.db.insert("companies", {
@@ -249,7 +254,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       return { withModule, withoutModule, userWith, userWithout };
     });
   }
+// template:remove:end
 
+
+  // template:remove:start salesData
   test("Sales data rows are strictly isolated to the tenant (BOLA)", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { userWith } = await seedSalesData(t);
@@ -264,7 +272,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     expect(result.page.length).toBe(1);
     expect(result.page[0].accountName).toBe("mine");
   });
+// template:remove:end
 
+
+  // template:remove:start salesData
   test("A workspace without the module cannot reach the data", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { userWithout } = await seedSalesData(t);
@@ -305,7 +316,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       client.mutation(api.salesData.generateUploadUrl, {})
     ).rejects.toThrowError(/not enabled/i);
   });
+// template:remove:end
 
+
+  // template:remove:start salesData
   test("The section overview reports the module as off rather than throwing", async () => {
     // The navigation asks this on every render, including for the workspaces
     // that do not have it. That is a normal answer, not an error.
@@ -325,7 +339,10 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     expect(on.companyName).toBe("With Module");
     expect(on.currentImport?.salesRowCount).toBe(1);
   });
+// template:remove:end
 
+
+  // template:remove:start salesData
   test("An import cannot be started against another workspace", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { withModule, userWithout } = await seedSalesData(t);
@@ -341,4 +358,6 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       })
     ).rejects.toThrowError(/Unauthorized/);
   });
+// template:remove:end
+
 });

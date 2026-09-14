@@ -1,3 +1,4 @@
+import { companyBillingAccount } from "./billingPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery, internalMutation } from "./_generated/server";
@@ -304,6 +305,9 @@ export const deleteCompany = superAdminMutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
+    if (await companyBillingAccount(ctx, args.id)) {
+      throw appError("CONFLICT", "This company has Stripe billing history. Reconcile and archive its billing before deleting it.");
+    }
 
     const company = await ctx.db.get(args.id);
     const now = Date.now();
@@ -397,6 +401,9 @@ export const assignPlanToCompany = superAdminMutation({
   args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
   returns: v.id("companies"),
   handler: async (ctx, args) => {
+    if (await companyBillingAccount(ctx, args.id)) {
+      throw appError("CONFLICT", "Stripe manages this company plan. Manual plan assignment is unavailable.");
+    }
     const company = await ctx.db.get(args.id);
     if (!company) throw appError("NOT_FOUND", "Company not found");
 

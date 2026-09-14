@@ -2,6 +2,9 @@
 
 Use this checklist when turning Sonae into a new customer-specific or vertical product starter.
 
+First create the code copy using [Build a new application from Sonae](./cloning-sonae.md).
+The default keeps the framework and Arcade; the other four application areas are opt-in.
+
 The goal is to make product-specific changes through configuration, translations, templates, seed data, and extension points before editing core runtime code.
 
 ## 1. Product Identity
@@ -9,7 +12,7 @@ The goal is to make product-specific changes through configuration, translations
 - Set the product/platform name through system settings.
 - Replace logo URLs through system settings or uploaded logo storage.
 - Confirm light and dark theme tokens are set through settings rather than hardcoded CSS.
-- Review System Settings > System Options > Brand Handoff Summary and confirm product name, logo mode, brand color, runtime sender, widget posture, diagnostics posture, production gate, and ready presets.
+- Use [Product Setup](./product-setup.md) to preview and apply the clone's product defaults. Review System Settings > Identity and Aesthetics for stored branding overrides, and the configured email sender separately.
 - Replace customer-facing product copy in `messages/en.json` and `messages/it.json`.
 - Keep English and Italian locale dictionaries in parity.
 - Set the system email sender name/address or configure `RESEND_FROM_EMAIL` as the deployment override.
@@ -18,8 +21,8 @@ The goal is to make product-specific changes through configuration, translations
 ## 2. Navigation And Module Shape
 
 - Decide which modules should be visible for the vertical product.
-- Pick the closest module preset in System Settings > System Options before editing navigation.
-- Review Navigation Profiles in System Settings > System Options before hiding links or changing route groups.
+- Set company capabilities in the company Features screen.
+- Add product navigation in `src/ui/components/layout/SidebarNavTrees.tsx`; there is no Navigation Profiles setup step.
 - Keep platform-owner surfaces super-admin-only.
 - Hide temporary or diagnostic routes unless `diagnosticRoutingEnabled` is intentionally enabled.
 - Add new routes only after role and tenant behavior is clear.
@@ -28,7 +31,7 @@ The goal is to make product-specific changes through configuration, translations
 
 ## 3. Custom Domains And Public Surfaces
 
-- Review System Settings > System Options > Custom Domain Readiness.
+- Record the public app origin in `sonae.product.json` and check the hosting/domain configuration outside the app.
 - Confirm the primary production app host with the hosting provider.
 - Confirm widget allowed domains are restricted and do not include wildcard-only public exposure.
 - Confirm the branded email sender domain is verified or `RESEND_FROM_EMAIL` is set.
@@ -61,7 +64,7 @@ The goal is to make product-specific changes through configuration, translations
 
 - Run `npm run setup:validate` for local development.
 - Run `npm run setup:validate -- --profile=production` before production handoff.
-- Configure at least one live model provider for production.
+- Configure the providers and feature credentials selected in `sonae.product.json`. Knowledge embeddings, voice and telephony require Vertex independently of the text-model provider.
 - Set model defaults from stored configuration, not hardcoded runtime literals.
 - Install connector definitions and configure secret references outside source control.
 - Keep write, destructive, and external tools approval-gated unless explicitly reviewed.
@@ -73,7 +76,7 @@ The goal is to make product-specific changes through configuration, translations
 - Confirm System Health has no stuck runs, stale approvals, failed tools, or provider failure clusters.
 - Export the System Health report for deployment handoff.
 - Confirm plan quotas and agent run budgets match the expected commercial model.
-- Copy the System Settings > System Options > Packaging Checklist markdown into the release notes, build plan, or handoff page.
+- Record this checklist, the product configuration and the actual verification results in the product handoff notes.
 
 ## 8. Fresh Deployment Smoke
 

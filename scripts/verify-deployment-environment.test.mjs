@@ -25,10 +25,10 @@ describe("verify-deployment-environment", () => {
   });
 
   it("names a missing required key", () => {
-    const everythingButAuth = REQUIRED_KEYS.filter((key) => key !== "AUTH_GOOGLE_ID");
-    const { missingRequired } = evaluateDeployment([], everythingButAuth);
+    const everythingButSite = REQUIRED_KEYS.filter((key) => key !== "SITE_URL");
+    const { missingRequired } = evaluateDeployment([], everythingButSite);
 
-    expect(missingRequired).toEqual(["AUTH_GOOGLE_ID"]);
+    expect(missingRequired).toEqual(["SITE_URL"]);
   });
 
   it("reports an absent feature group as the feature, not a wall of keys", () => {
@@ -45,8 +45,8 @@ describe("verify-deployment-environment", () => {
   });
 
   it("reads names out of convex env list output", () => {
-    const output = "AUTH_GOOGLE_ID=abc123\nRESEND_API_KEY=re_xyz\nnot a key line\n";
+    const output = "SITE_URL=abc123\nRESEND_API_KEY=re_xyz\nnot a key line\n";
 
-    expect(parseEnvListOutput(output)).toEqual(["AUTH_GOOGLE_ID", "RESEND_API_KEY"]);
+    expect(parseEnvListOutput(output)).toEqual(["SITE_URL", "RESEND_API_KEY"]);
   });
 });

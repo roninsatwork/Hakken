@@ -3,6 +3,14 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
+// Optional Stripe recovery; the mutation is inert while billing is disabled.
+crons.interval(
+  "stripe-billing-reconciliation",
+  { minutes: 5 },
+  internal.jobLedger.runJob,
+  { job: "stripe-billing-reconciliation" }
+);
+
 
 // Run workflow schedule dispatcher every minute
 crons.interval(

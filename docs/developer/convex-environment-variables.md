@@ -44,7 +44,8 @@ Notes:
   deliberately separate from the `CONNECTOR_GOOGLE_*` pair below, which is the
   app acting as a client of Google on a tenant's behalf.
 - Sign-in works with either Google OAuth or email magic links (via Resend
-  below); the setup validator requires at least one of the two to be complete.
+  below); the setup validator requires every sign-in provider selected in
+  `sonae.product.json` to be complete in production.
   Partial Google configuration is treated as a failure, not a fallback.
 - If `SITE_URL` is missing, the connector OAuth return URL falls back to
   `http://localhost:3000` — correct locally, wrong everywhere else.
@@ -76,6 +77,22 @@ Notes:
   people who can act on the alert — rather than giving up. See
   [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
+## Optional Stripe Billing
+
+Billing ships disabled in `sonae.billing.json`; existing Sonae deployments do not
+need Stripe credentials. Enabled clones require both keys below in the backend.
+No key belongs in a `NEXT_PUBLIC_` variable.
+
+| Variable | What it is for |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Stripe API credential matching the configured test/live mode; read by `convex/billingStripe.ts` and the Stripe component. |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for the clone's `/stripe/webhook` endpoint; verified by the Stripe component after the bounded body check. |
+
+The component does not discover products, prices or portal policy automatically.
+Follow [Stripe Billing](../operator/stripe-billing.md) for explicit setup and
+sandbox verification. The variable inventory above is historical deployment
+evidence; this optional integration has not been enabled or verified live.
+
 ## AI Providers
 
 | Variable | What it is for |
@@ -92,8 +109,10 @@ Notes:
 - A missing provider key is a configuration state, not a crash: the runtime
   refuses that provider's models with a clear "not configured" error, and with
   no provider at all the assistant writes a "Core Offline" notice instead of
-  replying. The setup validator requires at least one complete provider group
-  (Vertex pair, OpenAI, or Anthropic).
+  replying. The setup and deployment validators require the provider groups selected in
+  `sonae.product.json`, plus feature dependencies such as Vertex for knowledge
+  embeddings. Both use `scripts/provider-requirements.mjs`; see
+  [Product Setup](../operator/product-setup.md).
 - Vertex targets project `sonae-dev-491717` in location `global` by default;
   `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` override that when set.
 - Which provider actually serves each use case is decided by the model

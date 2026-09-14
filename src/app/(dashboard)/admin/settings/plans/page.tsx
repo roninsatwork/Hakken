@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useMutation } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -249,6 +250,7 @@ export default function SubscriptionPlansPage() {
             align: "right",
             cell: (plan) => (
               <RowActions>
+                <Link href={`/admin/settings/plans/${plan._id}/billing`} className="text-[12px] text-secondary underline underline-offset-4">{t("stripePrice")}</Link>
                 <RowIconButton onClick={() => handleOpenEdit(plan)} label={t('table.editPlan')}>
                   <Edit2 className="w-4 h-4" />
                 </RowIconButton>

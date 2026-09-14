@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { beforeEach, expect, test, describe, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { api, internal } from "./_generated/api";
@@ -548,7 +549,7 @@ describe("assistant reply streaming", () => {
         expect(messages[0].isStreaming).toBe(false);
         // The reader keeps what they already saw, told why it stopped.
         expect(messages[0].content).toContain(partial.trim());
-        expect(messages[0].content).toContain("Sonae Core Offline");
+        expect(messages[0].content).toContain(`${DEFAULT_SETTINGS.platformName} Core Offline`);
     });
 });
 

@@ -1,9 +1,8 @@
 import { httpRouter } from "convex/server";
+import { registerBillingHttp } from "./billingHttp";
 import { auth } from "./auth";
 import { handleWebhook } from "./workflows";
-// template:remove:start properties
 import { processApifyWebhook } from "./webhooks";
-// template:remove:end
 import {
   handlePublicAgentRunTrigger,
   handlePublicApiPing,
@@ -18,6 +17,7 @@ import {
 } from "./connectorOAuth";
 
 const http = httpRouter();
+registerBillingHttp(http);
 
 http.route({
   path: "/api/webhooks/workflow",
@@ -111,12 +111,11 @@ http.route({
 auth.addHttpRoutes(http);
 
 
-// template:remove:start properties
 http.route({
   path: "/apify-webhook",
   method: "POST",
   handler: processApifyWebhook,
 });
-// template:remove:end
+
 
 export default http;

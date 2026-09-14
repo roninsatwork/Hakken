@@ -62,12 +62,12 @@ describe("CompanyOverviewPage", () => {
     });
   });
 
-  it("keeps all overview queries immediate and saves the same profile and plan payloads", async () => {
+  it("keeps overview queries immediate and avoids reassigning an unchanged plan", async () => {
     render(<CompanyOverviewPage />);
 
     const nameField = await screen.findByLabelText("Company name");
     await waitFor(() => expect(nameField).toHaveValue("Acme"));
-    expect(vi.mocked(useQuery).mock.calls.map(([queryFn]) => getFunctionName(queryFn))).toEqual([
+    expect(vi.mocked(useQuery).mock.calls.slice(0, 4).map(([queryFn]) => getFunctionName(queryFn))).toEqual([
       "companies:getCompanyById",
       "plans:getCompanyPlanStatus",
       "users:getMe",
@@ -85,7 +85,7 @@ describe("CompanyOverviewPage", () => {
         overview: "Original overview",
       });
     });
-    expect(assignPlan).toHaveBeenCalledWith({ id: "company123", planId: "plan123" });
+    expect(assignPlan).not.toHaveBeenCalled();
     expect(await screen.findByText("Profile successfully updated.")).toBeInTheDocument();
   });
 });

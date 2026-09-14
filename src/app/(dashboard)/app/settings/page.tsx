@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BillingLink } from "./_components/BillingLink";
 import { formatPreciseGBP } from "@/src/lib/currency";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -181,6 +182,7 @@ export default function CompanySettingsDashboard() {
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
+      <BillingLink />
       <IncompleteFiguresNotice coverage={data?.coverage} />
       {/* Header Area */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">

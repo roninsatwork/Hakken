@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { billingTables } from "./billingSchema";
 
 // template:remove:start movement
 const movementCameraBodyPartValidator = v.union(
@@ -57,6 +58,7 @@ export const opportunityHeadlineValidator = v.object({
 
 export default defineSchema({
   ...authTables,
+  ...billingTables,
   
   companies: defineTable({
     name: v.string(),
@@ -462,6 +464,7 @@ export default defineSchema({
     lastLoginAt: v.optional(v.number()),
     loginCount30d: v.optional(v.number()),
   }).index("email", ["email"])
+    .index("by_plan_override", ["planOverrideId"])
     .index("by_company", ["companyId"])
     .index("by_token", ["tokenIdentifier"])
     /*
@@ -3165,7 +3168,7 @@ export default defineSchema({
     .index("by_company_date", ["companyId", "date"])
     .index("by_user_date", ["userId", "date"]),
 
-  // template:remove:start properties
+  // Generic Apify jobs belong to the framework; only listing storage is optional.
   apifyRuns: defineTable({
     runId: v.string(), // The Apify run ID
     actorId: v.string(),
@@ -3178,6 +3181,7 @@ export default defineSchema({
   }).index("by_runId", ["runId"])
     .index("by_company", ["companyId", "startedAt"]),
 
+  // template:remove:start properties
   properties: defineTable({
     runId: v.optional(v.string()), // The Apify run ID that scraped this
     rightmoveId: v.string(), // The unique Rightmove property ID

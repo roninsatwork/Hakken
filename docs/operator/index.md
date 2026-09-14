@@ -6,6 +6,11 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 
 - [Local Demo Seed Runbook](./local-demo-seed-runbook.md)
 - [Local Test Auth Runbook](./local-test-auth-runbook.md)
+- [Build a New Application from Sonae](./cloning-sonae.md)
+- [Product Setup After Cloning](./product-setup.md)
+- [Optional Stripe Billing](./stripe-billing.md)
+- [Reviewed Framework Updates](./framework-updates.md)
+- [Product Recipes](../developer/product-recipes.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)
 
 ## Demo Operations

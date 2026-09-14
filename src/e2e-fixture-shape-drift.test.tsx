@@ -69,8 +69,16 @@ const lineOf = (needle: string) => {
  * may only fall — raising the ceiling to make a change pass is the move these
  * numbers exist to prevent.
  */
-const COMPARED_FLOOR = 53;
-const HOLLOW_CEILING = 10;
+const COMPARED_FLOOR = 49
+// template:remove:start movement
++ 4
+// template:remove:end
+;
+const HOLLOW_CEILING = 7
+// template:remove:start movement
++ 3
+// template:remove:end
+;
 
 const queryPaths = pathsBetween(lineOf("export function useQuery("), lineOf("export function useMutation("));
 const pagedPaths = pathsBetween(lineOf("export function usePaginatedQuery("), mockLines.length);
@@ -126,7 +134,11 @@ test("every stand-in answer matches what the real function declares", async () =
       return;
     }
 
+    // Company billing is deliberately absent for platform operators. Compare
+    // its populated answer using the company role that actually opens it.
+    if (fullPath === "billing:getStatus") document.cookie = "sonae_e2e_auth=company-admin";
     const value = fixtureValue(fullPath, paged);
+    document.cookie = "sonae_e2e_auth=super-admin";
     // `undefined` is how the stand-in spells "still loading", which no
     // declaration describes and nothing can be concluded from.
     if (value === undefined) return;

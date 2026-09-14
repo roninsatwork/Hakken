@@ -33,11 +33,15 @@ const GROUPS = [
   },
   {
     title: "Template",
-    entries: ["template:build"],
+    entries: ["template:build", "template:verify", "product:init", "feature:generate", "product:recipe", "framework:update"],
   },
 ];
 
 const DESCRIPTIONS = {
+  "product:recipe": "Preview a product recipe; --list shows the catalog",
+  "framework:update": "Compare a fresh framework export and prepare an explicit review",
+  "feature:generate": "Preview a complete tenant feature; --apply writes it locally",
+  "product:init": "Preview product configuration; --apply updates a clone",
   dev: "Start the Next.js dev server",
   "convex:dev": "Start the Convex backend and keep types in sync",
   "verify:env": "Check local environment variables",
@@ -54,7 +58,8 @@ const DESCRIPTIONS = {
   "auth:local:seed": "Seed local test auth users",
   "auth:local:state": "Show local test auth state",
   "demo:local:seed": "Seed a local demo tenant",
-  "template:build": "Write the platform template (no verticals) to --out <dir>",
+  "template:build": "Write a framework + Arcade copy to --out <new-dir>; --dry-run previews it",
+  "template:verify": "Install and verify isolated framework/optional-module copies",
 };
 
 const all = Object.keys(scripts);
@@ -88,6 +93,6 @@ if (other.length > 0) {
   console.log("");
 }
 
-console.log(
+if (movement.length > 0) console.log(
   `  ${movement.length} movement demo scripts are prefixed "movement:" — run \`npm run movement\` for a grouped index of them.\n`,
 );

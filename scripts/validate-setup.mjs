@@ -1,205 +1,82 @@
 #!/usr/bin/env node
-
 import fs from "node:fs";
+import { readBilling } from "./billing-config.mjs";
 import path from "node:path";
+import { parseEnv } from "node:util";
+import { fileURLToPath } from "node:url";
+import { isEmail, readProduct } from "./product-config.mjs";
+import { BACKEND_REQUIRED_KEYS, evaluateProviderRequirements } from "./provider-requirements.mjs";
 
-const repoRoot = process.cwd();
-const args = new Set(process.argv.slice(2));
-const profileArg = process.argv.find((arg) => arg.startsWith("--profile="));
-const profile = profileArg?.slice("--profile=".length) || "local";
-const strict = args.has("--strict");
-
-if (!["local", "production"].includes(profile)) {
-  console.error("Unknown profile. Use --profile=local or --profile=production.");
-  process.exit(1);
-}
-
-function parseEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
+export function loadSetupEnv(root, overrides = process.env) {
   const entries = {};
-  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const separator = line.indexOf("=");
-    if (separator === -1) continue;
-    const key = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim().replace(/^['"]|['"]$/g, "");
-    if (key) entries[key] = value;
+  for (const name of [".env", ".env.local"]) {
+    const filename = path.join(root, name);
+    if (fs.existsSync(filename)) Object.assign(entries, parseEnv(fs.readFileSync(filename, "utf8")));
   }
-
-  return entries;
+  return { ...entries, ...overrides };
 }
 
-const env = {
-  ...parseEnvFile(path.join(repoRoot, ".env")),
-  ...parseEnvFile(path.join(repoRoot, ".env.local")),
-  ...process.env,
-};
-
-const failures = [];
-const warnings = [];
-const passes = [];
-
-function hasValue(key) {
-  return typeof env[key] === "string" && env[key].trim().length > 0;
-}
-
-function requireValue(key, reason) {
-  if (hasValue(key)) {
-    passes.push(`${key}: configured`);
-  } else {
-    failures.push(`${key}: missing. ${reason}`);
+export function evaluateSetup(env, config, { profile = "local", strict = false, billing } = {}) {
+  if (!["local", "production"].includes(profile)) throw new Error("Use --profile=local or --profile=production.");
+  const names = Object.keys(env).filter(key => typeof env[key] === "string" && env[key].trim());
+  const result = evaluateProviderRequirements(config, names, { profile, billing });
+  const { failures, warnings, passes } = result;
+  const present = new Set(names);
+  const requireKey = (key, required = true) => {
+    if (present.has(key)) passes.push(key + ": configured");
+    else (required ? failures : warnings).push(key + ": missing.");
+  };
+  for (const key of ["NEXT_PUBLIC_CONVEX_URL", "CONVEX_DEPLOYMENT"]) requireKey(key);
+  for (const key of ["NEXT_PUBLIC_APP_URL", ...BACKEND_REQUIRED_KEYS]) requireKey(key, profile === "production");
+  for (const key of ["NEXT_PUBLIC_CONVEX_URL", "NEXT_PUBLIC_APP_URL", "SITE_URL", "CONVEX_SITE_URL"]) {
+    if (!present.has(key)) continue;
+    try {
+      const url = new URL(env[key]);
+      const localHost = url.hostname === "localhost" || url.hostname.endsWith(".localhost") || url.hostname === "[::1]" || /^127\./.test(url.hostname) || url.hostname === "0.0.0.0";
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || (profile === "production" && (url.protocol !== "https:" || localHost))) {
+        failures.push(key + ": use a valid " + (profile === "production" ? "public HTTPS" : "HTTP(S)") + " URL without credentials.");
+      }
+      if (profile === "production" && config.deployment.appUrl && ["NEXT_PUBLIC_APP_URL", "SITE_URL"].includes(key) && url.origin !== new URL(config.deployment.appUrl).origin) {
+        failures.push(key + ": does not match deployment.appUrl in sonae.product.json.");
+      }
+    } catch { failures.push(key + ": must be a valid URL."); }
   }
-}
-
-function warnValue(key, reason) {
-  if (hasValue(key)) {
-    passes.push(`${key}: configured`);
-  } else {
-    warnings.push(`${key}: not configured. ${reason}`);
+  if (profile === "production" && env.CONVEX_DEPLOYMENT?.startsWith("anonymous:")) failures.push("CONVEX_DEPLOYMENT: production cannot use an anonymous local deployment.");
+  if (present.has("INITIAL_SUPER_ADMIN_EMAIL") && !isEmail(env.INITIAL_SUPER_ADMIN_EMAIL)) failures.push("INITIAL_SUPER_ADMIN_EMAIL: use a bare email address.");
+  if (present.has("RESEND_API_KEY")) {
+    const sender = ["RESEND_FROM_EMAIL", "AUTH_EMAIL"].map(key => env[key]).find(value => value?.trim());
+    if (sender && (!isEmail(/<([^>]+)>$/.exec(sender)?.[1] ?? sender) || /[\r\n]/.test(sender))) failures.push("Email sender: use a valid address or Name <address>; .invalid placeholders cannot send mail.");
   }
-}
-
-function validateUrl(key, options = {}) {
-  if (!hasValue(key)) return;
-  try {
-    const url = new URL(env[key]);
-    if (!["http:", "https:"].includes(url.protocol)) {
-      failures.push(`${key}: must use http or https.`);
-    }
-    if (profile === "production" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
-      failures.push(`${key}: production profile cannot point at localhost.`);
-    }
-    if (options.expectedHostSuffix && !url.hostname.endsWith(options.expectedHostSuffix)) {
-      warnings.push(`${key}: expected host ending in ${options.expectedHostSuffix}.`);
-    }
-  } catch {
-    failures.push(`${key}: must be a valid URL.`);
+  if (billing?.enabled) {
+    if (config.deployment.appUrl && billing.appOrigin !== config.deployment.appUrl) failures.push("Billing appOrigin must match deployment.appUrl.");
+    if (env.STRIPE_SECRET_KEY && !new RegExp("^(sk|rk)_" + billing.mode + "_").test(env.STRIPE_SECRET_KEY)) failures.push("STRIPE_SECRET_KEY: wrong billing mode.");
   }
+  return { ...result, ok: failures.length === 0 && (!strict || warnings.length === 0) };
 }
 
-function validateProviderGroup(name, keys) {
-  const configured = keys.filter(hasValue);
-  if (configured.length === 0) return false;
-  if (configured.length !== keys.length) {
-    failures.push(`${name}: partial configuration. Missing ${keys.filter((key) => !hasValue(key)).join(", ")}.`);
-    return false;
+export function setupMain(argv = process.argv.slice(2)) {
+  let profile = "local";
+  let configPath = "sonae.product.json";
+  let strict = false;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--strict") strict = true;
+    else if (arg.startsWith("--profile=")) profile = arg.slice(10);
+    else if (arg === "--profile" && argv[i + 1]) profile = argv[++i];
+    else if (arg === "--config" && argv[i + 1]) configPath = argv[++i];
+    else throw new Error("Unknown or incomplete option. Use --profile local|production, --config <file>, --strict.");
   }
-  passes.push(`${name}: configured`);
-  return true;
+  const config = readProduct(process.cwd(), configPath);
+  const result = evaluateSetup(loadSetupEnv(process.cwd()), config, { profile, strict, billing: readBilling(process.cwd()) });
+  console.log("Product setup validation (" + profile + (strict ? ", strict" : "") + ")");
+  for (const pass of result.passes) console.log("✓ " + pass);
+  for (const warning of result.warnings) console.warn("⚠ " + warning);
+  for (const failure of result.failures) console.error("✗ " + failure);
+  console.log(result.ok ? "Setup validation passed. Credentials have not been contacted or authenticated." : "Setup validation failed. Check the named settings and rerun npm run setup:validate.");
+  return result.ok ? 0 : 1;
 }
 
-requireValue("NEXT_PUBLIC_CONVEX_URL", "Run `npm run convex:dev` or set the target Convex deployment URL.");
-requireValue("CONVEX_DEPLOYMENT", "Run `npm run convex:dev` or set the Convex deployment name.");
-validateUrl("NEXT_PUBLIC_CONVEX_URL", { expectedHostSuffix: profile === "production" ? ".convex.cloud" : undefined });
-
-if (profile === "production") {
-  requireValue("NEXT_PUBLIC_APP_URL", "Set the public app URL used in links, auth callbacks, and deployment checks.");
-  requireValue("INITIAL_SUPER_ADMIN_EMAIL", "Set the bootstrap super-admin fallback email.");
-  validateUrl("NEXT_PUBLIC_APP_URL");
-
-  if (hasValue("CONVEX_DEPLOYMENT") && env.CONVEX_DEPLOYMENT.startsWith("anonymous:")) {
-    failures.push("CONVEX_DEPLOYMENT: production profile cannot use anonymous local deployment.");
-  }
-} else {
-  warnValue("INITIAL_SUPER_ADMIN_EMAIL", "Useful for local bootstrap and platform alert fallback.");
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { process.exitCode = setupMain(); }
+  catch { console.error("Cannot validate setup. Check the options and product/environment file formats; values are not printed."); process.exitCode = 1; }
 }
-
-const hasGoogleAuth = validateProviderGroup("Google auth", ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"]);
-const hasResendAuth = hasValue("RESEND_API_KEY");
-if (profile === "production") {
-  if (!hasGoogleAuth && !hasResendAuth) {
-    failures.push("Auth provider: configure either AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET or RESEND_API_KEY.");
-  }
-} else if (!hasGoogleAuth && !hasResendAuth) {
-  warnings.push("Auth provider: no Google OAuth or Resend key found. Local test auth can still work when explicitly enabled.");
-}
-
-// Sending mail without a configured sender is not a soft failure: magic-link
-// sign-in, invites, scheduled reports and workflow emails all use it. With
-// nothing set the sender falls back to a deliberately undeliverable
-// `.invalid` address (see convex/emailBrandingService.ts) rather than
-// impersonating a domain this deployment does not own — so the mail is simply
-// never delivered. Catch it here rather than when someone cannot sign in.
-const hasSenderAddress = ["RESEND_FROM_EMAIL", "AUTH_EMAIL"].some(hasValue);
-if (hasResendAuth && !hasSenderAddress) {
-  const message =
-    "Email sender is not set. Email sending is configured (RESEND_API_KEY present) but no sender address is. " +
-    "Set AUTH_EMAIL or RESEND_FROM_EMAIL to an address on a domain verified with your mail provider, or set the sender in Settings. " +
-    "Until then magic-link sign-in and invite emails will not be delivered.";
-
-  if (profile === "production") {
-    failures.push(message);
-  } else {
-    warnings.push(message);
-  }
-}
-
-const hasGoogleVertex = validateProviderGroup("Google Vertex AI", ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"]);
-const hasOpenAI = ["OPENAI_API_KEY", "OPEN_AI_API_KEY", "OPENAI_KEY"].some(hasValue);
-const hasAnthropic = hasValue("ANTHROPIC_API_KEY");
-const hasOpenRouter = hasValue("OPENROUTER_API_KEY");
-
-if (hasValue("GOOGLE_PRIVATE_KEY") && !env.GOOGLE_PRIVATE_KEY.includes("\\n") && !env.GOOGLE_PRIVATE_KEY.includes("BEGIN PRIVATE KEY")) {
-  warnings.push("GOOGLE_PRIVATE_KEY: value does not look like a service-account private key.");
-}
-
-if (hasOpenAI) passes.push("OpenAI: configured");
-if (hasAnthropic) passes.push("Anthropic: configured");
-if (hasOpenRouter) passes.push("OpenRouter: configured");
-
-if (profile === "production") {
-  if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic && !hasOpenRouter) {
-    failures.push("AI provider: configure at least one runtime provider credential group.");
-  }
-} else if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic && !hasOpenRouter) {
-  warnings.push("AI provider: no runtime provider credentials found. Contract tests and local demo seeding can still run without live model calls.");
-}
-
-warnValue("FIRECRAWL_API_KEY", "Required only for live website knowledge ingestion.");
-warnValue("APIFY_API_TOKEN", "Required only for live Apify property/search ingestion.");
-if (hasValue("APIFY_API_TOKEN")) {
-  requireValue("APIFY_WEBHOOK_SECRET", "Required when Apify callbacks are enabled.");
-}
-
-// The connector consent flow: all three or none. A deployment with half the
-// group configured would show a Connect button that fails at the far end of
-// Google's screen, which is the worst place to discover it.
-const connectorOAuthKeys = [
-  "CONNECTOR_GOOGLE_CLIENT_ID",
-  "CONNECTOR_GOOGLE_CLIENT_SECRET",
-  "CONNECTOR_TOKEN_ENCRYPTION_KEY",
-];
-const configuredConnectorKeys = connectorOAuthKeys.filter(hasValue);
-if (configuredConnectorKeys.length === 0) {
-  warnings.push(
-    "Connector OAuth: not configured. Required only to connect the Gmail mailbox " +
-    "(CONNECTOR_GOOGLE_CLIENT_ID, CONNECTOR_GOOGLE_CLIENT_SECRET, CONNECTOR_TOKEN_ENCRYPTION_KEY)."
-  );
-} else if (configuredConnectorKeys.length < connectorOAuthKeys.length) {
-  failures.push(
-    `Connector OAuth: partially configured. Missing ${connectorOAuthKeys
-      .filter((key) => !hasValue(key))
-      .join(", ")} — set all three or none.`
-  );
-} else {
-  passes.push("Connector OAuth credentials configured.");
-}
-
-const effectiveFailures = strict ? [...failures, ...warnings.map((warning) => `Strict warning: ${warning}`)] : failures;
-
-console.log(`Sonae setup validation (${profile}${strict ? ", strict" : ""})`);
-for (const pass of passes) console.log(`✓ ${pass}`);
-for (const warning of warnings) console.warn(`⚠ ${warning}`);
-for (const failure of failures) console.error(`✗ ${failure}`);
-
-if (effectiveFailures.length > 0) {
-  console.error("");
-  console.error("Setup validation failed. Fix the items above, then rerun `npm run setup:validate`.");
-  process.exit(1);
-}
-
-console.log("");
-console.log("Setup validation passed.");

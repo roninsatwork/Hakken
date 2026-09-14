@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "identity": {
+    "name": "Sonae",
+    "slug": "sonae",
+    "title": "Sonae - Protocol",
+    "description": "Sonae Living Dossier",
+    "tagline": "備え — to be prepared. The production layer behind AI products, already built and running, so your budget goes on the part only you can make.",
+    "brandColorHex": "#E26D28",
+    "logoUrlLight": "",
+    "logoUrlDark": ""
+  },
+  "deployment": {
+    "repositoryUrl": "https://github.com/roninsatwork/Sonae.git",
+    "appUrl": "",
+    "region": "us-central1",
+    "service": "sonae-app",
+    "artifactRepository": "sonae-repo"
+  },
+  "bootstrap": { "adminEmail": "" },
+  "email": { "senderName": "", "senderAddress": "" },
+  "providers": { "auth": ["google", "resend"], "ai": ["vertex"] },
+  "features": {
+    "email": true,
+    "knowledge": true,
+    "webIngestion": false,
+    "apify": false,
+    "gmail": false,
+    "voice": false,
+    "telephony": false,
+    "widget": false
+  }
+}

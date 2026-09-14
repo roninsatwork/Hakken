@@ -7,6 +7,9 @@ completed work.
 
 ## Active Plans
 
+- [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
+- [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.
+
 - [Ronin's Run 3D](./active/ronins-run-3d-plan.md) — separate first-person game
   using all four original map layouts. Playable prototype verified locally;
   visual target remains unmet. Overall estimate 55%.
@@ -27,10 +30,10 @@ completed work.
   2026-08-23, not started.** The problem it solves is still open. ~5.5 days.
 
 - [The Clean Cut — Turning A Clone Into A Client's Own Product](./active/client-product-cut-plan.md) —
-  how a client-owned build stops shipping with four in ten files belonging to
-  somebody else's demo. Extends the existing vertical-cut script from removing
-  marked lines to removing whole owned folders, after the clone, on the copy.
-  Agreed 2026-08-23.
+  **delivered locally 2026-09-13; 100% complete.** Framework + Arcade always
+  remain; four optional areas can be removed with their files, packages and
+  shared references. Source checks, five generated builds and base/Arcade browser
+  checks passed. See the [cloning guide](../operator/cloning-sonae.md).
 
 - [The Governance Screens Read A Summary, Not The Estate](./active/governance-screens-read-a-summary-plan.md) —
   why the governance overview is the one admin screen that is not instant, and

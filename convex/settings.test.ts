@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
@@ -58,8 +59,8 @@ describe("OWASP: Broken Access Control - Settings", () => {
     const userClient = t.withIdentity({ subject: plainUserId });
 
     expect(await t.query(api.settings.get, {})).toMatchObject({
-      platformName: "Sonae",
-      brandColorHex: "#E26D28",
+      platformName: DEFAULT_SETTINGS.platformName,
+      brandColorHex: DEFAULT_SETTINGS.brandColorHex,
       diagnosticRoutingEnabled: false,
     });
 

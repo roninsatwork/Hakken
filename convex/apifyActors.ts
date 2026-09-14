@@ -10,6 +10,7 @@
  * that stores results needs it too, and that webhook does not run in Node.
  */
 
+// template:remove:start properties
 /** The Rightmove listings scraper behind the Properties screen. */
 export const RIGHTMOVE_ACTOR_ID = "jKpgGfgRfzrGgEMa8";
 
@@ -24,6 +25,7 @@ export const RIGHTMOVE_ACTOR_ID = "jKpgGfgRfzrGgEMa8";
 export function producesPropertyListings(actorId: string | undefined): boolean {
   return actorId === RIGHTMOVE_ACTOR_ID;
 }
+// template:remove:end
 
 /**
  * Every string that looks like a web address, at any depth of a job's settings.

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "provider": "stripe",
+  "mode": "test",
+  "appOrigin": "",
+  "portalConfigurationId": "",
+  "recoveryPortalConfigurationId": "",
+  "graceDays": null,
+  "quotaWindow": "calendar-month",
+  "offers": []
+}

@@ -291,7 +291,8 @@ describe("the buttons rule", () => {
     expect(findStaleFreezes(frozen).some((s) => s.file === probeRelative)).toBe(false);
   });
 
-  it("leaves the movement demos alone — frozen whole by owner decision", () => {
+  // template:remove:start movement
+it("leaves the movement demos alone — frozen whole by owner decision", () => {
     const demoProbe = path.join(
       process.cwd(),
       "src",
@@ -309,6 +310,8 @@ describe("the buttons rule", () => {
       fs.rmSync(demoProbe);
     }
   });
+// template:remove:end
+
 
   it("does not count the kit's own <Button>", () => {
     write(

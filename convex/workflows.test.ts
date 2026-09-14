@@ -2,7 +2,10 @@ import { convexTest } from "convex-test";
 import { expect, test, describe, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+// template:remove:start properties
 import type { Doc, Id } from "./_generated/dataModel";
+// template:remove:end
+
 
 describe("OWASP: Broken Access Control - Workflows", () => {
   test("Standard USER cannot execute any Workflow CRUD operations", async () => {

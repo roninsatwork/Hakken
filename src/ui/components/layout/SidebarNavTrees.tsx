@@ -10,10 +10,20 @@ import {
   Workflow,
   ShieldCheck,
   Settings,
+  CreditCard,
   Wrench,
+// template:remove:start movement
   Globe,
+// template:remove:end
+
+// template:remove:start properties
   Home,
+// template:remove:end
+
+// template:remove:start salesReports
   LineChart,
+// template:remove:end
+
   ListChecks,
   MonitorSpeaker,
   Phone,
@@ -23,14 +33,25 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { CORE_MODULES } from "@/convex/utils/coreModules";
 import {
+  // template:remove:start movement
   POSTURE_STUDIO_MODULE_KEY,
+  // template:remove:end
+  // template:remove:start properties
   PROPERTIES_MODULE_KEY,
+  // template:remove:end
+  // template:remove:start salesReports
   REPORTS_MODULE_KEY,
+  // template:remove:end
 } from "@/convex/utils/coreModules";
 import {
   NavItem,
+// template:remove:start salesData
   OptionalNavSection,
+// template:remove:end
+
+  // template:remove:start salesData
   SalesDataNavItem,
+  // template:remove:end
   SubNavItem,
   isSystemSettingsRoute,
 } from "./SidebarNavigation";
@@ -42,6 +63,7 @@ export function AdminNavTree({
   toggleSection,
   isAuditor,
   canSeeAdminSections,
+  canManageBilling = false,
   pendingApprovals,
   pendingWorkflowApprovals,
 }: {
@@ -51,6 +73,7 @@ export function AdminNavTree({
   toggleSection: (section: string) => void;
   isAuditor: boolean;
   canSeeAdminSections: boolean;
+  canManageBilling?: boolean;
   pendingApprovals: { count: number; atLimit: boolean } | undefined;
   pendingWorkflowApprovals: { count: number; atLimit: boolean } | undefined;
 }) {
@@ -170,7 +193,7 @@ export function AdminNavTree({
           activeItem === 'System Settings' ||
           activeItem === 'API Keys' ||
           activeItem === 'Webhook Deliveries' ||
-          activeItem === 'Analytics'}
+          activeItem === 'Analytics' || activeItem === 'PlatformBilling'}
         onClick={() => setActiveItem('System Settings')}
         hasChildren
         isOpen={openSections.settings}
@@ -178,6 +201,7 @@ export function AdminNavTree({
       >
         <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={isSystemSettingsRoute(pathname)} onClick={() => setActiveItem('System Settings')} />
         <SubNavItem label={t('plans')} href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+        {canManageBilling && <SubNavItem label={t('billing')} href="/admin/settings/billing" isActive={pathname.startsWith('/admin/settings/billing')} onClick={() => setActiveItem('PlatformBilling')} />}
         <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
         <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
       </NavItem>
@@ -407,6 +431,11 @@ export function UserNavTree({
       <SubNavItem label={t('teamMembers')} href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
       <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
     </NavItem>
+  )}
+
+  {!isSuperAdmin && user?.role === "ADMIN" && !user.impersonatingCompanyId && (
+    <NavItem icon={CreditCard} label={t('billing')} href="/app/settings/billing"
+      isActive={pathname.startsWith('/app/settings/billing')} onClick={() => setActiveItem('Billing')} />
   )}
 
   {/* template:remove:start arcade */}

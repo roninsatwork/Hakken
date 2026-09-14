@@ -4,6 +4,21 @@
  * the way. The per-demo build times live on each panel, not here.
  */
 export function DemosIntro() {
+  const demos = [
+    // template:remove:start properties
+    "properties",
+    // template:remove:end
+    // template:remove:start salesReports
+    "salesReports",
+    // template:remove:end
+    // template:remove:start movement
+    "movement",
+    // template:remove:end
+    // template:remove:start salesData
+    "salesData",
+    // template:remove:end
+  ];
+  const count = ["No", "One", "Two", "Three", "Four"][demos.length];
   return (
     <section className="ps-demos-intro">
       <div className="ps-demos-intro-grid">
@@ -12,7 +27,7 @@ export function DemosIntro() {
             Built on Sonae
           </span>
           <h2 className="ps-display ps-demos-intro-h2 mt-3" data-reveal>
-            Four demos, pre-built in record time.
+            {count} {demos.length === 1 ? "demo" : "demos"}, pre-built in record time.
           </h2>
         </div>
         <p className="ps-demos-intro-lede" data-reveal>

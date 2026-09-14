@@ -163,6 +163,7 @@ describe("the wiki rewrite landing", () => {
   });
 });
 
+// template:remove:start salesData
 describe("matching a sender to a customer", () => {
   test("matches on either email column, normalised, inside the company wall only", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -206,7 +207,10 @@ describe("matching a sender to a customer", () => {
     ).resolves.toBeNull();
   });
 });
+// template:remove:end
 
+
+// template:remove:start salesData
 describe("the knowing doors' read", () => {
   test("a matched phone number reads the whole page, pinned layer included; strangers read nothing", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -323,6 +327,8 @@ describe("the knowing doors' read", () => {
     ).resolves.toBeNull();
   });
 });
+// template:remove:end
+
 
 describe("topic pages and the links between them", () => {
   test("the model's topic JSON is distrusted: bad kinds, bad slugs, and excess are dropped", async () => {

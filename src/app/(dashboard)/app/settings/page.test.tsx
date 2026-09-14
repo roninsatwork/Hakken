@@ -149,7 +149,7 @@ describe("CompanySettingsDashboard", () => {
   it("queries company metrics and renders populated organization analytics", () => {
     render(<CompanySettingsDashboard />);
 
-    expect(useQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "today" }));
+    expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "today" }));
     expect(screen.getByText("Organization Dashboard")).toBeInTheDocument();
     expect(screen.getByText("£99.00")).toBeInTheDocument();
     expect(screen.getByText("Provider Usage")).toBeInTheDocument();
@@ -160,6 +160,6 @@ describe("CompanySettingsDashboard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Change timeframe" }));
 
-    expect(useQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "30d" }));
+    expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "30d" }));
   });
 });

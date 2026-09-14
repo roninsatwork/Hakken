@@ -5,6 +5,7 @@ import {
 
 describe('Repository Documentation Drift', () => {
 
+  // template:remove:start movement
   test('handoff and platform plans keep movement demo files out of scope', () => {
     const guardrailFiles = [
       'AGENTS.md',
@@ -27,6 +28,8 @@ describe('Repository Documentation Drift', () => {
 
     expect(missingPaths, `Movement demo no-touch paths missing from guardrail docs:\n${missingPaths.join('\n')}`).toEqual([]);
   });
+// template:remove:end
+
 
 
   test('deployment docs match the production GitHub Actions gate', () => {

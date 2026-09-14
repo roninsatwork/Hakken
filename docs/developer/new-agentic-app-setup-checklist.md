@@ -13,6 +13,13 @@ Implementation references:
 - `convex/localDemoSeed.ts`
 - `scripts/local-demo-seed.mjs`
 
+For a new product clone, start with [Product Setup](../operator/product-setup.md).
+Product Setup previews identity and provider requirements before applying local file changes.
+Use [Product Recipes](./product-recipes.md) for a complete starting workflow, or the
+[Feature Generator](./feature-generator.md) for individual domain records and their
+forms, relationships, tenant checks and navigation. Preserve the export baseline
+and follow [Framework Updates](../operator/framework-updates.md) for later core changes.
+
 ## 1. Repository And Environment
 
 - Confirm the current branch is `dev`.

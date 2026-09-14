@@ -118,7 +118,7 @@ describe("settings service helpers", () => {
     // delivered to, rather than one belonging to whoever built the platform.
     expect(buildEmailBranding({ platformName: "Acme Ops" })).toMatchObject({
       platformName: "Acme Ops",
-      fromAddress: `Sonae <${UNCONFIGURED_EMAIL_ADDRESS}>`,
+      fromAddress: `${DEFAULT_SETTINGS.platformName} <${UNCONFIGURED_EMAIL_ADDRESS}>`,
     });
     expect(UNCONFIGURED_EMAIL_ADDRESS).toMatch(/\.invalid$/);
   });
