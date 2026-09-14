@@ -6,6 +6,15 @@ import schema from "./schema";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { MCP_PROTOCOL_VERSION } from "./mcpProtocol";
 
+vi.mock("./utils/safeWorkflowHttp", async original => {
+  const actual = await original<typeof import("./utils/safeWorkflowHttp")>();
+  return { ...actual, fetchWorkflowAction: (url: string, options: RequestInit, dependencies: object) =>
+    actual.fetchWorkflowAction(url, options, { ...dependencies,
+      fetchImplementation: (input, init) => fetch(input, init),
+      resolveHostname: async () => [{ address: "93.184.216.34" }],
+    }) };
+});
+
 /**
  * Calling a tool that lives on somebody else's server.
  *
@@ -210,6 +219,17 @@ describe("what stops a call", () => {
     expect(sent).toHaveLength(0);
   });
 
+  test("a tool cannot cross the server owner boundary through an inconsistent binding", async () => {
+    const { t, companyAId, serverId, toolId } = await setup();
+    const { sent } = stubServer({ content: [] });
+    await t.run(async ctx => {
+      const other = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now() });
+      await ctx.db.patch(serverId, { companyId: other });
+    });
+    expect(await call(t, toolId, companyAId)).toMatchObject({ ok: false });
+    expect(sent).toHaveLength(0);
+  });
+
   test("arguments are checked against the server's own schema first", async () => {
     // Unvalidated arguments are how a tool call becomes whatever the model felt
     // like sending — to somebody else's system, with this workspace's credential.
@@ -221,7 +241,7 @@ describe("what stops a call", () => {
     expect(sent).toHaveLength(0);
   });
 
-  test("a missing credential names the variable to set, never its value", async () => {
+  test("an unapproved credential is refused before any request", async () => {
     const { t, companyAId, serverId, toolId } = await setup();
     const adminA = t.withIdentity({
       subject: await t.run(async (ctx) => (await ctx.db.query("users").first())!._id),
@@ -233,7 +253,7 @@ describe("what stops a call", () => {
 
     const result = await call(t, toolId, companyAId);
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toContain("CONNECTOR_SECRET_VAULT_ACME_MCP");
+    if (!result.ok) expect(result.error).toContain("MCP_CREDENTIAL_BINDINGS");
     expect(sent).toHaveLength(0);
   });
 

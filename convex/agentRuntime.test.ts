@@ -28,6 +28,16 @@ import {
 
 const generateMock = vi.hoisted(() => vi.fn());
 
+// These tests pump every scheduled timer. Exercise the real MCP handshake, but
+// leave socket deadlines/DNS to the transport suite instead of advancing a real
+// request's deadline while an approval continuation is being drained.
+vi.mock("./utils/safeWorkflowHttp", () => ({
+  fetchWorkflowAction: async (url: string, options: RequestInit) => {
+    const response = await fetch(url, options);
+    return { status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers.entries()) };
+  },
+}));
+
 /**
  * Lets a test look at the database mid-stream.
  *

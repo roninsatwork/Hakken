@@ -54,6 +54,7 @@ import {
  * missing its tail is worse than one that says it was cut short.
  */
 async function collectTools(args: {
+  ctx: ActionCtx;
   url: string;
   authorization?: string;
   session: Exchange;
@@ -65,6 +66,7 @@ async function collectTools(args: {
 
   for (let page = 0; page < MCP_MAX_PAGES; page += 1) {
     const response = await postJsonRpc({
+      ctx: args.ctx,
       url: args.url,
       body: buildToolsListRequest(requestId, cursor),
       authorization: args.authorization,
@@ -235,8 +237,8 @@ export const discoverServerTools = adminAction({
       // Resolved rather than hardcoded: a renamed deployment introduces itself
       // by its own name to every server it connects to.
       const branding = await ctx.runQuery(internal.settings.getEmailBranding, {});
-      const session = await openSession(url, branding.platformName, authorization);
-      const collected = await collectTools({ url, authorization, session });
+      const session = await openSession(ctx, url, branding.platformName, authorization);
+      const collected = await collectTools({ ctx, url, authorization, session });
 
       const notes: string[] = [`Found ${collected.tools.length} tools.`];
       if (collected.rejected > 0) {

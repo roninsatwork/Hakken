@@ -95,7 +95,7 @@ export const callServerTool = internalAction({
     // permission — the run is. Deliberately the same message either way, so a
     // caller cannot learn whether another company's tool exists.
     const owner = target.companyId ?? target.server.companyId;
-    if (!args.companyId || owner !== args.companyId) {
+    if (!args.companyId || owner !== args.companyId || target.server.companyId !== args.companyId) {
       return { ok: false, error: "That tool is not available to this workspace." };
     }
 
@@ -127,9 +127,10 @@ export const callServerTool = internalAction({
       // Resolved, never hardcoded: a product cloned from this repo and renamed
       // introduces itself by its own name to every server it calls.
       const branding = await ctx.runQuery(internal.settings.getEmailBranding, {});
-      const session = await openSession(url, branding.platformName, credential.authorization);
+      const session = await openSession(ctx, url, branding.platformName, credential.authorization);
 
       const response = await postJsonRpc({
+        ctx,
         url,
         body: buildToolCallRequest(2, target.mcpToolName, (args.args ?? {}) as Record<string, unknown>),
         authorization: credential.authorization,

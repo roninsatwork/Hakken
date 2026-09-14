@@ -2,6 +2,8 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
@@ -415,10 +417,10 @@ async function requeueKnowledgeDocument(
 }
 
 export const generateUploadUrl = adminMutation({
-  args: {},
+  args: uploadMetadataArgs,
   returns: v.string(),
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
+  handler: async (ctx, args) => {
+    return await issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "knowledge", args);
   },
 });
 
@@ -901,6 +903,7 @@ export const saveDocument = tenantMutation({
     const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
 
+    await requireOwnedUpload(ctx, args.storageId, { userId, companyId: ctx.companyId }, ["knowledge"]);
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
@@ -952,10 +955,11 @@ export const saveChatDocument = tenantMutation({
 
     // Secure Gate: Prevent malicious injection by verifying thread ownership
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) {
+    if (!thread || thread.userId !== userId || thread.companyId !== ctx.companyId) {
       throw appError("UNAUTHORIZED", "Unauthorized access to thread");
     }
 
+    await requireOwnedUpload(ctx, args.storageId, { userId, companyId: ctx.companyId }, ["chat"]);
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({

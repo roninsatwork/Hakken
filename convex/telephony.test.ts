@@ -5,6 +5,7 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { computeTwilioSignature } from "./telephonyService";
+import { encryptVoiceTicket } from "./utils/voiceTicketEncryption";
 
 const { generateTextWithResolvedModelMock } = vi.hoisted(() => ({
     generateTextWithResolvedModelMock: vi.fn(),
@@ -313,12 +314,7 @@ describe("answering the phone", () => {
 describe("the transcript arriving mid-call", () => {
     const mintCallTicket = async (companyId: string) => {
         // The same shape the platform mints for a call: a company, no thread.
-        const payload = Buffer.from(
-            JSON.stringify({ companyId, model: "test-live-audio-model", expiresAt: Date.now() + 60_000 })
-        ).toString("base64url");
-        const { createHmac } = await import("node:crypto");
-        const signature = createHmac("sha256", "shared-secret").update(payload).digest("base64url");
-        return `${payload}.${signature}`;
+        return encryptVoiceTicket({ companyId, model: "test-live-audio-model", expiresAt: Date.now() + 60_000 }, "shared-secret");
     };
 
     const answeredCall = async (t: ReturnType<typeof convexTest>) => {

@@ -52,7 +52,7 @@ describe("Movements API Authentication Hardening", () => {
 
     // 6. generateUploadUrl mutation
     await expect(
-      t.mutation(api.movements.generateUploadUrl)
+      t.mutation(api.movements.generateUploadUrl, {})
     ).rejects.toThrow("Unauthenticated");
 
     // 7. getFileUrl query

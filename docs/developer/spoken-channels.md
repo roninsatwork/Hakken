@@ -31,7 +31,27 @@ Voice dictation through `src/hooks/useVoiceToText.ts` remains a separate turn-ba
 - includes company instructions, rules, skills, memories, and the spoken style in the session instructions
 - declares a knowledge-search tool for live lookup
 
-Google live-audio sessions use the relay ticket path. `signVoiceTicket` signs a compact payload with the relay secret, a random one-time id, and the platform redemption endpoint; the browser sends that ticket to the relay. The relay claims it locally and redeems it through `/api/voice/redeem` before opening Vertex, so the same ticket cannot start a second session on the same instance or another instance. The page never receives provider credentials.
+Google live-audio sessions use the relay ticket path. `signVoiceTicket` creates a
+versioned AES-256-GCM encrypted and authenticated payload with a random nonce and
+one-time id. Its key is derived from the relay secret using the fixed v2 domain.
+The browser forwards ciphertext; it cannot decode the company instructions, rules
+or memories. The relay claims the ticket locally and redeems it through
+`/api/voice/redeem` before opening Vertex. The page never receives provider credentials.
+
+Redemption and knowledge requests also require `x-voice-relay-auth`, an HMAC-SHA256
+of the complete ticket under `VOICE_RELAY_SECRET`, encoded as base64url. A browser
+holding a ticket cannot call these endpoints directly. Knowledge lookup requires a
+redeemed, unclosed session and permits at most ten searches per minute and sixty
+per session, enforced transactionally across relay instances. Queries are capped
+at 2,000 characters. Redemption records outlive the one-minute ticket until the
+15-minute session allowance ends. The relay closes the record through
+`/api/voice/control` on shutdown; expiry is the backstop if that notification fails.
+Authenticated browser voice-search actions separately allow ten requests per minute.
+
+Deploy the backend and relay together in an authorized maintenance window.
+Legacy plaintext signed tickets are deliberately refused; do not add a fallback
+that restores prompt disclosure. Mixed versions cannot start working sessions.
+Local tests and builds do not demonstrate a coordinated live rollout.
 
 The relay admits browser sessions only on `/` and `/live`, and phone media only on `/twilio`. Both WebSocket doors cap caller frames at 128 KB and close connections that do not present their first authentication frame within five seconds. Set `VOICE_RELAY_URL` to the relay root or `/live`, and set `TELEPHONY_STREAM_URL` to `/twilio` on the same service.
 
@@ -39,14 +59,20 @@ The relay admits browser sessions only on `/` and `/live`, and phone media only 
 
 ## Voice Knowledge Lookup
 
-`convex/voiceRelay.ts` exposes the HTTP endpoints the relay calls to redeem a ticket and to search company knowledge. The redemption endpoint atomically records a ticket's one-time id before the relay opens a provider session. The knowledge endpoint:
+`convex/voiceRelay.ts` exposes the HTTP endpoints the relay calls to redeem a
+ticket, meter kiosk turns, close sessions, and search company knowledge. The
+redemption endpoint atomically records a ticket's one-time id before the relay
+opens a provider session. `/api/voice/control` authenticates the same ticket and
+relay HMAC; for kiosk tickets it reserves company quota at speech onset,
+finalizes on Vertex `turnComplete`, refunds an unfinished turn on close, and
+releases the widget's active-session lease. The knowledge endpoint:
 
 - requires `VOICE_RELAY_SECRET`
 - accepts a signed ticket and query as JSON
 - allows request bodies up to 128 KB because tickets can carry full company spoken instructions
-- verifies the HMAC signature with Web Crypto
+- verifies ticket encryption/authentication and the relay-only HMAC with Web Crypto
 - allows lookups for a signed thread or company fallback
-- rejects expired, malformed, unauthenticated, oversized, or scope-less requests
+- rejects expired, unredeemed, closed, over-quota, malformed, unauthenticated, oversized, or scope-less requests
 - calls `internal.aiVoiceSession.searchKnowledgeForVoiceInternal`
 
 Thread id remains the preferred scope. The company id in the ticket is only a fallback for a thread that belongs to no workspace, which prevents a relay-side caller from swapping a ticket onto another tenant's documents.
@@ -120,7 +146,11 @@ The Receptionist screen is the kiosk version of Sonae's live voice experience.
 It uses a widget's company, linked agent, and branding, but opens as a top-level
 Sonae page instead of an iframe. `convex/kioskActions.ts` creates Google relay
 tickets for anonymous kiosk visitors after `convex/kiosk.ts` validates the
-widget token and reserves a per-widget session slot.
+widget token. Ticket minting holds one pending slot; only relay redemption
+increments the hourly/lifetime session counters and converts it to an active
+lease. Open-mic silence is not a turn. Each completed voice turn consumes one
+unit from the company plan through the relay control endpoint, and the next
+turn winds down calmly when that allowance is exhausted.
 
 Kiosk sessions are Google Vertex relay-only in the current implementation. If
 the relay variables or a compatible realtime model are missing, the page returns
@@ -136,7 +166,10 @@ Relevant schema fields and tables:
 - `phoneCalls` stores provider call id, company id, caller/called numbers, status, transcript turns, summary, matched customer key, task id, start/end timestamps, and end reason.
 - `aiActionRequests` rate-limits transcription, speech synthesis, realtime session, and voice preview helper actions.
 - `toolConnectors` stores the installed Twilio voice connector and its claimed phone number.
-- `widgets` stores receptionist opt-in, kiosk heartbeat, session counts, and kiosk rate windows.
+- `widgets` stores receptionist opt-in, kiosk heartbeat, session counts, kiosk
+  rate windows, and expiring pending/active voice leases.
+- `voiceTicketRedemptions` stores one-time redemption, knowledge limits, kiosk
+  turn state, and the temporary quota reservation needed for close-time refund.
 - `tasks` receives post-call follow-up tasks.
 - `wikiPages` can be updated after matched customer calls.
 

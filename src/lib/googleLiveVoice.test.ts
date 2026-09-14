@@ -52,6 +52,7 @@ describe("reading what the relay forwards", () => {
 
   test("the relay's own ready signal is recognised", () => {
     expect(readLiveServerMessage(JSON.stringify({ type: "relay.ready" }))).toEqual({ ready: true });
+    expect(readLiveServerMessage(JSON.stringify({ type: "relay.quota" }))).toEqual({ quotaExhausted: true });
   });
 
   test("noise and malformed frames are ignored rather than thrown", () => {

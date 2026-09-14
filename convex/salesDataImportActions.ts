@@ -121,6 +121,7 @@ export const inspectWorkbook = tenantAction({
     );
     if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
+    await ctx.runMutation(internal.uploadReservations.authorizeWorkbook, { userId: ctx.userId, storageId: args.storageId, attach: false });
     const workbook = await loadWorkbook(ctx, args.storageId);
 
     return {
@@ -173,6 +174,7 @@ export const runImport = tenantAction({
     );
     if (!context) throw appError("MODULE_DISABLED", "Sales Data is not enabled for this workspace.");
 
+    await ctx.runMutation(internal.uploadReservations.authorizeWorkbook, { userId: ctx.userId, storageId: args.storageId, attach: false });
     const workbook = await loadWorkbook(ctx, args.storageId);
     validateSheetMapping(args.sheetMapping, workbook.worksheets.length);
 

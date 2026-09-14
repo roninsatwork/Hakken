@@ -9,16 +9,17 @@ import { ensureCustomer, checkoutUrl } from "./billingCheckout";
 import { reconcileAccount } from "./billingReconciliation";
 import { appError } from "./utils/appError";
 
-async function withAccount<T>(ctx: ActionCtx, userId: Id<"users">, enroll: boolean, work: (account: Doc<"billingAccounts">) => Promise<T>, offerKey?: string): Promise<T> {
-  const account = await ctx.runMutation(internal.billingState.acquire, { userId, enroll, ...(offerKey ? { offerKey } : {}) });
+async function withAccount<T>(ctx: ActionCtx, userId: Id<"users">, operation: "checkout" | "portal" | "refresh", work: (account: Doc<"billingAccounts">) => Promise<T>, offerKey?: string): Promise<T> {
+  const account = await ctx.runMutation(internal.billingState.acquire, { userId, enroll: operation === "checkout", auditSource: operation, ...(offerKey ? { offerKey } : {}) });
   if (!account) throw appError("NOT_FOUND", "This company has no Stripe billing account.");
-  try { return await work(account); }
+  let outcome: "succeeded" | "failed" = "failed";
+  try { const result = await work(account); outcome = "succeeded"; return result; }
   catch (error) {
     if (error instanceof ConvexError) throw error;
     // Stripe errors can contain request details. Keep credentials and provider internals off the wire.
     throw appError("UPSTREAM_FAILURE", "Stripe could not complete the request. Retry, or contact your operator if it persists.");
   } finally {
-    await ctx.runMutation(internal.billingState.release, { accountId: account._id, revision: account.revision });
+    await ctx.runMutation(internal.billingState.release, { accountId: account._id, revision: account.revision, outcome });
   }
 }
 
@@ -38,7 +39,7 @@ export const createCheckout = adminAction({
       if (error instanceof ConvexError) throw error;
       throw appError("UPSTREAM_FAILURE", "Stripe configuration could not be verified. Please retry.");
     }
-    return withAccount(ctx, ctx.userId, true, async initial => {
+    return withAccount(ctx, ctx.userId, "checkout", async initial => {
       const account = await ensureCustomer(ctx, stripe, initial);
       const state = await reconcileAccount(ctx, stripe, account);
       if (!state.mayCheckout) throw appError("CONFLICT", "A subscription already exists or needs review. Use the billing portal to manage it.");
@@ -53,7 +54,7 @@ export const createPortal = adminAction({
     billingCompany(ctx.user);
     const config = (await requireBillingConfig(ctx));
     const stripe = stripeClient(config);
-    return withAccount(ctx, ctx.userId, false, async account => {
+    return withAccount(ctx, ctx.userId, "portal", async account => {
       if (!account.customerId) throw appError("CONFLICT", "Complete billing setup before opening the portal.");
       const offers = await ctx.runQuery(internal.billingState.getOffers, {});
       let configuration: string;
@@ -77,7 +78,7 @@ export const refresh = adminAction({
     billingCompany(ctx.user);
     const config = await requireBillingConfig(ctx);
     const stripe = stripeClient(config);
-    await withAccount(ctx, ctx.userId, false, account => reconcileAccount(ctx, stripe, account));
+    await withAccount(ctx, ctx.userId, "refresh", account => reconcileAccount(ctx, stripe, account));
     return null;
   },
 });

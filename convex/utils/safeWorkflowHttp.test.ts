@@ -19,6 +19,11 @@ describe("safe workflow HTTP", () => {
     "fc00::1",
     "fe80::1",
     "::ffff:127.0.0.1",
+    "0:0:0:0:0:0:0:1",
+    "0:0:0:0:0:ffff:7f00:1",
+    "64:ff9b::a00:1",
+    "2002:7f00:1::",
+    "2001::1",
   ])("blocks restricted resolved address %s", (address) => {
     expect(isBlockedWorkflowAddress(address)).toBe(true);
   });
@@ -96,5 +101,35 @@ describe("safe workflow HTTP", () => {
       {},
       { fetchImplementation, resolveHostname: resolvePublic, timeoutMs: 1 }
     )).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  test("the deadline also covers DNS resolution", async () => {
+    await expect(fetchWorkflowAction("https://slow-dns.example/", {}, {
+      resolveHostname: () => new Promise(() => {}), timeoutMs: 5,
+    })).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  test("the deadline covers a stalled response body after headers", async () => {
+    const cancel = vi.fn();
+    await expect(fetchWorkflowAction("https://hooks.example/slow-body", {}, {
+      resolveHostname: resolvePublic, timeoutMs: 5,
+      fetchImplementation: async () => new Response(new ReadableStream({ cancel })),
+    })).rejects.toMatchObject({ name: "AbortError" });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  test("counts UTF-8 bytes, not string length, even when content-length lies", async () => {
+    await expect(fetchWorkflowAction("https://hooks.example/unicode", {}, {
+      resolveHostname: resolvePublic, maxResponseBytes: 3,
+      fetchImplementation: async () => new Response("😀", { headers: { "content-length": "1" } }),
+    })).rejects.toThrow("response exceeds 3 bytes");
+  });
+
+  test("rejects mixed public/private DNS answers", async () => {
+    const fetchImplementation = vi.fn();
+    await expect(fetchWorkflowAction("https://hooks.example/", {}, {
+      fetchImplementation, resolveHostname: async () => [{ address: "1.1.1.1" }, { address: "10.0.0.1" }],
+    })).rejects.toThrow("restricted address");
+    expect(fetchImplementation).not.toHaveBeenCalled();
   });
 });

@@ -676,3 +676,41 @@ test("saved operator configuration drives checkout, reconciliation and the porta
   expect(await f.admin.query(api.billing.getStatus, {})).toMatchObject({ enabled: true, accessAllowed: true, planName: "Team" });
   await expect(f.admin.action(api.billingActions.createPortal, {})).resolves.toContain("billing.stripe.com");
 });
+
+test("billing actions audit tenant, actor, outcome and safe metadata", async () => {
+  const f = await setup();
+  await f.purchase();
+  provider.billingPortal.sessions.create.mockRejectedValueOnce(new Error("provider-secret-and-private-url"));
+  await expect(f.admin.action(api.billingActions.createPortal, {})).rejects.toThrow("Stripe could not complete");
+  const logs = await f.t.run(ctx => ctx.db.query("auditLogs").collect());
+  const operations = logs.filter(row => row.actionType === "BILLING_OPERATION_FINISHED");
+  expect(operations.map(row => JSON.parse(row.metadata!))).toEqual(expect.arrayContaining([
+    expect.objectContaining({ source: "checkout", outcome: "succeeded" }),
+    expect.objectContaining({ source: "portal", outcome: "failed" }),
+  ]));
+  for (const row of operations) {
+    expect(row.actorId).toBe(f.ids.admin);
+    expect(row.companyId).toBe((await f.account())!.companyId);
+  }
+  expect(JSON.stringify(logs)).not.toMatch(/provider-secret-and-private-url|checkout\.stripe\.com|billing\.stripe\.com/);
+});
+
+test("subscription changes are auditable without duplicate changes on reconciliation", async () => {
+  const f = await setup();
+  await f.purchase();
+  await subscribe(f, "active", true, false);
+  await f.t.action(internal.billingSync.reconcile, { accountId: (await f.account())!._id, auditProviderEventId: "evt_paid" });
+  const changes = () => f.t.run(ctx => ctx.db.query("auditLogs")
+    .withIndex("by_action_entity_timestamp", q => q.eq("actionType", "BILLING_SUBSCRIPTION_CHANGED")).collect());
+  const before = await changes();
+  expect(JSON.parse(before.at(-1)!.metadata!)).toMatchObject({
+    source: "webhook", providerEventId: "evt_paid", after: { status: "active" },
+  });
+  expect(before.at(-1)!.actorId).toBeUndefined();
+  await f.t.action(internal.billingSync.reconcile, { accountId: (await f.account())!._id, auditProviderEventId: "evt_paid" });
+  expect(await changes()).toHaveLength(before.length);
+  for (let i = 0; i < 2; i++) await f.t.mutation(internal.billingConfiguration.recordWebhook, { eventId: "evt_paid", eventType: "invoice.paid" });
+  const receipts = await f.t.run(ctx => ctx.db.query("auditLogs")
+    .withIndex("by_action_entity_timestamp", q => q.eq("actionType", "BILLING_WEBHOOK_RECEIVED").eq("entityId", "evt_paid")).collect());
+  expect(receipts).toHaveLength(1);
+});

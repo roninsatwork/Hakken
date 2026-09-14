@@ -43,18 +43,20 @@ set.
   the kiosk thread after validating the raw widget session token.
 - `validateKioskThreadAccess` is the internal token check used by the voice
   session action.
-- `reserveKioskSession` is the internal per-widget voice-session admission gate
-  and heartbeat/session-count writer.
+- `reserveKioskSession` holds one short-lived pending ticket slot. It does not
+  increment the session counter; relay redemption performs that accounting.
 - `listMyReceptionScreens` is a tenant query for `/app/reception`; it lists the
   active kiosk-enabled widgets for the current workspace.
 - `recordKioskHeartbeat` lets the idle kiosk page update `kioskLastSeenAt`
   without creating a session.
 
 `convex/kioskActions.ts` owns `createKioskVoiceSession`. It validates the kiosk
-thread token, reserves the session, requires `VOICE_RELAY_URL` and
+thread token, requires `VOICE_RELAY_URL` and
 `VOICE_RELAY_SECRET`, resolves the `realtime` model default, requires the Google
 Vertex speech-to-speech relay path for this surface, loads the workspace spoken
-voice, builds spoken session instructions, and signs a one-minute relay ticket.
+voice, builds spoken session instructions, signs a one-minute relay ticket, and
+then holds the pending slot. Failed configuration attempts consume no session
+allowance.
 
 ## Data Model
 
@@ -66,6 +68,10 @@ bookkeeping:
   voice-session ceiling.
 - `kioskLastSeenAt` records idle heartbeat and session activity for staff.
 - `kioskSessionCount` is the lifetime conversation count shown in UI.
+- `kioskVoicePendingThreadId` / `kioskVoicePendingUntil` allow one ticket to be
+  minted at a time.
+- `kioskVoiceActiveTicketId` / `kioskVoiceActiveUntil` allow one redeemed voice
+  session at a time and expire safely if close delivery fails.
 - `kioskThreadWindowStart` and `kioskThreadCountInWindow` cap anonymous kiosk
   thread minting.
 
@@ -86,6 +92,13 @@ The kiosk page starts in `idle`. A click/tap calls `createKioskThread`, then
 relay WebSocket opens, the page sends the signed ticket, streams downsampled
 16 kHz microphone PCM, plays received PCM audio, and records completed turns
 back to Convex.
+
+For kiosk tickets, the relay drops open-mic silence until PCM crosses the
+speech threshold, then calls `/api/voice/control` before forwarding that turn
+to Vertex. The control mutation atomically reserves one unit from the company
+plan. Vertex's `turnComplete` finalizes it exactly once; closing before that
+boundary refunds the reservation. An exhausted next turn receives a private
+`relay.quota` signal, and the visitor sees only calm `Back shortly.` copy.
 
 Important runtime details:
 
@@ -127,9 +140,10 @@ Current limits are:
 - `VOICE_TURN_MAX_LENGTH = 4000`
 
 Thread minting records `RATE_LIMITED_KIOSK_THREADS` once when the hourly thread
-ceiling is crossed. Session reservation refuses with visitor-safe copy when the
-per-widget hourly session count is exhausted. Heartbeats are accepted at most
-once per interval.
+ceiling is crossed. A widget can hold only one pending or active voice session.
+The hourly count advances only when the relay redeems the ticket and opens a
+real provider session; close releases the active lease and expiry is its
+backstop. Heartbeats are accepted at most once per interval.
 
 ## Tests And Verification
 
@@ -159,4 +173,6 @@ Preserve these invariants:
 - The microphone is closed while idle.
 - The screen must reset between visitors.
 - Kiosk session/thread minting must remain bounded per widget.
+- Each completed kiosk voice turn spends one company-plan message allowance;
+  silence and abandoned turns do not.
 - Spoken voice stays a workspace setting shared with Ask Sonae and phone calls.

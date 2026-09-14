@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
@@ -196,6 +198,8 @@ export const create = tenantMutation({
   },
   returns: v.id("movements"),
   handler: async (ctx, args) => {
+    const storageId = getMovementStorageId(args);
+    if (storageId) await requireOwnedUpload(ctx, storageId, { userId: ctx.userId, companyId: ctx.companyId }, ["recording"]);
     return await ctx.db.insert("movements", {
       title: args.title,
       difficulty: args.difficulty,
@@ -263,10 +267,10 @@ export const remove = tenantMutation({
 });
 
 export const generateUploadUrl = tenantMutation({
-  args: {},
+  args: uploadMetadataArgs,
   returns: v.string(),
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
+  handler: async (ctx, args) => {
+    return await issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "recording", args);
   },
 });
 

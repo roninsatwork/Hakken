@@ -31,6 +31,7 @@ export const KIOSK_THREAD_MESSAGE_CAP = 400;
 /** The idle screen pings every minute; accepting a write at most every half
  * minute keeps "last seen" honest while bounding what a script can spend. */
 export const KIOSK_HEARTBEAT_MIN_INTERVAL_MS = 30_000;
+export const KIOSK_PENDING_SESSION_MS = 75_000;
 
 const VOICE_TURN_MAX_LENGTH = 4000;
 
@@ -212,18 +213,24 @@ export const validateKioskThreadAccess = internalQuery({
 });
 
 /**
- * One wake tap = one reserved session, counted per widget per hour because
- * there is no signed-in person to count by. Also the kiosk's heartbeat: the
- * admin screen reads the last-seen time and lifetime session count, so a
- * dead tablet in reception is noticed from a desk.
+ * Hold one short-lived ticket slot while the action finishes. This does not
+ * consume the hourly allowance: only a relay redemption does, so repeatedly
+ * calling the public action cannot exhaust a reception desk without opening
+ * the provider connection it asked for.
  */
 export const reserveKioskSession = internalMutation({
   args: {
     widgetId: v.id("widgets"),
+    threadId: v.id("threads"),
   },
+  returns: v.object({ ok: v.boolean(), reason: v.optional(v.string()) }),
   handler: async (ctx, args): Promise<{ ok: boolean; reason?: string }> => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) {
+      return { ok: false, reason: "This screen is not in service." };
+    }
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.widgetId !== widget._id) {
       return { ok: false, reason: "This screen is not in service." };
     }
     const now = Date.now();
@@ -232,11 +239,12 @@ export const reserveKioskSession = internalMutation({
     if (inWindow >= KIOSK_SESSIONS_PER_HOUR) {
       return { ok: false, reason: "The assistant is busy just now. Back shortly." };
     }
+    if ((widget.kioskVoicePendingUntil ?? 0) > now || (widget.kioskVoiceActiveUntil ?? 0) > now) {
+      return { ok: false, reason: "The assistant is busy just now. Back shortly." };
+    }
     await ctx.db.patch(widget._id, {
-      kioskSessionWindowStart: inWindow === 0 ? now : windowStart,
-      kioskSessionCountInWindow: inWindow + 1,
-      kioskLastSeenAt: now,
-      kioskSessionCount: (widget.kioskSessionCount ?? 0) + 1,
+      kioskVoicePendingThreadId: args.threadId,
+      kioskVoicePendingUntil: now + KIOSK_PENDING_SESSION_MS,
     });
     return { ok: true };
   },
@@ -303,4 +311,3 @@ export const recordKioskHeartbeat = publicMutation({
     return null;
   },
 });
-

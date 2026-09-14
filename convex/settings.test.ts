@@ -37,11 +37,12 @@ describe("OWASP: Broken Access Control - Settings", () => {
     const maliciousClient = t.withIdentity({ subject: hackerUserId });
 
     await expect(
-      maliciousClient.mutation(api.settings.generateUploadUrl)
+      maliciousClient.mutation(api.settings.generateUploadUrl, {})
     ).rejects.toThrow("Unauthorized");
   });
 
   test("settings read defaults and super admins can insert, update, audit, and upload", async () => {
+    process.env.CONVEX_SITE_URL = "https://uploads.convex.site";
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const superAdminId = await t.run(async (ctx) =>

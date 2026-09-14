@@ -2,6 +2,12 @@ import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
 
 const crons = cronJobs();
+crons.interval(
+  "upload-garbage-collection",
+  { minutes: 5 },
+  internal.jobLedger.runJob,
+  { job: "upload-garbage-collection" }
+);
 
 // Optional Stripe recovery; the mutation is inert while billing is disabled.
 crons.interval(

@@ -267,6 +267,11 @@ export default function KioskPage() {
         lastActivityRef.current = Date.now();
         setStillThere(false);
 
+        if (event.quotaExhausted) {
+          resetToIdle("Back shortly.");
+          return;
+        }
+
         if (event.toolCalls?.length) {
           setSessionState("thinking");
           return;

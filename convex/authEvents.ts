@@ -2,8 +2,16 @@ import type { Id } from "./_generated/dataModel";
 import type { AuthEventType } from "./utils/authEventTypes";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { internalMutation } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
 import * as governanceShapes from "./utils/governanceShapes";
+import {
+  GLOBAL_REQUEST_WINDOW_MS,
+  MAX_GLOBAL_REQUESTS_PER_MINUTE,
+  MAX_REQUESTS_PER_WINDOW,
+  REQUEST_WINDOW_MS,
+  normaliseEmail,
+} from "./oneTimeCodeService";
 import {
   SIGN_IN_MAX_REQUESTS_PER_HOUR,
   SIGN_IN_REQUEST_WINDOW_MS,
@@ -27,6 +35,58 @@ export type AuthEventInput = {
 };
 
 type AuthEventCtx = Pick<MutationCtx, "db">;
+
+/**
+ * The authoritative email-send gate. This mutation is called by the exported
+ * auth:signIn action itself, so a caller cannot skip it by bypassing the login
+ * page. Both email providers share the same limits: changing buttons cannot
+ * double the amount of mail one address receives.
+ */
+export const reserveAuthEmailSend = internalMutation({
+  args: {
+    email: v.string(),
+    provider: v.union(v.literal("resend"), v.literal("one-time-code")),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args): Promise<boolean> => {
+    const email = normaliseEmail(args.email);
+    if (!email) return false;
+
+    const now = Date.now();
+    const recentGlobal = await ctx.db
+      .query("authEvents")
+      .withIndex("by_type", (q) =>
+        q.eq("eventType", "AUTH_EMAIL_SEND_RESERVED")
+          .gt("timestamp", now - GLOBAL_REQUEST_WINDOW_MS)
+      )
+      .order("desc")
+      .take(MAX_GLOBAL_REQUESTS_PER_MINUTE);
+    if (recentGlobal.length >= MAX_GLOBAL_REQUESTS_PER_MINUTE) return false;
+
+    const recentForAddress = await ctx.db
+      .query("authEvents")
+      .withIndex("by_email_type_timestamp", (q) =>
+        q.eq("email", email).eq("eventType", "AUTH_EMAIL_SEND_RESERVED")
+          .gt("timestamp", now - SIGN_IN_REQUEST_WINDOW_MS)
+      )
+      .order("desc")
+      .take(SIGN_IN_MAX_REQUESTS_PER_HOUR);
+    if (recentForAddress.length >= SIGN_IN_MAX_REQUESTS_PER_HOUR) return false;
+    if (
+      recentForAddress.filter((event) => event.timestamp > now - REQUEST_WINDOW_MS).length >=
+      MAX_REQUESTS_PER_WINDOW
+    ) return false;
+
+    await logAuthEvent(ctx, {
+      email,
+      eventType: "AUTH_EMAIL_SEND_RESERVED",
+      timestamp: now,
+      provider: args.provider,
+      reasonCode: "provider_send_boundary",
+    });
+    return true;
+  },
+});
 
 export async function logAuthEvent(ctx: AuthEventCtx, event: AuthEventInput) {
   return await ctx.db.insert("authEvents", {

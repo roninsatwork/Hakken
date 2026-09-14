@@ -26,6 +26,7 @@
  */
 
 import { createServer } from "node:http";
+import { createHmac } from "node:crypto";
 import { GoogleAuth } from "google-auth-library";
 import { WebSocket, WebSocketServer } from "ws";
 import {
@@ -34,6 +35,8 @@ import {
   classifyUpgradePath,
   createCallerRouter,
   createTicketReplayGuard,
+  isTurnComplete,
+  pcm16HasSpeech,
   readToolCalls,
 } from "./protocol.mjs";
 import {
@@ -138,6 +141,16 @@ relay.on("connection", (browser) => {
 
   let vertex = null;
   let closing = false;
+  let admittedTicket;
+  let admittedPayload;
+  let sessionPayload;
+  let turnIndex = 1;
+  let turnState = "idle";
+  const meteredFrames = [];
+  const relayHeaders = (ticket) => ({
+    "content-type": "application/json",
+    "x-voice-relay-auth": createHmac("sha256", RELAY_SECRET).update(ticket).digest("base64url"),
+  });
   // Owns the ticket-then-conversation ordering, and holds whatever the caller
   // says while Vertex is still being opened. See protocol.mjs for why that
   // ordering has to be decided synchronously.
@@ -153,11 +166,37 @@ relay.on("connection", (browser) => {
     PRE_AUTH_TIMEOUT_MS
   );
 
+  const postControl = async (action, index) => {
+    if (!admittedTicket || !admittedPayload?.controlUrl) return { ok: true };
+    const response = await fetch(admittedPayload.controlUrl, {
+      method: "POST",
+      headers: relayHeaders(admittedTicket),
+      body: JSON.stringify({
+        ticket: admittedTicket,
+        action,
+        ...(index !== undefined ? { turnIndex: index } : {}),
+      }),
+      signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
+    });
+    return { ok: response.ok, status: response.status };
+  };
+
   const shutdown = (code, reason) => {
     if (closing) return;
     closing = true;
     clearTimeout(ticketTimer);
     clearTimeout(sessionTimer);
+    if (admittedTicket) {
+      if (admittedPayload?.controlUrl) {
+        void postControl("close").catch(() => {});
+      } else if (KNOWLEDGE_URL) {
+        void fetch(KNOWLEDGE_URL, {
+          method: "POST", headers: relayHeaders(admittedTicket),
+          body: JSON.stringify({ ticket: admittedTicket, close: true }),
+          signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
+        }).catch(() => {});
+      }
+    }
     say(`closing (${code}): ${reason}`);
     try {
       browser.close(code, reason);
@@ -172,6 +211,50 @@ relay.on("connection", (browser) => {
   };
 
   const sessionTimer = setTimeout(() => shutdown(1000, "Session ended."), MAX_SESSION_MS);
+
+  const deliverCallerDecision = (decision) => {
+    if (decision.kind === "send" && vertex?.readyState === WebSocket.OPEN) vertex.send(decision.frame);
+  };
+
+  const beginMeteredTurn = async () => {
+    if (!admittedPayload || turnState !== "idle" || meteredFrames.length === 0) return;
+    turnState = "beginning";
+    try {
+      const admission = await postControl("begin-turn", turnIndex);
+      if (!admission.ok) {
+        if (browser.readyState === WebSocket.OPEN) {
+          browser.send(JSON.stringify({ type: "relay.quota" }));
+        }
+        shutdown(1000, admission.status === 429 ? "Company voice allowance exhausted." : "Turn admission refused.");
+        return;
+      }
+      turnState = "open";
+      for (const frame of meteredFrames.splice(0)) {
+        deliverCallerDecision(router.receive(frame, true));
+      }
+    } catch (error) {
+      console.warn(`[session ${id}] turn admission failed:`, error?.message ?? error);
+      shutdown(1011, "Turn admission unavailable.");
+    }
+  };
+
+  const completeMeteredTurn = async () => {
+    if (turnState !== "open") return;
+    turnState = "completing";
+    try {
+      const completion = await postControl("complete-turn", turnIndex);
+      if (!completion.ok) {
+        shutdown(1011, "Turn completion unavailable.");
+        return;
+      }
+      turnIndex += 1;
+      turnState = "idle";
+      if (meteredFrames.length > 0) void beginMeteredTurn();
+    } catch (error) {
+      console.warn(`[session ${id}] turn completion failed:`, error?.message ?? error);
+      shutdown(1011, "Turn completion unavailable.");
+    }
+  };
 
   /**
    * Look the question up and hand the answer straight back to Vertex.
@@ -190,7 +273,7 @@ relay.on("connection", (browser) => {
         try {
           const response = await fetch(KNOWLEDGE_URL, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: relayHeaders(rawTicket),
             body: JSON.stringify({ ticket: rawTicket, query: String(call.args?.query ?? "") }),
             signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
           });
@@ -221,12 +304,24 @@ relay.on("connection", (browser) => {
     try {
       const redemption = await fetch(ticket.redemptionUrl, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: relayHeaders(rawTicket),
         body: JSON.stringify({ ticket: rawTicket }),
         signal: AbortSignal.timeout(PRE_AUTH_TIMEOUT_MS),
       });
       if (!redemption.ok) {
         shutdown(4401, redemption.status === 409 ? "Ticket already used." : "Ticket redemption refused.");
+        return;
+      }
+      admittedTicket = rawTicket;
+      admittedPayload = ticket;
+      if (meteredFrames.length > 0) void beginMeteredTurn();
+      if (closing) {
+        if (ticket.controlUrl) await postControl("close");
+        else if (KNOWLEDGE_URL) await fetch(KNOWLEDGE_URL, {
+            method: "POST", headers: relayHeaders(rawTicket),
+            body: JSON.stringify({ ticket: rawTicket, close: true }),
+            signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
+          });
         return;
       }
     } catch (error) {
@@ -269,6 +364,7 @@ relay.on("connection", (browser) => {
 
       const calls = readToolCalls(text);
       if (calls.length > 0) void answerToolCalls(calls, rawTicket);
+      if (ticket.meteredVoiceTurns && isTurnComplete(text)) void completeMeteredTurn();
     });
 
     vertex.on("close", (code, reason) =>
@@ -281,11 +377,19 @@ relay.on("connection", (browser) => {
   };
 
   browser.on("message", (data, isBinary) => {
+    if (sessionPayload?.meteredVoiceTurns && isBinary && turnState !== "open") {
+      const frame = Buffer.from(data);
+      if (meteredFrames.length === 0 && !pcm16HasSpeech(frame)) return;
+      if (meteredFrames.length < MAX_HELD_FRAMES) meteredFrames.push(frame);
+      if (turnState === "idle") void beginMeteredTurn();
+      return;
+    }
     const decision = router.receive(data, isBinary);
     switch (decision.kind) {
       case "ticket":
         clearTimeout(ticketTimer);
         say("ticket accepted");
+        sessionPayload = decision.ticket;
         void openVertex(decision.ticket, decision.rawTicket);
         return;
       case "refused":
@@ -295,7 +399,7 @@ relay.on("connection", (browser) => {
         shutdown(4401, decision.reason);
         return;
       case "send":
-        if (vertex?.readyState === WebSocket.OPEN) vertex.send(decision.frame);
+        deliverCallerDecision(decision);
         return;
       default:
         return;

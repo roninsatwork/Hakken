@@ -39,7 +39,7 @@ export function IdentitySettingsContent({
 
     const outcome = await action.run(
       async () => {
-        const uploadUrl = await generateUploadUrl();
+        const uploadUrl = await generateUploadUrl({ sizeBytes: file.size, contentType: file.type });
         const res = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": file.type },

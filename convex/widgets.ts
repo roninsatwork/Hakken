@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import { Id } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
@@ -163,6 +165,7 @@ export const saveWidget = adminMutation({
 
     let finalLogoUrl = args.themeLogoUrl;
     if (finalLogoUrl && !finalLogoUrl.startsWith("http")) {
+       await requireOwnedUpload(ctx, finalLogoUrl as Id<"_storage">, { userId, companyId: ctx.companyId }, ["image"]);
        await validateStoredUpload(ctx, finalLogoUrl as Id<"_storage">, validateAdminImageMetadata);
        const url = await ctx.storage.getUrl(finalLogoUrl as Id<"_storage">);
        if (url) {
@@ -288,6 +291,7 @@ export const WIDGET_UPLOAD_URL_LIMIT = 10;
 export const generateWidgetUploadUrl = publicMutation({
   reason: "Anonymous widget visitors attach files; validated against the widget upload policy.",
   args: { 
+    ...uploadMetadataArgs,
     widgetId: v.id("widgets"),
     threadId: v.id("threads"),
     widgetAccessToken: v.string(),
@@ -316,7 +320,7 @@ export const generateWidgetUploadUrl = publicMutation({
     await ctx.db.patch(thread._id, { widgetUploadUrlCount: issuedUploadUrls + 1 });
 
     // Generate an upload URL for widget file attachments (supports anonymous visitors)
-    return await ctx.storage.generateUploadUrl();
+    return await issueUpload(ctx, { threadId: thread._id, companyId: widget.companyId }, "widget", args);
   },
 });
 
@@ -341,6 +345,7 @@ export const finalizeWidgetUpload = publicMutation({
       throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
+    await requireOwnedUpload(ctx, args.storageId, { threadId: thread._id, companyId: widget.companyId }, ["widget"], false);
     await validateStoredUpload(ctx, args.storageId, validateWidgetAttachmentMetadata);
 
     return { success: true, storageId: args.storageId };

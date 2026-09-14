@@ -115,15 +115,49 @@ describe("the receptionist screen", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toContain("not available");
 
-    // The tap still consumed a session slot and beat the heart.
+    // Configuration failed before a provider connection existed, so this
+    // attempt consumes neither the shared session allowance nor its health
+    // count. Only relay redemption does that.
     const widget = await t.run(async (ctx) => ctx.db.get(widgetId));
-    expect(widget?.kioskSessionCount).toBe(1);
-    expect(widget?.kioskLastSeenAt).toBeGreaterThan(0);
+    expect(widget?.kioskSessionCount).toBeUndefined();
+    expect(widget?.kioskLastSeenAt).toBeUndefined();
+  });
+
+  test("one pending ticket becomes one active counted session only when the relay redeems it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedKioskWidget(t, true);
+    const session = await t.mutation(api.kiosk.createKioskThread, { widgetId });
+    const reservation = await t.mutation(internal.kiosk.reserveKioskSession, {
+      widgetId,
+      threadId: session!.threadId,
+    });
+    expect(reservation.ok).toBe(true);
+    await expect(t.mutation(internal.kiosk.reserveKioskSession, {
+      widgetId,
+      threadId: session!.threadId,
+    })).resolves.toMatchObject({ ok: false });
+
+    const ticketId = "kiosk-ticket-123456789";
+    await expect(t.mutation(internal.voiceRelay.redeemVoiceTicketInternal, {
+      ticketId,
+      expiresAt: Date.now() + 60_000,
+      kioskWidgetId: widgetId,
+      threadId: session!.threadId,
+    })).resolves.toBe(true);
+
+    const widget = await t.run(async (ctx) => ctx.db.get(widgetId));
+    expect(widget).toMatchObject({
+      kioskSessionCount: 1,
+      kioskSessionCountInWindow: 1,
+      kioskVoiceActiveTicketId: ticketId,
+    });
+    expect(widget?.kioskVoicePendingThreadId).toBeUndefined();
   });
 
   test("the per-widget hourly session window refuses the sixty-first tap", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { widgetId } = await seedKioskWidget(t, true);
+    const session = await t.mutation(api.kiosk.createKioskThread, { widgetId });
 
     await t.run(async (ctx) => {
       await ctx.db.patch(widgetId, {
@@ -133,7 +167,10 @@ describe("the receptionist screen", () => {
     });
 
     // Reserved through the internal door the voice session uses.
-    const reservation = await t.mutation(internal.kiosk.reserveKioskSession, { widgetId });
+    const reservation = await t.mutation(internal.kiosk.reserveKioskSession, {
+      widgetId,
+      threadId: session!.threadId,
+    });
     expect(reservation).toMatchObject({ ok: false });
   });
 

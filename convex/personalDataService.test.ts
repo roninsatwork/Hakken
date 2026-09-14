@@ -19,8 +19,12 @@ import {
  * remembers this file exists. So the schema is the source of truth and the
  * manifest is checked against it.
  */
+function schemaSource() {
+  return ["schema.ts", "billingSchema.ts", "uploadSchema.ts"].map(file => fs.readFileSync(path.join(process.cwd(), "convex", file), "utf8")).join("\n");
+}
+
 function tablesReferencingUsers(): Map<string, string[]> {
-  const source = fs.readFileSync(path.join(process.cwd(), "convex", "schema.ts"), "utf8");
+  const source = schemaSource();
   const tables = source.matchAll(/^ {2}(\w+): defineTable\(\{([\s\S]*?)^ {2}\}\)/gm);
   const found = new Map<string, string[]>();
 
@@ -34,7 +38,7 @@ function tablesReferencingUsers(): Map<string, string[]> {
 
 /** Every index in the schema, as "table.leadingField" to the index's name. */
 function indexesLeadingWith(): Map<string, string> {
-  const source = fs.readFileSync(path.join(process.cwd(), "convex", "schema.ts"), "utf8");
+  const source = schemaSource();
   const found = new Map<string, string>();
 
   for (const [, table, body] of source.matchAll(/^ {2}(\w+): defineTable\(([\s\S]*?)(?=^ {2}\w+: defineTable\(|\Z)/gm)) {

@@ -14,7 +14,8 @@ import { appError } from "./utils/appError";
 import * as tailShapes from "./utils/tailShapes";
 import { tenantAction } from "./tenantFunctions";
 import { v } from "convex/values";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import { encryptVoiceTicket } from "./utils/voiceTicketEncryption";
 import { internal } from "./_generated/api";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
@@ -89,6 +90,12 @@ export const searchKnowledgeForVoice = tenantAction({
       throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
+    if (args.query.length > 2_000) throw appError("INVALID_INPUT", "Invalid voice search query.");
+    if (!args.query.trim()) return { context: "" };
+    await ctx.runMutation(internal.aiActionRequests.reserve, {
+      actorId: ctx.userId, ...(companyId ? { companyId } : {}),
+      actionName: "voiceKnowledge", windowMs: 60_000, maxRequests: 10,
+    });
     return await ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
       threadId: args.threadId,
       query: args.query,
@@ -383,12 +390,12 @@ export function signVoiceTicket(payload: Record<string, unknown>, secret: string
       "Live voice ticket redemption needs CONVEX_SITE_URL on this deployment."
     );
   }
-  const encoded = Buffer.from(JSON.stringify({
+  return encryptVoiceTicket({
     ...payload,
     jti: randomUUID(),
     redemptionUrl: `${siteUrl}/api/voice/redeem`,
-  })).toString("base64url");
-  return `${encoded}.${createHmac("sha256", secret).update(encoded).digest("base64url")}`;
+    controlUrl: `${siteUrl}/api/voice/control`,
+  }, secret);
 }
 
 /**

@@ -24,6 +24,7 @@ import { appError } from "./utils/appError";
 
 /** Every job the crons dispatch, and how to run it. */
 const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
+  "upload-garbage-collection": (ctx) => ctx.runMutation(internal.uploadReservations.cleanup, {}),
   "stripe-billing-reconciliation": (ctx) => ctx.runMutation(internal.billingSync.scheduleReconciliation, {}),
   "workflow-schedule-dispatcher": (ctx) =>
     ctx.runMutation(internal.workflowEngine.scheduleDispatcher, {}),
@@ -73,6 +74,7 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
 /** How often each job is meant to run, in minutes — the screen uses this to
  * say "overdue" without the reader having to know the schedule. */
 const EXPECTED_EVERY_MINUTES: Record<string, number> = {
+  "upload-garbage-collection": 5,
   "workflow-schedule-dispatcher": 1,
   "gmail-mailbox-watcher": 1,
   "agent-run-stall-recovery": 2,

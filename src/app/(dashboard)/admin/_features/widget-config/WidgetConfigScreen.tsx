@@ -125,7 +125,7 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
         const objectUrl = URL.createObjectURL(file);
         setThemeLogoUrl(objectUrl);
 
-        const uploadUrl = await generateUploadUrl();
+        const uploadUrl = await generateUploadUrl({ sizeBytes: file.size, contentType: file.type });
         const result = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": file.type },

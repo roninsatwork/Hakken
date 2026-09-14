@@ -65,7 +65,7 @@ export default function MyProfilePage() {
     await photoAction.run(
       async () => {
         // 1. Get short-lived upload URL from Convex
-        const postUrl = await generateUploadUrl();
+        const postUrl = await generateUploadUrl({ sizeBytes: file.size, contentType: file.type });
 
         // 2. POST the file to the URL
         const result = await fetch(postUrl, {

@@ -15,12 +15,12 @@ export function registerBillingHttp(http: HttpRouter) {
     webhookPath: PATH, apiVersion: STRIPE_API_VERSION,
     onEvent: async (ctx, event) => {
       if (event.livemode !== ((await billingConfig(ctx)).mode === "live")) return;
-      await ctx.runMutation(internal.billingConfiguration.recordWebhook, {});
+      await ctx.runMutation(internal.billingConfiguration.recordWebhook, { eventId: event.id, eventType: event.type });
       const object = event.data.object;
       const customerId = "customer" in object ? objectId(object.customer) : undefined;
       if (!customerId) return;
       const accountId = await ctx.runQuery(internal.billingState.findCustomer, { customerId });
-      if (accountId) await ctx.runAction(internal.billingSync.reconcile, { accountId });
+      if (accountId) await ctx.runAction(internal.billingSync.reconcile, { accountId, auditProviderEventId: event.id });
     },
   });
   const endpoint = componentRouter.lookup(PATH, "POST")!;

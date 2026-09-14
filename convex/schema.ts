@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { billingTables } from "./billingSchema";
+import { uploadTables } from "./uploadSchema";
 
 // template:remove:start movement
 const movementCameraBodyPartValidator = v.union(
@@ -59,6 +60,7 @@ export const opportunityHeadlineValidator = v.object({
 export default defineSchema({
   ...authTables,
   ...billingTables,
+  ...uploadTables,
   
   companies: defineTable({
     name: v.string(),
@@ -690,6 +692,7 @@ export default defineSchema({
       v.literal("transcribeAudio"),
       v.literal("synthesizeSpeech"),
       v.literal("realtimeVoiceSession"),
+      v.literal("voiceKnowledge"),
       v.literal("voicePreview"),
       v.literal("generateNodeConfig")
     ),
@@ -704,6 +707,16 @@ export default defineSchema({
     ticketId: v.string(),
     expiresAt: v.number(),
     redeemedAt: v.number(),
+    kioskWidgetId: v.optional(v.id("widgets")),
+    kioskThreadId: v.optional(v.id("threads")),
+    quotaCompanyId: v.optional(v.id("companies")),
+    quotaCountAfterReservation: v.optional(v.number()),
+    pendingTurnIndex: v.optional(v.number()),
+    completedTurns: v.optional(v.number()),
+    lookups: v.optional(v.number()),
+    windowAt: v.optional(v.number()),
+    windowLookups: v.optional(v.number()),
+    closedAt: v.optional(v.number()),
   })
     .index("by_ticket_id", ["ticketId"])
     .index("by_expires_at", ["expiresAt"]),
@@ -835,6 +848,9 @@ export default defineSchema({
       // sign-in form to post mail at a person.
       v.literal("MAGIC_LINK_THROTTLED"),
       v.literal("MAGIC_LINK_STARTED"),
+      // Reserved at the actual auth-provider send boundary. Unlike the
+      // screen's preflight events, this also covers direct auth:signIn calls.
+      v.literal("AUTH_EMAIL_SEND_RESERVED"),
       v.literal("INVITE_FOUND"),
       v.literal("INVITE_MISSING"),
       v.literal("INVITE_EXPIRED"),
@@ -3111,6 +3127,13 @@ export default defineSchema({
     kioskSessionCountInWindow: v.optional(v.number()),
     kioskLastSeenAt: v.optional(v.number()),
     kioskSessionCount: v.optional(v.number()),
+    // A ticket is only pending until the relay redeems it. Once redeemed the
+    // active lease prevents a single kiosk from opening parallel provider
+    // sessions; both leases expire without a cleanup job if a device vanishes.
+    kioskVoicePendingThreadId: v.optional(v.id("threads")),
+    kioskVoicePendingUntil: v.optional(v.number()),
+    kioskVoiceActiveTicketId: v.optional(v.string()),
+    kioskVoiceActiveUntil: v.optional(v.number()),
     // Anonymous thread minting is rate-windowed per widget (2026-08 security
     // audit): the widget door and the kiosk door each keep their own hourly
     // count, in the same shape as the kiosk session window above.

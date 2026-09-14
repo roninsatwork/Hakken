@@ -314,6 +314,24 @@ operator workflow; this starter does not automate irreversible financial cleanup
 
 ## Implementation and verification
 
+### Audit records
+
+Admitted checkout, portal and refresh operations write start and completion
+records with the company, acting administrator, source, lease revision and outcome.
+Provider errors and hosted payment URLs are not copied to the audit trail.
+An interrupted worker can leave a start without a finish; a released legacy
+worker without an explicit outcome is recorded as unknown, never assumed successful.
+Subscription changes record the previous and next status, plan, paid-through date,
+cancellation and access deadline atomically with the saved projection. An unchanged
+reconciliation does not create another subscription-change record.
+
+Verified Stripe events are recorded once per provider event ID, and that ID follows
+webhook-triggered reconciliation into the change record. Duplicate delivery can
+retry reconciliation but cannot duplicate the receipt or an unchanged projection.
+Scheduled repair has no invented human actor. Configuration saves record the
+operator and before/after non-secret configuration. These are operational audit
+records, not an invoice ledger or proof of live Stripe acceptance.
+
 - [`convex/billingConfiguration.ts`](../../convex/billingConfiguration.ts): runtime configuration, revisions and immutable historical price bindings.
 - [`convex/billingAdmin.ts`](../../convex/billingAdmin.ts): protected setup, company detail and paginated oversight queries.
 - [`convex/billingAdminActions.ts`](../../convex/billingAdminActions.ts): provider verification, price picker and portal setup.

@@ -1,6 +1,8 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
+import { encryptVoiceTicket } from "./utils/voiceTicketEncryption";
+import { internal } from "./_generated/api";
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 
@@ -13,9 +15,7 @@ const SECRET = "test-relay-secret";
  * what matters here is what it refuses.
  */
 function mintTicket(payload: Record<string, unknown>, secret = SECRET) {
-    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const signature = createHmac("sha256", secret).update(encoded).digest("base64url");
-    return `${encoded}.${signature}`;
+    return encryptVoiceTicket(payload, secret);
 }
 
 async function seedThread(t: ReturnType<typeof convexTest>) {
@@ -42,9 +42,10 @@ async function seedThread(t: ReturnType<typeof convexTest>) {
 }
 
 function lookup(t: ReturnType<typeof convexTest>, body: unknown) {
+    const ticket = typeof body === "object" && body !== null && "ticket" in body && typeof body.ticket === "string" ? body.ticket : "";
     return t.fetch("/api/voice/knowledge", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-voice-relay-auth": createHmac("sha256", SECRET).update(ticket).digest("base64url") },
         body: typeof body === "string" ? body : JSON.stringify(body),
     });
 }
@@ -52,14 +53,29 @@ function lookup(t: ReturnType<typeof convexTest>, body: unknown) {
 function redeem(t: ReturnType<typeof convexTest>, ticket: string) {
     return t.fetch("/api/voice/redeem", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-voice-relay-auth": createHmac("sha256", SECRET).update(ticket).digest("base64url") },
         body: JSON.stringify({ ticket }),
+    });
+}
+
+function control(t: ReturnType<typeof convexTest>, ticket: string, action: "begin-turn" | "complete-turn" | "close", turnIndex?: number) {
+    return t.fetch("/api/voice/control", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-voice-relay-auth": createHmac("sha256", SECRET).update(ticket).digest("base64url") },
+        body: JSON.stringify({ ticket, action, ...(turnIndex ? { turnIndex } : {}) }),
     });
 }
 
 beforeEach(() => {
     vi.stubEnv("VOICE_RELAY_SECRET", SECRET);
 });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
+
+async function admittedTicket(t: ReturnType<typeof convexTest>, payload: Record<string, unknown>) {
+    const ticket = mintTicket({ jti: randomUUID(), ...payload });
+    expect((await redeem(t, ticket)).status).toBe(200);
+    return ticket;
+}
 
 describe("one-time voice ticket redemption", () => {
     test("one ticket opens only one relay connection", async () => {
@@ -101,13 +117,142 @@ describe("one-time voice ticket redemption", () => {
     });
 });
 
+describe("kiosk relay admission and company message quota", () => {
+    test("counts a real relay session and each completed turn exactly once", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { companyId, widgetId, threadId } = await t.run(async (ctx) => {
+            const planId = await ctx.db.insert("plans", {
+                name: "One turn", priceGBP: 1, messageLimit: 1, isActive: true, createdAt: Date.now(),
+            });
+            const companyId = await ctx.db.insert("companies", {
+                name: "Kiosk Co", planId, messagesUsedThisPeriod: 0, createdAt: Date.now(),
+            });
+            const widgetId = await ctx.db.insert("widgets", {
+                companyId, name: "Desk", allowedDomains: [], isActive: true, kioskEnabled: true,
+                createdAt: Date.now(),
+            });
+            const threadId = await ctx.db.insert("threads", {
+                companyId, widgetId, title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
+            });
+            await ctx.db.patch(widgetId, {
+                kioskVoicePendingThreadId: threadId,
+                kioskVoicePendingUntil: Date.now() + 60_000,
+            });
+            return { companyId, widgetId, threadId };
+        });
+        const ticket = mintTicket({
+            model: "test-provider-model",
+            jti: "metered-kiosk-ticket-1234",
+            redemptionUrl: "https://platform.test/api/voice/redeem",
+            controlUrl: "https://platform.test/api/voice/control",
+            expiresAt: Date.now() + 60_000,
+            kioskWidgetId: widgetId,
+            threadId,
+            meteredVoiceTurns: true,
+        });
+
+        expect((await redeem(t, ticket)).status).toBe(200);
+        expect((await redeem(t, ticket)).status).toBe(409);
+        expect((await control(t, ticket, "begin-turn", 1)).status).toBe(200);
+        expect((await control(t, ticket, "begin-turn", 1)).status).toBe(200);
+        expect(await t.run(async (ctx) => (await ctx.db.get(companyId))?.messagesUsedThisPeriod)).toBe(1);
+        expect((await control(t, ticket, "complete-turn", 1)).status).toBe(200);
+        expect((await control(t, ticket, "begin-turn", 2)).status).toBe(429);
+        expect((await control(t, ticket, "close")).status).toBe(200);
+
+        const widget = await t.run(async (ctx) => ctx.db.get(widgetId));
+        expect(widget?.kioskSessionCount).toBe(1);
+        expect(widget?.kioskVoiceActiveTicketId).toBeUndefined();
+    });
+
+    test("abandons an unfinished reservation without charging the company", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { companyId, widgetId, threadId } = await t.run(async (ctx) => {
+            const planId = await ctx.db.insert("plans", {
+                name: "Turns", priceGBP: 1, messageLimit: 10, isActive: true, createdAt: Date.now(),
+            });
+            const companyId = await ctx.db.insert("companies", {
+                name: "Kiosk Co", planId, messagesUsedThisPeriod: 0, createdAt: Date.now(),
+            });
+            const widgetId = await ctx.db.insert("widgets", {
+                companyId, name: "Desk", allowedDomains: [], isActive: true, kioskEnabled: true,
+                createdAt: Date.now(),
+            });
+            const threadId = await ctx.db.insert("threads", {
+                companyId, widgetId, title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
+            });
+            await ctx.db.patch(widgetId, { kioskVoicePendingThreadId: threadId, kioskVoicePendingUntil: Date.now() + 60_000 });
+            return { companyId, widgetId, threadId };
+        });
+        const ticket = mintTicket({
+            model: "test-provider-model", jti: "refund-kiosk-ticket-12345",
+            redemptionUrl: "https://platform.test/api/voice/redeem",
+            expiresAt: Date.now() + 60_000, kioskWidgetId: widgetId, threadId, meteredVoiceTurns: true,
+        });
+        expect((await redeem(t, ticket)).status).toBe(200);
+        expect((await control(t, ticket, "begin-turn", 1)).status).toBe(200);
+        expect((await control(t, ticket, "close")).status).toBe(200);
+        expect(await t.run(async (ctx) => (await ctx.db.get(companyId))?.messagesUsedThisPeriod)).toBe(0);
+    });
+});
+
 describe("the relay asking for company knowledge", () => {
+    test("a browser-held ticket alone cannot redeem or search", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { threadId } = await seedThread(t);
+        const ticket = mintTicket({ threadId, jti: "one-time-id-123456789", expiresAt: Date.now() + 60_000 });
+        for (const path of ["redeem", "knowledge"]) {
+            expect((await t.fetch(`/api/voice/${path}`, {
+                method: "POST", headers: { "content-type": "application/json" },
+                body: JSON.stringify({ ticket, query: "private data" }),
+            })).status).toBe(401);
+        }
+        expect((await lookup(t, { ticket, query: "not yet redeemed" })).status).toBe(429);
+    });
+
+    test("concurrent lookups share a quota, and a closed session stays closed", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const jti = "one-time-id-123456789";
+        await t.mutation(internal.voiceRelay.redeemVoiceTicketInternal, { ticketId: jti, expiresAt: Date.now() + 60_000 });
+        const results = await Promise.all(Array.from({ length: 12 }, () =>
+            t.mutation(internal.voiceRelay.admitKnowledgeLookup, { ticketId: jti })));
+        expect(results.filter(Boolean)).toHaveLength(10);
+        expect(await t.mutation(internal.voiceRelay.admitKnowledgeLookup, { ticketId: jti, close: true })).toBe(true);
+        expect(await t.mutation(internal.voiceRelay.admitKnowledgeLookup, { ticketId: jti })).toBe(false);
+    });
+
+    test("session quotas persist past the one-minute admission ticket", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        let now = Date.now();
+        vi.spyOn(Date, "now").mockImplementation(() => now);
+        const jti = "one-time-id-123456789";
+        await t.mutation(internal.voiceRelay.redeemVoiceTicketInternal, { ticketId: jti, expiresAt: now + 60_000 });
+        for (let window = 0; window < 6; window++) {
+            now += 60_001;
+            for (let count = 0; count < 10; count++) {
+                expect(await t.mutation(internal.voiceRelay.admitKnowledgeLookup, { ticketId: jti })).toBe(true);
+            }
+        }
+        now += 60_001;
+        expect(await t.mutation(internal.voiceRelay.admitKnowledgeLookup, { ticketId: jti })).toBe(false);
+    });
+
+    test("ticket bytes reveal no prompt and legacy plaintext passes are refused", async () => {
+        const instructions = "Private company policy and memory";
+        const ticket = mintTicket({ instructions, jti: "one-time-id-123456789", expiresAt: Date.now() + 60_000 });
+        expect(ticket.split(".").map(part => Buffer.from(part, "base64url").toString("utf8")).join("")).not.toContain(instructions);
+        const payload = Buffer.from(JSON.stringify({ instructions, jti: "one-time-id-123456789", expiresAt: Date.now() + 60_000 })).toString("base64url");
+        const old = `${payload}.${createHmac("sha256", SECRET).update(payload).digest("base64url")}`;
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        expect((await redeem(t, old)).status).toBe(401);
+    });
+
     test("answers a lookup carrying a ticket this platform signed", async () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         const { threadId, companyId } = await seedThread(t);
 
         const response = await lookup(t, {
-            ticket: mintTicket({
+            ticket: await admittedTicket(t, {
                 threadId,
                 companyId,
                 model: "test-provider-model",
@@ -196,7 +341,7 @@ describe("the relay asking for company knowledge", () => {
         const { threadId, companyId } = await seedThread(t);
 
         const response = await lookup(t, {
-            ticket: mintTicket({
+            ticket: await admittedTicket(t, {
                 threadId,
                 companyId,
                 model: "test-provider-model",
@@ -222,7 +367,7 @@ describe("the relay asking for company knowledge", () => {
         );
 
         const response = await lookup(t, {
-            ticket: mintTicket({
+            ticket: await admittedTicket(t, {
                 threadId: orphanThreadId as Id<"threads">,
                 companyId,
                 expiresAt: Date.now() + 60_000,

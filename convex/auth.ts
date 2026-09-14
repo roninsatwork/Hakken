@@ -6,6 +6,8 @@ import Resend from "@auth/core/providers/resend";
 import { Email } from "@convex-dev/auth/providers/Email";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { internal } from "./_generated/api";
+import { v } from "convex/values";
+import { publicAction } from "./tenantFunctions";
 import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
@@ -120,15 +122,9 @@ const providers: AuthProviderConfig[] = [
     generateVerificationToken: async () =>
       generateCode((count) => crypto.getRandomValues(new Uint8Array(count))),
     /**
-     * No `ctx` here — this provider's send hook is Auth.js's, which takes only
-     * the parameters and has no database access. The throttle therefore lives
-     * in `oneTimeCodes.requestCode`, which the sign-in screen calls first and
-     * which refuses before `signIn` is ever reached.
-     *
-     * Worth stating plainly rather than implying otherwise: that gate is on the
-     * request path, not inside the send. It stops the sign-in form being used
-     * to post mail at someone, which is what it is for; it is not a defence
-     * against a caller driving the auth endpoint directly.
+     * No `ctx` exists inside this provider hook. The exported `signIn` action
+     * below therefore reserves the send before invoking Auth.js, while the
+     * screen's `oneTimeCodes.requestCode` remains an earlier, friendly refusal.
      */
     sendVerificationRequest: async ({ identifier, provider, token }) => {
       const platformName = DEFAULT_SETTINGS.platformName;
@@ -200,10 +196,52 @@ if (
   );
 }
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+const authRuntime = convexAuth({
   providers,
 
   callbacks: {
     createOrUpdateUser: createOrUpdateSonaeAuthUser,
+  },
+});
+
+export const { auth, signOut, store, isAuthenticated } = authRuntime;
+const frameworkSignIn = authRuntime.signIn;
+
+/**
+ * Keep the public function name expected by the Convex Auth clients, but put
+ * the mail throttle around the provider invocation itself. Returning the same
+ * generic "started" result on refusal avoids revealing whether an address is
+ * registered and avoids handing direct callers a throttle oracle.
+ */
+export const signIn = publicAction({
+  reason:
+    "Convex Auth sign-in is necessarily pre-authentication; this wrapper preserves that public contract while enforcing the provider email-send throttle.",
+  args: {
+    provider: v.optional(v.string()),
+    params: v.optional(v.any()),
+    verifier: v.optional(v.string()),
+    refreshToken: v.optional(v.string()),
+    calledBy: v.optional(v.string()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const params = args.params as Record<string, unknown> | undefined;
+    const provider = args.provider;
+    const isInitialEmailSend =
+      (provider === "resend" || provider === "one-time-code") &&
+      typeof params?.email === "string" &&
+      params.code === undefined;
+
+    if (isInitialEmailSend) {
+      const allowed = await ctx.runMutation(internal.authEvents.reserveAuthEmailSend, {
+        email: params.email as string,
+        provider,
+      });
+      if (!allowed) return { started: true };
+    }
+
+    return await (frameworkSignIn as unknown as {
+      _handler: (handlerCtx: typeof ctx, handlerArgs: typeof args) => Promise<unknown>;
+    })._handler(ctx, args);
   },
 });

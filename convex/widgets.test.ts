@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
 import { WIDGET_THREADS_PER_HOUR, WIDGET_UPLOAD_URL_LIMIT } from "./widgets";
 
@@ -9,6 +10,7 @@ import { WIDGET_THREADS_PER_HOUR, WIDGET_UPLOAD_URL_LIMIT } from "./widgets";
  * a real deployment shares the secret between the Next server and Convex. */
 const TEST_EMBED_SECRET = "widget-embed-test-secret";
 process.env.WIDGET_EMBED_SIGNING_SECRET = TEST_EMBED_SECRET;
+process.env.CONVEX_SITE_URL = "https://uploads.convex.site";
 
 const embedPassFor = (widgetId: string, embedHost: string | null = "support.example.com") =>
   mintWidgetEmbedPass({ widgetId, embedHost, secret: TEST_EMBED_SECRET });
@@ -364,6 +366,7 @@ describe("Widget Authorization", () => {
     );
     const storageId = await t.run(async (ctx) => {
       const storageId = await ctx.storage.store(new Blob(["image"], { type: "image/png" }));
+      await seedUploadReceipt(ctx, storageId, { threadId, companyId: (await ctx.db.get(threadId))?.companyId }, "widget");
       await ctx.db.insert("mockStorageMetadata", {
         storageId,
         size: 5,
@@ -485,6 +488,7 @@ describe("a photo from the widget", () => {
         new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })
       );
       await ctx.db.patch(storageId as never, { contentType: "image/png" } as never);
+      await seedUploadReceipt(ctx, storageId, { threadId, companyId: (await ctx.db.get(threadId))?.companyId }, "widget");
       await ctx.db.insert("mockStorageMetadata", {
         storageId,
         size: 4,

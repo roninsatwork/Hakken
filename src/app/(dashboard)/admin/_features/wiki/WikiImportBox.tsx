@@ -94,7 +94,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       }
       for (const item of collected) {
         const contentType = resolveUploadContentType(item.file);
-        const uploadUrl = await generateUploadUrl();
+        const uploadUrl = await generateUploadUrl({ sizeBytes: item.file.size, contentType: contentType });
         const result = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": contentType },

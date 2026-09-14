@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 
 describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
   test("Standard USER cannot upload knowledge documents at all", async () => {
@@ -1352,6 +1353,7 @@ describe("bulk file ingestion queue", () => {
 
     const storageId = await t.run(async (ctx) => {
       const storageId = await ctx.storage.store(new Blob(["# Revenue"], { type: "text/markdown" }));
+      await seedUploadReceipt(ctx, storageId, { userId: adminId }, "knowledge");
       await ctx.db.insert("mockStorageMetadata", {
         storageId,
         size: 10,
