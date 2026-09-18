@@ -23,12 +23,12 @@ function stubCtx(args: {
     }
     // No provider named: nothing configured, so resolution reached the failsafe.
     if (!args.providerKey) {
-      return { modelId: "gemini-2.5-flash", providerKey: "google", providerModelId: "gemini-2.5-flash", source: "failsafe" };
+      return { modelId: "test-failsafe-model", providerKey: "google", providerModelId: "test-failsafe-model", source: "failsafe" };
     }
     return {
-      modelId: args.providerKey === "typesafe" ? "typesafe:jev-latest" : "google:gemini-flash",
+      modelId: args.providerKey === "typesafe" ? "typesafe:jev-latest" : "google:test-text-model",
       providerKey: args.providerKey,
-      providerModelId: args.providerKey === "typesafe" ? "jev-latest" : "gemini-flash",
+      providerModelId: args.providerKey === "typesafe" ? "jev-latest" : "test-text-model",
       source: "default",
     };
   });
@@ -161,7 +161,7 @@ describe("runDecisions", () => {
     // scale; low stakes still act, and the row says which path answered.
     expect(results["mailbox.message-kind"]).toMatchObject({ source: "TEXT_MODEL", certainty: "FAIRLY_SURE", verdict: "ACT", outcome: "ACTED" });
     expect(recorded[0]).toMatchObject({
-      usage: { modelId: "google:gemini-flash", providerKey: "google" },
+      usage: { modelId: "google:test-text-model", providerKey: "google" },
       runs: [{ source: "TEXT_MODEL", certainty: "FAIRLY_SURE" }, { source: "TEXT_MODEL" }],
     });
   });

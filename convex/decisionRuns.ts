@@ -5,6 +5,7 @@ import { calculateModelCostGBP } from "./aiCostService";
 import { buildDecisionActedAuditMetadata } from "./auditLogService";
 import { getDecision, listDecisions } from "./decisionRegistry";
 import { certaintyWords, resolveDecisionMode, type DecisionMode } from "./decisionService";
+import { appError } from "./utils/appError";
 
 /**
  * The database side of the Decision engine: modes, run rows, cost and audit.
@@ -79,7 +80,7 @@ export async function resolveDecisionModes(
   const modes: Record<string, DecisionMode> = {};
   for (const key of args.decisionKeys) {
     const definition = getDecision(key);
-    if (!definition) throw new Error(`Unknown decision '${key}'.`);
+    if (!definition) throw appError("INVALID_INPUT", `Unknown decision '${key}'.`);
     const globalRow = await ctx.db
       .query("decisionSettings")
       .withIndex("by_scope_key", (q) => q.eq("scope", "global").eq("decisionKey", key))

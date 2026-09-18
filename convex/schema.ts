@@ -3,6 +3,7 @@ import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
+import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 // template:remove:start movement
 const movementCameraBodyPartValidator = v.union(
@@ -3771,31 +3772,20 @@ export default defineSchema({
    * Deduplicated by key so the same disagreement is not raised nightly,
    * and auto-resolved when the pages change so the claim no longer stands.
    */
-  /**
-   * One row per Decision run: a named judgment the platform made, who
-   * answered it (TypeSafe or the simple rule), how sure it was, and what
-   * happened. Never the subject's text — only a reference to it, the same
-   * restraint the mailbox ledger shows. docs/plans/active/decisions-typesafe-plan.md.
-   */
+  /** One row per Decision run, by reference to its subject, never its text (docs/plans/active/decisions-typesafe-plan.md). */
   decisionRuns: defineTable({
     decisionKey: v.string(),
     companyId: v.optional(v.id("companies")),
-    /** What was judged: "email", "message", "wikiPage", ... plus its id. */
     subjectKind: v.string(),
     subjectId: v.string(),
-    /** "yes" / "no", the chosen option, or the score. */
     answer: v.string(),
-    /** JSON map of option → probability; absent when a rule answered. */
     probabilities: v.optional(v.string()),
-    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
-    mode: v.union(v.literal("OFF"), v.literal("ASK_A_PERSON"), v.literal("ACT")),
-    outcome: v.union(v.literal("ACTED"), v.literal("HANDED_TO_PERSON"), v.literal("RECORDED")),
-    source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
-    /** Why the rule answered instead of TypeSafe, when it did. */
-    fallbackReason: v.optional(v.union(v.literal("MODE_OFF"), v.literal("NO_MODEL"), v.literal("PROVIDER_FAILED"))),
-    /** What acting on the answer meant, in words, when the run acted. */
+    certainty: v.optional(decisionCertaintyValidator),
+    mode: decisionModeValidator,
+    outcome: decisionOutcomeValidator,
+    source: decisionSourceValidator,
+    fallbackReason: v.optional(decisionFallbackReasonValidator),
     action: v.optional(v.string()),
-    /** This run's share of the request it was part of. */
     costGBP: v.number(),
     agentRunId: v.optional(v.id("agentRuns")),
     threadId: v.optional(v.id("threads")),
@@ -3816,7 +3806,7 @@ export default defineSchema({
     scope: v.union(v.literal("global"), v.literal("company")),
     companyId: v.optional(v.id("companies")),
     decisionKey: v.string(),
-    mode: v.union(v.literal("OFF"), v.literal("ASK_A_PERSON"), v.literal("ACT")),
+    mode: decisionModeValidator,
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   })
@@ -3832,8 +3822,7 @@ export default defineSchema({
       // company's memories migrated (one-brain-plan.md, phase 3) — the
       // queue that used to live on the Memory screen.
       v.literal("CORRECTION"),
-      // An answer the Filing Clerk's Decision judged worth filing while its
-      // mode says a person decides (decisions-typesafe-plan.md, Phase F.2).
+      // Judged worth filing while the Decision's mode says a person decides.
       v.literal("FILING")
     ),
     pageKeyA: v.string(),
@@ -3843,9 +3832,8 @@ export default defineSchema({
     detail: v.optional(v.string()),
     dedupeKey: v.string(),
     status: v.union(v.literal("OPEN"), v.literal("RESOLVED"), v.literal("DISMISSED")),
-    /** The Decision that raised it, and how sure it was, when one did. */
     decisionKey: v.optional(v.string()),
-    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
+    certainty: v.optional(decisionCertaintyValidator),
     raisedAt: v.number(),
     resolvedAt: v.optional(v.number()),
     resolvedBy: v.optional(v.id("users")),

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { Scale } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -10,6 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 
 type RunRow = {
   id: Id<"decisionRuns">;
@@ -65,6 +67,8 @@ export function DecisionDetailScreen({
   const platformData = useQuery(api.decisions.detailForPlatform, companyId ? "skip" : { decisionKey });
   const companyData = useQuery(api.decisions.detailForCompany, companyId ? { companyId, decisionKey } : "skip");
   const data = companyId ? companyData : platformData;
+  const [page, setPage] = useState(1);
+  const paged = paginateItems((data?.runs ?? []) as RunRow[], page, TABLE_PAGE_SIZE);
 
   const backHref = companyId ? `/admin/companies/${companyId}/ai/decisions` : "/admin/ai/decisions";
   const copyKey = data?.decision.copyKey;
@@ -131,18 +135,18 @@ export function DecisionDetailScreen({
           <p className="mt-0.5 text-[12px] text-secondary">{t("detail.runsHint", { count: 50 })}</p>
         </div>
         <DataTable
-          rows={data?.runs as RunRow[] | undefined}
+          rows={data === undefined ? undefined : paged.items}
           rowKey={(row) => row.id}
           minWidthClassName="min-w-[820px]"
           empty={{ icon: <Scale className="w-8 h-8 text-muted/30" />, label: t("detail.emptyRuns") }}
           footer={{
             mode: "paged",
-            page: 1,
-            totalPages: 1,
-            totalCount: data?.runs.length ?? 0,
-            pageSize: 50,
+            page: paged.page,
+            totalPages: paged.totalPages,
+            totalCount: paged.totalItems,
+            pageSize: paged.pageSize,
             isLoading: data === undefined,
-            onPageChange: () => {},
+            onPageChange: setPage,
             labels: {
               empty: t("detail.emptyRuns"),
               showing: (_start, _end, total) => t("detail.showingRuns", { count: total }),

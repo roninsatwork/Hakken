@@ -46,7 +46,7 @@ describe("a Decision answered by a text model", () => {
       inputTokens: 210,
       outputTokens: 30,
     }));
-    const model = { modelId: "google:gemini-flash", providerKey: "google", providerModelId: "gemini-flash" };
+    const model = { modelId: "google:test-text-model", providerKey: "google", providerModelId: "test-text-model" };
 
     const result = await askTextModel({ model, state: { email: { body: "Hi" } }, questions: { urgent, kind }, generate: generate as never });
 
@@ -55,14 +55,14 @@ describe("a Decision answered by a text model", () => {
     expect(request.model).toBe(model);
     expect(request.jsonSchema).toEqual(buildDecisionJsonSchema({ urgent, kind }));
     expect(request.contents[0].text).toContain('"body": "Hi"');
-    expect(result.model).toBe("gemini-flash");
+    expect(result.model).toBe("test-text-model");
     expect(result.usage).toEqual({ inputTokens: 210, outputTokens: 30 });
     expect(result.answers.urgent).toEqual({ type: "noul", noul: 0.92 });
     expect(result.answers.kind).toMatchObject({ type: "choice", choice: "customer" });
   });
 
   test("no JSON, or a missing answer, is an upstream failure", async () => {
-    const model = { modelId: "google:gemini-flash", providerKey: "google", providerModelId: "gemini-flash" };
+    const model = { modelId: "google:test-text-model", providerKey: "google", providerModelId: "test-text-model" };
     await expect(askTextModel({ model, state: {}, questions: { urgent }, generate: (async () => ({ text: "Sorry, I cannot." })) as never }))
       .rejects.toThrow(/no JSON/);
     await expect(askTextModel({ model, state: {}, questions: { urgent }, generate: (async () => ({ text: '{"answers": {}}' })) as never }))

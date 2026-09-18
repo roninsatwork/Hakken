@@ -114,6 +114,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   // --- Shared records that merely note who touched them -----------------
   ...([
     ["aiModelDefaults", ["updatedBy"]],
+    ["decisionSettings", ["updatedBy"]],
     ["invitations", ["invitedBy"]],
     ["emailTemplates", ["updatedBy"]],
     ["systemConfig", ["updatedBy"]],

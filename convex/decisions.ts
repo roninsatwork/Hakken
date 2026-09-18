@@ -25,8 +25,8 @@ import { appError } from "./utils/appError";
  */
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-/** Rows read per Decision for the weekly counts; at the cap the count is "at least". */
-const COUNT_CAP = 2001;
+/** Rows read per Decision for the weekly counts; at the cap the count is "at least" (kept under the platform's thousand-row read band). */
+const COUNT_CAP = 501;
 const RECENT_RUNS = 50;
 
 const modeValidator = v.union(v.literal("OFF"), v.literal("ASK_A_PERSON"), v.literal("ACT"));
