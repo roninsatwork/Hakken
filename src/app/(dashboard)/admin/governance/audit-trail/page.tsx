@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { safeCsvCell } from "@/src/lib/csv";
 import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SearchBar } from "@/src/ui/components/screens/Table";
@@ -155,9 +156,9 @@ export default function AuditTrailPage() {
           row.target,
           row.workspace,
         ])]
-          // Quoted throughout, and inner quotes doubled. A change described as
-          // `Purpose: "old" → "new"` would otherwise tear the row in half.
-          .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
+          // Quote throughout, double inner quotes, and prefix spreadsheet
+          // formula markers so exported audit text remains inert when opened.
+          .map((row) => row.map(safeCsvCell).join(","))
           .join("\n");
 
         const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));

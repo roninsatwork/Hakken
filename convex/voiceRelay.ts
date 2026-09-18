@@ -5,6 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { incrementChatQuota, isChatQuotaExceeded, resolveChatQuota } from "./chatService";
 import { KIOSK_SESSIONS_PER_HOUR } from "./kiosk";
+import { effectiveModulesFor } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 
 /**
  * The door the voice relay knocks on when a spoken session reaches for the
@@ -162,26 +164,20 @@ export const redeemVoiceTicketInternal = internalMutation({
       ]);
       if (
         !widget || !widget.isActive || !widget.kioskEnabled ||
-        !thread || thread.widgetId !== widget._id ||
-        widget.kioskVoicePendingThreadId !== thread._id ||
-        (widget.kioskVoicePendingUntil ?? 0) <= now ||
+        !thread || thread.widgetId !== widget._id || thread.companyId !== widget.companyId || thread.sourceUrl !== "kiosk" ||
         (widget.kioskVoiceActiveUntil ?? 0) > now
       ) return false;
+      const company = widget.companyId ? await ctx.db.get(widget.companyId) : null;
+      if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.reception)) return false;
 
       const windowStart = widget.kioskSessionWindowStart ?? 0;
       const inWindow = now - windowStart < 60 * 60 * 1000
         ? widget.kioskSessionCountInWindow ?? 0
         : 0;
       if (inWindow >= KIOSK_SESSIONS_PER_HOUR) {
-        await ctx.db.patch(widget._id, {
-          kioskVoicePendingThreadId: undefined,
-          kioskVoicePendingUntil: undefined,
-        });
         return false;
       }
       await ctx.db.patch(widget._id, {
-        kioskVoicePendingThreadId: undefined,
-        kioskVoicePendingUntil: undefined,
         kioskVoiceActiveTicketId: args.ticketId,
         kioskVoiceActiveUntil: args.expiresAt + MAX_SESSION_MS,
         kioskSessionWindowStart: inWindow === 0 ? now : windowStart,

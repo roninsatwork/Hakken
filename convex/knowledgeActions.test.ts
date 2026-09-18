@@ -2,6 +2,11 @@ import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import {
+  KNOWLEDGE_WEBSITE_MAPS_PER_HOUR,
+  KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS,
+  KNOWLEDGE_WEBSITE_URLS_PER_REQUEST,
+} from "./knowledgeImportPolicy";
 
 const { embedContentMock } = vi.hoisted(() => ({
   embedContentMock: vi.fn(),
@@ -75,6 +80,53 @@ describe("knowledge actions", () => {
     ).rejects.toThrow("SSRF Prevention");
   });
 
+  test("website mapping caps the links returned by the provider", async () => {
+    process.env.FIRECRAWL_API_KEY = "test-key";
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
+      return await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      links: Array.from(
+        { length: KNOWLEDGE_WEBSITE_URLS_PER_REQUEST + 20 },
+        (_, index) => `https://example.com/${index}`,
+      ),
+    }), { status: 200, headers: { "content-type": "application/json" } })));
+
+    const links = await t.withIdentity({ subject: adminId }).action(api.knowledgeActions.mapWebsite, {
+      url: "https://example.com",
+    });
+    expect(links).toHaveLength(KNOWLEDGE_WEBSITE_URLS_PER_REQUEST);
+  });
+
+  test("website mapping is capped per workspace hour before another provider call", async () => {
+    process.env.FIRECRAWL_API_KEY = "test-key";
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
+      return await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      links: [],
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    for (let index = 0; index < KNOWLEDGE_WEBSITE_MAPS_PER_HOUR; index++) {
+      await adminClient.action(api.knowledgeActions.mapWebsite, {
+        url: `https://example.com/map-${index}`,
+      });
+    }
+
+    await expect(adminClient.action(api.knowledgeActions.mapWebsite, {
+      url: "https://example.com/over-map-limit",
+    })).rejects.toThrow(`at most ${KNOWLEDGE_WEBSITE_MAPS_PER_HOUR} websites per hour`);
+    expect(fetchMock).toHaveBeenCalledTimes(KNOWLEDGE_WEBSITE_MAPS_PER_HOUR);
+  });
+
   test("website queue no-ops when empty and marks pending documents failed without Firecrawl credentials", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     delete process.env.FIRECRAWL_API_KEY;
@@ -103,6 +155,28 @@ describe("knowledge actions", () => {
     await t.action(internal.knowledgeActions.processWebsiteQueue, {});
 
     expect(await t.run(async (ctx) => ctx.db.get(documentId))).toMatchObject({ status: "failed" });
+    expect(consoleError).toHaveBeenCalledWith("Queue Scrape Error", expect.any(Error));
+  });
+
+  test("website ingestion refuses oversized extracted text before embedding", async () => {
+    process.env.FIRECRAWL_API_KEY = "test-key";
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const documentId = await t.run(async (ctx) => await ctx.db.insert("knowledgeDocuments", {
+      title: "Oversized page",
+      sourceUrl: "https://example.com/oversized",
+      status: "pending",
+      format: "url",
+      createdAt: Date.now(),
+    }));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      data: { markdown: "x".repeat(KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS + 1) },
+    }), { status: 200, headers: { "content-type": "application/json" } })));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await t.action(internal.knowledgeActions.processWebsiteQueue, {});
+
+    expect(await t.run(async (ctx) => ctx.db.get(documentId))).toMatchObject({ status: "failed" });
+    expect(embedContentMock).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith("Queue Scrape Error", expect.any(Error));
   });
 

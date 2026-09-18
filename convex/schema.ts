@@ -2181,6 +2181,16 @@ export default defineSchema({
       filterFields: ["companyId"],
     }),
 
+  // One reusable hourly cost counter per knowledge scope. Keeping the counter
+  // separate from documents means deleting an imported page cannot reset the
+  // paid-provider allowance.
+  knowledgeImportQuotas: defineTable({
+    scopeKey: v.string(),
+    windowStartedAt: v.number(),
+    queuedUrls: v.number(),
+    mapRequests: v.number(),
+  }).index("by_scope", ["scopeKey"]),
+
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({
     documentId: v.id("knowledgeDocuments"),
@@ -2223,6 +2233,9 @@ export default defineSchema({
     widgetAccessTokenHash: v.optional(v.string()),
     /** Upload URLs already issued to this anonymous conversation. */
     widgetUploadUrlCount: v.optional(v.number()),
+    /** Bounds voice-ticket minting by one anonymous kiosk conversation. */
+    kioskTicketWindowStart: v.optional(v.number()),
+    kioskTicketCountInWindow: v.optional(v.number()),
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     /**
@@ -3127,11 +3140,12 @@ export default defineSchema({
     kioskSessionCountInWindow: v.optional(v.number()),
     kioskLastSeenAt: v.optional(v.number()),
     kioskSessionCount: v.optional(v.number()),
-    // A ticket is only pending until the relay redeems it. Once redeemed the
-    // active lease prevents a single kiosk from opening parallel provider
-    // sessions; both leases expire without a cleanup job if a device vanishes.
+    // Legacy pending fields remain optional for existing rows, but no longer
+    // gate admission: an unredeemed anonymous ticket must not lock the desk.
     kioskVoicePendingThreadId: v.optional(v.id("threads")),
     kioskVoicePendingUntil: v.optional(v.number()),
+    // Only a redeemed session holds the shared active lease. It expires if a
+    // device vanishes without delivering the close event.
     kioskVoiceActiveTicketId: v.optional(v.string()),
     kioskVoiceActiveUntil: v.optional(v.number()),
     // Anonymous thread minting is rate-windowed per widget (2026-08 security

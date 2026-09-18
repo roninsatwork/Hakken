@@ -123,27 +123,45 @@ describe("the receptionist screen", () => {
     expect(widget?.kioskLastSeenAt).toBeUndefined();
   });
 
-  test("one pending ticket becomes one active counted session only when the relay redeems it", async () => {
+  test("abandoned tickets cannot hold the shared slot; only redemption makes a session active", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { widgetId } = await seedKioskWidget(t, true);
-    const session = await t.mutation(api.kiosk.createKioskThread, { widgetId });
-    const reservation = await t.mutation(internal.kiosk.reserveKioskSession, {
+    const abandoned = (await t.mutation(api.kiosk.createKioskThread, { widgetId }))!;
+    const nextVisitor = (await t.mutation(api.kiosk.createKioskThread, { widgetId }))!;
+    const firstTicket = await t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
       widgetId,
-      threadId: session!.threadId,
+      threadId: abandoned.threadId,
     });
-    expect(reservation.ok).toBe(true);
-    await expect(t.mutation(internal.kiosk.reserveKioskSession, {
+    expect(firstTicket.ok).toBe(true);
+    // An existing row may still carry the retired pending fields after deploy.
+    await t.run(async (ctx) => ctx.db.patch(widgetId, {
+      kioskVoicePendingThreadId: abandoned.threadId,
+      kioskVoicePendingUntil: Date.now() + 60_000,
+    }));
+    // No relay redemption follows the first visitor's ticket. Another visitor
+    // can still mint and open a real session immediately.
+    const secondTicket = await t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
       widgetId,
-      threadId: session!.threadId,
-    })).resolves.toMatchObject({ ok: false });
+      threadId: nextVisitor.threadId,
+    });
+    expect(secondTicket.ok).toBe(true);
+    const beforeRedemption = await t.run(async (ctx) => ctx.db.get(widgetId));
+    expect(beforeRedemption?.kioskVoiceActiveTicketId).toBeUndefined();
+    expect(beforeRedemption?.kioskSessionCountInWindow).toBeUndefined();
 
     const ticketId = "kiosk-ticket-123456789";
     await expect(t.mutation(internal.voiceRelay.redeemVoiceTicketInternal, {
       ticketId,
       expiresAt: Date.now() + 60_000,
       kioskWidgetId: widgetId,
-      threadId: session!.threadId,
+      threadId: nextVisitor.threadId,
     })).resolves.toBe(true);
+    await expect(t.mutation(internal.voiceRelay.redeemVoiceTicketInternal, {
+      ticketId: "abandoned-ticket-123456789",
+      expiresAt: Date.now() + 60_000,
+      kioskWidgetId: widgetId,
+      threadId: abandoned.threadId,
+    })).resolves.toBe(false);
 
     const widget = await t.run(async (ctx) => ctx.db.get(widgetId));
     expect(widget).toMatchObject({
@@ -151,7 +169,25 @@ describe("the receptionist screen", () => {
       kioskSessionCountInWindow: 1,
       kioskVoiceActiveTicketId: ticketId,
     });
-    expect(widget?.kioskVoicePendingThreadId).toBeUndefined();
+  });
+
+  test("one anonymous conversation cannot mint voice tickets without bound", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedKioskWidget(t, true);
+    const first = (await t.mutation(api.kiosk.createKioskThread, { widgetId }))!;
+    for (let index = 0; index < 5; index++) {
+      await expect(t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
+        widgetId, threadId: first.threadId,
+      })).resolves.toMatchObject({ ok: true });
+    }
+    await expect(t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
+      widgetId, threadId: first.threadId,
+    })).resolves.toMatchObject({ ok: false });
+    const second = (await t.mutation(api.kiosk.createKioskThread, { widgetId }))!;
+    await expect(t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
+      widgetId, threadId: second.threadId,
+    })).resolves.toMatchObject({ ok: true });
+    expect((await t.run(async (ctx) => ctx.db.get(widgetId)))?.kioskSessionCountInWindow).toBeUndefined();
   });
 
   test("the per-widget hourly session window refuses the sixty-first tap", async () => {
@@ -166,12 +202,12 @@ describe("the receptionist screen", () => {
       });
     });
 
-    // Reserved through the internal door the voice session uses.
-    const reservation = await t.mutation(internal.kiosk.reserveKioskSession, {
+    // A ticket is refused before prompt assembly when the real-session window is full.
+    const admission = await t.mutation(internal.kiosk.authorizeKioskVoiceTicket, {
       widgetId,
       threadId: session!.threadId,
     });
-    expect(reservation).toMatchObject({ ok: false });
+    expect(admission).toMatchObject({ ok: false });
   });
 
   test("thread minting has its own hourly ceiling, audit-logged once and reopening with the window", async () => {

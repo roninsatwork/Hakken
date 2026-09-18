@@ -20,8 +20,10 @@ export type BoundedBodyResult =
   | { ok: true; text: string }
   | { ok: false; reason: "too_large" | "unreadable" };
 
+type StreamedBody = Pick<Request, "body" | "headers">;
+
 export async function readBoundedBody(
-  request: Request,
+  request: StreamedBody,
   maxBytes: number = DEFAULT_MAX_BODY_BYTES
 ): Promise<BoundedBodyResult> {
   // The declared length is a hint, not a promise — checking it turns away the
@@ -68,7 +70,7 @@ export async function readBoundedBody(
 
 /** The same read, for the handlers that want the parsed object. */
 export async function readBoundedJson(
-  request: Request,
+  request: StreamedBody,
   maxBytes: number = DEFAULT_MAX_BODY_BYTES
 ): Promise<{ ok: true; payload: unknown } | { ok: false; reason: "too_large" | "unreadable" }> {
   const body = await readBoundedBody(request, maxBytes);

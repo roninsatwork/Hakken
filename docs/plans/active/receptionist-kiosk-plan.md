@@ -35,9 +35,12 @@ thread, sends idle heartbeats, shows a permanent AI/recording disclosure, nudges
 after silence, resets for the next visitor, and reloads while idle overnight.
 Convex now holds per-widget kiosk session, thread-minting, heartbeat, and
 message caps. The 2026-09-14 resource-consumption hardening also limits each
-widget to one pending/active relay session, counts the hourly allowance only at
+widget to one active relay session, counts the hourly allowance only at
 relay redemption, and charges completed kiosk turns once against the company
-message plan. What remains is operational Phase D proof on a real tablet at the
+message plan. The 2026-09-15 security repair removed the anonymous pending
+slot: unredeemed tickets cannot block other visitors, and each conversation
+can ask for five tickets per hour before prompt assembly. What remains is
+operational Phase D proof on a real tablet at the
 front desk for a sustained run.
 
 ## The decision
@@ -187,5 +190,5 @@ typed conversation — the bones before the voice.
 - A native app or kiosk-mode OS management (the browser page is the
   product; locking the device down is the venue's device policy).
 - Multiple simultaneous kiosks sharing one widget. The resource guard permits
-  one pending or active voice session per widget; a second physical kiosk
+  one active voice session per widget; a second physical kiosk
   needs its own widget configuration.

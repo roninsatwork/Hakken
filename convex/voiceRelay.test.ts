@@ -5,6 +5,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 
 const SECRET = "test-relay-secret";
 
@@ -125,18 +126,14 @@ describe("kiosk relay admission and company message quota", () => {
                 name: "One turn", priceGBP: 1, messageLimit: 1, isActive: true, createdAt: Date.now(),
             });
             const companyId = await ctx.db.insert("companies", {
-                name: "Kiosk Co", planId, messagesUsedThisPeriod: 0, createdAt: Date.now(),
+                name: "Kiosk Co", planId, enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], messagesUsedThisPeriod: 0, createdAt: Date.now(),
             });
             const widgetId = await ctx.db.insert("widgets", {
                 companyId, name: "Desk", allowedDomains: [], isActive: true, kioskEnabled: true,
                 createdAt: Date.now(),
             });
             const threadId = await ctx.db.insert("threads", {
-                companyId, widgetId, title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
-            });
-            await ctx.db.patch(widgetId, {
-                kioskVoicePendingThreadId: threadId,
-                kioskVoicePendingUntil: Date.now() + 60_000,
+                companyId, widgetId, sourceUrl: "kiosk", title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
             });
             return { companyId, widgetId, threadId };
         });
@@ -172,16 +169,15 @@ describe("kiosk relay admission and company message quota", () => {
                 name: "Turns", priceGBP: 1, messageLimit: 10, isActive: true, createdAt: Date.now(),
             });
             const companyId = await ctx.db.insert("companies", {
-                name: "Kiosk Co", planId, messagesUsedThisPeriod: 0, createdAt: Date.now(),
+                name: "Kiosk Co", planId, enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], messagesUsedThisPeriod: 0, createdAt: Date.now(),
             });
             const widgetId = await ctx.db.insert("widgets", {
                 companyId, name: "Desk", allowedDomains: [], isActive: true, kioskEnabled: true,
                 createdAt: Date.now(),
             });
             const threadId = await ctx.db.insert("threads", {
-                companyId, widgetId, title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
+                companyId, widgetId, sourceUrl: "kiosk", title: "Kiosk", createdAt: Date.now(), updatedAt: Date.now(),
             });
-            await ctx.db.patch(widgetId, { kioskVoicePendingThreadId: threadId, kioskVoicePendingUntil: Date.now() + 60_000 });
             return { companyId, widgetId, threadId };
         });
         const ticket = mintTicket({

@@ -71,6 +71,17 @@ export const createKioskVoiceSession = publicAction({
       return { ok: false, reason: "The assistant is not available on this screen yet." };
     }
 
+    // A minted ticket must not lock the one shared kiosk voice slot. Bound
+    // issuance by this conversation before assembling its company prompt;
+    // the relay takes the active lease only when it redeems a real session.
+    const admission = await ctx.runMutation(internal.kiosk.authorizeKioskVoiceTicket, {
+      widgetId: args.widgetId,
+      threadId: args.threadId,
+    });
+    if (!admission.ok) {
+      return { ok: false, reason: admission.reason ?? "The assistant is busy just now." };
+    }
+
     const instructions = await buildSpokenSessionInstructions(ctx, access.companyId);
 
     // The workspace's chosen voice (Voice screen in the AI admin), unless
@@ -98,16 +109,6 @@ export const createKioskVoiceSession = publicAction({
       },
       relaySecret
     );
-
-    // Hold one pending slot only after configuration and ticket minting have
-    // succeeded. The hourly session counter moves later, at relay redemption.
-    const reservation = await ctx.runMutation(internal.kiosk.reserveKioskSession, {
-      widgetId: args.widgetId,
-      threadId: args.threadId,
-    });
-    if (!reservation.ok) {
-      return { ok: false, reason: reservation.reason ?? "The assistant is busy just now." };
-    }
 
     return {
       ok: true,

@@ -140,10 +140,25 @@ export const recordMagicLinkRequestAttempt = publicMutation({
   },
   returns: v.object({ logged: v.boolean(), allowed: v.boolean() }),
   handler: async (ctx, args) => {
-    const email = args.email.trim().toLowerCase();
+    const email = normaliseEmail(args.email);
     const now = Date.now();
 
-    if (!email) return { logged: true, allowed: true };
+    if (!email) return { logged: false, allowed: false };
+
+    // Per-address limits do nothing when every request invents a new address.
+    // Stop before any of the request/found/missing rows below are written, so
+    // the public preflight cannot become an unbounded telemetry writer.
+    const recentGlobalRequests = await ctx.db
+      .query("authEvents")
+      .withIndex("by_type", (q) =>
+        q.eq("eventType", "MAGIC_LINK_REQUESTED")
+          .gt("timestamp", now - GLOBAL_REQUEST_WINDOW_MS)
+      )
+      .order("desc")
+      .take(MAX_GLOBAL_REQUESTS_PER_MINUTE);
+    if (recentGlobalRequests.length >= MAX_GLOBAL_REQUESTS_PER_MINUTE) {
+      return { logged: false, allowed: false };
+    }
 
     /*
      * The refusal has to happen here, before the sign-in screen calls the

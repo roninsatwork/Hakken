@@ -43,8 +43,9 @@ set.
   the kiosk thread after validating the raw widget session token.
 - `validateKioskThreadAccess` is the internal token check used by the voice
   session action.
-- `reserveKioskSession` holds one short-lived pending ticket slot. It does not
-  increment the session counter; relay redemption performs that accounting.
+- `authorizeKioskVoiceTicket` limits ticket issuance per anonymous conversation
+  and checks the widget's real-session allowance. It holds no shared slot;
+  relay redemption alone admits an active session and performs accounting.
 - `listMyReceptionScreens` is a tenant query for `/app/reception`; it lists the
   active kiosk-enabled widgets for the current workspace.
 - `recordKioskHeartbeat` lets the idle kiosk page update `kioskLastSeenAt`
@@ -54,9 +55,9 @@ set.
 thread token, requires `VOICE_RELAY_URL` and
 `VOICE_RELAY_SECRET`, resolves the `realtime` model default, requires the Google
 Vertex speech-to-speech relay path for this surface, loads the workspace spoken
-voice, builds spoken session instructions, signs a one-minute relay ticket, and
-then holds the pending slot. Failed configuration attempts consume no session
-allowance.
+voice, admits a per-thread ticket before building spoken session instructions,
+then signs a one-minute relay ticket. An abandoned ticket cannot block another
+visitor. Failed configuration attempts consume no ticket or session allowance.
 
 ## Data Model
 
@@ -68,8 +69,8 @@ bookkeeping:
   voice-session ceiling.
 - `kioskLastSeenAt` records idle heartbeat and session activity for staff.
 - `kioskSessionCount` is the lifetime conversation count shown in UI.
-- `kioskVoicePendingThreadId` / `kioskVoicePendingUntil` allow one ticket to be
-  minted at a time.
+- `kioskVoicePendingThreadId` / `kioskVoicePendingUntil` are legacy optional
+  fields retained for existing rows; they no longer gate admission.
 - `kioskVoiceActiveTicketId` / `kioskVoiceActiveUntil` allow one redeemed voice
   session at a time and expire safely if close delivery fails.
 - `kioskThreadWindowStart` and `kioskThreadCountInWindow` cap anonymous kiosk
@@ -77,7 +78,9 @@ bookkeeping:
 
 Kiosk conversations are stored in `threads` with `sourceUrl: "kiosk"`,
 `widgetId`, optional `companyId`, optional `agentId`, and
-`widgetAccessTokenHash`. The browser receives the raw token but it is kept in a
+`widgetAccessTokenHash`. `kioskTicketWindowStart` and
+`kioskTicketCountInWindow` limit one conversation to five ticket requests per
+hour. The browser receives the raw token but it is kept in a
 React ref, not localStorage, so a reset, refresh, or closed tab drops the
 visitor credential.
 

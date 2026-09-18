@@ -4,7 +4,10 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { AUTH_EVENT_TYPES } from "./utils/authEventTypes";
 import { SIGN_IN_MAX_REQUESTS_PER_HOUR, SIGN_IN_REQUEST_WINDOW_MS } from "./signInThrottleService";
-import { MAX_REQUESTS_PER_WINDOW } from "./oneTimeCodeService";
+import {
+  MAX_GLOBAL_REQUESTS_PER_MINUTE,
+  MAX_REQUESTS_PER_WINDOW,
+} from "./oneTimeCodeService";
 
 describe("the auth provider email-send boundary", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -122,6 +125,26 @@ describe("how often one address may ask for a magic link", () => {
 
     await expect(request(t, "busy@example.com")).resolves.toMatchObject({ allowed: false });
     await expect(request(t, "quiet@example.com")).resolves.toMatchObject({ allowed: true });
+  });
+
+  test("globally bounds rotating-address telemetry writes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < MAX_GLOBAL_REQUESTS_PER_MINUTE; index++) {
+      await expect(request(t, `rotating-${index}@example.com`)).resolves.toMatchObject({
+        allowed: true,
+      });
+    }
+    await expect(request(t, "over-global-limit@example.com")).resolves.toEqual({
+      logged: false,
+      allowed: false,
+    });
+
+    const events = await t.run(async (ctx) => ctx.db.query("authEvents").collect());
+    expect(events.filter((event) => event.eventType === "MAGIC_LINK_REQUESTED")).toHaveLength(
+      MAX_GLOBAL_REQUESTS_PER_MINUTE,
+    );
+    expect(events.some((event) => event.email === "over-global-limit@example.com")).toBe(false);
   });
 
   test("normalises the address, so casing and spacing are not a way around it", async () => {

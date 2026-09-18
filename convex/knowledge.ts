@@ -6,12 +6,12 @@ import { issueUpload, requireOwnedUpload } from "./uploadReservations";
 import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
-import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import { appError } from "./utils/appError";
 import * as knowledgeShapes from "./utils/knowledgeShapes";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { queueWebsiteUrlsCore, reserveKnowledgeImportQuota } from "./knowledgeWebsiteQueueService";
 import { adminMutation, tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
 import {
   assertCanAccessKnowledgeScope,
@@ -1249,16 +1249,49 @@ export const garbageCollectThreadVectors = internalMutation({
  * this filter the scraper would claim one and POST `sourceUrl: undefined` to
  * Firecrawl. See docs/plans/active/knowledge-markdown-and-bulk-upload-plan.md.
  */
-export const getNextPendingUrlInternal = internalQuery({
+export const claimNextPendingUrlInternal = internalMutation({
   args: {},
   handler: async (ctx) => {
-     return await ctx.db
+     const next = await ctx.db
       .query("knowledgeDocuments")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("asc")
       .filter((q) => q.eq(q.field("format"), "url"))
       .first();
+
+     if (!next) return null;
+
+     const claimedAt = Date.now();
+     await ctx.db.patch(next._id, {
+       status: "processing",
+       lastIngestionStartedAt: claimedAt,
+       lastIngestionError: undefined,
+     });
+
+     return {
+       ...next,
+       status: "processing" as const,
+       lastIngestionStartedAt: claimedAt,
+       lastIngestionError: undefined,
+     };
   }
+});
+
+/**
+ * Mapping is a paid Firecrawl operation even when no pages are ultimately
+ * queued. Reserve its company-scoped allowance transactionally before the
+ * action contacts the provider.
+ */
+export const reserveWebsiteMapInternal = internalMutation({
+  args: { companyId: v.optional(v.id("companies")) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await reserveKnowledgeImportQuota(ctx, {
+      companyId: args.companyId,
+      mapRequests: 1,
+    });
+    return null;
+  },
 });
 
 /**
@@ -1505,46 +1538,14 @@ export const queueWebsiteUrls = tenantMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
-
-    const docIds = [];
-    for (const url of args.urls) {
-        // 🛡️ SECURITY: Central SSRF Prevention Shield
-        validateSafeUrl(url, "Knowledge Base Import");
-
-        // Simple duplicates check
-        const existing = await ctx.db
-            .query("knowledgeDocuments")
-            .withIndex("by_source_company", (q) => q.eq("sourceUrl", url).eq("companyId", scope.companyId).eq("agentId", scope.agentId))
-            .first();
-            
-        if (existing) {
-             if (args.forceRefresh) {
-                 await ctx.db.patch(existing._id, {
-                   status: "pending",
-                   lastQueuedAt: Date.now(),
-                   lastIngestionError: undefined,
-                 });
-                 docIds.push(existing._id);
-             }
-             continue;
-        }
-
-        const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
-          title: url,
-          sourceUrl: url,
-          status: "pending",
-          format: "url",
-          createdBy: userId,
-          createdAt: Date.now(),
-          lastQueuedAt: Date.now(),
-          companyId: scope.companyId,
-          agentId: scope.agentId,
-        }));
-    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
-      await ctx.db.patch(documentId, { wikiReviewRequested: true });
-    }
-        docIds.push(documentId);
-    }
+    const docIds = await queueWebsiteUrlsCore(ctx, {
+      userId,
+      urls: args.urls,
+      forceRefresh: args.forceRefresh,
+      wikiReview: args.wikiReview,
+      companyId: scope.companyId,
+      agentId: scope.agentId,
+    });
 
     if (docIds.length > 0) {
        await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
