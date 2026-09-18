@@ -9,6 +9,7 @@ import { appError } from "./utils/appError";
 import * as aiModelShapes from "./utils/aiModelShapes";
 import {
   ANTHROPIC_PROVIDER_KEY,
+  DECISION_MODEL_USE_CASE,
   DEFAULT_MODEL_USE_CASES,
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_DIMENSIONS,
@@ -17,6 +18,7 @@ import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
+  TYPESAFE_PROVIDER_KEY,
   buildModelSearchText,
   canGenerateText,
   canProviderServeUseCase,
@@ -49,8 +51,15 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   [OPENAI_PROVIDER_KEY]: "OpenAI",
   [ANTHROPIC_PROVIDER_KEY]: "Anthropic",
   [OPENROUTER_PROVIDER_KEY]: "OpenRouter",
+  [TYPESAFE_PROVIDER_KEY]: "TypeSafe",
 };
-const PLATFORM_PROVIDER_KEYS = [GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, ANTHROPIC_PROVIDER_KEY, OPENROUTER_PROVIDER_KEY];
+const PLATFORM_PROVIDER_KEYS = [
+  GOOGLE_VERTEX_PROVIDER_KEY,
+  OPENAI_PROVIDER_KEY,
+  ANTHROPIC_PROVIDER_KEY,
+  OPENROUTER_PROVIDER_KEY,
+  TYPESAFE_PROVIDER_KEY,
+];
 
 type AiModelDefaultUseCase = (typeof DEFAULT_MODEL_USE_CASES)[number];
 
@@ -349,7 +358,12 @@ function isSupportedDefaultUseCase(useCase: string): useCase is AiModelDefaultUs
   return DEFAULT_MODEL_USE_CASES.includes(useCase as AiModelDefaultUseCase);
 }
 
-function modelSupportsUseCase(model: Pick<Doc<"aiModels">, "supportedUseCases">, useCase: string) {
+function modelSupportsUseCase(model: Pick<Doc<"aiModels">, "supportedUseCases">, useCase: string): boolean {
+  // Same rule as the screens: the Decisions job takes any model that can do
+  // short text work (it answers in JSON), never a speech or live-audio one.
+  if (useCase === DECISION_MODEL_USE_CASE) {
+    return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "fast-chat");
+  }
   return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
 }
 
@@ -674,8 +688,10 @@ function canModelServeUseCase(
   model: { providerKey?: string } | null | undefined,
   useCase: string | undefined,
 ) {
-  if (!model || !useCase) return true;
-  return canProviderServeUseCase(model.providerKey, useCase);
+  if (!model) return true;
+  // A call with no job named is a text call; a judgment-only provider must
+  // not be handed one just because nobody said which text job it was.
+  return canProviderServeUseCase(model.providerKey, useCase ?? "chat");
 }
 
 async function getUseCaseDefaultModel(
@@ -752,7 +768,7 @@ function isModelServable(
   return !model.providerKey || !disabledProviderKeys.has(model.providerKey);
 }
 
-async function resolveModelConfig(
+export async function resolveModelConfig(
   ctx: QueryCtx,
   args: { requestedModelId?: string; companyId?: Id<"companies">; useCase?: string }
 ) {

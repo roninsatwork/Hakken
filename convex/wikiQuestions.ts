@@ -5,6 +5,7 @@ import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
+import { getDecision } from "./decisionRegistry";
 
 /**
  * Open questions (wiki-agents plan, phases 1-2): the staff's findings, for
@@ -16,13 +17,15 @@ import { appError } from "./utils/appError";
 export const raiseQuestionInternal = internalMutation({
   args: {
     companyId: v.optional(v.id("companies")),
-    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION")),
+    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION"), v.literal("FILING")),
     pageKeyA: v.string(),
     claimA: v.string(),
     pageKeyB: v.optional(v.string()),
     claimB: v.optional(v.string()),
     detail: v.optional(v.string()),
     dedupeKey: v.string(),
+    decisionKey: v.optional(v.string()),
+    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
   },
   handler: async (ctx, args): Promise<boolean> => {
     // The same disagreement is raised once, however many nights it stands.
@@ -43,6 +46,8 @@ export const raiseQuestionInternal = internalMutation({
       ...(args.detail ? { detail: args.detail.slice(0, 500) } : {}),
       dedupeKey: args.dedupeKey,
       status: "OPEN",
+      ...(args.decisionKey ? { decisionKey: args.decisionKey } : {}),
+      ...(args.certainty ? { certainty: args.certainty } : {}),
       raisedAt: Date.now(),
     });
     await ctx.db.insert("auditLogs", {
@@ -112,28 +117,35 @@ export const autoResolveStaleQuestionsInternal = internalMutation({
  */
 const openQuestionValidator = v.object({
   questionId: v.id("wikiOpenQuestions"),
-  kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION")),
+  kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION"), v.literal("FILING")),
   pageKeyA: v.string(),
   claimA: v.string(),
   pageKeyB: v.union(v.string(), v.null()),
   claimB: v.union(v.string(), v.null()),
   detail: v.union(v.string(), v.null()),
   raisedAt: v.number(),
+  /** The Decision that raised it (its copy key) and how sure it was, when one did. */
+  decisionCopyKey: v.union(v.string(), v.null()),
+  certainty: v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"), v.null()),
 });
 
 function questionForScreen(question: {
   _id: Id<"wikiOpenQuestions">;
-  kind: "CONTRADICTION" | "FRESHNESS" | "CORRECTION";
+  kind: "CONTRADICTION" | "FRESHNESS" | "CORRECTION" | "FILING";
   pageKeyA: string;
   claimA: string;
   pageKeyB?: string;
   claimB?: string;
   detail?: string;
   raisedAt: number;
+  decisionKey?: string;
+  certainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE";
 }) {
   return {
     questionId: question._id,
     kind: question.kind,
+    decisionCopyKey: question.decisionKey ? (getDecision(question.decisionKey)?.copyKey ?? question.decisionKey) : null,
+    certainty: question.certainty ?? null,
     pageKeyA: question.pageKeyA,
     claimA: question.claimA,
     pageKeyB: question.pageKeyB ?? null,

@@ -58,7 +58,9 @@ const DEFAULT_RETRY_POLICY: ProviderRetryPolicy = {
   jitterRatio: 0.2,
 };
 
-const RETRYABLE_HTTP_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+// 529 is "overloaded" at Anthropic and TypeSafe: the same instruction as 503,
+// wait and try again, under a code the standard set never carried.
+const RETRYABLE_HTTP_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const NON_RETRYABLE_HTTP_STATUSES = new Set([400, 401, 403, 404, 422]);
 const RETRYABLE_ERROR_CODES = new Set([
   "RESOURCE_EXHAUSTED",

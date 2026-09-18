@@ -235,6 +235,31 @@ export function buildAgentActionAuditMetadata(args: {
  * detail already lives in the agent observability screens, and duplicating it
  * here would bury everything else in the trail within a week.
  */
+/**
+ * A Decision that acted on its own.
+ *
+ * Only runs that acted are written: a run handed to a person has its task or
+ * queue item as the record, and a run on which nothing hung would bury the
+ * trail. The certainty is a word, never a number, and the source says
+ * whether TypeSafe judged it or the simple rule did while TypeSafe was off.
+ * docs/plans/active/decisions-typesafe-plan.md, commitment 9.
+ */
+export function buildDecisionActedAuditMetadata(args: {
+  decisionName: string;
+  answer: string;
+  certainty: string | null;
+  action: string;
+  source: "TYPESAFE" | "TEXT_MODEL" | "RULES";
+}) {
+  return JSON.stringify({
+    decision: args.decisionName,
+    answer: args.answer,
+    ...(args.certainty ? { certainty: args.certainty } : {}),
+    did: args.action,
+    ...(args.source === "RULES" ? { judgedBy: "the simple rule (TypeSafe was off)" } : {}),
+  });
+}
+
 export function buildAgentRunAuditMetadata(args: {
   agentName?: string;
   objective?: string;
@@ -262,6 +287,7 @@ const FIELD_WORDS: Record<string, string> = {
   humanApprovalRequired: "Needs approval",
   autonomousToolExecution: "Runs unattended",
   modelId: "Model",
+  mode: "Mode",
 
   // System settings. These moved from "which fields were touched" to real
   // before-and-after values, so they need reader-facing names for the first
@@ -457,6 +483,8 @@ const ACTION_WORDS: Record<string, string> = {
   SIGN_IN_FAILED: "A sign-in was refused",
   AGENT_ACTION: "An agent acted on its own",
   AGENT_RUN_FINISHED: "An agent run finished",
+  DECISION_ACTED: "A Decision acted",
+  DECISION_MODE_CHANGED: "A Decision's mode was changed",
   API_REQUEST_REFUSED: "An API request was refused",
   API_KEY_FIRST_USED: "An API key was used for the first time",
   EXPORT_AUDIT_TRAIL: "Took a copy of the audit trail",

@@ -6,6 +6,7 @@ import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
+  TYPESAFE_PROVIDER_KEY,
 } from "./aiModelService";
 import { createAnthropicAgentProvider } from "./anthropicAgentProvider";
 import { createGoogleAgentProvider } from "./googleAgentProvider";
@@ -37,6 +38,11 @@ export function getAgentProviderAdapter(providerKey: string): AgentProviderAdapt
       return createOpenAIAgentProvider();
     case OPENROUTER_PROVIDER_KEY:
       return createOpenRouterAgentProvider();
+    case TYPESAFE_PROVIDER_KEY:
+      throw appError(
+        "INVALID_INPUT",
+        "TypeSafe models only make decisions; they cannot run an agent. Choose a text model for this agent.",
+      );
     default:
       throw appError(
         "INVALID_INPUT",

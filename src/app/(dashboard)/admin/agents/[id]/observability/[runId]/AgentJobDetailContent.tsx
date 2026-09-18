@@ -4,6 +4,7 @@ import { useMemo, useState, type ButtonHTMLAttributes, type ComponentType } from
 import { useMutation } from "convex/react";
 // template:remove:start salesData
 import { useQuery } from "convex/react";
+import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 // template:remove:end
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "next/navigation";
@@ -331,6 +332,7 @@ export function AgentJobDetailContent({
 
       {/* template:remove:start salesData */}
       <RunRecord runId={runId} />
+      <RunDecisions runId={runId} />
       {/* template:remove:end */}
 
       {run.finalOutput && !run.error && (
@@ -392,6 +394,66 @@ export function AgentJobDetailContent({
 }
 
 // template:remove:start salesData
+/**
+ * The Decisions filed under this run (decisions-typesafe-plan.md, Phase E):
+ * one line each, with the pill. Absent rather than empty for a run that
+ * made none, so every other agent's page has nothing extra to scroll past.
+ */
+function RunDecisions({ runId }: { runId: Id<"agentRuns"> }) {
+  const t = useTranslations("admin.agents.details.observability.run.decisions");
+  const tDecisions = useTranslations("decisions");
+  const tAdmin = useTranslations("admin.decisions");
+  const rows = useQuery(api.decisions.listForRun, { runId });
+  if (!rows || rows.length === 0) return null;
+
+  const answerLabel = (copyKey: string, answer: string) =>
+    tDecisions.has(`catalogue.${copyKey}.answers.${answer}`) ? tDecisions(`catalogue.${copyKey}.answers.${answer}`) : answer;
+
+  return (
+    <section
+      aria-label={t("title")}
+      className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-3"
+    >
+      <div>
+        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("title")}</h3>
+        <p className="text-[12px] text-secondary mt-1">{t("hint")}</p>
+      </div>
+      {/* The record's own line shape, not a table: this page draws its
+          header by hand and the kit guard rightly refuses a table under it. */}
+      <div className="flex flex-col">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="border-t border-border-dim/40 first:border-t-0 py-2 flex flex-wrap items-center gap-x-3 gap-y-1"
+          >
+            <DecisionPill
+              name={tDecisions(`catalogue.${row.copyKey ?? ""}.name`)}
+              certainty={row.certainty ?? null}
+              probabilities={parseSpread(row.probabilities)}
+              chosen={row.answer}
+            />
+            <span className="text-[12.5px] text-foreground">{answerLabel(row.copyKey ?? "", row.answer)}</span>
+            <span className="text-[12.5px] text-secondary">
+              {tAdmin(`detail.outcome.${row.outcome}`)} · {tAdmin(`detail.source.${row.source}`)}
+            </span>
+            <span className="font-mono text-[11px] text-muted truncate max-w-[260px] ml-auto">{row.subjectId}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function parseSpread(value?: string): Record<string, number> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function RunRecord({ runId }: { runId: Id<"agentRuns"> }) {
   const t = useTranslations("admin.agents.details.observability.run.record");
   const record = useQuery(api.salesDataResearchJobs.getRunRecord, { runId });

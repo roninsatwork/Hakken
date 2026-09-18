@@ -22,6 +22,7 @@ import {
   Monitor,
   NotebookPen,
   Palette,
+  Scale,
   ShieldCheck,
   TerminalSquare,
 } from "lucide-react";
@@ -83,6 +84,14 @@ const instructionItems = [
     href: "/admin/ai/diary",
     icon: NotebookPen,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/diary"),
+  },
+  {
+    // The judgments the platform makes on its own and how much rope each has
+    // (docs/plans/active/decisions-typesafe-plan.md, Phase C).
+    labelKey: "decisions",
+    href: "/admin/ai/decisions",
+    icon: Scale,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/decisions"),
   },
   {
     // The global AI's own evals (Anthony's ruling, 2026-08-16): the same

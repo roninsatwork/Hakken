@@ -79,10 +79,12 @@ export const runAgentObjective = internalAction({
     // The shared safety gate (modelTurnService): evaluate and, when refused,
     // save the refusal into the thread attributed to this runtime — worded as
     // the deployment's configured platform, not the shipped default.
+    const guardedThread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
     const safetyDecision = await guardModelTurn(ctx, {
         content: args.content,
         refusal: { threadId: args.threadId, source: "agent" },
         platformName: (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName,
+        ...(guardedThread?.companyId ? { companyId: guardedThread.companyId } : {}),
     });
     if (!safetyDecision.allowed) return;
 

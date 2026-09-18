@@ -58,8 +58,18 @@ export const GOOGLE_VERTEX_PROVIDER_KEY = "google";
 export const OPENAI_PROVIDER_KEY = "openai";
 export const ANTHROPIC_PROVIDER_KEY = "anthropic";
 export const OPENROUTER_PROVIDER_KEY = "openrouter";
+/**
+ * TypeSafe is a judgment provider, not a text one. Its models answer typed
+ * questions (yes/no, pick-one, score) with probabilities and never write prose,
+ * so it can only ever serve the `decision` job. That job takes any model —
+ * Sonae must never depend on TypeSafe (Anthony, 2026-09-17); an ordinary
+ * text model answers the same questions in JSON with its own estimate of
+ * how sure it is. See `docs/plans/active/decisions-typesafe-plan.md`.
+ */
+export const TYPESAFE_PROVIDER_KEY = "typesafe";
 export const EMBEDDING_MODEL_USE_CASE = "embedding";
 export const REALTIME_MODEL_USE_CASE = "realtime";
+export const DECISION_MODEL_USE_CASE = "decision";
 
 /**
  * Can this model actually hold a spoken conversation?
@@ -110,6 +120,7 @@ export const DEFAULT_MODEL_USE_CASES = [
   "vision",
   REALTIME_MODEL_USE_CASE,
   EMBEDDING_MODEL_USE_CASE,
+  DECISION_MODEL_USE_CASE,
 ] as const;
 
 export type AiModelUseCase = (typeof DEFAULT_MODEL_USE_CASES)[number] | string;
@@ -213,6 +224,14 @@ export function canProviderServeUseCase(providerKey: string | undefined, useCase
   // A model with no provider key is a legacy row, treated as Google everywhere.
   const provider = providerKey ?? GOOGLE_VERTEX_PROVIDER_KEY;
 
+  // TypeSafe's only job is decisions: a judgment model in a text row would
+  // throw at the first call. The Decisions job itself takes any model
+  // (Anthony's ruling, 2026-09-17: Sonae must never depend on TypeSafe) —
+  // a text model answers the same question in JSON with its own estimate of
+  // how sure it is.
+  if (provider === TYPESAFE_PROVIDER_KEY) return useCase === DECISION_MODEL_USE_CASE;
+  if (useCase === DECISION_MODEL_USE_CASE) return true;
+
   if (GOOGLE_ONLY_USE_CASES.has(useCase)) return provider === GOOGLE_VERTEX_PROVIDER_KEY;
   if (useCase === REALTIME_MODEL_USE_CASE) return REALTIME_CAPABLE_PROVIDER_KEYS.has(provider);
   if (AGENT_CAPABLE_USE_CASES.has(useCase)) return AGENT_CAPABLE_PROVIDER_KEYS.has(provider);
@@ -237,6 +256,9 @@ export function describeUseCaseProviderLimit(useCase: string) {
   }
   if (useCase === "speech") {
     return "Only Google speech models can do this job on this platform — pick one whose name says it does text-to-speech.";
+  }
+  if (useCase === DECISION_MODEL_USE_CASE) {
+    return "Any model can do this job. TypeSafe models answer with a measured certainty; other models estimate it, so their answers are trusted a little less.";
   }
   if (AGENT_CAPABLE_USE_CASES.has(useCase)) {
     return "Agents need a model that can use tools while it works, which not every provider offers.";
@@ -345,6 +367,9 @@ export function canGenerateText(model: {
 
   if (capabilities.includes("text")) return true;
   if (capabilities.includes("embeddings")) return false;
+  // A judgment model answers questions with probabilities; it has no prose to
+  // give, and asking it for some is a provider error dressed as a grading failure.
+  if (capabilities.includes(DECISION_MODEL_USE_CASE)) return false;
   if (useCases.includes(EMBEDDING_MODEL_USE_CASE) && !useCases.includes("chat")) return false;
 
   return true;

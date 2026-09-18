@@ -3334,6 +3334,7 @@ export default defineSchema({
       v.literal("agentTransactions"),
       v.literal("phoneCalls"),
       v.literal("mailboxMessages"),
+      v.literal("decisionRuns"),
       v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
@@ -3756,6 +3757,58 @@ export default defineSchema({
    * Deduplicated by key so the same disagreement is not raised nightly,
    * and auto-resolved when the pages change so the claim no longer stands.
    */
+  /**
+   * One row per Decision run: a named judgment the platform made, who
+   * answered it (TypeSafe or the simple rule), how sure it was, and what
+   * happened. Never the subject's text — only a reference to it, the same
+   * restraint the mailbox ledger shows. docs/plans/active/decisions-typesafe-plan.md.
+   */
+  decisionRuns: defineTable({
+    decisionKey: v.string(),
+    companyId: v.optional(v.id("companies")),
+    /** What was judged: "email", "message", "wikiPage", ... plus its id. */
+    subjectKind: v.string(),
+    subjectId: v.string(),
+    /** "yes" / "no", the chosen option, or the score. */
+    answer: v.string(),
+    /** JSON map of option → probability; absent when a rule answered. */
+    probabilities: v.optional(v.string()),
+    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
+    mode: v.union(v.literal("OFF"), v.literal("ASK_A_PERSON"), v.literal("ACT")),
+    outcome: v.union(v.literal("ACTED"), v.literal("HANDED_TO_PERSON"), v.literal("RECORDED")),
+    source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
+    /** Why the rule answered instead of TypeSafe, when it did. */
+    fallbackReason: v.optional(v.union(v.literal("MODE_OFF"), v.literal("NO_MODEL"), v.literal("PROVIDER_FAILED"))),
+    /** What acting on the answer meant, in words, when the run acted. */
+    action: v.optional(v.string()),
+    /** This run's share of the request it was part of. */
+    costGBP: v.number(),
+    agentRunId: v.optional(v.id("agentRuns")),
+    threadId: v.optional(v.id("threads")),
+    messageId: v.optional(v.id("messages")),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_key_created", ["decisionKey", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_key_created", ["companyId", "decisionKey", "createdAt"])
+    .index("by_subject", ["subjectKind", "subjectId"])
+    .index("by_agent_run", ["agentRunId"])
+    .index("by_thread", ["threadId"])
+    .index("by_message", ["messageId"]),
+
+  /** A Decision's mode, platform-wide or for one company; same shape as `aiModelDefaults`. */
+  decisionSettings: defineTable({
+    scope: v.union(v.literal("global"), v.literal("company")),
+    companyId: v.optional(v.id("companies")),
+    decisionKey: v.string(),
+    mode: v.union(v.literal("OFF"), v.literal("ASK_A_PERSON"), v.literal("ACT")),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  })
+    .index("by_scope_key", ["scope", "decisionKey"])
+    .index("by_company_key", ["companyId", "decisionKey"]),
+
   wikiOpenQuestions: defineTable({
     companyId: v.optional(v.id("companies")),
     kind: v.union(
@@ -3764,7 +3817,10 @@ export default defineSchema({
       // A person's typed correction from chat, routed here once their
       // company's memories migrated (one-brain-plan.md, phase 3) — the
       // queue that used to live on the Memory screen.
-      v.literal("CORRECTION")
+      v.literal("CORRECTION"),
+      // An answer the Filing Clerk's Decision judged worth filing while its
+      // mode says a person decides (decisions-typesafe-plan.md, Phase F.2).
+      v.literal("FILING")
     ),
     pageKeyA: v.string(),
     claimA: v.string(),
@@ -3773,6 +3829,9 @@ export default defineSchema({
     detail: v.optional(v.string()),
     dedupeKey: v.string(),
     status: v.union(v.literal("OPEN"), v.literal("RESOLVED"), v.literal("DISMISSED")),
+    /** The Decision that raised it, and how sure it was, when one did. */
+    decisionKey: v.optional(v.string()),
+    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
     raisedAt: v.number(),
     resolvedAt: v.optional(v.number()),
     resolvedBy: v.optional(v.id("users")),

@@ -200,6 +200,14 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
         rows = candidates.filter((run) => TERMINAL_RUN_STATUSES.has(run.status)).length;
       } else if (key === "agentTransactions") {
         rows = (await ctx.db.query("agentTransactions").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
+      } else if (key === "phoneCalls") {
+        // These three fell through to zero before, so the dry-run promised
+        // "nothing to delete" for tables the run then emptied.
+        rows = (await ctx.db.query("phoneCalls").withIndex("by_started", (q) => q.lt("startedAt", cutoff)).take(CAP)).length;
+      } else if (key === "mailboxMessages") {
+        rows = (await ctx.db.query("mailboxMessages").withIndex("by_created", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
+      } else if (key === "decisionRuns") {
+        rows = (await ctx.db.query("decisionRuns").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
       } else if (key === "purgeHistory") {
         const newest = await ctx.db.query("purgeHistory").withIndex("by_started").order("desc").take(PURGE_HISTORY_PROTECTED_ROWS + 1);
         if (newest.length > PURGE_HISTORY_PROTECTED_ROWS) {
@@ -528,6 +536,16 @@ export const executePurgeRecursive = internalMutation({
         const batch = await ctx.db
           .query("mailboxMessages")
           .withIndex("by_created", (q) => q.lt("createdAt", cutoffTimestamp))
+          .take(500);
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "decisionRuns") {
+        const batch = await ctx.db
+          .query("decisionRuns")
+          .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoffTimestamp))
           .take(500);
         for (const record of batch) {
           await ctx.db.delete(record._id);

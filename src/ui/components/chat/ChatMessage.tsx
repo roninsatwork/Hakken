@@ -123,6 +123,9 @@ export default function ChatMessage({
             ))}
           </div>
         )}
+        {/* Whatever the caller pins under the message — for a question, the
+            Decisions that judged it (decisions-typesafe-plan.md, Phase E). */}
+        {footer}
       </motion.div>
     );
   }

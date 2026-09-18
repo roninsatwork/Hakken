@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { runDecisions } from "./decisionActions";
 import {
   buildRewriteSystemInstruction,
   buildRewriteUserContent,
@@ -87,7 +88,60 @@ export const considerAnswer = internalAction({
       const parsed = jsonMatch
         ? (JSON.parse(jsonMatch[0]) as { file?: unknown; kind?: unknown; slug?: unknown; note?: unknown })
         : {};
-      if (parsed.file !== true && !args.vouchedByHuman) return;
+      // Worth filing? The reading model's own `file` is the rule; the
+      // Decision (decisions-typesafe-plan.md, Phase F.2) has the last word
+      // when switched on. A person who pressed "Save to wiki" has already
+      // decided, and is not second-guessed by either.
+      const fileByRule = parsed.file === true;
+      let shouldFile = fileByRule || Boolean(args.vouchedByHuman);
+      if (!args.vouchedByHuman) {
+        const proposed = {
+          kind: typeof parsed.kind === "string" ? parsed.kind : "",
+          slug: typeof parsed.slug === "string" ? parsed.slug : "",
+          note: typeof parsed.note === "string" ? parsed.note : "",
+        };
+        const decision = (await runDecisions(ctx, {
+          companyId: args.companyId,
+          subject: { kind: "thread", id: args.threadId },
+          state: {
+            question: args.question.slice(0, 500),
+            answer: args.answer.slice(0, 3000),
+            pagesUsed: args.pageKeys,
+            proposed,
+          },
+          requests: [{ key: "wiki.worth-filing", fallback: () => ({ kind: "yes-no", yes: fileByRule }) }],
+        }))["wiki.worth-filing"];
+        const judgedYes = decision.answer.kind === "yes-no" && decision.answer.yes;
+        if (decision.verdict === "ACT") {
+          shouldFile = judgedYes;
+        } else if (decision.verdict === "ASK_A_PERSON") {
+          shouldFile = false;
+          if (judgedYes && proposed.kind && proposed.slug && proposed.note) {
+            // Judged worth filing, but a person decides: the note goes on
+            // the wiki's open-questions panel rather than onto a page.
+            const slug = normaliseTopicSlug(proposed.slug);
+            await ctx.runMutation(internal.wikiQuestions.raiseQuestionInternal, {
+              companyId: args.companyId,
+              kind: "FILING",
+              pageKeyA: `${proposed.kind}:${slug}`,
+              claimA: proposed.note.trim(),
+              detail: "An answered question looked worth keeping on this page. Save it from the conversation if you agree, or dismiss this.",
+              dedupeKey: `FILING::${proposed.kind}:${slug}::${proposed.note.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 60)}`,
+              decisionKey: "wiki.worth-filing",
+              ...(decision.certainty ? { certainty: decision.certainty } : {}),
+            });
+            await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+              systemKey: "WIKI_FILING_CLERK",
+              companyId: args.companyId,
+              trigger: "EVENT",
+              objective: "Decide whether an answered question taught something worth filing.",
+              summary: `Judged worth filing into ${proposed.kind}:${slug}; left for a person to decide.`,
+              startedAt,
+            });
+          }
+        }
+      }
+      if (!shouldFile) return;
       if (!WIKI_TOPIC_KINDS.includes(parsed.kind as WikiTopicKind)) return;
       if (typeof parsed.slug !== "string" || typeof parsed.note !== "string") return;
       const slug = normaliseTopicSlug(parsed.slug);

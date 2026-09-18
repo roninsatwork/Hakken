@@ -46,6 +46,7 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/system-prompt");
     expect(screen.getByRole("menuitem", { name: "Wiki" })).toHaveAttribute("href", "/admin/ai/knowledge");
     expect(screen.getByRole("menuitem", { name: "Unanswered" })).toHaveAttribute("href", "/admin/ai/unanswered");
+    expect(screen.getByRole("menuitem", { name: "Decisions" })).toHaveAttribute("href", "/admin/ai/decisions");
 
     fireEvent.click(screen.getByRole("button", { name: "Widget" }));
 

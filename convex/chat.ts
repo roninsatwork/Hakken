@@ -612,6 +612,8 @@ export const saveAssistantSafetyRefusal = internalMutation({
     threadId: v.id("threads"),
     content: v.string(),
     category: safetyRefusalCategoryValidator,
+    /** "sure", "fairly sure" or "not sure" when a Decision found it; absent when a rule did. */
+    certainty: v.optional(v.string()),
     source: safetyRefusalSourceValidator,
   },
   handler: async (ctx, args) => {
@@ -637,6 +639,7 @@ export const saveAssistantSafetyRefusal = internalMutation({
         metadata: JSON.stringify({
           category: args.category,
           source: args.source,
+          ...(args.certainty ? { certainty: args.certainty } : {}),
         }),
       });
     }

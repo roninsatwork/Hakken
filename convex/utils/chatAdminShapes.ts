@@ -56,3 +56,13 @@ export const offsetThreadPageShape = v.object({
 export const adminThreadPageShape = paginationResultValidator(clientAdminThreadShape);
 
 export const adminThreadMessagesShape = v.array(rowShape.messages);
+
+export const adminThreadDecisionsShape = v.array(v.object({
+  key: v.string(),
+  copyKey: v.string(),
+  answer: v.string(),
+  certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
+  source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
+  probabilities: v.optional(v.string()),
+  createdAt: v.number(),
+}));

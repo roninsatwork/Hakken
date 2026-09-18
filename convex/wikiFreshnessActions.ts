@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { runDecisions } from "./decisionActions";
 
 /**
  * The Freshness Checker (wiki-agents plan, phase 2): aging pages get read
@@ -130,8 +131,26 @@ export const checkCompanyFreshness = internalAction({
         const parsed = jsonMatch
           ? (JSON.parse(jsonMatch[0]) as { supported?: unknown; unsupportedClaim?: unknown })
           : {};
-        if (parsed.supported === false && typeof parsed.unsupportedClaim === "string" && parsed.unsupportedClaim.trim()) {
-          const claim = parsed.unsupportedClaim.trim();
+        const flagged =
+          parsed.supported === false && typeof parsed.unsupportedClaim === "string" ? parsed.unsupportedClaim.trim() : "";
+        // The reading model's verdict is the rule; the Decision
+        // (decisions-typesafe-plan.md, Phase F.2) has the last word when
+        // switched on, and the open question carries how sure it was.
+        const decision = (await runDecisions(ctx, {
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          subject: { kind: "wikiPage", id: page.pageKey },
+          state: {
+            page: { key: page.pageKey, content: page.content.slice(0, 8000) },
+            sources: sources.texts.join("\n\n---\n\n").slice(0, 12000),
+            flagged,
+          },
+          requests: [{ key: "wiki.claim-supported", fallback: () => ({ kind: "yes-no", yes: flagged === "" }) }],
+        }))["wiki.claim-supported"];
+        const supported = decision.verdict === "RULES"
+          ? flagged === ""
+          : decision.answer.kind === "yes-no" && decision.answer.yes;
+        if (!supported) {
+          const claim = flagged || page.content.slice(0, 200);
           const wasNew = await ctx.runMutation(internal.wikiQuestions.raiseQuestionInternal, {
             companyId: args.companyId,
             kind: "FRESHNESS",
@@ -139,6 +158,8 @@ export const checkCompanyFreshness = internalAction({
             claimA: claim,
             detail: "The kept sources no longer support this claim. Check it, then edit or pin the page.",
             dedupeKey: `FRESHNESS::${page.pageKey}::${claim.toLowerCase().replace(/\s+/g, " ").slice(0, 60)}`,
+            ...(decision.verdict !== "RULES" ? { decisionKey: "wiki.claim-supported" } : {}),
+            ...(decision.certainty ? { certainty: decision.certainty } : {}),
           });
           if (wasNew) raised += 1;
         } else {

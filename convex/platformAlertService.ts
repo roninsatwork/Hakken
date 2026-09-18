@@ -56,7 +56,7 @@ export type OperationalFailureExample = {
    */
   targetId?: string;
   targetName?: string;
-  targetType?: "agent" | "schedule" | "workflow";
+  targetType?: "agent" | "schedule" | "workflow" | "decision";
 };
 
 export type OperationalHealthReport = {
@@ -101,6 +101,18 @@ export type OperationalHealthReport = {
     examples: OperationalFailureExample[];
   };
   staleRunningScheduledExecutions: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  decisionsHandedToPerson: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  decisionsOnSimpleRules: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  decisionsUnsure: {
     count: number;
     examples: OperationalFailureExample[];
   };
@@ -316,7 +328,7 @@ export type PlatformAlertOccurrence = {
   at?: number;
   targetId?: string;
   targetName?: string;
-  targetType?: "agent" | "schedule" | "workflow";
+  targetType?: "agent" | "schedule" | "workflow" | "decision";
 };
 
 export type PlatformAlertCauseGroup = {
@@ -326,7 +338,7 @@ export type PlatformAlertCauseGroup = {
   lastAt?: number;
   targetId?: string;
   targetNames: string[];
-  targetType?: "agent" | "schedule" | "workflow";
+  targetType?: "agent" | "schedule" | "workflow" | "decision";
 };
 
 function toOperationalOccurrence(example: OperationalFailureExample): PlatformAlertOccurrence {

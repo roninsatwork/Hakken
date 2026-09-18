@@ -1,4 +1,5 @@
 import type { Doc } from "@/convex/_generated/dataModel";
+import { PURGE_PIPELINE_KEYS, type PurgePipelineKey as BackendPurgePipelineKey } from "@/convex/purgeScheduleService";
 
 export type PiiConfig = {
   enabled?: boolean;
@@ -12,20 +13,8 @@ export type SystemSettingsFormData = Partial<Doc<"systemSettings">> & {
   [key: string]: string | number | boolean | undefined;
 };
 
-export type PurgePipelineKey =
-  | "agentLogs"
-  | "workflowLogs"
-  | "userLogins"
-  | "chatHistory"
-  | "auditLogs"
-  | "publicApiRequests"
-  | "authEvents"
-  | "aiActionRequests"
-  | "analyticsSnapshots"
-  | "webhookDeliveries"
-  | "agentRunHistory"
-  | "agentTransactions"
-  | "purgeHistory";
+/** The backend's own key type; a second copy here is how the list drifted. */
+export type PurgePipelineKey = BackendPurgePipelineKey;
 
 export type PurgePipelineConfig = {
   enabled?: boolean;
@@ -44,18 +33,12 @@ export type PurgeHistoryRow = Doc<"purgeHistory"> & {
   actorName?: string;
 };
 
-export const purgePipelineKeys: PurgePipelineKey[] = [
-  "agentLogs",
-  "agentRunHistory",
-  "agentTransactions",
-  "workflowLogs",
-  "userLogins",
-  "authEvents",
-  "chatHistory",
-  "auditLogs",
-  "publicApiRequests",
-  "aiActionRequests",
-  "analyticsSnapshots",
-  "webhookDeliveries",
-  "purgeHistory",
-];
+/**
+ * The rows on the retention screen, in the backend's own order.
+ *
+ * This was a hand-copied list, and it drifted: the phone-call and mailbox
+ * pipelines ran nightly at their default retention with no row here to see
+ * or change them. One list, owned by the backend, is the fix; the screen's
+ * only job is to give each key its words.
+ */
+export const purgePipelineKeys: PurgePipelineKey[] = [...PURGE_PIPELINE_KEYS];

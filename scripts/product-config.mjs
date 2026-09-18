@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 export const PRODUCT_FILE = "sonae.product.json";
 export const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const AUTH_PROVIDERS = ["google", "resend"];
-export const AI_PROVIDERS = ["vertex", "openai", "anthropic", "openrouter"];
+export const AI_PROVIDERS = ["vertex", "openai", "anthropic", "openrouter", "typesafe"];
 export const FEATURES = ["email", "knowledge", "webIngestion", "apify", "gmail", "voice", "telephony", "widget"];
 
 function object(value, keys, label) {

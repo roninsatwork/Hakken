@@ -15,7 +15,7 @@ const operationalFailureExampleShape = v.object({
   summary: v.optional(v.string()),
   targetId: v.optional(v.string()),
   targetName: v.optional(v.string()),
-  targetType: v.optional(v.union(v.literal("agent"), v.literal("schedule"), v.literal("workflow"))),
+  targetType: v.optional(v.union(v.literal("agent"), v.literal("schedule"), v.literal("workflow"), v.literal("decision"))),
 });
 
 const failureBlock = v.object({
@@ -112,6 +112,10 @@ export const systemHealthShape = v.object({
     schedulesMissingNextRun: failureBlock,
     staleAgentRuns: failureBlock,
     staleRunningScheduledExecutions: failureBlock,
+    /** Decisions (docs/plans/active/decisions-typesafe-plan.md, Phase E). */
+    decisionsHandedToPerson: failureBlock,
+    decisionsOnSimpleRules: failureBlock,
+    decisionsUnsure: failureBlock,
   }),
   pendingApprovalThresholdMinutes: v.number(),
   staleRunningThresholdMinutes: v.number(),

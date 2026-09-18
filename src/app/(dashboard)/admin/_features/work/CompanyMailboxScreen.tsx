@@ -10,17 +10,31 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 type Decision = "PENDING" | "REPLIED" | "TASK" | "SKIPPED";
+/** "NOT_SURE" is a certainty filter, not a decision: mail a Decision struggled with. */
+type Filter = Decision | "ALL" | "NOT_SURE";
 
-const DECISION_FILTERS: Array<{ value: Decision | "ALL"; labelKey: string }> = [
+const DECISION_FILTERS: Array<{ value: Filter; labelKey: string }> = [
   { value: "ALL", labelKey: "filter.all" },
   { value: "REPLIED", labelKey: "filter.replied" },
   { value: "TASK", labelKey: "filter.task" },
   { value: "SKIPPED", labelKey: "filter.skipped" },
+  { value: "NOT_SURE", labelKey: "filter.notSure" },
 ];
+
+function parseSpread(value?: string): Record<string, number> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * A company's handled mail (seven-gaps plan, phase 1). The Gmail watcher
@@ -32,16 +46,21 @@ const DECISION_FILTERS: Array<{ value: Decision | "ALL"; labelKey: string }> = [
  */
 export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies"> }) {
   const t = useTranslations("aiMailbox");
+  const tDecisions = useTranslations("decisions");
   const { platformName } = useSystemSettings();
   const [search, setSearch] = useState("");
-  const [decision, setDecision] = useState<Decision | "ALL">("ALL");
+  const [decision, setDecision] = useState<Filter>("ALL");
 
   const searchTerm = search.trim();
   const mail = useServerPagedTable(api.mailbox.listMailboxForCompany, {
     companyId,
     ...(searchTerm ? { searchTerm } : {}),
-    ...(decision === "ALL" ? {} : { decision }),
+    ...(decision === "ALL" || decision === "NOT_SURE" ? {} : { decision }),
+    ...(decision === "NOT_SURE" ? { certainty: "NOT_SURE" as const } : {}),
   });
+
+  const answerLabel = (copyKey: string, answer: string) =>
+    tDecisions.has(`catalogue.${copyKey}.answers.${answer}`) ? tDecisions(`catalogue.${copyKey}.answers.${answer}`) : answer;
 
   // Blue/amber tokens with written labels, never green-vs-red.
   const decisionClass: Record<string, string> = {
@@ -114,9 +133,23 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
             cell: (row) => (
               <>
                 <span className="line-clamp-2 text-[13px] text-foreground">{row.subject}</span>
-                {row.decisionReason && (
+                {/* The Decisions that judged this email, one pill each; the
+                    written reason stands in until a Decision has run. */}
+                {row.decisions.length > 0 ? (
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    {row.decisions.map((run) => (
+                      <DecisionPill
+                        key={run.key}
+                        name={answerLabel(run.copyKey, run.answer)}
+                        certainty={run.certainty ?? null}
+                        probabilities={parseSpread(run.probabilities)}
+                        chosen={run.answer}
+                      />
+                    ))}
+                  </span>
+                ) : row.decisionReason ? (
                   <span className="block text-[12px] text-muted truncate mt-0.5">{row.decisionReason}</span>
-                )}
+                ) : null}
               </>
             ),
           },

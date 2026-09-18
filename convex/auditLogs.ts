@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import { getDecision } from "./decisionRegistry";
 import schema from "./schema";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
@@ -112,7 +113,10 @@ async function describeAuditRow(ctx: QueryCtx, log: Doc<"auditLogs">) {
   ]);
 
   let targetName: string | null = null;
-  if (log.entityId) {
+  if (log.entityId && log.entityType === "decisions") {
+    // Decisions are code, not rows: the registry names them.
+    targetName = getDecision(log.entityId)?.name ?? null;
+  } else if (log.entityId) {
     const normalised = ctx.db.normalizeId(log.entityType as TableNames, log.entityId);
     if (normalised) {
       const target = (await ctx.db.get(normalised)) as Record<string, unknown> | null;

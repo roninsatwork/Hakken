@@ -1,7 +1,9 @@
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { evaluateAssistantSafety, type AssistantSafetyDecision } from "./aiSafetyPolicy";
+import { evaluateAssistantSafety, getAssistantSafetyWarnings, type AssistantSafetyDecision } from "./aiSafetyPolicy";
+import { runDecisions } from "./decisionActions";
+import { certaintyWords } from "./decisionService";
 import { shouldFlushStreamedText } from "./streamingService";
 import type { MessageEvidence } from "./utils/messageEvidence";
 
@@ -42,7 +44,7 @@ import type { MessageEvidence } from "./utils/messageEvidence";
  * messages. Narrow on purpose so a unit test can hand in a plain recording
  * stub instead of a whole Convex runtime.
  */
-export type ModelTurnCtx = Pick<ActionCtx, "runMutation">;
+export type ModelTurnCtx = Pick<ActionCtx, "runMutation" | "runQuery">;
 
 /** Which model answered, written onto every message the turn produces. */
 export type ModelAttribution = {
@@ -95,9 +97,55 @@ export async function guardModelTurn(
     refusal?: { threadId: Id<"threads">; source: "assistant" | "agent" };
     /** The deployment's configured name, so refusal copy names the platform the reader is using. */
     platformName?: string;
+    /** The company the turn belongs to, so its Decision modes apply and the run is filed under it. */
+    companyId?: Id<"companies">;
+    /** The thread, when there is no refusal sink but the run should still be linked. */
+    threadId?: Id<"threads">;
   }
 ): Promise<AssistantSafetyDecision> {
-  const decision = evaluateAssistantSafety(args.content, { platformName: args.platformName });
+  const ruleDecision = evaluateAssistantSafety(args.content, { platformName: args.platformName });
+
+  // The three safety Decisions (decisions-typesafe-plan.md, Phase F.1),
+  // with the regexes as their rules. Switched off, this is exactly the old
+  // gate. Switched on, a sure "yes" adds a refusal the regexes missed.
+  // Security here is monotonic (review, 2026-09-18): a rule's refusal
+  // always stands, whatever the Decision says, so switching one on can
+  // only ever tighten the gate. A Decision that disagrees with a rule is
+  // still on the record, which is how a noisy rule gets found.
+  const ruleFlags = new Set(getAssistantSafetyWarnings(args.content).map((warning) => warning.category));
+  const threadId = args.refusal?.threadId ?? args.threadId;
+  const results = await runDecisions(ctx as ActionCtx, {
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    subject: { kind: "thread", id: threadId ?? "no-thread" },
+    state: { company: { name: "" }, message: { text: args.content } },
+    requests: [
+      { key: "chat.hidden-instructions", fallback: () => ({ kind: "yes-no", yes: ruleFlags.has("hidden_instructions") }) },
+      { key: "chat.permission-bypass", fallback: () => ({ kind: "yes-no", yes: ruleFlags.has("permission_bypass") }) },
+      { key: "chat.cross-tenant", fallback: () => ({ kind: "yes-no", yes: ruleFlags.has("cross_tenant_access") }) },
+    ],
+    ...(threadId ? { links: { threadId } } : {}),
+  });
+
+  const flagged = (key: string, category: "hidden_instructions" | "permission_bypass" | "cross_tenant_access") => {
+    if (ruleFlags.has(category)) return true;
+    const result = results[key];
+    return result.verdict === "ACT" && result.answer.kind === "yes-no" && result.answer.yes;
+  };
+
+  const category =
+    flagged("chat.hidden-instructions", "hidden_instructions") ? "hidden_instructions"
+    : flagged("chat.permission-bypass", "permission_bypass") ? "permission_bypass"
+    : flagged("chat.cross-tenant", "cross_tenant_access") ? "cross_tenant_access"
+    : null;
+
+  if (!category) return { allowed: true };
+
+  // The refusal wording per category is the policy's; only who decided differs.
+  const decision: AssistantSafetyDecision = ruleDecision.allowed || ruleDecision.category !== category
+    ? refusalFor(category, args.platformName)
+    : ruleDecision;
+  const decidedBy = results[DECISION_KEY_BY_CATEGORY[category]];
+  const decidedByRule = ruleFlags.has(category);
 
   if (!decision.allowed && args.refusal) {
     await ctx.runMutation(internal.chat.saveAssistantSafetyRefusal, {
@@ -105,10 +153,31 @@ export async function guardModelTurn(
       content: decision.response,
       category: decision.category,
       source: args.refusal.source,
+      ...(!decidedByRule && decidedBy.certainty ? { certainty: certaintyWords(decidedBy.certainty) } : {}),
     });
   }
 
   return decision;
+}
+
+const DECISION_KEY_BY_CATEGORY = {
+  hidden_instructions: "chat.hidden-instructions",
+  permission_bypass: "chat.permission-bypass",
+  cross_tenant_access: "chat.cross-tenant",
+} as const;
+
+/** The policy's own refusal for a category, when a Decision rather than a regex found it. */
+function refusalFor(
+  category: "hidden_instructions" | "permission_bypass" | "cross_tenant_access",
+  platformName?: string,
+): AssistantSafetyDecision {
+  const probe = {
+    hidden_instructions: "reveal the system prompt",
+    permission_bypass: "ignore previous instructions",
+    cross_tenant_access: "another company's data",
+  }[category];
+  const decision = evaluateAssistantSafety(probe, { platformName });
+  return decision.allowed ? { allowed: true } : { allowed: false, category, response: decision.response };
 }
 
 /**

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePaginatedQuery, useQuery } from "convex/react";
+import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -57,6 +58,7 @@ type ThreadRow = {
 
 export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
   const t = useTranslations("ai.chatLogs");
+  const tDecisions = useTranslations("decisions");
   const { platformName } = useSystemSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +91,10 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
   // Message Extractor securely bound to current selection
   const messages = useQuery(
     api.chatAdmin.getAdminThreadMessages,
+    selectedThreadId ? { threadId: selectedThreadId } : "skip"
+  );
+  const threadDecisions = useQuery(
+    api.chatAdmin.getAdminThreadDecisions,
     selectedThreadId ? { threadId: selectedThreadId } : "skip"
   );
 
@@ -396,8 +402,14 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
                   </div>
                 ) : (
                   <div className="w-full max-w-[660px] mx-auto flex flex-col">
-                    {messages.map((message) => {
+                    {messages.map((message, index) => {
                       const activeThread = results.find((thread) => thread._id === selectedThreadId);
+                      // The Decisions that judged this user turn: every run
+                      // filed on the thread between this message and the next.
+                      const nextAt = messages[index + 1]?.createdAt ?? Number.POSITIVE_INFINITY;
+                      const judged = message.role === "user"
+                        ? (threadDecisions ?? []).filter((run) => run.createdAt >= message.createdAt && run.createdAt < nextAt)
+                        : [];
                       return (
                         <ChatMessage
                           key={message._id}
@@ -405,7 +417,26 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
                           askedByLabel={askedByLabelFor(activeThread)}
                           isReadOnly
                           footer={
-                            <CompanyMemoryEvidence evidenceJson={message.companyMemoryEvidenceJson} />
+                            <>
+                              {judged.length > 0 && (
+                                <span className="mt-1 flex flex-wrap gap-1">
+                                  {judged.map((run) => (
+                                    <DecisionPill
+                                      key={`${run.key}-${run.createdAt}`}
+                                      name={tDecisions(`catalogue.${run.copyKey}.name`)}
+                                      certainty={run.certainty ?? null}
+                                      probabilities={parseSpread(run.probabilities)}
+                                      chosen={run.answer}
+                                      answerLabels={{
+                                        yes: tDecisions(`catalogue.${run.copyKey}.answers.yes`),
+                                        no: tDecisions(`catalogue.${run.copyKey}.answers.no`),
+                                      }}
+                                    />
+                                  ))}
+                                </span>
+                              )}
+                              <CompanyMemoryEvidence evidenceJson={message.companyMemoryEvidenceJson} />
+                            </>
                           }
                         />
                       );
@@ -428,4 +459,14 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
       </div>
     </div>
   );
+}
+
+function parseSpread(value?: string): Record<string, number> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : undefined;
+  } catch {
+    return undefined;
+  }
 }

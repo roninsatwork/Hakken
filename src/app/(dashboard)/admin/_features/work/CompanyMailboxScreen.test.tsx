@@ -40,6 +40,7 @@ const messages = [
     subject: "Can you quote for 40 doors?",
     decision: "REPLIED",
     decisionReason: "Answered from the price list.",
+    decisions: [],
     createdAt: Date.UTC(2026, 7, 14, 9, 30),
   },
   {
@@ -48,6 +49,7 @@ const messages = [
     subject: "Invoice 4021 query",
     decision: "TASK",
     decisionReason: "Raised for a person to check.",
+    decisions: [],
     createdAt: Date.UTC(2026, 7, 15, 11, 5),
   },
 ];

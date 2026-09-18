@@ -90,10 +90,12 @@ export const generateSonaeResponse = internalAction({
 
     // The shared safety gate (modelTurnService): evaluate and, when refused,
     // save the refusal into the thread attributed to this runtime.
+    const guardedThread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
     const safetyDecision = await guardModelTurn(ctx, {
         content: args.content,
         refusal: { threadId: args.threadId, source: "assistant" },
         platformName,
+        ...(guardedThread?.companyId ? { companyId: guardedThread.companyId } : {}),
     });
     if (!safetyDecision.allowed) {
         await setStage(undefined);
@@ -347,6 +349,7 @@ export const generateSonaeResponse = internalAction({
         if (thread?.companyId ? companyAnswersFromWiki(company) : true) {
             try {
                 const wikiAnswer = await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
+                    threadId: args.threadId,
                     // No company on the thread means the global AI's own
                     // conversation: the chooser reads the platform shelf
                     // alone (Anthony's SaaS ruling, 2026-08-17).

@@ -351,5 +351,39 @@ export const recordStaffRunInternal = internalMutation({
       companyId: args.companyId,
       since: args.startedAt,
     });
+    await adoptRoundDecisions(ctx, {
+      runId,
+      companyId: args.companyId,
+      since: args.startedAt,
+      decisionKeys: STAFF_DECISION_KEYS[args.systemKey] ?? [],
+    });
   },
 });
+
+/** Which Decisions each staff member makes, so a round's runs can be filed under its agent run. */
+const STAFF_DECISION_KEYS: Record<string, string[]> = {
+  WIKI_FILING_CLERK: ["wiki.worth-filing"],
+  WIKI_FRESHNESS_CHECKER: ["wiki.claim-supported"],
+  WIKI_CONTRADICTION_FINDER: ["wiki.claims-disagree"],
+};
+
+/**
+ * The Decision runs this round made, filed under its agent run the same way
+ * its logs are (decisions-typesafe-plan.md, Phase E): the staff record the
+ * run at the end of a round, so the runs are adopted by time and key.
+ */
+async function adoptRoundDecisions(
+  ctx: { db: import("./_generated/server").MutationCtx["db"] },
+  args: { runId: Id<"agentRuns">; companyId?: Id<"companies">; since: number; decisionKeys: string[] },
+): Promise<void> {
+  if (args.decisionKeys.length === 0) return;
+  const keys = new Set(args.decisionKeys);
+  const orphans = await ctx.db
+    .query("decisionRuns")
+    .withIndex("by_company_created", (q) => q.eq("companyId", args.companyId).gte("createdAt", args.since))
+    .take(500);
+  for (const run of orphans) {
+    if (run.agentRunId || !keys.has(run.decisionKey)) continue;
+    await ctx.db.patch(run._id, { agentRunId: args.runId });
+  }
+}

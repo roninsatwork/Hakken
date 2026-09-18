@@ -9,6 +9,7 @@ export const PROVIDER_GROUPS = {
   openai: { label: "OpenAI", keys: [["OPENAI_API_KEY", "OPEN_AI_API_KEY", "OPENAI_KEY"]] },
   anthropic: { label: "Anthropic", keys: [["ANTHROPIC_API_KEY"]] },
   openrouter: { label: "OpenRouter", keys: [["OPENROUTER_API_KEY"]] },
+  typesafe: { label: "TypeSafe decisions", keys: [["TYPESAFE_API_KEY"]] },
   webIngestion: { label: "Website ingestion", keys: [["FIRECRAWL_API_KEY"]] },
   apify: { label: "Apify callbacks", keys: [["APIFY_API_TOKEN"], ["APIFY_WEBHOOK_SECRET"]] },
   gmail: { label: "Gmail OAuth", keys: [["CONNECTOR_GOOGLE_CLIENT_ID"], ["CONNECTOR_GOOGLE_CLIENT_SECRET"], ["CONNECTOR_TOKEN_ENCRYPTION_KEY"]] },

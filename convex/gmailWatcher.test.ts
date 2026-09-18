@@ -419,3 +419,262 @@ describe("full-width paragraphs", () => {
     expect(unwrapped).toContain("- A discovery workshop\n- A fixed-fee build");
   });
 });
+
+/**
+ * The mailbox's Decisions, switched on (decisions-typesafe-plan.md, Phase D).
+ *
+ * TypeSafe is stubbed at its HTTP boundary like Gmail and the reply model.
+ * What is under test is the wiring: a sure "not a customer" leaves the mail
+ * alone in the Decision's own words, a sure review overrules the reply
+ * model's own opinion, an unsure review hands over, the ask-a-person mode
+ * sends nothing, and a dead provider falls back to the rules with the mail
+ * still answered.
+ */
+type TypesafeStubAnswers = Record<string, unknown>;
+
+/** Seed a chosen TypeSafe model for the Decisions job and set each mode. */
+async function switchOnDecisions(
+  t: ReturnType<typeof convexTest>,
+  modes: Record<string, "OFF" | "ASK_A_PERSON" | "ACT">,
+) {
+  vi.stubEnv("TYPESAFE_API_KEY", "typesafe-test-key");
+  await t.run(async (ctx) => {
+    const now = Date.now();
+    await ctx.db.insert("aiProviders", {
+      providerKey: "typesafe",
+      displayName: "TypeSafe",
+      isEnabled: true,
+      authMode: "environment",
+      status: "healthy",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("aiModels", {
+      modelId: "typesafe:jev-latest",
+      providerKey: "typesafe",
+      providerModelId: "jev-latest",
+      displayName: "Jev Latest",
+      isEnabled: true,
+      isDefault: false,
+      capabilities: ["decision"],
+      supportedUseCases: ["decision"],
+      standardInputCostBelow200k: 1,
+      standardInputCostAbove200k: 1,
+      outputResponseCost: 2,
+      lastSyncedAt: now,
+    });
+    await ctx.db.insert("aiModelDefaults", {
+      scope: "global",
+      useCase: "decision",
+      providerKey: "typesafe",
+      modelId: "typesafe:jev-latest",
+      updatedAt: now,
+    });
+    for (const [decisionKey, mode] of Object.entries(modes)) {
+      await ctx.db.insert("decisionSettings", { scope: "global", decisionKey, mode, updatedAt: now });
+    }
+  });
+}
+
+/**
+ * Put TypeSafe in front of the Gmail stub: `/v1/systemone` answers from the
+ * script (one entry per request, in order), everything else goes to Gmail.
+ */
+function stubTypesafe(script: Array<TypesafeStubAnswers | { status: number }>) {
+  const gmailFetch = globalThis.fetch;
+  const requests: Array<{ questions: string[]; state: unknown }> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (!url.includes("api.typesafe.ai")) return gmailFetch(input, init);
+      const body = JSON.parse(String(init?.body ?? "{}")) as { questions: Record<string, unknown>; state: unknown };
+      requests.push({ questions: Object.keys(body.questions), state: body.state });
+      const next = script.shift();
+      if (!next) throw new Error("TypeSafe asked more than the script allows.");
+      if ("status" in next && typeof next.status === "number" && Object.keys(next).length === 1) {
+        return Response.json({ error: "overloaded" }, { status: next.status });
+      }
+      return Response.json({ model: "jev-latest", answers: next, usage: { input_tokens: 400, output_tokens: 40 } });
+    }),
+  );
+  return { requests };
+}
+
+const choice = (choiceKey: string, probabilities: Record<string, number>, confidence: number) => ({
+  type: "choice", choice: choiceKey, probabilities, confidence,
+});
+const noul = (value: number) => ({ type: "noul", noul: value });
+
+const SPAMMY: StubMessage = {
+  id: "sp-1",
+  threadId: "thread-sp1",
+  headers: { From: "Best Deals <deals@example.net>", Subject: "You have been selected", "Message-ID": "<sp1@example.net>" },
+  body: "Congratulations! Claim your prize now.",
+};
+
+describe("the mailbox's Decisions, switched on", () => {
+  beforeEach(() => {
+    vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_ID", "client-id");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_SECRET", "client-secret");
+    generateMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  test("a sure 'spam' leaves the mail alone in the Decision's own words, priced and audited", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seedMailbox(t);
+    await switchOnDecisions(t, { "mailbox.message-kind": "ACT", "mailbox.language": "ACT", "mailbox.urgent": "ACT" });
+    const { sends } = stubGmail([SPAMMY]);
+    const typesafe = stubTypesafe([
+      {
+        "mailbox.message-kind": choice("spam", { spam: 0.9, customer: 0.06, newsletter: 0.02, automated: 0.01, other: 0.01 }, 0.84),
+        "mailbox.language": choice("english", { english: 0.94, italian: 0.01, french: 0.01, german: 0.01, spanish: 0.01, portuguese: 0.01, other: 0.01 }, 0.93),
+        "mailbox.urgent": noul(0.1),
+      },
+    ]);
+    generateMock.mockResolvedValue({ text: '{"reply": "Should never be asked.", "needsHuman": false}' });
+
+    await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    expect(sends).toHaveLength(0);
+    expect(generateMock).not.toHaveBeenCalled();
+    expect(typesafe.requests).toHaveLength(1);
+    expect(typesafe.requests[0].questions).toEqual(["mailbox.message-kind", "mailbox.language", "mailbox.urgent"]);
+    expect(typesafe.requests[0].state).toMatchObject({ company: { name: "Mail Co" }, email: { subject: "You have been selected" } });
+
+    const { rows, runs, transactions, audits } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("mailboxMessages").collect(),
+      runs: await ctx.db.query("decisionRuns").collect(),
+      transactions: await ctx.db.query("agentTransactions").collect(),
+      audits: (await ctx.db.query("auditLogs").collect()).filter((entry) => entry.actionType === "DECISION_ACTED"),
+    }));
+    expect(rows[0]).toMatchObject({ decision: "SKIPPED", decisionReason: "Skipped the email as spam." });
+    expect(runs).toHaveLength(3);
+    expect(runs.find((run) => run.decisionKey === "mailbox.message-kind")).toMatchObject({
+      answer: "spam", certainty: "SURE", outcome: "ACTED", source: "TYPESAFE", action: "skipped the email as spam", subjectId: "sp-1",
+    });
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject({ providerKey: "typesafe", inputTokens: 400, outputTokens: 40 });
+    // 400 in at £1/M + 40 out at £2/M.
+    expect(transactions[0].costGBP).toBeCloseTo(0.00048);
+    expect(audits).toHaveLength(1);
+    expect(JSON.parse(audits[0].metadata ?? "{}")).toMatchObject({ decision: "Is this email from a customer?", answer: "spam", certainty: "sure" });
+  });
+
+  test("a sure review overrules the reply model: no task, and the reply wears the judged language", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seedMailbox(t);
+    await switchOnDecisions(t, { "mailbox.message-kind": "ACT", "mailbox.language": "ACT", "mailbox.needs-a-person": "ACT" });
+    const { sends } = stubGmail([QUESTION]);
+    const typesafe = stubTypesafe([
+      {
+        "mailbox.message-kind": choice("customer", { customer: 0.95, newsletter: 0.02, automated: 0.01, spam: 0.01, other: 0.01 }, 0.93),
+        "mailbox.language": choice("italian", { italian: 0.9, english: 0.05, french: 0.01, german: 0.01, spanish: 0.01, portuguese: 0.01, other: 0.01 }, 0.85),
+        "mailbox.urgent": noul(0.2),
+      },
+      { "mailbox.needs-a-person": noul(0.04) },
+    ]);
+    // The reply model hedges; the Decision, sure, says no person is needed.
+    generateMock.mockResolvedValue({ text: '{"reply": "Siamo aperti dalle 9 alle 17.", "needsHuman": true, "language": "en"}' });
+
+    await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    expect(sends).toHaveLength(1);
+    expect(decodeSentMime(sends[0].raw).body).toContain("Buongiorno Priya");
+    expect(typesafe.requests).toHaveLength(2);
+    expect(typesafe.requests[1].questions).toEqual(["mailbox.needs-a-person"]);
+    expect(typesafe.requests[1].state).toMatchObject({ reply: { text: "Siamo aperti dalle 9 alle 17." } });
+
+    const { rows, tasks } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("mailboxMessages").collect(),
+      tasks: await ctx.db.query("tasks").collect(),
+    }));
+    expect(rows[0].decision).toBe("REPLIED");
+    expect(tasks).toHaveLength(0);
+  });
+
+  test("an unsure review hands over, and a sure 'urgent' makes the task urgent and due today", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seedMailbox(t);
+    await switchOnDecisions(t, { "mailbox.needs-a-person": "ACT", "mailbox.urgent": "ACT" });
+    const { sends } = stubGmail([QUESTION]);
+    stubTypesafe([
+      { "mailbox.urgent": noul(0.96) },
+      { "mailbox.needs-a-person": noul(0.55) },
+    ]);
+    generateMock.mockResolvedValue({ text: '{"reply": "We are open 9 to 5.", "needsHuman": false}' });
+    const before = Date.now();
+
+    await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    expect(sends).toHaveLength(1);
+    const { rows, tasks, runs } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("mailboxMessages").collect(),
+      tasks: await ctx.db.query("tasks").collect(),
+      runs: await ctx.db.query("decisionRuns").collect(),
+    }));
+    expect(rows[0].decision).toBe("TASK");
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].title.startsWith("Urgent: Answer priya@customer.co.uk")).toBe(true);
+    expect(tasks[0].dueAt).toBeGreaterThan(before);
+    expect(runs.find((run) => run.decisionKey === "mailbox.needs-a-person")).toMatchObject({ certainty: "NOT_SURE", outcome: "HANDED_TO_PERSON" });
+    // Off, so its rule answered and TypeSafe was never asked about it.
+    expect(runs.find((run) => run.decisionKey === "mailbox.message-kind")).toMatchObject({ source: "RULES", fallbackReason: "MODE_OFF", answer: "customer" });
+  });
+
+  test("ask-a-person on message-kind sends nothing and files the question as a task", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { adminId } = await seedMailbox(t);
+    await switchOnDecisions(t, { "mailbox.message-kind": "ASK_A_PERSON" });
+    const { sends } = stubGmail([SPAMMY]);
+    stubTypesafe([{ "mailbox.message-kind": choice("newsletter", { newsletter: 0.8, customer: 0.15, automated: 0.03, spam: 0.01, other: 0.01 }, 0.65) }]);
+    generateMock.mockResolvedValue({ text: '{"reply": "Should never be asked.", "needsHuman": false}' });
+
+    await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    expect(sends).toHaveLength(0);
+    expect(generateMock).not.toHaveBeenCalled();
+    const { rows, tasks } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("mailboxMessages").collect(),
+      tasks: await ctx.db.query("tasks").collect(),
+    }));
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].title).toContain("Decide whether to answer deals@example.net");
+    expect(tasks[0].assigneeUserId).toBe(adminId);
+    expect(rows[0]).toMatchObject({ decision: "TASK", taskId: tasks[0]._id, decisionReason: "A person decides whether to answer this email." });
+  });
+
+  test("a dead provider falls back to the rules and the mail is still answered", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seedMailbox(t);
+    await switchOnDecisions(t, { "mailbox.message-kind": "ACT", "mailbox.needs-a-person": "ACT" });
+    const { sends } = stubGmail([QUESTION]);
+    // Three attempts per request, two requests: every one overloaded.
+    stubTypesafe([{ status: 529 }, { status: 529 }, { status: 529 }, { status: 529 }, { status: 529 }, { status: 529 }]);
+    generateMock.mockResolvedValue({ text: '{"reply": "We are open 9 to 5.", "needsHuman": false}' });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      await t.action(internal.gmailWatcher.pollMailboxes, {});
+    } finally {
+      warn.mockRestore();
+    }
+
+    expect(sends).toHaveLength(1);
+    const { rows, runs, transactions } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("mailboxMessages").collect(),
+      runs: await ctx.db.query("decisionRuns").collect(),
+      transactions: await ctx.db.query("agentTransactions").collect(),
+    }));
+    expect(rows[0].decision).toBe("REPLIED");
+    expect(runs.every((run) => run.source === "RULES")).toBe(true);
+    expect(runs.filter((run) => run.fallbackReason === "PROVIDER_FAILED").map((run) => run.decisionKey).sort())
+      .toEqual(["mailbox.message-kind", "mailbox.needs-a-person"]);
+    expect(transactions).toHaveLength(0);
+  }, 30_000);
+});

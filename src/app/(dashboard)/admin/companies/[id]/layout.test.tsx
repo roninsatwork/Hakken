@@ -84,6 +84,7 @@ describe("CompanyDashboardLayout navigation", () => {
       ["Prompt", "/admin/companies/company123/ai/prompt"],
       ["AI Rules", "/admin/companies/company123/ai/rules"],
       ["AI Models", "/admin/companies/company123/ai/models"],
+      ["Decisions", "/admin/companies/company123/ai/decisions"],
       ["Evals", "/admin/companies/company123/ai/evals"],
       ["Chat Logs", "/admin/companies/company123/ai/chat-logs"],
     ];

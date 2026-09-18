@@ -37,6 +37,9 @@ export type SystemHealth = {
     schedulesMissingNextRun: HealthBucket;
     staleAgentRuns: HealthBucket;
     staleRunningScheduledExecutions: HealthBucket;
+    decisionsHandedToPerson: HealthBucket;
+    decisionsOnSimpleRules: HealthBucket;
+    decisionsUnsure: HealthBucket;
   };
   checkedAt: number;
 };
@@ -107,6 +110,10 @@ function buildAttention(health: SystemHealth): Attention[] {
   add("failedScheduledExecutions", "attention.failedScheduledExecutions", ops.failedScheduledExecutions, "actions.openWorkflowRuns", "/admin/workflows/executions");
   add("staleRunningScheduledExecutions", "attention.staleRunningScheduledExecutions", ops.staleRunningScheduledExecutions, "actions.openWorkflowRuns", "/admin/workflows/executions");
   add("failedAgentTransactions", "attention.failedAgentTransactions", ops.failedAgentTransactions, "actions.openAgents", "/admin/agents");
+  // Decisions (decisions-typesafe-plan.md, Phase E).
+  add("decisionsHandedToPerson", "attention.decisionsHandedToPerson", ops.decisionsHandedToPerson, "actions.openDecisions", "/admin/ai/decisions");
+  add("decisionsOnSimpleRules", "attention.decisionsOnSimpleRules", ops.decisionsOnSimpleRules, "actions.openModels", "/admin/ai/models/defaults");
+  add("decisionsUnsure", "attention.decisionsUnsure", ops.decisionsUnsure, "actions.openDecisions", "/admin/ai/decisions");
 
   return rows;
 }

@@ -52,6 +52,9 @@ function buildOperationalReport(overrides: Partial<OperationalHealthReport> = {}
     schedulesMissingNextRun: { count: 0, examples: [] },
     staleAgentRuns: { count: 0, examples: [] },
     staleRunningScheduledExecutions: { count: 0, examples: [] },
+    decisionsHandedToPerson: { count: 0, examples: [] },
+    decisionsOnSimpleRules: { count: 0, examples: [] },
+    decisionsUnsure: { count: 0, examples: [] },
     ...overrides,
   };
 }

@@ -804,7 +804,7 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     });
 
     expect(searchedPage.page.map((model) => model.modelId)).toEqual(["openai:gpt-test"]);
-    expect(providers.map((provider) => provider.providerKey)).toEqual(["google", "openai", "anthropic", "openrouter"]);
+    expect(providers.map((provider) => provider.providerKey)).toEqual(["google", "openai", "anthropic", "openrouter", "typesafe"]);
   });
 
   test("provider catalogue returns platform providers and super-admins can disable providers", async () => {
@@ -820,7 +820,7 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     const client = t.withIdentity({ subject: adminId });
     const initialProviders = await client.query(api.aiModels.getProviders, {});
 
-    expect(initialProviders.map((provider) => provider.providerKey)).toEqual(["google", "openai", "anthropic", "openrouter"]);
+    expect(initialProviders.map((provider) => provider.providerKey)).toEqual(["google", "openai", "anthropic", "openrouter", "typesafe"]);
     expect(initialProviders.every((provider) => provider.authMode === "environment")).toBe(true);
 
     await client.mutation(api.aiModels.setProviderEnabled, {

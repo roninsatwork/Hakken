@@ -21,6 +21,7 @@ import { WikiImportBox } from "./WikiImportBox";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiAskBox } from "./WikiAskBox";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 
 const PAGE_SIZE = 15;
 
@@ -44,6 +45,7 @@ export function WikiPagesListScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiPages");
+  const tDecisions = useTranslations("decisions");
   const { platformName } = useSystemSettings();
   const action = useAdminAction({ scope: "admin-wiki-pages" });
   const [search, setSearch] = useState("");
@@ -461,6 +463,14 @@ export function WikiPagesListScreen({
                     )}
                     {question.detail && (
                       <span className="text-[12px] text-secondary">{question.detail}</span>
+                    )}
+                    {question.decisionCopyKey && (
+                      <span className="mt-1 flex">
+                        <DecisionPill
+                          name={tDecisions(`catalogue.${question.decisionCopyKey}.name`)}
+                          certainty={question.certainty}
+                        />
+                      </span>
                     )}
                   </div>
                   <WriteButton
