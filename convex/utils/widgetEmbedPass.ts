@@ -20,9 +20,13 @@
  * can still obtain a pass — the referer is client-supplied. The pass does not
  * make origin unforgeable; it forces every session through the served page
  * (visible, loggable, rate-limitable) and makes the mutation refusable on a
- * server-observed host instead of a caller-invented one. Spend is bounded
- * separately: the company plan quota prices every message, and
- * `WIDGET_THREADS_PER_HOUR` caps how fast threads can be minted at all.
+ * server-observed host instead of a caller-invented one. A pass is reusable
+ * within its age on purpose: making it single-use would not stop a script
+ * that reloads the page per thread, and would cost a table of spent passes.
+ * Spend is bounded separately: the company plan quota prices every message,
+ * `WIDGET_THREADS_PER_HOUR` caps how fast threads can be minted, and
+ * `WIDGET_MESSAGES_PER_HOUR` (chatService) caps the messages across all of a
+ * widget's threads whatever the plan (2026-09 audit).
  */
 
 import { constantTimeEqual } from "./security";

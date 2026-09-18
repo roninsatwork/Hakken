@@ -3,6 +3,7 @@ import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
+import { WIDGET_MESSAGES_PER_HOUR } from "./chatService";
 import type { Id } from "./_generated/dataModel";
 
 // createWidgetThread requires a server-minted embed pass; tests mint their
@@ -300,6 +301,97 @@ describe("Message Quotas Enforcements", () => {
       // real reply arrives later from the scheduled model call.
       expect(messages?.length).toBe(1);
       expect(messages?.[0].role).toBe("user");
+    });
+
+    /**
+     * 2026-09 audit: an unlimited plan meant an anonymous visitor could drive
+     * unbounded model work by opening thread after thread. The widget's own
+     * hourly message ceiling holds whatever the plan says, and across threads.
+     */
+    test("a widget's hourly message ceiling holds across threads, whatever the plan", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { widgetId } = await setUpWidgetCompany(t, {
+        messageLimit: -1,
+        messagesUsedThisPeriod: 0,
+      });
+      // One seat left in the window.
+      await t.run(async (ctx) => {
+        await ctx.db.patch(widgetId, {
+          messageWindowStart: Date.now(),
+          messageCountInWindow: WIDGET_MESSAGES_PER_HOUR - 1,
+        });
+      });
+      const first = await openWidgetThread(t, widgetId);
+      const second = await openWidgetThread(t, widgetId);
+
+      // The last seat is granted…
+      await t.mutation(api.chat.sendMessage, {
+        threadId: first.threadId,
+        content: "Hello?",
+        widgetAccessToken: first.accessToken,
+      });
+      // …and a fresh thread does not buy another: the ceiling is the widget's.
+      // The visitor gets the same soft refusal as an exhausted plan.
+      for (const attempt of [1, 2]) {
+        await t.mutation(api.chat.sendMessage, {
+          threadId: second.threadId,
+          content: `Still there? ${attempt}`,
+          widgetAccessToken: second.accessToken,
+        });
+      }
+
+      const { limited, secondThreadMessages } = await t.run(async (ctx) => ({
+        limited: (await ctx.db.query("auditLogs").collect()).filter(
+          (entry) => entry.actionType === "RATE_LIMITED_WIDGET_MESSAGES"
+        ),
+        secondThreadMessages: await ctx.db
+          .query("messages")
+          .withIndex("by_thread", (q) => q.eq("threadId", second.threadId))
+          .collect(),
+      }));
+      // Logged once for the window; each refused attempt stored only the
+      // visitor's line and the apology, and scheduled no model work.
+      expect(limited).toHaveLength(1);
+      expect(secondThreadMessages.map((message) => message.role).sort()).toEqual(["assistant", "assistant", "user", "user"]);
+      for (const reply of secondThreadMessages.filter((message) => message.role === "assistant")) {
+        expect(reply.systemKey).toBe("quotaRefusal");
+      }
+
+      // An expired window admits visitors again.
+      await t.run(async (ctx) => {
+        await ctx.db.patch(widgetId, { messageWindowStart: Date.now() - 2 * 60 * 60 * 1000 });
+      });
+      await t.mutation(api.chat.sendMessage, {
+        threadId: second.threadId,
+        content: "Back again.",
+        widgetAccessToken: second.accessToken,
+      });
+      const widget = await t.run(async (ctx) => ctx.db.get(widgetId));
+      expect(widget?.messageCountInWindow).toBe(1);
+      const reopened = await t.run(async (ctx) =>
+        ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", second.threadId)).collect()
+      );
+      expect(reopened.at(-1)).toMatchObject({ role: "user", content: "Back again." });
+    });
+
+    test("a visitor cannot choose the model, the thinking level or the swarm", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { widgetId } = await setUpWidgetCompany(t, { messageLimit: -1, messagesUsedThisPeriod: 0 });
+      const { threadId, accessToken } = await openWidgetThread(t, widgetId);
+
+      for (const settings of [{ modelId: "google:test-text-model" }, { thinkingLevel: "SWARM" }, { thinkingLevel: "HIGH" }]) {
+        await expect(
+          t.mutation(api.chat.sendMessage, {
+            threadId,
+            content: "Plan my company's expansion.",
+            widgetAccessToken: accessToken,
+            ...settings,
+          })
+        ).rejects.toThrow("cannot choose a model or thinking level");
+      }
+      // Refused before anything was stored, so nothing was scheduled either.
+      const messages = await t.query(api.chat.getMessages, { threadId, widgetAccessToken: accessToken });
+      expect(messages).toEqual([]);
     });
   });
 

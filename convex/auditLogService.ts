@@ -503,6 +503,8 @@ const ACTION_WORDS: Record<string, string> = {
   MANUAL_PURGE_TRIGGER: "Started a clear-out by hand",
   MANUAL_PURGE_CANCEL: "Cancelled a clear-out",
   BLOCKED_WIDGET_ACCESS: "Blocked a widget request",
+  RATE_LIMITED_WIDGET_THREADS: "A widget hit its hourly conversation ceiling",
+  RATE_LIMITED_WIDGET_MESSAGES: "A widget hit its hourly message ceiling",
   ASSISTANT_SAFETY_REFUSAL: "The assistant refused a request",
   CREATE_INVITE: "Invited someone",
   REVOKE_INVITE: "Withdrew an invitation",

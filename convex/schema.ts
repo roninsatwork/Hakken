@@ -3154,6 +3154,11 @@ export default defineSchema({
     // count, in the same shape as the kiosk session window above.
     threadWindowStart: v.optional(v.number()),
     threadCountInWindow: v.optional(v.number()),
+    // And the messages across all of a widget's threads share one hourly
+    // ceiling (2026-09 audit), so a visitor cannot multiply AI work by
+    // opening many threads. See `reserveWidgetMessageSeat` in chatService.
+    messageWindowStart: v.optional(v.number()),
+    messageCountInWindow: v.optional(v.number()),
     kioskThreadWindowStart: v.optional(v.number()),
     kioskThreadCountInWindow: v.optional(v.number()),
     createdBy: v.optional(v.id("users")),
