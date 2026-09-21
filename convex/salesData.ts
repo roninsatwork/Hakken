@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { issueUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { normalizeKey } from "./salesDataImportService";
@@ -674,11 +676,11 @@ export function emptyPage(paginationOpts: { cursor: string | null }) {
 // === Upload ============================================================
 
 export const generateUploadUrl = tenantMutation({
-  args: {},
+  args: uploadMetadataArgs,
   returns: v.string(),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     await requireSalesDataCompany(ctx);
-    return await ctx.storage.generateUploadUrl();
+    return await issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "workbook", args);
   },
 });
 

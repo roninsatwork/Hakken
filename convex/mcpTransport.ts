@@ -12,6 +12,8 @@
 
 import { getErrorMessage } from "./utils/lang";
 import { resolveConnectorSecret } from "./connectorSecretResolver";
+import { internal } from "./_generated/api";
+import type { ActionCtx } from "./_generated/server";
 import {
   buildInitialiseRequest,
   buildInitialisedNotification,
@@ -55,6 +57,7 @@ export function fail(reason: string): never {
  *   an attempt to exhaust the process reading it.
  */
 export async function postJsonRpc(args: {
+  ctx: Pick<ActionCtx, "runAction">;
   url: string;
   body: unknown;
   authorization?: string;
@@ -72,59 +75,44 @@ export async function postJsonRpc(args: {
   if (args.sessionId) headers["Mcp-Session-Id"] = args.sessionId;
   if (args.protocolVersion) headers["MCP-Protocol-Version"] = args.protocolVersion;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), MCP_DISCOVERY_TIMEOUT_MS);
-
-  let response: Response;
+  let response: { status: number; body: string; headers: Record<string, string> };
   try {
-    response = await fetch(args.url, {
+    response = await args.ctx.runAction(internal.outboundHttp.request, {
+      url: args.url,
       method: "POST",
       headers,
       body: JSON.stringify(args.body),
-      redirect: "manual",
-      signal: controller.signal,
+      timeoutMs: MCP_DISCOVERY_TIMEOUT_MS,
+      maxResponseBytes: MCP_MAX_RESPONSE_BYTES,
     });
   } catch (error) {
     const message = getErrorMessage(error, "unknown error");
-    fail(controller.signal.aborted
-      ? `The server did not answer within ${Math.round(MCP_DISCOVERY_TIMEOUT_MS / 1000)} seconds.`
-      : `The server could not be reached: ${message}`);
-  } finally {
-    clearTimeout(timeout);
+    fail(`The server could not be reached: ${message}`);
   }
 
   if (response.status >= 300 && response.status < 400) {
     fail("The server redirected the request, which is not followed.");
   }
 
-  const sessionId = response.headers.get("Mcp-Session-Id") ?? undefined;
+  const sessionId = response.headers["mcp-session-id"];
+  const ok = response.status >= 200 && response.status < 300;
 
   // A notification is answered with 202 and no body. There is nothing to read
   // and nothing to check beyond the status.
   if (args.expectedId === undefined) {
-    if (!response.ok && response.status !== 202) {
+    if (!ok) {
       fail(`The server rejected the handshake with status ${response.status}.`);
     }
     return { sessionId };
   }
 
-  if (!response.ok) {
+  if (!ok) {
     fail(`The server answered with status ${response.status}.`);
   }
 
-  const declaredLength = Number(response.headers.get("Content-Length") ?? "0");
-  if (declaredLength > MCP_MAX_RESPONSE_BYTES) {
-    fail("The server's reply is too large to read.");
-  }
-
-  const body = await response.text();
-  if (body.length > MCP_MAX_RESPONSE_BYTES) {
-    fail("The server's reply is too large to read.");
-  }
-
   const outcome = readJsonRpcResponse({
-    contentType: response.headers.get("Content-Type"),
-    body,
+    contentType: response.headers["content-type"] ?? null,
+    body: response.body,
     expectedId: args.expectedId,
   });
   if (!outcome.ok) fail(outcome.reason);
@@ -134,11 +122,13 @@ export async function postJsonRpc(args: {
 
 /** Open a session: greet the server, and tell it we are ready. */
 export async function openSession(
+  ctx: Pick<ActionCtx, "runAction">,
   url: string,
   clientName: string,
   authorization?: string,
 ): Promise<Exchange & { label?: string }> {
   const greeting = await postJsonRpc({
+    ctx,
     url,
     body: buildInitialiseRequest(1, clientName),
     authorization,
@@ -151,6 +141,7 @@ export async function openSession(
   // Owed to the server before any real request. A server within its rights to
   // refuse everything until it arrives.
   await postJsonRpc({
+    ctx,
     url,
     body: buildInitialisedNotification(),
     authorization,
@@ -173,15 +164,34 @@ export async function openSession(
  * which variable is missing; nobody needs its contents.
  */
 export function resolveServerAuthorization(server: {
+  _id: string;
+  companyId: string;
+  url: string;
   authMode: "NONE" | "SECRET_REF";
   secretRef?: string;
-}): { ok: true; authorization?: string } | { ok: false; reason: string } {
+}, env: Record<string, string | undefined> = process.env): { ok: true; authorization?: string } | { ok: false; reason: string } {
   if (server.authMode !== "SECRET_REF") return { ok: true };
   if (!server.secretRef) {
     return { ok: false, reason: "This server has no credential configured." };
   }
 
-  const lookup = resolveConnectorSecret(server.secretRef, process.env);
+  // Only the deployment operator can grant a credential to a tenant/server/URL.
+  // Tenant-editable references and URLs are never themselves authorization.
+  let approved = false;
+  try {
+    const bindings: unknown = JSON.parse(env.MCP_CREDENTIAL_BINDINGS ?? "[]");
+    approved = Array.isArray(bindings) && bindings.some((binding: unknown) => {
+      if (!binding || typeof binding !== "object") return false;
+      const row = binding as Record<string, unknown>;
+      return row.companyId === server.companyId && row.serverId === server._id
+        && row.secretRef === server.secretRef && row.url === new URL(server.url).href;
+    });
+  } catch {
+    // Invalid or absent operator configuration fails closed.
+  }
+  if (!approved) return { ok: false, reason: "The deployment operator must approve this server's credential and exact URL in MCP_CREDENTIAL_BINDINGS." };
+
+  const lookup = resolveConnectorSecret(server.secretRef, env);
   if (!lookup.found) {
     return {
       ok: false,

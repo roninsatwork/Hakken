@@ -303,6 +303,15 @@ completed work.
   inactivity reset and token rotation between visitors, and kiosk health
   on the admin widget screen. Records the decisions that the kiosk is a
   widget presented differently, and that wake words are out of scope.
+- [Decisions — TypeSafe judgments, visible and switchable](./active/decisions-typesafe-plan.md) —
+  TypeSafe comes in as a judgment-only provider and every judgment it makes
+  becomes a named Decision with a plain question, three certainty words,
+  three modes (Off / Ask a person / Acts on its own), a run row, an audit
+  entry when it acts, and one shared pill on every screen that shows a
+  result, including Health, agent runs and chat logs. The rules Hakken uses
+  today stay as each Decision's fallback. Mailbox first, then chat safety,
+  then the wiki checkers. **Agreed 2026-09-17, not started; 0%.** Waiting on
+  a TypeSafe account and key.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of

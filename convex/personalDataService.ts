@@ -57,6 +57,9 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   { table: "arcadeScores", fields: ["userId"], treatment: "ERASE", reason: "Their scores." },
   { table: "arcadeRuns", fields: ["userId"], treatment: "ERASE", reason: "Their Night Heist run receipts." },
   { table: "aiActionRequests", fields: ["actorId"], treatment: "ERASE", reason: "Their rate-limit counters." },
+  { table: "uploadReservations", fields: ["userId"], treatment: "DISSOCIATE", reason: "Retain attached business files without the erased uploader identity." },
+  { table: "billingAccounts", fields: ["auditActorId"], treatment: "DISSOCIATE", reason: "The most recent billing worker; permanent attribution remains in the audit trail." },
+  { table: "billingSettings", fields: ["updatedBy"], treatment: "DISSOCIATE", reason: "The current settings remain; permanent operator attribution is kept in the audit trail." },
   { table: "analyticsDailySnapshots", fields: ["userId"], treatment: "ERASE", reason: "Their usage, counted per person." },
   { table: "agentMemories", fields: ["userId"], treatment: "ERASE", reason: "What an assistant remembered about them." },
   {
@@ -111,6 +114,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   // --- Shared records that merely note who touched them -----------------
   ...([
     ["aiModelDefaults", ["updatedBy"]],
+    ["decisionSettings", ["updatedBy"]],
     ["invitations", ["invitedBy"]],
     ["emailTemplates", ["updatedBy"]],
     ["systemConfig", ["updatedBy"]],
@@ -268,9 +272,12 @@ export type PersonalDataSection = {
  * a benefit taken rarely.
  */
 export const PERSONAL_DATA_INDEXES: Readonly<Record<string, string>> = {
+  "uploadReservations.userId": "by_user",
   "agentRunFeedback.userId": "by_user_agent_updated",
   "messageFeedback.userId": "by_user_created",
   "aiActionRequests.actorId": "by_actor_action_requested",
+  "billingAccounts.auditActorId": "by_audit_actor",
+  "billingSettings.updatedBy": "by_updated_by",
   "analyticsDailySnapshots.userId": "by_user_date",
   "arcadeScores.userId": "by_user",
   "arcadeRuns.userId": "by_user_started",

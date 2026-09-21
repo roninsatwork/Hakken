@@ -49,13 +49,24 @@ export const publish = internalMutation({
     const value = { key: "stripe" as const, config, revision: args.revision + 1, updatedAt: Date.now(), updatedBy: args.userId };
     if (saved) await ctx.db.patch(saved._id, value);
     else await ctx.db.insert("billingSettings", value);
+    await ctx.db.insert("auditLogs", {
+      actionType: "BILLING_CONFIGURATION_CHANGED", actorId: args.userId,
+      entityType: "billingSettings", entityId: "stripe", timestamp: Date.now(),
+      metadata: JSON.stringify({ revision: value.revision, before: previous, after: config }),
+    });
     return null;
   },
 });
 
 export const recordWebhook = internalMutation({
-  args: {}, returns: v.null(),
-  handler: async ctx => {
+  args: { eventId: v.string(), eventType: v.string() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const seen = await ctx.db.query("auditLogs").withIndex("by_action_entity_timestamp", q =>
+      q.eq("actionType", "BILLING_WEBHOOK_RECEIVED").eq("entityId", args.eventId)).first();
+    if (!seen) await ctx.db.insert("auditLogs", {
+      actionType: "BILLING_WEBHOOK_RECEIVED", entityType: "stripeEvents", entityId: args.eventId,
+      timestamp: Date.now(), metadata: JSON.stringify({ eventType: args.eventType }),
+    });
     const row = await ctx.db.query("billingHealth").withIndex("by_key", q => q.eq("key", "stripe")).unique();
     if (row) await ctx.db.patch(row._id, { lastWebhookAt: Date.now() });
     else await ctx.db.insert("billingHealth", { key: "stripe", lastWebhookAt: Date.now() });

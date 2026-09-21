@@ -10,8 +10,11 @@ import {
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
   REALTIME_MODEL_USE_CASE,
+  TYPESAFE_PROVIDER_KEY,
+  DECISION_MODEL_USE_CASE,
 } from "./aiModelService";
 import { listAnthropicModels } from "./anthropicProviderService";
+import { listTypesafeModels } from "./typesafeProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
 import { listOpenRouterModels } from "./openrouterProviderService";
 import { buildVertexProviderConfig, createVertexGenAIClient, isVertexTextGenerationModel, listVertexModels } from "./vertexProviderService";
@@ -25,6 +28,7 @@ function getProviderDisplayName(providerKey: string) {
   if (providerKey === OPENAI_PROVIDER_KEY) return "OpenAI";
   if (providerKey === ANTHROPIC_PROVIDER_KEY) return "Anthropic";
   if (providerKey === OPENROUTER_PROVIDER_KEY) return "OpenRouter";
+  if (providerKey === TYPESAFE_PROVIDER_KEY) return "TypeSafe";
   return providerKey;
 }
 
@@ -342,6 +346,33 @@ export async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
 }
 
 /**
+ * TypeSafe models are stamped by what the provider is, not by what their id
+ * says. Every model it lists is a judgment model: it can serve the Decisions
+ * job and nothing else, and the id-substring rules above (which decide
+ * "reasoning" from an "o" or an "opus") have nothing true to say about it.
+ */
+export async function syncTypesafeModelCatalogue(ctx: ActionCtx) {
+  const models = await listTypesafeModels();
+  const formattedModels = models.map((model) => ({
+    modelId: `${TYPESAFE_PROVIDER_KEY}:${model.id}`,
+    providerModelId: model.id,
+    displayName: titleizeModelId(model.id),
+    description: model.description
+      ?? "TypeSafe judgment model: answers yes-or-no, pick-one and how-much questions with a certainty.",
+    capabilities: [DECISION_MODEL_USE_CASE],
+    supportedUseCases: [DECISION_MODEL_USE_CASE],
+  }));
+
+  await ctx.runMutation(internal.aiModels.internalBatchUpsert, {
+    providerKey: TYPESAFE_PROVIDER_KEY,
+    providerDisplayName: "TypeSafe",
+    models: formattedModels,
+  });
+
+  return formattedModels;
+}
+
+/**
  * What a sync tells the screen.
  *
  * The whole formatted catalogue used to travel back — hundreds of model records
@@ -398,6 +429,18 @@ export const syncAnthropicModels = superAdminAction({
   },
 });
 
+export const syncTypesafeModels = superAdminAction({
+  args: {},
+  returns: modelSyncOutcome,
+  handler: async (ctx) => {
+    try {
+      return { synced: (await syncTypesafeModelCatalogue(ctx)).length };
+    } catch (e: unknown) {
+      throw appError("UPSTREAM_FAILURE", `Failed to sync TypeSafe models: ${getErrorMessage(e, "Unknown error")}`);
+    }
+  },
+});
+
 export const syncVertexModels = superAdminAction({
   args: {},
   returns: modelSyncOutcome,
@@ -449,6 +492,11 @@ export const probeProviderInternal = internalAction({
         detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
       } else if (args.providerKey === OPENROUTER_PROVIDER_KEY) {
         const models = await listOpenRouterModels();
+        detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
+      } else if (args.providerKey === TYPESAFE_PROVIDER_KEY) {
+        // Listing is free; asking a question is not. The hourly probe runs
+        // this body for every enabled provider, so the check must never spend.
+        const models = await listTypesafeModels();
         detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
       } else {
         throw appError("INVALID_INPUT", `Unsupported provider '${args.providerKey}'.`);

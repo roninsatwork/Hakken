@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from "./settingsService";
+import { readTicket } from "../services/voice-relay/protocol.mjs";
 import { beforeEach, expect, test, describe, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { api, internal } from "./_generated/api";
@@ -847,7 +848,7 @@ describe("the live voice session", () => {
     }
 
     function readTicketPayload(ticket: string) {
-        return JSON.parse(Buffer.from(ticket.split(".")[0], "base64url").toString("utf8"));
+        return readTicket(ticket, "shared-secret");
     }
 
     /** Asserts the Google transport and narrows to it, so the fields exist. */

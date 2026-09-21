@@ -12,6 +12,8 @@ describe("ai provider retry service", () => {
   test("classifies retryable and non-retryable HTTP statuses", () => {
     expect(isRetryableHttpStatus(429)).toBe(true);
     expect(isRetryableHttpStatus(503)).toBe(true);
+    // "Overloaded" at Anthropic and TypeSafe.
+    expect(isRetryableHttpStatus(529)).toBe(true);
     expect(isRetryableHttpStatus(401)).toBe(false);
   });
 

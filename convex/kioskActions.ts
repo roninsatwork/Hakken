@@ -52,15 +52,6 @@ export const createKioskVoiceSession = publicAction({
       throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
-    // One wake tap reserves one session, counted per widget per hour; the
-    // same call is the kiosk's heartbeat for the admin screen.
-    const reservation = await ctx.runMutation(internal.kiosk.reserveKioskSession, {
-      widgetId: args.widgetId,
-    });
-    if (!reservation.ok) {
-      return { ok: false, reason: reservation.reason ?? "The assistant is busy just now." };
-    }
-
     const relayUrl = process.env.VOICE_RELAY_URL?.trim();
     const relaySecret = process.env.VOICE_RELAY_SECRET?.trim();
     if (!relayUrl || !relaySecret) {
@@ -78,6 +69,17 @@ export const createKioskVoiceSession = publicAction({
       !isSpeechToSpeechModelId(modelConfig.providerModelId)
     ) {
       return { ok: false, reason: "The assistant is not available on this screen yet." };
+    }
+
+    // A minted ticket must not lock the one shared kiosk voice slot. Bound
+    // issuance by this conversation before assembling its company prompt;
+    // the relay takes the active lease only when it redeems a real session.
+    const admission = await ctx.runMutation(internal.kiosk.authorizeKioskVoiceTicket, {
+      widgetId: args.widgetId,
+      threadId: args.threadId,
+    });
+    if (!admission.ok) {
+      return { ok: false, reason: admission.reason ?? "The assistant is busy just now." };
     }
 
     const instructions = await buildSpokenSessionInstructions(ctx, access.companyId);
@@ -101,6 +103,8 @@ export const createKioskVoiceSession = publicAction({
         tools: [VOICE_KNOWLEDGE_TOOL_DECLARATION],
         companyId: access.companyId ?? null,
         threadId: args.threadId,
+        kioskWidgetId: args.widgetId,
+        meteredVoiceTurns: true,
         expiresAt,
       },
       relaySecret

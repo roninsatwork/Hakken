@@ -46,7 +46,7 @@ type SaveMovementRecordingInput = {
   bodyFocus?: MovementBodyFocus[];
   captureStartReadiness?: MovementStartReadiness | null;
   frames: MovementFrame[];
-  generateUploadUrl: () => Promise<string>;
+  generateUploadUrl: (args: { sizeBytes: number; contentType: string }) => Promise<string>;
   createMovement: (input: MovementCreateInput) => Promise<unknown>;
   uploadFetch?: typeof fetch;
   requireCommissioningPacket?: boolean;
@@ -164,13 +164,13 @@ export async function saveMovementRecording({
     requireCommissioningPacket,
     requireDeepCapturePacket,
   });
-  const postUrl = await generateUploadUrl();
   // Written and compressed once. The old path stringified the packet twice —
   // once to hash it and once to send it — which on a deep capture meant two
   // 35MB strings alive at the same time on top of the frames themselves.
   const { body, contentType } = await buildMovementRecordingUploadBody(
     serializeMovementRecordingPacket(payload),
   );
+  const postUrl = await generateUploadUrl({ sizeBytes: typeof body === "string" ? new Blob([body]).size : body.size, contentType });
   const uploadResponse = await uploadFetch(postUrl, {
     method: "POST",
     headers: { "Content-Type": contentType },

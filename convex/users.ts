@@ -1,6 +1,8 @@
 import { internalQuery, internalMutation } from "./_generated/server";
 import schema from "./schema";
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -76,8 +78,10 @@ export const getUserInternal = internalQuery({
   },
 });
 
-export const generateUploadUrl = tenantMutation(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
+export const generateUploadUrl = tenantMutation({
+  args: uploadMetadataArgs,
+  returns: v.string(),
+  handler: async (ctx, args) => issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "image", args),
 });
 
 // === User Management CRUD Operations ===
@@ -467,6 +471,7 @@ export const updateMyProfile = tenantMutation({
 
     let resolvedImageUrl = args.image;
     if (args.storageId) {
+      await requireOwnedUpload(ctx, args.storageId, { userId: ctx.userId, companyId: ctx.companyId }, ["image"]);
       await validateStoredUpload(ctx, args.storageId, validateAdminImageMetadata);
       resolvedImageUrl = (await ctx.storage.getUrl(args.storageId)) ?? args.image;
     }

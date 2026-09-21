@@ -7,6 +7,7 @@ import {
   type AgentRiskLevel,
 } from "./agentRiskService";
 import { v } from "convex/values";
+import { requireOwnedUpload } from "./uploadReservations";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -920,6 +921,7 @@ export const createAgent = superAdminMutation({
 
     let resolvedAvatarUrl = args.avatar;
     if (args.storageId) {
+      await requireOwnedUpload(ctx, args.storageId, { userId: ctx.userId, companyId: ctx.companyId }, ["image"]);
       await validateStoredUpload(ctx, args.storageId, validateAdminImageMetadata);
       resolvedAvatarUrl = (await ctx.storage.getUrl(args.storageId)) ?? args.avatar;
     }
@@ -1178,6 +1180,7 @@ export const updateAgent = superAdminMutation({
     
     let resolvedAvatarUrl = updates.avatar;
     if (storageId) {
+      await requireOwnedUpload(ctx, storageId, { userId: ctx.userId, companyId: ctx.companyId }, ["image"]);
       await validateStoredUpload(ctx, storageId, validateAdminImageMetadata);
       resolvedAvatarUrl = (await ctx.storage.getUrl(storageId)) ?? updates.avatar;
     }

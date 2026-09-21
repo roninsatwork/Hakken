@@ -209,7 +209,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
 
           uploadedFileIds = [];
           for (const file of filesSnapshot) {
-             const postUrl = await generateUploadUrl();
+             const postUrl = await generateUploadUrl({ sizeBytes: file.size, contentType: file.type });
              const result = await fetch(postUrl, {
                method: "POST",
                headers: { "Content-Type": file.type },

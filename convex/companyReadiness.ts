@@ -6,6 +6,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import * as tailShapes from "./utils/tailShapes";
 import { requireCompanyAccess } from "./authz";
 import { summariseCompanyModelRouting } from "./aiModels";
+import { summariseCompanyDecisionModes } from "./decisionRuns";
 import { parseStoredStringArray } from "./utils/lang";
 
 const READINESS_EVAL_LIMIT = 1000;
@@ -90,6 +91,7 @@ async function buildCompanyAiAreas(ctx: QueryCtx, companyId: Id<"companies">, co
     enabledBindings,
     evalCases,
     unresolvedDriftEvents,
+    decisions,
   ] = await Promise.all([
     ctx.db
       .query("aiRules")
@@ -132,6 +134,7 @@ async function buildCompanyAiAreas(ctx: QueryCtx, companyId: Id<"companies">, co
       .withIndex("by_company_resolved_created", (q) => q.eq("companyId", companyId).eq("resolvedAt", undefined))
       .order("desc")
       .take(DRIFT_SCAN_LIMIT),
+    summariseCompanyDecisionModes(ctx, companyId),
   ]);
 
   const promptLength = company.systemPrompt?.trim().length ?? 0;
@@ -220,6 +223,17 @@ async function buildCompanyAiAreas(ctx: QueryCtx, companyId: Id<"companies">, co
             state: "NOT_CONFIGURED" as const,
             summary: `All ${routing.totalUseCases} jobs use the platform's model.`,
           }),
+    },
+    {
+      key: "decisions",
+      label: "Decisions",
+      href: "/ai/decisions",
+      ...(decisions.setHere > 0
+        ? {
+          state: "SET_HERE" as const,
+          summary: `${decisions.setHere} of ${decisions.total} ${pluralise(decisions.setHere, "decision has", "decisions have")} a mode chosen here.`,
+        }
+        : { state: "NOT_CONFIGURED" as const, summary: "Follows the platform's modes." }),
     },
     {
       key: "memory",

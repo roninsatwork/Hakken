@@ -38,6 +38,7 @@ export default function AIModelProvidersPage() {
   const syncOpenAIModels = useAction(api.aiModelsActions.syncOpenAIModels);
   const syncAnthropicModels = useAction(api.aiModelsActions.syncAnthropicModels);
   const syncOpenRouterModels = useAction(api.aiModelsActions.syncOpenRouterModels);
+  const syncTypesafeModels = useAction(api.aiModelsActions.syncTypesafeModels);
   const testProviderConnection = useAction(api.aiModelsActions.testProviderConnection);
   const setProviderEnabled = useMutation(api.aiModels.setProviderEnabled);
   const action = useAdminAction({ scope: "admin-ai-model-providers" });
@@ -78,6 +79,7 @@ export default function AIModelProvidersPage() {
     openai: syncOpenAIModels,
     anthropic: syncAnthropicModels,
     openrouter: syncOpenRouterModels,
+    typesafe: syncTypesafeModels,
   };
 
   const syncProvider = async (providerKey: SyncProviderKey) => {

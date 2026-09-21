@@ -2,6 +2,8 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { billingTables } from "./billingSchema";
+import { uploadTables } from "./uploadSchema";
+import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 // template:remove:start movement
 const movementCameraBodyPartValidator = v.union(
@@ -59,6 +61,7 @@ export const opportunityHeadlineValidator = v.object({
 export default defineSchema({
   ...authTables,
   ...billingTables,
+  ...uploadTables,
   
   companies: defineTable({
     name: v.string(),
@@ -690,6 +693,7 @@ export default defineSchema({
       v.literal("transcribeAudio"),
       v.literal("synthesizeSpeech"),
       v.literal("realtimeVoiceSession"),
+      v.literal("voiceKnowledge"),
       v.literal("voicePreview"),
       v.literal("generateNodeConfig")
     ),
@@ -704,6 +708,16 @@ export default defineSchema({
     ticketId: v.string(),
     expiresAt: v.number(),
     redeemedAt: v.number(),
+    kioskWidgetId: v.optional(v.id("widgets")),
+    kioskThreadId: v.optional(v.id("threads")),
+    quotaCompanyId: v.optional(v.id("companies")),
+    quotaCountAfterReservation: v.optional(v.number()),
+    pendingTurnIndex: v.optional(v.number()),
+    completedTurns: v.optional(v.number()),
+    lookups: v.optional(v.number()),
+    windowAt: v.optional(v.number()),
+    windowLookups: v.optional(v.number()),
+    closedAt: v.optional(v.number()),
   })
     .index("by_ticket_id", ["ticketId"])
     .index("by_expires_at", ["expiresAt"]),
@@ -835,6 +849,9 @@ export default defineSchema({
       // sign-in form to post mail at a person.
       v.literal("MAGIC_LINK_THROTTLED"),
       v.literal("MAGIC_LINK_STARTED"),
+      // Reserved at the actual auth-provider send boundary. Unlike the
+      // screen's preflight events, this also covers direct auth:signIn calls.
+      v.literal("AUTH_EMAIL_SEND_RESERVED"),
       v.literal("INVITE_FOUND"),
       v.literal("INVITE_MISSING"),
       v.literal("INVITE_EXPIRED"),
@@ -2165,6 +2182,16 @@ export default defineSchema({
       filterFields: ["companyId"],
     }),
 
+  // One reusable hourly cost counter per knowledge scope. Keeping the counter
+  // separate from documents means deleting an imported page cannot reset the
+  // paid-provider allowance.
+  knowledgeImportQuotas: defineTable({
+    scopeKey: v.string(),
+    windowStartedAt: v.number(),
+    queuedUrls: v.number(),
+    mapRequests: v.number(),
+  }).index("by_scope", ["scopeKey"]),
+
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({
     documentId: v.id("knowledgeDocuments"),
@@ -2207,6 +2234,9 @@ export default defineSchema({
     widgetAccessTokenHash: v.optional(v.string()),
     /** Upload URLs already issued to this anonymous conversation. */
     widgetUploadUrlCount: v.optional(v.number()),
+    /** Bounds voice-ticket minting by one anonymous kiosk conversation. */
+    kioskTicketWindowStart: v.optional(v.number()),
+    kioskTicketCountInWindow: v.optional(v.number()),
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     /**
@@ -3111,6 +3141,14 @@ export default defineSchema({
     kioskSessionCountInWindow: v.optional(v.number()),
     kioskLastSeenAt: v.optional(v.number()),
     kioskSessionCount: v.optional(v.number()),
+    // Legacy pending fields remain optional for existing rows, but no longer
+    // gate admission: an unredeemed anonymous ticket must not lock the desk.
+    kioskVoicePendingThreadId: v.optional(v.id("threads")),
+    kioskVoicePendingUntil: v.optional(v.number()),
+    // Only a redeemed session holds the shared active lease. It expires if a
+    // device vanishes without delivering the close event.
+    kioskVoiceActiveTicketId: v.optional(v.string()),
+    kioskVoiceActiveUntil: v.optional(v.number()),
     // Anonymous thread minting is rate-windowed per widget (2026-08 security
     // audit): the widget door and the kiosk door each keep their own hourly
     // count, in the same shape as the kiosk session window above.
@@ -3311,6 +3349,7 @@ export default defineSchema({
       v.literal("agentTransactions"),
       v.literal("phoneCalls"),
       v.literal("mailboxMessages"),
+      v.literal("decisionRuns"),
       v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
@@ -3733,6 +3772,47 @@ export default defineSchema({
    * Deduplicated by key so the same disagreement is not raised nightly,
    * and auto-resolved when the pages change so the claim no longer stands.
    */
+  /** One row per Decision run, by reference to its subject, never its text (docs/plans/active/decisions-typesafe-plan.md). */
+  decisionRuns: defineTable({
+    decisionKey: v.string(),
+    companyId: v.optional(v.id("companies")),
+    subjectKind: v.string(),
+    subjectId: v.string(),
+    answer: v.string(),
+    probabilities: v.optional(v.string()),
+    certainty: v.optional(decisionCertaintyValidator),
+    mode: decisionModeValidator,
+    outcome: decisionOutcomeValidator,
+    source: decisionSourceValidator,
+    fallbackReason: v.optional(decisionFallbackReasonValidator),
+    action: v.optional(v.string()),
+    costGBP: v.number(),
+    agentRunId: v.optional(v.id("agentRuns")),
+    threadId: v.optional(v.id("threads")),
+    messageId: v.optional(v.id("messages")),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_key_created", ["decisionKey", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_key_created", ["companyId", "decisionKey", "createdAt"])
+    .index("by_subject", ["subjectKind", "subjectId"])
+    .index("by_agent_run", ["agentRunId"])
+    .index("by_thread", ["threadId"])
+    .index("by_message", ["messageId"]),
+
+  /** A Decision's mode, platform-wide or for one company; same shape as `aiModelDefaults`. */
+  decisionSettings: defineTable({
+    scope: v.union(v.literal("global"), v.literal("company")),
+    companyId: v.optional(v.id("companies")),
+    decisionKey: v.string(),
+    mode: decisionModeValidator,
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  })
+    .index("by_scope_key", ["scope", "decisionKey"])
+    .index("by_company_key", ["companyId", "decisionKey"]),
+
   wikiOpenQuestions: defineTable({
     companyId: v.optional(v.id("companies")),
     kind: v.union(
@@ -3741,7 +3821,9 @@ export default defineSchema({
       // A person's typed correction from chat, routed here once their
       // company's memories migrated (one-brain-plan.md, phase 3) — the
       // queue that used to live on the Memory screen.
-      v.literal("CORRECTION")
+      v.literal("CORRECTION"),
+      // Judged worth filing while the Decision's mode says a person decides.
+      v.literal("FILING")
     ),
     pageKeyA: v.string(),
     claimA: v.string(),
@@ -3750,6 +3832,8 @@ export default defineSchema({
     detail: v.optional(v.string()),
     dedupeKey: v.string(),
     status: v.union(v.literal("OPEN"), v.literal("RESOLVED"), v.literal("DISMISSED")),
+    decisionKey: v.optional(v.string()),
+    certainty: v.optional(decisionCertaintyValidator),
     raisedAt: v.number(),
     resolvedAt: v.optional(v.number()),
     resolvedBy: v.optional(v.id("users")),

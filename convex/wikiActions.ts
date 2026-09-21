@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { runDecisions } from "./decisionActions";
 import {
   buildRewriteSystemInstruction,
   buildRewriteUserContent,
@@ -31,6 +32,8 @@ export const selectWikiContextForQuery = internalAction({
     query: v.string(),
     includeCustomerPages: v.boolean(),
     maxChars: v.optional(v.number()),
+    /** The conversation this reading serves, so its Decision runs show in "Why this answer?". */
+    threadId: v.optional(v.id("threads")),
   },
   handler: async (
     ctx,
@@ -139,8 +142,34 @@ export const selectWikiContextForQuery = internalAction({
           .slice(0, 4);
       };
 
+      // Each pick is checked (decisions-typesafe-plan.md, Phase F.3): the
+      // chooser's pick is the rule; a switched-on Decision that is sure the
+      // page is about something else leaves it out of the reading.
+      const keepPagesThatAnswer = async (
+        keys: string[],
+        index: Array<{ key: string; title: string; hint: string }>,
+      ): Promise<string[]> => {
+        if (keys.length === 0) return keys;
+        // One provider request for all the picks (at most four), each its
+        // own question; a call per page multiplied spend for nothing.
+        const results = await runDecisions(ctx, {
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          subject: { kind: "wikiPages", id: keys.join("|").slice(0, 300) },
+          state: {
+            question: args.query.slice(0, 400),
+            pages: Object.fromEntries(keys.map((key) => [key, { key, hint: index.find((candidate) => candidate.key === key)?.hint ?? "" }])),
+          },
+          requests: keys.map((key) => ({ key: "wiki.page-answers-question", id: key, fallback: () => ({ kind: "yes-no", yes: true }) })),
+          ...(args.threadId ? { links: { threadId: args.threadId } } : {}),
+        });
+        return keys.filter((key) => {
+          const result = results[key];
+          return !(result.verdict === "ACT" && result.answer.kind === "yes-no" && !result.answer.yes);
+        });
+      };
+
       const tended = await buildIndex(false);
-      const tendedKeys = await chooseFrom(tended);
+      const tendedKeys = await keepPagesThatAnswer(await chooseFrom(tended), tended);
       if (tendedKeys.length > 0) return await openBothShelves(tendedKeys);
 
       // Nothing among the tended pages covers it. Before believing the wiki
@@ -149,7 +178,7 @@ export const selectWikiContextForQuery = internalAction({
       // still a shelf that holds the answer.
       const withSources = await buildIndex(true);
       if (withSources.length === tended.length) return { context: "", pageKeys: [] };
-      const sourceKeys = await chooseFrom(withSources);
+      const sourceKeys = await keepPagesThatAnswer(await chooseFrom(withSources), withSources);
       if (sourceKeys.length > 0) return await openBothShelves(sourceKeys);
       // Both passes read the index and found nothing: believe it.
       return { context: "", pageKeys: [] };

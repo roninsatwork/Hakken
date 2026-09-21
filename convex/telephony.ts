@@ -20,7 +20,7 @@ import {
   parseNumberOwnership,
   signaturesMatch,
 } from "./telephonyService";
-import { base64UrlToText, ticketIsAuthentic } from "./voiceRelay";
+import { readAuthenticTicket } from "./voiceRelay";
 import { resolveConnectorSecret } from "./connectorSecretResolver";
 import {
   TWILIO_AUTH_TOKEN_SECRET_REF,
@@ -415,25 +415,10 @@ export const handleCallTurns = httpAction(async (ctx, request) => {
 
   const ticket = typeof body.ticket === "string" ? body.ticket : "";
   const callSid = typeof body.callSid === "string" ? body.callSid : "";
-  const [payloadPart, signaturePart] = ticket.split(".");
-  if (!payloadPart || !signaturePart || !callSid) return new Response(null, { status: 401 });
-
-  let authentic = false;
-  try {
-    authentic = await ticketIsAuthentic(payloadPart, signaturePart, secret);
-  } catch {
-    authentic = false;
-  }
-  if (!authentic) return new Response(null, { status: 401 });
-
-  let payload: { companyId?: string | null; expiresAt?: number };
-  try {
-    payload = JSON.parse(base64UrlToText(payloadPart)) as typeof payload;
-  } catch {
-    return new Response(null, { status: 401 });
-  }
+  if (!callSid) return new Response(null, { status: 401 });
+  const payload = await readAuthenticTicket(ticket, secret);
   if (
-    typeof payload.expiresAt !== "number" ||
+    !payload || typeof payload.expiresAt !== "number" ||
     payload.expiresAt + MAX_CALL_SESSION_MS < Date.now() ||
     !payload.companyId
   ) {

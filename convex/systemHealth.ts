@@ -16,6 +16,7 @@ import { appError } from "./utils/appError";
 import * as healthShapes from "./utils/healthShapes";
 import { listDisabledPurgePipelines } from "./purgeScheduleService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
+import { getDecisionHealth } from "./decisionHealth";
 import {
   type AlertRuleStatus,
   type AnalyticsHealthReport,
@@ -41,7 +42,7 @@ type AnalyticsDataHealthArgs = {
   daysBack?: number;
   scope?: HealthScope;
 };
-type HealthScope = {
+export type HealthScope = {
   companyId?: Id<"companies">;
   companyName?: string;
   type: "company" | "platform";
@@ -656,7 +657,12 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     }))
   );
 
+  const decisions = await getDecisionHealth(ctx, { scope, windowStartTs, now });
+
   return {
+    decisionsHandedToPerson: buildOperationalBucket(decisions.handedToPerson.examples, decisions.handedToPerson.count),
+    decisionsOnSimpleRules: buildOperationalBucket(decisions.onSimpleRules.examples, decisions.onSimpleRules.count),
+    decisionsUnsure: buildOperationalBucket(decisions.unsure.examples, decisions.unsure.count),
     agentFailures: buildOperationalBucket(agentFailures, agentFailureLogs.length),
     failedAgentTransactions: buildOperationalBucket(failedAgentTransactions, failedTransactions.length),
     failedToolCalls: buildOperationalBucket(failedToolCalls, scopedFailedToolCalls.length),

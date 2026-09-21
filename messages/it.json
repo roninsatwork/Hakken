@@ -876,6 +876,70 @@
     "exitWorkspace": "Esci dal Tenant"
   },
   "admin": {
+    "decisions": {
+      "title": "Decisioni",
+      "subtitle": "I giudizi che la piattaforma prende da sola, e quanta libertà ha ciascuno.",
+      "companySubtitle": "I giudizi che la piattaforma prende per questa azienda, e quanta libertà ha ciascuno.",
+      "explainer": "Una Decisione è una domanda a cui la piattaforma risponde con una certezza: sicuro, abbastanza sicuro o non sicuro. Spento vuol dire che gira la regola semplice, come prima. Chiedi a una persona vuol dire che ogni risposta va a qualcuno. Agisce da solo vuol dire che agisce quando è abbastanza sicuro e chiede a una persona quando non lo è.",
+      "usingSimpleRules": "Nessun modello può rispondere al lavoro Decisioni in questo momento, quindi ogni Decisione usa la sua regola semplice.",
+      "openModelDefaults": "Apri i modelli predefiniti",
+      "searchPlaceholder": "Cerca decisioni",
+      "empty": "Nessuna Decisione ancora",
+      "showing": "{count, plural, one {# decisione} other {# decisioni}}",
+      "columnDecision": "Decisione",
+      "columnUsedIn": "Usata in",
+      "columnThisWeek": "Questa settimana",
+      "columnMode": "Modalità",
+      "columnPlatformMode": "Piattaforma",
+      "columnCompanyMode": "Questa azienda",
+      "ran": "{count, plural, =0 {Mai eseguita} one {# esecuzione} other {# esecuzioni}}",
+      "ranAtLeast": "almeno {count} esecuzioni",
+      "handed": "{count} a una persona",
+      "followPlatform": "Segui la piattaforma ({mode})",
+      "modeAria": "Modalità per {name}",
+      "saveFailed": "La modalità non è stata salvata. Riprova.",
+      "stakes": {
+        "LOW": "Agisce da sola quando è almeno abbastanza sicura.",
+        "HIGH": "Agisce da sola solo quando è sicura."
+      },
+      "subjectKinds": {
+        "email": "Email",
+        "message": "Messaggio",
+        "wikiPage": "Pagina wiki"
+      },
+      "detail": {
+        "back": "Torna alle Decisioni",
+        "questionTitle": "La domanda, come la vede il modello",
+        "answersTitle": "Risposte che può dare",
+        "modeLine": "Modalità: {mode}",
+        "weekLine": "Questa settimana: {ran} esecuzioni, {handed} passate a una persona, {cost} spesi.",
+        "runsTitle": "Ultime esecuzioni",
+        "runsHint": "Le {count} esecuzioni più recenti. Il soggetto è un riferimento, mai il testo.",
+        "emptyRuns": "Questa Decisione non è ancora stata eseguita",
+        "showingRuns": "{count, plural, one {# esecuzione} other {# esecuzioni}}",
+        "columnWhen": "Quando",
+        "columnSubject": "Soggetto",
+        "columnAnswer": "Risposta",
+        "columnCertainty": "Certezza",
+        "columnOutcome": "Cosa è successo",
+        "columnSource": "Giudicata da",
+        "outcome": {
+          "ACTED": "Ha agito",
+          "HANDED_TO_PERSON": "Passata a una persona",
+          "RECORDED": "Registrata"
+        },
+        "source": {
+          "TYPESAFE": "TypeSafe",
+          "TEXT_MODEL": "Il modello scelto",
+          "RULES": "Regola semplice"
+        },
+        "fallback": {
+          "MODE_OFF": "spenta",
+          "NO_MODEL": "nessun modello scelto",
+          "PROVIDER_FAILED": "TypeSafe non ha risposto"
+        }
+      }
+    },
     "overview": {
       "title": "Dashboard Protocollo",
       "subtitle": "Utilizzo e analisi della piattaforma.",
@@ -1333,6 +1397,7 @@
           "prompt": "Prompt",
           "aiRules": "Regole AI",
           "aiModels": "Modelli AI",
+          "decisions": "Decisioni",
           "evals": "Valutazioni",
           "chatLogs": "Registri chat",
           "calls": "Chiamate",
@@ -3418,6 +3483,13 @@
               "underASecond": "meno di un secondo",
               "showMore": "Mostra altri"
             },
+            "decisions": {
+              "aria": "Come sono andate le sue Decisioni",
+              "title": "Decisioni",
+              "line": "{ran, plural, =0 {Nessuna Decisione eseguita in questo periodo.} one {# Decisione eseguita} other {# Decisioni eseguite}}",
+              "detail": "{acted} hanno agito da sole · {handed} passate a una persona · {onRules} risposte dalla regola semplice · {cost} spesi",
+              "partial": "Contate solo sulle ultime {runs} esecuzioni."
+            },
             "research": {
               "aria": "Il lavoro di ricerca",
               "lastJob": "L'ultimo lavoro di ricerca",
@@ -3469,6 +3541,19 @@
             "timeHint": "Ogni passo del lavoro, disegnato in base al tempo che ha impiegato.",
             "noSteps": "Nessun passo è stato registrato",
             "noStepsHint": "Questo lavoro non è arrivato abbastanza lontano da registrare cosa stava facendo.",
+            "decisions": {
+              "title": "Decisioni prese",
+              "hint": "I giudizi archiviati sotto questa esecuzione, con quanto era sicuro ciascuno e chi ha risposto.",
+              "nothing": "Nessuna Decisione è stata eseguita in questo lavoro",
+              "columns": {
+                "decision": "Decisione",
+                "subject": "Soggetto",
+                "answer": "Risposta",
+                "certainty": "Certezza",
+                "outcome": "Cosa è successo",
+                "source": "Giudicata da"
+              }
+            },
             "record": {
               "title": "Cosa ha registrato",
               "hint": "Costruito dalle righe che questa esecuzione ha scritto, non da ciò che l'agente dice di aver fatto.",
@@ -3889,6 +3974,18 @@
           "webhookDeliveries": {
             "title": "Consegne Webhook",
             "description": "Tentativi di consegna per evento e destinazione, con anteprime di richiesta e risposta."
+          },
+          "phoneCalls": {
+            "title": "Registri delle Chiamate",
+            "description": "Trascrizioni e riassunti delle chiamate dal pubblico, con i loro numeri di telefono. I dati più personali della piattaforma, quindi la finestra più breve."
+          },
+          "mailboxMessages": {
+            "title": "Registro della Casella di Posta",
+            "description": "Una riga per ogni email che la casella collegata ha esaminato: mittente, oggetto e cosa è stato deciso. La posta resta in Gmail con la conservazione di Gmail."
+          },
+          "decisionRuns": {
+            "title": "Registri delle Decisioni",
+            "description": "Ogni giudizio preso dalla piattaforma, chi ha risposto, quanto era sicuro e cosa è successo. Riferimenti a email, messaggi e pagine, mai il loro testo."
           },
           "purgeHistory": {
             "title": "Cronologia Purge",
@@ -4942,6 +5039,9 @@
         "failedScheduledExecutions": "Esecuzioni pianificate non riuscite",
         "staleRunningScheduledExecutions": "Esecuzioni pianificate mai terminate",
         "failedAgentTransactions": "Addebiti di agenti non riusciti",
+        "decisionsHandedToPerson": "Decisioni in attesa di una persona",
+        "decisionsOnSimpleRules": "Decisioni che girano sulle regole semplici",
+        "decisionsUnsure": "Una Decisione è incerta molto più del solito",
         "connections": "Connessioni che hanno smesso di rispondere",
         "scheduledJobs": "Lavori pianificati in errore o in ritardo"
       },
@@ -4954,7 +5054,8 @@
         "openCompanies": "Apri le aziende",
         "openSchedules": "Apri le pianificazioni",
         "openWorkflowRuns": "Apri le esecuzioni dei flussi",
-        "openConnections": "Apri le connessioni"
+        "openConnections": "Apri le connessioni",
+        "openDecisions": "Apri le Decisioni"
       },
       "results": {
         "worked": "Riuscito",
@@ -5109,7 +5210,8 @@
         "always": "sempre attiva",
         "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni.",
         "wikiPages": "Pagine wiki alla base di questa risposta",
-        "wikiPlatform": "(piattaforma)"
+        "wikiPlatform": "(piattaforma)",
+        "checks": "Controlli eseguiti sulla domanda"
       },
       "photoAction": {
         "heading": "Follow-up suggerito",
@@ -5354,7 +5456,8 @@
           "realtime": "Conversazione parlata dal vivo — tu parli, risponde subito e può essere interrotto.",
           "embedding": "Trasformare i documenti in qualcosa di ricercabile. Solo i modelli di embedding possono farlo.",
           "vision": "Leggere immagini e screenshot.",
-          "toolCalling": "Decidere quale strumento usare e con quali argomenti."
+          "toolCalling": "Decidere quale strumento usare e con quali argomenti.",
+          "decision": "Rispondere a una domanda sì-o-no, a scelta singola o di grado con una certezza, così la piattaforma può agire o chiedere a una persona. Qualsiasi modello può farlo; i modelli TypeSafe misurano la certezza invece di stimarla."
         }
       },
       "catalogue": {
@@ -5919,6 +6022,7 @@
       "unanswered": "Senza risposta",
       "diary": "Diario",
       "evals": "Valutazioni",
+      "decisions": "Decisioni",
       "providers": "Provider",
       "modelCatalogue": "Catalogo modelli",
       "defaults": "Predefiniti",
@@ -6881,6 +6985,122 @@
     "searchPlaceholder": "Cerca connessioni per nome",
     "checkFailed": "Impossibile verificare le connessioni. Riprova."
   },
+  "decisions": {
+    "pill": {
+      "rule": "Regola",
+      "showSpread": "Mostra come è stata risposta {name}",
+      "spreadTitle": "Quanto sicura, per risposta"
+    },
+    "usedIn": {
+      "mailbox": "Casella di posta",
+      "chat": "Chat",
+      "wiki": "Wiki"
+    },
+    "certainty": {
+      "SURE": "Sicuro",
+      "FAIRLY_SURE": "Abbastanza sicuro",
+      "NOT_SURE": "Non sicuro"
+    },
+    "modes": {
+      "OFF": "Spento",
+      "ASK_A_PERSON": "Chiedi a una persona",
+      "ACT": "Agisce da solo"
+    },
+    "catalogue": {
+      "wikiWorthFiling": {
+        "name": "Vale la pena archiviare questa risposta nel wiki?",
+        "description": "Quando un membro dello staff riceve una risposta che attinge a più pagine del wiki, decide se ha insegnato qualcosa di durevole e nuovo che merita una pagina.",
+        "rule": "Senza, decide lo stesso modello che legge la risposta.",
+        "answers": { "yes": "Vale la pena", "no": "Non vale la pena" }
+      },
+      "wikiClaimSupported": {
+        "name": "Questa pagina è ancora sostenuta dalle sue fonti?",
+        "description": "Ogni notte controlla le pagine datate rispetto ai documenti da cui sono state scritte e apre una domanda quando le fonti non sostengono più un'affermazione.",
+        "rule": "Senza, decide lo stesso modello che legge la pagina.",
+        "answers": { "yes": "Ancora sostenuta", "no": "Non più sostenuta" }
+      },
+      "wikiClaimsDisagree": {
+        "name": "Queste due pagine si contraddicono davvero?",
+        "description": "Ogni notte legge insieme le pagine collegate e apre una domanda quando due di esse affermano lo stesso fatto in due modi incompatibili.",
+        "rule": "Senza, decide lo stesso modello che legge le pagine.",
+        "answers": { "yes": "Si contraddicono", "no": "Concordano" }
+      },
+      "wikiPageAnswersQuestion": {
+        "name": "Questa pagina del wiki risponde alla domanda?",
+        "description": "Controlla ogni pagina che l'assistente sta per leggere e lascia fuori quelle che hanno in comune con la domanda solo una parola.",
+        "rule": "Senza, il modello che sceglie le pagine viene preso per buono.",
+        "answers": { "yes": "Risponde", "no": "Non c'entra" }
+      },
+      "wikiRealQuestion": {
+        "name": "È una vera domanda a cui il wiki dovrebbe rispondere?",
+        "description": "Tiene saluti, prove e chiacchiere fuori dalla lista Senza risposta, e tiene dentro le domande vere.",
+        "rule": "Senza, decidono un elenco di saluti e un conteggio di parole.",
+        "answers": { "yes": "Una vera domanda", "no": "Non è una domanda" }
+      },
+      "chatHiddenInstructions": {
+        "name": "Questo messaggio cerca di estrarre le istruzioni nascoste?",
+        "description": "Individua i tentativi di far rivelare all'assistente le sue istruzioni nascoste, le policy o la configurazione privata, senza scattare sulle domande ordinarie che citano una policy.",
+        "rule": "Senza, decide un elenco fisso di frasi.",
+        "answers": { "yes": "Cerca di estrarre", "no": "Messaggio ordinario" }
+      },
+      "chatPermissionBypass": {
+        "name": "Questo messaggio cerca di aggirare le regole?",
+        "description": "Individua i tentativi di far ignorare all'assistente le sue regole, i permessi o la separazione tra aziende.",
+        "rule": "Senza, decide un elenco fisso di frasi.",
+        "answers": { "yes": "Cerca di aggirare", "no": "Messaggio ordinario" }
+      },
+      "chatCrossTenant": {
+        "name": "Questo messaggio chiede i dati di un'altra azienda?",
+        "description": "Individua le richieste di raggiungere o rivelare i dati privati di un'altra azienda.",
+        "rule": "Senza, decide un elenco fisso di frasi.",
+        "answers": { "yes": "Chiede i dati di un'altra azienda", "no": "Messaggio ordinario" }
+      },
+      "mailboxMessageKind": {
+        "name": "Questa email arriva da un cliente?",
+        "description": "Classifica ogni email in arrivo come messaggio di un cliente, newsletter, avviso automatico, spam o altro, così la casella risponde solo alle persone vere.",
+        "rule": "Senza, decidono le etichette di Gmail e gli indirizzi no-reply.",
+        "answers": {
+          "customer": "Cliente",
+          "newsletter": "Newsletter o marketing",
+          "automated": "Avviso automatico",
+          "spam": "Spam",
+          "other": "Altro"
+        }
+      },
+      "mailboxNeedsAPerson": {
+        "name": "Questa risposta ha bisogno di una persona?",
+        "description": "Legge la bozza di risposta insieme all'email e decide se può partire così com'è o se deve intervenire una persona.",
+        "rule": "Senza, decide lo stesso modello che scrive la risposta.",
+        "answers": {
+          "yes": "Serve una persona",
+          "no": "Può partire"
+        }
+      },
+      "mailboxLanguage": {
+        "name": "In che lingua è questa email?",
+        "description": "Individua la lingua del mittente così la risposta torna nella stessa lingua.",
+        "rule": "Senza, il modello che scrive la risposta tira a indovinare.",
+        "answers": {
+          "english": "Inglese",
+          "italian": "Italiano",
+          "french": "Francese",
+          "german": "Tedesco",
+          "spanish": "Spagnolo",
+          "portuguese": "Portoghese",
+          "other": "Un'altra lingua"
+        }
+      },
+      "mailboxUrgent": {
+        "name": "Questa email è urgente?",
+        "description": "Individua le email che richiedono una risposta oggi, così l'attività di seguito viene segnata come urgente.",
+        "rule": "Senza, niente viene segnato come urgente.",
+        "answers": {
+          "yes": "Urgente",
+          "no": "Non urgente"
+        }
+      }
+    }
+  },
   "aiMailbox": {
     "title": "Casella di posta",
     "subtitle": "Ogni email vista dall'AI di questa azienda, e cosa ne ha fatto.",
@@ -6905,7 +7125,8 @@
       "all": "Tutte",
       "replied": "Ha risposto",
       "task": "Ha creato un'attività",
-      "skipped": "Lasciata stare"
+      "skipped": "Lasciata stare",
+      "notSure": "Non sicura"
     }
   },
   "aiDiary": {

@@ -5,6 +5,15 @@ import schema from "./schema";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { MCP_PROTOCOL_VERSION } from "./mcpProtocol";
 
+vi.mock("./utils/safeWorkflowHttp", async original => {
+  const actual = await original<typeof import("./utils/safeWorkflowHttp")>();
+  return { ...actual, fetchWorkflowAction: (url: string, options: RequestInit, dependencies: object) =>
+    actual.fetchWorkflowAction(url, options, { ...dependencies,
+      fetchImplementation: (input, init) => fetch(input, init),
+      resolveHostname: async () => [{ address: "93.184.216.34" }],
+    }) };
+});
+
 /**
  * Contacting a tool server, and what happens when it misbehaves.
  *
@@ -218,7 +227,7 @@ describe("when a server misbehaves", () => {
     const outcome = await adminA.action(api.mcpDiscovery.discoverServerTools, { serverId });
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.message).toContain("redirected");
+    expect(outcome.message).toContain("redirects are not allowed");
   });
 
   test("a server speaking an unsupported version is refused by name", async () => {
@@ -309,7 +318,7 @@ describe("the company boundary", () => {
     expect(tool.companyId).toBe(server?.companyId);
   });
 
-  test("a missing credential is reported by the variable to set, never its value", async () => {
+  test("an unapproved credential is refused before any request", async () => {
     const { t, adminA, serverId } = await setup();
     await adminA.mutation(api.mcpServers.updateServer, {
       id: serverId, authMode: "SECRET_REF", secretRef: "vault/acme/mcp",
@@ -319,7 +328,7 @@ describe("the company boundary", () => {
     const outcome = await adminA.action(api.mcpDiscovery.discoverServerTools, { serverId });
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.message).toContain("CONNECTOR_SECRET_VAULT_ACME_MCP");
+    expect(outcome.message).toContain("MCP_CREDENTIAL_BINDINGS");
     // Nothing was contacted, so nothing was stored.
     expect(await t.run(async (ctx) => await ctx.db.query("mcpServerTools").collect())).toHaveLength(0);
   });

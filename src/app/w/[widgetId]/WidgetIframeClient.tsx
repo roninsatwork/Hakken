@@ -293,6 +293,8 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
     try {
         const session = await ensureThread();
         const postUrl = await generateWidgetUploadUrl({
+            sizeBytes: file.size,
+            contentType: file.type,
             widgetId: widget._id,
             threadId: session.threadId,
             widgetAccessToken: session.accessToken,

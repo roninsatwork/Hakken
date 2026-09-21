@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, usePaginatedQuery } from "convex/react";
+import { formatCurrencyGBP } from "@/src/lib/currency";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
@@ -63,6 +64,31 @@ type Analytics = NonNullable<ReturnType<typeof useAnalytics>>;
 
 function useAnalytics(agentId: Id<"agents">, lookbackDays: number) {
   return useQuery(api.agentRuns.getAnalyticsForAgent, { agentId, lookbackDays });
+}
+
+/**
+ * How this agent's Decisions went over the window (decisions-typesafe-plan.md,
+ * Phase E). Shows nothing for an agent that makes none, rather than an empty
+ * panel every other agent has to scroll past.
+ */
+function DecisionsPanel({ agentId, lookbackDays }: { agentId: Id<"agents">; lookbackDays: number }) {
+  const t = useTranslations("admin.agents.details.observability.dashboard.decisions");
+  const summary = useQuery(api.decisions.summaryForAgent, { agentId, lookbackDays });
+  if (!summary || summary.ran === 0) return null;
+
+  return (
+    <section
+      aria-label={t("aria")}
+      className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-1"
+    >
+      <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("title")}</h3>
+      <p className="text-[12.5px] text-foreground">{t("line", { ran: summary.ran })}</p>
+      <p className="text-[12px] text-secondary">
+        {t("detail", { acted: summary.acted, handed: summary.handed, onRules: summary.onRules, cost: formatCurrencyGBP(summary.costGBP) })}
+      </p>
+      {summary.isPartial && <p className="text-[11px] text-muted">{t("partial", { runs: 50 })}</p>}
+    </section>
+  );
 }
 
 // template:remove:start salesData
@@ -262,6 +288,7 @@ export default function AgentObservabilityPage() {
       {/* template:remove:start salesData */}
       <ResearchJobPanel agentId={agentId} />
       {/* template:remove:end */}
+      <DecisionsPanel agentId={agentId} lookbackDays={lookbackDays} />
 
       {!hasHistory ? (
         <EmptyHistory />

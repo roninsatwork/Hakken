@@ -19,7 +19,7 @@ export async function leasedAccount(ctx: MutationCtx, args: { accountId: Id<"bil
 }
 
 export const acquire = internalMutation({
-  args: { userId: v.optional(v.id("users")), accountId: v.optional(v.id("billingAccounts")), enroll: v.optional(v.boolean()), offerKey: v.optional(v.string()) },
+  args: { userId: v.optional(v.id("users")), accountId: v.optional(v.id("billingAccounts")), enroll: v.optional(v.boolean()), offerKey: v.optional(v.string()), auditSource: v.optional(v.string()), auditProviderEventId: v.optional(v.string()) },
   returns: v.union(v.null(), rowShape.billingAccounts),
   handler: async (ctx, args) => {
     const config = (await requireBillingConfig(ctx));
@@ -48,17 +48,39 @@ export const acquire = internalMutation({
     if (!account) return null;
     if (account.mode !== config.mode) throw appError("NOT_CONFIGURED", "This billing account belongs to a different Stripe mode.");
     if (account.leaseUntil > Date.now()) throw appError("CONFLICT", "Another billing request is running. Please retry shortly.");
-    const update = { revision: account.revision + 1, leaseUntil: Date.now() + 90_000 };
+    const update = {
+      revision: account.revision + 1, leaseUntil: Date.now() + 90_000,
+      auditActorId: args.userId, auditSource: args.auditSource ?? "reconcile",
+      auditProviderEventId: args.auditProviderEventId,
+    };
     await ctx.db.patch(account._id, update);
+    await ctx.db.insert("auditLogs", {
+      actionType: "BILLING_OPERATION_STARTED", actorId: args.userId,
+      companyId: account.companyId, entityType: "billingAccounts", entityId: account._id,
+      timestamp: Date.now(), metadata: JSON.stringify({
+        source: update.auditSource, revision: update.revision,
+        providerEventId: args.auditProviderEventId, offerKey: args.offerKey,
+      }),
+    });
     return { ...account, ...update };
   },
 });
 
 export const release = internalMutation({
-  args: leaseArgs, returns: v.null(),
+  args: { ...leaseArgs, outcome: v.optional(v.union(v.literal("succeeded"), v.literal("failed"))) }, returns: v.null(),
   handler: async (ctx, args) => {
     const account = await ctx.db.get(args.accountId);
-    if (account?.revision === args.revision) await ctx.db.patch(account._id, { leaseUntil: 0, syncedAt: Date.now() });
+    if (account?.revision === args.revision && account.leaseUntil !== 0) {
+      await ctx.db.patch(account._id, { leaseUntil: 0, syncedAt: Date.now() });
+      await ctx.db.insert("auditLogs", {
+        actionType: "BILLING_OPERATION_FINISHED", actorId: account.auditActorId,
+        companyId: account.companyId, entityType: "billingAccounts", entityId: account._id,
+        timestamp: Date.now(), metadata: JSON.stringify({
+          source: account.auditSource, revision: args.revision, outcome: args.outcome ?? "unknown",
+          providerEventId: account.auditProviderEventId,
+        }),
+      });
+    }
     return null;
   },
 });
@@ -157,6 +179,24 @@ export const applyProjection = internalMutation({
       }
     }
     const accessExpiresAt = paidAccessDeadline(projection, (await requireBillingConfig(ctx)).graceDays ?? 0);
+    const summarize = (state: { status: string; subscriptionId?: string; offer?: { key: string; planId: string }; paidThrough: number; cancelAtPeriodEnd: boolean; accessExpiresAt?: number }) => ({
+      status: state.status, subscriptionId: state.subscriptionId ?? null,
+      offerKey: state.offer?.key ?? null, planId: state.offer?.planId ?? null,
+      paidThrough: state.paidThrough, cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+      accessExpiresAt: state.accessExpiresAt ?? 0,
+    });
+    const before = summarize(account);
+    const after = summarize({ ...account, ...projection, accessExpiresAt });
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "BILLING_SUBSCRIPTION_CHANGED", actorId: account.auditActorId,
+        companyId: account.companyId, entityType: "billingAccounts", entityId: account._id,
+        timestamp: Date.now(), metadata: JSON.stringify({ before, after,
+          source: account.auditSource, providerEventId: account.auditProviderEventId,
+          revision: args.revision,
+        }),
+      });
+    }
     await ctx.db.patch(account._id, { ...projection, syncedAt: Date.now(), reconciledAt: Date.now(), accessExpiresAt });
     if (accessExpiresAt > Date.now() && accessExpiresAt !== account.accessExpiresAt) {
       await ctx.scheduler.runAt(accessExpiresAt, internal.billingState.expireAccess, { accountId: account._id, deadline: accessExpiresAt });

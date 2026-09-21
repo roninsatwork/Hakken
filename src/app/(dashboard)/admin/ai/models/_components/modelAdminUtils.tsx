@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { DECISION_MODEL_USE_CASE } from "@/convex/aiModelService";
 
 export type ModelStatusFilter = "active" | "inactive";
-export type SyncProviderKey = "google" | "openai" | "anthropic" | "openrouter";
+export type SyncProviderKey = "google" | "openai" | "anthropic" | "openrouter" | "typesafe";
 
 export type GlobalDefaultRow = {
   useCase: string;
@@ -91,7 +92,7 @@ export function formatModelDisplayName(model: {
 }
 
 export function isSyncProviderKey(value: string): value is SyncProviderKey {
-  return value === "google" || value === "openai" || value === "anthropic" || value === "openrouter";
+  return value === "google" || value === "openai" || value === "anthropic" || value === "openrouter" || value === "typesafe";
 }
 
 export function getProviderHealthMessage(settings?: string) {
@@ -141,7 +142,13 @@ export function formatProviderDate(value?: number, locale = "en-GB") {
   }).format(new Date(value));
 }
 
-export function modelSupportsUseCase(model: { supportedUseCases?: string[] }, useCase: string) {
+export function modelSupportsUseCase(model: { supportedUseCases?: string[] }, useCase: string): boolean {
+  // The Decisions job takes any model that can do short text work (it
+  // answers in JSON) as well as a judgment model; synced catalogues never
+  // list "decision" for a text model. Speech and live-audio models cannot.
+  if (useCase === DECISION_MODEL_USE_CASE) {
+    return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "fast-chat");
+  }
   return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
 }
 
@@ -232,6 +239,7 @@ export const MODEL_USE_CASE_DESCRIPTION_KEYS: Record<string, string> = {
   embedding: "useCases.embedding",
   vision: "useCases.vision",
   "tool-calling": "useCases.toolCalling",
+  decision: "useCases.decision",
 };
 
 /**

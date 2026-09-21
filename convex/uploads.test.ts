@@ -3,6 +3,7 @@ import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 
 describe("Strict Message Upload Gating (Option B)", () => {
   test("Message with no attachments succeeds", async () => {
@@ -59,6 +60,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
     // Upload a valid image blob
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob(["mock-image-bytes"], { type: "image/png" }));
+      await seedUploadReceipt(ctx, id, { userId }, "chat");
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 100,
@@ -108,6 +110,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob(["hello,world"], { type: "text/csv" }));
+      await seedUploadReceipt(ctx, id, { userId }, "chat");
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 11,
@@ -191,6 +194,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
     // Store an executable script blob instead of an allowed image/document
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob(["import os; os.system('malicious')"], { type: "application/javascript" }));
+      await seedUploadReceipt(ctx, id, { userId }, "chat");
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 50,
@@ -234,6 +238,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
     const largeBlobContent = "x".repeat(5 * 1024 * 1024 + 10);
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob([largeBlobContent], { type: "image/jpeg" }));
+      await seedUploadReceipt(ctx, id, { userId }, "chat");
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 5 * 1024 * 1024 + 10,
@@ -275,6 +280,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob(["mock-pdf"], { type: "application/pdf" }));
+      await seedUploadReceipt(ctx, id, { userId }, "chat");
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 50 * 1024 * 1024 + 1,

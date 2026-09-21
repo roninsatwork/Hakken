@@ -31,6 +31,7 @@ export const KIOSK_THREAD_MESSAGE_CAP = 400;
 /** The idle screen pings every minute; accepting a write at most every half
  * minute keeps "last seen" honest while bounding what a script can spend. */
 export const KIOSK_HEARTBEAT_MIN_INTERVAL_MS = 30_000;
+export const KIOSK_TICKETS_PER_THREAD_PER_HOUR = 5;
 
 const VOICE_TURN_MAX_LENGTH = 4000;
 
@@ -196,6 +197,11 @@ export const validateKioskThreadAccess = internalQuery({
     threadId: v.id("threads"),
     widgetAccessToken: v.string(),
   },
+  returns: v.object({
+    ok: v.boolean(),
+    companyId: v.optional(v.id("companies")),
+    widgetId: v.optional(v.id("widgets")),
+  }),
   handler: async (
     ctx,
     args
@@ -212,18 +218,29 @@ export const validateKioskThreadAccess = internalQuery({
 });
 
 /**
- * One wake tap = one reserved session, counted per widget per hour because
- * there is no signed-in person to count by. Also the kiosk's heartbeat: the
- * admin screen reads the last-seen time and lifetime session count, so a
- * dead tablet in reception is noticed from a desk.
+ * Admit a ticket without holding the shared voice slot. Anonymous callers can
+ * mint tickets, so one conversation gets a small hourly allowance before the
+ * action assembles the spoken prompt. A ticket that is never redeemed cannot
+ * prevent another visitor from obtaining one. Only relay redemption takes the
+ * single active lease and consumes the widget's session allowance.
  */
-export const reserveKioskSession = internalMutation({
+export const authorizeKioskVoiceTicket = internalMutation({
   args: {
     widgetId: v.id("widgets"),
+    threadId: v.id("threads"),
   },
+  returns: v.object({ ok: v.boolean(), reason: v.optional(v.string()) }),
   handler: async (ctx, args): Promise<{ ok: boolean; reason?: string }> => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) {
+      return { ok: false, reason: "This screen is not in service." };
+    }
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.widgetId !== widget._id || thread.companyId !== widget.companyId || thread.sourceUrl !== "kiosk") {
+      return { ok: false, reason: "This screen is not in service." };
+    }
+    const company = widget.companyId ? await ctx.db.get(widget.companyId) : null;
+    if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.reception)) {
       return { ok: false, reason: "This screen is not in service." };
     }
     const now = Date.now();
@@ -232,11 +249,19 @@ export const reserveKioskSession = internalMutation({
     if (inWindow >= KIOSK_SESSIONS_PER_HOUR) {
       return { ok: false, reason: "The assistant is busy just now. Back shortly." };
     }
-    await ctx.db.patch(widget._id, {
-      kioskSessionWindowStart: inWindow === 0 ? now : windowStart,
-      kioskSessionCountInWindow: inWindow + 1,
-      kioskLastSeenAt: now,
-      kioskSessionCount: (widget.kioskSessionCount ?? 0) + 1,
+    if ((widget.kioskVoiceActiveUntil ?? 0) > now) {
+      return { ok: false, reason: "The assistant is busy just now. Back shortly." };
+    }
+    const ticketWindowStart = thread.kioskTicketWindowStart ?? 0;
+    const ticketsInWindow = now - ticketWindowStart < 60 * 60 * 1000
+      ? thread.kioskTicketCountInWindow ?? 0
+      : 0;
+    if (ticketsInWindow >= KIOSK_TICKETS_PER_THREAD_PER_HOUR) {
+      return { ok: false, reason: "This conversation has asked too often. Start a new visit." };
+    }
+    await ctx.db.patch(thread._id, {
+      kioskTicketWindowStart: ticketsInWindow === 0 ? now : ticketWindowStart,
+      kioskTicketCountInWindow: ticketsInWindow + 1,
     });
     return { ok: true };
   },
@@ -303,4 +328,3 @@ export const recordKioskHeartbeat = publicMutation({
     return null;
   },
 });
-

@@ -34,7 +34,13 @@ token per wake tap, creates a Google Vertex relay voice session through
 thread, sends idle heartbeats, shows a permanent AI/recording disclosure, nudges
 after silence, resets for the next visitor, and reloads while idle overnight.
 Convex now holds per-widget kiosk session, thread-minting, heartbeat, and
-message caps. What remains is operational Phase D proof on a real tablet at the
+message caps. The 2026-09-14 resource-consumption hardening also limits each
+widget to one active relay session, counts the hourly allowance only at
+relay redemption, and charges completed kiosk turns once against the company
+message plan. The 2026-09-15 security repair removed the anonymous pending
+slot: unredeemed tickets cannot block other visitors, and each conversation
+can ask for five tickets per hour before prompt assembly. What remains is
+operational Phase D proof on a real tablet at the
 front desk for a sustained run.
 
 ## The decision
@@ -113,9 +119,10 @@ the ghost chime gets fixed or removed.
    exhaustion, or a synthesis failure shows a calm "back shortly" idle
    state and keeps retrying; it never shows an error stack to a visitor
    or requires a person with a keyboard.
-4. **The kiosk spends like the widget it is.** Company plan quota,
-   per-thread rate limits, and the anonymous refusal copy all apply
-   unchanged; a kiosk cannot be a quota side-channel.
+4. **The kiosk spends like the widget it is.** Each completed spoken turn
+   consumes one company-plan message at the relay boundary. The next turn is
+   refused before provider spend when the allowance is exhausted; the visitor
+   sees only the anonymous calm refusal copy.
 5. **Idle means idle.** Between visitors the microphone is closed — the
    idle screen listens for nothing; only the wake tap opens it.
 
@@ -182,5 +189,6 @@ typed conversation — the bones before the voice.
 - Payments, printing, badge scanning, or any hardware integration.
 - A native app or kiosk-mode OS management (the browser page is the
   product; locking the device down is the venue's device policy).
-- Multiple simultaneous kiosks per widget — nothing prevents it, nothing
-  is built for it; revisit if a client asks.
+- Multiple simultaneous kiosks sharing one widget. The resource guard permits
+  one active voice session per widget; a second physical kiosk
+  needs its own widget configuration.

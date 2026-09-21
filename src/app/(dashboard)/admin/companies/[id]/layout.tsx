@@ -36,6 +36,7 @@ import {
   NotebookPen,
   PhoneCall,
   CircleDollarSign,
+  Scale,
 } from "lucide-react";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useTranslations } from "next-intl";
@@ -210,6 +211,12 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
             matchesCompanyRoute(pathname, `${aiHref}/models`)
             || matchesCompanyRoute(pathname, `${companyHref}/models`)
           ),
+        },
+        {
+          label: t("tabs.decisions"),
+          href: `${aiHref}/decisions`,
+          icon: Scale,
+          matches: (pathname: string) => matchesCompanyRoute(pathname, `${aiHref}/decisions`),
         },
         {
           label: t("tabs.evals"),

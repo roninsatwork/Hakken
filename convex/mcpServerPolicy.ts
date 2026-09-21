@@ -13,12 +13,9 @@
  * server-side request forgery prize. Writing a second version of that list is
  * how the two drift apart and one of them quietly stops covering something.
  *
- * **Known limit, inherited and worth restating.** A hostname that *resolves* to
- * a private address cannot be detected here; there is no DNS resolution before
- * the request is made. The residual risk is an administrator pointing a server
- * at an internal name. Unlike the HTTP connector — where only a super-admin
- * could do that — a company administrator can reach this, so the blast radius
- * is their own workspace's outbound requests rather than the platform's.
+ * This is only the storage-time lexical check. At execution, `outboundHttp`
+ * resolves DNS, rejects restricted answers and pins the socket to a checked IP.
+ * Credential use also requires an operator-approved company/server/URL binding.
  */
 
 import { validateHttpConnectorBaseUrl } from "./httpConnectorPolicy";

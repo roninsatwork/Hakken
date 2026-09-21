@@ -150,6 +150,15 @@ export const mailboxListShape = v.object({
     taskId: v.optional(v.id("tasks")),
     repliedAt: v.optional(v.number()),
     createdAt: v.number(),
+    /** The Decisions that ran on this email, oldest first; empty before Phase D or with every mode off. */
+    decisions: v.array(v.object({
+      key: v.string(),
+      copyKey: v.string(),
+      answer: v.string(),
+      certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
+      source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
+      probabilities: v.optional(v.string()),
+    })),
   })),
   isDone: v.boolean(),
   continueCursor: v.string(),
@@ -173,6 +182,15 @@ export const messageEvidenceShape = v.union(v.null(), v.object({
   memories: v.array(v.object({ id: v.string(), title: v.string(), alwaysOn: v.boolean() })),
   skills: v.array(v.object({ id: v.string(), name: v.string() })),
   wikiPages: v.array(v.object({ title: v.string(), isPlatform: v.boolean() })),
+  /** The Decisions that ran on the turn this answer replied to. */
+  checks: v.array(v.object({
+    key: v.string(),
+    copyKey: v.string(),
+    answer: v.string(),
+    certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
+    source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
+    probabilities: v.optional(v.string()),
+  })),
   hasAny: v.boolean(),
 }));
 

@@ -29,6 +29,15 @@ The email flow deliberately uses neutral success copy. It shows the same "check 
 
 If diagnostics logging fails, the login page catches that failure and still proceeds with the auth action. Auth diagnostics are useful evidence, not a dependency for sending the magic link.
 
+The actual send boundary is the exported `auth:signIn` action in
+`convex/auth.ts`. Before either `resend` or `one-time-code` invokes its email
+provider, it atomically calls `internal.authEvents.reserveAuthEmailSend`.
+Magic links and codes share a five-send rolling 15-minute limit and a 30-send
+hourly limit per normalized address, plus a 60-send-per-minute platform
+backstop. A refused call returns the same generic `started` shape and never
+invokes the provider. The page-level checks remain useful early feedback and
+diagnostics, but direct callers cannot bypass this authoritative gate.
+
 ## Verify Page And One-Time Codes
 
 `src/app/verify/page.tsx` is the page a magic-link email lands on. It reads the
@@ -88,6 +97,8 @@ Public magic-link attempts call `recordMagicLinkRequestAttempt`, which records:
 - `INVITE_STALE_ACCEPTED_RECOVERED`
 
 Provisioning callbacks record additional events such as `MAGIC_LINK_STARTED` and `MAGIC_LINK_VERIFIED`.
+`AUTH_EMAIL_SEND_RESERVED` records an admitted provider send at the server
+boundary; it deliberately covers both link and code providers.
 
 `getRecentAuthEvents` requires admin access. Super admins see recent platform events, while company admins see only events scoped to their active company. Unscoped events such as missing-invite attempts are intentionally hidden from company admins.
 

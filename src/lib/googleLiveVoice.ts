@@ -73,6 +73,7 @@ export type LiveServerEvent = {
   interrupted?: boolean;
   turnComplete?: boolean;
   ready?: boolean;
+  quotaExhausted?: boolean;
   toolCalls?: LiveToolCall[];
 };
 
@@ -104,6 +105,7 @@ export function readLiveServerMessage(raw: string): LiveServerEvent | null {
   }
 
   if ((message as { type?: string }).type === "relay.ready") return { ready: true };
+  if ((message as { type?: string }).type === "relay.quota") return { quotaExhausted: true };
 
   const toolCall = message.toolCall as
     | { functionCalls?: Array<{ id?: string; name?: string; args?: Record<string, unknown> }> }

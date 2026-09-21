@@ -6,6 +6,7 @@ const aiActionNameValidator = v.union(
   v.literal("transcribeAudio"),
   v.literal("synthesizeSpeech"),
   v.literal("realtimeVoiceSession"),
+  v.literal("voiceKnowledge"),
   v.literal("voicePreview"),
   v.literal("generateNodeConfig")
 );

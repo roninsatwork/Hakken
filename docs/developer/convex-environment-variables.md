@@ -100,6 +100,7 @@ evidence; this optional integration has not been enabled or verified live.
 | `ANTHROPIC_API_KEY` | Anthropic (Claude) models for chat and the agent runtime. |
 | `OPENAI_API_KEY` | OpenAI models, including real-time voice sessions (`convex/aiVoiceSession.ts`). |
 | `OPENROUTER_API_KEY` | Models routed through OpenRouter. |
+| `TYPESAFE_API_KEY` | TypeSafe judgment models for the Decisions job (`convex/typesafeProviderService.ts`). Decisions only; never text. |
 | `GOOGLE_CLIENT_EMAIL` | Service-account identity for Google Vertex AI (Google models and embeddings). |
 | `GOOGLE_PRIVATE_KEY` | That service account's private key. |
 | `GEMINI_API_KEY` | **Read by nothing in the codebase.** Google models authenticate with the Vertex service account above. Safe to remove once confirmed nothing outside this repository uses it. |
@@ -162,7 +163,7 @@ See [Gmail Mailbox](./gmail-mailbox.md).
 | Variable | What it is for |
 | --- | --- |
 | `VOICE_RELAY_URL` | Endpoint of the live voice relay that carries Google speech-to-speech sessions (assistant voice, voice preview, kiosk receptionist). Use the relay root or `/live`. |
-| `VOICE_RELAY_SECRET` | Signs the short-lived, one-time tickets that admit a caller to the relay and its platform redemption endpoint. |
+| `VOICE_RELAY_SECRET` | Derives the encryption key for confidential one-time voice tickets and authenticates relay-only redemption/knowledge requests. |
 | `TELEPHONY_STREAM_URL` | The relay's `/twilio` media-stream URL for phone-call audio. |
 | `TELEPHONY_PUBLIC_URL` | Public webhook URL given to Twilio for inbound voice calls. |
 | `TELEPHONY_STATUS_PUBLIC_URL` | Public callback URL Twilio reports call status changes to. |
@@ -196,3 +197,46 @@ Notes:
   the widget page may still render but conversation creation fails closed.
 
 See [Embedded Widgets](./embedded-widgets.md).
+
+## Controlled file uploads
+
+The upload issuers require Convex's built-in `CONVEX_SITE_URL`. They return
+`/api/uploads?token=...`, never a native storage upload URL. A permission lasts
+ten minutes, is usable once, and belongs to the issuing user and active company
+(or anonymous widget conversation). Do not log these bearer URLs.
+
+The gateway streams each body to a private native storage URL, counts actual
+bytes, cancels excess bytes/disconnections, and stops after 120 seconds. Declared
+length is checked but is not trusted instead of counting. Documents, workbooks
+and recording bodies allow 50 MiB (the existing UI calls this 50 MB); chat images
+allow 5 MiB, admin/profile images 2 MiB, and widget images 1 MiB. Existing MIME
+allowlists still apply. Recording compression and packet semantics are unchanged.
+
+Issuance reserves the declared byte size (or the maximum when omitted). Fixed
+hourly limits are 1 GiB/1,000 permissions per user or widget thread, 10 GiB/2,500
+per company (global uploads share the platform bucket), and 20 GiB/5,000 across
+the deployment. Fixed daily limits are four times those values. Failed, unused
+and abandoned permissions still consume their reservation; no refund can be
+used to bypass ingress quotas. Anonymous widgets additionally retain their
+existing ten-per-conversation lifetime limit.
+
+File attachment checks the receipt's user/conversation, company and purpose
+before obtaining a URL or deleting any rejected file. Existing saved files stay
+readable; newly attaching an old unregistered upload requires uploading it again.
+Permissions and unclaimed files are swept by the monitored
+`upload-garbage-collection` job every five minutes in bounded batches. Ready
+files have a 24-hour claim window. Workbook inspection/import uses a temporary
+source file, which remains eligible for cleanup; imported database rows remain.
+Attached files are preserved. Expired backlog schedules further bounded batches.
+
+A paginated storage sweep also removes files created after gateway enforcement
+that have no receipt, covering a process dying between storage acceptance and
+receipt registration. It never sweeps pre-enforcement files. All production
+storage writes must therefore use this gateway; `uploadIngressGuard.test.ts`
+guards this assumption. Any future trusted server-side storage writer must
+register its file before enabling it.
+
+Local stream and integration tests are not live deployment acceptance. When
+releasing, verify a 50 MiB upload and an over-limit rejection through the deployed
+HTTP endpoint, attachment ownership, and the cleanup job. Any in-flight legacy
+direct-upload URL must be replaced by requesting a new permission.

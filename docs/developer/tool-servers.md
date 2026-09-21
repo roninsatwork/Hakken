@@ -76,7 +76,7 @@ In order, cheapest first:
 2. The running company owns it.
 3. The server is switched on.
 4. The arguments match the schema the server published.
-5. The credential resolves.
+5. The operator has approved the credential for this company, server and exact URL, and it resolves.
 
 The tenant always comes from the run and the tool is looked up by the id the
 runtime invoked — never by a name the model produced — so there is no argument
@@ -87,7 +87,12 @@ an injected instruction could set to reach another company's server.
 **Outbound.** Only arguments that satisfy the server's own published schema.
 Addresses are re-validated at call time, not trusted because they passed once,
 and `validateHttpConnectorBaseUrl` refuses plain HTTP, embedded credentials,
-loopback, the private ranges, and the cloud metadata address.
+loopback, the private ranges, and the cloud metadata address. The Node action
+`outboundHttp.request` resolves DNS immediately before connecting, refuses the
+entire answer set if any address is restricted, and pins the socket to a checked
+IP while retaining the original hostname for Host and TLS verification. It never
+follows redirects. One deadline covers DNS, connection, headers and body; byte
+counting cancels oversized streamed responses even without a trustworthy length.
 
 **Inbound.** Three rules:
 
@@ -154,9 +159,23 @@ removed.
 
 Hitting a limit is reported, never silently truncated.
 
-## Known limit
+## Operator credential approval
 
-A hostname that *resolves* to a private address cannot be detected — there is no
-DNS resolution before the request is made. The blast radius is one workspace's
-own outbound requests, since a company administrator can only connect servers for
-their own company.
+`SECRET_REF` alone is not permission to use a deployment credential. Set backend
+environment variable `MCP_CREDENTIAL_BINDINGS` to a JSON array of approved bindings:
+
+```json
+[{"companyId":"<company id>","serverId":"<server id>","url":"https://tools.example.com/mcp","secretRef":"vault/acme/mcp"}]
+```
+
+The URL must equal its normalized `new URL(url).href`, including path and query.
+The referenced value remains in `CONNECTOR_SECRET_VAULT_ACME_MCP`; never put the
+credential itself in the grant or frontend configuration. The operator must
+independently verify the destination and credential ownership before granting it.
+Changing company, server, URL or reference invalidates approval. Missing or invalid
+grants fail closed before resolving a secret or contacting the destination.
+
+Existing authenticated servers need operator grants when deploying this change.
+Anonymous (`NONE`) servers do not. No grants are created automatically. Connector
+and MCP responses must be uncompressed; the transport requests identity encoding
+and rejects encoded responses. Workflow HTTP uses the same pinned transport.

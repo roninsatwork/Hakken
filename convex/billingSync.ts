@@ -7,15 +7,16 @@ import { reconcileAccount } from "./billingReconciliation";
 import { appError } from "./utils/appError";
 
 export const reconcile = internalAction({
-  args: { accountId: v.id("billingAccounts") }, returns: v.null(),
+  args: { accountId: v.id("billingAccounts"), auditProviderEventId: v.optional(v.string()) }, returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const config = await billingConfig(ctx);
     if (!config.enabled) return null;
-    const account = await ctx.runMutation(internal.billingState.acquire, args);
+    const account = await ctx.runMutation(internal.billingState.acquire, { ...args, auditSource: args.auditProviderEventId ? "webhook" : "reconcile" });
     if (!account) return null;
-    try { await reconcileAccount(ctx, stripeClient(config), account); }
+    let outcome: "succeeded" | "failed" = "failed";
+    try { await reconcileAccount(ctx, stripeClient(config), account); outcome = "succeeded"; }
     catch { throw appError("UPSTREAM_FAILURE", "Stripe billing reconciliation failed; delivery can be retried."); }
-    finally { await ctx.runMutation(internal.billingState.release, { accountId: account._id, revision: account.revision }); }
+    finally { await ctx.runMutation(internal.billingState.release, { accountId: account._id, revision: account.revision, outcome }); }
     return null;
   },
 });

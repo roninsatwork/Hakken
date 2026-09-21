@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { runDecisions } from "./decisionActions";
 
 /**
  * The Contradiction Finder (wiki-agents plan, phase 1): reads one kind's
@@ -101,6 +102,21 @@ export const findContradictionsForCompany = internalAction({
           )
           .slice(0, 5);
         for (const finding of findings) {
+          // Each candidate pair the reading model named is judged again
+          // (decisions-typesafe-plan.md, Phase F.2): the model's finding is
+          // the rule; a switched-on Decision that is sure they agree drops it.
+          const excerptOf = (key: string) => cluster.find((page) => page.pageKey === key)?.excerpt.slice(0, 3000) ?? "";
+          const decision = (await runDecisions(ctx, {
+            ...(args.companyId ? { companyId: args.companyId } : {}),
+            subject: { kind: "wikiPage", id: `${finding.pageA}|${finding.pageB}` },
+            state: {
+              pageA: { key: finding.pageA, claim: finding.claimA, excerpt: excerptOf(finding.pageA) },
+              pageB: { key: finding.pageB, claim: finding.claimB, excerpt: excerptOf(finding.pageB) },
+            },
+            requests: [{ key: "wiki.claims-disagree", fallback: () => ({ kind: "yes-no", yes: true }) }],
+          }))["wiki.claims-disagree"];
+          const disagree = decision.verdict === "RULES" ? true : decision.answer.kind === "yes-no" && decision.answer.yes;
+          if (!disagree) continue;
           const normalise = (value: string) =>
             value.toLowerCase().replace(/\s+/g, " ").slice(0, 60);
           const dedupeKey = [
@@ -116,6 +132,8 @@ export const findContradictionsForCompany = internalAction({
             pageKeyB: finding.pageB,
             claimB: finding.claimB,
             dedupeKey,
+            ...(decision.verdict !== "RULES" ? { decisionKey: "wiki.claims-disagree" } : {}),
+            ...(decision.certainty ? { certainty: decision.certainty } : {}),
           });
           if (wasNew) raised += 1;
         }

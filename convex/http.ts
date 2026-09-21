@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { handleUpload, handleUploadOptions } from "./uploadHttp";
 import { registerBillingHttp } from "./billingHttp";
 import { auth } from "./auth";
 import { handleWebhook } from "./workflows";
@@ -9,7 +10,7 @@ import {
   handlePublicRunStatus,
   handlePublicWorkflowRunTrigger,
 } from "./publicApi";
-import { handleVoiceKnowledgeLookup, handleVoiceTicketRedemption } from "./voiceRelay";
+import { handleVoiceControl, handleVoiceKnowledgeLookup, handleVoiceTicketRedemption } from "./voiceRelay";
 import { handleCallStatus, handleCallTurns, handleIncomingCall } from "./telephony";
 import {
   handleConnectorOAuthAuthorize,
@@ -17,6 +18,8 @@ import {
 } from "./connectorOAuth";
 
 const http = httpRouter();
+http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
+http.route({ path: "/api/uploads", method: "OPTIONS", handler: handleUploadOptions });
 registerBillingHttp(http);
 
 http.route({
@@ -64,6 +67,12 @@ http.route({
   path: "/api/voice/redeem",
   method: "POST",
   handler: handleVoiceTicketRedemption,
+});
+
+http.route({
+  path: "/api/voice/control",
+  method: "POST",
+  handler: handleVoiceControl,
 });
 
 // Somebody dialled the number. Verified as the telephony provider by its own

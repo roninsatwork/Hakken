@@ -11,6 +11,7 @@ import {
 import { appError } from "./utils/appError";
 import { toClientAdminThread } from "./utils/chatAdminShapes";
 import * as chatAdminShapes from "./utils/chatAdminShapes";
+import { getDecision } from "./decisionRegistry";
 
 const CHAT_LOG_SEARCH_CANDIDATE_LIMIT = 500;
 const ADMIN_THREAD_MESSAGE_LIMIT = 500;
@@ -234,6 +235,37 @@ export const getCompanyThreadById = adminQuery({
 });
 
 // Secure API endpoint to fetch the raw timeline for any specific thread ID
+/**
+ * The Decision runs filed against a thread, oldest first, so the chat logs
+ * can pin each to the user message it judged (decisions-typesafe-plan.md,
+ * Phase E). Same access rule as the messages themselves.
+ */
+export const getAdminThreadDecisions = adminQuery({
+  args: { threadId: v.id("threads") },
+  returns: chatAdminShapes.adminThreadDecisionsShape,
+  handler: async (ctx, args) => {
+    const { user: admin } = ctx;
+    const thread = await ctx.db.get(args.threadId);
+    if (admin.role !== "SUPER_ADMIN" && (!thread?.companyId || !canReadCompanyThreads(admin, thread.companyId))) {
+      throw appError("UNAUTHORIZED", "Unauthorized: Cross-boundary access denied.");
+    }
+    const runs = await ctx.db
+      .query("decisionRuns")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("asc")
+      .take(ADMIN_THREAD_MESSAGE_LIMIT * 3);
+    return runs.map((run) => ({
+      key: run.decisionKey,
+      copyKey: getDecision(run.decisionKey)?.copyKey ?? run.decisionKey,
+      answer: run.answer,
+      ...(run.certainty ? { certainty: run.certainty } : {}),
+      source: run.source,
+      ...(run.probabilities ? { probabilities: run.probabilities } : {}),
+      createdAt: run.createdAt,
+    }));
+  },
+});
+
 export const getAdminThreadMessages = adminQuery({
   args: { threadId: v.id("threads") },
   returns: chatAdminShapes.adminThreadMessagesShape,

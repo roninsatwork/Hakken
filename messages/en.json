@@ -876,6 +876,70 @@
     "exitWorkspace": "Exit Workspace"
   },
   "admin": {
+    "decisions": {
+      "title": "Decisions",
+      "subtitle": "The judgments the platform makes on its own, and how much rope each one has.",
+      "companySubtitle": "The judgments the platform makes for this company, and how much rope each one has.",
+      "explainer": "A Decision is a question the platform answers with a certainty: sure, fairly sure or not sure. Off means the simple rule runs, as before. Ask a person means every answer goes to someone. Acts on its own means it acts when sure enough and asks a person when it isn't.",
+      "usingSimpleRules": "No model can answer the Decisions job right now, so every Decision is using its simple rule.",
+      "openModelDefaults": "Open Model Defaults",
+      "searchPlaceholder": "Search decisions",
+      "empty": "No Decisions yet",
+      "showing": "{count, plural, one {# decision} other {# decisions}}",
+      "columnDecision": "Decision",
+      "columnUsedIn": "Used in",
+      "columnThisWeek": "This week",
+      "columnMode": "Mode",
+      "columnPlatformMode": "Platform",
+      "columnCompanyMode": "This company",
+      "ran": "{count, plural, =0 {Not run} one {# run} other {# runs}}",
+      "ranAtLeast": "at least {count} runs",
+      "handed": "{count} to a person",
+      "followPlatform": "Follow the platform ({mode})",
+      "modeAria": "Mode for {name}",
+      "saveFailed": "The mode could not be saved. Try again.",
+      "stakes": {
+        "LOW": "Acts on its own when fairly sure or better.",
+        "HIGH": "Acts on its own only when sure."
+      },
+      "subjectKinds": {
+        "email": "Email",
+        "message": "Message",
+        "wikiPage": "Wiki page"
+      },
+      "detail": {
+        "back": "Back to Decisions",
+        "questionTitle": "The question, as the model sees it",
+        "answersTitle": "Answers it can give",
+        "modeLine": "Mode: {mode}",
+        "weekLine": "This week: {ran} runs, {handed} handed to a person, {cost} spent.",
+        "runsTitle": "Last runs",
+        "runsHint": "The most recent {count} runs. The subject is a reference, never the text itself.",
+        "emptyRuns": "This Decision has not run yet",
+        "showingRuns": "{count, plural, one {# run} other {# runs}}",
+        "columnWhen": "When",
+        "columnSubject": "Subject",
+        "columnAnswer": "Answer",
+        "columnCertainty": "Certainty",
+        "columnOutcome": "What happened",
+        "columnSource": "Judged by",
+        "outcome": {
+          "ACTED": "Acted",
+          "HANDED_TO_PERSON": "Handed to a person",
+          "RECORDED": "Recorded"
+        },
+        "source": {
+          "TYPESAFE": "TypeSafe",
+          "TEXT_MODEL": "The chosen model",
+          "RULES": "Simple rule"
+        },
+        "fallback": {
+          "MODE_OFF": "switched off",
+          "NO_MODEL": "no model chosen",
+          "PROVIDER_FAILED": "TypeSafe did not answer"
+        }
+      }
+    },
     "overview": {
       "title": "Admin Dashboard",
       "subtitle": "Platform usage and analytics.",
@@ -1333,6 +1397,7 @@
           "prompt": "Prompt",
           "aiRules": "AI Rules",
           "aiModels": "AI Models",
+          "decisions": "Decisions",
           "evals": "Evals",
           "chatLogs": "Chat Logs",
           "calls": "Calls",
@@ -3418,6 +3483,13 @@
               "underASecond": "under a second",
               "showMore": "Show more"
             },
+            "decisions": {
+              "aria": "How its Decisions went",
+              "title": "Decisions",
+              "line": "{ran, plural, =0 {No Decisions ran in this period.} one {# Decision ran} other {# Decisions ran}}",
+              "detail": "{acted} acted on their own · {handed} handed to a person · {onRules} answered by the simple rule · {cost} spent",
+              "partial": "Counted over the last {runs} runs only."
+            },
             "research": {
               "aria": "The research job",
               "lastJob": "The last research job",
@@ -3469,6 +3541,19 @@
             "timeHint": "Each step of the job, drawn against the time it took.",
             "noSteps": "No steps were recorded",
             "noStepsHint": "This job did not get far enough to record what it was doing.",
+            "decisions": {
+              "title": "Decisions it made",
+              "hint": "The judgments filed under this run, with how sure each was and who answered it.",
+              "nothing": "No Decisions ran in this job",
+              "columns": {
+                "decision": "Decision",
+                "subject": "Subject",
+                "answer": "Answer",
+                "certainty": "Certainty",
+                "outcome": "What happened",
+                "source": "Judged by"
+              }
+            },
             "record": {
               "title": "What it recorded",
               "hint": "Built from the rows this run wrote, not from what the agent says it did.",
@@ -3889,6 +3974,18 @@
           "webhookDeliveries": {
             "title": "Webhook Deliveries",
             "description": "Delivery attempts per event and destination, including request and response previews."
+          },
+          "phoneCalls": {
+            "title": "Phone Call Records",
+            "description": "Transcripts and summaries of calls from members of the public, with their phone numbers. The most personal data on the platform, so the shortest window."
+          },
+          "mailboxMessages": {
+            "title": "Mailbox Ledger",
+            "description": "One line per email the connected mailbox looked at: sender, subject and what was decided. The mail itself stays in Gmail under Gmail's own retention."
+          },
+          "decisionRuns": {
+            "title": "Decision Records",
+            "description": "Every judgment the platform made, who answered it, how sure it was and what happened. References to emails, messages and pages, never their text."
           },
           "purgeHistory": {
             "title": "Purge History",
@@ -4942,6 +5039,9 @@
         "failedScheduledExecutions": "Scheduled runs that failed",
         "staleRunningScheduledExecutions": "Scheduled runs that never finished",
         "failedAgentTransactions": "Agent charges that failed",
+        "decisionsHandedToPerson": "Decisions waiting for a person",
+        "decisionsOnSimpleRules": "Decisions running on simple rules",
+        "decisionsUnsure": "A Decision is unsure far more than usual",
         "connections": "Connections that stopped answering",
         "scheduledJobs": "Scheduled jobs failing or late"
       },
@@ -4954,7 +5054,8 @@
         "openCompanies": "Open companies",
         "openSchedules": "Open schedules",
         "openWorkflowRuns": "Open workflow runs",
-        "openConnections": "Open connections"
+        "openConnections": "Open connections",
+        "openDecisions": "Open Decisions"
       },
       "results": {
         "worked": "Worked",
@@ -5109,7 +5210,8 @@
         "always": "always on",
         "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone.",
         "wikiPages": "Wiki pages this answer stood on",
-        "wikiPlatform": "(platform)"
+        "wikiPlatform": "(platform)",
+        "checks": "Checks that ran on the question"
       },
       "photoAction": {
         "heading": "Suggested follow-up",
@@ -5354,7 +5456,8 @@
           "realtime": "Live spoken conversation — you talk, it answers straight away and can be interrupted.",
           "embedding": "Turning documents into something searchable. Only embedding models can do this.",
           "vision": "Reading images and screenshots.",
-          "toolCalling": "Deciding which tool to use and with what arguments."
+          "toolCalling": "Deciding which tool to use and with what arguments.",
+          "decision": "Answering a yes-or-no, pick-one or how-much question with a certainty, so the platform can act or ask a person. Any model can do it; TypeSafe models measure their certainty rather than estimate it."
         }
       },
       "catalogue": {
@@ -5919,6 +6022,7 @@
       "unanswered": "Unanswered",
       "diary": "Diary",
       "evals": "Evals",
+      "decisions": "Decisions",
       "providers": "Providers",
       "modelCatalogue": "Model Catalogue",
       "defaults": "Defaults",
@@ -6881,6 +6985,122 @@
     "searchPlaceholder": "Search connections by name",
     "checkFailed": "The connections could not be checked. Try again."
   },
+  "decisions": {
+    "pill": {
+      "rule": "Rule",
+      "showSpread": "Show how {name} was answered",
+      "spreadTitle": "How sure, per answer"
+    },
+    "usedIn": {
+      "mailbox": "Mailbox",
+      "chat": "Chat",
+      "wiki": "Wiki"
+    },
+    "certainty": {
+      "SURE": "Sure",
+      "FAIRLY_SURE": "Fairly sure",
+      "NOT_SURE": "Not sure"
+    },
+    "modes": {
+      "OFF": "Off",
+      "ASK_A_PERSON": "Ask a person",
+      "ACT": "Acts on its own"
+    },
+    "catalogue": {
+      "wikiWorthFiling": {
+        "name": "Is this answer worth filing into the wiki?",
+        "description": "When a member of staff gets an answer that draws on several wiki pages, decides whether it taught something durable and new worth its own page.",
+        "rule": "Without it, the model that reads the answer also decides.",
+        "answers": { "yes": "Worth filing", "no": "Not worth filing" }
+      },
+      "wikiClaimSupported": {
+        "name": "Is this page still supported by its sources?",
+        "description": "Each night, checks aging pages against the documents they were written from and raises an open question when the sources no longer back a claim.",
+        "rule": "Without it, the model that reads the page also decides.",
+        "answers": { "yes": "Still supported", "no": "No longer supported" }
+      },
+      "wikiClaimsDisagree": {
+        "name": "Do these two pages genuinely disagree?",
+        "description": "Each night, reads related pages together and raises an open question when two of them state the same fact two incompatible ways.",
+        "rule": "Without it, the model that reads the pages also decides.",
+        "answers": { "yes": "They disagree", "no": "They agree" }
+      },
+      "wikiPageAnswersQuestion": {
+        "name": "Does this wiki page answer the question?",
+        "description": "Checks each page the assistant is about to read for an answer, and leaves out the ones that only share a word with the question.",
+        "rule": "Without it, the model that picks the pages is trusted as it is.",
+        "answers": { "yes": "Answers it", "no": "Not about this" }
+      },
+      "wikiRealQuestion": {
+        "name": "Is this a real question worth answering in the wiki?",
+        "description": "Keeps greetings, tests and small talk off the Unanswered list, and keeps real questions on it.",
+        "rule": "Without it, a list of greeting words and a word count decide.",
+        "answers": { "yes": "A real question", "no": "Not a question" }
+      },
+      "chatHiddenInstructions": {
+        "name": "Is this message trying to extract hidden instructions?",
+        "description": "Catches attempts to make the assistant reveal its hidden instructions, policies or private configuration, without tripping on ordinary questions that mention a policy.",
+        "rule": "Without it, a fixed list of phrases decides.",
+        "answers": { "yes": "Trying to extract", "no": "Ordinary message" }
+      },
+      "chatPermissionBypass": {
+        "name": "Is this message trying to bypass the rules?",
+        "description": "Catches attempts to make the assistant ignore its rules, permissions or the separation between companies.",
+        "rule": "Without it, a fixed list of phrases decides.",
+        "answers": { "yes": "Trying to bypass", "no": "Ordinary message" }
+      },
+      "chatCrossTenant": {
+        "name": "Is this message asking for another company's data?",
+        "description": "Catches requests to reach or reveal another company's private data.",
+        "rule": "Without it, a fixed list of phrases decides.",
+        "answers": { "yes": "Asking for another company's data", "no": "Ordinary message" }
+      },
+      "mailboxMessageKind": {
+        "name": "Is this email from a customer?",
+        "description": "Sorts each incoming email into a customer message, a newsletter, an automated notice, spam or something else, so the mailbox only answers real people.",
+        "rule": "Without it, Gmail's own labels and no-reply addresses decide.",
+        "answers": {
+          "customer": "Customer",
+          "newsletter": "Newsletter or marketing",
+          "automated": "Automated notice",
+          "spam": "Spam",
+          "other": "Something else"
+        }
+      },
+      "mailboxNeedsAPerson": {
+        "name": "Does this reply need a person?",
+        "description": "Reads the drafted reply against the email and decides whether it can be sent as it is or a person needs to take over.",
+        "rule": "Without it, the model that writes the reply also decides.",
+        "answers": {
+          "yes": "Needs a person",
+          "no": "Can be sent"
+        }
+      },
+      "mailboxLanguage": {
+        "name": "Which language is this email in?",
+        "description": "Decides the sender's language so the reply comes back in the same one.",
+        "rule": "Without it, the model that writes the reply guesses.",
+        "answers": {
+          "english": "English",
+          "italian": "Italian",
+          "french": "French",
+          "german": "German",
+          "spanish": "Spanish",
+          "portuguese": "Portuguese",
+          "other": "Another language"
+        }
+      },
+      "mailboxUrgent": {
+        "name": "Is this email urgent?",
+        "description": "Spots emails that need a reply today, so the follow-up task is marked as urgent.",
+        "rule": "Without it, nothing is marked urgent.",
+        "answers": {
+          "yes": "Urgent",
+          "no": "Not urgent"
+        }
+      }
+    }
+  },
   "aiMailbox": {
     "title": "Mailbox",
     "subtitle": "Every email this company's AI has seen, and what it did with each.",
@@ -6905,7 +7125,8 @@
       "all": "All",
       "replied": "Replied",
       "task": "Made a task",
-      "skipped": "Left alone"
+      "skipped": "Left alone",
+      "notSure": "Not sure"
     }
   },
   "aiDiary": {

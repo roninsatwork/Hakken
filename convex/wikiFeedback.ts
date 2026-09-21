@@ -11,6 +11,8 @@ import {
   questionKey,
 } from "./wikiFeedbackService";
 import { appError } from "./utils/appError";
+import type { MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 /**
  * The loop's bookkeeping (closing-the-loop-plan.md, phases 1–2): one
@@ -116,7 +118,27 @@ export const recordAnswerOutcomeInternal = internalMutation({
     // brain, so the miss strengthens the global knowledge — one platform
     // row, counting the companies that hit it, fixed once for everyone.
     // The global AI's own conversations go straight to the platform row.
-    if (!isSubstantiveQuestion(args.question)) return;
+    // Whether this is a real question is the greeting-list rule's call,
+    // and the Decision's (decisions-typesafe-plan.md, Phase F.4) once this
+    // write is done: it judges after the fact and corrects the list when it
+    // is sure the rule was wrong either way.
+    const ruleSaysReal = isSubstantiveQuestion(args.question);
+    await ctx.scheduler.runAfter(0, internal.wikiFeedbackActions.judgeUnansweredQuestion, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      question: args.question,
+      ruleSaysReal,
+    });
+    if (!ruleSaysReal) return;
+    await logGap(ctx, { companyId: args.companyId, question: args.question, now });
+  },
+});
+
+/** The gap, logged once and counted on repeats, under the scope the routing rule says owns it. */
+async function logGap(
+  ctx: MutationCtx,
+  args: { companyId?: Id<"companies">; question: string; now: number },
+): Promise<void> {
+    const now = args.now;
     const key = questionKey(args.question);
     if (!key) return;
 
@@ -174,6 +196,35 @@ export const recordAnswerOutcomeInternal = internalMutation({
       resolvedAt: undefined,
       ...(scope === undefined ? { companiesJson: mergeCompanies(existing.companiesJson) } : {}),
     });
+}
+
+/**
+ * The real-question Decision's correction, when it is sure the rule was
+ * wrong: a real question the rule dropped is logged; a non-question the
+ * rule logged is dismissed.
+ */
+export const recordJudgedGapInternal = internalMutation({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    question: v.string(),
+    real: v.boolean(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    if (args.real) {
+      await logGap(ctx, { companyId: args.companyId, question: args.question, now: Date.now() });
+      return;
+    }
+    const key = questionKey(args.question);
+    if (!key) return;
+    for (const scope of [args.companyId, undefined]) {
+      const existing = await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withIndex("by_company_key", (q) => q.eq("companyId", scope).eq("normalizedKey", key))
+        .unique();
+      if (existing && existing.status === "OPEN") {
+        await ctx.db.patch(existing._id, { status: "DISMISSED", resolvedAt: Date.now() });
+      }
+    }
   },
 });
 

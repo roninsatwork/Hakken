@@ -97,10 +97,12 @@ export default function SalesDataImportPage() {
     setOutcome(null);
 
     const uploaded = await action.run(async () => {
-      const uploadUrl = await generateUploadUrl();
+      const { resolveUploadContentType } = await import("@/src/lib/constants/uploads");
+      const contentType = resolveUploadContentType(file);
+      const uploadUrl = await generateUploadUrl({ sizeBytes: file.size, contentType });
       const response = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
+        headers: { "Content-Type": contentType },
         body: file,
       });
       if (!response.ok) throw new Error(t("errors.uploadFailed"));

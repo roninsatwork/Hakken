@@ -17,8 +17,8 @@ export const billingConfigShape = v.object({
 export const billingTables = {
   billingSettings: defineTable({
     key: v.literal("stripe"), config: billingConfigShape, revision: v.number(),
-    updatedAt: v.number(), updatedBy: v.id("users"),
-  }).index("by_key", ["key"]),
+    updatedAt: v.number(), updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]).index("by_updated_by", ["updatedBy"]),
   billingHealth: defineTable({
     key: v.literal("stripe"), lastWebhookAt: v.number(),
   }).index("by_key", ["key"]),
@@ -40,10 +40,14 @@ export const billingTables = {
     // Serialises provider reads and writes; a stale worker cannot commit over a newer one.
     revision: v.number(),
     leaseUntil: v.number(),
+    auditActorId: v.optional(v.id("users")),
+    auditSource: v.optional(v.string()),
+    auditProviderEventId: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_company", ["companyId"]).index("by_customer", ["customerId"])
     .index("by_plan", ["offer.planId"]).index("by_synced", ["syncedAt"])
     .index("by_mode_status", ["mode", "status"])
+    .index("by_audit_actor", ["auditActorId"])
     .index("by_price_plan", ["offer.stripePriceId", "offer.planId"]),
   billingCheckouts: defineTable({
     accountId: v.id("billingAccounts"),

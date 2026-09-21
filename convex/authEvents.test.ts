@@ -1,9 +1,65 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { AUTH_EVENT_TYPES } from "./utils/authEventTypes";
 import { SIGN_IN_MAX_REQUESTS_PER_HOUR, SIGN_IN_REQUEST_WINDOW_MS } from "./signInThrottleService";
+import {
+  MAX_GLOBAL_REQUESTS_PER_MINUTE,
+  MAX_REQUESTS_PER_WINDOW,
+} from "./oneTimeCodeService";
+
+describe("the auth provider email-send boundary", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test("shares one short-window allowance across links and codes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    for (let index = 0; index < MAX_REQUESTS_PER_WINDOW; index++) {
+      await expect(t.mutation(internal.authEvents.reserveAuthEmailSend, {
+        email: index % 2 ? " Person@Example.com " : "person@example.com",
+        provider: index % 2 ? "resend" : "one-time-code",
+      })).resolves.toBe(true);
+    }
+    await expect(t.mutation(internal.authEvents.reserveAuthEmailSend, {
+      email: "person@example.com",
+      provider: "resend",
+    })).resolves.toBe(false);
+    const rows = await t.run(async (ctx) => ctx.db.query("authEvents")
+      .withIndex("by_type", (q) => q.eq("eventType", "AUTH_EMAIL_SEND_RESERVED")).collect());
+    expect(rows).toHaveLength(MAX_REQUESTS_PER_WINDOW);
+  });
+
+  test("direct auth:signIn calls cannot send past the same boundary", async () => {
+    vi.stubEnv("SITE_URL", "https://product.test");
+    vi.stubEnv("CONVEX_SITE_URL", "https://backend.test");
+    vi.stubEnv("RESEND_API_KEY", "");
+    const sendSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Direct", createdAt: Date.now() });
+      await ctx.db.insert("invitations", {
+        email: "direct@example.com",
+        companyId,
+        role: "USER",
+        status: "PENDING",
+        token: "direct-test-invite",
+        invitedAt: Date.now(),
+      });
+    });
+    for (let index = 0; index < MAX_REQUESTS_PER_WINDOW + 1; index++) {
+      await expect(t.action(api.auth.signIn, {
+        provider: "resend",
+        params: { email: "direct@example.com", redirectTo: "https://product.test" },
+      })).resolves.toMatchObject({ started: true });
+    }
+    const reservations = await t.run(async (ctx) => ctx.db.query("authEvents")
+      .withIndex("by_email_type_timestamp", (q) =>
+        q.eq("email", "direct@example.com").eq("eventType", "AUTH_EMAIL_SEND_RESERVED")
+      ).collect());
+    expect(reservations).toHaveLength(MAX_REQUESTS_PER_WINDOW);
+    expect(sendSpy).toHaveBeenCalledTimes(MAX_REQUESTS_PER_WINDOW);
+  });
+});
 
 /**
  * The sign-in form posts mail to whatever address is in the box, and nobody is
@@ -69,6 +125,26 @@ describe("how often one address may ask for a magic link", () => {
 
     await expect(request(t, "busy@example.com")).resolves.toMatchObject({ allowed: false });
     await expect(request(t, "quiet@example.com")).resolves.toMatchObject({ allowed: true });
+  });
+
+  test("globally bounds rotating-address telemetry writes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    for (let index = 0; index < MAX_GLOBAL_REQUESTS_PER_MINUTE; index++) {
+      await expect(request(t, `rotating-${index}@example.com`)).resolves.toMatchObject({
+        allowed: true,
+      });
+    }
+    await expect(request(t, "over-global-limit@example.com")).resolves.toEqual({
+      logged: false,
+      allowed: false,
+    });
+
+    const events = await t.run(async (ctx) => ctx.db.query("authEvents").collect());
+    expect(events.filter((event) => event.eventType === "MAGIC_LINK_REQUESTED")).toHaveLength(
+      MAX_GLOBAL_REQUESTS_PER_MINUTE,
+    );
+    expect(events.some((event) => event.email === "over-global-limit@example.com")).toBe(false);
   });
 
   test("normalises the address, so casing and spacing are not a way around it", async () => {

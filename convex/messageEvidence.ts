@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import * as governanceShapes from "./utils/governanceShapes";
+import { getDecision } from "./decisionRegistry";
 
 /**
  * Why an answer said what it said.
@@ -31,6 +32,9 @@ function parseEvidence<T>(raw: string | undefined): T | null {
     return null;
   }
 }
+
+/** Runs read per turn; three chat Decisions ship today. */
+const CHECKS_PER_TURN = 8;
 
 export const getForMessage = tenantQuery({
   args: { messageId: v.id("messages") },
@@ -107,7 +111,34 @@ export const getForMessage = tenantQuery({
 
     const documents = Array.from(documentTitles.entries()).map(([id, title]) => ({ id, title }));
 
+    // The Decisions that judged the question this answer replied to
+    // (decisions-typesafe-plan.md, Phase E): every run filed on the thread
+    // between the user's message and this reply.
+    const priorUser = await ctx.db
+      .query("messages")
+      .withIndex("by_thread_role_created", (q) =>
+        q.eq("threadId", message.threadId).eq("role", "user").lt("createdAt", message.createdAt),
+      )
+      .order("desc")
+      .first();
+    const checkRuns = priorUser
+      ? await ctx.db
+          .query("decisionRuns")
+          .withIndex("by_thread", (q) => q.eq("threadId", message.threadId))
+          .filter((q) => q.and(q.gte(q.field("createdAt"), priorUser.createdAt), q.lte(q.field("createdAt"), message.createdAt)))
+          .take(CHECKS_PER_TURN)
+      : [];
+    const checks = checkRuns.map((run) => ({
+      key: run.decisionKey,
+      copyKey: getDecision(run.decisionKey)?.copyKey ?? run.decisionKey,
+      answer: run.answer,
+      ...(run.certainty ? { certainty: run.certainty } : {}),
+      source: run.source,
+      ...(run.probabilities ? { probabilities: run.probabilities } : {}),
+    }));
+
     return {
+      checks,
       documents,
       memories,
       skills,

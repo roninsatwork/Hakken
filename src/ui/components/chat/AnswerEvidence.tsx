@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen } from "lucide-react";
+import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -21,6 +22,7 @@ import type { Id } from "@/convex/_generated/dataModel";
  */
 export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
   const t = useTranslations("ai.assistant.evidence");
+  const tDecisions = useTranslations("decisions");
   const [isOpen, setIsOpen] = useState(false);
   const evidence = useQuery(api.messageEvidence.getForMessage, isOpen ? { messageId } : "skip");
 
@@ -88,6 +90,25 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
               ))}
             </EvidenceGroup>
           )}
+
+          {evidence.checks.length > 0 && (
+            <EvidenceGroup icon={<Scale className="h-3 w-3" />} label={t("checks")}>
+              {evidence.checks.map((check) => (
+                <li key={check.key} className="flex">
+                  <DecisionPill
+                    name={tDecisions(`catalogue.${check.copyKey}.name`)}
+                    certainty={check.certainty ?? null}
+                    probabilities={parseSpread(check.probabilities)}
+                    chosen={check.answer}
+                    answerLabels={{
+                      yes: tDecisions(`catalogue.${check.copyKey}.answers.yes`),
+                      no: tDecisions(`catalogue.${check.copyKey}.answers.no`),
+                    }}
+                  />
+                </li>
+              ))}
+            </EvidenceGroup>
+          )}
         </div>
       )}
     </div>
@@ -112,4 +133,14 @@ function EvidenceGroup({
       <ul className="flex flex-col gap-0.5 pl-[18px] list-disc marker:text-muted/50">{children}</ul>
     </div>
   );
+}
+
+function parseSpread(value?: string): Record<string, number> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, number>) : undefined;
+  } catch {
+    return undefined;
+  }
 }

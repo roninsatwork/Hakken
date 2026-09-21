@@ -7,7 +7,7 @@
  * way to see it was to run the whole stack by hand.
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createDecipheriv, createHash } from "node:crypto";
 
 /**
  * The ticket says who is allowed to talk and what the session is. It is
@@ -16,16 +16,21 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * connection, too short to be worth stealing.
  */
 export function readTicket(raw, secret, now = Date.now()) {
-  const [payloadPart, signaturePart] = String(raw ?? "").split(".");
-  if (!payloadPart || !signaturePart) throw new Error("Malformed ticket.");
-
-  const expected = createHmac("sha256", secret).update(payloadPart).digest();
-  const provided = Buffer.from(signaturePart, "base64url");
-  if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
-    throw new Error("Bad ticket signature.");
+  const parts = String(raw ?? "").split(".");
+  if (!raw || parts.length < 2) throw new Error("Malformed ticket.");
+  let payload;
+  try {
+    if (parts.length !== 3 || parts[0] !== "v2") throw new Error("Unsupported ticket.");
+    const iv = Buffer.from(parts[1], "base64url");
+    const encrypted = Buffer.from(parts[2], "base64url");
+    if (iv.length !== 12 || encrypted.length < 16) throw new Error("Malformed ticket.");
+    const key = createHash("sha256").update(`sonae-voice-ticket-v2:${secret}`).digest();
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(encrypted.subarray(-16));
+    payload = JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(0, -16)), decipher.final()]).toString("utf8"));
+  } catch {
+    throw new Error("Bad ticket signature or encryption.");
   }
-
-  const payload = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8"));
   if (typeof payload.expiresAt !== "number" || payload.expiresAt < now) {
     throw new Error("Ticket expired.");
   }
@@ -107,6 +112,32 @@ export function buildAudioFrame(bytes) {
       mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: bytes.toString("base64") }],
     },
   });
+}
+
+/**
+ * A cheap speech gate for the kiosk meter. The browser streams PCM even in a
+ * silent room; silence must not reserve a paid turn merely because a socket is
+ * open. This is deliberately conservative and is not used as voice activity
+ * detection by the model itself.
+ */
+export function pcm16HasSpeech(bytes, rmsThreshold = 500) {
+  const pcm = Buffer.from(bytes);
+  const samples = Math.floor(pcm.length / 2);
+  if (samples === 0) return false;
+  let sumSquares = 0;
+  for (let offset = 0; offset + 1 < pcm.length; offset += 2) {
+    const sample = pcm.readInt16LE(offset);
+    sumSquares += sample * sample;
+  }
+  return Math.sqrt(sumSquares / samples) >= rmsThreshold;
+}
+
+export function isTurnComplete(raw) {
+  try {
+    return JSON.parse(raw)?.serverContent?.turnComplete === true;
+  } catch {
+    return false;
+  }
 }
 
 /**

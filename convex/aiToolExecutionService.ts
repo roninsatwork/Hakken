@@ -13,7 +13,7 @@ import { isConnectorOAuthProviderConfigured } from "./connectorOAuthProviders";
 import { isConnectorTokenEncryptionConfigured } from "./connectorTokenCrypto";
 import {
   HTTP_CONNECTOR_TIMEOUT_MS,
-  describeHttpConnectorResponse,
+  HTTP_CONNECTOR_MAX_RESPONSE_BYTES,
   resolveHttpConnectorBody,
   resolveHttpConnectorTarget,
   truncateHttpConnectorBody,
@@ -1044,20 +1044,15 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     if (secrets.values.auth_header) headers.Authorization = secrets.values.auth_header;
     if (body.body) headers["Content-Type"] = "application/json";
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), HTTP_CONNECTOR_TIMEOUT_MS);
-
-    let response: Response;
+    let response: { status: number; body: string };
     try {
-      response = await fetch(target.url, {
+      response = await input.ctx.runAction(internal.outboundHttp.request, {
+        url: target.url,
         method: target.method,
         headers,
         body: body.body,
-        // Never followed. A redirect would let the endpoint forward the request,
-        // and this connector's credential with it, somewhere the administrator
-        // never scoped.
-        redirect: "manual",
-        signal: controller.signal,
+        timeoutMs: HTTP_CONNECTOR_TIMEOUT_MS,
+        maxResponseBytes: HTTP_CONNECTOR_MAX_RESPONSE_BYTES,
       });
     } catch (error) {
       // The URL is safe to report — it is the administrator's own base plus the
@@ -1067,25 +1062,15 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
         `The request to ${target.url} failed: `
         + `${error instanceof Error ? error.message : "unknown transport error"}`,
       );
-    } finally {
-      clearTimeout(timeout);
     }
 
-    const contentLength = Number(response.headers.get("content-length"));
-    const check = describeHttpConnectorResponse({
-      status: response.status,
-      contentLength: Number.isFinite(contentLength) ? contentLength : undefined,
-    });
-    if (!check.ok) throw appError("INVALID_INPUT", check.reason);
-
-    const raw = await response.text();
-    const { body: responseBody, truncated } = truncateHttpConnectorBody(raw);
+    const { body: responseBody, truncated } = truncateHttpConnectorBody(response.body);
 
     return {
       status: response.status,
       // A non-2xx is information the agent should reason about, not a transport
       // failure — a 404 means the record is not there, which is an answer.
-      ok: response.ok,
+      ok: response.status >= 200 && response.status < 300,
       url: target.url,
       body: responseBody,
       truncated,

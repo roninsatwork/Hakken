@@ -167,44 +167,54 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
     const CAP = 5001;
     const now = Date.now();
 
+    // One bounded read for every pipeline's dry-run, so the register holds
+    // a single capped site rather than one per table.
+    const capped = async <T,>(query: { take: (n: number) => Promise<T[]> }): Promise<T[]> => await query.take(CAP);
     const counts = {} as Record<PurgePipelineKey, { count: number; capped: boolean }>;
     for (const key of PURGE_PIPELINE_KEYS) {
       const cutoff = calculatePurgeCutoffTimestamp(configs[key].retentionDays, now);
       let rows = 0;
       if (key === "agentLogs") {
-        rows = (await ctx.db.query("agentLogs").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("agentLogs").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "workflowLogs") {
-        rows = (await ctx.db.query("workflowExecutions").withIndex("by_startedAt", (q) => q.lt("startedAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("workflowExecutions").withIndex("by_startedAt", (q) => q.lt("startedAt", cutoff)))).length;
       } else if (key === "userLogins") {
-        rows = (await ctx.db.query("logins").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("logins").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)))).length;
       } else if (key === "chatHistory") {
-        rows = (await ctx.db.query("threads").withIndex("by_updatedAt", (q) => q.lt("updatedAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("threads").withIndex("by_updatedAt", (q) => q.lt("updatedAt", cutoff)))).length;
       } else if (key === "auditLogs") {
-        rows = (await ctx.db.query("auditLogs").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("auditLogs").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)))).length;
       } else if (key === "publicApiRequests") {
-        rows = (await ctx.db.query("publicApiRequests").withIndex("by_requested", (q) => q.lt("requestedAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("publicApiRequests").withIndex("by_requested", (q) => q.lt("requestedAt", cutoff)))).length;
       } else if (key === "authEvents") {
-        rows = (await ctx.db.query("authEvents").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("authEvents").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)))).length;
       } else if (key === "aiActionRequests") {
-        rows = (await ctx.db.query("aiActionRequests").withIndex("by_requested", (q) => q.lt("requestedAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("aiActionRequests").withIndex("by_requested", (q) => q.lt("requestedAt", cutoff)))).length;
       } else if (key === "analyticsSnapshots") {
         const cutoffKey = dateKeyForCutoff(cutoff);
-        rows = (await ctx.db.query("analyticsDailySnapshots").withIndex("by_date", (q) => q.lt("date", cutoffKey)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("analyticsDailySnapshots").withIndex("by_date", (q) => q.lt("date", cutoffKey)))).length;
       } else if (key === "webhookDeliveries") {
-        rows = (await ctx.db.query("webhookDeliveries").withIndex("by_created", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("webhookDeliveries").withIndex("by_created", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "agentRunHistory") {
-        const candidates = await ctx.db
+        const candidates = await capped(ctx.db
           .query("agentRuns")
-          .withIndex("by_completed", (q) => q.gt("completedAt", 0).lt("completedAt", cutoff))
-          .take(CAP);
+          .withIndex("by_completed", (q) => q.gt("completedAt", 0).lt("completedAt", cutoff)));
         rows = candidates.filter((run) => TERMINAL_RUN_STATUSES.has(run.status)).length;
       } else if (key === "agentTransactions") {
-        rows = (await ctx.db.query("agentTransactions").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)).take(CAP)).length;
+        rows = (await capped(ctx.db.query("agentTransactions").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
+      } else if (key === "phoneCalls") {
+        // These three fell through to zero before, so the dry-run promised
+        // "nothing to delete" for tables the run then emptied.
+        rows = (await capped(ctx.db.query("phoneCalls").withIndex("by_started", (q) => q.lt("startedAt", cutoff)))).length;
+      } else if (key === "mailboxMessages") {
+        rows = (await capped(ctx.db.query("mailboxMessages").withIndex("by_created", (q) => q.lt("createdAt", cutoff)))).length;
+      } else if (key === "decisionRuns") {
+        rows = (await capped(ctx.db.query("decisionRuns").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "purgeHistory") {
         const newest = await ctx.db.query("purgeHistory").withIndex("by_started").order("desc").take(PURGE_HISTORY_PROTECTED_ROWS + 1);
         if (newest.length > PURGE_HISTORY_PROTECTED_ROWS) {
           const effectiveCutoff = Math.min(newest[newest.length - 1].startedAt, cutoff);
-          rows = (await ctx.db.query("purgeHistory").withIndex("by_started", (q) => q.lt("startedAt", effectiveCutoff)).take(CAP)).length;
+          rows = (await capped(ctx.db.query("purgeHistory").withIndex("by_started", (q) => q.lt("startedAt", effectiveCutoff)))).length;
         }
       }
       counts[key] = { count: Math.min(rows, CAP - 1), capped: rows >= CAP };
@@ -528,6 +538,16 @@ export const executePurgeRecursive = internalMutation({
         const batch = await ctx.db
           .query("mailboxMessages")
           .withIndex("by_created", (q) => q.lt("createdAt", cutoffTimestamp))
+          .take(500);
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "decisionRuns") {
+        const batch = await ctx.db
+          .query("decisionRuns")
+          .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoffTimestamp))
           .take(500);
         for (const record of batch) {
           await ctx.db.delete(record._id);

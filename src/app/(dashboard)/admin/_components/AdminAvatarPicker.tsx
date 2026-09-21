@@ -61,7 +61,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
     setUploadError("");
     const outcome = await action.run(
       async () => {
-        const postUrl = await generateUploadUrl();
+        const postUrl = await generateUploadUrl({ sizeBytes: file.size, contentType: file.type });
         const result = await fetch(postUrl, {
           method: "POST",
           headers: { "Content-Type": file.type },

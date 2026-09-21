@@ -155,7 +155,7 @@ export function KnowledgeManager({
     updateQueueEntry(key, { status: "uploading" });
 
     const contentType = helpers.uploadPolicy.resolveUploadContentType(collected.file);
-    const uploadUrl = await generateUploadUrl();
+    const uploadUrl = await generateUploadUrl({ sizeBytes: collected.file.size, contentType: contentType });
     const result = await fetch(uploadUrl, {
       method: "POST",
       headers: { "Content-Type": contentType },

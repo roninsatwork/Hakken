@@ -35,7 +35,7 @@ Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
 - `getModels` and `getActiveModels` are authenticated queries used by model selectors.
 - `getModelPickerOptions` is the lightweight authenticated picker query; it returns only the display, provider, use-case, capability, enabled, and headline pricing fields the browser needs.
 - `getPaginatedModels` is the super-admin model catalog query. Search, status, and provider filters are applied through database search/index paths so the OpenRouter-scale catalogue is not scanned and sliced in memory.
-- `getProviders` returns stored providers plus inferred platform providers for Google Vertex AI, OpenAI, Anthropic, and OpenRouter.
+- `getProviders` returns stored providers plus inferred platform providers for Google Vertex AI, OpenAI, Anthropic, OpenRouter, and TypeSafe.
 - `setProviderEnabled` upserts provider status and writes audit metadata.
 - `getGlobalModelDefaults`, `setGlobalModelDefault`, and `clearGlobalModelDefault` manage platform defaults.
 - `getCompanyModelDefaults`, `setCompanyModelDefault`, and `clearCompanyModelDefault` manage tenant overrides.
@@ -45,7 +45,7 @@ Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
 
 `convex/aiModelsActions.ts` contains provider actions:
 
-- provider catalog sync for Google, OpenAI, and Anthropic
+- provider catalog sync for Google, OpenAI, Anthropic, OpenRouter, and TypeSafe
 - provider connection tests
 - internal health updates through model/provider services
 
@@ -67,7 +67,7 @@ Do not add runtime hardcoded model literals. Use the stored model catalog and de
 
 ## Provider Handling
 
-The platform provider keys are Google Vertex AI, OpenAI, Anthropic, and OpenRouter. `getProviders` returns inferred provider rows when a provider has not yet been stored so the admin UI can still show the expected platform controls.
+The platform provider keys are Google Vertex AI, OpenAI, Anthropic, OpenRouter, and TypeSafe. TypeSafe is a judgment-only provider: `canProviderServeUseCase` lets it serve the `decision` job and nothing else, and refuses every other provider for that job (`docs/plans/active/decisions-typesafe-plan.md`). `getProviders` returns inferred provider rows when a provider has not yet been stored so the admin UI can still show the expected platform controls.
 
 Provider enablement is independent from model enablement. A model can be enabled but hidden from active selectors if its provider is disabled. `getActiveModels` filters disabled providers before returning selectable models.
 

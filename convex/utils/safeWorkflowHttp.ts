@@ -2,6 +2,9 @@
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { Readable } from "node:stream";
 
 import { appError } from "./appError";
 import { validateSafeUrl } from "./security";
@@ -50,13 +53,19 @@ function isBlockedIpv4(address: string): boolean {
  * or a cloud metadata address only when the request is executed.
  */
 export function isBlockedWorkflowAddress(address: string): boolean {
-  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "").split("%")[0];
+  let normalized = address.toLowerCase().replace(/^\[|\]$/g, "").split("%")[0];
   const version = isIP(normalized);
 
   if (version === 4) return isBlockedIpv4(normalized);
   if (version !== 6) return true;
+  normalized = new URL(`http://[${normalized}]/`).hostname.slice(1, -1);
 
   return (
+    !/^[23][0-9a-f]{3}:/.test(normalized) ||
+    /^2001:(?:[0-9a-f]{1,2}|1[0-9a-f]{2}):/.test(normalized) ||
+    normalized.startsWith("2001::") ||
+    normalized.startsWith("2002:") ||
+    normalized.startsWith("3fff:") ||
     normalized === "::" ||
     normalized === "::1" ||
     normalized.startsWith("::ffff:") ||
@@ -79,7 +88,7 @@ async function resolveWithSystemDns(hostname: string): Promise<readonly Resolved
 export async function assertWorkflowTargetResolvesPublicly(
   url: string,
   resolveHostname: ResolveHostname = resolveWithSystemDns
-): Promise<void> {
+): Promise<readonly ResolvedAddress[]> {
   validateSafeUrl(url, "Action Node");
   const hostname = new URL(url).hostname.replace(/^\[|\]$/g, "");
   const addresses = isIP(hostname) ? [{ address: hostname }] : await resolveHostname(hostname);
@@ -87,9 +96,50 @@ export async function assertWorkflowTargetResolvesPublicly(
   if (addresses.length === 0 || addresses.some(({ address }) => isBlockedWorkflowAddress(address))) {
     throw appError("INVALID_INPUT", "SSRF Prevention: Action Node hostname resolved to a restricted address.");
   }
+  return addresses;
 }
 
-async function readBoundedResponse(response: Response, maxBytes: number): Promise<string> {
+/** Connect to the checked address, while preserving the hostname for Host and TLS. */
+export async function fetchPinnedAddress(
+  url: string,
+  options: RequestInit,
+  address: string,
+): Promise<Response> {
+  if (options.body != null && typeof options.body !== "string") {
+    throw appError("INVALID_INPUT", "Outbound requests require a text body.");
+  }
+  return await new Promise<Response>((resolve, reject) => {
+    const target = new URL(url);
+    const request = (target.protocol === "https:" ? httpsRequest : httpRequest)(target, {
+      method: options.method ?? "GET",
+      headers: { ...Object.fromEntries(new Headers(options.headers).entries()), "accept-encoding": "identity" },
+      signal: options.signal ?? undefined,
+      // No shared pool may reuse an unchecked socket. No second DNS lookup.
+      agent: false,
+      lookup: (_hostname, lookupOptions, callback) => {
+        const family = isIP(address);
+        if (lookupOptions.all) callback(null, [{ address, family }]);
+        else callback(null, address, family);
+      },
+    }, (incoming) => {
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(incoming.headers)) {
+        if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+      }
+      const status = incoming.statusCode ?? 502;
+      if ([204, 205, 304].includes(status) || options.method === "HEAD") {
+        incoming.destroy();
+        resolve(new Response(null, { status, headers }));
+      } else {
+        resolve(new Response(Readable.toWeb(incoming) as ReadableStream<Uint8Array>, { status, headers }));
+      }
+    });
+    request.on("error", reject);
+    request.end(options.body ?? undefined);
+  });
+}
+
+async function readBoundedResponse(response: Response, maxBytes: number, signal: AbortSignal): Promise<string> {
   const contentLength = response.headers.get("content-length");
   if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > maxBytes) {
     await response.body?.cancel();
@@ -99,12 +149,16 @@ async function readBoundedResponse(response: Response, maxBytes: number): Promis
   if (!response.body) return "";
 
   const reader = response.body.getReader();
+  const abort = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener("abort", abort, { once: true });
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
 
   try {
     while (true) {
+      signal.throwIfAborted();
       const { done, value } = await reader.read();
+      signal.throwIfAborted();
       if (done) break;
 
       totalBytes += value.byteLength;
@@ -115,6 +169,7 @@ async function readBoundedResponse(response: Response, maxBytes: number): Promis
       chunks.push(value);
     }
   } finally {
+    signal.removeEventListener("abort", abort);
     reader.releaseLock();
   }
 
@@ -137,10 +192,8 @@ export async function fetchWorkflowAction(
   url: string,
   fetchOptions: RequestInit,
   dependencies: SafeWorkflowFetchDependencies = {}
-): Promise<{ status: number; body: string }> {
+): Promise<{ status: number; body: string; headers: Record<string, string> }> {
   const resolveHostname = dependencies.resolveHostname ?? resolveWithSystemDns;
-  await assertWorkflowTargetResolvesPublicly(url, resolveHostname);
-
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -148,7 +201,14 @@ export async function fetchWorkflowAction(
   );
 
   try {
-    const response = await (dependencies.fetchImplementation ?? fetch)(url, {
+    const addresses = await Promise.race([
+      assertWorkflowTargetResolvesPublicly(url, resolveHostname),
+      new Promise<never>((_resolve, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+      }),
+    ]);
+    const response = await (dependencies.fetchImplementation ?? ((input, init) =>
+      fetchPinnedAddress(input, init ?? {}, addresses[0].address)))(url, {
       ...fetchOptions,
       redirect: "manual",
       signal: controller.signal,
@@ -158,12 +218,18 @@ export async function fetchWorkflowAction(
       await response.body?.cancel();
       throw appError("UPSTREAM_FAILURE", "Action Node redirects are not allowed.");
     }
+    if (response.headers.get("content-encoding") && response.headers.get("content-encoding") !== "identity") {
+      await response.body?.cancel();
+      throw appError("UPSTREAM_FAILURE", "Encoded outbound responses are not supported.");
+    }
 
     return {
       status: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
       body: await readBoundedResponse(
         response,
-        dependencies.maxResponseBytes ?? WORKFLOW_ACTION_MAX_RESPONSE_BYTES
+        dependencies.maxResponseBytes ?? WORKFLOW_ACTION_MAX_RESPONSE_BYTES,
+        controller.signal,
       ),
     };
   } finally {

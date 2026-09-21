@@ -2,6 +2,12 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { seedUploadReceipt } from "../scripts/test-upload-fixture";
+import {
+  KNOWLEDGE_WEBSITE_REQUEUE_WINDOW_MS,
+  KNOWLEDGE_WEBSITE_URLS_PER_HOUR,
+  KNOWLEDGE_WEBSITE_URLS_PER_REQUEST,
+} from "./knowledgeImportPolicy";
 
 describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
   test("Standard USER cannot upload knowledge documents at all", async () => {
@@ -1094,7 +1100,10 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     });
 
     await t.run(async (ctx) => {
-      await ctx.db.patch(documentId, { status: "ready" });
+      await ctx.db.patch(documentId, {
+        status: "ready",
+        lastQueuedAt: Date.now() - KNOWLEDGE_WEBSITE_REQUEUE_WINDOW_MS - 1,
+      });
     });
 
     await expect(
@@ -1112,15 +1121,51 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
       })
     ).resolves.toEqual([documentId]);
 
-    const pendingDocument = await t.run(async (ctx) => ctx.runQuery(internal.knowledge.getNextPendingUrlInternal, {}));
+    const pendingDocument = await t.mutation(internal.knowledge.claimNextPendingUrlInternal, {});
 
     expect(pendingDocument?._id).toBe(documentId);
     expect(pendingDocument).toMatchObject({
       sourceUrl: "https://example.com/docs",
       companyId,
-      status: "pending",
+      status: "processing",
       format: "url",
     });
+  });
+
+  test("website queue bounds each request and each workspace hour", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      return { companyId, adminId };
+    });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.mutation(api.knowledge.queueWebsiteUrls, {
+      companyId,
+      urls: Array.from(
+        { length: KNOWLEDGE_WEBSITE_URLS_PER_REQUEST + 1 },
+        (_, index) => `https://example.com/request-${index}`,
+      ),
+    })).rejects.toThrow(`Import at most ${KNOWLEDGE_WEBSITE_URLS_PER_REQUEST}`);
+
+    await expect(adminClient.mutation(api.knowledge.queueWebsiteUrls, {
+      companyId,
+      urls: Array.from(
+        { length: KNOWLEDGE_WEBSITE_URLS_PER_HOUR },
+        (_, index) => `https://example.com/hour-${index}`,
+      ),
+    })).resolves.toHaveLength(KNOWLEDGE_WEBSITE_URLS_PER_HOUR);
+
+    await expect(adminClient.mutation(api.knowledge.queueWebsiteUrls, {
+      companyId,
+      urls: ["https://example.com/over-hourly-limit"],
+    })).rejects.toThrow(`at most ${KNOWLEDGE_WEBSITE_URLS_PER_HOUR} website pages per hour`);
   });
 
   test("bulk website delete is scoped by company and root domain", async () => {
@@ -1352,6 +1397,7 @@ describe("bulk file ingestion queue", () => {
 
     const storageId = await t.run(async (ctx) => {
       const storageId = await ctx.storage.store(new Blob(["# Revenue"], { type: "text/markdown" }));
+      await seedUploadReceipt(ctx, storageId, { userId: adminId }, "knowledge");
       await ctx.db.insert("mockStorageMetadata", {
         storageId,
         size: 10,
@@ -1384,9 +1430,7 @@ describe("bulk file ingestion queue", () => {
       });
     });
 
-    const claimedByWebsiteQueue = await t.run(async (ctx) =>
-      ctx.runQuery(internal.knowledge.getNextPendingUrlInternal, {}),
-    );
+    const claimedByWebsiteQueue = await t.mutation(internal.knowledge.claimNextPendingUrlInternal, {});
 
     expect(claimedByWebsiteQueue).toBeNull();
   });
@@ -1406,6 +1450,25 @@ describe("bulk file ingestion queue", () => {
 
     const claimed = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
     expect(claimed).toBeNull();
+  });
+
+  test("a website document is atomically claimed so parallel chains cannot take it twice", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const documentId = await t.run(async (ctx) => await ctx.db.insert("knowledgeDocuments", {
+      title: "https://example.com/guide",
+      sourceUrl: "https://example.com/guide",
+      status: "pending",
+      format: "url",
+      createdAt: Date.now(),
+    }));
+
+    const [first, second] = await Promise.all([
+      t.mutation(internal.knowledge.claimNextPendingUrlInternal, {}),
+      t.mutation(internal.knowledge.claimNextPendingUrlInternal, {}),
+    ]);
+
+    expect([first?._id, second?._id].filter(Boolean)).toEqual([documentId]);
+    expect(await t.run(async (ctx) => ctx.db.get(documentId))).toMatchObject({ status: "processing" });
   });
 
   test("a claimed document is marked processing so a parallel chain cannot take it twice", async () => {

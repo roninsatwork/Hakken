@@ -2,6 +2,8 @@ import { internalQuery } from "./_generated/server";
 import schema from "./schema";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import type { Id } from "./_generated/dataModel";
 import {
   publicQuery,
@@ -154,9 +156,15 @@ export const update = superAdminMutation({
     const patchObj = buildSettingsPatch(args);
 
     if (patchObj.logoUrlLight && isStorageLogoReference(patchObj.logoUrlLight)) {
+      if (patchObj.logoUrlLight !== settings?.logoUrlLight) {
+        await requireOwnedUpload(ctx, patchObj.logoUrlLight as Id<"_storage">, { userId, companyId: ctx.companyId }, ["image"]);
+      }
       await validateStoredUpload(ctx, patchObj.logoUrlLight as Id<"_storage">, validateAdminImageMetadata);
     }
     if (patchObj.logoUrlDark && isStorageLogoReference(patchObj.logoUrlDark)) {
+      if (patchObj.logoUrlDark !== settings?.logoUrlDark) {
+        await requireOwnedUpload(ctx, patchObj.logoUrlDark as Id<"_storage">, { userId, companyId: ctx.companyId }, ["image"]);
+      }
       await validateStoredUpload(ctx, patchObj.logoUrlDark as Id<"_storage">, validateAdminImageMetadata);
     }
 
@@ -238,9 +246,9 @@ export const getEmailBranding = internalQuery({
 });
 
 export const generateUploadUrl = superAdminMutation({
+  args: uploadMetadataArgs,
   returns: v.string(),
-  handler: async (ctx) => {
-
-    return await ctx.storage.generateUploadUrl();
+  handler: async (ctx, args) => {
+    return await issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "image", args);
   },
 });

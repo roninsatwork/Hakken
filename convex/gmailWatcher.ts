@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { runDecisions, type DecisionResult } from "./decisionActions";
 import { isNoReplyAddress, parseAddress } from "./gmailConnector";
 import { resolvePlatformName } from "./settingsService";
 import { appError } from "./utils/appError";
@@ -315,6 +316,59 @@ async function processMessage(
     .filter(Boolean);
   const newestBody = senderTexts.at(-1) ?? "";
 
+  const company = connector.companyId
+    ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: connector.companyId })
+    : null;
+
+  // The mailbox's Decisions (docs/plans/active/decisions-typesafe-plan.md,
+  // Phase D). Three judgments over the same email in one request; each
+  // keeps its own mode, and every one of them ships switched off, in which
+  // case the rule the watcher always used answers: the header pre-filter
+  // above already said "customer", nothing is urgent, and the reply model
+  // names the language.
+  const emailState = {
+    company: { name: company?.name ?? "" },
+    email: {
+      from: summary.from,
+      subject: summary.subject || "(no subject)",
+      body: newestBody.slice(0, 6000),
+    },
+  };
+  const triage = await runDecisions(ctx, {
+    ...(connector.companyId ? { companyId: connector.companyId } : {}),
+    subject: { kind: "email", id: summary.id },
+    state: emailState,
+    requests: [
+      { key: "mailbox.message-kind", fallback: () => ({ kind: "pick-one", choice: "customer" }) },
+      { key: "mailbox.language", fallback: () => ({ kind: "pick-one", choice: "other" }) },
+      { key: "mailbox.urgent", fallback: () => ({ kind: "yes-no", yes: false }) },
+    ],
+  });
+
+  const messageKind = triage["mailbox.message-kind"];
+  if (messageKind.action && messageKind.verdict === "ACT") {
+    // Judged not to be a customer, surely enough to act: left alone, and
+    // the reason on the ledger is the Decision's own words.
+    await ctx.runMutation(internal.gmailWatcherStore.markDecision, {
+      connectorId: connector._id,
+      gmailMessageId: summary.id,
+      decision: "SKIPPED",
+      reason: sentenceCase(messageKind.action),
+    });
+    return;
+  }
+  if (messageKind.action && messageKind.verdict === "ASK_A_PERSON") {
+    // Judged not to be a customer, but the mode (or the certainty) says a
+    // person decides. No reply goes out; the task carries the question.
+    await fileTriageTask(ctx, connector, summary, newestBody, messageKind, platformName);
+    return;
+  }
+
+  const languageCode = languageCodeFor(triage["mailbox.language"]);
+  const urgent = triage["mailbox.urgent"];
+  const isUrgent =
+    urgent.source !== "RULES" && urgent.certainty !== "NOT_SURE" && urgent.answer.kind === "yes-no" && urgent.answer.yes;
+
   // The knowledge search hears everything the sender has said in the thread,
   // so the topic survives however the latest message is phrased.
   const retrievalQuery = `${summary.subject}\n\n${senderTexts.join("\n\n")}`.slice(0, 6000);
@@ -379,21 +433,40 @@ async function processMessage(
     ...(customerPage ? { customerPage } : {}),
   });
 
+  // Does this reply need a person? Asked over the draft, after it exists;
+  // the reply model's own `needsHuman` is the rule that answers when the
+  // Decision is off. With no draft at all there is nothing to judge: a
+  // person, as before.
+  let needsHuman = decision.needsHuman;
+  if (decision.reply) {
+    const review = await runDecisions(ctx, {
+      ...(connector.companyId ? { companyId: connector.companyId } : {}),
+      subject: { kind: "email", id: summary.id },
+      state: { ...emailState, reply: { text: decision.reply, knowledge: (knowledge.context ?? "").slice(0, 6000) } },
+      requests: [
+        { key: "mailbox.needs-a-person", fallback: () => ({ kind: "yes-no", yes: decision.needsHuman }) },
+      ],
+    });
+    const needsPerson = review["mailbox.needs-a-person"];
+    if (needsPerson.verdict === "ACT" && needsPerson.answer.kind === "yes-no") {
+      needsHuman = needsPerson.answer.yes;
+    } else if (needsPerson.verdict === "ASK_A_PERSON") {
+      needsHuman = true;
+    }
+  }
+
   // The reply always goes out (through the rails): either the written answer
   // — which uses published facts and figures exactly as the knowledge states
   // them — or, if the model call itself died, the plain fallback so the
   // sender never gets silence. Either way it is dressed in code: greeting,
   // sign-off, and the written-by-AI disclosure.
-  const company = connector.companyId
-    ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: connector.companyId })
-    : null;
   const replyBody = dressReply({
     body: decision.reply?.trim() || FALLBACK_HOLDING_REPLY,
     senderFirstName: senderFirstName(summary.from),
     companyName: company?.name,
     platformName,
     // The fallback text is English, so its dressing must be too.
-    ...(decision.reply ? { language: decision.language } : {}),
+    ...(decision.reply ? { language: languageCode ?? decision.language } : {}),
   });
   const sent = await ctx.runAction(internal.gmailConnector.replyToMessage, {
     connectorId: connector._id,
@@ -418,7 +491,7 @@ async function processMessage(
     });
   }
 
-  if (sent.ok && !decision.needsHuman) {
+  if (sent.ok && !needsHuman) {
     await labelProcessed(ctx, connector, summary.id, platformName);
     // recordReply set REPLIED; nothing more to mark.
     return;
@@ -444,10 +517,12 @@ async function processMessage(
       companyId: connector.companyId,
       // Sliced whole, not just the subject: the sender address is unbounded,
       // and the task-title ceiling is 200 — same promise as `detail` above,
-      // a long email must shorten the task, never fail it.
-      title: `Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`.slice(0, 200),
+      // a long email must shorten the task, never fail it. An urgent email
+      // (the Decision, sure enough) says so in the title and is due today.
+      title: `${isUrgent ? "Urgent: " : ""}Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`.slice(0, 200),
       detail,
       ...(assignee ? { assigneeUserId: assignee } : {}),
+      ...(isUrgent ? { dueAt: Date.now() + URGENT_DUE_MS } : {}),
       createdBySource: "AGENT" as const,
     });
   }
@@ -460,6 +535,75 @@ async function processMessage(
     ...(taskId ? { taskId } : {}),
   });
   await labelProcessed(ctx, connector, summary.id, platformName);
+}
+
+/** An urgent email's task is due within the working day. */
+const URGENT_DUE_MS = 4 * 60 * 60 * 1000;
+
+function sentenceCase(text: string) {
+  const trimmed = text.trim();
+  return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}.`;
+}
+
+/**
+ * The language Decision's answer as the two-letter code the dressing keys
+ * on, when TypeSafe answered and was at least fairly sure; otherwise
+ * undefined, and the reply model's own code stands.
+ */
+const LANGUAGE_CODES: Record<string, string> = {
+  english: "en",
+  italian: "it",
+  french: "fr",
+  german: "de",
+  spanish: "es",
+  portuguese: "pt",
+};
+
+function languageCodeFor(result: DecisionResult | undefined) {
+  if (!result || result.source === "RULES" || result.certainty === "NOT_SURE") return undefined;
+  if (result.answer.kind !== "pick-one") return undefined;
+  return LANGUAGE_CODES[result.answer.choice];
+}
+
+/**
+ * "A person decides whether to answer": the message-kind Decision judged the
+ * email not to be a customer's, but its mode — or its certainty — leaves the
+ * call to a person. Nothing is sent; the task says what was judged and how
+ * surely, and the ledger row points at the task.
+ */
+async function fileTriageTask(
+  ctx: ActionCtx,
+  connector: Doc<"toolConnectors">,
+  summary: MessageSummary,
+  newestBody: string,
+  messageKind: DecisionResult,
+  platformName: string,
+) {
+  let taskId: Id<"tasks"> | undefined;
+  if (connector.companyId) {
+    const assignee = await ctx.runQuery(internal.telephony.findCallAssignee, { companyId: connector.companyId });
+    const judged = messageKind.answer.kind === "pick-one" ? messageKind.answer.choice : "not a customer";
+    const detail = (
+      `${platformName} did not reply. It judged this email to be ${judged}` +
+      `${messageKind.certainty ? ` (${messageKind.certainty === "SURE" ? "sure" : messageKind.certainty === "FAIRLY_SURE" ? "fairly sure" : "not sure"})` : ""}` +
+      ` and the Decision is set to ask a person.\n\nFrom: ${summary.from}\nSubject: ${summary.subject || "(no subject)"}\n\n` +
+      `Their message:\n${newestBody.slice(0, 1200)}`
+    ).slice(0, 2000);
+    taskId = await ctx.runMutation(internal.tasks.createTaskInternal, {
+      companyId: connector.companyId,
+      title: `Decide whether to answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 100)}"`.slice(0, 200),
+      detail,
+      ...(assignee ? { assigneeUserId: assignee } : {}),
+      createdBySource: "AGENT" as const,
+    });
+  }
+  await ctx.runMutation(internal.gmailWatcherStore.markDecision, {
+    connectorId: connector._id,
+    gmailMessageId: summary.id,
+    decision: "TASK",
+    reason: "A person decides whether to answer this email.",
+    ...(taskId ? { taskId } : {}),
+  });
 }
 
 /**

@@ -85,9 +85,10 @@ This means a missing override does not fall back to the company plan. Preserve t
 
 Chat quota resolution is intentionally implemented in `convex/chatService.ts`, not in the profile status helper. `resolveChatQuota` checks a valid user override first, then falls through to the active company plan when the override row is missing, and finally returns unlimited usage when neither target has a valid plan. Keep this distinction in mind when changing deleted-plan or cleanup semantics: profile display can show `System Default` for a dangling override while the chat send path may still meter against the company plan.
 
-## Chat Enforcement
+## Chat And Reception Voice Enforcement
 
-The monthly plan counter is currently enforced in `chat.sendMessage`.
+The monthly plan counter is enforced in `chat.sendMessage` and in completed
+Receptionist kiosk voice turns.
 
 Before the quota check, the mutation verifies thread access, attachment policy, and the per-thread user-message rate limit. It then resolves the quota target:
 
@@ -96,6 +97,13 @@ Before the quota check, the mutation verifies thread access, attachment policy, 
 - no valid plan target: allow unlimited usage without incrementing a usage row
 
 When a finite quota is exhausted, the mutation still records the attempted user message, inserts an assistant soft-block message, updates the thread timestamp, and returns without running model generation. Signed-in app threads are told that the company AI allocation is exhausted and directed to an administrator. Anonymous widget threads receive only a generic temporary-unavailability notice so the customer's billing state is not disclosed publicly. The widget notice carries `systemKey: "quotaRefusal"` for browser-language presentation. PII redaction runs before this quota branch, and a successful send increments the selected usage counter before normal message insertion.
+
+Receptionist voice is metered by the relay rather than by the kiosk browser.
+The relay reserves one company-plan unit only when non-silent PCM begins a
+turn, finalizes it once on Vertex `turnComplete`, and refunds it if the session
+closes first. The next turn is refused before audio reaches Vertex when the
+finite allowance is exhausted. Phone calls remain separately charged once per
+admitted call.
 
 Do not describe plan quotas as a global AI feature gate unless more call sites are wired to `resolveChatQuota`, `isChatQuotaExceeded`, and `incrementChatQuota`. Provider rate limits, public API limits, workflow payload limits, upload limits, and widget upload quotas are separate controls.
 

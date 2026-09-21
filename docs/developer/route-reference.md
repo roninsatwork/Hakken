@@ -128,6 +128,7 @@ in the same documentation pass.
 | `/admin/ai/money` | Global AI money view. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/ai/chat-logs`, `/admin/ai/usage/chat-logs` | Global chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/ai/diary` | Platform Wiki learning diary. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/decisions` | The judgments the platform makes on its own, their weekly counts and their mode (Off, Ask a person, Acts on its own). `/admin/ai/decisions/[key]` shows the question and the last runs. | [Decisions plan](../plans/active/decisions-typesafe-plan.md) |
 | `/admin/ai/unanswered` | Platform and company unanswered Wiki demand. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/ai/evals` | Platform-level AI checks. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/ai/evals/new` | New platform AI check. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |

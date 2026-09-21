@@ -24,6 +24,7 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("agentTransactions"),
   v.literal("phoneCalls"),
   v.literal("mailboxMessages"),
+  v.literal("decisionRuns"),
   v.literal("purgeHistory"),
 );
 
@@ -86,6 +87,10 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // the same short window as the phone records it mirrors. The mail itself
   // lives in Gmail under Gmail's own retention, untouched by this.
   mailboxMessages: { ...DAILY_2AM, retentionDays: 90 },
+  // Every judgment the platform made and how sure it was. References to
+  // emails, messages and pages, never their text; an operational log like
+  // the agent logs, kept the same 90 days.
+  decisionRuns: { ...DAILY_2AM, retentionDays: 90 },
   // Cleans only the purge system's own log, which the hourly dispatcher
   // grows even when everything else is off. The newest 200 entries are
   // always kept regardless of retention.

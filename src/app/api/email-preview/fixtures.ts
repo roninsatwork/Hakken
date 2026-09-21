@@ -37,6 +37,9 @@ function buildOperations(overrides: Partial<OperationalHealthReport> = {}): Oper
     schedulesMissingNextRun: EMPTY_BUCKET,
     staleAgentRuns: EMPTY_BUCKET,
     staleRunningScheduledExecutions: EMPTY_BUCKET,
+    decisionsHandedToPerson: EMPTY_BUCKET,
+    decisionsOnSimpleRules: EMPTY_BUCKET,
+    decisionsUnsure: EMPTY_BUCKET,
     ...overrides,
   };
 }

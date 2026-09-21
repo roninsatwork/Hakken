@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { issueUpload, requireOwnedUpload } from "./uploadReservations";
+import { uploadMetadataArgs } from "./uploadSchema";
 import type { Doc } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
@@ -282,10 +284,10 @@ export const getThreadInternal = internalQuery({
 });
 
 export const generateChatUploadUrl = tenantMutation({
-  args: {},
+  args: uploadMetadataArgs,
   returns: v.string(),
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
+  handler: async (ctx, args) => {
+    return await issueUpload(ctx, { userId: ctx.userId, companyId: ctx.companyId }, "chat", args);
   },
 });
 
@@ -340,6 +342,15 @@ export const sendMessage = publicMutation({
     await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
+    if (args.fileIds?.length && !thread.widgetId && thread.companyId !== (current ? getActiveCompanyId(current.user) : undefined)) {
+      throw appError("UNAUTHORIZED", "Upload files in the conversation's workspace.");
+    }
+    for (const storageId of args.fileIds ?? []) {
+      await requireOwnedUpload(ctx, storageId, thread.widgetId
+        ? { threadId: thread._id, companyId: thread.companyId }
+        : { userId: current?.userId, companyId: current ? getActiveCompanyId(current.user) : undefined },
+      thread.widgetId ? ["widget"] : ["chat"]);
+    }
     await validateChatAttachments(ctx, args.fileIds);
 
     // 🛡️ SECURITY: Rate Limiting (Prevent Denial of Wallet / Spam)
@@ -601,6 +612,8 @@ export const saveAssistantSafetyRefusal = internalMutation({
     threadId: v.id("threads"),
     content: v.string(),
     category: safetyRefusalCategoryValidator,
+    /** "sure", "fairly sure" or "not sure" when a Decision found it; absent when a rule did. */
+    certainty: v.optional(v.string()),
     source: safetyRefusalSourceValidator,
   },
   handler: async (ctx, args) => {
@@ -626,6 +639,7 @@ export const saveAssistantSafetyRefusal = internalMutation({
         metadata: JSON.stringify({
           category: args.category,
           source: args.source,
+          ...(args.certainty ? { certainty: args.certainty } : {}),
         }),
       });
     }

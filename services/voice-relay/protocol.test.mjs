@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { encryptVoiceTicket } from "../../convex/utils/voiceTicketEncryption.ts";
 import { describe, expect, test } from "vitest";
 import {
   buildAudioFrame,
@@ -8,6 +8,8 @@ import {
   createCallerRouter,
   createTicketReplayGuard,
   isCallerFrameAllowed,
+  isTurnComplete,
+  pcm16HasSpeech,
   readTicket,
   readToolCalls,
 } from "./protocol.mjs";
@@ -15,9 +17,7 @@ import {
 const SECRET = "test-relay-secret";
 
 function mintTicket(payload, secret = SECRET) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = createHmac("sha256", secret).update(encoded).digest("base64url");
-  return `${encoded}.${signature}`;
+  return encryptVoiceTicket(payload, secret);
 }
 
 function validTicket(overrides = {}) {
@@ -132,6 +132,21 @@ describe("what the page is allowed to send", () => {
       },
     });
     expect(isCallerFrameAllowed(answer)).toBe(true);
+  });
+});
+
+describe("metering kiosk speech", () => {
+  test("silence does not start a paid turn, while ordinary speech does", () => {
+    expect(pcm16HasSpeech(Buffer.alloc(640))).toBe(false);
+    const speech = Buffer.alloc(640);
+    for (let offset = 0; offset < speech.length; offset += 2) speech.writeInt16LE(2_000, offset);
+    expect(pcm16HasSpeech(speech)).toBe(true);
+  });
+
+  test("only Vertex's explicit completed-turn boundary completes a turn", () => {
+    expect(isTurnComplete(JSON.stringify({ serverContent: { turnComplete: true } }))).toBe(true);
+    expect(isTurnComplete(JSON.stringify({ serverContent: { interrupted: true } }))).toBe(false);
+    expect(isTurnComplete("not json")).toBe(false);
   });
 });
 

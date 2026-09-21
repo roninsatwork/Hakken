@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
-import { getMediaCapabilities, isOpenAITextGenerationModel } from "./aiModelsActions";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { getMediaCapabilities, isOpenAITextGenerationModel, syncTypesafeModelCatalogue } from "./aiModelsActions";
+import type { ActionCtx } from "./_generated/server";
 import { isVertexTextGenerationModel, parseVertexModelId } from "./vertexProviderService";
 
 /**
@@ -70,5 +71,35 @@ describe("openai catalogue listing", () => {
     expect(getMediaCapabilities("whisper-1")).toEqual(["audio"]);
     expect(getMediaCapabilities("gpt-4o-mini-tts")).toEqual(["audio"]);
     expect(getMediaCapabilities("omni-moderation-latest")).toEqual(["moderation"]);
+  });
+});
+
+describe("typesafe catalogue listing", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  test("every TypeSafe model is a decisions model and nothing else", async () => {
+    vi.stubEnv("TYPESAFE_API_KEY", "key");
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ models: [{ name: "jev-latest", description: "Flagship" }, { name: "jev-opus-mini" }] }), { status: 200 }),
+    ));
+    const runMutation = vi.fn(async () => undefined);
+    const ctx = { runMutation } as unknown as ActionCtx;
+
+    const models = await syncTypesafeModelCatalogue(ctx);
+
+    expect(models.map((model) => model.modelId)).toEqual(["typesafe:jev-latest", "typesafe:jev-opus-mini"]);
+    for (const model of models) {
+      // Named "opus" or "mini", the id-substring rules would call this a
+      // reasoning text model. The provider decides, not the name.
+      expect(model.capabilities).toEqual(["decision"]);
+      expect(model.supportedUseCases).toEqual(["decision"]);
+    }
+    expect(runMutation).toHaveBeenCalledTimes(1);
+    const [, args] = runMutation.mock.calls[0] as unknown as [unknown, { providerKey: string; providerDisplayName: string }];
+    expect(args.providerKey).toBe("typesafe");
+    expect(args.providerDisplayName).toBe("TypeSafe");
   });
 });

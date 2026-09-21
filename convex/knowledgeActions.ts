@@ -13,8 +13,17 @@ import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
 import { getErrorMessage } from "./utils/lang";
 import { appError } from "./utils/appError";
+import { readBoundedBody } from "./utils/boundedRequestBody";
+import {
+  KNOWLEDGE_WEBSITE_MAX_CHUNKS,
+  KNOWLEDGE_WEBSITE_REQUEST_TIMEOUT_MS,
+  KNOWLEDGE_WEBSITE_RESPONSE_MAX_BYTES,
+  KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS,
+  KNOWLEDGE_WEBSITE_URLS_PER_REQUEST,
+} from "./knowledgeImportPolicy";
 
 
 /**
@@ -125,6 +134,9 @@ export const mapWebsite = adminAction({
 
     // 🛡️ SECURITY: Prevent internal SSRF scans via Firecrawl
     validateSafeUrl(args.url, "Firecrawl Map Dispatcher");
+    await ctx.runMutation(internal.knowledge.reserveWebsiteMapInternal, {
+      companyId: getActiveCompanyId(ctx.user),
+    });
 
     const response = await fetch("https://api.firecrawl.dev/v1/map", {
        method: "POST",
@@ -132,26 +144,27 @@ export const mapWebsite = adminAction({
            "Authorization": `Bearer ${firecrawlKey}`,
            "Content-Type": "application/json"
        },
-       body: JSON.stringify({ url: args.url, limit: 500 }) // Cap at 500
+       body: JSON.stringify({ url: args.url, limit: KNOWLEDGE_WEBSITE_URLS_PER_REQUEST }),
+       signal: AbortSignal.timeout(KNOWLEDGE_WEBSITE_REQUEST_TIMEOUT_MS),
     });
 
-    if (!response.ok) {
-       const text = await response.text();
-       throw appError("UPSTREAM_FAILURE", `Firecrawl mapping failed: ${text}`);
-    }
-
-    const data = await response.json();
+    const data = await readFirecrawlJson(response, "mapping");
     if (!data.success) throw appError("UPSTREAM_FAILURE", "Firecrawl mapping unsuccesful");
-    return data.links as string[];
+    return Array.isArray(data.links)
+      ? (data.links as unknown[])
+        .filter((link: unknown): link is string => typeof link === "string")
+        .slice(0, KNOWLEDGE_WEBSITE_URLS_PER_REQUEST)
+      : [];
   }
 });
 
 export const processWebsiteQueue = internalAction({
   args: {},
   handler: async (ctx) => {
-     const nextDoc = await ctx.runQuery(internal.knowledge.getNextPendingUrlInternal);
-     if (!nextDoc || nextDoc.status !== "pending") return;
-     await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId: nextDoc._id });
+     // Claim and mark are one transaction. Several queue chains may be awake,
+     // but only one can receive a given document and spend provider work on it.
+     const nextDoc = await ctx.runMutation(internal.knowledge.claimNextPendingUrlInternal);
+     if (!nextDoc) return;
 
      try {
        const firecrawlKey = process.env.FIRECRAWL_API_KEY;
@@ -163,11 +176,13 @@ export const processWebsiteQueue = internalAction({
                "Authorization": `Bearer ${firecrawlKey}`,
                "Content-Type": "application/json"
            },
-           body: JSON.stringify({ url: nextDoc.sourceUrl, formats: ["markdown"] })
+           body: JSON.stringify({ url: nextDoc.sourceUrl, formats: ["markdown"] }),
+           signal: AbortSignal.timeout(KNOWLEDGE_WEBSITE_REQUEST_TIMEOUT_MS),
        });
 
        if (!response.ok) {
            if (response.status === 429) {
+               await response.body?.cancel();
                console.warn("Firecrawl Rate Limit Hit (429). Executing exponential backoff.");
                await ctx.runMutation(internal.knowledge.markDocPendingInternal, {
                  documentId: nextDoc._id,
@@ -176,14 +191,24 @@ export const processWebsiteQueue = internalAction({
                await ctx.scheduler.runAfter(10000, internal.knowledgeActions.processWebsiteQueue);
                return; 
            }
-           throw appError("UPSTREAM_FAILURE", "Scrape failed: " + await response.text());
        }
-       const data = await response.json();
-       const markdownText = data.data?.markdown || "";
+       const data = await readFirecrawlJson(response, "scrape");
+       const markdownText = typeof data.data?.markdown === "string" ? data.data.markdown : "";
 
        if (!markdownText) throw appError("UPSTREAM_FAILURE", "No extracted markdown text from URL.");
 
-       await embedAndStoreDoc(ctx, nextDoc._id, nextDoc.companyId, nextDoc.agentId, nextDoc.threadId, markdownText);
+       await embedAndStoreDoc(
+         ctx,
+         nextDoc._id,
+         nextDoc.companyId,
+         nextDoc.agentId,
+         nextDoc.threadId,
+         markdownText,
+         {
+           maxCharacters: KNOWLEDGE_WEBSITE_SOURCE_MAX_CHARACTERS,
+           maxChunks: KNOWLEDGE_WEBSITE_MAX_CHUNKS,
+         },
+       );
      } catch (e) {
        console.error("Queue Scrape Error", e);
        await ctx.runMutation(internal.knowledge.markDocFailedInternal, {
@@ -204,9 +229,22 @@ async function embedAndStoreDoc(
   companyId: Id<"companies"> | undefined,
   agentId: Id<"agents"> | undefined,
   threadId: Id<"threads"> | undefined,
-  rawText: string
+  rawText: string,
+  limits?: { maxCharacters: number; maxChunks: number },
 ) {
+      if (limits && rawText.length > limits.maxCharacters) {
+        throw appError(
+          "INVALID_INPUT",
+          `Knowledge source exceeds ${limits.maxCharacters} characters.`,
+        );
+      }
       const chunks = chunkKnowledgeText(rawText);
+      if (limits && chunks.length > limits.maxChunks) {
+        throw appError(
+          "INVALID_INPUT",
+          `Knowledge source exceeds ${limits.maxChunks} embedding chunks.`,
+        );
+      }
 
       const embeddingAi = createVertexEmbeddingClient();
       const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
@@ -269,4 +307,30 @@ async function embedAndStoreDoc(
              markReady: i + chunkSize >= embeddedChunks.length,
           });
       }
+}
+
+type FirecrawlPayload = {
+  success?: boolean;
+  links?: unknown;
+  data?: { markdown?: unknown };
+};
+
+async function readFirecrawlJson(response: Response, operation: string): Promise<FirecrawlPayload> {
+  const body = await readBoundedBody(response, KNOWLEDGE_WEBSITE_RESPONSE_MAX_BYTES);
+  if (!body.ok) {
+    throw appError(
+      "UPSTREAM_FAILURE",
+      body.reason === "too_large"
+        ? `Firecrawl ${operation} response exceeded ${KNOWLEDGE_WEBSITE_RESPONSE_MAX_BYTES} bytes.`
+        : `Firecrawl ${operation} response could not be read.`,
+    );
+  }
+  if (!response.ok) {
+    throw appError("UPSTREAM_FAILURE", `Firecrawl ${operation} failed: ${body.text.slice(0, 300)}`);
+  }
+  try {
+    return JSON.parse(body.text) as FirecrawlPayload;
+  } catch {
+    throw appError("UPSTREAM_FAILURE", `Firecrawl ${operation} returned invalid JSON.`);
+  }
 }
