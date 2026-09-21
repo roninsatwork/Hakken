@@ -31,7 +31,7 @@ Hakken already has two useful pieces:
 
 Hakken also has a deterministic mocked e2e lane:
 
-- `e2e/auth.setup.ts` writes role cookies such as `sonae_e2e_auth`.
+- `e2e/auth.setup.ts` writes role cookies such as `hakken_e2e_auth`.
 - `src/proxy.ts` trusts that cookie only when `E2E_AUTH_ENABLED=1`.
 - `next.config.ts` aliases `convex/react` to `src/e2e/convexReactMock.tsx` when e2e auth is enabled.
 
@@ -60,9 +60,9 @@ Use Hakken's existing role vocabulary:
 
 Suggested deterministic local users:
 
-- `local-super-admin@sonae.test`
-- `local-company-admin@sonae.test`
-- `local-user@sonae.test`
+- `local-super-admin@hakken.test`
+- `local-company-admin@hakken.test`
+- `local-user@hakken.test`
 
 Suggested deterministic company:
 
@@ -114,7 +114,7 @@ Implement:
 
 Important implementation note:
 
-The existing `createOrUpdateSonaeAuthUser` callback is invite-oriented. The local credentials provider should not become a general user creation path. It should only sign in deterministic seeded users.
+The existing `createOrUpdateHakkenAuthUser` callback is invite-oriented. The local credentials provider should not become a general user creation path. It should only sign in deterministic seeded users.
 
 Acceptance:
 
@@ -171,10 +171,10 @@ Implement:
 Suggested local flow:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run convex:dev
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run auth:local:seed
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run dev -- -p 3100
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run convex:dev
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run auth:local:seed
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run dev -- -p 3100
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
 ```
 
 Acceptance:

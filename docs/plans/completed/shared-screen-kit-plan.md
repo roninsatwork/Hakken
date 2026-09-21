@@ -48,8 +48,8 @@ Measured 2026-08-16:
 | `src/ui/**` (the actual shared layer) | 34 | — |
 
 `src/ui` holds the app chrome — header, sidebar, chat, charts — plus
-`SonaeModal`, `SonaeEmptyState`, `StatusPill`, `input`, `typography`,
-`TimeframeDropdown`, `JsonSchemaBuilder`. `SonaeModal` is used by 38 screens,
+`HakkenModal`, `HakkenEmptyState`, `StatusPill`, `input`, `typography`,
+`TimeframeDropdown`, `JsonSchemaBuilder`. `HakkenModal` is used by 38 screens,
 which is the same lesson again: put a part in reach and it gets used.
 
 **So the work is promotion, not invention.** That is a materially smaller and

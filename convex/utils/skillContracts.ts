@@ -24,7 +24,7 @@ export const SKILL_TEXT_LIMIT = 8000;
 export const SKILL_JSON_LIMIT = 24000;
 export const SKILL_MARKDOWN_LIMIT = 24000;
 export const STARTER_SKILL_CATEGORY = "STARTER";
-export const SKILL_BUNDLE_FORMAT = "sonae.agentSkillBundle.v1" as const;
+export const SKILL_BUNDLE_FORMAT = "hakken.agentSkillBundle.v1" as const;
 
 export type SkillStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 export type SkillRiskLevel = "LOW" | "MEDIUM" | "HIGH";

@@ -27,7 +27,7 @@ export type VertexProviderConfig = {
   };
 };
 
-export const DEFAULT_VERTEX_PROJECT = "sonae-dev-491717";
+export const DEFAULT_VERTEX_PROJECT = "hakken-dev-491717";
 export const DEFAULT_VERTEX_LOCATION = "global";
 
 export function buildVertexProviderConfig(args: {

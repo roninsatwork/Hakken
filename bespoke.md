@@ -32,7 +32,7 @@ Before starting, ensure you have the following tools and information:
         *   `Service Account User`
         *   **`Vertex AI User`** (Crucial for Hakken AI features)
     *   **Generate Key:** Create a new JSON key. This key is used for both GitHub Actions and backend AI authentication.
-4.  **Create Artifact Registry:** Repository named `sonae-repo` in the desired region (e.g., `us-central1`).
+4.  **Create Artifact Registry:** Repository named `hakken-repo` in the desired region (e.g., `us-central1`).
 5.  **OAuth Consent Screen:** 
     *   Configure as "External".
     *   Add scopes: `openid`, `email`, `profile`.

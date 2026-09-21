@@ -24,7 +24,7 @@ export function readTicket(raw, secret, now = Date.now()) {
     const iv = Buffer.from(parts[1], "base64url");
     const encrypted = Buffer.from(parts[2], "base64url");
     if (iv.length !== 12 || encrypted.length < 16) throw new Error("Malformed ticket.");
-    const key = createHash("sha256").update(`sonae-voice-ticket-v2:${secret}`).digest();
+    const key = createHash("sha256").update(`hakken-voice-ticket-v2:${secret}`).digest();
     const decipher = createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(encrypted.subarray(-16));
     payload = JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(0, -16)), decipher.final()]).toString("utf8"));

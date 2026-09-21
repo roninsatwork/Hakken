@@ -289,7 +289,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
 
     const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
       method: "POST",
-      headers: { "x-sonae-secret": "webhook-secret" },
+      headers: { "x-hakken-secret": "webhook-secret" },
       body: "x".repeat(20_001),
     });
 
@@ -338,7 +338,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
 
     const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
       method: "POST",
-      headers: { "x-sonae-secret": "stream-secret" },
+      headers: { "x-hakken-secret": "stream-secret" },
       body,
       duplex: "half",
     } as RequestInit & { duplex: "half" });
@@ -380,7 +380,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     for (let i = 0; i < 2; i++) {
       const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
         method: "POST",
-        headers: { "x-sonae-secret": "webhook-secret" },
+        headers: { "x-hakken-secret": "webhook-secret" },
         body: "{}",
       });
       expect(response.status).toBe(429);

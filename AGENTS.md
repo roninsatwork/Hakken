@@ -18,12 +18,11 @@ Sonae is the reusable framework and continues in its own right, maintained
 separately. Hakken is the first product built on top of it. Never edit, commit
 to, or push to the Sonae folder or repo unless the user explicitly asks.
 
-**On the git remotes here:** `origin` still points at `roninsatwork/Sonae` — the
-clone default, kept for pulling framework updates. The remote named `hakken`
-points at `roninsatwork/Hakken`. Push product work to `hakken`. A consequence:
-any tool that reads `origin` to name this project — including the Claude desktop
-sidebar — will display it as "Sonae". That is a display label only. It does not
-mean you are working in Sonae; check `pwd` if in doubt.
+**On the git remotes here:** `origin` is `roninsatwork/Hakken` — push product
+work there. `upstream` is `roninsatwork/Sonae`, kept only for pulling framework
+updates; never push to it. The remotes were swapped on 2026-09-21, because
+tools that name a project from `origin` (including the Claude desktop sidebar)
+were displaying this repository as "Sonae".
 
 ## Product Context — read this before you build anything
 
@@ -39,17 +38,19 @@ Three things to hold onto:
   Sonae itself still live upstream. PRODUCT.md Part
   Two is what the code does today; Part Three §31 is the Hakken product surface,
   all of it unbuilt. Never describe a Part Three item as though it exists.
-- **The product is Hakken everywhere it can be.** Components, Convex
-  functions, config filenames, test fixtures, CSS classes and every
-  user-facing string were renamed on 2026-09-21 — `HakkenModal`,
-  `generateHakkenResponse`, `hakken.product.json`, `projectName: "Hakken"`.
-  The `sonae` names that remain are deliberate external contracts: webhook
-  headers (`x-sonae-secret`), Stripe metadata (`sonaeBillingAccount`), the
-  embedded widget surface (`SONAE_WIDGET_CONFIG`, `sonae-widget-*`), live
-  infrastructure (`sonae-app`, `sonae.ronins.co.uk`) and the upstream remote.
-  Renaming those breaks a running system — do not "fix" them. Full list and
-  reasons in PRODUCT.md §33. `docs/plans/completed/` and `docs/product/` are
-  dated records and keep the old identifier names; read them as history.
+- **The product is Hakken. Nothing here is called Sonae.** Everything was
+  renamed on 2026-09-21 — components, Convex functions and tables, config
+  files, webhook headers, Stripe metadata keys, the widget surface,
+  deployment names, test fixtures, CSS classes and every user-facing string.
+  The only `Sonae` left is the URL of the upstream repository this was cloned
+  from, and the prose above explaining that relationship. If you find any
+  other `sonae`, it is a miss — rename it.
+- **The rename knowingly broke external integrations.** Webhook receivers,
+  Stripe metadata on live subscriptions, embedded widget snippets, DNS and
+  Cloud Run resources still expect the old names. This was accepted
+  deliberately; they are being fixed over time. The cutover checklist —
+  what broke, and what to reconfigure — is PRODUCT.md §33. Do not "fix" a
+  failure by renaming something back to `sonae`.
 - **Everything in `docs/product/` is a dated record.** Do not edit those files
   to match later decisions. Supersede them with a new dated document, or record
   the change in PRODUCT.md's change log.

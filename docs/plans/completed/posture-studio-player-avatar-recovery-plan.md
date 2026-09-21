@@ -208,7 +208,7 @@ The proof strategy is:
   - hands-front screenshots do not show forearms disappearing behind the torso.
   - squat screenshots show lower hips/knee bend versus neutral.
   - leg-raise screenshots show only the selected leg raised.
-- Debug registry proof reads `window.__sonaeMovementRetargetDebug.player` and the tracking debug ref to confirm the live player path is using the expected owners.
+- Debug registry proof reads `window.__hakkenMovementRetargetDebug.player` and the tracking debug ref to confirm the live player path is using the expected owners.
 
 Artifacts should be saved under a non-committed scratch path such as `tests/artifacts/movement-player-avatar-proof/` or `tmp/movement-player-avatar-proof/`, then summarized in the handoff. These artifacts are not committed unless explicitly requested.
 

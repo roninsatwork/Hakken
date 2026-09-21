@@ -56,8 +56,8 @@ describe("WidgetIframeClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    localStorage.setItem("sonae_widget_widget-1_thread", "thread-1");
-    localStorage.setItem("sonae_widget_widget-1_token", "access-token");
+    localStorage.setItem("hakken_widget_widget-1_thread", "thread-1");
+    localStorage.setItem("hakken_widget_widget-1_token", "access-token");
     Element.prototype.scrollIntoView = vi.fn();
     vi.stubGlobal(
       "Audio",

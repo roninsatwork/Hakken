@@ -155,7 +155,7 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
 
            if (targetOrigin) {
                window.parent.postMessage({ 
-                   type: 'SONAE_WIDGET_CONFIG', 
+                   type: 'HAKKEN_WIDGET_CONFIG', 
                    showPopup: widget.showPopupPreview && widget.enableGreeting, 
                    themeGreeting: widget.themeGreeting,
                    primaryColor: widget.themePrimaryColor || "#000000"
@@ -228,8 +228,8 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
            return;
        }
 
-       const existingThreadKey = `sonae_widget_${widgetId}_thread`;
-       const existingTokenKey = `sonae_widget_${widgetId}_token`;
+       const existingThreadKey = `hakken_widget_${widgetId}_thread`;
+       const existingTokenKey = `hakken_widget_${widgetId}_token`;
        const storedThreadId = localStorage.getItem(existingThreadKey) as Id<"threads"> | null;
        const storedAccessToken = localStorage.getItem(existingTokenKey);
        
@@ -273,8 +273,8 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
     }
     setThreadId(createdThread.threadId);
     setWidgetAccessToken(createdThread.accessToken);
-    localStorage.setItem(`sonae_widget_${widgetId}_thread`, createdThread.threadId);
-    localStorage.setItem(`sonae_widget_${widgetId}_token`, createdThread.accessToken);
+    localStorage.setItem(`hakken_widget_${widgetId}_thread`, createdThread.threadId);
+    localStorage.setItem(`hakken_widget_${widgetId}_token`, createdThread.accessToken);
     return { threadId: createdThread.threadId, accessToken: createdThread.accessToken };
   };
 
@@ -369,8 +369,8 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
   };
 
   const handleReset = () => {
-     localStorage.removeItem(`sonae_widget_${widgetId}_thread`);
-     localStorage.removeItem(`sonae_widget_${widgetId}_token`);
+     localStorage.removeItem(`hakken_widget_${widgetId}_thread`);
+     localStorage.removeItem(`hakken_widget_${widgetId}_token`);
      setThreadId(null);
      setWidgetAccessToken(null);
      clearPendingPhoto();

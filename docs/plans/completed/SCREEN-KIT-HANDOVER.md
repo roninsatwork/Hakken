@@ -216,7 +216,7 @@ with opinions. Scanned across 303 screens under `(dashboard)`.
 | **Selects** | 50 raw `<select>` against 10 uses of the shared `Select`. |
 | **Textareas** | 48 raw `<textarea>`. |
 | **Status pills** | 13 spellings across 18 hand-written, plus `StatusPill` used 11 times. |
-| **Empty states** | `SonaeEmptyState` 12, `TableEmptyRow` 41 — and hand-written ones besides. |
+| **Empty states** | `HakkenEmptyState` 12, `TableEmptyRow` 41 — and hand-written ones besides. |
 | **Detail pages** | `DetailLayout` used **3 times**, despite being built for exactly this. |
 
 **Buttons and cards are the two big ones**, and buttons is the biggest single

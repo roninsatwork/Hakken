@@ -50,7 +50,7 @@ function BandHead({ eyebrow, title, subtitle, brand = false }: {
   return (
     <div className="mb-8 flex max-w-3xl flex-col gap-3 md:mb-12">
       <Eyebrow brand={brand}>{eyebrow}</Eyebrow>
-      <h2 className="sonae-display text-[clamp(24px,2.9vw,38px)] leading-[1.1] text-foreground">
+      <h2 className="hakken-display text-[clamp(24px,2.9vw,38px)] leading-[1.1] text-foreground">
         {title}
       </h2>
       {subtitle ? <p className="max-w-[62ch] text-[16px] leading-relaxed text-secondary">{subtitle}</p> : null}
@@ -253,7 +253,7 @@ function LoopFigure({ value, label, names }: { value: string; label: string; nam
         ))}
       </svg>
       <div className="absolute inset-[34%] flex flex-col items-center justify-center gap-0.5 text-center">
-        <b className="sonae-display text-[28px] font-normal leading-none text-foreground">{value}</b>
+        <b className="hakken-display text-[28px] font-normal leading-none text-foreground">{value}</b>
         <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-secondary">{label}</span>
       </div>
     </div>
@@ -315,7 +315,7 @@ export default function AppDashboardPage() {
         <div className="relative grid items-center gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14">
           <div className="flex flex-col items-start gap-5">
             <Eyebrow brand>{t("hero.eyebrow")}</Eyebrow>
-            <h1 className="sonae-display hakken-hero-h1 text-foreground">{t("hero.title")}</h1>
+            <h1 className="hakken-display hakken-hero-h1 text-foreground">{t("hero.title")}</h1>
             <p className="max-w-[46ch] text-[clamp(15px,1.25vw,18px)] font-light leading-[1.5] text-secondary">
               {t("hero.body")}
             </p>
@@ -381,7 +381,7 @@ export default function AppDashboardPage() {
               <AgentArt />
             </div>
             <div className="flex min-w-0 flex-col gap-3">
-              <h3 className="sonae-display text-[clamp(21px,2.1vw,30px)] font-normal text-foreground">
+              <h3 className="hakken-display text-[clamp(21px,2.1vw,30px)] font-normal text-foreground">
                 {capabilities[0].title}
               </h3>
               <p className="max-w-[62ch] text-[16px] leading-relaxed text-secondary">{capabilities[0].body}</p>
@@ -636,7 +636,7 @@ export default function AppDashboardPage() {
                   : "";
             return (
               <div key={figure.label} className={`py-6 pr-6 ${startsRow}`}>
-                <b className="sonae-display block text-[clamp(30px,3vw,42px)] font-normal leading-none tabular-nums text-brand">
+                <b className="hakken-display block text-[clamp(30px,3vw,42px)] font-normal leading-none tabular-nums text-brand">
                   {figure.value}
                 </b>
                 <span className="mt-2.5 block max-w-[26ch] text-[15px] leading-relaxed text-secondary">{figure.label}</span>
@@ -679,7 +679,7 @@ export default function AppDashboardPage() {
         <div className="relative grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
           <div className="flex flex-col items-start gap-4">
             <Eyebrow brand>{t("useCases.eyebrow")}</Eyebrow>
-            <h2 className="sonae-display text-[clamp(24px,2.9vw,38px)] leading-[1.1] text-foreground">
+            <h2 className="hakken-display text-[clamp(24px,2.9vw,38px)] leading-[1.1] text-foreground">
               {t("useCases.title")}
             </h2>
             <p className="max-w-[34ch] text-[16px] leading-relaxed text-secondary">{t("useCases.subtitle")}</p>

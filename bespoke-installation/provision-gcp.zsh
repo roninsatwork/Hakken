@@ -15,7 +15,7 @@ PROJECT_ID=$1
 BILLING_ACCOUNT_ID=$2
 REGION=${3:-us-central1}
 SERVICE_ACCOUNT_NAME="github-deployer"
-REPO_NAME="sonae-repo"
+REPO_NAME="hakken-repo"
 
 echo "🚀 Starting GCP Provisioning for Project: $PROJECT_ID..."
 

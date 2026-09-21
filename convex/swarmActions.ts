@@ -208,7 +208,7 @@ export const executeSwarmObjective = internalAction({
       content: lastOutput,
       inputTokens: totalInTokens,
       outputTokens: totalOutTokens,
-      modelUsed: finalModelConfig?.modelId ?? "sonae-swarm-cluster-v1",
+      modelUsed: finalModelConfig?.modelId ?? "hakken-swarm-cluster-v1",
       providerKey: finalModelConfig?.providerKey,
       providerModelId: finalModelConfig?.providerModelId,
     });

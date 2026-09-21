@@ -94,7 +94,7 @@ h1 {
    surfaces that pitch to the same buyer speak in one voice. Bricolage is
    loaded by the dashboard layout; the Inter fallback is what renders on any
    route that does not load it, which degrades quietly rather than breaking. */
-.sonae-display {
+.hakken-display {
   font-family: var(--font-bricolage), var(--font-inter), ui-sans-serif, sans-serif;
   font-weight: 640;
   font-variation-settings: "opsz" 60;

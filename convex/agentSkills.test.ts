@@ -1137,7 +1137,7 @@ describe("agent skills", () => {
     });
     expect(exportedBundle.filename).toBe("risk-monitoring-bundle.json");
     expect(exportedBundle.bundle).toMatchObject({
-      format: "sonae.agentSkillBundle.v1",
+      format: "hakken.agentSkillBundle.v1",
       skill: {
         name: "Risk Monitoring",
         riskLevel: "HIGH",

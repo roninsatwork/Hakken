@@ -297,7 +297,7 @@ If a provider response was lost and an idempotency window has expired, the
 starter first checks provider checkout history. It replaces an absent/expired
 checkout only after that bounded history and the subscription check are complete;
 ambiguous or oversized histories require operator reconciliation. Find the existing object in the Stripe dashboard
-using its `sonaeBillingAccount` / `sonaeCheckoutAttempt` metadata. An authenticated
+using its `hakkenBillingAccount` / `hakkenCheckoutAttempt` metadata. An authenticated
 deployment operator can call the internal
 `billingRecovery:attachProviderObject` action with the stored `accountId`,
 verified `customerId` and optional `sessionId`. It checks provider metadata,

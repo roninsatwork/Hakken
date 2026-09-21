@@ -122,7 +122,7 @@ describe("Webhook delivery logs", () => {
     const result = await t.action(internal.webhookDeliveryActions.dispatchInternal, {
       deliveryId,
       payloadJson: JSON.stringify({ ok: true }),
-      headers: [{ name: "X-Sonae-Test", value: "yes" }],
+      headers: [{ name: "X-Hakken-Test", value: "yes" }],
     });
 
     expect(result).toMatchObject({
@@ -136,7 +136,7 @@ describe("Webhook delivery logs", () => {
       body: JSON.stringify({ ok: true }),
       headers: expect.objectContaining({
         "Content-Type": "application/json",
-        "X-Sonae-Test": "yes",
+        "X-Hakken-Test": "yes",
       }),
     }));
   });

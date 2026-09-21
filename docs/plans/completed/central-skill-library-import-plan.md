@@ -274,7 +274,7 @@ Prefer extending the existing tables conservatively.
 
 Possible additions to `agentSkills`:
 
-- `sourceFormat`: optional `"MANUAL" | "SONAE_BUNDLE" | "SKILL_MD"`.
+- `sourceFormat`: optional `"MANUAL" | "HAKKEN_BUNDLE" | "SKILL_MD"`.
 - `sourceFilename`: optional string.
 - `sourceHash`: optional string for duplicate detection.
 - `sourceMarkdown`: optional original imported Markdown, only if product wants a source preview.

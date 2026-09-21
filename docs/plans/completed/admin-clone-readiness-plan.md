@@ -121,7 +121,7 @@ components they use; the settings field `platformName` (via
 
 3.1 Route every user-visible "Hakken" literal in `admin/**` and the
 admin-serving `src/ui/**` components through `platformName`. Code comments
-and internal component names (`SonaeModal` etc.) are not user-visible and
+and internal component names (`HakkenModal` etc.) are not user-visible and
 stay — renaming components is cosmetic churn, explicitly out of scope.
 
 3.2 Extend the guard: widen `no-client-specific-fallbacks.test.ts`'s
@@ -245,7 +245,7 @@ the two literals inside Phase 2's freshly collapsed screens caught in the
 mop-up). Task 3.2 delivered the guard the strong way round: a third scan in
 `no-client-specific-fallbacks.test.ts` covering the admin roots with an
 **empty** shrink-only allowance map — zero surviving builder-name strings,
-so any new one fails the build. Module-path literals (the `SonaeModal`
+so any new one fails the build. Module-path literals (the `HakkenModal`
 import specifiers) are excluded as not user-visible; the component renames
 stay out of scope as agreed. Fourteen test files pin the behaviour by
 rendering under a mock platform name ("Acme Copilot"). A clone now renames

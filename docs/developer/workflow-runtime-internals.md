@@ -48,7 +48,7 @@ Action callers can use `runManualSync` in `convex/workflows.ts`; it requires act
 
 Due schedule dispatch is handled by `internal.workflowEngine.scheduleDispatcher`, which is registered from `convex/crons.ts` to run every minute. The dispatcher queries active schedules whose `nextRunAt` is due, up to the bounded dispatch limit. Workflow schedules only execute the graph when the workflow exists, is active, and has `triggerType` set to `SCHEDULE`. Agent schedules queue agent runs and link them to workflow execution records instead of invoking the workflow graph runtime.
 
-Public webhooks enter through `convex/webhooks.ts`. The HTTP action reads the `workflowId` query parameter, requires the workflow to be active and configured as `WEBHOOK`, verifies the `x-sonae-secret` header against the stored secret, creates a public webhook execution through `createPublicWorkflowRunInternal`, and schedules `startWorkflow` with the request body as initial input. The internal creation path also requires the workflow's stored `companyId` to match the supplied public trigger company id. The secret is not accepted in the URL. Oversized webhook input is rejected with 413 before execution when either the numeric `content-length` header or the actual request text exceeds the 20,000-character public input limit.
+Public webhooks enter through `convex/webhooks.ts`. The HTTP action reads the `workflowId` query parameter, requires the workflow to be active and configured as `WEBHOOK`, verifies the `x-hakken-secret` header against the stored secret, creates a public webhook execution through `createPublicWorkflowRunInternal`, and schedules `startWorkflow` with the request body as initial input. The internal creation path also requires the workflow's stored `companyId` to match the supplied public trigger company id. The secret is not accepted in the URL. Oversized webhook input is rejected with 413 before execution when either the numeric `content-length` header or the actual request text exceeds the 20,000-character public input limit.
 
 The schedule-list force-run action in `api.scheduler.manualRunSchedule` is not a graph execution path for workflows. For workflow targets, it creates an execution and schedules `internal.scheduler.completeSimulation`. For agent targets, it queues and runs the agent path. Use this distinction when debugging customer reports about force-run behavior.
 
@@ -175,7 +175,7 @@ Paused schedules have no `nextRunAt`. Toggling a schedule active recalculates `n
 Webhook runtime is intentionally narrow:
 
 - The workflow must exist, be active, and have `triggerType === "WEBHOOK"`.
-- The request must send the exact secret in the `x-sonae-secret` header.
+- The request must send the exact secret in the `x-hakken-secret` header.
 - Secret comparison uses constant-time comparison in `convex/workflows.ts`.
 - Initial public input is trimmed and limited before it is stored.
 - Public execution creation can include tenant context through `companyId` when the caller path supplies it.

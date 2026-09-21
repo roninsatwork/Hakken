@@ -15,9 +15,9 @@
 > taken on 2026-09-21. Sonae is Ronins' general-purpose agentic application
 > framework and continues to exist and be maintained separately; Hakken is the
 > product built on that foundation, developed here and only here. Code
-> identifiers and user-facing strings are now `Hakken`; the `sonae` names that
-> remain are external contracts (webhook headers, Stripe metadata, live
-> infrastructure) — see §33.
+> identifiers, deployment names and user-facing strings are all `Hakken`; the
+> integrations outside this repository that still expect the old names are
+> listed, with what to reconfigure, in §33.
 >
 > Platform sections last verified against the code on 2026-09-13. Vision last
 > updated 2026-09-21 from `docs/product/app-vision-v2.md` (v2.3).
@@ -742,34 +742,37 @@ They are not Hakken product surface. The clone tooling
 most of them as optional modules. Decide per module whether to keep, park or
 strip it before phase 1; nothing in Part One depends on any of them.
 
-### Identifiers that deliberately still read `sonae`
+### The rename is complete — and what it breaks outside this repo
 
 The 2026-09-21 rebrand renamed documentation prose. A follow-up pass the same
-day renamed the rest: React components, Convex functions, config filenames,
-test fixtures, CSS classes, debug globals and every user-facing string are now
-`Hakken`, including `projectName` in `messages/en.json`.
+day renamed everything else: components, Convex functions and tables, config
+files, webhook headers, Stripe metadata keys, the embedded widget surface,
+deployment names, test fixtures, CSS classes, debug globals, historical plan
+records and every user-facing string. Nothing here is named `sonae` any more
+except the URL of the upstream repository this was cloned from.
 
-What still reads `sonae` is deliberate. Each one is a contract with something
-outside this repository, and renaming it breaks a running system:
+This was done deliberately, accepting breakage, to stop the two names coexisting.
+**Systems outside this repository still expect the old names.** Each row below is
+broken until it is reconfigured:
 
-| Kind | Examples | Why it stays |
-|---|---|---|
-| Webhook wire protocol | `x-sonae-secret`, `X-Sonae-Signature`, `X-Sonae-Timestamp`, `Sonae-Webhook-Dispatcher` | Receivers already parse these headers |
-| Stripe metadata | `sonaeBillingAccount`, `sonaeCheckoutAttempt` | Written on live customers and subscriptions |
-| Embedded widget surface | `sonae_widget_*`, `SONAE_WIDGET_CONFIG`, `SonaeWidgetInitialized`, and the `sonae-widget-*` / `sonae-open` / `sonae-display` / `sonae-icon-*` CSS classes | Third-party sites set the global, listen for the event and target the classes |
-| Deployment and DNS | `sonae-app` (Cloud Run), `sonae-repo` (Artifact Registry), `sonae-dev-491717` (GCP project), `sonae.ronins.co.uk`, `sonae-auth.ronins.co.uk`, `sonae-db.ronins.co.uk` | Live infrastructure |
-| Persisted format ids | `sonae.agentSkillBundle.v1`, `sonae-swarm-cluster-v1`, `sonae-voice-ticket-v2` | Stored in existing records |
-| Provider-side ids | `G-SONAE`, `sonae-stripe-portal-*` | Configured in the provider, not here |
-| Upstream framework | `https://github.com/roninsatwork/Sonae.git` and the `product:init` origin guard | Names the actual repository this was cloned from |
-| Convex table | `sonaeGlobal` | Renaming a table is a data migration |
+| Area | Old | New | What to do |
+|---|---|---|---|
+| Webhook secret header | `x-sonae-secret` | `x-hakken-secret` | Update every registered receiver |
+| Webhook signature | `X-Sonae-Signature`, `X-Sonae-Timestamp` | `X-Hakken-*` | Update receiver signature verification |
+| Dispatcher User-Agent | `Sonae-Webhook-Dispatcher` | `Hakken-Webhook-Dispatcher` | Update receiver allowlists |
+| Stripe metadata | `sonaeBillingAccount`, `sonaeCheckoutAttempt` | `hakken*` | Live customers and subscriptions carry the old keys; backfill or re-link before billing recovery/reconciliation runs |
+| Widget global and event | `SONAE_WIDGET_CONFIG`, `SonaeWidgetInitialized` | `HAKKEN_WIDGET_CONFIG`, `HakkenWidgetInitialized` | Reissue every embedding site's snippet |
+| Widget CSS | `sonae-widget-*`, `sonae-open`, `sonae-display`, `sonae-icon-*` | `hakken-*` | Any site styling the widget |
+| Widget storage | `sonae_widget_*` | `hakken_widget_*` | Live widget sessions reset once |
+| Convex table | `sonaeGlobal` | `hakkenGlobal` | Data migration on any deployment holding rows |
+| Cloud Run / Artifact Registry | `sonae-app`, `sonae-repo` | `hakken-app`, `hakken-repo` | Next deploy creates new resources; the old ones keep running and costing until removed |
+| GCP project and DNS | `sonae-dev-491717`, `sonae.ronins.co.uk`, `sonae-auth.ronins.co.uk`, `sonae-db.ronins.co.uk` | `hakken-*` | These must be created before they resolve |
+| Persisted format ids | `sonae.agentSkillBundle.v1`, `sonae-swarm-cluster-v1`, `sonae-voice-ticket-v2` | `hakken.*` | Records written under the old id need migrating |
 
-Renaming any of these is a migration with a cutover, not a find-and-replace.
-
-**Historical records keep their original names.** `docs/plans/completed/` and
-`docs/product/` are dated records of decisions as they were made, so they still
-say `SonaeModal`, `generateSonaeResponse`, `sonae-local-test-auth` and the like.
-Read them as history: the code those names refer to is now `HakkenModal`,
-`generateHakkenResponse` and `hakken-local-test-auth`.
+The Hakken Convex deployment (`quaint-zebra-2`) was created empty on
+2026-09-21, so the table and format-id rows carry no data debt there. The
+Stripe, webhook, widget, DNS and Cloud Run rows do apply to anything already
+running against the Sonae deployment.
 
 ---
 
@@ -784,8 +787,9 @@ Read them as history: the code those names refer to is now `HakkenModal`,
   the new product and what it does not. Part Three gained §31, the Hakken
   product surface, all of it unbuilt; the previous gap table became §32; §33
   records the legacy demo modules. The five research documents were brought into
-  `docs/product/`. Code identifiers, config filenames and deployment names
-  containing `sonae` are unchanged and still correct.
+  `docs/product/`. A follow-up pass the same day renamed every remaining
+  `sonae` identifier, filename and deployment name to `hakken`, knowingly
+  breaking external integrations; the cutover checklist is §33.
 * **2026-09-13** — Corrected OAuth, MCP and health-endpoint implementation
   claims against the code. Live deployment readiness remains a separate check.
 * **2026-08-23 (later)** — Three claims corrected against the code. Tenant

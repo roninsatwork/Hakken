@@ -178,7 +178,7 @@ are — see the maintenance plan's M6.3 note before touching the runtime loop).
 
 ### 3.1 `convex/ai.ts` (1,596 lines → three files plus one relocation)
 
-- `convex/aiChat.ts` — `generateSonaeResponse` and its helpers (lines
+- `convex/aiChat.ts` — `generateHakkenResponse` and its helpers (lines
   ~201–730 today).
 - `convex/aiSpeech.ts` — `transcribeAudio`, `synthesizeSpeech`, and the
   payload/model assertion helpers.
@@ -188,7 +188,7 @@ are — see the maintenance plan's M6.3 note before touching the runtime loop).
   belongs with the workflow modules, not in ai.
 
 **Caution:** moving a Convex function changes its `internal.*` path. Known
-callers of `internal.ai.generateSonaeResponse` include `chat.ts`,
+callers of `internal.ai.generateHakkenResponse` include `chat.ts`,
 `wikiAsk.ts`, and `companyEvalRunActions.ts` — grep for `internal.ai.` across
 `convex/` and update every reference in the same commit. Typecheck catches
 stragglers; do not rely on tests alone.

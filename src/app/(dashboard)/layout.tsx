@@ -9,7 +9,7 @@ import FluidWorkspace from "@/src/ui/components/layout/FluidWorkspace";
  * `/app` tells the same story to the same buyer as the marketing site, and was
  * telling it in a different voice — Inter Light against the site's Bricolage.
  * Loading it here rather than in the page keeps it a layout concern, and the
- * `.sonae-display` class in globals.css is the only thing that reads it.
+ * `.hakken-display` class in globals.css is the only thing that reads it.
  */
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],

@@ -34,7 +34,7 @@ function getRetryDelayMs(attemptNumber: number) {
 function buildHeaders(headers: Array<{ name: string; value: string }> | undefined) {
   const outboundHeaders: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "Sonae-Webhook-Dispatcher/1.0",
+    "User-Agent": "Hakken-Webhook-Dispatcher/1.0",
   };
   for (const header of headers ?? []) {
     const name = header.name.trim();

@@ -22,8 +22,8 @@ permissions:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT }}
   REGION: us-central1
-  SERVICE: sonae-app
-  REPO: sonae-repo
+  SERVICE: hakken-app
+  REPO: hakken-repo
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:

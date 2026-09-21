@@ -98,7 +98,7 @@ describe("AnalyticsPage", () => {
   it("shows a healthy analytics data-health summary", () => {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
-      if (path.includes("getAnalyticsId")) return "G-SONAE";
+      if (path.includes("getAnalyticsId")) return "G-HAKKEN";
       if (path.includes("getAnalyticsDataHealthForAdmin")) return buildHealthyHealth();
       return undefined;
     });
@@ -150,17 +150,17 @@ describe("AnalyticsPage", () => {
   it("loads the unchanged success feedback after saving", async () => {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
-      if (path.includes("getAnalyticsId")) return "G-SONAE";
+      if (path.includes("getAnalyticsId")) return "G-HAKKEN";
       if (path.includes("getAnalyticsDataHealthForAdmin")) return buildHealthyHealth();
       return undefined;
     });
 
     render(<AnalyticsPage />);
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "G-SONAE-NEW" } });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "G-HAKKEN-NEW" } });
     fireEvent.click(screen.getByRole("button", { name: "Commit Configuration" }));
 
-    await waitFor(() => expect(updateAnalyticsId).toHaveBeenCalledWith({ trackingId: "G-SONAE-NEW" }));
+    await waitFor(() => expect(updateAnalyticsId).toHaveBeenCalledWith({ trackingId: "G-HAKKEN-NEW" }));
     expect(await screen.findByText("Tracking Integrated")).toBeInTheDocument();
   });
 });

@@ -3,8 +3,8 @@
 
 (function() {
     // Prevent double execution
-    if (window.SonaeWidgetInitialized) return;
-    window.SonaeWidgetInitialized = true;
+    if (window.HakkenWidgetInitialized) return;
+    window.HakkenWidgetInitialized = true;
 
     // Locate the script tag that loaded this script to extract the Widget ID
     let scriptTag = document.currentScript;
@@ -33,7 +33,7 @@
     // Inject Base CSS
     const style = document.createElement('style');
     style.innerHTML = `
-        #sonae-widget-container {
+        #hakken-widget-container {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -46,7 +46,7 @@
             pointer-events: none;
         }
 
-        #sonae-widget-iframe-wrapper {
+        #hakken-widget-iframe-wrapper {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 100px);
@@ -62,25 +62,25 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #sonae-widget-iframe-wrapper.sonae-open {
+        #hakken-widget-iframe-wrapper.hakken-open {
             opacity: 1;
             transform: translateY(0) scale(1);
             visibility: visible;
         }
 
-        #sonae-widget-iframe {
+        #hakken-widget-iframe {
             width: 100%;
             height: 100%;
             border: none;
             background: transparent;
         }
 
-        #sonae-widget-button-container {
+        #hakken-widget-button-container {
             position: relative;
             pointer-events: auto;
         }
 
-        #sonae-widget-button {
+        #hakken-widget-button {
             width: 60px;
             height: 60px;
             border-radius: 30px;
@@ -97,26 +97,26 @@
             z-index: 2;
         }
 
-        #sonae-widget-button:hover {
+        #hakken-widget-button:hover {
             transform: scale(1.05);
             box-shadow: 0 12px 32px rgba(0,0,0,0.3);
         }
 
-        .sonae-widget-icon {
+        .hakken-widget-icon {
             width: 24px;
             height: 24px;
             transition: opacity 0.2s ease, transform 0.2s ease;
             position: absolute;
         }
 
-        .sonae-icon-chat { opacity: 1; transform: scale(1) rotate(0deg); }
-        .sonae-icon-close { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+        .hakken-icon-chat { opacity: 1; transform: scale(1) rotate(0deg); }
+        .hakken-icon-close { opacity: 0; transform: scale(0.5) rotate(-90deg); }
 
-        #sonae-widget-button.sonae-open .sonae-icon-chat { opacity: 0; transform: scale(0.5) rotate(90deg); }
-        #sonae-widget-button.sonae-open .sonae-icon-close { opacity: 1; transform: scale(1) rotate(0deg); }
+        #hakken-widget-button.hakken-open .hakken-icon-chat { opacity: 0; transform: scale(0.5) rotate(90deg); }
+        #hakken-widget-button.hakken-open .hakken-icon-close { opacity: 1; transform: scale(1) rotate(0deg); }
 
         /* Pop-up Preview Bubble */
-        #sonae-widget-popup {
+        #hakken-widget-popup {
             position: absolute;
             bottom: calc(100% + 16px);
             right: 0;
@@ -137,7 +137,7 @@
             z-index: 1;
         }
 
-        #sonae-widget-popup::after {
+        #hakken-widget-popup::after {
             content: '';
             position: absolute;
             bottom: -6px;
@@ -148,14 +148,14 @@
             transform: rotate(45deg);
         }
         
-        #sonae-widget-popup.sonae-show-popup {
+        #hakken-widget-popup.hakken-show-popup {
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
         }
 
         /* Hide popup if widget is open */
-        #sonae-widget-button-container.sonae-open #sonae-widget-popup {
+        #hakken-widget-button-container.hakken-open #hakken-widget-popup {
             opacity: 0 !important;
             transform: translateY(10px) !important;
             pointer-events: none !important;
@@ -168,7 +168,7 @@
         }
 
         @media (max-width: 480px) {
-            #sonae-widget-iframe-wrapper {
+            #hakken-widget-iframe-wrapper {
                 width: calc(100vw - 48px);
                 height: calc(100vh - 120px);
             }
@@ -178,26 +178,26 @@
 
     // Create Container
     const container = document.createElement('div');
-    container.id = 'sonae-widget-container';
+    container.id = 'hakken-widget-container';
 
     // Create Iframe Wrapper
     const iframeWrapper = document.createElement('div');
-    iframeWrapper.id = 'sonae-widget-iframe-wrapper';
+    iframeWrapper.id = 'hakken-widget-iframe-wrapper';
 
     // Build Iframe
     const iframe = document.createElement('iframe');
-    iframe.id = 'sonae-widget-iframe';
+    iframe.id = 'hakken-widget-iframe';
     iframe.src = `${hostUrl}/w/${widgetId}`;
     iframe.allow = "microphone";
     iframeWrapper.appendChild(iframe);
 
     // Create Button Container (Holds Button + Popup)
     const buttonContainer = document.createElement('div');
-    buttonContainer.id = 'sonae-widget-button-container';
+    buttonContainer.id = 'hakken-widget-button-container';
 
     // Create Pop-up Bubble
     const popup = document.createElement('div');
-    popup.id = 'sonae-widget-popup';
+    popup.id = 'hakken-widget-popup';
     popup.addEventListener('click', () => {
         // Clicking popup acts like clicking button to open
         toggleWidget();
@@ -206,11 +206,11 @@
 
     // Create Toggle Button
     const button = document.createElement('button');
-    button.id = 'sonae-widget-button';
+    button.id = 'hakken-widget-button';
     button.setAttribute('aria-label', 'Toggle Chat');
     button.innerHTML = `
-        <svg class="sonae-widget-icon sonae-icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        <svg class="sonae-widget-icon sonae-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg class="hakken-widget-icon hakken-icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <svg class="hakken-widget-icon hakken-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     `;
     button.addEventListener('click', toggleWidget);
     buttonContainer.appendChild(button);
@@ -222,14 +222,14 @@
     function toggleWidget() {
         isOpen = !isOpen;
         if (isOpen) {
-            iframeWrapper.classList.add('sonae-open');
-            button.classList.add('sonae-open');
-            buttonContainer.classList.add('sonae-open');
+            iframeWrapper.classList.add('hakken-open');
+            button.classList.add('hakken-open');
+            buttonContainer.classList.add('hakken-open');
             iframe.contentWindow.postMessage({ type: 'WIDGET_OPENED' }, hostUrl);
         } else {
-            iframeWrapper.classList.remove('sonae-open');
-            button.classList.remove('sonae-open');
-            buttonContainer.classList.remove('sonae-open');
+            iframeWrapper.classList.remove('hakken-open');
+            button.classList.remove('hakken-open');
+            buttonContainer.classList.remove('hakken-open');
         }
     }
 
@@ -238,7 +238,7 @@
         // Strict security check: ensure origin matches the trusted Hakken deployment
         if (event.origin !== hostUrl) return;
         
-        if (event.data && event.data.type === 'SONAE_WIDGET_CONFIG') {
+        if (event.data && event.data.type === 'HAKKEN_WIDGET_CONFIG') {
             widgetConfig = event.data;
             
             // 1. Apply primary color to button
@@ -251,7 +251,7 @@
                popup.innerText = widgetConfig.themeGreeting;
                // Delay animation slightly for dramatic entry
                setTimeout(() => {
-                   popup.classList.add('sonae-show-popup');
+                   popup.classList.add('hakken-show-popup');
                    popup.style.animation = "hakkenBounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
                }, 1000);
             }

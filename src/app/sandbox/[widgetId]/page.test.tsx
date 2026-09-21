@@ -11,7 +11,7 @@ describe("WidgetSandboxPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = "";
-    (window as typeof window & { SonaeWidgetInitialized?: boolean }).SonaeWidgetInitialized = true;
+    (window as typeof window & { HakkenWidgetInitialized?: boolean }).HakkenWidgetInitialized = true;
   });
 
   afterEach(() => {
@@ -47,13 +47,13 @@ describe("WidgetSandboxPage", () => {
     expect(script?.src).toMatch(/\/embed\.js\?t=\d+$/);
 
     const widgetContainer = document.createElement("div");
-    widgetContainer.id = "sonae-widget-container";
+    widgetContainer.id = "hakken-widget-container";
     document.body.appendChild(widgetContainer);
 
     unmount();
 
     expect(document.body.querySelector('script[data-widget-id="widget-123"]')).toBeNull();
-    expect(document.getElementById("sonae-widget-container")).toBeNull();
-    expect((window as typeof window & { SonaeWidgetInitialized?: boolean }).SonaeWidgetInitialized).toBe(false);
+    expect(document.getElementById("hakken-widget-container")).toBeNull();
+    expect((window as typeof window & { HakkenWidgetInitialized?: boolean }).HakkenWidgetInitialized).toBe(false);
   });
 });

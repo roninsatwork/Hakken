@@ -14,8 +14,8 @@
     "repositoryUrl": "https://github.com/roninsatwork/Hakken.git",
     "appUrl": "",
     "region": "us-central1",
-    "service": "sonae-app",
-    "artifactRepository": "sonae-repo"
+    "service": "hakken-app",
+    "artifactRepository": "hakken-repo"
   },
   "bootstrap": {
     "adminEmail": ""

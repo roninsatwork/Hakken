@@ -382,13 +382,13 @@ recent paid invoices and retains the confirmed plan when history is ambiguous.
 All charge/credit calculations and invoices remain in Stripe. See the
 [current setup and lifecycle guide](../../operator/stripe-billing.md).
 
-Verification in `/private/tmp/sonae-stripe-portal-7_nu19ts`:
+Verification in `/private/tmp/hakken-stripe-portal-7_nu19ts`:
 
 - Fresh offline lockfile install and Node 24.18.0 / 59 direct dependencies verified.
 - `npm run check` passed: guards (including all 16 template combinations), lint,
   cold TypeScript and **749 files / 6,598 tests**.
 - `npm run lint:all` passed with the existing shared-header hook warning.
-- Exported Base + Arcade to `/private/tmp/sonae-stripe-portal-base`, enabled
+- Exported Base + Arcade to `/private/tmp/hakken-stripe-portal-base`, enabled
   billing with dummy identifiers and no keys, installed its 49 direct dependencies,
   and passed **82 focused tests**, cold TypeScript and targeted lint.
 - Production builds passed for both the full framework and the billing-enabled

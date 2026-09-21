@@ -95,7 +95,7 @@ export async function readAuthenticTicket(ticket: string, secret: string): Promi
     if (parts.length !== 3 || parts[0] !== "v2") return null;
     const iv = base64UrlToBytes(parts[1]);
     if (iv.byteLength !== 12) return null;
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`sonae-voice-ticket-v2:${secret}`));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`hakken-voice-ticket-v2:${secret}`));
     const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["decrypt"]);
     const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, base64UrlToBytes(parts[2]));
     return JSON.parse(new TextDecoder().decode(plaintext)) as VoiceTicketPayload;

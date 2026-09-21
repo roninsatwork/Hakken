@@ -20,7 +20,7 @@ is governed by [Movement Definitive Plan](./movement-definitive-plan.md).
 **Working rules:**
 - Work on branch `dev`. Read `AGENTS.md` before starting.
 - Do not commit or push without Anthony asking.
-- `sonae.ronins.co.uk` is an OLD deployment. Test on `localhost:3000`.
+- `hakken.ronins.co.uk` is an OLD deployment. Test on `localhost:3000`.
 - Node 24.18.0 for trusted checks; `verify:env` enforces the checked-in Node
   and direct dependency baseline before local commands run.
 - Every item below carries an acceptance test. "It looks right" is not acceptance

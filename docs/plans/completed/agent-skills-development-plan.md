@@ -503,7 +503,7 @@ Status as of June 21, 2026:
 - Starter skills now include at least two suggested eval fixtures each: one happy-path or primary workflow check plus one safety, threshold, approval, schema, or tenant-boundary edge case.
 - The Agent Skill Authoring Guide is available at `docs/developer/agent-skill-authoring-guide.md` and linked from the documentation indexes.
 - Skill cloning is implemented from Skill Detail: super-admins can create a draft copy of an existing skill with instructions, tool mappings, knowledge recommendations, rules, and suggested eval fixtures copied, while bindings are intentionally left behind.
-- Internal skill bundle import/export is implemented: Skill Detail exports a versioned `sonae.agentSkillBundle.v1` JSON bundle, and the catalog imports bundles as draft skills with fresh version snapshots and no bindings.
+- Internal skill bundle import/export is implemented: Skill Detail exports a versioned `hakken.agentSkillBundle.v1` JSON bundle, and the catalog imports bundles as draft skills with fresh version snapshots and no bindings.
 - Higher-fidelity admin interaction coverage now exists for creating skills from the catalog modal, saving detail-page edits, archiving skills, and reviewing rollout upgrades.
 - Core regression coverage now exists for starter skill seeding, skill binding, seeded eval fixture coverage, high-risk skill activation blocking, pinned skill updates, explicit and bulk skill binding upgrades, stale skill eval detection, runtime prompt skill compilation, skill-scoped improvement suggestion application, runtime-run skill attribution, and UI coverage for the skill catalog, skill detail rollout panel, agent skill binding tab, and eval skill filtering.
 

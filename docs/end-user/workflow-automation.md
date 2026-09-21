@@ -70,7 +70,7 @@ Manual workflows are run from the builder. This is the safest mode for testing b
 
 Scheduled workflows are intended to run automatically. When a saved workflow graph contains a trigger node set to schedule mode, Hakken creates or updates a linked schedule record for that workflow. The workflow also needs to remain active and have trigger type `SCHEDULE` for the backend dispatcher to run it.
 
-Webhook workflows expose an endpoint that an external system can call with a `POST` request. The builder displays the endpoint format. A secure webhook secret is generated for webhook workflows and must be sent in the `x-sonae-secret` request header. The secret is not accepted in the URL, which reduces the chance of leaking it through proxy or browser logs. The request body becomes the initial workflow payload and must stay within the current 20,000-character limit. If the workflow is inactive, is no longer configured for webhooks, has the wrong secret, or receives an oversized payload, the webhook should not run.
+Webhook workflows expose an endpoint that an external system can call with a `POST` request. The builder displays the endpoint format. A secure webhook secret is generated for webhook workflows and must be sent in the `x-hakken-secret` request header. The secret is not accepted in the URL, which reduces the chance of leaking it through proxy or browser logs. The request body becomes the initial workflow payload and must stay within the current 20,000-character limit. If the workflow is inactive, is no longer configured for webhooks, has the wrong secret, or receives an oversized payload, the webhook should not run.
 
 The endpoint shown in the builder comes from the configured Convex HTTP Actions
 site origin. In deployed environments, that origin must be configured separately
@@ -129,7 +129,7 @@ When building workflows, start small. Create the workflow, add a trigger and one
 
 For scheduled operations, confirm both the schedule and the workflow trigger type. A standalone schedule can target a workflow, but the backend dispatcher only runs workflow graph schedules when the workflow exists, is active, and is configured as a scheduled workflow. Paused schedules, inactive workflows, deleted targets, and workflows with the wrong trigger type will not produce the expected automated run.
 
-For webhook operations, verify the endpoint, workflow id, active status, trigger type, `x-sonae-secret` header, and request size. The request body becomes initial workflow data, so keep it within the expected shape and avoid sending unnecessary sensitive data. Oversized webhook payloads are rejected before execution rather than truncated into the workflow run.
+For webhook operations, verify the endpoint, workflow id, active status, trigger type, `x-hakken-secret` header, and request size. The request body becomes initial workflow data, so keep it within the expected shape and avoid sending unnecessary sensitive data. Oversized webhook payloads are rejected before execution rather than truncated into the workflow run.
 
 For approvals, open Workflow Runs. A run waiting on a person is flagged there and counted on the sidebar. Opening it shows what the approval node is asking, and its preview, with approve and reject on the waiting step. Approving resumes the downstream path; rejecting stops the whole run. An approval nobody answers expires on the platform window and the run is marked failed. Failed runs should be inspected from the step list before being retried.
 

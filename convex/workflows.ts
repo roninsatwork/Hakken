@@ -402,8 +402,8 @@ export const handleWebhook = httpAction(async (ctx, request) => {
     }
 
     // 🛡️ SECURITY: Webhook secret verification (prevent trigger spoofing)
-    // Enforce webhook secret strictly via headers (x-sonae-secret), completely omitting URL param checking to avoid credential leak via proxy logs.
-    const secretHeader = request.headers.get("x-sonae-secret");
+    // Enforce webhook secret strictly via headers (x-hakken-secret), completely omitting URL param checking to avoid credential leak via proxy logs.
+    const secretHeader = request.headers.get("x-hakken-secret");
     const providedSecret = secretHeader || "";
 
     const expectedSecret = workflow.webhookSecret || "";

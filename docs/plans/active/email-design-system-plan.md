@@ -230,7 +230,7 @@ Verified against both deployments:
 | | Production | Dev (`silent-axolotl-121`) |
 | --- | --- | --- |
 | `RESEND_FROM_EMAIL` | `Hakken Auth <auth@ronins.co.uk>` | `anthony@ronins.co.uk` |
-| `SITE_URL` | `https://sonae.ronins.co.uk` | `http://localhost:3000` |
+| `SITE_URL` | `https://hakken.ronins.co.uk` | `http://localhost:3000` |
 
 DNS on `ronins.co.uk`:
 

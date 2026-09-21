@@ -16,7 +16,7 @@ follow-fidelity rule below (0.1 per body segment) AND Anthony seeing it look rig
 - Work on branch `dev`. Current HEAD: `4ffa204c6`. Everything below is committed and pushed.
 - Node 24.18.0 for trusted checks. Use the checked-in `.nvmrc` / `.node-version`
   and run `npm ci`; `npm run verify:env` enforces the current local baseline.
-- **sonae.ronins.co.uk is an OLD deployment** — always test on `localhost:3000`. See [[check-which-environment-anthony-sees]].
+- **hakken.ronins.co.uk is an OLD deployment** — always test on `localhost:3000`. See [[check-which-environment-anthony-sees]].
 - Never delete recordings/videos. Do not commit/push without Anthony asking (he has been approving each commit).
 - Read AGENTS.md.
 
@@ -362,7 +362,7 @@ Hardened later the same day:
   crashed hand/face model rebuilds everything rather than silently dropping
   finger and face markers. The debug footer shows engine state and the raw
   last error.
-- Note: sonae.ronins.co.uk runs an old deployment. None of this is live until
+- Note: hakken.ronins.co.uk runs an old deployment. None of this is live until
   Anthony asks for a commit/push/deploy.
 
 ## Goal 2: Replay Studio and Game — IN PROGRESS

@@ -25,8 +25,8 @@
  * silently break every receiver already in production. Treat them as protocol
  * identifiers, like the User-Agent in webhookDeliveryActions.ts.
  */
-export const SIGNATURE_HEADER = "X-Sonae-Signature";
-export const TIMESTAMP_HEADER = "X-Sonae-Timestamp";
+export const SIGNATURE_HEADER = "X-Hakken-Signature";
+export const TIMESTAMP_HEADER = "X-Hakken-Timestamp";
 
 /** Named so a future scheme can be added without receivers guessing which they got. */
 export const SIGNATURE_VERSION = "v1";

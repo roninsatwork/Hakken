@@ -10,7 +10,7 @@ Embedded widgets are the public chat surface implemented by `public/embed.js`, `
 - `src/app/w/[widgetId]/page.tsx` renders the public iframe chat experience server shell, reads the request referrer, and mints the signed widget embed pass passed into the client.
 - `src/app/w/[widgetId]/WidgetIframeClient.tsx` owns the public chat client, including photo staging, upload, thumbnail display, visitor-facing photo-action confirmation, and `createWidgetThread` calls with the embed pass.
 - `src/app/sandbox/[widgetId]/page.tsx` injects `public/embed.js` into a simulated page for manual verification.
-- `public/embed.js` is the host-page script. It injects styles, creates the fixed-position widget container, opens the iframe, receives `SONAE_WIDGET_CONFIG`, and applies popup/color behavior.
+- `public/embed.js` is the host-page script. It injects styles, creates the fixed-position widget container, opens the iframe, receives `HAKKEN_WIDGET_CONFIG`, and applies popup/color behavior.
 - `src/proxy.ts` applies the per-widget enforcing `Content-Security-Policy: frame-ancestors ...` header for `/w/[widgetId]`.
 - `src/app/kiosk/[widgetId]/page.tsx` is not the embedded iframe. It is the full-screen Receptionist screen that reuses widget identity and anonymous tokens; see [Receptionist Screen](./receptionist-screen.md).
 
@@ -88,7 +88,7 @@ Company message allocation still applies to anonymous widget threads, but `quota
 
 Quota notices carry `systemKey: "quotaRefusal"`. `src/lib/widgetSystemMessages.ts` translates that platform-authored message from `navigator.language` because anonymous visitors do not have the app's locale cookie. Italian is implemented; unknown keys and languages fall back to stored English. Keep this dictionary limited to platform messages and never run model output through it.
 
-`createWidgetThread` generates a high-entropy access token, stores only its SHA-256 hash on the thread, and returns the raw token to the iframe session. The iframe stores the thread id and raw token in widget-specific localStorage keys, `sonae_widget_{widgetId}_thread` and `sonae_widget_{widgetId}_token`. If only one value is present on load, the iframe clears the partial session and creates a fresh thread/token pair before sending messages.
+`createWidgetThread` generates a high-entropy access token, stores only its SHA-256 hash on the thread, and returns the raw token to the iframe session. The iframe stores the thread id and raw token in widget-specific localStorage keys, `hakken_widget_{widgetId}_thread` and `hakken_widget_{widgetId}_token`. If only one value is present on load, the iframe clears the partial session and creates a fresh thread/token pair before sending messages.
 
 Anonymous widget calls into chat access helpers must pass the raw token as `widgetAccessToken`; otherwise `canAccessThread` returns false and `assertCanAccessThread` throws `Unauthorized: Invalid widget session`. This prevents a visitor who learns a thread id from reading or writing that widget thread without the browser-held session credential.
 

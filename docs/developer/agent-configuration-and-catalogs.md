@@ -127,7 +127,7 @@ The detail page uses:
 - `cloneSkill`
 - `upgradeSkillBindingsForSkill`
 
-Skill bundles use format marker `sonae.agentSkillBundle.v1`. Imports create a draft rather than silently activating a skill. Exports should remain portable JSON bundles, not references to local files or environment state.
+Skill bundles use format marker `hakken.agentSkillBundle.v1`. Imports create a draft rather than silently activating a skill. Exports should remain portable JSON bundles, not references to local files or environment state.
 
 ## Starter Skills
 

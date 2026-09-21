@@ -16,14 +16,14 @@ export const attachProviderObject = internalAction({
     try {
       const stripe = stripeClient(await requireBillingConfig(ctx));
       const customer = await stripe.customers.retrieve(args.customerId);
-      if (customer.deleted || customer.livemode !== (account.mode === "live") || customer.metadata.sonaeBillingAccount !== account._id) {
+      if (customer.deleted || customer.livemode !== (account.mode === "live") || customer.metadata.hakkenBillingAccount !== account._id) {
         throw appError("CONFLICT", "Stripe customer does not match the stored billing account.");
       }
       await ctx.runMutation(internal.billingState.bindCustomer, { ...lease, customerId: customer.id });
       if (args.sessionId) {
         const session = await stripe.checkout.sessions.retrieve(args.sessionId);
         if (!account.attemptId || objectId(session.customer) !== customer.id || session.client_reference_id !== account._id ||
-            session.metadata?.sonaeCheckoutAttempt !== account.attemptId || session.metadata.sonaeBillingAccount !== account._id) {
+            session.metadata?.hakkenCheckoutAttempt !== account.attemptId || session.metadata.hakkenBillingAccount !== account._id) {
           throw appError("CONFLICT", "Stripe checkout does not match the stored attempt.");
         }
         await ctx.runMutation(internal.billingState.saveSession, {

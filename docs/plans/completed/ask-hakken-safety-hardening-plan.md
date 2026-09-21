@@ -29,7 +29,7 @@ Normal chat flow:
 1. The frontend creates or opens a thread.
 2. The frontend optionally uploads files and stores them as thread-scoped knowledge documents.
 3. `convex/chat.sendMessage` validates access, validates attachments, rate-limits, checks quota, redacts PII when configured, stores the message, and schedules the AI response.
-4. Normal Ask Hakken routes to `internal.ai.generateSonaeResponse`.
+4. Normal Ask Hakken routes to `internal.ai.generateHakkenResponse`.
 5. Agent-backed threads route to `internal.agentRuntime.generateAgentResponse`.
 6. Swarm mode routes to `internal.swarmActions.executeSwarmObjective`.
 7. The response action resolves a configured model, loads recent thread history, assembles system instructions, retrieves scoped knowledge chunks, calls the provider, and stores the assistant response.
@@ -169,7 +169,7 @@ Acceptance:
 
 Status:
 
-- Implemented `ASK_SONAE_PLATFORM_SAFETY_CONTRACT` in `convex/aiPromptAssembly.ts`.
+- Implemented `ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT` in `convex/aiPromptAssembly.ts`.
 - Normal assistant prompts now place configured platform behavior, company prompts, and AI rules below platform safety.
 - Agent prompts now use `buildAgentSystemInstruction`, which places configured agent behavior below platform safety.
 - Added regression coverage in `convex/aiPromptAssembly.test.ts`.

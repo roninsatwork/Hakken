@@ -114,7 +114,7 @@ Notes:
   `hakken.product.json`, plus feature dependencies such as Vertex for knowledge
   embeddings. Both use `scripts/provider-requirements.mjs`; see
   [Product Setup](../operator/product-setup.md).
-- Vertex targets project `sonae-dev-491717` in location `global` by default;
+- Vertex targets project `hakken-dev-491717` in location `global` by default;
   `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` override that when set.
 - Which provider actually serves each use case is decided by the model
   defaults in admin, not by which keys exist — see

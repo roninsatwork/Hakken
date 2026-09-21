@@ -87,7 +87,7 @@ These are new product/framework layers to add on top of the existing foundation.
 - Destructive, external, or high-risk actions must support explicit approval.
 - Keep English and Italian locale dictionaries in parity.
 - Admin tables and feeds should default to 15 rows per page.
-- Use existing admin UI primitives and `SonaeModal` patterns. Do not use native browser dialogs.
+- Use existing admin UI primitives and `HakkenModal` patterns. Do not use native browser dialogs.
 
 ## Implementation Progress
 

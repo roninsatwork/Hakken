@@ -96,7 +96,7 @@ never auto-retry; they fail to the review list on the first error.
 **What was actually missing:** less than planned. The agent runtime already
 streamed end to end (provider stream function, flush policy, stalled
 handling), and the widget and dashboard already render streaming rows. The
-gap was the plain assistant path (`generateSonaeResponse`): it waited for the
+gap was the plain assistant path (`generateHakkenResponse`): it waited for the
 whole answer and saved once.
 
 **Built:** the registry request gains an optional `onText` listener; the

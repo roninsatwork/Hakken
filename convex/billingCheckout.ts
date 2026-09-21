@@ -10,7 +10,7 @@ export async function ensureCustomer(ctx: Pick<ActionCtx, "runMutation">, stripe
   if (account.customerId) return account;
   // This step cannot charge: checkout is unreachable until the binding is durably saved.
   // A retry after Stripe prunes the key may leave an unused empty customer, never a second subscription.
-  const customer = await stripe.customers.create({ metadata: { sonaeBillingAccount: account._id } }, { idempotencyKey: `hakken-customer-${account._id}` });
+  const customer = await stripe.customers.create({ metadata: { hakkenBillingAccount: account._id } }, { idempotencyKey: `hakken-customer-${account._id}` });
   if (customer.livemode !== (account.mode === "live")) throw appError("NOT_CONFIGURED", "Stripe customer uses the wrong mode.");
   await ctx.runMutation(internal.billingState.bindCustomer, { accountId: account._id, revision: account.revision, customerId: customer.id });
   return { ...account, customerId: customer.id };
@@ -23,7 +23,7 @@ async function sessionForAttempt(stripe: Stripe, account: Doc<"billingAccounts">
     // replacing it; never reuse an expired idempotency key to submit a purchase.
     const sessions = await stripe.checkout.sessions.list({ customer: account.customerId, limit: 100 });
     if (sessions.has_more) throw appError("CONFLICT", "An unfinished checkout needs operator reconciliation before retrying.");
-    const matches = sessions.data.filter(s => s.metadata?.sonaeCheckoutAttempt === attempt._id);
+    const matches = sessions.data.filter(s => s.metadata?.hakkenCheckoutAttempt === attempt._id);
     if (matches.length > 1) throw appError("CONFLICT", "Multiple checkout sessions need operator reconciliation.");
     if (matches.length === 1) return matches[0];
     return null;
@@ -34,8 +34,8 @@ async function sessionForAttempt(stripe: Stripe, account: Doc<"billingAccounts">
     line_items: [{ price: attempt.offer.stripePriceId, quantity: 1 }],
     client_reference_id: account._id, expires_at: attempt.expiresAt / 1000,
     success_url: attempt.returnUrl, cancel_url: attempt.returnUrl,
-    metadata: { sonaeBillingAccount: account._id, sonaeCheckoutAttempt: attempt._id },
-    subscription_data: { metadata: { sonaeBillingAccount: account._id, sonaeCheckoutAttempt: attempt._id } },
+    metadata: { hakkenBillingAccount: account._id, hakkenCheckoutAttempt: attempt._id },
+    subscription_data: { metadata: { hakkenBillingAccount: account._id, hakkenCheckoutAttempt: attempt._id } },
   }, { idempotencyKey: `hakken-checkout-${attempt._id}` });
 }
 

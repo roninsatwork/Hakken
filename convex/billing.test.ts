@@ -62,7 +62,7 @@ async function subscribe(f: Awaited<ReturnType<typeof setup>>, status = "active"
   const account = (await f.account())!;
   const subscription = {
     id: "sub_owned", customer: "cus_owned", livemode: false, status, collection_method: "charge_automatically", cancel_at_period_end: false,
-    metadata: { sonaeBillingAccount: account._id, sonaeCheckoutAttempt: account.attemptId },
+    metadata: { hakkenBillingAccount: account._id, hakkenCheckoutAttempt: account.attemptId },
     items: { data: [{ id: "si_owned", quantity: 1, price: await provider.prices.retrieve(), current_period_start: NOW / 1000, current_period_end: END / 1000 }], has_more: false },
     latest_invoice: { id: "in_initial", created: NOW / 1000, status: paid ? "paid" : "open", amount_remaining: paid ? 0 : 2900, livemode: false, currency: "gbp", customer: "cus_owned", parent: { subscription_details: { subscription: "sub_owned" } }, billing_reason: "subscription_cycle", lines: { has_more: false, data: [{ parent: { type: "subscription_item_details", subscription_item_details: { proration: false, subscription_item: "si_owned", subscription: "sub_owned" } }, pricing: { price_details: { price: "price_month" } }, quantity: 1, amount: 2900, currency: "gbp", period: { start: NOW / 1000, end: END / 1000 } }] } },
   };
@@ -195,9 +195,9 @@ describe("Company Stripe billing", () => {
     await expect(f.purchase()).rejects.toThrow();
     const account = (await f.account())!;
     const params = provider.checkout.sessions.create.mock.calls[0][0];
-    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { sonaeBillingAccount: "foreign" } });
+    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { hakkenBillingAccount: "foreign" } });
     await expect(f.t.action(internal.billingRecovery.attachProviderObject, { accountId: account._id, customerId: "cus_owned", sessionId: "cs_owned" })).rejects.toThrow("does not match");
-    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { sonaeBillingAccount: account._id } });
+    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { hakkenBillingAccount: account._id } });
     provider.checkout.sessions.retrieve.mockResolvedValue({ ...params, id: "cs_owned", status: "open", url: "https://checkout.stripe.com/c/session" });
     await f.t.action(internal.billingRecovery.attachProviderObject, { accountId: account._id, customerId: "cus_owned", sessionId: "cs_owned" });
     await f.purchase();
@@ -207,10 +207,10 @@ describe("Company Stripe billing", () => {
   test("a foreign customer or checkout cannot replace the stored binding", async () => {
     const f = await setup(); await f.purchase();
     const account = (await f.account())!;
-    provider.customers.retrieve.mockResolvedValue({ id: "cus_other", livemode: false, metadata: { sonaeBillingAccount: account._id } });
+    provider.customers.retrieve.mockResolvedValue({ id: "cus_other", livemode: false, metadata: { hakkenBillingAccount: account._id } });
     await expect(f.t.action(internal.billingRecovery.attachProviderObject, { accountId: account._id, customerId: "cus_other" })).rejects.toThrow("already bound");
-    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { sonaeBillingAccount: account._id } });
-    provider.checkout.sessions.retrieve.mockResolvedValue({ customer: "cus_other", client_reference_id: account._id, metadata: { sonaeCheckoutAttempt: account.attemptId } });
+    provider.customers.retrieve.mockResolvedValue({ id: "cus_owned", livemode: false, metadata: { hakkenBillingAccount: account._id } });
+    provider.checkout.sessions.retrieve.mockResolvedValue({ customer: "cus_other", client_reference_id: account._id, metadata: { hakkenCheckoutAttempt: account.attemptId } });
     await expect(f.t.action(internal.billingRecovery.attachProviderObject, { accountId: account._id, customerId: "cus_owned", sessionId: "cs_foreign" })).rejects.toThrow("does not match");
     expect((await f.account())!.customerId).toBe("cus_owned");
   });
@@ -301,7 +301,7 @@ describe("Company Stripe billing", () => {
     sub.items.data[0].price.unit_amount = 1;
     await f.admin.action(api.billingActions.refresh, {});
     expect(await f.account()).toMatchObject({ status: "unsupported", paidThrough: 0 });
-    sub.metadata.sonaeBillingAccount = "foreign" as typeof sub.metadata.sonaeBillingAccount;
+    sub.metadata.hakkenBillingAccount = "foreign" as typeof sub.metadata.hakkenBillingAccount;
     await f.admin.action(api.billingActions.refresh, {});
     expect(await f.account()).toMatchObject({ status: "unsupported", paidThrough: 0 });
     sub.items.data[0].price.unit_amount = 2900;

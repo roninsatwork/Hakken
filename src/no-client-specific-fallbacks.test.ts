@@ -58,9 +58,9 @@ const ALLOWED_FILES = new Set(["convex/seedUsers.ts"]);
  * - gmailWatcher.ts: `PROCESSED_LABEL_NAME` — the default Gmail label; the
  *   label actually written is the configured platform name.
  * - webhookSignatureService.ts / webhookDeliveryActions.ts: outbound header
- *   names and User-Agent — wire protocol existing consumers parse; renaming
- *   them breaks every receiver in production. These still carry the original
- *   `Hakken` wire names for that reason, so their builder-name count is now 0.
+ *   names and User-Agent — wire protocol consumers parse. Renamed to `Hakken`
+ *   on 2026-09-21 with everything else, knowingly breaking existing receivers
+ *   until they are reconfigured; the cutover list is PRODUCT.md §33.
  * - localDemoSeed.ts / memoryMigration.ts: operator-run seed and one-time
  *   migration, not on any request path.
  *
@@ -72,8 +72,8 @@ const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
   "convex/localDemoSeed.ts": 2,
   "convex/memoryMigration.ts": 1,
   "convex/settingsService.ts": 0,
-  "convex/webhookDeliveryActions.ts": 0,
-  "convex/webhookSignatureService.ts": 0,
+  "convex/webhookDeliveryActions.ts": 1,
+  "convex/webhookSignatureService.ts": 2,
 };
 
 /**

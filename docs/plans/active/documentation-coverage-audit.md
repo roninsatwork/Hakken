@@ -30,7 +30,7 @@ developer pairs or targeted refreshes.
 ## Implementation Areas Reviewed
 
 - Repository identity: `AGENTS.md`, `package.json`, `docs/index.md`, `.git/`,
-  branch `dev`, and remote `https://github.com/roninsatwork/Sonae.git`.
+  branch `dev`, and remote `https://github.com/roninsatwork/Hakken.git`.
 - App routes under `src/app/(dashboard)/app`, `src/app/(dashboard)/admin`,
   `src/app/(dashboard)/demos`, `src/app/(public)`, `/login`, `/w/[widgetId]`,
   `/sandbox/[widgetId]`, and the local/e2e API routes.

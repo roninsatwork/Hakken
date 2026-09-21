@@ -297,8 +297,8 @@ describe("workflow shared components", () => {
   it("renders workflow webhook endpoints from the configured Convex HTTP actions origin", async () => {
     const previousApiUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
     const previousSiteUrl = process.env.CONVEX_SITE_URL;
-    process.env.NEXT_PUBLIC_CONVEX_URL = "https://sonae-db.ronins.co.uk";
-    process.env.CONVEX_SITE_URL = "https://sonae-auth.ronins.co.uk";
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://hakken-db.ronins.co.uk";
+    process.env.CONVEX_SITE_URL = "https://hakken-auth.ronins.co.uk";
     window.history.pushState({}, "", "/admin/workflows/workflow_123");
 
     try {
@@ -321,9 +321,9 @@ describe("workflow shared components", () => {
       );
 
       expect(await screen.findByText(
-        "https://sonae-auth.ronins.co.uk/api/webhooks/workflow?workflowId=workflow_123"
+        "https://hakken-auth.ronins.co.uk/api/webhooks/workflow?workflowId=workflow_123"
       )).toBeInTheDocument();
-      expect(screen.queryByText(/sonae-db\.ronins\.co\.uk\/api\/webhooks/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/hakken-db\.ronins\.co\.uk\/api\/webhooks/)).not.toBeInTheDocument();
     } finally {
       process.env.NEXT_PUBLIC_CONVEX_URL = previousApiUrl;
       process.env.CONVEX_SITE_URL = previousSiteUrl;

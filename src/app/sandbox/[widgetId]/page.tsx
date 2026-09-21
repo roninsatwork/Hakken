@@ -44,9 +44,9 @@ export default function WidgetSandboxPage() {
         scriptMountedRef.current = false;
         // Clean up the script and widget DOM elements if navigating away
         if (script.parentNode) script.parentNode.removeChild(script);
-        const widgetContainer = document.getElementById("sonae-widget-container");
+        const widgetContainer = document.getElementById("hakken-widget-container");
         if (widgetContainer) widgetContainer.remove();
-        (window as typeof window & { SonaeWidgetInitialized?: boolean }).SonaeWidgetInitialized = false;
+        (window as typeof window & { HakkenWidgetInitialized?: boolean }).HakkenWidgetInitialized = false;
       };
     }
   }, [widget, widgetId]);

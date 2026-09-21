@@ -174,7 +174,7 @@ The deployment sequence is managed by `.github/workflows/deploy.yml`:
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
 3. Container build: Docker image built by buildx with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args. Layers are cached between releases in the registry under a third tag, `:buildcache`, so the `npm ci` layer is reused whenever the lockfile has not moved. That tag is machine-written and carries no releases — never deploy it, and do not prune it unless you want the next build to start cold.
 4. Registry push: buildx publishes straight to Google Artifact Registry with `--push`, so the image is never loaded into the local daemon only to be uploaded again.
-5. Cloud Run rollout: image deployed to the `sonae-app` service in `us-central1` with port `3000`.
+5. Cloud Run rollout: image deployed to the `hakken-app` service in `us-central1` with port `3000`.
 
 There is no `npm run build` step on the runner. It produced a `.next/` that
 nothing read — `.dockerignore` excludes `.next` from the build context, and the
@@ -324,7 +324,7 @@ Find the SHA you want (the deploy job's summary prints the deployed SHA, and
 `git log main` gives you the previous one), then point the service at it:
 
 ```bash
-gcloud run services update sonae-app --region us-central1 --image us-central1-docker.pkg.dev/$GCP_PROJECT/sonae-repo/sonae-app:<PREVIOUS_SHA>
+gcloud run services update hakken-app --region us-central1 --image us-central1-docker.pkg.dev/$GCP_PROJECT/hakken-repo/hakken-app:<PREVIOUS_SHA>
 ```
 
 Confirm the rollback took effect:

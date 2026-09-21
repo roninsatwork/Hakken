@@ -21,7 +21,7 @@ describes. Company skills are a chat-and-widget concept.
 ## What the code does today
 
 - `chat.sendMessage` routes agent-less, non-swarm messages to
-  `ai.generateSonaeResponse` (`convex/chat.ts:303-325`). Widget visitors take
+  `ai.generateHakkenResponse` (`convex/chat.ts:303-325`). Widget visitors take
   the same path — `threads.widgetId` is the only thing that distinguishes a
   widget thread from company chat.
 - `companySkills.getRuntimeCompanySkillsInternal`
@@ -67,7 +67,7 @@ code, in the repo's usual way.
 `getRuntimeCompanySkillsInternal` gains a required `surfaceType` argument
 (`"COMPANY_CHAT" | "WIDGET"`) and returns only skills with an enabled binding
 for that surface (`by_company_surface_enabled` index already exists).
-`ai.generateSonaeResponse` derives the surface from the thread:
+`ai.generateHakkenResponse` derives the surface from the thread:
 `thread.widgetId ? "WIDGET" : "COMPANY_CHAT"`. Eval threads
 (`purpose: "EVAL"`) count as company chat unless they carry a widget id —
 evals must run through the runtime that ships.

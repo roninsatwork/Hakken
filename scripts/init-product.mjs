@@ -90,9 +90,9 @@ export function planProduct(root, config) {
     const before = fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : null;
     if (before !== after) changes.push({ path: relative, before, after });
   };
-  // A typo in --root must not turn an unrelated project into a Sonae product.
+  // A typo in --root must not turn an unrelated project into a Hakken product.
   readProduct(root);
-  if (!read("scripts/strip-verticals.mjs").includes("loadKnownVerticals")) throw new Error("Target is not a Sonae framework clone.");
+  if (!read("scripts/strip-verticals.mjs").includes("loadKnownVerticals")) throw new Error("Target is not a Hakken framework clone.");
   const manifest = JSON.parse(read("template.verticals.json"));
   if (!manifest.alwaysKeep?.includes("arcade")) throw new Error("The framework must retain Arcade.");
   const json = value => JSON.stringify(value, null, 2) + "\n";
@@ -163,7 +163,7 @@ export function applyProduct(plan) {
   let origin = "";
   try { origin = execFileSync("git", ["remote", "get-url", "origin"], { cwd: plan.root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); } catch { /* Fresh export has no remote. */ }
   if (/(?:github\.com[:/])roninsatwork\/Sonae(?:\.git)?\/?$/i.test(origin)) throw new Error("Refusing to initialise the Sonae source repository. Apply to a fresh exported clone with its own remote (or no remote).");
-  if (configIsFramework(plan.config)) throw new Error("Set the new product's repositoryUrl before applying; it still points at Sonae.");
+  if (configIsFramework(plan.config)) throw new Error("Set the new product's repositoryUrl before applying; it still points at Hakken.");
   for (const change of plan.changes) {
     const filename = safeFile(plan.root, change.path);
     const current = fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : null;

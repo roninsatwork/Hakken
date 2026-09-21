@@ -547,7 +547,7 @@ Exit criteria:
 
 Current mounted evidence:
 
-- Command: `npm run movement:game:packet-proof -- --base-url http://localhost:3100 --debug-session-json <session.json> --out tmp/movement-replay-lab/current-mounted-game-packet-proof.json --allow-legacy --local-test-auth --secret sonae-local-test-auth`.
+- Command: `npm run movement:game:packet-proof -- --base-url http://localhost:3100 --debug-session-json <session.json> --out tmp/movement-replay-lab/current-mounted-game-packet-proof.json --allow-legacy --local-test-auth --secret hakken-local-test-auth`.
 - Passing lifecycle packet: `px72q2e5m8pw9gctaj11yh36a989wjt7`, 632 expected and processed frames, 572 expected and rendered active frames, zero missing/duplicates, pause held frame 67, final player/instructor indexes 631/631, and seven boundary checksums per active frame.
 - Honest evidence tier: `legacy-lifecycle-only`; this historical packet has no `movement-player-input-v1` fingerprint or source packet hash and cannot certify the acquisition boundary.
 - Historical negative-control note: `Walking on the Spot` originally blocked when the recorded harness froze at frame 59. After chronological prestart repair it passes; it must not remain documented as source-invalid.
