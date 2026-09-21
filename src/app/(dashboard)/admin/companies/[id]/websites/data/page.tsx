@@ -8,6 +8,7 @@ import { Clock, Info } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingSwitch, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -50,6 +51,7 @@ export default function CompanyDataCollectionPage() {
   const setSeoMethod = useMutation(api.companies.setCompanySeoMethod);
   const createSchedule = useMutation(api.scheduler.createSchedule);
   const updateSchedule = useMutation(api.scheduler.updateSchedule);
+  const createAgentFromTemplate = useMutation(api.agents.createAgentFromTemplate);
   const action = useAdminAction({ scope: "admin-company-data" });
 
   const [draft, setDraft] = useState<ScheduleDraft>(createDefaultScheduleDraft());
@@ -82,6 +84,30 @@ export default function CompanyDataCollectionPage() {
   // so this screen needs no notion of its own about which agent collects data.
   const collectorAgent = agents?.find((agent) => agent.name === "DataForSEO Agent");
   const canSchedule = Boolean(schedule || collectorAgent);
+
+  /**
+   * Create the collecting agent from its template.
+   *
+   * It arrives inactive, like every agent created from a template, so nothing
+   * starts spending the moment this is pressed. The schedule below is what
+   * turns collection on, and it is a separate deliberate act.
+   */
+  const handleCreateAgent = async () => {
+    setError("");
+
+    const outcome = await action.run(
+      async () => {
+        await createAgentFromTemplate({ templateId: "dataforseo-agent" });
+      },
+      {
+        key: "create-agent",
+        suppressErrorToast: true,
+        fallbackMessage: t("errors.createAgentFailed"),
+      },
+    );
+
+    if (!outcome.ok) setError(outcome.message);
+  };
 
   const handleSave = async () => {
     setError("");
@@ -138,13 +164,30 @@ export default function CompanyDataCollectionPage() {
         description={t("subtitle")}
       />
 
+      {/*
+        The banner used to end at "create one from its template in the Agents
+        section", which was an instruction nobody could follow: the template
+        picker was taken off the new-agent screen, so no screen created an
+        agent from a template at all. The button is here rather than a link
+        because there is exactly one template this screen can mean, and asking
+        someone to go and find it is asking them to do the lookup the screen
+        has already done.
+      */}
       {!canSchedule ? (
-        <div className="flex items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
+        <div className="flex flex-wrap items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-[16rem] flex-1 flex-col gap-1">
             <span className="text-[13px] font-medium text-foreground">{t("noAgentTitle")}</span>
             <span className="max-w-2xl text-[12px] leading-relaxed text-muted">{t("noAgentBody")}</span>
           </div>
+          <Button
+            variant="accent"
+            className="ml-auto shrink-0 px-3 py-1.5 text-[12px]"
+            onClick={handleCreateAgent}
+            disabled={action.isBusy("create-agent")}
+          >
+            {t("createAgent")}
+          </Button>
         </div>
       ) : null}
 

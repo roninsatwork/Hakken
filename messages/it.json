@@ -1451,11 +1451,13 @@
       "save": "Salva",
       "saved": "Salvato",
       "errors": {
-        "saveFailed": "Impossibile salvare queste impostazioni. Riprova."
+        "saveFailed": "Impossibile salvare queste impostazioni. Riprova.",
+        "createAgentFailed": "Non è stato possibile creare l'agente di raccolta."
       },
       "scheduleName": "Dati SEO — {company}",
+      "createAgent": "Crea l'agente di raccolta",
       "noAgentTitle": "Nessun agente di raccolta",
-      "noAgentBody": "La pianificazione esegue un agente chiamato “DataForSEO Agent”. Crealo dal suo modello nella sezione Agenti, poi imposta qui una pianificazione.",
+      "noAgentBody": "La pianificazione esegue un agente chiamato “DataForSEO Agent”. Crealo qui, poi imposta una pianificazione. Arriva disattivato, quindi non viene raccolto nulla finché non lo attivi.",
       "cadence": {
         "daily": "Giornaliero",
         "weekly": "Settimanale",

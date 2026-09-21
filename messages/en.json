@@ -1451,11 +1451,13 @@
       "save": "Save",
       "saved": "Saved",
       "errors": {
-        "saveFailed": "Could not save these settings. Try again."
+        "saveFailed": "Could not save these settings. Try again.",
+        "createAgentFailed": "The collecting agent could not be created."
       },
       "scheduleName": "SEO data — {company}",
+      "createAgent": "Create the collecting agent",
       "noAgentTitle": "No collecting agent yet",
-      "noAgentBody": "The schedule runs an agent called “DataForSEO Agent”. Create one from its template in the Agents section, then set a schedule here.",
+      "noAgentBody": "The schedule runs an agent called “DataForSEO Agent”. Create it here, then set a schedule. It arrives switched off, so nothing is collected until you turn it on.",
       "cadence": {
         "daily": "Daily",
         "weekly": "Weekly",
