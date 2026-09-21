@@ -265,6 +265,30 @@ const RULES = {
       "indented. If this table is a fragment whose header genuinely lives in its parent,\n" +
       "that is what the frozen list is for — but check the parent really draws one.",
   },
+  controls: {
+    part: "a table with no footer",
+    headline: "These render a DataTable with no footer:",
+    fix:
+      "A list screen reads title, then description, then the search box, then the table,\n" +
+      "then its footer. The rule above checks the header end of that sentence; this one\n" +
+      "checks the other end, because a screen can put its header in exactly the right\n" +
+      "place and still hand the reader a list with no second page and no count.\n" +
+      "\n" +
+      "Pass `footer` to DataTable (src/ui/components/screens/DataTable.tsx). It has three\n" +
+      "modes: `paged` for a list whose length is known, `cursor` for one too big to\n" +
+      "count, `loadMore` for one that grows. Pick the one that matches how the data is\n" +
+      "actually read.\n" +
+      "\n" +
+      "The footer also carries the empty state's wording, so a table without one says\n" +
+      "nothing when it has nothing to show.\n" +
+      "\n" +
+      "**The search box is deliberately not checked here.** It is the standard for a\n" +
+      "list screen and it is what a reader reaches for first, but 28 of this codebase's\n" +
+      "66 tables are paged with no search box — summaries, skeletons and sub-tables on\n" +
+      "detail pages among them — so a rule demanding one would be inventing a standard\n" +
+      "rather than holding an existing one. It stays a question for review: if a reader\n" +
+      "could plausibly be hunting for one row, the table wants a search box.",
+  },
   headings: {
     part: "a page heading",
     headline: "These draw more page headings by hand than their frozen count allows:",
@@ -332,6 +356,7 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     shadows: new Set(allowlist.shadows ?? []),
     dividers: new Set(allowlist.dividers ?? []),
     anatomy: new Set(allowlist.anatomy ?? []),
+    controls: new Set(allowlist.controls ?? []),
     // Unlike the lists above this freezes a count per file, because a file
     // with eleven raw buttons cannot be asked to reach zero in one sitting —
     // it is only asked never to reach twelve.
@@ -610,6 +635,13 @@ function findInFile(relative, text) {
     if (headerAt < 0 || headerAt > tableAt) {
       found.push({ rule: "anatomy", file: relative, line: lineOf(tableAt) });
     }
+
+    // The other end of the same sentence. A screen can put its header in exactly
+    // the right place and still hand the reader a list with no second page, no
+    // count, and nothing to say when it is empty.
+    if (!/\bfooter=\{/.test(text)) {
+      found.push({ rule: "controls", file: relative, line: lineOf(tableAt) });
+    }
   }
 
   // One hit per file rather than per part: the fault is the assembly, and
@@ -719,6 +751,7 @@ export function findStaleFreezes(frozen = loadFrozen()) {
     "shadows",
     "dividers",
     "anatomy",
+    "controls",
     "headerRule",
   ]) {
     for (const relative of frozen[rule]) {
@@ -751,6 +784,7 @@ function main() {
         `${frozen.checkboxes.size} tick boxes, ${frozen.switches.size} switches, ` +
         `${frozen.shadows.size} shadowed kit names, ${frozen.dividers.size} hand-drawn lists, ` +
         `${frozen.anatomy.size} headerless tables, ` +
+        `${frozen.controls.size} footerless tables, ` +
         `${frozen.assembled.size} hand-assembled tables, ${buttonCount} raw buttons ` +
         `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +
         `(across ${frozen.headings.size} files) and ${frozen.headerRule.size} hand-drawn ` +

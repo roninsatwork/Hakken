@@ -5010,25 +5010,23 @@
         "serp_google_organic": "Where it ranks for one search",
         "keyword_search_volume": "How often terms are searched"
       },
-      "queueTitle": "In the queue",
       "queueCounts": "{pending} waiting · {claimed} being sent · {submitted} awaiting an answer",
-      "queueEmpty": "The queue is empty. Nothing runs until a schedule fires.",
-      "historyTitle": "Collected",
-      "historyEmpty": "Nothing has been collected yet.",
-      "failedOnly": "Failures only",
-      "dueColumn": "Goes out",
-      "collectedColumn": "Collected",
-      "sentAt": "Sent {when}",
       "attempts": "{count} attempt(s) so far",
       "sandbox": "Sandbox",
-      "spend": "${cost} across {pulls} pulls in the last 30 days",
       "queueSubtitle": "Nothing is waiting to go out.",
-      "historySubtitle": "Nothing has been collected yet.",
       "linesSubtitle": "Every website this run asked about, and whether it paid.",
-      "queueSearchPlaceholder": "Search the queue by website or client...",
-      "historySearchPlaceholder": "Search collected data by website or client...",
       "linesSearchPlaceholder": "Search this run by website...",
-      "noMatch": "Nothing matches that search."
+      "noMatch": "Nothing matches that search.",
+      "pullsTitle": "Every pull",
+      "empty": "Nothing has been collected yet.",
+      "searchPlaceholder": "Search by website or client...",
+      "whenColumn": "When",
+      "stateFilter": {
+        "label": "State",
+        "all": "Any state",
+        "search": "Filter states...",
+        "noMatches": "No state matches that."
+      }
     }
   },
   "ai": {

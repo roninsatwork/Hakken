@@ -195,7 +195,10 @@ describe("WebsiteDetailPage", () => {
     render(<WebsiteDetailPage />);
 
     expect((await screen.findAllByText("notFetched")).length).toBeGreaterThan(0);
-    expect(screen.getByText("noWatchers")).toBeInTheDocument();
+    // Twice now, and deliberately: the table's own empty state says it, and so
+    // does the footer, which is what a footer is for. Asserting one would fail
+    // the moment either half did its job.
+    expect((await screen.findAllByText("noWatchers")).length).toBeGreaterThan(0);
   });
 
   it("says so plainly when the website does not exist", () => {

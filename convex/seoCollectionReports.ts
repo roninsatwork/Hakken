@@ -41,127 +41,28 @@ const cycleRow = v.object({
 });
 
 /**
- * The queue as it stands right now, row by row.
+ * Every pull, at whatever stage it has reached.
  *
- * A live window rather than an archive, which is why it has no pagination: the
- * queue is meant to be short-lived, and what an operator wants is the next
- * hundred things going out, not page nine of a hundred thousand. When a cycle
- * for a large tenant is draining, that list is the whole story anyway — the
- * rows behind it are the same rows with later due times.
+ * One table rather than two. The queue and the collected list were separate
+ * screens-within-a-screen for a while, which put two searches and two footers
+ * on one page and left the useful list below a table that is empty by design
+ * almost all the time. They are the same rows one stage apart, so they are one
+ * list with a state filter over it, and "failures only" stops being a special
+ * case and becomes one value of that filter.
  *
- * Ordered by when each row may be sent, because that is the order they will
- * actually go. `dueAt` spacing is what makes this list read as a schedule
- * rather than a heap.
+ * The counts come back with the page because an operator's first question is
+ * "is anything moving", and a filtered list cannot answer it.
  */
-export const listSeoQueue = superAdminQuery({
-  args: {
-    searchTerm: v.optional(v.string()),
-    page: v.number(),
-    pageSize: v.number(),
-  },
-  returns: v.object({
-    data: v.array(v.object({
-      _id: v.id("seoDataPulls"),
-      host: v.string(),
-      companyName: v.string(),
-      operationId: v.string(),
-      status: v.string(),
-      dueAt: v.union(v.number(), v.null()),
-      sentAt: v.union(v.number(), v.null()),
-      attempts: v.number(),
-      cycleId: v.union(v.id("seoCollectionCycles"), v.null()),
-    })),
-    totalCount: v.number(),
-    totalPages: v.number(),
-    /** Totals behind the window, so a short list cannot read as a quiet queue. */
-    pending: v.number(),
-    claimed: v.number(),
-    submitted: v.number(),
-    countsAreCapped: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    const counts: Record<string, number> = {};
-    let countsAreCapped = false;
-    const collected = [];
-
-    for (const status of ["PENDING", "CLAIMED", "SUBMITTED"] as const) {
-      const rows = await ctx.db
-        .query("seoDataPulls")
-        .withIndex("by_status_due", (q) => q.eq("status", status))
-        .order("asc")
-        .take(QUEUE_COUNT_CEILING);
-      counts[status] = rows.length;
-      countsAreCapped ||= rows.length === QUEUE_COUNT_CEILING;
-      collected.push(...rows.slice(0, QUEUE_WINDOW));
-    }
-
-    // Merged after the fact rather than in one query, because the three
-    // statuses live in separate ranges of the same index. Sorting here is
-    // cheap at this size and honest: they really are one queue.
-    const window = collected
-      .sort((a, b) => (a.dueAt ?? a.submittedAt) - (b.dueAt ?? b.submittedAt))
-      .slice(0, QUEUE_WINDOW);
-
-    const hosts = new Map<string, string>();
-    const names = new Map<string, string>();
-
-    const rows = await Promise.all(window.map(async (pull) => {
-      if (pull.websiteId && !hosts.has(pull.websiteId)) {
-        const website = await ctx.db.get(pull.websiteId);
-        hosts.set(pull.websiteId, website?.displayHost ?? website?.host ?? "");
-      }
-      if (pull.companyId && !names.has(pull.companyId)) {
-        const company = await ctx.db.get(pull.companyId);
-        names.set(pull.companyId, company?.name ?? "");
-      }
-      return {
-        _id: pull._id,
-        host: pull.websiteId ? hosts.get(pull.websiteId) ?? "" : pull.target ?? "",
-        // Whose cadence caused this, not somebody to charge. A shared host is
-        // pulled once for everyone watching it.
-        companyName: pull.companyId ? names.get(pull.companyId) ?? "" : "",
-        operationId: pull.operationId,
-        status: pull.status,
-        dueAt: pull.dueAt ?? null,
-        sentAt: pull.sentAt ?? null,
-        attempts: pull.attempts ?? 0,
-        cycleId: pull.cycleId ?? null,
-      };
-    }));
-
-    const term = normalizeSearchTerm(args.searchTerm ?? "");
-    const matching = term
-      ? rows.filter((row) =>
-        includesSearchTerm(row.host, term) || includesSearchTerm(row.companyName, term))
-      : rows;
-
-    const paged = paginateItems(matching, args.page, args.pageSize);
-
-    return {
-      ...paged,
-      pending: counts.PENDING ?? 0,
-      claimed: counts.CLAIMED ?? 0,
-      submitted: counts.SUBMITTED ?? 0,
-      countsAreCapped,
-    };
-  },
-});
-
-/**
- * What the queue has already settled, newest first.
- *
- * The same rows as the queue above, one stage later, which is why it carries
- * the same columns. A screen that showed work in flight as pulls and finished
- * work as runs would be describing two different things and quietly inviting
- * the reader to compare them.
- *
- * Paginated, unlike the queue, because this one really is an archive.
- */
-export const listSeoHistory = superAdminQuery({
+export const listSeoPulls = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
-    /** "FAILED" narrows to what went wrong, which is the usual reason to look. */
-    status: v.optional(v.union(v.literal("READY"), v.literal("FAILED"))),
+    status: v.optional(v.union(
+      v.literal("PENDING"),
+      v.literal("CLAIMED"),
+      v.literal("SUBMITTED"),
+      v.literal("READY"),
+      v.literal("FAILED"),
+    )),
     searchTerm: v.optional(v.string()),
   },
   returns: paginationResultValidator(v.object({
@@ -173,23 +74,32 @@ export const listSeoHistory = superAdminQuery({
     costUsd: v.number(),
     sandbox: v.boolean(),
     error: v.union(v.string(), v.null()),
-    completedAt: v.union(v.number(), v.null()),
+    attempts: v.number(),
+    /** When this happens or happened, whichever the row's stage makes true. */
+    at: v.union(v.number(), v.null()),
     cycleId: v.union(v.id("seoCollectionCycles"), v.null()),
   })),
   handler: async (ctx, args) => {
-    const page = args.status
+    // Waiting rows read in the order they will go out; everything else reads
+    // newest first. Sorting a queue by when it was created would bury the row
+    // about to be sent under five hundred behind it.
+    const page = args.status === "PENDING"
       ? await ctx.db
         .query("seoDataPulls")
-        .withIndex("by_status_submitted", (q) => q.eq("status", args.status!))
-        .order("desc")
+        .withIndex("by_status_due", (q) => q.eq("status", "PENDING"))
+        .order("asc")
         .paginate(args.paginationOpts)
-      : await ctx.db
-        .query("seoDataPulls")
-        .withIndex("by_submitted")
-        .order("desc")
-        .filter((q) =>
-          q.or(q.eq(q.field("status"), "READY"), q.eq(q.field("status"), "FAILED")))
-        .paginate(args.paginationOpts);
+      : args.status
+        ? await ctx.db
+          .query("seoDataPulls")
+          .withIndex("by_status_submitted", (q) => q.eq("status", args.status!))
+          .order("desc")
+          .paginate(args.paginationOpts)
+        : await ctx.db
+          .query("seoDataPulls")
+          .withIndex("by_submitted")
+          .order("desc")
+          .paginate(args.paginationOpts);
 
     const hosts = new Map<string, string>();
     const names = new Map<string, string>();
@@ -206,20 +116,25 @@ export const listSeoHistory = superAdminQuery({
       return {
         _id: pull._id,
         host: pull.websiteId ? hosts.get(pull.websiteId) ?? "" : pull.target ?? "",
+        // Whose cadence caused this, not somebody to charge. A shared host is
+        // pulled once for everyone watching it.
         companyName: pull.companyId ? names.get(pull.companyId) ?? "" : "",
         operationId: pull.operationId,
         status: pull.status,
         costUsd: pull.costUsd,
         sandbox: pull.sandbox,
         error: pull.error ?? null,
-        completedAt: pull.completedAt ?? null,
+        attempts: pull.attempts ?? 0,
+        // One column, three meanings, each true of the stage it belongs to:
+        // when a waiting row goes out, and when a settled one finished.
+        at: pull.completedAt ?? pull.sentAt ?? pull.dueAt ?? null,
         cycleId: pull.cycleId ?? null,
       };
     }));
 
-    // Filtered after the page is read, so a search narrows the page rather
-    // than the archive. The alternative is a search index over a table that
-    // exists to be written to, not searched.
+    // Filtered after the page is read, so a search narrows the page rather than
+    // the archive. A search index over a table that exists to be written to
+    // would be paid for on every write to save a query nobody runs often.
     const term = normalizeSearchTerm(args.searchTerm ?? "");
     const matching = term
       ? rows.filter((row) =>
@@ -231,62 +146,51 @@ export const listSeoHistory = superAdminQuery({
 });
 
 /**
- * How much of the queue the screen can page through.
+ * How much is in flight right now, for the line above the table.
  *
- * Still a window rather than an archive — the queue is meant to be short-lived,
- * and the rows beyond this are the same rows with later due times. Large enough
- * that a draining cycle is legible, small enough to stay a cheap read.
+ * Counted rather than listed, and bounded rather than exact: this is a number
+ * somebody refreshes, not an accounting figure, and an unbounded count over the
+ * pull table is the query that works until the day it does not. Over the ceiling
+ * it says "more than", which is honest and enough.
  */
-const QUEUE_WINDOW = 500;
+export const readSeoQueueCounts = superAdminQuery({
+  args: {},
+  returns: v.object({
+    pending: v.number(),
+    claimed: v.number(),
+    submitted: v.number(),
+    capped: v.boolean(),
+  }),
+  handler: async (ctx) => {
+    const counts: Record<string, number> = {};
+    let capped = false;
 
-/** The ceiling on counting. Over it the screen says "more than", which is honest. */
-const QUEUE_COUNT_CEILING = 500;
+    for (const status of ["PENDING", "CLAIMED", "SUBMITTED"] as const) {
+      const rows = await ctx.db
+        .query("seoDataPulls")
+        .withIndex("by_status_due", (q) => q.eq("status", status))
+        .take(QUEUE_COUNT_CEILING);
+      counts[status] = rows.length;
+      capped ||= rows.length === QUEUE_COUNT_CEILING;
+    }
 
-/**
- * Every company's collection runs on one screen.
- *
- * The platform view: one list across every tenant, which is exactly the view a
- * company must never be given. Super admin only, like everything in this file.
- */
-export const listAllCycles = superAdminQuery({
-  args: { paginationOpts: paginationOptsValidator },
-  returns: paginationResultValidator(v.object({
-    ...cycleRow.fields,
-    companyId: v.id("companies"),
-    companyName: v.string(),
-  })),
-  handler: async (ctx, args) => {
-    const page = await ctx.db
-      .query("seoCollectionCycles")
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const names = new Map<string, string>();
-
-    const rows = await Promise.all(page.page.map(async (cycle) => {
-      if (!names.has(cycle.companyId)) {
-        const company = await ctx.db.get(cycle.companyId);
-        names.set(cycle.companyId, company?.name ?? "");
-      }
-      return {
-        ...toCycleRow(cycle),
-        companyId: cycle.companyId,
-        companyName: names.get(cycle.companyId) ?? "",
-      };
-    }));
-
-    return { ...page, page: rows };
+    return {
+      pending: counts.PENDING ?? 0,
+      claimed: counts.CLAIMED ?? 0,
+      submitted: counts.SUBMITTED ?? 0,
+      capped,
+    };
   },
 });
 
+/** The ceiling on counting. Over it the screen says "more than". */
+const QUEUE_COUNT_CEILING = 500;
+
 /**
- * One run, line by line: what was asked, about which host, and whether this
- * run paid for it.
+ * One run's summary, for the header of its detail page.
  *
- * The host is named here, across companies, which is the one place that is
- * allowed to happen — and the reason every screen over this file is super
- * admin only. A tenant-facing version of this list would tell each customer
- * which of their rivals somebody else is also watching.
+ * Separate from its lines below because they change at different rates: the
+ * pills settle once, while the table under them is searched and paged.
  */
 export const getSeoCycle = superAdminQuery({
   args: { cycleId: v.id("seoCollectionCycles") },
@@ -300,7 +204,6 @@ export const getSeoCycle = superAdminQuery({
     if (!cycle) return null;
 
     const company = await ctx.db.get(cycle.companyId);
-
     return {
       ...toCycleRow(cycle),
       companyId: cycle.companyId,
@@ -309,16 +212,13 @@ export const getSeoCycle = superAdminQuery({
   },
 });
 
-/** One screenful of detail. A cycle can hold far more; the list is a sample. */
-const MAX_LINES = 200;
-
 /**
  * One run's lines, searchable and paged like every other admin table.
  *
- * Split out of `getSeoCycle` so the screen reads the way the rest of admin
- * reads: title, description, search, table, footer. The summary above the
- * table and the rows inside it are different reads because they change at
- * different rates.
+ * The host is named here across companies, which is the one place that is
+ * allowed to happen and the reason every screen over this file is super admin
+ * only. A tenant-facing version of this list would tell each customer which of
+ * their rivals somebody else is also watching.
  */
 export const listSeoCycleLines = superAdminQuery({
   args: {
@@ -380,6 +280,9 @@ export const listSeoCycleLines = superAdminQuery({
     };
   },
 });
+
+/** One screenful of detail. A cycle can hold far more; the list is a sample. */
+const MAX_LINES = 200;
 
 function toCycleRow(cycle: Doc<"seoCollectionCycles">) {
   return {

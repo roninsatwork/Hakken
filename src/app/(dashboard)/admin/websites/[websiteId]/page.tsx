@@ -108,6 +108,17 @@ export default function WebsiteDetailPage() {
         rowKey={(watcher) => watcher.key}
         minWidthClassName="min-w-[760px]"
         empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("noWatchers") }}
+        footer={{
+          // `loadMore` rather than `paged`: the watchers arrive with the
+          // website in one read, so there is no second page to fetch — what the
+          // footer is here for is the count and the empty state's wording.
+          mode: "loadMore",
+          visibleCount: website.watchers.length,
+          canLoadMore: false,
+          isLoading: false,
+          onLoadMore: () => undefined,
+          labels: { empty: t("noWatchers") },
+        }}
         columns={[
           {
             key: "company",

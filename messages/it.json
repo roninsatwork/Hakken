@@ -5010,25 +5010,23 @@
         "serp_google_organic": "Posizione per una ricerca",
         "keyword_search_volume": "Frequenza di ricerca dei termini"
       },
-      "queueTitle": "In coda",
       "queueCounts": "{pending} in attesa · {claimed} in invio · {submitted} in attesa di risposta",
-      "queueEmpty": "La coda è vuota. Nulla parte finché non scatta una pianificazione.",
-      "historyTitle": "Raccolti",
-      "historyEmpty": "Non è ancora stato raccolto nulla.",
-      "failedOnly": "Solo errori",
-      "dueColumn": "Invio previsto",
-      "collectedColumn": "Raccolto",
-      "sentAt": "Inviata {when}",
       "attempts": "{count} tentativo/i finora",
       "sandbox": "Sandbox",
-      "spend": "${cost} su {pulls} richieste negli ultimi 30 giorni",
       "queueSubtitle": "Non c'è nulla in attesa di invio.",
-      "historySubtitle": "Non è ancora stato raccolto nulla.",
       "linesSubtitle": "Ogni sito richiesto da questa esecuzione e se è stato pagato.",
-      "queueSearchPlaceholder": "Cerca nella coda per sito o cliente...",
-      "historySearchPlaceholder": "Cerca i dati raccolti per sito o cliente...",
       "linesSearchPlaceholder": "Cerca in questa esecuzione per sito...",
-      "noMatch": "Nessun risultato per questa ricerca."
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "pullsTitle": "Tutte le richieste",
+      "empty": "Non è ancora stato raccolto nulla.",
+      "searchPlaceholder": "Cerca per sito o cliente...",
+      "whenColumn": "Quando",
+      "stateFilter": {
+        "label": "Stato",
+        "all": "Qualsiasi stato",
+        "search": "Filtra stati...",
+        "noMatches": "Nessuno stato corrisponde."
+      }
     }
   },
   "ai": {
