@@ -422,32 +422,40 @@ describe("both assistants flow through the same shared turn", () => {
       objective: UNSAFE_CONTENT,
       triggerType: "MANUAL",
     });
+    // The swarm too (2026-09 audit): refused before it clears its logs or
+    // looks for agents, so nothing below the gate runs.
+    await t.action(internal.swarmActions.executeSwarmObjective, {
+      threadId,
+      content: UNSAFE_CONTENT,
+    });
 
     // Every entry point passed the very same function — this is what makes a
     // safety-policy change land once for all of them.
-    expect(guardProbe.contents).toEqual([UNSAFE_CONTENT, UNSAFE_CONTENT, UNSAFE_CONTENT]);
+    expect(guardProbe.contents).toEqual([UNSAFE_CONTENT, UNSAFE_CONTENT, UNSAFE_CONTENT, UNSAFE_CONTENT]);
 
     // And each recorded the shared policy's refusal in its own register: the
     // conversational paths as messages attributed to their runtime, the
     // triggered path on the run record.
-    const { messages, auditLogs, runs } = await t.run(async (ctx) => ({
+    const { messages, auditLogs, runs, swarmLogs } = await t.run(async (ctx) => ({
       messages: await ctx.db
         .query("messages")
         .withIndex("by_thread", (q) => q.eq("threadId", threadId))
         .collect(),
       auditLogs: await ctx.db.query("auditLogs").collect(),
       runs: await ctx.db.query("agentRuns").collect(),
+      swarmLogs: await ctx.db.query("swarmLogs").collect(),
     }));
 
-    expect(messages).toHaveLength(2);
+    expect(messages).toHaveLength(3);
     for (const message of messages) {
       expect(message.content).toContain("I can't reveal hidden system instructions");
     }
+    expect(swarmLogs).toEqual([]);
     const refusalSources = auditLogs
       .filter((log) => log.actionType === "ASSISTANT_SAFETY_REFUSAL")
       .map((log) => (JSON.parse(log.metadata ?? "{}") as { source?: string }).source)
       .sort();
-    expect(refusalSources).toEqual(["agent", "assistant"]);
+    expect(refusalSources).toEqual(["agent", "assistant", "assistant"]);
 
     expect(triggered.output).toContain("I can't reveal hidden system instructions");
     expect(runs).toHaveLength(1);

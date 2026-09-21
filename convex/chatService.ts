@@ -114,6 +114,73 @@ export function assertWithinMessageRateLimit(
   }
 }
 
+/**
+ * How many visitor messages one widget may send an hour, across every
+ * thread it has open.
+ *
+ * The per-thread minute limit and the hourly thread ceiling bound each door
+ * on its own, but multiplied together they still let one script drive
+ * hundreds of model calls a minute through a single widget (2026-09 audit),
+ * and a company on no plan has no message quota to stop it. This is the one
+ * ceiling that holds regardless of plan: an attacker cannot create widgets,
+ * so it caps the AI work a public widget can cause at a rate a real website
+ * never reaches. Ten a minute on average; a busy hour still fits.
+ */
+export const WIDGET_MESSAGES_PER_HOUR = 600;
+
+/**
+ * Take one seat in the widget's hourly message window, or refuse.
+ *
+ * Same window shape as thread minting: the crossing is audit-logged exactly
+ * once per window, so an attack leaves a mark without flooding the trail, and
+ * an expired window reopens on the next message.
+ */
+export async function reserveWidgetMessageSeat(
+  ctx: Pick<MutationCtx, "db">,
+  widget: Doc<"widgets">,
+  now = Date.now(),
+): Promise<boolean> {
+  const windowStart = widget.messageWindowStart ?? 0;
+  const inWindow = now - windowStart < 60 * 60 * 1000 ? widget.messageCountInWindow ?? 0 : 0;
+  if (inWindow >= WIDGET_MESSAGES_PER_HOUR) {
+    if (inWindow === WIDGET_MESSAGES_PER_HOUR) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "RATE_LIMITED_WIDGET_MESSAGES",
+        entityId: widget._id.toString(),
+        entityType: "widgets",
+        companyId: widget.companyId,
+        timestamp: now,
+        metadata: JSON.stringify({ perHour: WIDGET_MESSAGES_PER_HOUR }),
+      });
+      await ctx.db.patch(widget._id, { messageCountInWindow: inWindow + 1 });
+    }
+    return false;
+  }
+  await ctx.db.patch(widget._id, {
+    messageWindowStart: inWindow === 0 ? now : windowStart,
+    messageCountInWindow: inWindow + 1,
+  });
+  return true;
+}
+
+/**
+ * An anonymous visitor does not get to choose how their message is answered.
+ *
+ * The model, the thinking level and the swarm are the signed-in chat's
+ * controls; the widget's agent and the company's defaults decide for a
+ * visitor. A request that names any of them from a widget session is not a
+ * widget talking, so it is refused rather than quietly ignored.
+ */
+export function assertWidgetTurnSettingsAllowed(
+  thread: Doc<"threads">,
+  args: { modelId?: string; thinkingLevel?: string },
+) {
+  if (!isAnonymousWidgetThread(thread)) return;
+  if (args.modelId !== undefined || args.thinkingLevel !== undefined) {
+    throw appError("UNAUTHORIZED", "Unauthorized: Widget conversations cannot choose a model or thinking level");
+  }
+}
+
 export type ChatQuota = {
   messageLimit: number;
   messagesUsed: number;

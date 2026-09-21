@@ -72,6 +72,24 @@ request carries a 20-second timeout. The fifth finding, the widget's
 report-only content security policy, predates this work and is filed as its
 own task.
 
+**Second security review, 2026-09-18, one High finding fixed the same day.**
+The public widget, not the Decisions work: an anonymous visitor could
+multiply model work by opening thread after thread (the per-thread minute
+limit times the hourly thread ceiling, with no plan quota on a company
+without a plan), and could name a model, a thinking level or the swarm on a
+widget message. Fixed in three parts. (1) Every widget now has an hourly
+message ceiling across all of its threads (600, `WIDGET_MESSAGES_PER_HOUR`
+in chatService), the one bound that holds whatever the plan; the crossing is
+audit-logged once per window and the visitor gets the same soft "try again
+later" reply as an exhausted plan. (2) A widget session that names a model,
+a thinking level or the swarm is refused outright; the widget's agent and
+the company's defaults decide for a visitor. (3) The swarm passes through
+the shared safety gate like every other model turn, proved by the same
+runtime test that covers chat and agents. The embed pass stays reusable on
+purpose: single-use passes would not stop a script that reloads the page
+per thread and would cost a table of spent passes; the note on the pass
+says so. The Low finding (report-only widget CSP) is the task already filed.
+
 Phase A done 2026-09-17: code, tests (712 in the affected
 areas), typecheck, lint and guards green; Convex functions pushed to dev;
 Providers, platform Model Defaults, company Model Defaults and Health checked

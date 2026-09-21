@@ -7,6 +7,7 @@ import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { guardModelTurn } from "./modelTurnService";
 import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
@@ -18,6 +19,19 @@ export const executeSwarmObjective = internalAction({
     content: v.string(),
   },
   handler: async (ctx, args) => {
+    // The same safety gate as every other model turn (2026-09 audit: the
+    // swarm was the one path that reached a model without it). A refused
+    // objective is answered in the thread and never starts an agent.
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+    const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
+    const safetyDecision = await guardModelTurn(ctx, {
+      content: args.content,
+      refusal: { threadId: args.threadId, source: "assistant" },
+      platformName,
+      ...(thread?.companyId ? { companyId: thread.companyId } : {}),
+    });
+    if (!safetyDecision.allowed) return;
+
     await ctx.runMutation(internal.swarmRuntime.clearSwarmLogs, { threadId: args.threadId });
 
     const ai = createVertexGenAIClient();

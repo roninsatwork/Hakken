@@ -11,6 +11,7 @@ import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { publicMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessThread,
+  assertWidgetTurnSettingsAllowed,
   assertWithinMessageRateLimit,
   canAccessThread,
   getThreadMessageDimensions,
@@ -19,6 +20,7 @@ import {
   isChatQuotaExceeded,
   loadPiiConfig,
   quotaRefusalMessage,
+  reserveWidgetMessageSeat,
   resolveChatQuota,
   resolveTargetAgentId,
   validateChatAttachments,
@@ -340,6 +342,7 @@ export const sendMessage = publicMutation({
     }
 
     await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
+    assertWidgetTurnSettingsAllowed(thread, args);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
     if (args.fileIds?.length && !thread.widgetId && thread.companyId !== (current ? getActiveCompanyId(current.user) : undefined)) {
@@ -366,6 +369,17 @@ export const sendMessage = publicMutation({
 
     assertWithinMessageRateLimit(recentMessages, rateLimitNow);
 
+    // And across every thread the widget has open: the per-thread limit alone
+    // multiplies by the threads a script can mint (2026-09 audit). A refusal
+    // here is answered like an exhausted quota below — the same apology, the
+    // same soft block — rather than thrown, because a thrown mutation rolls
+    // back the audit row that marks the crossing.
+    let widgetBusy = false;
+    if (isAnonymousWidgetThread(thread) && thread.widgetId) {
+      const widget = await ctx.db.get(thread.widgetId);
+      widgetBusy = !widget || !(await reserveWidgetMessageSeat(ctx, widget, rateLimitNow));
+    }
+
     const user = current?.user ?? null;
 
     const quota = await resolveChatQuota(ctx, user, thread);
@@ -380,7 +394,7 @@ export const sendMessage = publicMutation({
     const safeContent = redactPII(args.content, piiConfig);
 
     // 3. Evaluate Limit
-    if (isChatQuotaExceeded(quota)) {
+    if (isChatQuotaExceeded(quota) || widgetBusy) {
        const messageDimensions = getThreadMessageDimensions(thread);
        // Sonae Rejection Soft Block
        await ctx.db.insert("messages", {
