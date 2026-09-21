@@ -9,18 +9,9 @@ The operator instructions are [Build a new application from Hakken](../../operat
 
 ## Agreed scope
 
-Arcade is a permanent part of the framework. The four removable areas are:
-
-*Superseded 2026-09-21: all four optional modules below were removed from this
-repository, so none of them can be kept or cut any more. The table records what
-the cut used to offer.*
-
-| Name | Application area |
-| --- | --- |
-| `movement` | Posture Studio and its capture, replay, models and tooling |
-| `properties` | Property search and Rightmove-specific processing |
-| `salesReports` | Sales and board reports |
-| `salesData` | Sales imports, customer CRM, research and opportunity reports |
+Arcade is a permanent part of the framework. There are no removable areas: the
+four that existed were removed from this repository on 2026-09-21, so every cut
+now produces the same clean base.
 
 Authentication, tenants, administration, agents, workflows, tasks, calls,
 reception, wiki and generic connectors remain in the framework. Calls and email

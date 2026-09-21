@@ -179,9 +179,6 @@ pushes. `ci.yml` and `deploy.yml` both cap themselves; this one was missed.
 
 ## Not tasks — decisions already made, recorded so they are not reopened
 
-- **The Posture Studio movement demo was removed on 2026-09-21**, together with
-  Properties, Sales Reports and Sales Data. It used to be fenced rather than
-  deleted; it is now gone from this repository entirely. Superseded.
 - **npm's block on package install scripts stays on.** See the note in
   `../completed/HANDOVER-platform-hardening.md`.
 - **The navigation profiles still name the product verticals** in their hide

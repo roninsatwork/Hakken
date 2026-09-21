@@ -11,14 +11,6 @@ Owner: Anthony
 tenancy and authz, knowledge/RAG, workflows, admin surfaces, operational
 envelope, and the reusability of this repo as a starter for other products.
 
-**Out of scope (explicitly):** the movement / Posture Studio demo. *Superseded
-2026-09-21: it was removed from this repository, so the exclusion below is moot
-and the fencing it describes no longer applies.* It stays. It
-is a live client demo and nothing in this plan deletes, moves, or refactors it.
-Where movement affects a platform metric (coverage denominators, dependency
-weight, build time) this plan **fences it**, it does not remove it. Movement work
-is governed by Movement Definitive Plan (not included in this copy).
-
 **Working rules:**
 - Work on branch `dev`. Read `AGENTS.md` before starting.
 - Do not commit or push without Anthony asking.

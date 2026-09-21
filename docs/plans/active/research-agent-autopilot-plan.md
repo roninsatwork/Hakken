@@ -303,11 +303,11 @@ list of its sites over any single register page."* — so the reader gets three
 lines of large bold text telling them what the agent was told, where the name of
 the job should be.
 
-It is not a styling accident. The screen has a special case that gives one kind
-of run — Rightmove property collection — a short title and a quiet detail line
-underneath. Every other agent falls through that case to "use the whole
-objective as the title". One agent was given a name and the rest were left with
-their instructions.
+It is not a styling accident. The screen had a special case that gave one kind
+of run a short title and a quiet detail line underneath, while every other agent
+fell through to "use the whole objective as the title". One agent was given a
+name and the rest were left with their instructions. That special case and the
+module it served were removed on 2026-09-21, so every run now falls through.
 
 Anthony, 2026-08-03: *"what is this and why is the font so large."*
 
@@ -319,8 +319,7 @@ Anthony, 2026-08-03: *"what is this and why is the font so large."*
   available to read, not shouted.
 - The naming is a property of the run rather than a special case in the screen,
   so a new agent gets a proper title by default instead of inheriting this bug.
-  The Rightmove special case is deleted at the same time. *Done 2026-09-21: the
-  special case and its whole module were removed.*
+  The special case that used to exempt one agent is already gone.
 
 ## How we will know it worked
 

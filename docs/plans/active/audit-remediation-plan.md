@@ -19,16 +19,6 @@ detail within a package*, the prompt file wins.**
 
 ## Non-negotiable working rules
 
-0. **Superseded 2026-09-21: Posture Studio was removed from this repository.**
-   The rule below applied while it was still here; it no longer constrains
-   anything. Original rule: **Posture Studio is untouchable** (Anthony,
-   2026-08-26: "don't touch the posture studio"). That is the movement area under its customer-facing name:
-   `src/app/(dashboard)/demos/**`, optional module (not included in this copy), the movement libs and
-   the sidebar block gated on `POSTURE_STUDIO_MODULE_KEY`. Every remaining
-   package excludes those paths — the demo freeze in `AGENTS.md` now carries his
-   direct instruction on top. Mechanical import-path fixes that keep the build
-   green remain allowed, nothing else.
-
 These come from standing agreements with Anthony (the owner). Violating them is
 worse than not doing the work.
 

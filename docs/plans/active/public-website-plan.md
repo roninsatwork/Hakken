@@ -24,7 +24,7 @@ Two hard requirements from Anthony:
 | Palette | Warm light/cream showroom (Clay-style) for the public site. The logged-in app stays dark. This contrast is deliberate and is the main "visually different" move. |
 | Hero panel (2026-07-30, second pass) | One deep **forest** panel (`--ps-forest #103e33`) carrying the hero, cream everywhere else — the structural equivalent of Clay's single deep-green hero on a white body. Forest rather than a neutral dark on purpose: the app is dark, so the hero has to read as a *colour*, not as dark mode. Type on it is `#fefdfb`, eyebrow in sand, one orange accent on the approve button. |
 | Header (2026-07-30, second pass) | Copied from Clay's structure: a cream pill inset `clamp(10px,3.8vw,56px)` from the viewport edges, rounded on its bottom corners only, floating over the hero panel. Nav links sit beside the wordmark at 15px/450 (not centred) so the right edge belongs to Sign in plus one primary action. |
-| Arcade on public site | No. Only the three serious products (Properties, Reports, Posture Studio). *Superseded 2026-09-21: those three were removed; Arcade is now the only showcase left.* |
+| Arcade on public site | Needs re-deciding. The answer was no, in favour of showcasing Properties, Reports and Posture Studio — all three were removed on 2026-09-21, leaving Arcade as the only candidate. |
 | Pricing | None anywhere. Everything routes to "talk to us". |
 | Screenshots | Yes — real product screenshots and screen recordings are allowed and wanted. Captured from the running app so they are genuine and re-capturable. |
 | Contact | Contact form (stored in Convex + forwarded via Resend). No pricing calculator, no chat widget. |

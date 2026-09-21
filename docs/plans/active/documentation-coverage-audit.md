@@ -3,10 +3,6 @@
 Last reviewed: 2026-08-25
 Status: active documentation-control note
 
-> **Stale in part, 2026-09-21.** The demo modules — Posture Studio, Properties,
-> Sales Reports and Sales Data — and all their documentation were removed from
-> this repository. Coverage items below that name those areas no longer apply;
-> the next pass should drop them rather than chase them.
 Audience: agents keeping Hakken documentation aligned with the implementation.
 
 ## Purpose
@@ -40,8 +36,8 @@ developer pairs or targeted refreshes.
   `src/app/(dashboard)/demos`, `src/app/(public)`, `/login`, `/w/[widgetId]`,
   `/sandbox/[widgetId]`, and the local/e2e API routes.
 - Sidebar navigation in `src/ui/components/layout/SidebarNavigation.tsx`,
-  including admin, assistant, reports, properties, Posture Studio,
-  organization settings, arcade, system settings, maintenance, agents,
+  including admin, assistant, organization settings, arcade, system settings,
+  maintenance, agents,
   workflows, AI, companies, users, and super-admin routes.
 - Convex schema tables in `convex/schema.ts`, including companies, users,
   plans, auth, AI providers and models, agents, agent runs, approvals,
@@ -94,13 +90,9 @@ surfaces that are currently exposed in navigation:
   tools/connectors, knowledge, widgets, agents, agent configuration, agent
   runtime operations, evals, observability, memories, and approvals context
 - workflow automation, executions, schedules, and runtime internals
-- property research, Rightmove/Apify collection flow, scraped data, logs, and
-  sales/board reports
 - auxiliary experiences: Ronin's Run and Agentic Testing Sandbox
 - public API, webhooks, embedded widgets, platform packaging, and white-label
   extension material
-- the frozen temporary Posture Studio/movement demo documentation and required
-  movement mirror/definitive-plan guardrails
 
 The plan/documentation map was stale, however. Several active plans existed in
 `docs/plans/active/` without being linked from `docs/plans/index.md` or the
