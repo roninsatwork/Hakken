@@ -14,7 +14,7 @@ Current implementation alignment includes multi-provider assistant streaming and
 
 - [Login, Access, And Authentication](./login-access-and-authentication.md)
 - [Governance And Trust](./governance-and-trust.md)
-- [Sales Data Workspace](./sales-data-workspace.md)
+- Sales Data Workspace (not included in this copy)
 - [Assistant Chat](./assistant-chat.md)
 - [Spoken Channels](./spoken-channels.md)
 - [Photo Actions](./photo-actions.md)
@@ -45,10 +45,10 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [Operational Diagnostics And Retention](./operational-diagnostics-and-retention.md)
 - [Public API And Webhooks](./public-api-and-webhooks.md)
 - [Widget Handoff And Troubleshooting](./widget-handoff-and-troubleshooting.md)
-- [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md)
+- Temporary Posture Studio Demo (not included in this copy)
 - [Workflow Automation](./workflow-automation.md)
-- [Property Research And Board Reports](./property-research-and-reports.md)
-- [Sales And Board Reports](./sales-and-board-reports.md)
+- Property Research And Board Reports (not included in this copy)
+- Sales And Board Reports (not included in this copy)
 
 ## Coverage Status
 

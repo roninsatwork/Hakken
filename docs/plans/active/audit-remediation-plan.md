@@ -21,7 +21,7 @@ detail within a package*, the prompt file wins.**
 
 0. **Posture Studio is untouchable** (Anthony, 2026-08-26: "don't touch the
    posture studio"). That is the movement area under its customer-facing name:
-   `src/app/(dashboard)/demos/**`, `convex/movements.ts`, the movement libs and
+   `src/app/(dashboard)/demos/**`, optional module (not included in this copy), the movement libs and
    the sidebar block gated on `POSTURE_STUDIO_MODULE_KEY`. Every remaining
    package excludes those paths — the demo freeze in `AGENTS.md` now carries his
    direct instruction on top. Mechanical import-path fixes that keep the build
@@ -142,7 +142,7 @@ dependency note says two are independent.
 | 10 | WP08 — i18n for pre-kit /app pages | `review/prompts/08-app-area-i18n.md` | 8% | 1.5 | WP03 |
 | 11 | WP10 — Shared palette + formatters | `review/prompts/10-shared-palette-and-formatters.md` | 5% | 1 | WP08 |
 | 12 | WP09 — File-naming convention ratchet | `review/prompts/09-file-naming-convention.md` | 3% | 0.5 | WP13, WP04, WP06 |
-| 13 | WP12 — Movement scripts CLI | `review/prompts/12-movement-scripts-cli.md` | 4% | 1 | — |
+| 13 | WP12 — Movement scripts CLI | optional module (not included in this copy) | 4% | 1 | — |
 | 14 | WP14 — Small-findings sweep | (this file, below) | 4% | 1 | everything else |
 
 Weights sum to 100 and are effort estimates; report
@@ -624,7 +624,7 @@ An external code auditor rescored the tree at `9bca72d0` and returned 8.5/10,
 up from the 8/10 of the original review. **Its numbers were checked against the
 code before anything was done with them, and they held.** Ten figures verified
 independently: 863 `appError` sites; four plain-`Error` survivors, all inside
-frozen `convex/movements.ts`; `agentSkills.ts` at 2,458 lines; `agentRuntime.ts`
+frozen optional module (not included in this copy); `agentSkills.ts` at 2,458 lines; `agentRuntime.ts`
 at 1,212; `KnowledgeManager.tsx` at 663; `ConfigDrawer.tsx` at 521;
 `SidebarNavigation.tsx` at 604; 101 `movement:` scripts; 234 PascalCase
 component files; the theme baseline at 1,052; `src/ui/atoms/` absent; six files
@@ -707,7 +707,7 @@ untidy codebase; it is one untidy codebase per product, forever.
 
 One file at a time, **largest first** — the shapes within a file repeat, so the
 second surface in a file is far cheaper than the first, and the ten heaviest
-files hold 130 of the 362. `convex/movements.ts` held 11 of them and was
+files hold 130 of the 362. optional module (not included in this copy) held 11 of them and was
 excluded as frozen Posture Studio code. Anthony lifted that on 2026-08-27 for
 declarations only — the eleven are declared and nothing else in that area was
 touched. After each file:
@@ -768,7 +768,7 @@ Update this table (and nothing else in this section) as work proceeds. States:
 | E2 movement scripts dispatcher | **done, rename refused** (2026-08-26: 58b651fa9) | `npm run movement` indexes all 101 in 19 families and 21 one-offs, dispatches by short name, and refuses an unknown one with its own family's suggestions. `npm run help` points at it. The rename half is refused on evidence rather than deferred: the names are referenced 1,258 times across 96 files, and four sit inside the frozen Posture Studio source — `MovementCaptureClient` prints one on screen for a user to copy and type, so renaming publishes a broken instruction. Every existing name still resolves. Three probes broken on purpose and watched to fail |
 | E3 broad analytics reads | **done — every capped figure discloses** (2026-08-26: bc143b7c4, 650c19c91) | All six remaining analytics surfaces read one row past their cap and report whether they ran out of room; five screens show it through one shared notice, in both languages. Sixteen reads left the broad-read register and its stale-entry rule took thirteen entries with them — 58 down to 45. `platformOverview` moved onto the same shared module, so its end-to-end test covers the shared code. **What is deliberately NOT done: the caps are still caps.** A month past ten thousand rows is now honest rather than silent, but it is still not read in full; removing the cap needs rollup tables, which is a design job and remains unscheduled |
 | E4 return validators beyond the client surface | **done** (2026-08-26: 25561ddb1, e10c4e0ea, 6dfd7083f) | The population that could leak is zero: fourteen handlers returned undeclared database rows, two were real leaks (`users.tokenIdentifier`, `workflows.webhookSecret`), and all fourteen are shaped. Shapes derive from the schema through `rowShape`, so a new column is declared the day it is added rather than travelling undeclared. The trivial fifth followed — 83 surfaces that return nothing or a bare boolean — taking the undeclared count 455 to 362. What remains is **E5**, which Anthony scheduled rather than left to drain |
-| E5 remaining return shapes | **done** (2026-08-26 to 2026-08-27: 2299d5414 … 3592c9312, eighteen commits) | Every client-callable declaration a browser can reach declares a return shape. The population is **365 → 0**. The last eleven were `convex/movements.ts`, which this plan excluded permanently — Anthony lifted that on 2026-08-27 for declarations only, and only declarations were made: eleven `returns:` lines, one type annotation on a filter so a declaration could be accurate, and nothing under `src/app/(dashboard)/demos/**` or in capture, scoring, replay or avatar logic. The raw-row list is empty and the ceiling is zero. (365, not the 362 the handover stated: the guard's builder list was missing `governanceAction`, so three declarations were invisible to it — found on the re-check and recorded in "Found in passing".) The five short-form handlers a regex calls empty were read by hand and are among the done. **Six live leaks were found by declaring, all of them fields an earlier pass believed closed or never saw**: `users.tokenIdentifier` on four people surfaces, `invitations.token` on four admin screens, the OAuth `state` that completes a connector authorisation, `threads.widgetAccessTokenHash` on all five chat-log doors, `workflows.webhookSecret` on the workflow list, and `apiKeys.keyDigest` on the keys screen. Each is narrowed on the way out and probed by putting it back. **Three guards were found reading nothing** and are fixed and probed: the raw-row rule matched text and missed every wrapped call; a `v.record()` return declaration is never validated at all; and no fixture in the suite carried a secret, so the first probe of each narrowing passed. The 393 internal-only declarations remain deliberately out of scope. The two items left open on 2026-08-27 came back the same day and are both closed: the masking config validates what it accepts and `getPiiConfig` declares its real shape, and the three Posture Studio surfaces no screen and no owner-side test reached now have one. Nothing in this package is open |
+| E5 remaining return shapes | **done** (2026-08-26 to 2026-08-27: 2299d5414 … 3592c9312, eighteen commits) | Every client-callable declaration a browser can reach declares a return shape. The population is **365 → 0**. The last eleven were optional module (not included in this copy), which this plan excluded permanently — Anthony lifted that on 2026-08-27 for declarations only, and only declarations were made: eleven `returns:` lines, one type annotation on a filter so a declaration could be accurate, and nothing under `src/app/(dashboard)/demos/**` or in capture, scoring, replay or avatar logic. The raw-row list is empty and the ceiling is zero. (365, not the 362 the handover stated: the guard's builder list was missing `governanceAction`, so three declarations were invisible to it — found on the re-check and recorded in "Found in passing".) The five short-form handlers a regex calls empty were read by hand and are among the done. **Six live leaks were found by declaring, all of them fields an earlier pass believed closed or never saw**: `users.tokenIdentifier` on four people surfaces, `invitations.token` on four admin screens, the OAuth `state` that completes a connector authorisation, `threads.widgetAccessTokenHash` on all five chat-log doors, `workflows.webhookSecret` on the workflow list, and `apiKeys.keyDigest` on the keys screen. Each is narrowed on the way out and probed by putting it back. **Three guards were found reading nothing** and are fixed and probed: the raw-row rule matched text and missed every wrapped call; a `v.record()` return declaration is never validated at all; and no fixture in the suite carried a secret, so the first probe of each narrowing passed. The 393 internal-only declarations remain deliberately out of scope. The two items left open on 2026-08-27 came back the same day and are both closed: the masking config validates what it accepts and `getPiiConfig` declares its real shape, and the three Posture Studio surfaces no screen and no owner-side test reached now have one. Nothing in this package is open |
 
 ---
 

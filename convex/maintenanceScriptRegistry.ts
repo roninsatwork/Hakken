@@ -1,9 +1,6 @@
 export type MaintenanceScriptId =
   | "inventory-rollup-rebuild"
   | "data-migrations-apply"
-  // template:remove:start salesData
-  | "comax-agents-provision"
-  // template:remove:end
   ;
 export type MaintenanceScriptRisk = "LOW" | "MEDIUM" | "HIGH";
 export type MaintenanceScriptCategory =
@@ -69,29 +66,6 @@ export const maintenanceScriptDefinitions: MaintenanceScriptDefinition[] = [
     expectedDuration:
       "Returns immediately. Migrations continue in the background; re-run this script to see updated progress.",
   },
-  // template:remove:start salesData
-  {
-    id: "comax-agents-provision",
-    name: "Set up the Comax agents",
-    category: "Agents",
-    riskLevel: "MEDIUM",
-    shortDescription:
-      "Installs the Comax connectors and switches the right tools on for each Comax agent.",
-    description:
-      "Which tools an agent can use is data, not code, so deploying a release ships the tool definitions but leaves every Comax agent on that deployment with none of them switched on. This installs the three Comax connectors plus the web reader, then gives each Comax agent exactly the tools its screen expects: the Company Research Agent its customer tools, the Prospect Search Agent its group tools, the Market Discovery Agent its five discovery tools, and the Opportunity Report Agent its three pricing tools. It also clears the approval gate on those four agents, so a run does its work instead of parking in the approval queue.",
-    whenToRun:
-      "Run after deploying to an environment where the Comax screens have never been set up, or when an agent's Interfaces tab shows fewer tools than it should. Comparing two environments and finding one bare is the usual reason.",
-    changes: [
-      "Installs the Comax Customer Research, Market Discovery and Opportunity Report connectors for the Comax workspace.",
-      "Installs the Firecrawl web reader.",
-      "Switches on each Comax agent's own tools, and switches off any Comax tool that belongs to a different agent.",
-      "Turns off human approval on those agents so their runs are unattended.",
-    ],
-    repeatability:
-      "Safe to run more than once. It converges on the same state, and a tool switched on by hand that is not part of the Comax set is left alone.",
-    expectedDuration: "Usually completes in a few seconds.",
-  },
-  // template:remove:end
 ];
 
 export function getMaintenanceScriptDefinition(scriptId: string) {

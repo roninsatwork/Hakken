@@ -132,6 +132,6 @@ implementation drift to resolve under the Public Website Plan.
 
 - [Hakken Product Overview](./platform-overview.md)
 - [Login, Access, And Authentication](./login-access-and-authentication.md)
-- [Property Research And Board Reports](./property-research-and-reports.md)
-- [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md)
+- Property Research And Board Reports (not included in this copy)
+- Temporary Posture Studio Demo (not included in this copy)
 - [Public Website Plan](../plans/active/public-website-plan.md)

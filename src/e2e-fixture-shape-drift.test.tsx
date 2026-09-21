@@ -70,14 +70,8 @@ const lineOf = (needle: string) => {
  * numbers exist to prevent.
  */
 const COMPARED_FLOOR = 49
-// template:remove:start movement
-+ 4
-// template:remove:end
 ;
 const HOLLOW_CEILING = 7
-// template:remove:start movement
-+ 3
-// template:remove:end
 ;
 
 const queryPaths = pathsBetween(lineOf("export function useQuery("), lineOf("export function useMutation("));

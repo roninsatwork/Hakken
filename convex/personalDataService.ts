@@ -70,12 +70,6 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     redactFields: ["content", "normalizedContent"],
   },
   { table: "userMemorySweeps", fields: ["userId"], treatment: "ERASE", reason: "The bookkeeping behind their private note." },
-// template:remove:start movement
-  { table: "movements", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
-// template:remove:end
-// template:remove:start movement
-  { table: "movementDebugSessions", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
-// template:remove:end
   { table: "notifications", fields: ["userId"], treatment: "ERASE", reason: "Their inbox. A notification exists only for the person it was sent to." },
 
   // --- Kept deliberately, because they are the evidence -----------------
@@ -151,27 +145,6 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     ["schedules", ["createdBy"]],
     ["widgets", ["createdBy"]],
     ["apifyRuns", ["startedBy"]],
-// template:remove:start salesData
-    ["salesDataImports", ["importedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesDataCustomers", ["updatedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesDataCustomerResearch", ["decidedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesDataProspects", ["decidedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesDataMarketDiscoveryJobs", ["startedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesDataResearchJobs", ["startedBy"]],
-// template:remove:end
-// template:remove:start salesData
-    ["salesOpportunityReports", ["requestedBy"]],
-// template:remove:end
     ["wikiOpenQuestions", ["resolvedBy"]],
     ["wikiReviews", ["decidedBy"]],
   ] as const).map(([table, fields]) => ({

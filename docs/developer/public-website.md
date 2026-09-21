@@ -22,8 +22,8 @@ Current implementation files include:
 - `src/app/(public)/_motion/PublicMotion.tsx`
 - `src/app/(public)/_components/home/ProductHero.tsx`
 - `src/app/(public)/_components/home/WhatHakkenIs.tsx`
-- `src/app/(public)/_components/home/DemosIntro.tsx`
-- `src/app/(public)/_components/home/ProductPanels.tsx`
+- optional module (not included in this copy)
+- optional module (not included in this copy)
 - `src/app/(public)/_components/home/WhoItsFor.tsx`
 
 The public website is governed by

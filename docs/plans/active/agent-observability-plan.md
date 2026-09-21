@@ -168,7 +168,7 @@ honest.
    (`SUCCESS` / `FAILED` / `UNKNOWN`), `durationMs` (optional) and
    `failureKey` (optional).
 2. Pass them from every writer. There are eight call sites: four in
-   `convex/agentRuntime.ts`, three in `convex/salesReportActions.ts`, one in
+   `convex/agentRuntime.ts`, three in optional module (not included in this copy), one in
    `convex/swarmActions.ts`.
 3. Existing rows keep `UNKNOWN` and show as *not recorded* rather than being
    guessed into a green tick. No backfill — the information was never captured

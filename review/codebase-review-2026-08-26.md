@@ -31,8 +31,8 @@ The defining property is that conventions are **mechanically enforced**, not doc
 
 | Sev | Location | Issue |
 |---|---|---|
-| Med | `convex/schema.ts` (4,421 lines, 116 tables), `convex/agentSkills.ts` (2,458), `convex/agentEvalFixtures.ts` (2,000), `convex/salesDataResearch.ts` (1,991) | 81 non-test, non-demo files exceed 500 lines. The worst frontend god-components were fixed (KnowledgeManager 1,453 → 663 plus a split-out Sections file; agentRuntime 2,803 → 1,212), but the backend's largest modules were not. |
-| Med | `src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx` (1,336), `app/[workspace]/customers/[account]/page.tsx` (911), `app/page.tsx` (708) | Page components carrying fetch, transform, chart and export logic inline. |
+| Med | `convex/schema.ts` (4,421 lines, 116 tables), `convex/agentSkills.ts` (2,458), `convex/agentEvalFixtures.ts` (2,000), optional module (not included in this copy) (1,991) | 81 non-test, non-demo files exceed 500 lines. The worst frontend god-components were fixed (KnowledgeManager 1,453 → 663 plus a split-out Sections file; agentRuntime 2,803 → 1,212), but the backend's largest modules were not. |
+| Med | optional module (not included in this copy) (1,336), `app/[workspace]/customers/[account]/page.tsx` (911), `app/page.tsx` (708) | Page components carrying fetch, transform, chart and export logic inline. |
 | Low | `tsconfig.json` | `strict` is on but `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are not, and `target` is still `ES2017` on a Node >= 24 / modern-browser project. 144 non-null assertions in non-test source are largely a symptom of the first gap. |
 | Low | No Prettier/formatter config | Formatting is convention only. It holds in practice (3,687 double-quoted imports vs 46 single in `src/`; 100% double in `convex/`), but nothing enforces it. |
 
@@ -66,7 +66,7 @@ Several inconsistencies from the last review have been **closed and locked**, wh
 - **File naming**: was called a three-way split. Measured now, PascalCase leads **234 to 6** among component files; the remaining kebab-case names are all Next.js structural (`page`, `layout`, `error`, `global-error`). `src/file-naming-drift.test.ts` now enforces PascalCase with a frozen 7-file list, and its comment correctly calls out that the earlier 302-file figure counted a different population.
 - **`src/ui/atoms/` vs `src/ui/components/screens/`**: the split is gone. All primitives (`Button`, `Checkbox`, `Field`, `Select`, `StatusPill`, `CursorPagination`) now live in one kit directory with their tests beside them.
 - **`quality-drift.test.ts`** (1,462 lines mixing ~10 concerns) has been split into 25 focused drift tests, largest now 569 lines.
-- **Pre-kit pages migrated**: `src/app/(dashboard)/app/reports/page.tsx` now uses `useTranslations`, the shared `chartPalette`, and `src/lib/currency` — the local `formatCurrency` and per-page hexes are gone. Zero local `formatDate`/`formatCurrency`/`formatNumber` duplicates remain outside the frozen demos, and `date-fns` has been removed from the tree entirely.
+- **Pre-kit pages migrated**: optional module (not included in this copy) now uses `useTranslations`, the shared `chartPalette`, and `src/lib/currency` — the local `formatCurrency` and per-page hexes are gone. Zero local `formatDate`/`formatCurrency`/`formatNumber` duplicates remain outside the frozen demos, and `date-fns` has been removed from the tree entirely.
 - **i18n adoption**: admin 158/241, app area 40/60 (was 27/53), `src/ui` 31/58. Parity between `en`/`it` is test-enforced across 4,703 keys, all resolving.
 
 ### Remaining genuine inconsistencies

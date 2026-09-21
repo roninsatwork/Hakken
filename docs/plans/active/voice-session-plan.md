@@ -185,7 +185,7 @@ transient state has a pattern too: `threads.assistantStage` with a staleness
 guard (`convex/chat.ts:100-130`).
 
 **The three.js boundary is enforced by a test — and the shape never
-touches it.** `src/movement-boundary.test.ts` fails the build if anything
+touches it.** optional module (not included in this copy) fails the build if anything
 outside `src/app/(dashboard)/demos/` or `src/lib/movements/` imports
 three.js or VRM libraries — deliberate bundle-size protection (~4.3 MB of
 client chunks). The sound-shape uses CSS/canvas only, so no boundary

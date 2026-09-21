@@ -62,8 +62,8 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Ronin's Run — Night Heist Plan](./plans/active/ronins-run-night-heist-plan.md) — four playable maps, saved campaign unlocks, Spirit Power takedowns, preserved visual reference, asset provenance and remaining play/quality acceptance checks.
 - [Admin Clone-Readiness Plan](./plans/completed/admin-clone-readiness-plan.md) — approved plan for the admin section's last hand-drawn debts: button migration onto the screen kit, collapsing mirrored screens, de-branding via `platformName`, and full admin copy externalisation into the message catalogues.
 - [Foundation Quality Plan](./plans/completed/foundation-quality-plan.md) — approved pre-clone plan for wiki/AI-runtime test coverage, `appError` conversion, splitting the `ai.ts` and `analyticsCron.ts` grab-bags, and the docs tidy-up.
-- [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
-- [Movement Studio Reward Presentation Fix Plan](./plans/active/movement-studio-reward-presentation-fix-plan.md) — active movement presentation fix plan for clearer reward and scoring feedback without reopening frozen motion implementation work.
+- Movement Definitive Plan (not included in this copy) — the single source of truth for current movement work.
+- Movement Studio Reward Presentation Fix Plan (not included in this copy) — active movement presentation fix plan for clearer reward and scoring feedback without reopening frozen motion implementation work.
 - [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
 - [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
 - [OpenRouter And Model Scale Plan](./plans/active/openrouter-and-model-scale-plan.md) — active AI provider/model catalogue scale plan for OpenRouter, provider resolution, paging, search indexes, and rollups.
@@ -78,11 +78,11 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [User Directory Plan](./plans/active/user-directory-plan.md) — active plan for the platform-wide user directory, login recording, and user activity aggregation.
 - [Email Design System Plan](./plans/active/email-design-system-plan.md) — active plan for the shared outbound email shell, plain-text parity, sender identity, and accessible colour contract.
 - [Observability Collection And Killswitch Handover](./plans/active/observability-collection-and-killswitch-handover.md) — active handover for honest Apify collection reporting and a visible agent kill switch.
-- [Workspace Sales Data Plan](./plans/active/workspace-sales-data-plan.md) — active plan for the optional workspace spreadsheet-import vertical and module gating.
-- [Workspace Customer CRM Plan](./plans/active/workspace-customer-crm-plan.md) — active plan for customer records, profiles, typed-in details, and sales history inside workspace sections.
-- [Workspace Customer Research Agent Plan](./plans/active/workspace-customer-research-agent-plan.md) — active plan for internet backfill, prospect discovery, researched-field provenance, and customer/prospect write boundaries.
+- Workspace Sales Data Plan (not included in this copy) — active plan for the optional workspace spreadsheet-import vertical and module gating.
+- Workspace Customer CRM Plan (not included in this copy) — active plan for customer records, profiles, typed-in details, and sales history inside workspace sections.
+- Workspace Customer Research Agent Plan (not included in this copy) — active plan for internet backfill, prospect discovery, researched-field provenance, and customer/prospect write boundaries.
 - [Market Discovery Agent Plan](./plans/active/market-discovery-agent-plan.md) — active plan for finding new parent companies outside imported groups, filing their locations as market-discovery prospects, and tracking the job with a visible progress bar.
-- [Comax Opportunity Report Plan](./plans/active/comax-opportunity-report-plan.md) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
+- Comax Opportunity Report Plan (not included in this copy) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
 - [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
 - [Governance And Trust Plan](./plans/active/governance-and-trust-plan.md) — delivered 2026-08-06; kept active for its framework test and recorded decisions. Covers the AI register, risk classification, evidence export, the Governance section, and the roles, one-time-code sign-in and personal-data-rights work behind it.
 - [Governance Screens Read A Summary Plan](./plans/active/governance-screens-read-a-summary-plan.md) — active plan for replacing expensive governance overview reads with maintained rollups and snapshots.
@@ -131,7 +131,7 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Public Website](./developer/public-website.md)
 - [Governance And Trust](./developer/governance-and-trust.md)
 - [Screen Kit](./developer/screen-kit.md)
-- [Sales Data Workspace](./developer/sales-data-workspace.md)
+- Sales Data Workspace (not included in this copy)
 - [Administration](./developer/administration.md)
 - [Company And User Management](./developer/company-user-management.md)
 - [Company AI Readiness And Checks](./developer/company-ai-readiness-and-checks.md)
@@ -165,11 +165,11 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Run Observatory](./developer/run-observatory.md)
 - [System Health And Platform Alerts](./developer/system-health-and-platform-alerts.md)
 - [System Settings And Branding](./developer/system-settings-and-branding.md)
-- [Temporary Posture Studio Demo](./developer/temporary-posture-studio-demo.md)
+- Temporary Posture Studio Demo (not included in this copy)
 - [Workflow Automation](./developer/workflow-automation.md)
 - [Workflow Runtime Internals](./developer/workflow-runtime-internals.md)
-- [Property Research And Board Reports](./developer/property-research-and-reports.md)
-- [Sales And Board Reports](./developer/sales-and-board-reports.md)
+- Property Research And Board Reports (not included in this copy)
+- Sales And Board Reports (not included in this copy)
 - [Product Extension Guide](./developer/product-extension-guide.md)
 - [Upload And Knowledge Policy](./developer/upload-and-knowledge-policy.md)
 - [AI Provider Tool Extension](./developer/ai-provider-tool-extension.md)
@@ -180,21 +180,21 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 
 #### Required Movement Mirror Methodology
 
-Before changing movement-side behaviour, read **[Movement Mirror And Side-Ownership Contract](./developer/movement-mirror-and-side-ownership-contract.md)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
+Before changing movement-side behaviour, read **Movement Mirror And Side-Ownership Contract (not included in this copy)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
 
 #### Required Movement Plan
 
 Before changing movement capture, Replay Studio, or Game Studio behaviour, read **[Movement Definitive Plan](./plans/active/movement-definitive-plan.md)**. It defines the two goals (capture countdown with full-body walk-back gate; correct avatar/instructor motion in Replay and Game), the two-part acceptance (automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation), and the capture-screen rules that must never regress. Retired background on the repair-loop discipline lives in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans); treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
 
-- [Movement Tracking](./developer/movement-tracking.md)
-- [Movement Demo Client Recovery Plan](./plans/completed/movement-demo-client-recovery-plan.md)
-- [Movement Demo Game And Replay Parity Plan](./plans/completed/movement-demo-game-replay-parity-plan.md)
-- [Movement Demo Replay Lab Plan](./plans/completed/movement-demo-replay-lab-plan.md)
-- **[Movement Mirror And Side-Ownership Contract — required](./developer/movement-mirror-and-side-ownership-contract.md)**
-- [Movement Demo Retargeting Approach](./developer/movement-demo-retargeting-approach.md)
-- [Movement Studio And Replay Unification Plan](./plans/completed/movement-studio-replay-unification-plan.md)
-- [Movement Studio Reward Presentation Fix Plan](./plans/active/movement-studio-reward-presentation-fix-plan.md)
-- [Movement Studio VrmAvatar Inventory](./developer/movement-studio-vrm-avatar-inventory.md)
+- Movement Tracking (not included in this copy)
+- Movement Demo Client Recovery Plan (not included in this copy)
+- Movement Demo Game And Replay Parity Plan (not included in this copy)
+- Movement Demo Replay Lab Plan (not included in this copy)
+- **Movement Mirror And Side-Ownership Contract — required (not included in this copy)**
+- Movement Demo Retargeting Approach (not included in this copy)
+- Movement Studio And Replay Unification Plan (not included in this copy)
+- Movement Studio Reward Presentation Fix Plan (not included in this copy)
+- Movement Studio VrmAvatar Inventory (not included in this copy)
 
 ### Operator
 
@@ -208,10 +208,10 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Generate a Product Feature](./developer/feature-generator.md)
 - [Product Recipes](./developer/product-recipes.md)
 - [Reviewed Framework Updates](./operator/framework-updates.md)
-- [Movement Demo Pitch Runbook](./operator/movement-demo-pitch-runbook.md)
-- [Movement Demo Manual Smoke Checklist](./operator/movement-demo-manual-smoke-checklist.md)
-- [Movement Demo Live Rehearsal Notes Template](./operator/movement-demo-live-rehearsal-notes-template.md)
-- [Movement Demo Presenter Card](./operator/movement-demo-presenter-card.md)
+- Movement Demo Pitch Runbook (not included in this copy)
+- Movement Demo Manual Smoke Checklist (not included in this copy)
+- Movement Demo Live Rehearsal Notes Template (not included in this copy)
+- Movement Demo Presenter Card (not included in this copy)
 
 ### End User
 
@@ -219,7 +219,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Platform Overview](./end-user/platform-overview.md)
 - [Public Website](./end-user/public-website.md)
 - [Governance And Trust](./end-user/governance-and-trust.md)
-- [Sales Data Workspace](./end-user/sales-data-workspace.md)
+- Sales Data Workspace (not included in this copy)
 - [Login, Access, And Authentication](./end-user/login-access-and-authentication.md)
 - [Assistant Chat](./end-user/assistant-chat.md)
 - [Spoken Channels](./end-user/spoken-channels.md)
@@ -251,7 +251,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Operational Diagnostics And Retention](./end-user/operational-diagnostics-and-retention.md)
 - [Public API And Webhooks](./end-user/public-api-and-webhooks.md)
 - [Widget Handoff And Troubleshooting](./end-user/widget-handoff-and-troubleshooting.md)
-- [Temporary Posture Studio Demo](./end-user/temporary-posture-studio-demo.md)
+- Temporary Posture Studio Demo (not included in this copy)
 - [Workflow Automation](./end-user/workflow-automation.md)
-- [Property Research And Board Reports](./end-user/property-research-and-reports.md)
-- [Sales And Board Reports](./end-user/sales-and-board-reports.md)
+- Property Research And Board Reports (not included in this copy)
+- Sales And Board Reports (not included in this copy)

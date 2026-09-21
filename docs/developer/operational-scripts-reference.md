@@ -102,9 +102,9 @@ here by purpose rather than repeated as one long command list.
 
 Before using these scripts, read:
 
-- [Movement Definitive Plan](../plans/active/movement-definitive-plan.md)
-- [Movement Mirror And Side-Ownership Contract](./movement-mirror-and-side-ownership-contract.md)
-- [Movement Tracking Developer Notes](./movement-tracking.md)
+- Movement Definitive Plan (not included in this copy)
+- Movement Mirror And Side-Ownership Contract (not included in this copy)
+- Movement Tracking Developer Notes (not included in this copy)
 
 ## Adding Or Changing Scripts
 

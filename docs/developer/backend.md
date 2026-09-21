@@ -87,7 +87,7 @@ Focused examples:
 - `convex/agent*.test.ts` for agent lifecycle, runtime evidence, evals, memories, logs, and releases.
 - `convex/workflow*.test.ts` and `convex/scheduler.test.ts` for workflow graph execution and schedules.
 - `convex/apiKeys.test.ts`, `convex/webhookDeliveries.test.ts`, and `convex/publicApi.ts` related tests for integrations.
-- `convex/properties.test.ts`, `convex/apify.test.ts`, and `convex/webhooks.test.ts` for property extraction.
+- optional module (not included in this copy), `convex/apify.test.ts`, and `convex/webhooks.test.ts` for property extraction.
 
 For implementation changes, run the repo gate from `AGENTS.md` before asking for merge or push:
 

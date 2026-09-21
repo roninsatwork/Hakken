@@ -1,23 +1,11 @@
 import { paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
-// template:remove:start salesData
-import schema, { opportunityHeadlineValidator } from "../schema";
-// template:remove:end
 
 import { rowShape } from "./rowShape";
 
-// template:remove:start salesData
-const reportFields = schema.tables.salesOpportunityReports.validator.fields;
-// template:remove:end
 
-// template:remove:start salesData
-const gapProductFields = schema.tables.salesOpportunityReportGapProducts.validator.fields;
-// template:remove:end
 
-// template:remove:start salesData
-const typeBasketFields = schema.tables.salesOpportunityReportTypeBaskets.validator.fields;
-// template:remove:end
 
 
 /** Shapes for the surfaces that come one or two to a file. */
@@ -162,17 +150,6 @@ export const workbookInspectionShape = v.object({
   })),
 });
 
-// template:remove:start salesData
-export const workbookImportShape = v.object({
-  importId: v.id("salesDataImports"),
-  salesRowCount: v.number(),
-  categoryRowCount: v.number(),
-  areasOfInterestRowCount: v.number(),
-  frequencyRowCount: v.number(),
-  skippedRowCount: v.number(),
-  periodLabels: v.array(v.string()),
-});
-// template:remove:end
 
 
 export const salesDataResetShape = v.object({ deleted: v.number() });
@@ -197,12 +174,6 @@ export const toolDiscoveryShape = v.object({
   toolCount: v.number(),
 });
 
-// template:remove:start salesData
-export const opportunityReportStartShape = v.object({
-  started: v.boolean(),
-  alreadyRunning: v.boolean(),
-});
-// template:remove:end
 
 
 /**
@@ -212,35 +183,6 @@ export const opportunityReportStartShape = v.object({
  * only turns "absent" into `null` or an empty list, so the shape says required
  * where the handler always answers.
  */
-// template:remove:start salesData
-export const opportunityReportShape = v.union(v.null(), v.object({
-  status: reportFields.status,
-  phase: reportFields.phase,
-  startedAt: reportFields.startedAt,
-  completedAt: v.union(v.number(), v.null()),
-  failureReason: v.union(v.string(), v.null()),
-  headline: v.union(v.null(), opportunityHeadlineValidator),
-  prospects: reportFields.prospects,
-  gaps: reportFields.gaps,
-  gapProducts: v.array(v.object({
-    accountNameKey: gapProductFields.accountNameKey,
-    categoryKey: gapProductFields.categoryKey,
-    products: gapProductFields.products,
-  })),
-  typeBaskets: v.array(v.object({
-    customerTypeKey: typeBasketFields.customerTypeKey,
-    customerType: typeBasketFields.customerType,
-    totalSpendGBP: typeBasketFields.totalSpendGBP,
-    customerCount: typeBasketFields.customerCount,
-    categories: typeBasketFields.categories,
-  })),
-  summary: v.union(v.null(), v.string()),
-  exceptions: reportFields.exceptions,
-  importFileName: v.union(v.string(), v.null()),
-  importPeriodLabels: v.array(v.string()),
-  describesCurrentImport: v.boolean(),
-}));
-// template:remove:end
 
 
 /** The wiki's admin-side doors: the same reads as the module doors, behind different walls. */

@@ -219,8 +219,8 @@ and skip the service (`convex/wikiStaff.ts:282-294`,
 | Intent router (`convex/orchestrator.ts:86`) | Which agent handles this? | Model self-reports `confidence`; hard-coded `> 0.65`; number never shown |
 | Agent self-improvement (`convex/agentRunReflectionService.ts:59-95`) | Which of 11 failure categories? | Substring matching on the error blob |
 | Company checks (`convex/companyEvals.ts:180-195`) | Does the answer make a forbidden claim? | `includes()` on the exact wording |
-| Prospect matching, workbook import (`convex/salesDataProspectMatching.ts`, `salesDataImportService.ts:108-230`) | Same business? Which column is which? | Token fingerprints, alias lists |
-| Customer research (`convex/salesDataResearchService.ts`) | Write the found figure or queue it? | Agent's self-reported HIGH/MEDIUM/LOW |
+| Prospect matching, workbook import (optional module (not included in this copy), `salesDataImportService.ts:108-230`) | Same business? Which column is which? | Token fingerprints, alias lists |
+| Customer research (optional module (not included in this copy)) | Write the found figure or queue it? | Agent's self-reported HIGH/MEDIUM/LOW |
 
 **Where a judgment is visible today.** Almost nowhere. The mailbox screen
 (`src/app/(dashboard)/admin/_features/work/CompanyMailboxScreen.tsx`) shows a

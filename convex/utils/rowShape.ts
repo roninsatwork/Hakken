@@ -61,27 +61,9 @@ export const rowShape = {
   purgeHistory: v.object({ ...whole("purgeHistory"), _id: v.id("purgeHistory") }),
   widgets: v.object({ ...whole("widgets"), _id: v.id("widgets") }),
   messages: v.object({ ...whole("messages"), _id: v.id("messages") }),
-  // template:remove:start movement
-  movements: v.object({ ...whole("movements"), _id: v.id("movements") }),
-  // template:remove:end
-  // template:remove:start movement
-  movementDebugSessions: v.object({ ...whole("movementDebugSessions"), _id: v.id("movementDebugSessions") }),
-  // template:remove:end
   notifications: v.object({ ...whole("notifications"), _id: v.id("notifications") }),
   phoneCalls: v.object({ ...whole("phoneCalls"), _id: v.id("phoneCalls") }),
   plans: v.object({ ...whole("plans"), _id: v.id("plans") }),
-  // template:remove:start salesData
-  salesDataAreasOfInterest: v.object({ ...whole("salesDataAreasOfInterest"), _id: v.id("salesDataAreasOfInterest") }),
-  // template:remove:end
-  // template:remove:start salesData
-  salesDataCategoryLinks: v.object({ ...whole("salesDataCategoryLinks"), _id: v.id("salesDataCategoryLinks") }),
-  // template:remove:end
-  // template:remove:start salesData
-  salesDataFrequencies: v.object({ ...whole("salesDataFrequencies"), _id: v.id("salesDataFrequencies") }),
-  // template:remove:end
-  // template:remove:start salesData
-  salesDataRows: v.object({ ...whole("salesDataRows"), _id: v.id("salesDataRows") }),
-  // template:remove:end
   schedules: v.object({ ...whole("schedules"), _id: v.id("schedules") }),
   workflowExecutionSteps: v.object({ ...whole("workflowExecutionSteps"), _id: v.id("workflowExecutionSteps") }),
   workflowExecutions: v.object({ ...whole("workflowExecutions"), _id: v.id("workflowExecutions") }),

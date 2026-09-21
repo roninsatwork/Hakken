@@ -5,30 +5,6 @@ import {
 
 describe('Repository Documentation Drift', () => {
 
-  // template:remove:start movement
-  test('handoff and platform plans keep movement demo files out of scope', () => {
-    const guardrailFiles = [
-      'AGENTS.md',
-      'docs/plans/completed/code-quality-95-plan.md',
-      'docs/plans/completed/current-cleanup-checklist.md',
-    ];
-    const requiredNoTouchPaths = [
-      'src/app/(dashboard)/demos/movements/**',
-      'src/app/(dashboard)/demos/movement-capture/page.tsx',
-      'convex/movements.ts',
-    ];
-
-    const missingPaths = guardrailFiles.flatMap((filePath) => {
-      const contents = readRepoFile(filePath);
-
-      return requiredNoTouchPaths
-        .filter((demoPath) => !contents.includes(demoPath))
-        .map((demoPath) => `${filePath}: ${demoPath}`);
-    });
-
-    expect(missingPaths, `Movement demo no-touch paths missing from guardrail docs:\n${missingPaths.join('\n')}`).toEqual([]);
-  });
-// template:remove:end
 
 
 

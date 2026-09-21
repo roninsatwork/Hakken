@@ -16,7 +16,7 @@ own, and everything in it was true at commit `3066f842c` on 2026-08-26.
 > within a file, so the second surface is far cheaper than the first. The ten
 > heaviest files hold 130 of the 362.
 >
-> **Do not touch `convex/movements.ts`.** It holds 11 of the 362 and is frozen
+> **Do not touch optional module (not included in this copy).** It holds 11 of the 362 and is frozen
 > Posture Studio code. It is excluded, permanently. Do not touch anything under
 > `src/app/(dashboard)/demos/**` either.
 >

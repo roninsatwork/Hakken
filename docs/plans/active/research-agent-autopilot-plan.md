@@ -393,4 +393,4 @@ What the split includes, from the discussion:
 - It does not change what counts as a good finding, or the rules that stop a
   prospect being filed against a site already on the books.
 - It does not touch the imported spreadsheet, ever. See
-  `convex/salesDataReset.ts` for why that sentence is in this document.
+  optional module (not included in this copy) for why that sentence is in this document.

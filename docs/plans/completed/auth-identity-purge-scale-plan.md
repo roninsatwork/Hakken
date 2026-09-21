@@ -130,7 +130,7 @@ It therefore needs a **cursor**, not a repeated take-from-the-start:
 **One `.paginate()` per function, and this is not negotiable.** Convex permits
 exactly one paginated query per function call and throws *"This query or
 mutation function ran multiple paginated queries"* on the second. This was hit
-for real on 2026-07-31 in `convex/salesData.ts`, where a loop that paginated
+for real on 2026-07-31 in optional module (not included in this copy), where a loop that paginated
 until a page filled passed all sixteen `convex-test` tests and failed the
 moment it reached a deployment — **`convex-test` does not enforce the rule.**
 

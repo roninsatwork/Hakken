@@ -16,16 +16,16 @@ This plan is for future agents taking over Hakken development without relying on
 The movement demo is temporary client-facing work. Do not spend refactor budget here:
 
 - `src/app/(dashboard)/demos/movements/**`
-- `src/app/(dashboard)/demos/movement-capture/page.tsx`
-- `convex/movements.ts`
+- optional module (not included in this copy)
+- optional module (not included in this copy)
 
 Allowed exceptions:
 
 - Fix a build, typecheck, lint, or test failure.
 - Fix a security issue that can affect the rest of the app.
 - Make a minimal change explicitly requested by the user.
-- If the explicit task touches movement capture, display preparation, scoring, retargeting, VRM bone application, or movement proof, read `docs/developer/movement-mirror-and-side-ownership-contract.md` before editing.
-- If the explicit task touches Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/movement-definitive-plan.md` before editing. The retired Replay repair harness plan in `docs/plans/completed/replay-studio-agent-repair-harness-plan.md` is background only unless it is deliberately reopened.
+- If the explicit task touches movement capture, display preparation, scoring, retargeting, VRM bone application, or movement proof, read optional module (not included in this copy) before editing.
+- If the explicit task touches Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read optional module (not included in this copy) before editing. The retired Replay repair harness plan in optional module (not included in this copy) is background only unless it is deliberately reopened.
 
 Replay Studio is the recorded-motion source of truth for movement debugging. Use the existing repair-packet, targeted-proof, fast-subset-proof, and all-nine rendered proof flow before claiming shared-avatar acceptance. Game Studio live-camera checks are final confirmation after Replay proof, not a replacement for the Replay harness.
 

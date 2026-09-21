@@ -376,21 +376,6 @@ describe("ai tool execution service", () => {
       "gmail.reply",
       "http.request",
       "knowledge.search",
-// template:remove:start salesData
-      "marketDiscovery.groups.record",
-// template:remove:end
-// template:remove:start salesData
-      "marketDiscovery.groups.review",
-// template:remove:end
-// template:remove:start salesData
-      "marketDiscovery.job.next",
-// template:remove:end
-// template:remove:start salesData
-      "marketDiscovery.locations.read",
-// template:remove:end
-// template:remove:start salesData
-      "marketDiscovery.locations.record",
-// template:remove:end
       // Every tool on every connected server, through one entry. The allowlist
       // is still matched exactly — this is one deliberate addition, and which
       // server and which tool come from the invoked tool's own record rather
@@ -400,45 +385,18 @@ describe("ai tool execution service", () => {
       // The opportunity report's three passes, in their fixed order: price the
       // prospects, find the chain gaps, then save the agent's summary — which
       // is refused if it names a figure the computed sections do not hold.
-// template:remove:start salesData
-      "opportunityReport.findGroupGaps",
-// template:remove:end
-// template:remove:start salesData
-      "opportunityReport.matchProspects",
-// template:remove:end
-// template:remove:start salesData
-      "opportunityReport.saveSummary",
-// template:remove:end
       // Hands a run its next piece of work from the research job's queue, and
       // closes off the last one. The only tool that knows a job exists.
-// template:remove:start salesData
-      "salesCustomers.job.next",
-// template:remove:end
       // Reads a group and the sites in it already supplied, so the prospecting
       // half does not re-report the customers it was told about.
-// template:remove:start salesData
-      "salesCustomers.prospects.read",
-// template:remove:end
       // Files a site found in a group. It can only write a prospect, and a site
       // that is already a customer is refused rather than merged.
-// template:remove:start salesData
-      "salesCustomers.prospects.record",
-// template:remove:end
       // Reads one customer and says which of their details are still missing.
-// template:remove:start salesData
-      "salesCustomers.research.read",
-// template:remove:end
       // Records one detail the research agent found, with the page it came
       // from. Whether that detail reaches the customer record is decided in
       // code, not by the agent.
-// template:remove:start salesData
-      "salesCustomers.research.record",
-// template:remove:end
       // Writes the board report from the agent's own knowledge and memory —
       // the one way a scheduled agent run ends in a saved report.
-// template:remove:start salesReports
-      "salesReports.generate",
-// template:remove:end
       // Hands a job to a person, so a finding does not die in a run log
       // nobody returns to. A WRITE, so it needs approval unless the agent
       // has been given autonomy deliberately.

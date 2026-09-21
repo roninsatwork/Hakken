@@ -91,125 +91,6 @@ function DecisionsPanel({ agentId, lookbackDays }: { agentId: Id<"agents">; look
   );
 }
 
-// template:remove:start salesData
-/**
- * The job this agent is working, above the runs that carry it out.
- *
- * A run list answers "what did it do at 09:14". It cannot answer "is the list
- * finished", because no run knows about the list — which is the whole reason the
- * job exists. Anthony, 2026-08-03: *"what is the purpose of building
- * observability tools if you hide stuff from it."*
- *
- * Shows nothing at all for an agent that has never had a job, rather than an
- * empty panel every other agent has to scroll past.
- */
-function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
-  const t = useTranslations("admin.agents.details.observability.dashboard.research");
-  const job = useQuery(api.salesDataResearchJobs.getResearchJobForAgent, { agentId });
-  if (!job) return null;
-
-  const isRunning = job.status === "RUNNING";
-  const tone =
-    job.status === "COMPLETE"
-      ? "text-success"
-      : job.status === "RUNNING"
-        ? "text-brand"
-        : job.status === "COMPLETE_WITH_EXCEPTIONS"
-          ? "text-warning"
-          : "text-secondary";
-
-  return (
-    <section
-      aria-label={t("aria")}
-      className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-3"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-[14px] font-semibold text-foreground tracking-tight">
-            {isRunning ? job.progress : t("lastJob")}
-          </h3>
-          <p className={`text-[12.5px] mt-1 ${tone}`}>
-            {isRunning
-              ? `${t("progress", { done: job.done, remaining: job.remaining })}${job.failed > 0 ? ` ${t("failedSuffix", { failed: job.failed })}` : ""}`
-              : job.endedReason}
-          </p>
-        </div>
-        <div className="text-[12px] text-muted tabular-nums text-right">
-          <div>
-            {t("spentOfMax", { spent: job.spentGBP.toFixed(2), max: job.maxCostGBP })}
-          </div>
-          {/* The run count is the mechanism, not the work — small, and last. */}
-          <div className="mt-0.5">
-            {t("runs", { count: job.runsStarted })}
-          </div>
-        </div>
-      </div>
-
-      {/* What the queue is made of, so "39 of 49" is not a mystery. */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-secondary">
-        <span>{t("customers", { count: job.customers })}</span>
-        <span>{t("chains", { count: job.chains })}</span>
-        <span>{t("prospects", { count: job.prospects })}</span>
-      </div>
-
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <div
-          className="h-full bg-brand transition-all"
-          style={{
-            width: `${job.total === 0 ? 0 : Math.round(((job.done + job.failed) / job.total) * 100)}%`,
-          }}
-        />
-      </div>
-
-      {/* The two things a person watching actually wants: what it has in hand
-          this second, and the newest things it has genuinely recorded — from
-          the job, so this never goes stale when a run hands over. */}
-      {isRunning && job.workingOn && (
-        <p className="text-[12.5px] text-foreground">
-          <span className="text-muted">{t("rightNow")}</span>
-          {job.workingOn.kind === "CHAIN"
-            ? t("lookingThrough", { label: job.workingOn.label })
-            : t("researching", { label: job.workingOn.label })}
-        </p>
-      )}
-
-      {job.records.length > 0 && (
-        <div className="flex flex-col">
-          <p className="text-[11.5px] text-muted mb-1">{t("latestRecorded")}</p>
-          {job.records.map((record, index) => (
-            <div
-              key={`${record.subject}-${record.at}-${index}`}
-              className="border-t border-border-dim/40 first:border-t-0 py-1.5 flex items-baseline gap-x-3"
-            >
-              {/* Decoration, not the signal: the detail beside it already reads
-                  "saved · …" or "looked for, not published", so the dot repeats
-                  in colour what the row says in words. Hidden from screen
-                  readers for the same reason. */}
-              <span
-                aria-hidden="true"
-                className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-success" : "bg-foreground/25"}`}
-              />
-              <span className="text-[12px] font-medium text-foreground whitespace-nowrap">{record.subject}</span>
-              <span className="text-[12px] text-secondary truncate min-w-0">{record.detail}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {job.exceptions.length > 0 && (
-        <div className="flex flex-col gap-1 pt-1">
-          <p className="text-[12px] text-warning">{t("couldNotDo")}</p>
-          {job.exceptions.slice(0, 8).map((exception) => (
-            <p key={exception.name} className="text-[12px] text-secondary">
-              {t("exception", { name: exception.name, reason: exception.reason })}
-            </p>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-// template:remove:end
 
 export default function AgentObservabilityPage() {
   const t = useTranslations("admin.agents.details.observability.dashboard");
@@ -285,9 +166,6 @@ export default function AgentObservabilityPage() {
         </div>
       </div>
 
-      {/* template:remove:start salesData */}
-      <ResearchJobPanel agentId={agentId} />
-      {/* template:remove:end */}
       <DecisionsPanel agentId={agentId} lookbackDays={lookbackDays} />
 
       {!hasHistory ? (

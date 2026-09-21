@@ -82,7 +82,7 @@ ever been spoken aloud.
 
 **A talking character is closer than it looks.** The movement demo renders and
 animates VRM avatars in real time
-(`src/app/(dashboard)/demos/movements/[id]/play/_components/useVrmAvatarFrameRuntime.ts`).
+(optional module (not included in this copy)).
 The rendering knowledge transfers; the character work here is a new, separate
 surface — the movement demo itself is fenced and stays untouched.
 

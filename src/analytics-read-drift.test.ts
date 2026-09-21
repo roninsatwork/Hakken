@@ -24,44 +24,8 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'governanceDayRollups', category: 'maintenance', phase: 'Phase 5', reason: 'the backfill rewrites one day per batch set-style, so it must read that day whole to converge instead of double-counting' },
   { filePath: 'convex/knowledge.ts', exportName: 'debugCount', table: 'knowledgeChunks', category: 'debug', phase: 'Phase 7', reason: 'knowledge debug chunk count is scheduled for debug quarantine or rollup comparison only' },
   { filePath: 'convex/knowledge.ts', exportName: 'debugCount', table: 'knowledgeDocuments', category: 'debug', phase: 'Phase 7', reason: 'knowledge debug count is scheduled for debug quarantine or rollup comparison only' },
-// template:remove:start properties
-  { filePath: 'convex/properties.ts', exportName: 'getPropertiesCount', table: 'properties', category: 'inventory_rollup', phase: 'Phase 5', reason: 'property count reads need indexed count strategy or rollup when data grows' },
-// template:remove:end
   { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'workflowExecutionSteps', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
   { filePath: 'convex/purges.ts', exportName: 'executePurgeRecursive', table: 'swarmLogs', category: 'maintenance', phase: 'Phase 7', reason: 'recursive purge is internal destructive maintenance and should remain quarantined' },
-// template:remove:start salesData
-  { filePath: 'convex/salesData.ts', exportName: 'listSalesFilterOptions', table: 'salesDataRows', category: 'low_priority_product', phase: 'Phase 1', reason: 'the sales table filter dropdowns are built from the rows so they cannot drift from the data; bounded by one import and cached until the next one, and the fix at larger scale is to store the distinct values on the import record' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesData.ts', exportName: 'listTableFilterOptions', table: 'salesDataCategoryLinks', category: 'low_priority_product', phase: 'Phase 1', reason: 'the categories tab dropdown is built from the rows so it cannot drift from the data; bounded by one import, read only while that tab is open, and capping it would silently drop filter values and read as the full list' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesData.ts', exportName: 'listTableFilterOptions', table: 'salesDataAreasOfInterest', category: 'low_priority_product', phase: 'Phase 1', reason: 'the areas-of-interest tab dropdown is built from the rows so it cannot drift from the data; bounded by one import, read only while that tab is open, and capping it would silently drop filter values and read as the full list' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesData.ts', exportName: 'listTableFilterOptions', table: 'salesDataFrequencies', category: 'low_priority_product', phase: 'Phase 1', reason: 'the frequency tab dropdowns are built from the rows so they cannot drift from the data; bounded by one import, read only while that tab is open, and capping it would silently drop filter values and read as the full list' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/dataMigrations.ts', exportName: 'moduleScope', table: 'salesDataAccounts', category: 'maintenance', phase: 'Phase 7', reason: 'the customer directory backfill reads the accounts already built for one import to decide whether that import still needs building; bounded by one row per account, and the migration is operator-run rather than on a request path' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataCustomers.ts', exportName: 'moduleScope', table: 'salesDataCustomers', category: 'low_priority_product', phase: 'Phase 1', reason: 'the customer list searches typed-in details as well as imported ones, and a scan predicate cannot go back to the database mid-scan; bounded by the customers somebody has filled details in for, which is at most the account count' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataCustomers.ts', exportName: 'moduleScope', table: 'salesDataCustomerResearch', category: 'low_priority_product', phase: 'Phase 1', reason: 'the missing-details filter must not count a detail the agent already searched for and found unpublished, and a scan predicate cannot go back to the database mid-scan; read only when that filter is on, and bounded by customers times researchable fields — a few hundred rows for the file seen' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataCustomers.ts', exportName: 'listCustomerFilterOptions', table: 'salesDataAccounts', category: 'low_priority_product', phase: 'Phase 1', reason: 'the customer list dropdowns are built from the accounts so they cannot drift from the data; bounded by one import at one row per account — 39 for the file seen — and capping it would silently drop filter values' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataMarketDiscovery.ts', exportName: 'startMarketDiscoveryJob', table: 'salesDataAccounts', category: 'low_priority_product', phase: 'Phase 1', reason: 'market discovery starts from every imported customer type, so the type list must not be capped; bounded by one import at one row per account, and the larger-scale fix is to store distinct customer types on the import record' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataCustomers.ts', exportName: 'countCustomers', table: 'salesDataAccounts', category: 'low_priority_product', phase: 'Phase 1', reason: 'counting customers and how many have details is the point of the read; bounded by one import at one row per account, and the fix at larger scale is a stored count on the import record' },
-// template:remove:end
-// template:remove:start salesData
-  { filePath: 'convex/salesDataCustomers.ts', exportName: 'countCustomers', table: 'salesDataProspects', category: 'low_priority_product', phase: 'Phase 1', reason: 'the prospect count sits above the list so the gap is visible without anybody changing the filter to discover it exists; bounded by the sites found across the groups in one import, and the fix at larger scale is the same stored count as the customer total' },
-// template:remove:end
   { filePath: 'convex/swarmRuntime.ts', exportName: 'getSwarmLogs', table: 'swarmLogs', category: 'workflow_runtime', phase: 'Phase 4', reason: 'swarm runtime logs need bounded runtime log pagination' },
   { filePath: 'convex/swarmRuntime.ts', exportName: 'clearSwarmLogs', table: 'swarmLogs', category: 'maintenance', phase: 'Phase 7', reason: 'swarm log clear is maintenance and should remain bounded or quarantined' },
   { filePath: 'convex/swarmRuntime.ts', exportName: 'getDemoAgents', table: 'agents', category: 'maintenance', phase: 'Phase 7', reason: 'demo agent lookup is maintenance/demo-only pending legacy quarantine' },

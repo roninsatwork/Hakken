@@ -40,7 +40,7 @@ stripper, and a Button primitive.
 - **Finding 15 — movement/Posture Studio.** The demo and its debug lab
   (`scripts/movement-debug/`, the 101 `movement:*` scripts) stay in Hakken.
   It is a live demo / POC. Movement work is governed by
-  [Movement Definitive Plan](../active/movement-definitive-plan.md).
+  Movement Definitive Plan (not included in this copy).
 
 **Standing decisions recorded here so nobody "fixes" them later:**
 - Anthony (`anthony@ronins.co.uk`) as SUPER_ADMIN on deployments is **the

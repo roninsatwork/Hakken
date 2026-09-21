@@ -613,264 +613,6 @@
     "badgeWaiting": "{count} waiting",
     "billing": "Billing"
   },
-  "properties": {
-    "search": {
-      "title": "Choose Your Search Area",
-      "description": "To get started, simply go to Rightmove, run your desired search, and paste the web address (URL) below. Any filters you set on Rightmove (like parking or tenure) will be automatically captured.",
-      "fetchingDetailsTitle": "Fetching Full Details",
-      "fetchingDetailsDesc": "We don't just skim the search results—our system carefully opens every single property listing to gather the complete photo galleries, floorplans, and key features. To do this safely and ensure we get all the data, this process can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can watch the live progress in the Logs tab.",
-      "step1": "Paste the Rightmove link",
-      "urlPlaceholder": "https://www.rightmove.co.uk/property-for-sale/find.html?...",
-      "step2": "How many properties to gather",
-      "limitDesc": "Choose how many properties to gather (Maximum 1000).",
-      "gatherButton": "Gather Properties",
-      "startingSearch": "Starting Search...",
-      "urlError": "Error: Please paste a valid Rightmove search URL first.",
-      "searchSuccess": "Search started successfully! Gathering the full property details can take up to 30 minutes. We recommend grabbing a coffee while you wait! You can track the progress in the Logs tab.",
-      "pageSubtitle": "Import property listings and market data directly from Rightmove."
-    },
-    "logs": {
-      "empty": "No extraction jobs have been dispatched yet.",
-      "syncFailed": "The run status could not be refreshed. Try again.",
-      "title": "Extraction Logs",
-      "subtitle": "Monitor the live status and history of your autonomous data extraction agents.",
-      "syncStatus": "Sync Status",
-      "inProgress": "In Progress",
-      "completed": "Completed",
-      "failed": "Failed",
-      "dispatched": "Dispatched: {time}",
-      "finished": "Finished: {time}",
-      "scraped": "<strong>{count}</strong> properties scraped"
-    },
-    "detail": {
-      "notFoundTitle": "Property Not Found",
-      "notFoundBody": "The requested property could not be found or you do not have permission to view it.",
-      "imageAlt": "Property",
-      "noImage": "No Image Available",
-      "back": "Back",
-      "listedOn": "Listed On",
-      "status": "Status",
-      "estSize": "Est. Size",
-      "pricePerSqFt": "Price per SqFt",
-      "propertyType": "Property Type",
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms",
-      "epcRating": "EPC Rating",
-      "location": "Location",
-      "viewMap": "View Map",
-      "floorplanAlt": "Floorplan",
-      "contactRightmove": "Contact via Rightmove",
-      "priceReduced": "Price Reduced",
-      "marketIntelligence": "Market Intelligence",
-      "descriptionHeading": "Property Description",
-      "keyFeatures": "Key Features",
-      "floorplans": "Floorplans",
-      "imageGallery": "Image Gallery",
-      "galleryAlt": "Gallery {index}",
-      "listingAgent": "Listing Agent",
-      "viewOriginal": "View Original Listing",
-      "agentProfile": "Agent Profile",
-      "unknownAgent": "Unknown Agent",
-      "unknownType": "Unknown",
-      "noDescription": "No description provided by the agent.",
-      "readLess": "Read Less",
-      "readFull": "Read Full Description"
-    },
-    "information": {
-      "heroKicker": "PROPERTY INTELLIGENCE",
-      "howItWorks": "How it works",
-      "engineBehind": "The engine behind it",
-      "oneWorkflow": "One workflow, three tools",
-      "builtTrusted": "Built to be trusted",
-      "bestCollection": "Getting the best collection",
-      "commonQuestions": "Common questions",
-      "tools": {
-        "search": {
-          "title": "Search",
-          "body": "The front door. Every collection starts here — and widening your library later is a ten-second job."
-        },
-        "scraped": {
-          "title": "Scraped Data",
-          "body": "Your growing library of listings — search by address, open the full details of any property, or delete what you no longer need."
-        },
-        "logs": {
-          "title": "Logs",
-          "body": "The control room: follow every run from dispatch to done, with counts updating as listings arrive."
-        }
-      },
-      "apify": {
-        "proven": {
-          "title": "Proven, not homemade",
-          "body": "Extraction runs on a dedicated, battle-tested web-automation platform — infrastructure built for exactly this job."
-        },
-        "runId": {
-          "title": "A real run ID, every time",
-          "body": "Every collection is a genuine Apify run with its own ID. Logs shows you the platform's own record — nothing summarised, nothing invented."
-        },
-        "scales": {
-          "title": "Scales as you do",
-          "body": "From ten listings to a thousand, from one search to fifty — the same engine takes it all in stride."
-        }
-      },
-      "trust": {
-        "publicOnly": {
-          "title": "Public listings only",
-          "body": "The agent gathers what's already public on Rightmove — the same details anyone browsing the site would see."
-        },
-        "deleteAnytime": {
-          "title": "Delete anytime",
-          "body": "Every property in your library can be removed with one click — with a confirmation step so nothing vanishes by accident."
-        },
-        "honestStatus": {
-          "title": "Honest status, never guessed",
-          "body": "Logs mirrors the real state of every run. A collection is only marked complete when it truly is."
-        }
-      },
-      "tips": {
-        "filterFirst": {
-          "title": "Filter on Rightmove first",
-          "body": "The collection is only as good as the search. Narrow by area, price and beds before copying the link."
-        },
-        "forSale": {
-          "title": "Use a for-sale search",
-          "body": "Links must be Rightmove property-for-sale search pages — a link to a single listing won't start a run."
-        },
-        "startSmall": {
-          "title": "Start small, then scale",
-          "body": "A first run of 50–100 listings proves the search is right before you commit to a thousand."
-        },
-        "letItRun": {
-          "title": "Let it run",
-          "body": "Big runs take time. Start one before a meeting, and the listings will be waiting when you get back."
-        }
-      },
-      "faq": {
-        "link": {
-          "q": "What kind of link do I paste?",
-          "a": "A Rightmove search results page for properties for sale — the address in your browser after you've searched and filtered."
-        },
-        "range": {
-          "q": "Why between 10 and 1,000 properties?",
-          "a": "Ten is the smallest run worth dispatching; a thousand keeps runs fast and focused. For bigger areas, split the search and run each part."
-        },
-        "duration": {
-          "q": "How long does a collection take?",
-          "a": "It depends on the size of the run. Small runs land in minutes; larger ones take as long as they take — Logs shows honest progress throughout."
-        },
-        "details": {
-          "q": "What details are captured for each property?",
-          "a": "Address, price, bedrooms, bathrooms, property type, the listing agent and the lead photo — plus the full listing text and floorplan where available."
-        },
-        "scraper": {
-          "q": "What actually does the scraping?",
-          "a": "Apify — an industry-standard web scraping platform, directed by your Rightmove Agent. The agent dispatches the run and files every listing as it lands."
-        },
-        "keepOpen": {
-          "q": "Do I need to keep the page open?",
-          "a": "No. Once dispatched, the run continues on its own. Come back to Logs whenever you like — pending counts update as listings arrive."
-        },
-        "remove": {
-          "q": "Can I remove properties I don't want?",
-          "a": "Yes — every row in Scraped Data has a delete action, with a confirmation step first. Deleting is permanent, and it never touches the live listing."
-        },
-        "fails": {
-          "q": "What happens if a run fails?",
-          "a": "It's marked Failed in Logs, plainly — no partial pretence. Your existing library is untouched; just dispatch the search again."
-        }
-      },
-      "stats": {
-        "paste": "pasted link starts a collection",
-        "gathered": "listings gathered in a single run",
-        "checks": "between live status checks",
-        "manual": "copying and pasting by hand"
-      },
-      "pageTitle": "How Property Collection Works",
-      "pageIntro": "A plain-English look at how one Rightmove link becomes a searchable library of property data — and how to watch it happen, live.",
-      "howSubtitle": "From a Rightmove search to your library, in four steps",
-      "engineSubtitle": "Powered by Apify — the industry standard for web data",
-      "workflowSubtitle": "Search starts it. Data holds it. Logs proves it.",
-      "workflowBody": "The Properties section is three pages working as one pipeline — you'll usually start in Search, live in Scraped Data, and glance at Logs while a run is underway.",
-      "trustSubtitle": "You stay in control of the data",
-      "trustBody": "An autonomous collector is only useful if you can trust what it brings back — and remove what you don't want. The pipeline is built around both.",
-      "tipsSubtitle": "Four small things that make a big difference",
-      "faqSubtitle": "Everything else you might be wondering",
-      "ctaTitle": "Start a collection",
-      "ctaBody": "Paste your first Rightmove search and watch it fill.",
-      "visuals": {
-        "journey": "The collection journey: a Rightmove search link travels to the agent, becomes property listings, and is tracked in the run logs",
-        "engineBadge": "RIGHTMOVE AGENT · APIFY",
-        "flowKicker": "From link to library",
-        "flowTitle": "One link in, a property library out",
-        "flowBody": "You don't fill in forms or copy listings by hand. You describe what you want with a Rightmove search, and the pipeline does the rest — collecting, filing and reporting as it goes.",
-        "flowHint": "Select a stage to see what happens there.",
-        "logsTag": "EXTRACTION LOGS",
-        "stages": {
-          "defaultDescription": "Four stages, one journey — from a link you paste to a library you own.",
-          "link": {
-            "label": "Paste a link",
-            "count": "Search",
-            "description": "Build your search on Rightmove itself — area, price range, bedrooms, radius — then copy the address of the results page and paste it in. That one link describes everything to collect."
-          },
-          "agent": {
-            "label": "The agent takes over",
-            "count": "Runs on Apify",
-            "description": "The Rightmove Agent reads your link and hands the heavy lifting to Apify, the industry-standard scraping platform. You set the ceiling — anywhere from 10 to 1,000 listings."
-          },
-          "data": {
-            "label": "Listings captured",
-            "count": "Scraped Data",
-            "description": "Each listing lands in Scraped Data with its full details and photo — searchable, browsable, and one click from a complete view."
-          },
-          "logs": {
-            "label": "Watch it live",
-            "count": "Logs",
-            "description": "Every run appears in Logs with its live status — in progress, completed or failed — and a count of what it captured. No refreshing, no guessing."
-          }
-        },
-        "flow": {
-          "search": {
-            "title": "Search on Rightmove",
-            "body": "Use Rightmove's own filters to describe exactly the properties you care about."
-          },
-          "paste": {
-            "title": "Paste the link",
-            "body": "Drop the search URL in, choose how many listings to gather, and press go."
-          },
-          "collect": {
-            "title": "The agent collects",
-            "body": "The extraction kicks off on its own — no tabs to babysit."
-          },
-          "browse": {
-            "title": "Browse your library",
-            "body": "Listings arrive in Scraped Data, with every run tracked in Logs."
-          }
-        }
-      },
-      "ctaHeading": "Ready to build your library?"
-    },
-    "scrapedData": {
-      "pageDescription": "View and manage properties scraped from Rightmove.",
-      "searchPlaceholder": "Search properties by address...",
-      "emptyLabel": "Nothing found",
-      "emptyNoMatch": "No property matches that search.",
-      "emptyNone": "No properties collected yet. Run a search to fill this in.",
-      "showing": "Showing {start} to {end} of {total} properties",
-      "columnAddress": "Property Address",
-      "columnPrice": "Price",
-      "columnSpecs": "Specs",
-      "columnActions": "Actions",
-      "imageAlt": "Property",
-      "noImage": "No Img",
-      "beds": "{count} Beds",
-      "baths": "{count} Baths",
-      "viewDetails": "View Details",
-      "deleteRow": "Delete {address}",
-      "deleteTitle": "Delete Property",
-      "deleteBody": "Are you sure you want to delete <highlight>{address}</highlight>? This action cannot be undone.",
-      "cancel": "Cancel",
-      "delete": "Delete"
-    }
-  },
   "header": {
     "adminOverview": "Platform Management",
     "exitWorkspace": "Exit Workspace"
@@ -6185,321 +5927,6 @@
     "deleteUserFailed": "The user could not be deleted. Try again.",
     "revokeInviteFailed": "The invitation could not be revoked. Try again."
   },
-  "salesData": {
-    "importTitle": "Import Data",
-    "importSubtitle": "Upload a workbook to replace this workspace's sales data.",
-    "uploadTitle": "1. Choose the workbook",
-    "uploadHint": "An Excel file (.xlsx) containing the sales, category and frequency worksheets.",
-    "chooseFile": "Choose file",
-    "uploading": "Reading the file...",
-    "mapTitle": "2. Say which worksheet is which",
-    "mapHint": "The sales worksheet is named for the period it covers, so it changes with every file. Pick each one below — the headings found are shown underneath.",
-    "datasetSales": "Sales figures",
-    "datasetCategories": "Categories by customer type",
-    "datasetFrequency": "Sale frequency",
-    "rowCount": "{count, plural, =0 {no rows} one {1 row} other {# rows}}",
-    "replaceData": "Replace data",
-    "importing": "Importing...",
-    "cancelUpload": "Cancel",
-    "replaceWarning": "Importing replaces everything currently in this workspace's three tables. The existing data stays in place until the new file has been read in full, so a file that fails changes nothing.",
-    "importComplete": "Imported {sales} sales rows, {categories} category pairings, {interest} areas of interest and {frequency} frequency rows.",
-    "importPeriods": "Revenue columns: {periods}",
-    "importSkipped": "{count, plural, one {1 row was skipped because it carried no product.} other {# rows were skipped because they carried no product.}}",
-    "historyTitle": "Import history",
-    "historyFile": "File",
-    "historyStatus": "Status",
-    "historyRows": "Sales / categories / interest / frequency",
-    "historyPeriods": "Periods",
-    "historyWhen": "Started",
-    "historyEmptyTitle": "No imports yet",
-    "historyEmptyDescription": "Upload a workbook above to populate the data tables.",
-    "statusCurrent": "Current",
-    "statusSuperseded": "Replaced",
-    "statusRunning": "Running",
-    "statusFailed": "Failed",
-    "customers": {
-      "title": "Customers",
-      "subtitle": "{total} customers · {withDetails} with details filled in.",
-      "subtitleLoading": "Loading customers...",
-      "searchPlaceholder": "Search names, codes, chains, towns, contacts...",
-      "clearSearch": "Clear search",
-      "filterType": "Customer type",
-      "filterGroup": "Chain",
-      "filterAll": "All",
-      "filterNarrow": "Type to narrow...",
-      "filterNoMatches": "No matches",
-      "recordProspect": "Prospect",
-      "recordMarketProspect": "Suspect",
-      "filterRecordCUSTOMERS": "Customers",
-      "filterRecordPROSPECTS": "Prospects",
-      "filterRecordSUSPECTS": "Suspects",
-      "filterRecordALL": "All",
-      "subtitleProspects": "· {count} prospects found.",
-      "subtitleSuspects": "· {count} suspects found in new groups.",
-      "clearStart": "Clear the database",
-      "clearConfirm": "Yes, clear it",
-      "clearCancel": "Keep it",
-      "clearRunning": "Clearing…",
-      "clearDone": "Cleared. The imported spreadsheet is untouched.",
-      "clearWarning": "Clears the contact details, the prospects and everything the AI found. The imported spreadsheet is left alone. There is no undo.",
-      "importSpreadsheet": "Populate from Spreadsheet Imports Screen",
-      "filterClear": "Clear filters",
-      "columnName": "Customer",
-      "columnCode": "Code",
-      "columnGroup": "Chain",
-      "columnType": "Type",
-      "columnLocation": "Location",
-      "columnSpend": "Six-month spend",
-      "noDetails": "no details yet",
-      "loading": "Loading...",
-      "emptyTitle": "No customers yet",
-      "emptyDescription": "Import a workbook and the customers in it appear here.",
-      "emptyNarrowedTitle": "No customers match",
-      "emptyNarrowedDescription": "Try a different search, or clear the filters.",
-      "pageNumber": "Page {page}",
-      "rowsShown": "{count} customers",
-      "rowsShownProspects": "{count} prospects",
-      "rowsShownSuspects": "{count} suspects",
-      "researchStart": "Research the missing details",
-      "researchRunning": "Research is running",
-      "researchNothingToDo": "Everything is already researched — there was nothing to do.",
-      "researchWorking": "Researching…",
-      "researchWorkingOn": "Researching {name}…",
-      "researchProgress": "{done} of {total} done",
-      "prospectsStart": "Find new prospects",
-      "marketSetupButton": "Find new groups",
-      "marketStop": "Stop",
-      "marketWorking": "Market discovery is running",
-      "marketWorkingOn": "{phase} · {name}",
-      "marketProgress": "{accepted} of {target} groups · {locations} locations · {duplicates} duplicates · {review} to check · £{spend} / £{max}",
-      "marketIdle": "Market discovery is ready.",
-      "marketFinished": "Market discovery finished — {reason}",
-      "marketDoneTitle": "Market discovery has finished",
-      "researchIdle": "Ready — press a button to put the agents to work.",
-      "researchFinished": "Finished — {reason}",
-      "researchDoneTitle": "The research job has finished",
-      "researchDoneOk": "OK",
-      "clearFailed": "The customer database could not be cleared. Try again.",
-      "researchFailed": "The search could not be started. Try again.",
-      "discoveryStartFailed": "Market discovery could not be started. Try again.",
-      "discoveryStopFailed": "Market discovery could not be stopped. Try again."
-    },
-    "customerProfile": {
-      "back": "All customers",
-      "loading": "Loading...",
-      "notFoundTitle": "Customer not found",
-      "notFoundDescription": "This customer is not in the current import. They may have been removed from the latest workbook.",
-      "fromImport": "From the spreadsheet",
-      "fromImportHint": "updated by each import",
-      "sixMonthSpend": "Six-month spend",
-      "productLines": "Product lines",
-      "chain": "Chain",
-      "typedIn": "Contact details",
-      "typedInHint": "kept through every import",
-      "addressLine1": "Address line 1",
-      "addressLine2": "Address line 2",
-      "town": "Town",
-      "postcode": "Postcode",
-      "country": "Country",
-      "phone": "Telephone",
-      "mobile": "Mobile",
-      "email": "Email",
-      "accountsEmail": "Accounts email",
-      "website": "Website",
-      "notRight": "Not right",
-      "recordProspect": "Prospect",
-      "prospectFound": "Where this came from",
-      "recordType": "Customer or prospect",
-      "recordCustomer": "Customer",
-      "backToList": "Back to the list",
-      "notInterested": "Not interested",
-      "prospectDismissed": "Marked not interested. It will not be reported again.",
-      "groupProspects": "{count} more sites in this group you do not supply",
-      "findDetails": "Find details",
-      "findDetailsStarting": "Starting…",
-      "findDetailsStarted": "Started — details will appear here as they are found",
-      "needsChecking": "Needs checking ({count})",
-      "needsCheckingHint": "Found online, but not certain enough to fill in",
-      "useIt": "Use it",
-      "discard": "Discard",
-      "contactName": "Contact name",
-      "contactRole": "Contact role",
-      "bedrooms": "Bedrooms",
-      "pupils": "Pupils",
-      "notes": "Notes",
-      "save": "Save details",
-      "saving": "Saving...",
-      "saved": "Saved",
-      "extraInvalid": "Enter a whole number, or leave it blank.",
-      "lastEdited": "Last edited by {who} on {when}",
-      "salesHeading": "Sales",
-      "salesTotalLabel": "Six months",
-      "salesEmpty": "No sales in the current import.",
-      "salesMonthsNote": "Months with no sales are not listed — a blank cell in the workbook means no sale, not zero.",
-      "lineProduct": "Product",
-      "lineValue": "Value",
-      "chainHeading": "Others in {chain}",
-      "lineEmpty": "No line items.",
-      "saveFailed": "The details could not be saved.",
-      "findDetailsFailed": "The search could not be started.",
-      "decideFailed": "That decision could not be saved. Try again.",
-      "prospectDismissFailed": "This prospect could not be marked not interested. Try again."
-    },
-    "tablesTitle": "Spreadsheet Imports",
-    "tablesSubtitle": "From {fileName} — {rows} sales rows.",
-    "tablesSubtitleEmpty": "No data imported yet.",
-    "clearAllStart": "Clear all data",
-    "clearAllConfirm": "Yes, clear everything",
-    "clearAllCancel": "Keep it",
-    "clearAllRunning": "Clearing…",
-    "clearAllDone": "Cleared. Upload a spreadsheet to start again.",
-    "clearAllWarning": "Clears the imported spreadsheet, the customers, everything the AI found, and the opportunity report. There is no undo.",
-    "tab": {
-      "sales": "Sales",
-      "categories": "Categories",
-      "frequency": "Sale Frequency",
-      "interest": "Areas of Interest"
-    },
-    "column": {
-      "sourceRow": "Row",
-      "account": "Account name",
-      "group": "Group name",
-      "customerType": "Customer type",
-      "product": "Product",
-      "category": "Product category",
-      "productType": "Product type",
-      "quantity": "Quantity",
-      "total": "Total",
-      "frequency": "Sale frequency",
-      "parentAccount": "Parent account",
-      "productCode": "Product code",
-      "uniqueId": "Unique ID",
-      "productDescription": "Product description"
-    },
-    "pageNumber": "Page {page}",
-    "rowsShown": "{count, plural, =0 {no rows} one {1 row} other {# rows}}",
-    "loading": "Loading...",
-    "emptyTitle": "Nothing to show",
-    "emptyDescriptionImported": "This table had no rows in the imported file.",
-    "emptyDescriptionNoImport": "Import a workbook to populate this table.",
-    "errors": {
-      "uploadFailed": "The file could not be uploaded. Check it is an .xlsx workbook and try again.",
-      "importFailed": "The import failed. Nothing has changed.",
-      "duplicateSheets": "Each dataset needs its own worksheet. Choose a different one."
-    },
-    "datasetAreasOfInterest": "Customer areas of interest",
-    "searchPlaceholder": {
-      "sales": "Search accounts, products, codes...",
-      "categories": "Search customer types and categories...",
-      "interest": "Search customer types and product types...",
-      "frequency": "Search categories, product types and frequency..."
-    },
-    "clearSearch": "Clear search",
-    "filter": {
-      "customerType": "Customer type",
-      "account": "Account",
-      "group": "Group",
-      "productCategory": "Product category",
-      "productType": "Product type",
-      "frequency": "Sale frequency",
-      "all": "All",
-      "narrow": "Type to narrow...",
-      "noMatches": "No matches",
-      "clear": "Clear filters"
-    },
-    "emptyTitleNarrowed": "No rows match",
-    "emptyDescriptionNarrowed": "No rows match the current search and filters. Clear them to see the full table.",
-    "opportunityReport": {
-      "title": "Opportunity Report",
-      "subtitle": "What converting the prospects and closing the chain gaps would be worth",
-      "reportOf": "Priced from {file}",
-      "newerImport": "A newer import has arrived since this report — run it again to price the new data.",
-      "runButton": "Run the report",
-      "exportButton": "Export",
-      "exportFailed": "The report could not be exported. Try again.",
-      "idle": "Ready to run.",
-      "alreadyRunning": "A report is already being built.",
-      "failed": "The last run failed: {reason}",
-      "runningPhaseMatching": "Pricing the prospects…",
-      "runningPhaseGaps": "Finding the gaps inside the chains…",
-      "runningPhaseSummary": "Writing the summary…",
-      "doneTitle": "Report ready",
-      "doneBody": "The opportunity report is ready to read.",
-      "doneOk": "OK",
-      "totalTitle": "Total opportunity found",
-      "totalSub": "Over the next six months",
-      "totalSplitProspects": "{value} from new business — sites to win",
-      "totalSplitGaps": "{value} from upsells to existing customers",
-      "basketShare": "{share}% of what these customers buy",
-      "basketTitle": "What a site like this buys",
-      "basketNote": "The mix {count, plural, one {one customer} other {# customers}} of type {type} actually buy, applied to the estimate above.",
-      "sectionUPSELLTab": "Upsell existing customers",
-      "sectionPROSPECTSTab": "Prospects in their groups",
-      "sectionSUSPECTSTab": "Suspects — new groups",
-      "sectionUPSELLTitle": "Existing customers to upsell to",
-      "sectionUPSELLNote": "Products their accounts are not buying yet, priced from what their sister sites spend.",
-      "sectionUPSELLEmpty": "No gaps found — every account is buying what its sister sites buy.",
-      "sectionPROSPECTSTitle": "Prospects inside existing customer groups",
-      "sectionPROSPECTSNote": "Sites in chains Comax already supplies. The call opens with the sister sites you already serve.",
-      "sectionPROSPECTSEmpty": "No prospects on file yet. Find new prospects on the Customers screen fills this.",
-      "sectionSUSPECTSTitle": "Suspects — new groups",
-      "sectionSUSPECTSNote": "UK groups Comax has never sold to. Priced the same way, but nobody here has a relationship yet.",
-      "sectionSUSPECTSEmpty": "No suspects on file yet. Find new groups on the Customers screen fills this.",
-      "totalSplitSuspects": "{value} from new groups — suspects",
-      "badgeNewBusiness": "New business",
-      "badgeUpsell": "Upsell",
-      "methodTitle": "How these numbers are worked out",
-      "methodSized": "{count, plural, one {# site is} other {# sites are}} priced by size: what similar customers spend per bed or pupil, times the site's own beds or pupils.",
-      "methodUnsized": "{count, plural, one {# site couldn't} other {# sites couldn't}} be priced by size — bed or pupil information is missing on one side or the other — so they use the average spend of the chain's existing customers instead.",
-      "methodUnpriced": "{count, plural, one {# site had} other {# sites had}} nobody to compare against, so they are left unpriced rather than guessed — see the notes at the bottom.",
-      "leaderboardTitle": "Where the money is",
-      "leaderboardSites": "{count, plural, one {# site to win} other {# sites to win}}",
-      "leaderboardGaps": "{count, plural, one {# product gap} other {# product gaps}}",
-      "chainSummaryBoth": "{sites, plural, one {# site} other {# sites}} to win worth {sitesValue}, plus {gaps, plural, one {# product gap} other {# product gaps}} worth {gapsValue} at their existing accounts.",
-      "chainSummaryProspectsOnly": "{sites, plural, one {# site} other {# sites}} to win worth {sitesValue}.",
-      "chainSummaryGapsOnly": "{gaps, plural, one {# product gap} other {# product gaps}} worth {gapsValue} at their existing accounts.",
-      "chainProspectsTitle": "New sites to win",
-      "marketDiscovery": "Suspect",
-      "chainGapsTitle": "Products their accounts aren't buying yet",
-      "chartByCategory": "Gap revenue by product category",
-      "summaryTitle": "The agent's reading",
-      "summaryNote": "Written by the agent from the sections above.",
-      "summaryShow": "Read the summary",
-      "summaryHide": "Hide the summary",
-      "thSite": "Site",
-      "thSize": "Size",
-      "thPricing": "How it's priced",
-      "thEstimate": "Six-month estimate",
-      "sistersBuyThis": "{buyers} of {siblings} sister accounts buy this",
-      "sistersBuyThisNamed": "{buyers} of {siblings} sister accounts buy this: {accounts}",
-      "productCount": "{count, plural, one {# product to offer} other {# products to offer}}",
-      "beds": "{count} beds",
-      "pupils": "{count} pupils",
-      "pricingSizedChainBeds": "Based on their sister sites' spend per bed",
-      "pricingSizedChainPupils": "Based on their sister sites' spend per pupil",
-      "pricingSizedTypeBeds": "Based on what similar sites spend per bed",
-      "pricingSizedTypePupils": "Based on what similar sites spend per pupil",
-      "pricingMathBeds": "{count} beds × {rate} per bed",
-      "pricingMathPupils": "{count} pupils × {rate} per pupil",
-      "pricingChainAverage": "Based on the group's average spend over the last six months",
-      "pricingTypeAverage": "Based on similar customers' average spend over the last six months",
-      "pricingNone": "Not priced — nobody to compare against",
-      "comparedAgainst": "The comparison is with customers you already supply: {names}.",
-      "allUnsizedNote": "{count, plural, one {Every site here is priced at the average six-month spend of the chain's # existing account — there isn't enough bed or pupil information to price them by size.} other {Every site here is priced at the average six-month spend of the chain's # existing accounts — there isn't enough bed or pupil information to price them by size.}}",
-      "someUnsizedNote": "{count, plural, one {# of these sites is priced at the group average because bed or pupil information is missing; the rest are priced by size.} other {# of these sites are priced at the group average because bed or pupil information is missing; the rest are priced by size.}}",
-      "gapsPricingNote": "Each gap is priced at what the sister accounts already spend in that category. The products listed under it are the ones they actually buy — the ready-made order sheet for the conversation.",
-      "exceptionsTitle": "What it could not do",
-      "emptyTitle": "No report yet",
-      "emptyBody": "Press run and the agent prices every prospect against the customers most like it, then finds what each chain member is not buying that its siblings are.",
-      "progressStep": "Step {step} of {total} · {percent}%",
-      "runningPhaseGapsCounted": "{prospects} prospects priced — finding the gaps inside the chains…",
-      "runningPhaseSummaryCounted": "{prospects} prospects priced, {gaps} gaps found — writing the summary…",
-      "failedTitle": "Report failed",
-      "failedBody": "The run ended without finishing the report: {reason}",
-      "startFailed": "The report could not be started. Try again."
-    },
-    "clearAllFailed": "The imported data could not be cleared. Try again."
-  },
   "tasks": {
     "title": "Tasks",
     "subtitle": "Work waiting on someone",
@@ -7011,49 +6438,73 @@
         "name": "Is this answer worth filing into the wiki?",
         "description": "When a member of staff gets an answer that draws on several wiki pages, decides whether it taught something durable and new worth its own page.",
         "rule": "Without it, the model that reads the answer also decides.",
-        "answers": { "yes": "Worth filing", "no": "Not worth filing" }
+        "answers": {
+          "yes": "Worth filing",
+          "no": "Not worth filing"
+        }
       },
       "wikiClaimSupported": {
         "name": "Is this page still supported by its sources?",
         "description": "Each night, checks aging pages against the documents they were written from and raises an open question when the sources no longer back a claim.",
         "rule": "Without it, the model that reads the page also decides.",
-        "answers": { "yes": "Still supported", "no": "No longer supported" }
+        "answers": {
+          "yes": "Still supported",
+          "no": "No longer supported"
+        }
       },
       "wikiClaimsDisagree": {
         "name": "Do these two pages genuinely disagree?",
         "description": "Each night, reads related pages together and raises an open question when two of them state the same fact two incompatible ways.",
         "rule": "Without it, the model that reads the pages also decides.",
-        "answers": { "yes": "They disagree", "no": "They agree" }
+        "answers": {
+          "yes": "They disagree",
+          "no": "They agree"
+        }
       },
       "wikiPageAnswersQuestion": {
         "name": "Does this wiki page answer the question?",
         "description": "Checks each page the assistant is about to read for an answer, and leaves out the ones that only share a word with the question.",
         "rule": "Without it, the model that picks the pages is trusted as it is.",
-        "answers": { "yes": "Answers it", "no": "Not about this" }
+        "answers": {
+          "yes": "Answers it",
+          "no": "Not about this"
+        }
       },
       "wikiRealQuestion": {
         "name": "Is this a real question worth answering in the wiki?",
         "description": "Keeps greetings, tests and small talk off the Unanswered list, and keeps real questions on it.",
         "rule": "Without it, a list of greeting words and a word count decide.",
-        "answers": { "yes": "A real question", "no": "Not a question" }
+        "answers": {
+          "yes": "A real question",
+          "no": "Not a question"
+        }
       },
       "chatHiddenInstructions": {
         "name": "Is this message trying to extract hidden instructions?",
         "description": "Catches attempts to make the assistant reveal its hidden instructions, policies or private configuration, without tripping on ordinary questions that mention a policy.",
         "rule": "Without it, a fixed list of phrases decides.",
-        "answers": { "yes": "Trying to extract", "no": "Ordinary message" }
+        "answers": {
+          "yes": "Trying to extract",
+          "no": "Ordinary message"
+        }
       },
       "chatPermissionBypass": {
         "name": "Is this message trying to bypass the rules?",
         "description": "Catches attempts to make the assistant ignore its rules, permissions or the separation between companies.",
         "rule": "Without it, a fixed list of phrases decides.",
-        "answers": { "yes": "Trying to bypass", "no": "Ordinary message" }
+        "answers": {
+          "yes": "Trying to bypass",
+          "no": "Ordinary message"
+        }
       },
       "chatCrossTenant": {
         "name": "Is this message asking for another company's data?",
         "description": "Catches requests to reach or reveal another company's private data.",
         "rule": "Without it, a fixed list of phrases decides.",
-        "answers": { "yes": "Asking for another company's data", "no": "Ordinary message" }
+        "answers": {
+          "yes": "Asking for another company's data",
+          "no": "Ordinary message"
+        }
       },
       "mailboxMessageKind": {
         "name": "Is this email from a customer?",
@@ -7249,250 +6700,6 @@
       "startDate": "Start Date",
       "endDateOptional": "End Date (Optional)",
       "applyRange": "Apply Range"
-    }
-  },
-  "salesReports": {
-    "board": {
-      "emptyTitle": "No Reports Available",
-      "emptyBody": "Upload a pipeline CSV and schedule the Sales Report Agent to generate board reports.",
-      "title": "BOARD REPORTS",
-      "subtitle": "Generated by {platformName} Intelligence Output Engine",
-      "kpiTotalPipeline": "Total Pipeline",
-      "kpiWeightedPipeline": "Weighted Pipeline",
-      "kpiOpenDeals": "Open Deals",
-      "kpiWinRate": "Win Rate",
-      "kpiWeighted": "Weighted",
-      "kpiAvgSize": "Avg Size",
-      "kpiCycleDays": "Cycle Days",
-      "seriesTotalPipeline": "Total Pipeline",
-      "seriesWeightedForecast": "Weighted Forecast",
-      "axisValue": "(Value)",
-      "axisWeightedValue": "(Weighted Value)",
-      "recommendation": "Recommendation:",
-      "seriesRiskConcentration": "Risk Concentration",
-      "momentumLeaders": "Momentum Leaders",
-      "supportCoaching": "Support & Coaching",
-      "exportToBoard": "Export to Board",
-      "noSummary": "No executive summary available.",
-      "sectionClosingWindows": "Closing Windows",
-      "sectionTopDeals": "Top Deals to Watch",
-      "sectionPipelineByStage": "4a. Pipeline by Stage",
-      "sectionPipelineByRep": "4b. Pipeline by Rep",
-      "sectionRiskRadar": "Section 5 — Risk Radar",
-      "riskCritical": "Critical — Needs Intervention This Week",
-      "riskAtRisk": "At Risk — Deteriorating",
-      "riskQuiet": "Quiet — Worth a Nudge",
-      "sectionRiskVector": "Risk Vector Analysis",
-      "sectionTeamSpotlight": "Team Spotlight",
-      "sectionPatterns": "Patterns & Signals",
-      "sectionPriorities": "This Week's Priorities",
-      "riskVectors": {
-        "slippedClose": "Slipped Close",
-        "stagnant": "Stagnant",
-        "noChampion": "No Champion",
-        "priceBlock": "Price Block",
-        "competitor": "Competitor",
-        "legalSec": "Legal/Sec"
-      }
-    },
-    "information": {
-      "pageTitle": "How Board Reports Work",
-      "pageIntro": "A plain-English look at the analyst behind your board reports — what it reads, what it remembers, and why you can trust every line it writes.",
-      "howItWorks": "How it works",
-      "howSubtitle": "From what your team knows to what your board sees",
-      "gettingStarted": "Getting started",
-      "startSubtitle": "Small to start. Smarter every week.",
-      "startBody": "There's no setup project. The agent starts with what you already have, and everything you add from then on makes it a better analyst.",
-      "builtTrusted": "Built to be trusted",
-      "trustSubtitle": "A report you can defend in the room",
-      "trustBody": "A board report is only useful if you can stand behind every line of it. The report is built around one rule: read what's in the data, and say what to do about it.",
-      "readingReport": "Reading the report",
-      "glossarySubtitle": "Four terms, translated",
-      "commonQuestions": "Common questions",
-      "faqSubtitle": "Everything else you might be wondering",
-      "ctaBody": "Open the latest board report, written from your own business.",
-      "ctaButton": "Open Board Reports",
-      "trust": {
-        "yourNumbers": {
-          "title": "Your numbers, not ours",
-          "body": "Every figure is computed from your own pipeline. The report reads your business — it never invents it."
-        },
-        "comparable": {
-          "title": "Comparable, week on week",
-          "body": "The format never changes, so what's changed in your business stands out the moment you open the report."
-        },
-        "actionable": {
-          "title": "Advice you can act on",
-          "body": "Every risk is paired with a reason and a recommendation — the report ends in actions, not observations."
-        }
-      },
-      "glossary": {
-        "weighted": {
-          "title": "Weighted pipeline",
-          "body": "Each deal's value multiplied by its probability of closing. £100k at 30% counts as £30k — a more honest forecast than face value."
-        },
-        "windows": {
-          "title": "Closing windows",
-          "body": "Deals grouped by when they're expected to land — this month, next month, and beyond — so timing risk is visible at a glance."
-        },
-        "radar": {
-          "title": "Risk radar",
-          "body": "Critical needs intervention this week. At-risk is deteriorating. Quiet simply hasn't been touched lately — often the easiest wins."
-        },
-        "winRate": {
-          "title": "Win rate",
-          "body": "Of the deals that reached a decision, the share you won — tracked with its direction of travel from the last report."
-        }
-      },
-      "ingredients": {
-        "pipeline": {
-          "title": "Your pipeline, as it is today",
-          "body": "An export of your deals from whatever you use now — no integrations, no IT project, no new process for the team."
-        },
-        "knowledge": {
-          "title": "Anything your team knows",
-          "body": "Add pricing, playbooks and account notes over time. The more it knows about how you sell, the sharper its advice."
-        },
-        "schedule": {
-          "title": "A schedule that suits you",
-          "body": "Weekly for a board cadence, or on demand. The agent runs on its own — you just open the result."
-        }
-      },
-      "faq": {
-        "need": {
-          "q": "What do I need to give it?",
-          "a": "An export of your pipeline — the same spreadsheet of deals your team already keeps. From there, everything else is optional."
-        },
-        "knows": {
-          "q": "What does it know about my company?",
-          "a": "Exactly what you share with it, and nothing more. Your pipeline, plus the documents your team adds to its knowledge."
-        },
-        "remembers": {
-          "q": "Does it remember previous reports?",
-          "a": "Yes. Lessons from one run carry into the next, and its memory of your business compounds — the analyst gets better with every report."
-        },
-        "retrieval": {
-          "q": "How does it find the right information?",
-          "a": "When it's writing, it searches everything you've shared and pulls in only the passages that matter for the point being made."
-        },
-        "cadence": {
-          "q": "How often do I get a new report?",
-          "a": "As often as you like. Most teams schedule a weekly run ahead of their board or pipeline meeting, and trigger extra runs when something big moves."
-        },
-        "share": {
-          "q": "Can I share it with the board?",
-          "a": "Yes. Export to Board captures the entire report as a single high-resolution image, ready to drop into a deck or an email."
-        },
-        "estimated": {
-          "q": "Are the numbers ever estimated?",
-          "a": "The figures are computed from your own pipeline. Where the report offers judgement — risk tiers, recommendations — it says so and gives its reason."
-        },
-        "noReports": {
-          "q": "Why does it say 'No Reports Available'?",
-          "a": "The agent hasn't run yet. Share your pipeline with it and schedule or trigger its first run — the first report lands minutes later."
-        }
-      },
-      "stats": {
-        "deals": "of your deals read on every run",
-        "sections": "board-ready sections, every week",
-        "agent": "agent behind every report",
-        "hours": "analyst hours needed to produce it"
-      },
-      "visuals": {
-        "wireframe": "A wireframe of the board report showing its story, numbers, risks and actions sections",
-        "agentCentre": "The report agent at the centre of what it draws on: your pipeline, your company's knowledge and its own memory — writing the board report",
-        "anatomyKicker": "What's inside",
-        "anatomyTitle": "The anatomy of a board report",
-        "anatomyBody": "Every report has the same eight sections, in the same order — a deliberate rhythm that starts with the story, proves it with numbers, flags the risks, and ends with what to do about them.",
-        "anatomyHint": "Select a part of the report to see what it does.",
-        "sourcesKicker": "The analyst behind it",
-        "sourcesTitle": "An analyst that knows your business",
-        "sourcesBody": "Board Reports aren't a template filled in with numbers. They're written by an AI agent that reads your entire pipeline, draws on the documents your team shares with it, and remembers what it learned last week.",
-        "sourcesHint": "Select a source to see what the agent draws on.",
-        "anatomy": {
-          "defaultDescription": "Eight sections, in the same order every time — written fresh from your pipeline data on each run.",
-          "story": {
-            "label": "The story",
-            "count": "Section 1",
-            "description": "A punchy headline and an executive summary in plain English — the agent's own read on the biggest news in your pipeline, before a single chart."
-          },
-          "numbers": {
-            "label": "The numbers",
-            "count": "Sections 2–4",
-            "description": "Six KPIs with their direction of travel, deals grouped by closing window, top deals to watch, and pipeline health by stage and by rep — the full state of play."
-          },
-          "risks": {
-            "label": "The risks",
-            "count": "Section 5",
-            "description": "Every open deal is triaged into one of three tiers — critical, at risk, or quiet — each with the reason and a recommended next move."
-          },
-          "actions": {
-            "label": "The actions",
-            "count": "Sections 6–8",
-            "description": "Who has momentum and who needs support, the patterns hiding in the data, and a short numbered list of this week's priorities."
-          }
-        },
-        "wireframeTags": {
-          "headline": "1 · HEADLINE",
-          "numbers": "2–4 · THE NUMBERS",
-          "riskRadar": "5 · RISK RADAR",
-          "thisWeek": "6–8 · THIS WEEK"
-        },
-        "riskTiers": {
-          "critical": "CRITICAL",
-          "atRisk": "AT RISK",
-          "quiet": "QUIET"
-        },
-        "nodeTags": {
-          "pipeline": "YOUR PIPELINE",
-          "knowledge": "YOUR KNOWLEDGE",
-          "agent": "THE REPORT AGENT",
-          "memory": "WHAT IT REMEMBERS",
-          "report": "THE BOARD REPORT"
-        },
-        "sources": {
-          "defaultDescription": "One agent, drawing on everything your team already has — and turning it into the report your board reads.",
-          "pipeline": {
-            "label": "Your pipeline",
-            "count": "Every deal, in full",
-            "description": "Every open deal — its value, its stage, its owner, its expected close — read in full on every run. Nothing sampled, nothing skimmed."
-          },
-          "knowledge": {
-            "label": "Company knowledge",
-            "count": "Documents you share",
-            "description": "Pricing, playbooks, account notes — whatever your team shares with it. When it's writing, the agent pulls out the right page at the right moment, the way a good colleague would."
-          },
-          "memory": {
-            "label": "What it remembers",
-            "count": "Run after run",
-            "description": "The agent carries what it learned from previous runs into the next one — so every report builds on the last instead of starting from scratch."
-          },
-          "report": {
-            "label": "The report it writes",
-            "count": "Board-ready",
-            "description": "Everything it read, remembered and looked up — distilled into the pages your board acts on. The full anatomy is just below."
-          }
-        },
-        "flow": {
-          "teach": {
-            "title": "Teach it your business",
-            "body": "Share your pipeline and the documents your team already has. That's its raw material."
-          },
-          "reads": {
-            "title": "It reads everything",
-            "body": "The whole pipeline, plus everything you've shared — before it writes a word."
-          },
-          "finds": {
-            "title": "It finds what matters",
-            "body": "Risks, patterns and momentum — weighed against what it knows and what it remembers."
-          },
-          "writes": {
-            "title": "It writes. You present.",
-            "body": "The report lands on schedule, and one click exports it for the deck."
-          }
-        }
-      },
-      "ctaHeading": "Ready to see your pipeline this clearly?"
     }
   },
   "agenticTesting": {

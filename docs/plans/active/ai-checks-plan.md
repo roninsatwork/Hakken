@@ -698,7 +698,7 @@ now matches the other two.
 - **Any non-dev deployment still has the retired embedding model**, so its assistant
   answers without its knowledge base until the embedding migration runs and the
   knowledge base is re-embedded there.
-- `scripts/movement-debug/diagnose-replay-studio.test.mjs` writes fixtures to fixed
+- optional module (not included in this copy) writes fixtures to fixed
   repo paths rather than a temp directory, so it cannot run in parallel with itself.
   Filed separately; found while stress-testing the test-timeout fix.
 

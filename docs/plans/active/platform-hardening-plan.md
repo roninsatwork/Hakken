@@ -15,7 +15,7 @@ envelope, and the reusability of this repo as a starter for other products.
 is a live client demo and nothing in this plan deletes, moves, or refactors it.
 Where movement affects a platform metric (coverage denominators, dependency
 weight, build time) this plan **fences it**, it does not remove it. Movement work
-is governed by [Movement Definitive Plan](./movement-definitive-plan.md).
+is governed by Movement Definitive Plan (not included in this copy).
 
 **Working rules:**
 - Work on branch `dev`. Read `AGENTS.md` before starting.
@@ -384,7 +384,7 @@ the former `src/ui/components/Robot.tsx`, a generated 3D component in the platfo
 away from pulling 4.3 MB into a shared chunk. Moved to
 `src/app/(dashboard)/demos/movements/_components/` rather than deleted.
 
-`src/movement-boundary.test.ts` now enforces the property:
+optional module (not included in this copy) now enforces the property:
 
 - no platform file may import the demo's heavy rendering/ML packages
 - no platform file may import from the demo directories at all (which would drag
@@ -1336,7 +1336,7 @@ quietly depending on a vertical:
    "properties"` block querying by Rightmove ID.
 2. `convex/bola.test.ts` proved tenant isolation using the properties table. The
    template would have dropped the proof along with the vertical, so the three
-   vertical BOLA tests moved to `convex/bola.verticals.test.ts` — same tests,
+   vertical BOLA tests moved to optional module (not included in this copy) — same tests,
    split by owner, leaving the platform's two behind.
 3. Two workflow tests used properties rows as their fixtures.
 4. The sidebar characterisation snapshots record the whole navigation tree, which

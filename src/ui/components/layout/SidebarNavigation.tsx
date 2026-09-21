@@ -5,17 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   // template:remove:start arcade
   // template:remove:end
-  // template:remove:start salesReports
-  // template:remove:end
   ChevronDown,
   Sidebar,
-  // template:remove:start movement
-  // template:remove:end
-  // template:remove:start properties
-  // template:remove:end
-  // template:remove:start salesData
-  Table2,
-  // template:remove:end
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -31,14 +22,6 @@ import { useTranslations } from "next-intl";
 // outside any fence); it sat inside the salesData fence until the first
 // strip build failed on it, 2026-08-19.
 import { AdminNavTree, UserNavTree } from "./SidebarNavTrees";
-// template:remove:start salesData
-import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
-// template:remove:start salesReports
-// template:remove:end
-// template:remove:start properties
-// template:remove:end
-import { isWorkspaceSectionPath, workspaceSlug } from "@/src/lib/workspaceSlug";
-// template:remove:end
 
 interface NavItemProps {
   icon: React.ElementType<{ className?: string }>;
@@ -212,91 +195,6 @@ export class OptionalNavSection extends Component<
   }
 }
 
-// template:remove:start salesData
-/**
- * The sales data entry, which draws only for a workspace that has the module.
- *
- * It runs its own query rather than receiving the answer as a prop so that the
- * `useQuery` call sits inside `OptionalNavSection`. A hook called in the
- * sidebar's own body is outside any boundary the sidebar renders, so a failure
- * there cannot be contained — which is the whole point of this split.
- *
- * The label is the workspace's own name. Nothing here, or anywhere in the
- * platform, holds a customer's name as a string.
- */
-export function SalesDataNavItem({
-  isSignedIn,
-  pathname,
-  activeItem,
-  isOpen,
-  onToggle,
-  onSelect,
-  t,
-}: {
-  isSignedIn: boolean;
-  pathname: string;
-  activeItem: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  onSelect: () => void;
-  t: (key: string) => string;
-}) {
-  /*
-   * Skipped until there is a signed-in user, like every other guarded query in
-   * this sidebar. `getMyWorkspaceModules` is a `tenantQuery`, so calling it
-   * without an identity throws `Unauthenticated` on the server — and the
-   * dashboard layout mounts this sidebar for the whole route group, including
-   * the moment after sign-out when the token has cleared but the tree has not
-   * unmounted yet.
-   *
-   * The boundary above caught the throw, so the only visible trace was a
-   * failed query on every sign-out in the Convex logs. A section that hides
-   * itself for a tick is the right outcome; asking the server a question it
-   * cannot answer is not.
-   */
-  const workspace = useQuery(
-    api.companies.getMyWorkspaceModules,
-    isSignedIn ? {} : "skip"
-  );
-
-  // Undefined while loading. Drawing the section before the answer arrives
-  // would flash a link at workspaces that never get one.
-  //
-  // `enabledModules` is optional-chained too: a workspace record that arrives
-  // without the field threw here and took the whole navigation section down
-  // into its error boundary. Reaching this with no module list means "no
-  // modules", not "crash".
-  if (!workspace?.enabledModules?.includes(SALES_DATA_MODULE_KEY)) return null;
-
-  // The section lives under the workspace's own name, so Comax reads
-  // /app/comax/... and the next client reads their own — from the company
-  // record, never written down here.
-  const base = `/app/${workspaceSlug(workspace.companyName ?? '')}`;
-  const importHref = `${base}/import-data`;
-  const tablesHref = `${base}/spreadsheet-import`;
-  const customersHref = `${base}/customers`;
-  const opportunityHref = `${base}/opportunity-report`;
-
-  return (
-    <NavItem
-      icon={Table2}
-      label={workspace.companyName ?? t('salesData')}
-      isActive={activeItem === 'Sales Data' || pathname.startsWith(`${base}/`)}
-      onClick={onSelect}
-      hasChildren
-      isOpen={isOpen}
-      onToggle={onToggle}
-    >
-      <SubNavItem label={t('salesDataImport')} href={importHref} isActive={pathname === importHref} onClick={onSelect} />
-      <SubNavItem label={t('salesDataTables')} href={tablesHref} isActive={pathname === tablesHref} onClick={onSelect} />
-      <SubNavItem label={t('salesDataCustomers')} href={customersHref} isActive={pathname.startsWith(customersHref)} onClick={onSelect} />
-      {/* Lives here, not under Reports: Anthony went looking for it beside
-          Customers, and where a person looks is where a screen belongs. */}
-      <SubNavItem label={t('salesDataOpportunityReport')} href={opportunityHref} isActive={pathname === opportunityHref} onClick={onSelect} />
-    </NavItem>
-  );
-}
-// template:remove:end
 
 /**
  * The system settings screens, as opposed to the other things that live under
@@ -345,15 +243,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/reception')) return 'Reception';
-  // template:remove:start properties
-  if (pathname.startsWith('/app/properties')) return 'Properties';
-  // template:remove:end
-  // template:remove:start salesReports
-  if (pathname.startsWith('/app/reports')) return 'Reports';
-  // template:remove:end
-  // template:remove:start salesData
-  if (isWorkspaceSectionPath(pathname)) return 'Sales Data';
-  // template:remove:end
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
   if (pathname.startsWith('/app/settings/billing')) return 'Billing';
@@ -365,9 +254,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
   // template:remove:end
   if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
-  // template:remove:start movement
-  if (pathname.startsWith('/demos')) return 'Demos';
-  // template:remove:end
   return pathname.startsWith('/admin') ? 'Admin Dashboard' : '';
 }
 
@@ -391,21 +277,9 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     maintenance: pathname.startsWith('/admin/health') ||
       pathname.startsWith('/admin/settings/scripts') ||
       pathname.startsWith('/admin/auth-diagnostics'),
-    // template:remove:start salesReports
-    reports: false,
-    // template:remove:end
     organization: false,
     // template:remove:start arcade
     arcade: pathname.startsWith('/app/arcade'),
-    // template:remove:end
-    // template:remove:start properties
-    properties: false,
-    // template:remove:end
-    // template:remove:start salesData
-    salesData: isWorkspaceSectionPath(pathname),
-    // template:remove:end
-    // template:remove:start movement
-    demos: false,
     // template:remove:end
   };
 }

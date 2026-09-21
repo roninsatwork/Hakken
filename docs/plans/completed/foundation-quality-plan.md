@@ -37,7 +37,7 @@ in the order they should be done.
 - **Vertical/demo removal.** The movement and arcade demos and the vertical
   modules stay; they will be deleted by hand after each clone. Do not build
   file-level template stripping under this plan.
-- **`convex/movements.ts` tenant scoping.** The unscoped reads are accepted
+- **optional module (not included in this copy) tenant scoping.** The unscoped reads are accepted
   as demo behaviour by design. Do not "fix" them here.
 - **Deployment bootstrap automation.** New instances will keep being
   configured by hand; the structure may change from companies to users in

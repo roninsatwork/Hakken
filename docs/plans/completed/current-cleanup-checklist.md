@@ -9,8 +9,8 @@ This checklist is the active source of truth for the whole-app cleanup work. Do 
 - Push to `dev` at the end of each verified phase after the user explicitly approves the phase-end push.
 - Do not touch the movement demo pages:
   - `src/app/(dashboard)/demos/movements/**`
-  - `src/app/(dashboard)/demos/movement-capture/page.tsx`
-  - `convex/movements.ts`
+  - optional module (not included in this copy)
+  - optional module (not included in this copy)
 - Work in bigger grouped sweeps, not one tiny file at a time.
 - Each sweep ends with tests, diff summary, and user approval before commit.
 - Each phase ends with a commit and push to `dev` after verification and explicit approval.

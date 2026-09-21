@@ -10,22 +10,6 @@
  * that stores results needs it too, and that webhook does not run in Node.
  */
 
-// template:remove:start properties
-/** The Rightmove listings scraper behind the Properties screen. */
-export const RIGHTMOVE_ACTOR_ID = "jKpgGfgRfzrGgEMa8";
-
-/**
- * Whether a finished run's results can be read as property listings.
- *
- * Everything else an agent starts through the generic Apify tool has a shape
- * this platform has never seen. Writing those items into the properties table
- * would fabricate records out of whatever fields happened to line up, which is
- * worse than storing nothing: a wrong property looks exactly like a right one.
- */
-export function producesPropertyListings(actorId: string | undefined): boolean {
-  return actorId === RIGHTMOVE_ACTOR_ID;
-}
-// template:remove:end
 
 /**
  * Every string that looks like a web address, at any depth of a job's settings.

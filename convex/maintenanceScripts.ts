@@ -6,9 +6,6 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import * as platformShapes from "./utils/platformShapes";
 import { getRegisteredMigrationNames } from "./dataMigrations";
 import { rebuildGlobalInventoryRollupData } from "./inventoryRollups";
-// template:remove:start salesData
-import { provisionComaxAgents } from "./salesDataComaxProvisioning";
-// template:remove:end
 import {
   getMaintenanceScriptDefinition,
   maintenanceScriptDefinitions,
@@ -39,11 +36,6 @@ async function executeMaintenanceScript(
     return await startPendingDataMigrations(ctx);
   }
 
-  // template:remove:start salesData
-  if (scriptId === "comax-agents-provision") {
-    return await provisionComaxAgents(ctx, _actorId);
-  }
-  // template:remove:end
 
   throw appError("INVALID_INPUT", "Unknown maintenance script");
 }

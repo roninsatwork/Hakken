@@ -80,7 +80,7 @@ landing, `knowledge.ts`'s chunk writer, which marks a document `ready`.
 `rankAssistantKnowledgeMatches` (`convex/knowledgeRetrievalService.ts`) are
 used by `convex/ai.ts` (typed chat and the spoken/voice door),
 `convex/agentRuntime.ts`, `convex/aiPromptAssembly.ts`,
-`convex/knowledgeRetrieval.ts`, `convex/salesReportActions.ts` and
+`convex/knowledgeRetrieval.ts`, optional module (not included in this copy) and
 `convex/swarmActions.ts`. The phone and the mailbox reach it through
 `ai.searchKnowledgeForVoiceInternal` (`convex/voiceRelay.ts`,
 `convex/gmailWatcher.ts`). Every one of those is a door this plan must serve

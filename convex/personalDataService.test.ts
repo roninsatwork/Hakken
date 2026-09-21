@@ -128,12 +128,6 @@ describe("the treatments are the ones a regulator would expect", () => {
     expect(ruleFor("logins")?.treatment).toBe("ERASE");
   });
 
-  // template:remove:start movement
-  test("a recording of someone's body is deleted", () => {
-    expect(ruleFor("movements")?.treatment).toBe("ERASE");
-    expect(ruleFor("movementDebugSessions")?.treatment).toBe("ERASE");
-  });
-  // template:remove:end
 
   test("a company's rules survive the person who wrote them leaving", () => {
     // Destroying a workspace's configuration is not what erasure asks for.

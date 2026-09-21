@@ -440,9 +440,6 @@ const modelDefaultUseCases = [
 const workflowId = "workflow_e2e";
 const createdWorkflowId = "workflow_e2e_created";
 const widgetId = "widget_e2e";
-// template:remove:start movement
-const movementId = "movement_e2e_roll_down";
-// template:remove:end
 
 
 const rules = [
@@ -553,180 +550,14 @@ const globalInventoryFixture = {
   systemIntegrity: analyticsSystemIntegrity,
 };
 
-// template:remove:start movement
-const makeMovementPose = () => {
-  const pose = Array.from({ length: 33 }, (_, landmarkIndex) => ({
-    x: 0.45 + landmarkIndex * 0.002,
-    y: 0.45,
-    z: 0,
-    visibility: 0.92,
-  }));
-
-  pose[0] = { x: 0.5, y: 0.28, z: 0, visibility: 0.92 };
-  pose[7] = { x: 0.42, y: 0.3, z: 0, visibility: 0.92 };
-  pose[8] = { x: 0.58, y: 0.3, z: 0, visibility: 0.92 };
-  pose[11] = { x: 0.38, y: 0.44, z: 0, visibility: 0.92 };
-  pose[12] = { x: 0.62, y: 0.44, z: 0, visibility: 0.92 };
-  pose[13] = { x: 0.34, y: 0.56, z: 0, visibility: 0.92 };
-  pose[14] = { x: 0.66, y: 0.56, z: 0, visibility: 0.92 };
-  pose[15] = { x: 0.32, y: 0.68, z: 0, visibility: 0.92 };
-  pose[16] = { x: 0.68, y: 0.68, z: 0, visibility: 0.92 };
-  pose[23] = { x: 0.42, y: 0.68, z: 0, visibility: 0.92 };
-  pose[24] = { x: 0.58, y: 0.68, z: 0, visibility: 0.92 };
-  pose[25] = { x: 0.44, y: 0.82, z: 0, visibility: 0.9 };
-  pose[26] = { x: 0.56, y: 0.82, z: 0, visibility: 0.9 };
-  pose[27] = { x: 0.44, y: 0.94, z: 0, visibility: 0.88 };
-  pose[28] = { x: 0.56, y: 0.94, z: 0, visibility: 0.88 };
-  pose[29] = { x: 0.43, y: 0.95, z: 0.02, visibility: 0.88 };
-  pose[30] = { x: 0.57, y: 0.95, z: 0.02, visibility: 0.88 };
-  pose[31] = { x: 0.43, y: 0.97, z: 0, visibility: 0.88 };
-  pose[32] = { x: 0.57, y: 0.97, z: 0, visibility: 0.88 };
-
-  return pose;
-};
-// template:remove:end
 
 
-// template:remove:start movement
-const movementFrames = [
-  makeMovementPose(),
-  (() => {
-    const pose = makeMovementPose();
-    pose[23] = { ...pose[23]!, y: 0.82 };
-    pose[24] = { ...pose[24]!, y: 0.82 };
-    pose[25] = { ...pose[25]!, y: 0.74 };
-    pose[26] = { ...pose[26]!, y: 0.74 };
-    return pose;
-  })(),
-  (() => {
-    const pose = makeMovementPose();
-    pose[25] = { ...pose[25]!, y: 0.54 };
-    pose[27] = { ...pose[27]!, y: 0.68 };
-    pose[29] = { ...pose[29]!, y: 0.7 };
-    pose[31] = { ...pose[31]!, y: 0.7 };
-    return pose;
-  })(),
-  (() => {
-    const pose = makeMovementPose();
-    pose[26] = { ...pose[26]!, y: 0.54 };
-    pose[28] = { ...pose[28]!, y: 0.68 };
-    pose[30] = { ...pose[30]!, y: 0.7 };
-    pose[32] = { ...pose[32]!, y: 0.7 };
-    return pose;
-  })(),
-].map((landmarks, frameIndex) => ({
-  timestamp: frameIndex * 33,
-  landmarks,
-  worldLandmarks: landmarks.map((landmark) => ({ ...landmark })),
-}));
-// template:remove:end
 
 
-// template:remove:start movement
-const movementDebugSamples = movementFrames.map((frame, frameIndex) => {
-  const squatDepth = frameIndex === 1 ? 0.38 : 0;
-  const leftKneeLift = frameIndex === 2 ? 0.42 : 0;
-  const rightKneeLift = frameIndex === 3 ? 0.42 : 0;
-
-  return {
-    bodyConfidence: {
-      hips: 0.95,
-      leftFoot: 0.9,
-      leftKnee: 0.92,
-      rightFoot: 0.9,
-      rightKnee: 0.92,
-      torso: 0.96,
-    },
-    camera: {
-      aspectRatio: 1.333,
-      frameRate: 30,
-      trackHeight: 960,
-      trackWidth: 1280,
-      videoHeight: 960,
-      videoWidth: 1280,
-    },
-    capturedAt: now + frameIndex * 500,
-    fallbacks: {
-      lowerBody: squatDepth > 0 ? "squat player-retarget" : "neutral player-retarget",
-      owners: "head player; torso player; lower player-retarget; feet player-retarget",
-    },
-    health: {
-      primaryAction: squatDepth > 0 ? "squat" : "stand",
-      score: 91,
-      warnings: [],
-    },
-    poseBounds: {
-      maxX: 0.68,
-      maxY: 0.97,
-      minX: 0.32,
-      minY: 0.28,
-      outOfFrameCount: 0,
-    },
-    retarget: {
-      appliedLowerBody: 6,
-      hipDrop: squatDepth,
-      leftFootContact: leftKneeLift === 0,
-      leftKneeLift,
-      rightFootContact: rightKneeLift === 0,
-      rightKneeLift,
-      solvedSegments: 11,
-      sourceQuality: 0.96,
-      squatDepth,
-      totalLowerBody: 6,
-      totalSegments: 11,
-      visualRootDrop: squatDepth,
-    },
-    tracking: {
-      pose: frame.landmarks,
-      worldPose: frame.worldLandmarks,
-    },
-  };
-});
-// template:remove:end
 
 
-// template:remove:start movement
-const movementDebugSessionFixture = {
-  _id: "movement_debug_e2e_replay",
-  _creationTime: now,
-  baselineSummary: "neutral e2e replay baseline",
-  createdAt: now,
-  createdBy: superAdminId,
-  durationMs: 1500,
-  endedAt: now + 1500,
-  movementId,
-  sampleCount: movementDebugSamples.length,
-  samplesJson: JSON.stringify(movementDebugSamples),
-  startedAt: now,
-  trigger: "manual-debug-save",
-  warningSummary: "none",
-};
-// template:remove:end
 
 
-// template:remove:start movement
-const movementFixture = {
-  _id: movementId,
-  _creationTime: now,
-  title: "E2E Roll Down",
-  difficulty: "Beginner",
-  poseData: JSON.stringify({
-    schemaVersion: 1,
-    capturedAt: now,
-    fps: 30,
-    frames: movementFrames,
-  }),
-  poseDataFormat: "storage-json-v1",
-  frameCount: movementFrames.length,
-  durationMs: 100,
-  captureFps: 30,
-  schemaVersion: 1,
-  spineGoal: "rollDown",
-  primaryCue: "Roll down one segment at a time.",
-  bodyFocus: ["ribcage", "pelvis"],
-  createdAt: now,
-};
-// template:remove:end
 
 
 function workflowFixture(id = workflowId, name = "E2E Workflow") {
@@ -1388,53 +1219,11 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "analytics:getCompanyMetrics") return companyMetricsFixture;
   if (path === "analytics:getGlobalAnalytics") return globalAnalyticsFixture;
   if (path === "analytics:getGlobalInventoryMetrics") return globalInventoryFixture;
-  // template:remove:start movement
-if (path === "movements:get") {
-    return queryArgs.id === movementId ? movementFixture : null;
-  }
-// template:remove:end
 
-  // template:remove:start movement
-if (path === "movements:listReplayAlignmentRecordings") {
-    return [
-      {
-        ...movementFixture,
-        poseDataUrl: null,
-      },
-    ];
-  }
-// template:remove:end
 
-  // template:remove:start movement
-if (path === "movements:listDebugTrackingSessions") {
-    return [
-      {
-        ...movementDebugSessionFixture,
-        samplesJson: undefined,
-        samplesPreview: movementDebugSessionFixture.samplesJson.slice(0, 800),
-      },
-    ];
-  }
-// template:remove:end
 
-  // template:remove:start movement
-if (path === "movements:getDebugTrackingSession") {
-    return queryArgs.id === movementDebugSessionFixture._id ? movementDebugSessionFixture : null;
-  }
-// template:remove:end
 
-  // template:remove:start movement
-if (path === "movements:getDebugTrackingSessions") {
-    const ids = Array.isArray(queryArgs.ids) ? queryArgs.ids : [];
-    return ids.includes(movementDebugSessionFixture._id) ? [movementDebugSessionFixture] : [];
-  }
-// template:remove:end
 
-  // template:remove:start movement
-if (path === "movements:getFileUrl") {
-    return null;
-  }
-// template:remove:end
 
   // Gated on hydration, like `users:getMe` above. These read `localStorage`,
   // which the server cannot see, so answering before the browser has taken over
@@ -1718,22 +1507,6 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
       isLoading: false,
     };
   }
-  // template:remove:start movement
-if (path === "movements:getPaginated") {
-    const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
-    const spineGoal = typeof queryArgs.spineGoal === "string" ? queryArgs.spineGoal : null;
-    const matchesSearch = !searchTerm || movementFixture.title.toLowerCase().includes(searchTerm);
-    const matchesSpineGoal = !spineGoal || movementFixture.spineGoal === spineGoal;
-    const results = matchesSearch && matchesSpineGoal ? [movementFixture] : [];
-
-    return {
-      results,
-      status: "Exhausted",
-      loadMore: async () => {},
-      isLoading: false,
-    };
-  }
-// template:remove:end
 
   if (path === "aiTools:getPaginatedTools") {
     return {

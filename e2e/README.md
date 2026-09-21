@@ -52,7 +52,7 @@ Authenticated coverage:
 - Role-based admin access behavior.
 - Dashboard export flow.
 - End-user assistant and profile flows, including `e2e/user-chat-flow.spec.ts` and `e2e/user-settings-flow.spec.ts`.
-- Movement route smoke checks in `e2e/movement-demo-smoke.spec.ts`.
+- Movement route smoke checks in optional module (not included in this copy).
 - Movement library, capture shell, detail viewer, play avatar lobby, and guided debug preview with deterministic movement fixture data in `e2e/movement-demo-authenticated.spec.ts`.
 - Movement avatar proof evals in `e2e/movement-avatar-proof.eval.spec.ts`. These use deterministic synthetic webcam skeleton poses to drive the live player avatar path, assert the debug ownership labels for standing, side bend, hands-front, squat, and left/right leg raises, check that the player-avatar region contains visible rendered pixels, compare posture silhouettes against standing, and attach screenshots plus visual metrics to the Playwright report.
 

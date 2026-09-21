@@ -119,8 +119,8 @@ as the durable documentation work queue.
   `docs/end-user/company-ai-readiness-and-checks.md` and
   `docs/developer/company-ai-readiness-and-checks.md`.
 - Add a dedicated sales and board reports documentation pair:
-  `docs/end-user/sales-and-board-reports.md` and
-  `docs/developer/sales-and-board-reports.md`.
+  optional module (not included in this copy) and
+  optional module (not included in this copy).
 - Update coverage notes so they no longer read as an unexplained blanket
   assertion.
 - Run a second stale-content pass after recent Hakken changes. This corrected:
@@ -138,10 +138,10 @@ as the durable documentation work queue.
   dark-mode lock classes, severity text fallback, and tests; `docs/end-user/emails.md`
   explains that alerts carry status in words as well as colour.
 - Refresh the sales and board reports documentation pair for the implemented
-  workspace Opportunity Report: `docs/end-user/sales-and-board-reports.md`
+  workspace Opportunity Report: optional module (not included in this copy)
   covers `/app/<workspace>/opportunity-report`, prospect valuation, group gaps,
-  named sister-account comparisons, and size-field caveats; `docs/developer/sales-and-board-reports.md`
-  covers `convex/salesOpportunityReports.ts`, deterministic pricing ownership,
+  named sister-account comparisons, and size-field caveats; optional module (not included in this copy)
+  covers optional module (not included in this copy), deterministic pricing ownership,
   schema role, watchdog completion, and the localisation contract for named
   sister-account evidence.
 - Run a fresh August coverage pass after the governance, sales-data, typed-code

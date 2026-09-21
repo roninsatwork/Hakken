@@ -291,26 +291,6 @@ describe("the buttons rule", () => {
     expect(findStaleFreezes(frozen).some((s) => s.file === probeRelative)).toBe(false);
   });
 
-  // template:remove:start movement
-it("leaves the movement demos alone — frozen whole by owner decision", () => {
-    const demoProbe = path.join(
-      process.cwd(),
-      "src",
-      "app",
-      "(dashboard)",
-      "demos",
-      "__screen_kit_probe__.tsx"
-    );
-    fs.writeFileSync(demoProbe, oneButton);
-
-    try {
-      const demoRelative = path.relative(process.cwd(), demoProbe);
-      expect(findHandWrittenParts().some((o) => o.file === demoRelative)).toBe(false);
-    } finally {
-      fs.rmSync(demoProbe);
-    }
-  });
-// template:remove:end
 
 
   it("does not count the kit's own <Button>", () => {

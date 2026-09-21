@@ -27,9 +27,6 @@ import { appError } from "./utils/appError";
 export const MAX_ITERATOR_FAN_OUT = 100;
 
 const allowedWorkflowTables = [
-  // template:remove:start properties
-  "properties",
-  // template:remove:end
   "threads",
   "messages",
   "widgets",
@@ -40,9 +37,6 @@ const allowedWorkflowTables = [
   "agentTransactions",
   // template:remove:start arcade
   "arcadeScores",
-  // template:remove:end
-  // template:remove:start salesReports
-  "salesReports",
   // template:remove:end
 ] as const;
 
@@ -117,33 +111,6 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
   const order = query.order;
 
   switch (args.tableName) {
-    // template:remove:start properties
-    case "properties": {
-      if (query.indexName === "by_company") {
-        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
-        return await ctx.db
-          .query("properties")
-          .withIndex("by_company", (q) => q.eq("companyId", companyId))
-          .order(order)
-          .take(limit);
-      }
-      if (query.indexName === "by_rightmoveId") {
-        const rows = await ctx.db
-          .query("properties")
-          .withIndex("by_rightmoveId", (q) => q.eq("rightmoveId", getRequiredStringQueryValue(query, "rightmoveId")))
-          .take(limit);
-        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
-      }
-      if (query.indexName === "by_runId") {
-        const rows = await ctx.db
-          .query("properties")
-          .withIndex("by_runId", (q) => q.eq("runId", getRequiredStringQueryValue(query, "runId")))
-          .take(limit);
-        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
-      }
-      break;
-    }
-    // template:remove:end
     case "companies": {
       if (!args.isSuperAdmin) break;
       if (query.indexName === "by_name") {

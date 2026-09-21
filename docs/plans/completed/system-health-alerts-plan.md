@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # System Health Alerts Expansion Plan
 
@@ -62,7 +62,7 @@ Primary sources:
 - `convex/agentRuntime.ts`
   - Chat-agent runtime catches failures and inserts an `agentLogs` error row.
   - Workflow agent node execution logs successful `WORKFLOW_EXECUTION` rows, but failures usually surface through workflow execution state instead.
-- `convex/salesReportActions.ts`
+- optional module (not included in this copy)
   - Sales report generation failures insert `agentLogs` rows with `interactionType: "ERROR"` and rethrow.
 
 Important nuance:

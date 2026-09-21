@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # Roadmap And Technical Debt
 
@@ -96,14 +96,14 @@ The mirror and replay proof plans are the controlling documents when the user ex
 
 Relevant plans remain active for context:
 
-- [Movement Demo Client Pitch Excellence Plan](./movement-demo-client-pitch-excellence-plan.md)
-- [Movement Demo Refactor Plan](./movement-demo-refactor-plan.md)
-- [Movement Demo Whole Body Tracking Plan](./movement-demo-whole-body-tracking-plan.md)
-- [Movement Mirror Methodology Implementation Plan](./movement-mirror-methodology-implementation-plan.md)
-- [Replay Studio Agent Repair Harness Plan](./replay-studio-agent-repair-harness-plan.md)
-- [Replay Studio Avatar-Follow Observability Plan](./replay-studio-avatar-follow-observability-plan.md)
-- [Replay Avatar-Follow Correction Plan](./replay-avatar-follow-correction-plan.md)
-- [Replay Lab Visual Acceptance Tightening Plan](./replay-lab-visual-acceptance-tightening-plan.md)
+- Movement Demo Client Pitch Excellence Plan (not included in this copy)
+- Movement Demo Refactor Plan (not included in this copy)
+- Movement Demo Whole Body Tracking Plan (not included in this copy)
+- Movement Mirror Methodology Implementation Plan (not included in this copy)
+- Replay Studio Agent Repair Harness Plan (not included in this copy)
+- Replay Studio Avatar-Follow Observability Plan (not included in this copy)
+- Replay Avatar-Follow Correction Plan (not included in this copy)
+- Replay Lab Visual Acceptance Tightening Plan (not included in this copy)
 
 ## Roadmap Index
 

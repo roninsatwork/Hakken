@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # Platform Scale Hardening Plan
 
@@ -26,8 +26,8 @@ This plan does not cover:
 - Billing strategy or pricing logic beyond scalable inventory/MRR reads.
 - Movement demo code:
   - `src/app/(dashboard)/demos/movements/**`
-  - `src/app/(dashboard)/demos/movement-capture/page.tsx`
-  - `convex/movements.ts`
+  - optional module (not included in this copy)
+  - optional module (not included in this copy)
 - Provider selection refactors except where model/catalog list scaling needs existing configuration boundaries.
 
 ## Current Baseline

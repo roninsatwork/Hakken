@@ -16,9 +16,6 @@ import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantAction } from "./tenantFunctions";
 import { collectUrls } from "./apifyActors";
-// template:remove:start properties
-import { RIGHTMOVE_ACTOR_ID } from "./apifyActors";
-// template:remove:end
 import { appError } from "./utils/appError";
 
 type ApifyRun = Doc<"apifyRuns">;
@@ -227,46 +224,6 @@ async function startApifyActor(
     return run.id;
 }
 
-// template:remove:start properties
-export const startRightmoveScrape = tenantAction({
-  args: {
-    listUrls: v.array(v.string()),
-    maxProperties: v.number(),
-  },
-  returns: v.string(),
-  handler: async (ctx, args): Promise<string> => {
-    const user = await ctx.runQuery(api.users.getMe);
-    if (!user) throw appError("UNAUTHENTICATED", "Unauthenticated");
-
-    for (const url of args.listUrls) {
-      validateSafeUrl(url, "Rightmove Scraper");
-    }
-
-    // The Properties screen knows it wants Rightmove listings, so it keeps its
-    // own settings for that actor rather than making the person filling in a
-    // search box understand Apify.
-    return await startApifyActor(ctx, {
-      actorId: RIGHTMOVE_ACTOR_ID,
-      input: {
-        listUrls: args.listUrls.map((url) => ({ url })),
-        propertyUrls: [],
-        monitoringMode: false,
-        deduplicateAtTaskLevel: false,
-        fullPropertyDetails: true,
-        includePriceHistory: true,
-        includeNearestSchools: false,
-        enableDelistingTracker: false,
-        addEmptyTrackerRecord: false,
-        email: "",
-        maxProperties: args.maxProperties,
-        proxy: { useApifyProxy: true },
-      },
-      companyId: user.companyId,
-      startedBy: user._id,
-    });
-  },
-});
-// template:remove:end
 
 export const pollRunStatus = internalAction({
   args: { runId: v.string() },

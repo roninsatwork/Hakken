@@ -7,8 +7,8 @@ This checklist covers the final low-risk housework pass before switching back to
 - Work on `dev`.
 - Do not touch the movement demo unless a required gate is broken:
   - `src/app/(dashboard)/demos/movements/**`
-  - `src/app/(dashboard)/demos/movement-capture/page.tsx`
-  - `convex/movements.ts`
+  - optional module (not included in this copy)
+  - optional module (not included in this copy)
 - Do not commit until the user explicitly says `commit`.
 - Do not push until the user explicitly says `push`.
 - Keep this pass focused on repo clarity, handoff clarity, scripts, and CI/deploy understanding.

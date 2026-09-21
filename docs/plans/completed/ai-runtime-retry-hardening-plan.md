@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # AI Runtime Retry Hardening Plan
 
@@ -102,7 +102,7 @@ There is one existing special-case retry behavior:
   - Website queue calls Firecrawl map/scrape through `fetch`.
   - Gap: embedding failures are logged per chunk and then skipped. Under throttling, this can silently create partial knowledge documents.
 
-- `convex/salesReportActions.ts`
+- optional module (not included in this copy)
   - Sales report generation uses direct `ai.models.generateContent` with JSON schema.
   - Gap: batch generation logs failure and throws. Retry should happen around the model call before writing the error log.
 
@@ -217,7 +217,7 @@ Call sites:
 - `convex/agentRuntime.ts`
 - `convex/swarmActions.ts`
 - `convex/knowledgeActions.ts`
-- `convex/salesReportActions.ts`
+- optional module (not included in this copy)
 - `convex/orchestrator.ts`
 
 Acceptance checks:

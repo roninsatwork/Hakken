@@ -520,16 +520,6 @@ describe("the hang-up-and-watch finale", () => {
                 createdAt: Date.now(),
             })
         );
-// template:remove:start salesData
-        await t.run(async (ctx) => {
-            await ctx.db.insert("salesDataCustomers", {
-                companyId,
-                accountNameKey: "harbour-hotel",
-                phone: "+44 7700 900123",
-                updatedAt: Date.now(),
-            });
-        });
-// template:remove:end
 
         await dial(t, { CallSid: "CA-finale", From: CALLER_NUMBER, To: CALLED_NUMBER });
         await t.run(async (ctx) => {
@@ -571,16 +561,10 @@ describe("the hang-up-and-watch finale", () => {
 
         const [call] = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
         expect(call.summary).toContain("Sunday delivery");
-// template:remove:start salesData
-        expect(call.matchedCustomerKey).toBe("harbour-hotel");
-// template:remove:end
         expect(call.taskId).toBeDefined();
 
         const [task] = await t.run(async (ctx) => ctx.db.query("tasks").collect());
         expect(task.title).toContain("***123");
-// template:remove:start salesData
-        expect(task.title).toContain("harbour-hotel");
-// template:remove:end
         expect(task.title).not.toContain(CALLER_NUMBER);
         expect(task.assigneeUserId).toBe(memberId);
         expect(task.sourceUrl).toContain("/app/calls/");

@@ -31,17 +31,8 @@ export const CORE_MODULES = {
  * oversight surface should hang on rather than a purchasable switch.
  */
 
-// template:remove:start salesReports
-export const REPORTS_MODULE_KEY = "reports";
-// template:remove:end
 
-// template:remove:start properties
-export const PROPERTIES_MODULE_KEY = "properties";
-// template:remove:end
 
-// template:remove:start movement
-export const POSTURE_STUDIO_MODULE_KEY = "postureStudio";
-// template:remove:end
 
 /**
  * Every capability a company gets unless someone withholds it.
@@ -53,13 +44,4 @@ export const POSTURE_STUDIO_MODULE_KEY = "postureStudio";
  */
 export const DEFAULT_COMPANY_MODULE_KEYS: readonly string[] = [
   ...Object.values(CORE_MODULES),
-  // template:remove:start salesReports
-  REPORTS_MODULE_KEY,
-  // template:remove:end
-  // template:remove:start properties
-  PROPERTIES_MODULE_KEY,
-  // template:remove:end
-  // template:remove:start movement
-  POSTURE_STUDIO_MODULE_KEY,
-  // template:remove:end
 ];

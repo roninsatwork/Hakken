@@ -227,16 +227,16 @@ in the same documentation pass.
 
 The movement demo is frozen unless the user explicitly reopens it or a required
 gate is broken. Before changing movement behavior or documentation semantics,
-read [Movement Mirror And Side-Ownership Contract](./movement-mirror-and-side-ownership-contract.md)
-and [Movement Definitive Plan](../plans/active/movement-definitive-plan.md).
+read Movement Mirror And Side-Ownership Contract (not included in this copy)
+and Movement Definitive Plan (not included in this copy).
 
 | Route | Purpose | Owning docs |
 | --- | --- | --- |
 | `/demos/movements` | Posture Studio library. | [Temporary Posture Studio Demo](../end-user/temporary-posture-studio-demo.md), [Temporary Posture Studio Demo Developer Guide](./temporary-posture-studio-demo.md) |
 | `/demos/movements/[id]` | Movement detail. | Movement docs and active plan. |
 | `/demos/movements/[id]/play` | Movement game/play surface. | Movement docs and active plan. |
-| `/demos/movements/information` | Public-facing movement info page inside app shell. | [Temporary Posture Studio Demo](../end-user/temporary-posture-studio-demo.md) |
-| `/demos/movements/replay-lab` | Replay Alignment/Replay Studio. | [Movement Demo Replay Lab Plan](../plans/completed/movement-demo-replay-lab-plan.md), active movement plan. |
+| `/demos/movements/information` | Public-facing movement info page inside app shell. | Temporary Posture Studio Demo (not included in this copy) |
+| `/demos/movements/replay-lab` | Replay Alignment/Replay Studio. | Movement Demo Replay Lab Plan (not included in this copy), active movement plan. |
 | `/demos/movements/squat-proof` | Squat proof route. | Movement proof docs and tests. |
 | `/demos/movement-capture` and children | Capture, deep capture, benchmark, readiness, hand/face proof routes. | Movement docs, proof scripts, active movement plan. |
 | `/demos/movement-capture/deep` | Deep movement capture route. | Movement docs, proof scripts, active movement plan. |

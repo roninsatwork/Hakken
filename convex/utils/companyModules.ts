@@ -18,19 +18,7 @@
  * records invalid.
  */
 
-// template:remove:start salesData
-import { SALES_DATA_MODULE_KEY } from "./salesDataModule";
-// template:remove:end
 import { CORE_MODULES } from "./coreModules";
-// template:remove:start salesReports
-import { REPORTS_MODULE_KEY } from "./coreModules";
-// template:remove:end
-// template:remove:start properties
-import { PROPERTIES_MODULE_KEY } from "./coreModules";
-// template:remove:end
-// template:remove:start movement
-import { POSTURE_STUDIO_MODULE_KEY } from "./coreModules";
-// template:remove:end
 
 export type CompanyModuleDefinition = {
   key: string;
@@ -43,18 +31,6 @@ export const COMPANY_MODULES: readonly CompanyModuleDefinition[] = [
   { key: CORE_MODULES.calls, vertical: "base" },
   { key: CORE_MODULES.reception, vertical: "base" },
   { key: CORE_MODULES.wiki, vertical: "base" },
-  // template:remove:start salesReports
-  { key: REPORTS_MODULE_KEY, vertical: "salesReports" },
-  // template:remove:end
-  // template:remove:start properties
-  { key: PROPERTIES_MODULE_KEY, vertical: "properties" },
-  // template:remove:end
-  // template:remove:start movement
-  { key: POSTURE_STUDIO_MODULE_KEY, vertical: "movement" },
-  // template:remove:end
-  // template:remove:start salesData
-  { key: SALES_DATA_MODULE_KEY, vertical: "salesData" },
-  // template:remove:end
 ];
 
 export const COMPANY_MODULE_KEYS: readonly string[] = COMPANY_MODULES.map(

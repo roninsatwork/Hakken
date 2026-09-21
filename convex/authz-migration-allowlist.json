@@ -1,5 +1,5 @@
 {
-  "note": "EMPTY \u2014 the migration is complete. Every client-callable Convex function is declared with a builder from convex/tenantFunctions.ts. This list must stay empty: new functions use a builder, and a deliberately unauthenticated surface uses publicQuery/publicMutation/publicAction with a written reason. Never add entries here.",
+  "note": "EMPTY — the migration is complete. Every client-callable Convex function is declared with a builder from convex/tenantFunctions.ts. This list must stay empty: new functions use a builder, and a deliberately unauthenticated surface uses publicQuery/publicMutation/publicAction with a written reason. Never add entries here.",
   "maxEntries": 0,
   "generatedAt": "2026-07-25",
   "pending": [],

@@ -2,14 +2,8 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ProductHero } from "./_components/home/ProductHero";
 import { WhatHakkenIs } from "./_components/home/WhatHakkenIs";
-// template:remove:start properties,salesReports,movement,salesData
-import { DemosIntro } from "./_components/home/DemosIntro";
-// template:remove:end
 
 import { WhoItsFor } from "./_components/home/WhoItsFor";
-// template:remove:start properties,salesReports,movement,salesData
-import { ProductPanels } from "./_components/home/ProductPanels";
-// template:remove:end
 
 import { ContactLink } from "./_components/ContactLink";
 
@@ -24,10 +18,6 @@ export default function HomePage() {
 
       <WhatHakkenIs />
 
-      {/* template:remove:start properties,salesReports,movement,salesData */}
-      <DemosIntro />
-      <ProductPanels />
-      {/* template:remove:end */}
 
       <WhoItsFor />
 

@@ -173,34 +173,6 @@ describe("CompaniesPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/admin/companies/company_2");
   });
 
-  // template:remove:start salesData
-  it("switches an optional module on for a workspace", async () => {
-    // The module flag is the only thing standing between a workspace and a
-    // section built for one client, so the checkbox reaching the mutation is
-    // worth proving rather than assuming.
-    render(<CompaniesPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /New Company/i }));
-    const companyNameInput = await screen.findByPlaceholderText("Enter company name");
-    fireEvent.change(companyNameInput, { target: { value: "Comax" } });
-
-    // By name, not by position: the card lists every capability now, and the
-    // first checkbox is no longer the bespoke one this test is about.
-    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
-
-    fireEvent.click(screen.getByRole("button", { name: "Provision Tenant" }));
-
-    await waitFor(() => {
-      expect(createCompany).toHaveBeenCalledWith({
-        name: "Comax",
-        systemPrompt: "",
-        // Every capability is pre-ticked on a fresh form; the click added the
-        // bespoke module on top.
-        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS, "salesData"],
-      });
-    });
-  });
-  // template:remove:end
 
   it("can withhold a framework module when provisioning a workspace", async () => {
     // The module flag is the only thing standing between a workspace and a

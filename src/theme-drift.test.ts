@@ -140,47 +140,6 @@ describe("status colour helpers stay consolidated", () => {
  * combination the safelist does not carry, which would otherwise ship as a
  * silently unstyled element.
  */
-// template:remove:start movement
-describe("movement palette safelist", () => {
-  const MOVEMENTS_ROOT = join(SRC_ROOT, "app/(dashboard)/demos/movements");
-  const PALETTE_PATH = join(MOVEMENTS_ROOT, "_lib/movementPalette.ts");
-
-  it("covers every palette class combination the demos emit", () => {
-    const paletteSource = readFileSync(PALETTE_PATH, "utf8");
-
-    const constants = new Map<string, string>();
-    for (const match of paletteSource.matchAll(/export const (MOVEMENT_\w+) = "(#[0-9a-fA-F]{6})"/g)) {
-      constants.set(match[1], match[2]);
-    }
-    expect(constants.size).toBeGreaterThan(0);
-
-    const safelist = new Set(paletteSource.match(/[a-z-]+(?::[a-z-]+)*-\[#[0-9a-fA-F]{6}\](?:\/[\d.[\]]+)?/g) ?? []);
-
-    // A template class: prefix-[${CONSTANT}] with an optional opacity suffix,
-    // possibly behind variants (hover:, focus:).
-    const templatePattern =
-      /((?:[a-z-]+:)*[a-z-]+)-\[\$\{(MOVEMENT_\w+)\}\](\/[\d.[\]]+)?/g;
-
-    const missing = new Set<string>();
-    for (const file of collectSourceFiles(MOVEMENTS_ROOT)) {
-      if (file === PALETTE_PATH) continue;
-      const content = readFileSync(file, "utf8");
-      for (const match of content.matchAll(templatePattern)) {
-        const [, prefix, constant, opacity] = match;
-        const hex = constants.get(constant);
-        if (!hex) continue;
-        const literal = `${prefix}-[${hex}]${opacity ?? ""}`;
-        if (!safelist.has(literal)) missing.add(literal);
-      }
-    }
-
-    expect(
-      [...missing],
-      "add these to the safelist comment in movementPalette.ts or Tailwind will not compile them",
-    ).toEqual([]);
-  });
-});
-// template:remove:end
 
 
 describe("theme drift ratchet", () => {

@@ -188,47 +188,6 @@ npm run dev
 npm run convex:dev
 ```
 
-<!-- template:remove:start movement -->
-## Movement Demo Freeze
-
-Do not refactor, redesign, or expand the movement demo unless the user explicitly asks or a quality gate is broken by it.
-
-Frozen areas:
-
-- `src/app/(dashboard)/demos/movements/**`
-- `src/app/(dashboard)/demos/movement-capture/page.tsx`
-- `convex/movements.ts`
-
-The user considers this demo temporary and expects to delete it after the client has seen it. Focus maintainability work elsewhere.
-
-If the user explicitly reopens avatar body motion, read `docs/developer/movement-demo-retargeting-approach.md` before changing `VrmAvatar` or lower-body tracking. The documented direction is source-skeleton proof, neutral calibration, vector retargeting, and foot locking; do not drive body animation primarily from labels such as `squat` or from canned poses.
-
-### Mirror Methodology — Mandatory Contract
-
-Before changing movement capture, display preparation, landmark ownership, scoring correspondence, retargeting, head/spine signs, hands, face, root motion, VRM bone application, or movement proof, read `docs/developer/movement-mirror-and-side-ownership-contract.md`.
-
-The historical implementation record is `docs/plans/completed/movement-mirror-methodology-implementation-plan.md` (retired). Current work follows `docs/plans/active/movement-definitive-plan.md`; do not skip directly to bone tuning or selected-frame proof.
-
-The non-negotiable mirror-game invariant is:
-
-- recorded instructor motion preserves anatomical side: instructor right drives instructor-avatar right;
-- the live player uses the opposite anatomical side to imitate the instructor: instructor right is matched by player left;
-- the player avatar reverses the player's anatomy: player left drives player-avatar right;
-- therefore, the instructor avatar and player avatar must visibly perform the same anatomical movement.
-
-Keep preview mirroring, coordinate reflection, anatomical side ownership, and player-to-instructor scoring as separate named decisions. Do not use one generic `mirror` / `facing-player` flag to represent all four.
-
-Mirror acceptance requires actual rendered VRM-bone proof. For shared avatar-behaviour changes, run the three-party instructor/player/player-avatar invariant through every rendered frame of the current schema-v3 acceptance recordings (see `docs/plans/active/movement-definitive-plan.md`) with zero silent skips; selected frames, solver labels, debug metadata, or a high score are not sufficient proof.
-
-### Replay/Game Motion Vision
-
-Replay Studio is the motion source of truth. If avatar motion is broken, fix the Replay/shared motion pipeline first, prove it with recorded data such as FULL MOTION EXERCISES, and then make Game Studio consume that same shared result. Do not patch Game Studio with separate bone rules, pose-specific tuning, or live-only presentation numbers that diverge from Replay. Any remaining Game Studio difference must be explicit input cleanup before the shared pipeline, or documented VRM application plumbing with parity proof.
-
-All previous movement/replay plans were retired on 2026-07-20. The single source of truth is `docs/plans/active/movement-definitive-plan.md`: acceptance is the automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation. Retired plans (for example `docs/plans/completed/replay-studio-agent-repair-harness-plan.md` and `docs/plans/completed/replay-lab-visual-acceptance-tightening-plan.md`) remain useful background on the record-once repair loop and rendered-proof discipline, but they no longer gate work. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
-
-When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
-
-<!-- template:remove:end -->
 
 ## Project Guardrails
 

@@ -12,17 +12,8 @@ import {
   Settings,
   CreditCard,
   Wrench,
-// template:remove:start movement
-  Globe,
-// template:remove:end
 
-// template:remove:start properties
-  Home,
-// template:remove:end
 
-// template:remove:start salesReports
-  LineChart,
-// template:remove:end
 
   ListChecks,
   MonitorSpeaker,
@@ -33,25 +24,10 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { CORE_MODULES } from "@/convex/utils/coreModules";
 import {
-  // template:remove:start movement
-  POSTURE_STUDIO_MODULE_KEY,
-  // template:remove:end
-  // template:remove:start properties
-  PROPERTIES_MODULE_KEY,
-  // template:remove:end
-  // template:remove:start salesReports
-  REPORTS_MODULE_KEY,
-  // template:remove:end
 } from "@/convex/utils/coreModules";
 import {
   NavItem,
-// template:remove:start salesData
-  OptionalNavSection,
-// template:remove:end
 
-  // template:remove:start salesData
-  SalesDataNavItem,
-  // template:remove:end
   SubNavItem,
   isSystemSettingsRoute,
 } from "./SidebarNavigation";
@@ -324,74 +300,9 @@ export function UserNavTree({
   />
   )}
 
-  {/* template:remove:start salesReports */}
-  {hasCapability(REPORTS_MODULE_KEY) && (
-  <NavItem
-    icon={LineChart}
-    label={t('reports')}
-    isActive={activeItem === 'Reports'}
-    onClick={() => setActiveItem('Reports')}
-    hasChildren
-    isOpen={openSections.reports}
-    onToggle={() => toggleSection('reports')}
-  >
-    <SubNavItem label={t('information')} href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
-    <SubNavItem label={t('salesReport')} href="/app/reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
-  </NavItem>
-  )}
-  {/* template:remove:end */}
 
-  {/* template:remove:start properties */}
-  {hasCapability(PROPERTIES_MODULE_KEY) && (
-  <NavItem
-    icon={Home}
-    label={t('properties')}
-    isActive={activeItem === 'Properties' || pathname.startsWith('/app/properties')}
-    onClick={() => setActiveItem('Properties')}
-    hasChildren
-    isOpen={openSections.properties}
-    onToggle={() => toggleSection('properties')}
-  >
-    <SubNavItem label={t('information')} href="/app/properties/information" isActive={pathname.startsWith('/app/properties/information')} onClick={() => setActiveItem('Properties')} />
-    <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
-    <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
-    <SubNavItem label={t('logs')} href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
-  </NavItem>
-  )}
-  {/* template:remove:end */}
 
-  {/* template:remove:start salesData */}
-  <OptionalNavSection>
-    <SalesDataNavItem
-      isSignedIn={!!user}
-      pathname={pathname}
-      activeItem={activeItem}
-      isOpen={openSections.salesData}
-      onToggle={() => toggleSection('salesData')}
-      onSelect={() => setActiveItem('Sales Data')}
-      t={t}
-    />
-  </OptionalNavSection>
-  {/* template:remove:end */}
 
-  {/* template:remove:start movement */}
-  {hasCapability(POSTURE_STUDIO_MODULE_KEY) && (
-  <NavItem
-    icon={Globe}
-    label={t('postureStudio')}
-    isActive={activeItem === 'Demos' || pathname.startsWith('/demos')}
-    onClick={() => setActiveItem('Demos')}
-    hasChildren
-    isOpen={openSections.demos}
-    onToggle={() => toggleSection('demos')}
-  >
-    <SubNavItem label={t('information')} href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
-    <SubNavItem label={t('studioLibrary')} href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
-    <SubNavItem label={t('replayAlignment')} href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
-
-  </NavItem>
-  )}
-  {/* template:remove:end */}
 
   {/*
     The customer's own governance section, scoped to their

@@ -1,13 +1,7 @@
 import React from "react";
-// template:remove:start movement
-import { fireEvent } from "@testing-library/react";
-// template:remove:end
 import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-// template:remove:start movement
-import { POSTURE_STUDIO_MODULE_KEY } from "@/convex/utils/coreModules";
-// template:remove:end
 import SidebarNavigation from "./SidebarNavigation";
 
 const setIsSidebarOpen = vi.hoisted(() => vi.fn());
@@ -273,30 +267,6 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: /Approvals/ })).not.toBeInTheDocument();
   });
 
-  // template:remove:start movement
-  it("links Replay Alignment from the Posture Studio submenu", () => {
-    vi.mocked(usePathname).mockReturnValue("/demos/movements/replay-lab");
-    // Posture Studio is a workspace module like Tasks or Properties now, so
-    // the section only exists for a workspace that has it switched on.
-    useQueryMock.mockImplementation((queryRef: unknown) => {
-      if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
-      if (queryRef === "companies:getMyWorkspaceModules") {
-        return { enabledModules: [POSTURE_STUDIO_MODULE_KEY] };
-      }
-      return undefined;
-    });
-
-    render(<SidebarNavigation />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Posture Studio" }));
-
-    expect(screen.getByRole("link", { name: "Studio Library" })).toHaveAttribute("href", "/demos/movements");
-    expect(screen.getByRole("link", { name: "Replay Alignment" })).toHaveAttribute(
-      "href",
-      "/demos/movements/replay-lab",
-    );
-  });
-  // template:remove:end
 });
 
 /**

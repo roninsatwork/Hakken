@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # Platform Grade Refactor And Test Upgrade Plan
 
@@ -30,8 +30,8 @@ This is not a rewrite for its own sake. Every refactor should make the next prod
 - Do not push to `main` unless the user explicitly asks for live deploy testing.
 - Movement demo stays frozen unless a required gate is broken:
   - `src/app/(dashboard)/demos/movements/**`
-  - `src/app/(dashboard)/demos/movement-capture/page.tsx`
-  - `convex/movements.ts`
+  - optional module (not included in this copy)
+  - optional module (not included in this copy)
 - Vertex references are allowed where they describe the intentional backend provider setup.
 - Gemini references should be removed, renamed, or documented unless they refer to an actual Google/Gemini model ID or external package/API.
 - Each slice ends with:
@@ -606,7 +606,7 @@ Checklist:
 
 Final verification record:
 
-- Frozen movement demo review: no files changed under `src/app/(dashboard)/demos/movements/**`, `src/app/(dashboard)/demos/movement-capture/page.tsx`, or `convex/movements.ts` in the final Phase 5-9 review range.
+- Frozen movement demo review: no files changed under `src/app/(dashboard)/demos/movements/**`, optional module (not included in this copy), or optional module (not included in this copy) in the final Phase 5-9 review range.
 - `npm run lint:all`: passed.
 - `npm run check`: passed with 75 test files and 297 tests passing.
 - `npm run build`: passed.

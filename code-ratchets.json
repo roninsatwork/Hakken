@@ -1,23 +1,17 @@
 {
   "moduleSize": {
-    "convex/schema.ts": 4550,
+    "convex/schema.ts": 3500,
     "convex/agentEvalFixtures.ts": 2000,
-    "convex/salesDataResearch.ts": 2000,
     "convex/wikiPages.ts": 1850,
     "convex/knowledge.ts": 1800,
     "convex/aiModels.ts": 1550,
     "convex/agents.ts": 1400,
-    "convex/salesDataMarketDiscovery.ts": 1400,
     "convex/agentRuns.ts": 1350,
     "convex/users.ts": 1250,
     "convex/agentRuntime.ts": 1250,
-    "convex/aiToolExecutionService.ts": 1200,
     "convex/agentSkills.ts": 1200,
-    "convex/salesData.ts": 1200,
     "convex/agentMemoryCandidates.ts": 1200,
     "convex/agentObjectiveLoop.ts": 1150,
-    "convex/dataMigrations.ts": 1100,
-    "convex/salesDataResearchJobs.ts": 1100,
     "convex/analytics.ts": 1100,
     "convex/workflowEngine.ts": 1050,
     "convex/purges.ts": 1050
@@ -33,8 +27,8 @@
     },
     {
       "root": "src/app/(dashboard)/app",
-      "floor": 39
+      "floor": 22
     }
   ],
-  "theme": 1031
+  "theme": 773
 }

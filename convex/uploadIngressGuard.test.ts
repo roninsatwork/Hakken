@@ -16,12 +16,6 @@ test("all production storage writes stay behind the registered, bounded gateway"
   expect(issuers).toEqual(["uploadHttp.ts"]);
   for (const file of [
     "chat", "users", "settings", "knowledge", "widgets",
-    // template:remove:start salesData
-    "salesData",
-    // template:remove:end
-    // template:remove:start movement
-    "movements",
-    // template:remove:end
   ]) {
     expect(readFileSync(join(root, file + ".ts"), "utf8")).toContain("issueUpload(ctx,");
   }

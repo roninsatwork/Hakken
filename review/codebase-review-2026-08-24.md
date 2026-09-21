@@ -51,7 +51,7 @@ Per-area scores:
 
 ### Other architectural strengths
 
-- **Layering enforced by tooling**: ESLint `no-restricted-imports` regex blocks browser imports of Convex function-defining modules (types/`utils/`/`*Service` allowed), zero exemptions; `src/movement-boundary.test.ts` fences 12 heavy 3D/ML packages inside the demo directories and verifies each guarded package is still installed so the guard can't go vacuous.
+- **Layering enforced by tooling**: ESLint `no-restricted-imports` regex blocks browser imports of Convex function-defining modules (types/`utils/`/`*Service` allowed), zero exemptions; optional module (not included in this copy) fences 12 heavy 3D/ML packages inside the demo directories and verifies each guarded package is still installed so the guard can't go vacuous.
 - **Bounded reads**: only 2 unbounded `.collect()` in non-test backend code (both on the small `governanceEstateRollups` table); 375 `.index(` + 26 search/vector indexes over 117 tables; ~5 db-level `.filter(` chains, all benign.
 - **Actions are clean**: no `ctx.db` in action files; external work (providers, Resend, Apify, webhooks) lives in `*Actions.ts`/service modules with `actionAuth.ts` wired into the builder layer.
 - **Audit coverage is real**: 60 non-test files write `auditLogs`; sampled privileged mutations all record rows; audit purges write purge records exempt from purging.
@@ -129,5 +129,5 @@ Each has a ready-to-use fix prompt in [prompts/](prompts/).
 9. **Pick one component file-naming convention and ratchet it.** → [prompts/09-file-naming-convention.md](prompts/09-file-naming-convention.md)
 10. **Extract a shared chart palette and dedupe local formatters.** → [prompts/10-shared-palette-and-formatters.md](prompts/10-shared-palette-and-formatters.md)
 11. **Split `quality-drift.test.ts` by concern.** → [prompts/11-split-quality-drift-test.md](prompts/11-split-quality-drift-test.md)
-12. **Move movement-debug scripts behind their own CLI.** → [prompts/12-movement-scripts-cli.md](prompts/12-movement-scripts-cli.md)
+12. **Move movement-debug scripts behind their own CLI.** → prompts/12-movement-scripts-cli.md (not included in this copy)
 13. **Consolidate `src/ui/atoms/` into the screen kit** — the primitives already live in `components/screens/` and the tooling treats both folders as one namespace; fold the vestigial 4-file atoms folder in and write down the placement rule. → [prompts/13-consolidate-atoms-folder.md](prompts/13-consolidate-atoms-folder.md)

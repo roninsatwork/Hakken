@@ -15,10 +15,10 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 
 ## Demo Operations
 
-- [Movement Demo Pitch Runbook](./movement-demo-pitch-runbook.md)
-- [Movement Demo Manual Smoke Checklist](./movement-demo-manual-smoke-checklist.md)
-- [Movement Demo Live Rehearsal Notes Template](./movement-demo-live-rehearsal-notes-template.md)
-- [Movement Demo Presenter Card](./movement-demo-presenter-card.md)
+- Movement Demo Pitch Runbook (not included in this copy)
+- Movement Demo Manual Smoke Checklist (not included in this copy)
+- Movement Demo Live Rehearsal Notes Template (not included in this copy)
+- Movement Demo Presenter Card (not included in this copy)
 
 ## Coverage Status
 

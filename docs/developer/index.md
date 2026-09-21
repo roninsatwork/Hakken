@@ -30,7 +30,7 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Assistant Chat](./assistant-chat.md)
 - [Public Website](./public-website.md)
 - [Governance And Trust](./governance-and-trust.md)
-- [Sales Data Workspace](./sales-data-workspace.md)
+- Sales Data Workspace (not included in this copy)
 - [Administration](./administration.md)
 - [Spoken Channels](./spoken-channels.md)
 - [Photo Actions](./photo-actions.md)
@@ -69,11 +69,11 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Run Observatory](./run-observatory.md)
 - [System Health And Platform Alerts](./system-health-and-platform-alerts.md)
 - [System Settings And Branding](./system-settings-and-branding.md)
-- [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md)
+- Temporary Posture Studio Demo (not included in this copy)
 - [Workflow Automation](./workflow-automation.md)
 - [Workflow Runtime Internals](./workflow-runtime-internals.md)
-- [Property Research And Board Reports](./property-research-and-reports.md)
-- [Sales And Board Reports](./sales-and-board-reports.md)
+- Property Research And Board Reports (not included in this copy)
+- Sales And Board Reports (not included in this copy)
 
 ## Platform Development
 
@@ -89,19 +89,19 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 
 The movement demo is frozen unless the user explicitly asks to reopen it or a required gate is broken.
 
-**Required mirror methodology:** read [Movement Mirror And Side-Ownership Contract](./movement-mirror-and-side-ownership-contract.md) before any work involving left/right landmarks, instructor or player display preparation, scoring correspondence, retargeting, head/spine direction, hands, face, root motion, or avatar proof. Instructor motion preserves anatomical side, the human player imitates with the opposite side, and the player avatar reverses the player so both rendered avatars perform the same anatomical movement.
+**Required mirror methodology:** read Movement Mirror And Side-Ownership Contract (not included in this copy) before any work involving left/right landmarks, instructor or player display preparation, scoring correspondence, retargeting, head/spine direction, hands, face, root motion, or avatar proof. Instructor motion preserves anatomical side, the human player imitates with the opposite side, and the player avatar reverses the player so both rendered avatars perform the same anatomical movement.
 
 **Required Replay Studio context:** read the active [Movement Definitive Plan](../plans/active/movement-definitive-plan.md) before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, rendered fidelity thresholds, or the movement agent debugging workflow. Historical background lives in [Replay Studio Agent Repair Harness Plan](../plans/completed/replay-studio-agent-repair-harness-plan.md) and [Replay Lab Visual Acceptance Tightening Plan](../plans/completed/replay-lab-visual-acceptance-tightening-plan.md); use those for context only unless they are deliberately reopened. Replay Studio owns recorded-motion diagnosis, and Game Studio live-camera checks are final confirmation after Replay proof, not the primary debugging loop.
 
-- [Movement Tracking](./movement-tracking.md)
-- [Movement Demo Client Recovery Plan](../plans/completed/movement-demo-client-recovery-plan.md)
-- [Movement Demo Game And Replay Parity Plan](../plans/completed/movement-demo-game-replay-parity-plan.md)
-- [Movement Demo Replay Lab Plan](../plans/completed/movement-demo-replay-lab-plan.md)
-- **[Movement Mirror And Side-Ownership Contract — required](./movement-mirror-and-side-ownership-contract.md)**
-- [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
-- [Movement Studio And Replay Unification Plan](../plans/completed/movement-studio-replay-unification-plan.md)
-- [Movement Studio Reward Presentation Fix Plan](../plans/active/movement-studio-reward-presentation-fix-plan.md)
-- [Movement Studio VrmAvatar Inventory](./movement-studio-vrm-avatar-inventory.md)
+- Movement Tracking (not included in this copy)
+- Movement Demo Client Recovery Plan (not included in this copy)
+- Movement Demo Game And Replay Parity Plan (not included in this copy)
+- Movement Demo Replay Lab Plan (not included in this copy)
+- **Movement Mirror And Side-Ownership Contract — required (not included in this copy)**
+- Movement Demo Retargeting Approach (not included in this copy)
+- Movement Studio And Replay Unification Plan (not included in this copy)
+- Movement Studio Reward Presentation Fix Plan (not included in this copy)
+- Movement Studio VrmAvatar Inventory (not included in this copy)
 
 ## Coverage Status
 

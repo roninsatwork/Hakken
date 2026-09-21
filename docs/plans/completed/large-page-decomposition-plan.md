@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # Large Page Decomposition Plan
 
@@ -10,8 +10,8 @@ This plan follows the completed code-quality 95 plan. Its goal is to reduce page
 
 - Do not modify the frozen movement demo unless the user explicitly asks:
   - `src/app/(dashboard)/demos/movements/**`
-  - `src/app/(dashboard)/demos/movement-capture/page.tsx`
-  - `convex/movements.ts`
+  - optional module (not included in this copy)
+  - optional module (not included in this copy)
 - Keep behavior stable. This is decomposition and consistency work, not a product redesign.
 - Prefer extracting presentational sections, hooks, and small pure helpers before changing data flow.
 - Keep shared abstractions local to a feature first; promote to shared UI only after a second real use case.

@@ -42,9 +42,9 @@ completed work.
   reads a handful of rows instead of sweeping up to ~34,500 — and the
   compliance figures stop being silently capped. Agreed 2026-08-18; ~2.5 days.
 
-- [Movement Definitive Plan](./active/movement-definitive-plan.md) — the vision,
+- Movement Definitive Plan (not included in this copy) — the vision,
   acceptance rules, capture-screen rules, and work queue for all movement work.
-- [Movement Studio Reward Presentation Fix Plan](./active/movement-studio-reward-presentation-fix-plan.md) —
+- Movement Studio Reward Presentation Fix Plan (not included in this copy) —
   the active presentation plan for improving movement scoring and reward
   feedback while respecting the movement demo freeze. Read it before changing
   movement reward copy, scoring display, or customer-facing movement feedback.
@@ -112,20 +112,20 @@ completed work.
 - [Observability Collection And Killswitch Handover](./active/observability-collection-and-killswitch-handover.md) —
   handover context for honest Apify collection reporting and a visible agent
   kill switch.
-- [Workspace Sales Data Plan](./active/workspace-sales-data-plan.md) — the plan
+- Workspace Sales Data Plan (not included in this copy) — the plan
   for the optional per-workspace spreadsheet import and its three browsable
   tables, and for the `companies.enabledModules` flag that switches any optional
   section on for one workspace without naming a client in platform code. Owns
-  `convex/salesData.ts`, the workbook parser, and `/app/<workspace>/spreadsheet-import`. Read it
+  optional module (not included in this copy), the workbook parser, and `/app/<workspace>/spreadsheet-import`. Read it
   before adding another client-specific section, or before touching the module
   registry in `convex/utils/companyModules.ts`.
-- [Workspace Customer CRM Plan](./active/workspace-customer-crm-plan.md) — the
+- Workspace Customer CRM Plan (not included in this copy) — the
   plan for customer records inside the workspace section: a searchable customer
   list, a profile holding the details staff type in, and the buying history the
   import already provides. Read it before adding anything customer-shaped to
   the sales data vertical, and for what the import does and does not hold —
   there are no orders in it, and only 39 customers behind the 4,568 rows.
-- [Workspace Customer Research Agent Plan](./active/workspace-customer-research-agent-plan.md) —
+- Workspace Customer Research Agent Plan (not included in this copy) —
   the plan for the agent that searches the internet for what the sales import
   cannot supply: the contact details behind each customer, and the other sites
   in a group the workspace does not yet sell to. Owns the
@@ -143,7 +143,7 @@ completed work.
   queue-backed progress bar, discovered-parent-company records, prospect origin
   labels, and opportunity-report separation between warm existing-chain
   prospects and colder market-discovery prospects.
-- [Comax Opportunity Report Plan](./active/comax-opportunity-report-plan.md) —
+- Comax Opportunity Report Plan (not included in this copy) —
   the plan for the Comax - Opportunity Report Agent and its screen: pricing
   every prospect from the spend of similar-sized customers (bedrooms for care
   homes, pupils for schools, same parent group first), pricing the product
@@ -156,7 +156,7 @@ completed work.
   turning the customer research and prospecting sweeps into one job that runs all
   three tasks to completion under a single press, replacing the fan-out of one
   agent run per customer and per chain. Read it before touching the sweeps in
-  `convex/salesDataResearch.ts`.
+  optional module (not included in this copy).
 - [Governance And Trust Plan](./active/governance-and-trust-plan.md) — delivered
   2026-08-06, and kept in `active/` because its framework test and its recorded
   decisions govern what comes next. The phased plan for the AI register, risk

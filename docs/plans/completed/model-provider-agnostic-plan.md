@@ -1,6 +1,6 @@
 > **RETIRED 2026-07-20.** All previous plans were closed to start fresh.
 > This document is historical reference only and must not drive new work.
-> The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
+> The single source of truth is Movement Definitive Plan (not included in this copy).
 
 # Model Provider Agnostic Platform Plan
 
@@ -29,7 +29,7 @@ The current codebase is already partially prepared for provider-neutral work, bu
 - `convex/aiModelService.ts` resolves a string model ID and still has a Gemini failsafe literal.
 - `convex/aiModelsActions.ts` exposes `syncVertexModels` and upserts a curated Google Vertex AI catalogue of Gemini models only.
 - `convex/vertexProviderService.ts` is the only concrete generation provider adapter.
-- `convex/ai.ts`, `convex/agentRuntime.ts`, `convex/orchestrator.ts`, and `convex/salesReportActions.ts` construct or use Google/Vertex request/response shapes directly.
+- `convex/ai.ts`, `convex/agentRuntime.ts`, `convex/orchestrator.ts`, and optional module (not included in this copy) construct or use Google/Vertex request/response shapes directly.
 - RAG embeddings now resolve through the dedicated embedding resolver, with `"text-embedding-004"` retained as the explicit Google Vertex 768-dimension fallback.
 - `messages` and `agentTransactions` store `modelUsed`, but not provider, capability, use case, or normalized model identity.
 - `analyticsDailySnapshots.modelMetrics` stores `{ model, cost, calls }`, but not provider or capability dimensions.
@@ -340,7 +340,7 @@ Targets:
 - `convex/ai.ts`.
 - `convex/agentRuntime.ts`.
 - `convex/orchestrator.ts`.
-- `convex/salesReportActions.ts`.
+- optional module (not included in this copy).
 - Workflow agent execution.
 - Transcription/title generation.
 
