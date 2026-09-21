@@ -69,6 +69,21 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}'],
           setupFiles: ['./vitest.setup.ts'],
+          /*
+           * The same reasoning as the backend project below, for the same
+           * reason: the Arcade engine tests here are integration tests, not
+           * unit tests. They build a district's geometry or play a whole map
+           * to completion, and on the two-core CI runner with coverage
+           * instrumentation they exceed Vitest's 5s default while passing in
+           * about two seconds on a laptop.
+           *
+           * Raising them one test at a time did not hold: three separate CI
+           * runs each surfaced a different pair, because the slowness belongs
+           * to the class of test, not to any particular one. A hang still
+           * fails here, thirty seconds later.
+           */
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
       {

@@ -2,10 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { clearPath, distance, EXIT, isWalkable, PATROLS, PLAYER_START, SEALS, TREASURE } from './MapData';
 import { findPath } from './Navigation';
 import { NightHeistSimulation, RULES } from './NightHeistSimulation';
-
-// These integration checks play a whole map. Coverage on the two-core CI
-// runner can exceed Vitest's 5s unit-test default without a gameplay failure.
-const FULL_MAP_TIMEOUT_MS = 30_000;
 const idle = { x: 0, y: 0, dash: false };
 function advance(game: NightHeistSimulation, seconds: number, input = idle) {
   for (let i = 0; i < seconds * 60; i++) game.update(1 / 60, input);
@@ -49,7 +45,7 @@ describe('courtyard navigation', () => {
       );
     }
     expect(game.status).toBe('escaped');
-  }, FULL_MAP_TIMEOUT_MS);
+  });
 });
 describe('Night Heist rules', () => {
   it('does not advance in ready or paused states and resets a retry', () => {
