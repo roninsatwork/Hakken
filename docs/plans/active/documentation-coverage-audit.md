@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-08-25
 Status: active documentation-control note
+
+> **Stale in part, 2026-09-21.** The demo modules — Posture Studio, Properties,
+> Sales Reports and Sales Data — and all their documentation were removed from
+> this repository. Coverage items below that name those areas no longer apply;
+> the next pass should drop them rather than chase them.
 Audience: agents keeping Hakken documentation aligned with the implementation.
 
 ## Purpose

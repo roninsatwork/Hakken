@@ -319,7 +319,8 @@ Anthony, 2026-08-03: *"what is this and why is the font so large."*
   available to read, not shouted.
 - The naming is a property of the run rather than a special case in the screen,
   so a new agent gets a proper title by default instead of inheriting this bug.
-  The Rightmove special case is deleted at the same time.
+  The Rightmove special case is deleted at the same time. *Done 2026-09-21: the
+  special case and its whole module were removed.*
 
 ## How we will know it worked
 

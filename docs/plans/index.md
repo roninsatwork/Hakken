@@ -94,18 +94,12 @@ completed work.
   the approvals and autonomous-tool-execution plan for agent runs and workflow
   approvals. Read it before changing approval queues, tool confirmation policy,
   parked run behaviour, or approval expiry.
-- [Pressing Run Should Actually Run The Agent](./active/agents-run-properly-plan.md) —
-  the plan/history for making manual and scheduled agent runs use the real
-  tool-capable agent loop.
 - [Company AI Readiness Rebuild Plan](./active/company-ai-readiness-rebuild-plan.md) —
   the replacement plan for the company AI readiness screen and its score,
   model-routing, eval, memory, widget, skill, and activity signals.
 - [Company And Agent Model Defaults Plan](./active/company-and-agent-model-defaults-plan.md) —
   the plan for bringing company model overrides and agent engine settings up to
   the platform Model Defaults standard.
-- [Observability Collection And Killswitch Handover](./active/observability-collection-and-killswitch-handover.md) —
-  handover context for honest Apify collection reporting and a visible agent
-  kill switch.
 - Workspace Sales Data Plan (not included in this copy) — the plan
   for the optional per-workspace spreadsheet import and its three browsable
   tables, and for the `companies.enabledModules` flag that switches any optional
@@ -413,6 +407,14 @@ instructions unless they are deliberately reopened.
   kit, the kit accessible and phone-safe, capabilities withheld per company and
   granted by plan. Page headers were closed out of it for a future plan of
   their own. Still the document to read before adding a screen.
+- [Observability Collection And Killswitch Handover](./completed/observability-collection-and-killswitch-handover.md) —
+  archived 2026-09-21 when the demo modules were stripped. Handover context for
+  honest Apify collection reporting and a visible agent kill switch; its worked
+  example, the Rightmove property agent, is no longer in this repository.
+- [Pressing Run Should Actually Run The Agent](./completed/agents-run-properly-plan.md) —
+  archived 2026-09-21 when the demo modules were stripped. History of making
+  manual and scheduled agent runs use the real tool-capable agent loop; its
+  driving case, the Rightmove property agent, is no longer in this repository.
 - [The Self-Improving Wiki](./completed/self-improving-wiki-plan.md) —
   delivered 2026-08-14: Karpathy's LLM Wiki pattern built faithfully into
   Hakken — whole pages the AI rewrites after every conversation, tended on a

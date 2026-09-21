@@ -11,6 +11,10 @@ The operator instructions are [Build a new application from Hakken](../../operat
 
 Arcade is a permanent part of the framework. The four removable areas are:
 
+*Superseded 2026-09-21: all four optional modules below were removed from this
+repository, so none of them can be kept or cut any more. The table records what
+the cut used to offer.*
+
 | Name | Application area |
 | --- | --- |
 | `movement` | Posture Studio and its capture, replay, models and tooling |

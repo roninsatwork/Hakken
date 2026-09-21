@@ -29,7 +29,7 @@ describe('Provider Classification Drift', () => {
       'docs/plans/completed/code-quality-95-plan.md',
       'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',
-      'docs/plans/active/agents-run-properly-plan.md',
+      'docs/plans/completed/agents-run-properly-plan.md',
       'docs/plans/completed/model-provider-agnostic-plan.md',
       'messages/en.json',
       'messages/it.json',

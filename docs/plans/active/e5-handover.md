@@ -16,9 +16,9 @@ own, and everything in it was true at commit `3066f842c` on 2026-08-26.
 > within a file, so the second surface is far cheaper than the first. The ten
 > heaviest files hold 130 of the 362.
 >
-> **Do not touch optional module (not included in this copy).** It holds 11 of the 362 and is frozen
-> Posture Studio code. It is excluded, permanently. Do not touch anything under
-> `src/app/(dashboard)/demos/**` either.
+> **Superseded 2026-09-21.** The frozen Posture Studio code this warned about
+> was removed from the repository, along with `src/app/(dashboard)/demos/**`.
+> Nothing here is left to avoid.
 >
 > **Do not push.** Every push bills a metered CI run and Anthony decides when.
 > Commit locally, one commit per file or per small batch, and stop.

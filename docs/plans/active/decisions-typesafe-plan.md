@@ -576,7 +576,6 @@ before an automatic write, the intent router's threshold.
 - The opportunity report's arithmetic. Deliberately model-free and staying so.
 - Editing a Decision's question on screen. Questions are code.
 - A slider or number for certainty anywhere in the UI.
-- The Posture Studio area.
 
 ## Waiting on Anthony
 
