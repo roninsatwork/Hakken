@@ -5,9 +5,11 @@ assets make money and why the rest don't — found, visited, converted, enquired
 or ordered, won — then fixes the broken stage and proves the result in leads and
 sales rather than positions or mentions.
 
-It is built on Ronins' agentic application framework (formerly **Sonae**), which
-supplies the multi-tenancy, agent runtime, tool governance, workflow scheduler,
-knowledge layer and governance evidence this product runs on.
+It is built on Ronins' agentic application framework, **Sonae**, which supplies
+the multi-tenancy, agent runtime, tool governance, workflow scheduler, knowledge
+layer and governance evidence this product runs on. This repository is a clone of
+Sonae taken on 2026-09-21; Sonae itself continues as a separate, maintained
+framework repository, and product work happens here rather than there.
 
 > **The product surface described above is not built yet.** This repository
 > currently contains the framework and its demo modules. Read

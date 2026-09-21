@@ -2,6 +2,29 @@
 
 This is the repo-level handoff for future coding agents. Treat this file as the first local project guide to read after the user's latest instructions.
 
+## Which repository is this?
+
+**This is Hakken. All work happens here.**
+
+Hakken was **cloned** from Sonae on 2026-09-21. This was not a rename — both
+repositories exist and both are kept:
+
+| | Local path | GitHub | Status |
+|---|---|---|---|
+| **Hakken** | `~/Projects/Hakken` | `roninsatwork/Hakken` | **Active. Do all work here.** |
+| **Sonae** | `~/Projects/Sonae` | `roninsatwork/Sonae` | Upstream framework. Leave alone. |
+
+Sonae is the reusable framework and continues in its own right, maintained
+separately. Hakken is the first product built on top of it. Never edit, commit
+to, or push to the Sonae folder or repo unless the user explicitly asks.
+
+**On the git remotes here:** `origin` still points at `roninsatwork/Sonae` — the
+clone default, kept for pulling framework updates. The remote named `hakken`
+points at `roninsatwork/Hakken`. Push product work to `hakken`. A consequence:
+any tool that reads `origin` to name this project — including the Claude desktop
+sidebar — will display it as "Sonae". That is a display label only. It does not
+mean you are working in Sonae; check `pwd` if in doubt.
+
 ## Product Context — read this before you build anything
 
 **Hakken** (発見, discovery) works out which of a business's digital assets make
@@ -12,10 +35,11 @@ research behind it is in [docs/product/](docs/product/index.md).
 Three things to hold onto:
 
 - **The product is not built.** This repository is the agentic framework it will
-  be built on (formerly named **Sonae**, renamed 2026-09-21). PRODUCT.md Part
+  be built on — a clone of the **Sonae** framework taken on 2026-09-21, with
+  Sonae itself still live upstream. PRODUCT.md Part
   Two is what the code does today; Part Three §31 is the Hakken product surface,
   all of it unbuilt. Never describe a Part Three item as though it exists.
-- **The rename covered documentation prose only.** Code identifiers, config
+- **The rebrand covered documentation prose only.** Code identifiers, config
   filenames, schema fields, env vars, deployment names and the git remote still
   read `sonae` and are still correct — `SonaeModal`, `generateSonaeResponse`,
   `sonae.product.json`, `x-sonae-secret`, `sonae-app` and the rest. Do not

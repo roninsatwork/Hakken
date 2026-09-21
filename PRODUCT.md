@@ -11,9 +11,10 @@
 > Three, "Not Built Yet", holds everything planned, and nothing above it is
 > described as though it exists.
 >
-> **Hakken** (発見, *hakken*: discovery). The product was renamed from Sonae on
-> 2026-09-20. Sonae was Ronins' general-purpose agentic application framework;
-> Hakken is the product this repository now builds on that foundation. Code
+> **Hakken** (発見, *hakken*: discovery). This repository is a clone of Sonae,
+> taken on 2026-09-21. Sonae is Ronins' general-purpose agentic application
+> framework and continues to exist and be maintained separately; Hakken is the
+> product built on that foundation, developed here and only here. Code
 > identifiers, config filenames, deployment names and schema fields that still
 > read `sonae` are unchanged and remain correct — see §33.
 >
@@ -767,7 +768,8 @@ that gap is a product-configuration change, not a documentation one: see
 
 ## Change Log
 
-* **2026-09-21** — Renamed from Sonae to Hakken and rewrote Part One against
+* **2026-09-21** — Cloned from Sonae into its own repository as the Hakken
+  product, and rewrote Part One against
   `docs/product/app-vision-v2.md` (v2.3). The product is now the asset-P&L and
   AI-visibility platform, not a general-purpose framework. Part Two was retained
   unchanged as verified platform capability and reframed as inherited
