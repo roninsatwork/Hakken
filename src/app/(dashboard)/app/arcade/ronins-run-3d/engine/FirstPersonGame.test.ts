@@ -4,6 +4,10 @@ import { NightHeistSimulation } from "../../ronins-run/engine/NightHeistSimulati
 import { distance } from "../../ronins-run/engine/MapData";
 import { FirstPersonGame, type ViewState } from "./FirstPersonGame";
 
+// These integration checks play a whole map. Coverage on the two-core CI
+// runner can exceed Vitest's 5s unit-test default without a gameplay failure.
+const FULL_MAP_TIMEOUT_MS = 30_000;
+
 const mock = vi.hoisted(() => ({
   dispose: vi.fn(),
   render: vi.fn(),
@@ -294,6 +298,7 @@ describe("first-person runtime", () => {
         game.simulation.enemies.every((enemy) => enemy.mode === "patrol"),
       ).toBe(true);
     },
+    FULL_MAP_TIMEOUT_MS,
   );
   it("does not steal keys from settings and reports lost graphics", () => {
     game.start();
