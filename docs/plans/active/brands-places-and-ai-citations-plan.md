@@ -312,21 +312,43 @@ Steps 1 and 2 are independent of everything else and could ship on their own.
 
 ## Open questions
 
-Recorded as open rather than quietly decided. Each changes code.
+Recorded as open rather than quietly decided. Each changes code. Two of the four
+were settled on 2026-09-21 and are struck through with what was decided.
 
 1. ~~**Who writes the prompts?**~~ **Decided 2026-09-21 by Anthony: admins and
    clients write them.** Not generated, so the collecting agent gains no new
    job. LLM Mentions returns the questions it actually saw being asked, which is
    the obvious place to draw suggestions from later without generating anything.
-2. **Is a brand variant tagged as correct-or-misspelling?** One small field, and
-   it turns "you were mentioned 40 times" into "40 times, 6 of them under the
-   wrong name", which is something a customer can act on.
+2. ~~**Is a brand variant tagged as correct-or-misspelling?**~~ **Decided
+   2026-09-21 by Anthony: yes.** A variant carries what it is, so a citation
+   under a wrong spelling is a different fact from one under the right name.
+   "Mentioned 40 times" becomes "40 times, 6 of them under the wrong name",
+   which is something a client can act on rather than just read.
+
+   What it costs to build: a `kind` beside `name` on each brand entry, a second
+   column on the brand names panel, and a field on the citation recording which
+   variant matched. The matcher already reports the matched name, so it is the
+   recording that changes rather than the matching. Absent reads as a correct
+   name, so the entries saved on 2026-09-21 need no migration.
 3. **The five meters.** Sites tracked is effectively free. Keywords tracked,
    locations tracked, prompts tracked and pages crawled each cost real money and
    scale differently. A plan needs a number for each; one number cannot cover
    them. This blocks sizing, the spend cap and pricing.
-4. **Do competitors get citations too?** Reading a rival's mentions out of a
-   response we already bought costs nothing extra, which argues for yes.
+4. ~~**Do competitors get citations too?**~~ **Decided 2026-09-21 by Anthony:
+   yes.** Reading a rival's mentions out of a response already bought costs
+   nothing at all — the answer names whoever it names, and skipping the names we
+   recognise would be throwing away the most useful column on the screen.
+
+   What it means in practice: a competitor is a `websites` row like any other,
+   so it can carry brand names, and the matcher runs over every tracked host in
+   the answer rather than only the one the question belonged to. A client sees
+   "you were named second, these three rivals were named above you", which is
+   the sentence the product exists to write.
+
+   It also means brand names on a competitor's record matter, and nobody has a
+   reason to fill them in except the client watching that competitor. The brand
+   names panel is already on the global website screen for exactly this, and it
+   is already shared, so one client filling them in serves everyone.
 
 ## Not in this plan
 
