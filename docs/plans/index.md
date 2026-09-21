@@ -21,6 +21,17 @@ completed work.
   credentials, the connector and every company's collection switch are all off
   until somebody decides otherwise, which is the same rule three times.
 
+- [Brands, Places and AI Citations](./active/brands-places-and-ai-citations-plan.md) —
+  the three gaps that stop the collection pipeline asking anything but "what
+  links to this host" and "what does it rank for". A site has no name, so
+  nothing can be asked about a brand; a site has no place, so local rank and AI
+  citations have nothing to target; and the manifest has one cost shape where
+  DataForSEO offers four. Brand names sit on the shared website record because
+  two companies would not disagree about them, location sits on the join row
+  because they would, and the thing we buy is the prompt rather than the brand —
+  so one purchase answers every watcher, exactly as one row per host already
+  does. **Designed 2026-09-21, not built.**
+
 - [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
 - [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.
 
