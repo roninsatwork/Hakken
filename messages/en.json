@@ -577,20 +577,12 @@
     "workspace": "Workspace",
     "assistant": "Assistant",
     "agenticTesting": "Agentic Testing",
-    "properties": "Properties",
-    "propertiesSearch": "Search",
-    "propertiesScrapedData": "Scraped Data",
     "impersonatingLabel": "Impersonating Workspace",
     "exitWorkspace": "Exit Workspace",
     "tools": "Tools",
     "toolServers": "Tool servers",
     "health": "Health",
     "connections": "Connections",
-    "salesData": "Sales Data",
-    "salesDataImport": "Import Data",
-    "salesDataTables": "Spreadsheet Imports",
-    "salesDataCustomers": "Customers",
-    "salesDataOpportunityReport": "Opportunity Report",
     "plans": "Plans",
     "skillCenter": "Skill Center",
     "widget": "Widget",
@@ -598,11 +590,8 @@
     "tasks": "Tasks",
     "calls": "Calls",
     "reception": "Reception",
-    "reports": "Reports",
     "information": "Information",
-    "salesReport": "Sales Report",
     "logs": "Logs",
-    "postureStudio": "Posture Studio",
     "studioLibrary": "Studio Library",
     "replayAlignment": "Replay Alignment",
     "organization": "Organization",
@@ -905,10 +894,6 @@
       "modulesLabel": "Optional Modules",
       "modulesHint": "Extra sections only this workspace can see",
       "modules": {
-        "salesData": {
-          "name": "Sales Data",
-          "description": "Spreadsheet import and browsable sales, category and frequency tables. The section is labelled with the workspace's own name."
-        },
         "tasks": {
           "name": "Tasks",
           "description": "The shared to-do list: things to chase, who is chasing them, and what is already done."
@@ -925,17 +910,9 @@
           "name": "Wiki",
           "description": "The assistant's growing notebook about this workspace — what it has learned and where it came from."
         },
-        "postureStudio": {
-          "name": "Posture Studio",
-          "description": "Movement capture, the studio library and replay alignment, for workspaces that coach how a body moves."
-        },
         "reports": {
           "name": "Reports",
           "description": "Sales reports written for the team, refreshed as new figures arrive."
-        },
-        "properties": {
-          "name": "Properties",
-          "description": "Property search and the collected listings, gathered by the assistant."
         }
       },
       "errors": {

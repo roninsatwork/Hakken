@@ -577,20 +577,12 @@
     "workspace": "Workspace",
     "assistant": "Assistente",
     "agenticTesting": "Test Agentico",
-    "properties": "Proprietà",
-    "propertiesSearch": "Ricerca",
-    "propertiesScrapedData": "Dati Estratti",
     "impersonatingLabel": "Workspace in Impersonificazione",
     "exitWorkspace": "Esci da Workspace",
     "tools": "Strumenti",
     "toolServers": "Server di strumenti",
     "health": "Salute",
     "connections": "Connessioni",
-    "salesData": "Dati di vendita",
-    "salesDataImport": "Importa dati",
-    "salesDataTables": "Importazioni da fogli di calcolo",
-    "salesDataCustomers": "Clienti",
-    "salesDataOpportunityReport": "Report opportunità",
     "plans": "Piani",
     "skillCenter": "Centro competenze",
     "widget": "Widget",
@@ -598,11 +590,8 @@
     "tasks": "Attività",
     "calls": "Chiamate",
     "reception": "Reception",
-    "reports": "Report",
     "information": "Informazioni",
-    "salesReport": "Report Vendite",
     "logs": "Log",
-    "postureStudio": "Posture Studio",
     "studioLibrary": "Libreria Studio",
     "replayAlignment": "Allineamento Replay",
     "organization": "Organizzazione",
@@ -900,10 +889,6 @@
       "modulesLabel": "Moduli opzionali",
       "modulesHint": "Sezioni aggiuntive visibili solo a questo spazio di lavoro",
       "modules": {
-        "salesData": {
-          "name": "Dati di vendita",
-          "description": "Importazione da foglio di calcolo e tabelle consultabili di vendite, categorie e frequenza. La sezione porta il nome dello spazio di lavoro."
-        },
         "tasks": {
           "name": "Attività",
           "description": "La lista delle cose da fare condivisa: cosa seguire, chi se ne occupa e cosa è già stato fatto."
@@ -920,17 +905,9 @@
           "name": "Wiki",
           "description": "Il quaderno dell'assistente su questo spazio di lavoro: cosa ha imparato e da dove viene."
         },
-        "postureStudio": {
-          "name": "Posture Studio",
-          "description": "Cattura del movimento, libreria dello studio e allineamento dei replay, per gli spazi di lavoro che insegnano come si muove il corpo."
-        },
         "reports": {
           "name": "Report",
           "description": "Report di vendita scritti per il team, aggiornati man mano che arrivano nuovi numeri."
-        },
-        "properties": {
-          "name": "Immobili",
-          "description": "La ricerca immobiliare e gli annunci raccolti dall'assistente."
         }
       },
       "errors": {
