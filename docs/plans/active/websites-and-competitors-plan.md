@@ -1,7 +1,7 @@
 # One Website, Many Watchers — Websites, Competitors and the Collection Pipeline
 
-Status: **structure built 2026-09-21; pipeline designed 2026-09-21, not built.**
-Owner: Anthony
+Status: **structure, pipeline, connector and screens built 2026-09-21.**
+Not yet run against live DataForSEO credentials. Owner: Anthony
 
 Hakken is in the same business as Ahrefs and Semrush, with DataForSEO as the
 core data source. This plan is the admin structure everything else hangs off,
@@ -118,21 +118,48 @@ Sidebar
  ├ Companies
  │  └ Manage Companies                 (exists)
  └ Websites
-    └ All Websites                     /admin/websites
+    ├ All Websites                     /admin/websites
+    └ Data Collection                  /admin/websites/collection
+       └ one run                       /admin/websites/collection/<cycleId>
 
 Company workspace
  └ Websites  (tab)
     ├ Websites                         the company's own sites
     │  └ one site                      its competitors + its cadence override
-    └ Data Collection                  the company default cadence + queued/live
+    └ Data Collection                  this company's cadence + queued/live
 ```
 
-The Data Collection screen uses `SeoScheduleFields` in
+**The two Data Collection screens are not the same screen and must not drift
+into each other.** The one in the company workspace is a *setting*: how often
+this client's sites are pulled. The one in the sidebar is the *pipeline*: what
+is going out right now, what came back, and what it cost across every tenant.
+See decision 11b. The company one never shows a cost, a queue or a run.
+
+The sidebar screen is two tables of the same rows at two stages — in the queue,
+then collected — carrying the same columns on purpose. An earlier build showed
+work in flight as individual requests and finished work as *runs*, which put
+two different things on one screen and invited a reader to compare numbers that
+were never comparable. Clicking any row opens the run it belonged to, which
+lists every website that run asked about and which lines cost nothing because
+somebody had already paid.
+
+Expect three of the queue's counters to read zero almost always. That is the
+design working: the worker chains schedule themselves and an empty queue starts
+nothing, so the numbers are only non-zero while a cycle drains. The column that
+earns its place daily is reuse, because it is the only place the shared-website
+saving is visible.
+
+The company's Data Collection screen uses `SeoScheduleFields` in
 `src/app/(dashboard)/admin/_components/SeoScheduleFields.tsx`: four cadence
 cards, then **one row** reading "on [Monday] at [09:00]" with the queued-vs-live
 toggle at the far right of that row. Chosen from mockups; a stacked version was
 rejected. Keep it one row. The screen looks for an agent named exactly
-`DataForSEO Agent` and shows a "no collecting agent yet" banner until one exists.
+`DataForSEO Agent` and shows a "no collecting agent yet" banner until one
+exists. **That banner carries the button that creates it.** It used to say
+"create one from its template in the Agents section", which nobody could do:
+the template picker was taken off the new-agent screen long ago and nothing in
+the frontend called `createAgentFromTemplate` at all. The agent arrives as a
+draft, so pressing it starts no spending.
 
 **Remove is not delete, and they never read alike.** Removing a website from a
 company, or a competitor from a website, takes that hold and nothing else — the
@@ -226,10 +253,40 @@ Do not reopen these.
    plan can switch on, sized in the table below.
 9. **Costs are the operator's own.** DataForSEO spend is absorbed and customers
    never see it. Every surface over pulls, cycles and rollups is super-admin only.
-10. **Raw results go to file storage, metrics go to documents.** Raw SERP JSON in
-    documents forever would dominate storage cost.
+10. **Raw results live on the pull row with a TTL, metrics go to their own
+    tables.** Raw SERP JSON kept *forever* would dominate storage cost; kept
+    nowhere, a parser bug would mean buying a month of data again. So it is
+    kept on the row and cleared by the sweep after its window.
+
+    **Corrected 2026-09-21, during the build.** This said file storage. It
+    cannot be: Convex file storage on this platform is swept of anything
+    without an upload reservation, because the upload gateway is the registry
+    for browser-uploaded files. A raw payload parked there would be deleted
+    within the day, and threading internal payloads through a gateway built
+    for user uploads with tokens and quotas would be the wrong shape entirely.
+    `uploadIngressGuard.test.ts` is what caught it.
 11. **Dashboards read rollups, never the pull table.** Same rule as
     `governanceDayRollups` and `inventoryRollups`.
+
+11b. **The collection screens are global, never per company.**
+    **Corrected 2026-09-21 by Anthony, against this plan's own build order,
+    which had put a run history under the company's Data Collection tab.** Two
+    reasons, and the second is the one that matters.
+
+    The queue is one shared pipeline. A per-tenant slice of it describes
+    something that does not exist, because companies do not have queues, the
+    platform does.
+
+    And every figure on these screens is Hakken's own spend. The company
+    workspace is the half that becomes customer-facing later — "a second door
+    onto the same logic" — so anything put there is something that has to be
+    taken away again. Keeping collection out of it now removes a future
+    migration rather than merely tidying a screen.
+
+    A settings form and an operational log are also different kinds of screen.
+    Data Collection is four cards and a switch, read once and left alone. A log
+    grows forever, and under the form it pushes the one decision below the
+    fold.
 12. **No agent reads SERP text in this slice.** The collecting agent never sees
     results. Later analysis agents get normalised metrics, not page titles. That
     closes the prompt-injection path rather than fencing it.
@@ -272,7 +329,8 @@ cycleId?                 the cycle that created it
 claimedBy?, claimedAt?   worker id and time; how the sweep finds stuck rows
 attempts                 sends tried; three and it is FAILED
 pingedAt?                when the pingback arrived
-rawFileId?               the raw response in file storage; resultJson is no longer written
+resultJson               the raw response, cleared by the sweep after its window
+rawTruncated?            true when the response was too large to keep at all
 new indexes: by_idempotency [idempotencyKey], by_status_due [status, dueAt], by_task [taskId], by_cycle [cycleId]
 ```
 
@@ -482,45 +540,96 @@ predictable.
 ### Build order
 
 Each step ends green on the full guard list below and on `npx convex dev
---once`. Nothing is committed yet; commit after each step on `dev`.
+--once`. Commit after each step on `dev`.
+
+**Steps 1 to 11 were built on 2026-09-21 and are committed.** What the build
+found is recorded against each step; the two corrections it forced are decision
+10 and decision 11b above. Step 12 is this document. What remains is live
+credentials and a first real run.
 
 1. **Fix the four failing UI tests** left by the schedules rework. They assert
    the old cadence shape: `src/app/(dashboard)/admin/websites/page.test.tsx`
    (2), `src/app/(dashboard)/admin/websites/[websiteId]/page.test.tsx` (1),
    `src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/page.test.tsx`
-   (1). Everything else is green.
+   (1). Everything else is green. **Done.** Both of the `page.test.tsx`
+   failures had a second cause worth knowing: with the cadence word gone every
+   fixture fell through to "not fetched", so the test looking for that phrase
+   found it twice and could not say which row it had.
 2. **Schema.** The tables and extensions in "Records". Classify every new table
    in `convex/personalDataService.ts` — the tests fail until you do. Schema
-   comments as long as the existing ones.
+   comments as long as the existing ones. **Done.** None of the new tables
+   holds a link to a person, so the classification test passes without a rule;
+   add one the moment that changes.
 3. **Policy and idempotency.** `convex/seoCollectionPolicy.ts` (constants) and
    the key builder, pure, with tests: same inputs give the same key, param order
-   does not matter, a different cycle date gives a different key.
+   does not matter, a different cycle date gives a different key. **Done**, 10
+   tests. Keyword order *is* significant, because DataForSEO returns results
+   positionally and a reordered list is a different request.
 4. **Expansion.** `expandSeoCycle` and the reuse ladder in
    `convex/seoCollection.ts`. Tests: a fresh result is reused and nothing
    inserted; an in-flight pull is reused; a stale one is re-planned; `dueAt`
    spacing; cursor resumes; plan cap stops it with the right status; nothing is
    written for an inactive website; competitors follow their website's rate.
+   **Done**, 10 tests. Pin any test of a weekly schedule to real dates: whether
+   one is due depends on the weekday, and a floating clock makes it pass or
+   fail by the day it runs.
 5. **Workers.** `claimSeoBatch`, `startSeoWorkers`, `processSeoQueue`,
    `fetchSeoResult`. Tests: two claims never overlap; a row with a `taskId` is
    never posted; 429 backs off and increments attempts; the chain stops on an
    empty queue; spend cap blocks a claim and marks the cycle. Use the sandbox
-   for anything that touches the network.
+   for anything that touches the network. **Done**, 14 tests. `postDataForSeoTask`
+   now wraps a batch version rather than duplicating it, and a 429 or 5xx
+   raises `DataForSeoBackoff`, which is caught at the one call site and turned
+   into a queue release — a rate limit is "later", not a failed attempt.
 6. **Pingback route** in `convex/http.ts`. Tests: unknown id is a no-op 200; a
    row not at `SUBMITTED` is a no-op; a good id schedules exactly one fetch.
+   **Done.** The route never logs the query string: it is attacker-chosen text.
 7. **Parsers** in `convex/dataForSeoParsers.ts`, one per operation, from saved
-   sample responses. Re-parse replaces, never duplicates.
+   sample responses. Re-parse replaces, never duplicates. **Done**, 10 tests,
+   including one asserting that a result title written to read as an
+   instruction never appears in the parsed output — it is not filtered, it is
+   never read.
 8. **Rollups and sweep.** `seoDayRollups` updates, `seo-collection-sweep` in
-   `convex/crons.ts` via `jobLedger`. Tests for each sweep duty.
+   `convex/crons.ts` via `jobLedger`. Tests for each sweep duty. **Done.** A new
+   cron also needs a cadence in `EXPECTED_EVERY_MINUTES` in `jobLedger.ts`, or
+   `cronsWiring.test.ts` fails.
 9. **Connector, handlers, template.** Wire the four tools and the agent
    template. Run the Data Collection screen; the banner should go away.
-10. **Screens** (super-admin only): a company's cycles under the Data
-    Collection tab, and a platform cost view under All Websites, both reading
-    `seoDayRollups`. Fluid layouts, theme tokens, `Button` from the screen kit.
-    Measure alignment with `getBoundingClientRect`, not by eye.
+   **Done**, and it does — but only after the banner was given a button, since
+   no screen offered the flow its own words described. Adding a handler also
+   means updating the expected list in `aiToolExecutionService.test.ts`.
+10. **Screens** (super-admin only). **This step as written was wrong and was
+    corrected during the build — see decision 11b.** It said to put a company's
+    cycles under that company's Data Collection tab. What was built instead is
+    one global screen at `/admin/websites/collection`, with a run detail behind
+    it, and the company's tab left as a settings form. **Done.** Fluid layouts,
+    theme tokens, `Button` from the screen kit, and alignment measured with
+    `getBoundingClientRect` rather than judged from a screenshot.
 11. **Retention.** Hook the two purges into the existing retention job.
+    **Done**, in the hourly sweep rather than the retention job, because both
+    purges are bounded passes over the same tables the sweep already walks.
+    Raw payloads are cleared and the pull row is kept, because the row is the
+    cost record and has to stay checkable against an invoice.
 12. **Docs.** `docs/developer/workflow-automation.md` and
     `docs/developer/workflow-runtime-internals.md` get a section on the SEO
     cycle; this plan gets a "Built" date.
+
+### What is left
+
+Everything above is committed on `dev` and deployed. Three things stand between
+this and a first real collection.
+
+1. **Credentials.** `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` and, until the
+   first bill is expected, `DATAFORSEO_SANDBOX=1` in the backend environment.
+   The owner sets these; nothing in the codebase reads them except
+   `dataForSeoRest.ts`, and they are never to be printed or stored.
+2. **The connector installed and the agent switched on.** The DataForSEO
+   connector appears under Tools but has not been added, so the agent created
+   from its template holds no tools yet and is still a draft.
+3. **A first real run,** with a company's collection switched on. Until then
+   the pipeline has been exercised only by its tests and by one manual cycle
+   that correctly planned nothing, because the company it ran for had
+   collection switched off.
 
 ### Guards that must pass
 

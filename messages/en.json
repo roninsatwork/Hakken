@@ -545,6 +545,7 @@
     "manageCompanies": "Manage Companies",
     "websites": "Websites",
     "allWebsites": "All Websites",
+    "seoCollection": "Data Collection",
     "ai": "Artificial Intelligence",
     "manageAi": "Manage AI",
     "manageGlobalAi": "Manage Global AI",
@@ -4961,6 +4962,66 @@
         "queued": "Queued",
         "waitingApproval": "Waiting for approval"
       }
+    },
+    "seoCollection": {
+      "title": "Data Collection",
+      "subtitle": "The queue behind every company's SEO data, and what each run cost. One pipeline, shared by every tenant.",
+      "loading": "Loading this run.",
+      "notFound": "That collection run no longer exists.",
+      "back": "Back to Data Collection",
+      "costColumn": "Cost",
+      "readyOfPlanned": "{ready} of {planned} collected",
+      "reused": "{count} answered by data already held",
+      "failed": "{count} failed",
+      "runStarted": "Started {when} · {trigger}",
+      "runCost": "${cost}",
+      "linesTitle": "What this run asked for",
+      "linesCapped": "Showing the first 200.",
+      "noLines": "This run asked for nothing.",
+      "hostColumn": "Website",
+      "operationColumn": "Asked for",
+      "stateColumn": "State",
+      "paidColumn": "Paid",
+      "alreadyHeld": "Already held",
+      "trigger": {
+        "SCHEDULE": "On its schedule",
+        "OVERRIDE_SWEEP": "A website on its own faster schedule",
+        "MANUAL": "Started by hand"
+      },
+      "status": {
+        "EXPANDING": "Writing the work list",
+        "SENDING": "Sending",
+        "COLLECTING": "Waiting for answers",
+        "DONE": "Done",
+        "CAPPED_PLAN": "Stopped at the plan limit",
+        "CAPPED_SPEND": "Stopped at the spend cap",
+        "FAILED": "Failed"
+      },
+      "pull": {
+        "PENDING": "Waiting",
+        "CLAIMED": "Being sent",
+        "SUBMITTED": "Sent",
+        "READY": "Collected",
+        "FAILED": "Failed"
+      },
+      "operation": {
+        "backlinks_summary": "Who links to it",
+        "domain_ranked_keywords": "What it ranks for",
+        "serp_google_organic": "Where it ranks for one search",
+        "keyword_search_volume": "How often terms are searched"
+      },
+      "queueTitle": "In the queue",
+      "queueCounts": "{pending} waiting · {claimed} being sent · {submitted} awaiting an answer",
+      "queueEmpty": "The queue is empty. Nothing runs until a schedule fires.",
+      "historyTitle": "Collected",
+      "historyEmpty": "Nothing has been collected yet.",
+      "failedOnly": "Failures only",
+      "dueColumn": "Goes out",
+      "collectedColumn": "Collected",
+      "sentAt": "Sent {when}",
+      "attempts": "{count} attempt(s) so far",
+      "sandbox": "Sandbox",
+      "spend": "${cost} across {pulls} pulls in the last 30 days"
     }
   },
   "ai": {

@@ -545,6 +545,7 @@
     "manageCompanies": "Gestisci Aziende",
     "websites": "Siti web",
     "allWebsites": "Tutti i siti web",
+    "seoCollection": "Raccolta dati",
     "ai": "Intelligenza Artificiale",
     "manageAi": "Gestisci AI",
     "manageGlobalAi": "Gestisci AI Globale",
@@ -4961,6 +4962,66 @@
         "queued": "In coda",
         "waitingApproval": "In attesa di approvazione"
       }
+    },
+    "seoCollection": {
+      "title": "Raccolta dati",
+      "subtitle": "La coda dietro i dati SEO di ogni azienda e il costo di ciascuna esecuzione. Un'unica pipeline, condivisa da tutti.",
+      "loading": "Caricamento dell'esecuzione.",
+      "notFound": "Questa esecuzione non esiste più.",
+      "back": "Torna a Raccolta dati",
+      "costColumn": "Costo",
+      "readyOfPlanned": "{ready} di {planned} raccolte",
+      "reused": "{count} risposte con dati già disponibili",
+      "failed": "{count} non riuscite",
+      "runStarted": "Avviata {when} · {trigger}",
+      "runCost": "${cost}",
+      "linesTitle": "Che cosa ha richiesto questa esecuzione",
+      "linesCapped": "Mostrate le prime 200.",
+      "noLines": "Questa esecuzione non ha richiesto nulla.",
+      "hostColumn": "Sito web",
+      "operationColumn": "Richiesta",
+      "stateColumn": "Stato",
+      "paidColumn": "Pagato",
+      "alreadyHeld": "Già disponibile",
+      "trigger": {
+        "SCHEDULE": "Secondo la pianificazione",
+        "OVERRIDE_SWEEP": "Un sito con una pianificazione più rapida",
+        "MANUAL": "Avviata manualmente"
+      },
+      "status": {
+        "EXPANDING": "Creazione dell'elenco di lavoro",
+        "SENDING": "Invio in corso",
+        "COLLECTING": "In attesa delle risposte",
+        "DONE": "Completata",
+        "CAPPED_PLAN": "Fermata al limite del piano",
+        "CAPPED_SPEND": "Fermata al tetto di spesa",
+        "FAILED": "Non riuscita"
+      },
+      "pull": {
+        "PENDING": "In attesa",
+        "CLAIMED": "In invio",
+        "SUBMITTED": "Inviata",
+        "READY": "Raccolta",
+        "FAILED": "Non riuscita"
+      },
+      "operation": {
+        "backlinks_summary": "Chi la collega",
+        "domain_ranked_keywords": "Per cosa si posiziona",
+        "serp_google_organic": "Posizione per una ricerca",
+        "keyword_search_volume": "Frequenza di ricerca dei termini"
+      },
+      "queueTitle": "In coda",
+      "queueCounts": "{pending} in attesa · {claimed} in invio · {submitted} in attesa di risposta",
+      "queueEmpty": "La coda è vuota. Nulla parte finché non scatta una pianificazione.",
+      "historyTitle": "Raccolti",
+      "historyEmpty": "Non è ancora stato raccolto nulla.",
+      "failedOnly": "Solo errori",
+      "dueColumn": "Invio previsto",
+      "collectedColumn": "Raccolto",
+      "sentAt": "Inviata {when}",
+      "attempts": "{count} tentativo/i finora",
+      "sandbox": "Sandbox",
+      "spend": "${cost} su {pulls} richieste negli ultimi 30 giorni"
     }
   },
   "ai": {

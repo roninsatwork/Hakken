@@ -100,7 +100,13 @@ export function AdminNavTree({
       isOpen={openSections.websites}
       onToggle={() => toggleSection('websites')}
     >
-      <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites')} onClick={() => setActiveItem('Websites')} />
+      {/*
+        All Websites must not light up while Data Collection is open, so its
+        active test excludes the collection routes rather than matching the
+        whole prefix. Two lit rows is how a reader stops trusting the sidebar.
+      */}
+      <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites') && !pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
+      <SubNavItem label={t('seoCollection')} href="/admin/websites/collection" isActive={pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
     </NavItem>
   )}
 

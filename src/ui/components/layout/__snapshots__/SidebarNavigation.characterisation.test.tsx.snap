@@ -76,6 +76,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "policiesInForce -> /admin/governance/policies",
     "schedules -> /admin/workflows/schedules",
     "scripts -> /admin/settings/scripts",
+    "seoCollection -> /admin/websites/collection",
     "systemAdmins -> /admin/super-admins",
     "systemSettings -> /admin/settings",
     "toolServers -> /admin/ai/tool-servers",

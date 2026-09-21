@@ -12,11 +12,13 @@ completed work.
   that fills it. A website exists once; a company holds its own websites and
   the competitors each is measured against sit inside them. Nothing
   company-specific ever lands on the website record. The SEO schedule is an
-  ordinary `schedules` row; a cycle per company writes a work list in pages,
-  reuses any result younger than that company's interval, and a small pool of
-  claim-then-send workers drains `seoDataPulls`. Pingback only, raw results in
-  file storage, dashboards on rollups. **Structure built 2026-09-21; pipeline
-  designed, build order and security rules in the plan, not built.**
+  ordinary `schedules` row; a cycle per company writes its work list in pages,
+  reuses any answer younger than that company's own interval, and a small pool
+  of claim-then-send workers drains `seoDataPulls` — because DataForSEO charges
+  when a task is posted, not when its result is read. Pingback carries a task
+  id and nothing else. The queue and its costs live on one global screen, never
+  inside a company. **Built 2026-09-21**; awaiting live credentials and a first
+  real run.
 
 - [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
 - [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.
