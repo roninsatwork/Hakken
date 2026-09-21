@@ -19,7 +19,19 @@ export const PROVIDER_GROUPS = {
 };
 
 // Convex Auth reads JWT keys inside its package, so source scanning alone misses them.
-export const BACKEND_REQUIRED_KEYS = ["SITE_URL", "CONVEX_SITE_URL", "INITIAL_SUPER_ADMIN_EMAIL", "JWT_PRIVATE_KEY", "JWKS"];
+export const BACKEND_REQUIRED_KEYS = ["SITE_URL", "INITIAL_SUPER_ADMIN_EMAIL", "JWT_PRIVATE_KEY", "JWKS"];
+
+/**
+ * Read by the backend, but never settable — so never missing.
+ *
+ * Convex supplies CONVEX_SITE_URL to functions itself and rejects any attempt
+ * to set it ("EnvVarNameForbidden"), so it cannot appear in `convex env list`,
+ * which is the only thing this check reads. Listing it as required made every
+ * deployment report one permanent missing setting no matter how correctly it
+ * was configured. It stays classified because the backend genuinely reads it
+ * and the drift test is right to insist every such key is accounted for.
+ */
+export const PLATFORM_PROVIDED_KEYS = ["CONVEX_SITE_URL"];
 export const OPTIONAL_KEYS = ["TELEPHONY_MAX_CONCURRENT_CALLS", "TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "PLATFORM_ALERT_EMAIL", "PLATFORM_ALERT_EMAILS", "ANALYTICS_ALERT_EMAIL", "ANALYTICS_ALERT_EMAILS"];
 export const IGNORED_KEYS = new Set([
   "NODE_ENV", "VITEST", "IS_TEST", "NEXT_PUBLIC_APP_URL",
@@ -27,7 +39,7 @@ export const IGNORED_KEYS = new Set([
   "LOCAL_DEMO_SEED_ENABLED", "LOCAL_DEMO_SEED_ENVIRONMENT", "LOCAL_DEMO_SEED_SECRET",
 ]);
 export const CLASSIFIED_KEYS = new Set([
-  ...BACKEND_REQUIRED_KEYS, ...OPTIONAL_KEYS, ...IGNORED_KEYS,
+  ...BACKEND_REQUIRED_KEYS, ...PLATFORM_PROVIDED_KEYS, ...OPTIONAL_KEYS, ...IGNORED_KEYS,
   ...Object.values(PROVIDER_GROUPS).flatMap(group => group.keys.flat()),
 ]);
 
