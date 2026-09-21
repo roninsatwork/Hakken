@@ -971,7 +971,10 @@
       },
       "grantsLabel": "Cosa attiva questo piano",
       "grantsHint": "Ogni azienda su questo piano le riceve, oltre a ciò che le è stato attivato direttamente.",
-      "stripePrice": "Prezzo Stripe"
+      "stripePrice": "Prezzo Stripe",
+      "promptsLabel": "Domande AI per sito",
+      "promptsPlaceholder": "10",
+      "promptsHint": "Ogni domanda viene posta a tutti i motori AI, ogni volta che quel sito viene raccolto. Zero disattiva la funzione per questo piano."
     },
     "companyDetails": {
       "title": "Telemetria Tenant",
@@ -1450,6 +1453,39 @@
         "saved": "Salvato",
         "errors": {
           "saveFailed": "Non è stato possibile salvare questa località. Riprova."
+        }
+      },
+      "prompts": {
+        "title": "Domande poste ai motori AI",
+        "subtitle": "Ciò che chiediamo a ChatGPT e agli altri per vedere se questo sito viene citato nella risposta. Una domanda appartiene a un sito, non a un cliente.",
+        "addLabel": "Una domanda che qualcuno porrebbe davvero",
+        "addPlaceholder": "chi è il miglior idraulico a Leeds",
+        "add": "Aggiungi domanda",
+        "remaining": "{count, plural, =0 {Non si possono aggiungere altre domande per questo sito.} one {Si può aggiungere ancora # domanda.} other {Si possono aggiungere ancora # domande.}}",
+        "loading": "Conteggio in corso.",
+        "searchPlaceholder": "Cerca domande...",
+        "empty": "Nessuna domanda: per questo sito non viene chiesto nulla.",
+        "noMatch": "Nessuna domanda corrisponde alla ricerca.",
+        "promptColumn": "Domanda",
+        "enginesColumn": "Rivolta a",
+        "stateColumn": "Stato",
+        "addedColumn": "Aggiunta",
+        "actionsColumn": "Azioni",
+        "asking": "Attiva",
+        "paused": "In pausa",
+        "pause": "Sospendi",
+        "resume": "Riprendi",
+        "remove": "Rimuovi questa domanda",
+        "engines": {
+          "chatgpt": "ChatGPT",
+          "perplexity": "Perplexity",
+          "gemini": "Gemini",
+          "claude": "Claude"
+        },
+        "errors": {
+          "addFailed": "Non è stato possibile aggiungere la domanda. Riprova.",
+          "toggleFailed": "Non è stato possibile modificare la domanda. Riprova.",
+          "removeFailed": "Non è stato possibile rimuovere la domanda. Riprova."
         }
       }
     },

@@ -12,6 +12,7 @@ type PlanFormData = {
   name: string;
   description: string;
   messageLimit: number;
+  seoPromptsPerWebsite: number;
   priceGBP: number;
   grantedModules: string[];
   isActive: boolean;
@@ -88,6 +89,17 @@ export function PlanDialogs({
               onChange={(event) => setFormData({ ...formData, messageLimit: Number(event.target.value) })}
               placeholder={t("limitPlaceholder")}
               className="font-mono"
+            />
+            <Field
+              label={t("promptsLabel")}
+              type="number"
+              min={0}
+              value={formData.seoPromptsPerWebsite}
+              onChange={(event) =>
+                setFormData({ ...formData, seoPromptsPerWebsite: Number(event.target.value) })}
+              placeholder={t("promptsPlaceholder")}
+              className="font-mono"
+              hint={t("promptsHint")}
             />
             <Field
               label={t("priceLabel")}

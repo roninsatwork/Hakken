@@ -46,6 +46,10 @@ describe('Provider Classification Drift', () => {
       // Same reason: this plan lists the AI engines whose answers we track for
       // citations. Naming them is the subject.
       'docs/plans/active/brands-places-and-ai-citations-plan.md',
+      // The one file whose subject is the list of engines we track citations
+      // in. Naming them here is the point; naming them anywhere else is the
+      // scattering this guard exists to catch.
+      'convex/seoAiEngines.ts',
       'src/provider-classification-drift.test.ts',
     ]);
 

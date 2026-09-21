@@ -98,6 +98,15 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     reason: "The record of who ran a maintenance script against live data.",
   },
   {
+    table: "trackedPrompts",
+    fields: ["createdBy"],
+    treatment: "DISSOCIATE",
+    reason:
+      "The question stays and keeps answering, because the answers already "
+      + "collected are about a website rather than about whoever typed it. Only "
+      + "the link to the person who added it is cleared.",
+  },
+  {
     table: "seoDataPulls",
     fields: ["requestedBy"],
     treatment: "DISSOCIATE",

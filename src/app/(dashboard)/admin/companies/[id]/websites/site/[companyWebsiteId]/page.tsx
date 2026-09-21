@@ -17,6 +17,11 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate } from "@/src/lib/dates";
 import { WebsiteScheduleOverride } from "./WebsiteScheduleOverride";
 import { WatchLocation } from "./WatchLocation";
+import { Button } from "@/src/ui/components/screens/Button";
+import { Field } from "@/src/ui/components/screens/Field";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { MessageSquare } from "lucide-react";
 
 const loadDialogs = () => import("./CompetitorDialogs");
 const AddCompetitorDialog = lazy(() =>
@@ -56,6 +61,64 @@ export default function CompanyWebsiteDetailPage() {
   const [url, setUrl] = useState("");
   const [removing, setRemoving] = useState<{ id: Id<"trackedCompetitors">; host: string } | null>(null);
   const [submitError, setSubmitError] = useState("");
+
+  /*
+    The AI questions below the competitors. Their table lives here rather than
+    in a component of its own because the screen-kit guard checks that a list's
+    header comes from a header component *above* its table, and splitting a
+    table into a fragment hides that ordering from the check — which is how
+    nine sub-tables ended up frozen into an allowlist.
+  */
+  const [promptDraft, setPromptDraft] = useState("");
+  const [promptError, setPromptError] = useState("");
+  const [promptSearch, setPromptSearch] = useState("");
+  const [promptPage, setPromptPage] = useState(1);
+  const debouncedPromptSearch = useDebounce(promptSearch, 400);
+
+  const addPrompt = useMutation(api.seoPrompts.addTrackedPrompt);
+  const removePrompt = useMutation(api.seoPrompts.removeTrackedPrompt);
+  const setPromptActive = useMutation(api.seoPrompts.setTrackedPromptActive);
+  const tPrompts = useTranslations("admin.companyWebsiteDetail.prompts");
+
+  const prompts = useQuery(api.seoPrompts.listTrackedPrompts, {
+    companyWebsiteId,
+    searchTerm: debouncedPromptSearch,
+    page: promptPage,
+    pageSize: TABLE_PAGE_SIZE,
+  });
+
+  const handleAddPrompt = async () => {
+    setPromptError("");
+    const outcome = await action.run(
+      () => addPrompt({ companyWebsiteId, prompt: promptDraft }),
+      { key: "add-prompt", suppressErrorToast: true, fallbackMessage: tPrompts("errors.addFailed") },
+    );
+    if (outcome.ok) setPromptDraft("");
+    else setPromptError(outcome.message);
+  };
+
+  /*
+    Through the action runner rather than fired and forgotten. A bare
+    `void mutation(...)` has nowhere to put a failure: the row would sit there
+    looking changed while the server had refused, and nothing would say so.
+  */
+  const handlePromptToggle = async (promptId: Id<"trackedPrompts">, isActive: boolean) => {
+    setPromptError("");
+    const outcome = await action.run(
+      () => setPromptActive({ promptId, isActive }),
+      { key: promptId, suppressErrorToast: true, fallbackMessage: tPrompts("errors.toggleFailed") },
+    );
+    if (!outcome.ok) setPromptError(outcome.message);
+  };
+
+  const handlePromptRemove = async (promptId: Id<"trackedPrompts">) => {
+    setPromptError("");
+    const outcome = await action.run(
+      () => removePrompt({ promptId }),
+      { key: promptId, suppressErrorToast: true, fallbackMessage: tPrompts("errors.removeFailed") },
+    );
+    if (!outcome.ok) setPromptError(outcome.message);
+  };
   const [dialogsActivated, setDialogsActivated] = useState(false);
 
   const competitors = useQuery(api.websites.getTrackedCompetitors, {
@@ -230,6 +293,126 @@ export default function CompanyWebsiteDetailPage() {
           />
         </Suspense>
       ) : null}
+
+      <div className="flex flex-col gap-2">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          <MessageSquare className="h-3.5 w-3.5" />
+          {tPrompts("title")}
+        </h2>
+        <p className="max-w-3xl text-[13px] text-secondary">{tPrompts("subtitle")}</p>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-[12px] border border-border-dim bg-card/40 p-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <Field
+            label={tPrompts("addLabel")}
+            value={promptDraft}
+            onChange={(event) => setPromptDraft(event.target.value)}
+            placeholder={tPrompts("addPlaceholder")}
+            wrapperClassName="flex-1 min-w-[16rem]"
+          />
+          <Button
+            variant="quiet"
+            className="px-3 py-2 text-[12px]"
+            disabled={action.isBusy("add-prompt") || promptDraft.trim().length === 0}
+            onClick={() => void handleAddPrompt()}
+          >
+            <Plus className="mr-1 inline h-3.5 w-3.5" />
+            {tPrompts("add")}
+          </Button>
+        </div>
+        {/*
+          On screen rather than discovered by hitting it: each question is a
+          paid call per engine, every time this website is collected.
+        */}
+        <span className="text-[11px] text-muted">
+          {prompts === undefined
+            ? tPrompts("loading")
+            : tPrompts("remaining", { count: prompts.remaining })}
+        </span>
+        <SaveError>{promptError}</SaveError>
+      </div>
+
+      <DataTable
+        rows={prompts === undefined ? undefined : prompts.data}
+        rowKey={(row) => row._id}
+        minWidthClassName="min-w-[720px]"
+        search={{
+          value: promptSearch,
+          onChange: (value) => {
+            setPromptSearch(value);
+            setPromptPage(1);
+          },
+          placeholder: tPrompts("searchPlaceholder"),
+        }}
+        empty={{
+          icon: <MessageSquare className="h-8 w-8 text-muted/30" />,
+          label: promptSearch ? tPrompts("noMatch") : tPrompts("empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page: promptPage,
+          totalPages: prompts?.totalPages ?? 1,
+          totalCount: prompts?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: prompts === undefined,
+          onPageChange: setPromptPage,
+          labels: { empty: promptSearch ? tPrompts("noMatch") : tPrompts("empty") },
+        }}
+        columns={[
+          {
+            key: "prompt",
+            header: tPrompts("promptColumn"),
+            cell: (row) => <span className="text-[13px] text-foreground">{row.prompt}</span>,
+          },
+          {
+            key: "engines",
+            header: tPrompts("enginesColumn"),
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">
+                {row.engines.map((engine) => tPrompts(`engines.${engine}`)).join(", ")}
+              </span>
+            ),
+          },
+          {
+            key: "promptState",
+            header: tPrompts("stateColumn"),
+            cell: (row) => (
+              <StatusPill tone={row.isActive ? "success" : "neutral"}>
+                {row.isActive ? tPrompts("asking") : tPrompts("paused")}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "promptActions",
+            header: "",
+            hiddenHeader: tPrompts("actionsColumn"),
+            align: "right",
+            cell: (row) => (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="quiet"
+                  className="px-2 py-1 text-[11px]"
+                  disabled={action.isBusy(row._id)}
+                  onClick={() => void handlePromptToggle(row._id, !row.isActive)}
+                >
+                  {row.isActive ? tPrompts("pause") : tPrompts("resume")}
+                </Button>
+                <Button
+                  variant="icon"
+                  aria-label={tPrompts("remove")}
+                  title={tPrompts("remove")}
+                  className="text-muted hover:text-destructive"
+                  disabled={action.isBusy(row._id)}
+                  onClick={() => void handlePromptRemove(row._id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

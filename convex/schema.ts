@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { aiEngineValidator } from "./seoAiEngines";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
@@ -527,6 +528,38 @@ export default defineSchema({
     .index("by_run", ["agentRunId"]),
 
   /**
+   * The questions we put to the AI engines for one website.
+   *
+   * A prompt belongs to a site rather than to a company: "best plumber in
+   * Leeds" is about one shop, not about an agency that holds four of them.
+   *
+   * **What we buy is the prompt, not the brand.** The answer names everyone it
+   * names, so one purchase serves every tracked site that appears in it. That
+   * is the same trick as one row per host, and it only works because brand
+   * names live on the shared `websites` record rather than here — see
+   * docs/plans/active/brands-places-and-ai-citations-plan.md.
+   */
+  trackedPrompts: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    /** Denormalised so a tenant-scoped list never loads a parent first. */
+    companyId: v.id("companies"),
+    websiteId: v.id("websites"),
+    /** What is actually sent, verbatim. Bounded in length at save. */
+    prompt: v.string(),
+    /** Which engines to ask. Empty is never stored; absent engines are not asked. */
+    engines: v.array(aiEngineValidator),
+    /** Absent follows the company website's own place. */
+    locationCode: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    createdBy: v.optional(v.id("users")),
+  })
+    .index("by_company_website", ["companyWebsiteId"])
+    .index("by_company", ["companyId"])
+    .index("by_website", ["websiteId"])
+    .index("by_active", ["isActive"]),
+
+  /**
    * A competitor, tracked against one of a company's own websites.
    *
    * The parent is a `companyWebsites` row rather than a company, because a
@@ -844,6 +877,22 @@ export default defineSchema({
     name: v.string(),
     description: v.optional(v.string()),
     messageLimit: v.number(), // -1 indicates unlimited
+    /**
+     * How many AI questions each owned website on this plan may track.
+     *
+     * A plan allowance, beside `messageLimit`, because it is the same kind of
+     * thing: what a tier includes. It applies per owned website, so a client
+     * with four sites on a plan allowing ten gets forty questions in total.
+     *
+     * The meter matters more here than for most limits. Each question is a paid
+     * call **per engine** every time that website is collected, so ten
+     * questions across four engines is forty charges per site per collection.
+     *
+     * Absent means the platform default in `seoPrompts.ts`, so a plan written
+     * before this existed still behaves sensibly. Lowering it does not remove
+     * questions already added; it stops more being added.
+     */
+    seoPromptsPerWebsite: v.optional(v.number()),
     priceGBP: v.number(),
     /**
      * Capabilities this tier switches on for every company holding it.

@@ -1,6 +1,6 @@
 import React from "react";
 import type { ReactElement, ReactNode } from "react";
-import { fireEvent, render as renderBase, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as renderBase, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -159,7 +159,9 @@ describe("CompanyWebsiteDetailPage", () => {
     fireEvent.change(await screen.findByLabelText("urlLabel", {}, { timeout: 5000 }), {
       target: { value: "https://www.rival-c.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "add" }));
+    // The screen now carries two "add" buttons — competitors and the AI
+    // questions below them — so the dialog's own is named by scoping to it.
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "add" }));
 
     await waitFor(() => {
       expect(addCompetitor).toHaveBeenCalledWith({
@@ -208,7 +210,7 @@ describe("CompanyWebsiteDetailPage", () => {
     fireEvent.change(await screen.findByLabelText("urlLabel", {}, { timeout: 5000 }), {
       target: { value: "ourshop.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "add" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "add" }));
 
     await waitFor(() => {
       expect(screen.getByText(/own competitor|errors\.saveFailed/)).toBeInTheDocument();
@@ -222,7 +224,9 @@ describe("CompanyWebsiteDetailPage", () => {
 
     expect((await screen.findAllByText("empty")).length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByPlaceholderText("searchPlaceholder"), {
+    // Two search boxes now: the competitors table and the questions table.
+    // The competitors one comes first, and it is the one this test is about.
+    fireEvent.change(screen.getAllByPlaceholderText("searchPlaceholder")[0], {
       target: { value: "nothing" },
     });
 

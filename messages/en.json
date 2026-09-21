@@ -971,7 +971,10 @@
       },
       "grantsLabel": "What this plan switches on",
       "grantsHint": "Every company on this plan gets these, plus anything switched on for it directly.",
-      "stripePrice": "Stripe price"
+      "stripePrice": "Stripe price",
+      "promptsLabel": "AI questions per website",
+      "promptsPlaceholder": "10",
+      "promptsHint": "Each question is asked of every AI engine, every time that website is collected. Zero switches the feature off for this tier."
     },
     "companyDetails": {
       "title": "Dashboard",
@@ -1450,6 +1453,39 @@
         "saved": "Saved",
         "errors": {
           "saveFailed": "Could not save this location. Try again."
+        }
+      },
+      "prompts": {
+        "title": "Questions we ask the AI engines",
+        "subtitle": "What we put to ChatGPT and the others to see whether this website gets named in the answer. A question belongs to a site, not to a client.",
+        "addLabel": "A question somebody would actually ask",
+        "addPlaceholder": "who is the best plumber in Leeds",
+        "add": "Add question",
+        "remaining": "{count, plural, =0 {No more questions can be added for this website.} one {# more question can be added.} other {# more questions can be added.}}",
+        "loading": "Counting.",
+        "searchPlaceholder": "Search questions...",
+        "empty": "No questions yet, so nothing is asked for this website.",
+        "noMatch": "No question matches that search.",
+        "promptColumn": "Question",
+        "enginesColumn": "Asked of",
+        "stateColumn": "State",
+        "addedColumn": "Added",
+        "actionsColumn": "Actions",
+        "asking": "Asking",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove this question",
+        "engines": {
+          "chatgpt": "ChatGPT",
+          "perplexity": "Perplexity",
+          "gemini": "Gemini",
+          "claude": "Claude"
+        },
+        "errors": {
+          "addFailed": "Could not add that question. Try again.",
+          "toggleFailed": "Could not change that question. Try again.",
+          "removeFailed": "Could not remove that question. Try again."
         }
       }
     },

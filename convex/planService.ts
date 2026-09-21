@@ -50,6 +50,7 @@ export function buildPlanRecord(args: {
   messageLimit: number;
   priceGBP: number;
   grantedModules?: string[];
+  seoPromptsPerWebsite?: number;
   isActive: boolean;
 }, now = Date.now()) {
   return {
@@ -60,6 +61,9 @@ export function buildPlanRecord(args: {
     // Same laundering as a company's own list: unknown keys stay out of the
     // database, where they would read as a capability nobody can find.
     grantedModules: normalizeEnabledModules(args.grantedModules),
+    // Absent stays absent rather than becoming a number: a plan written before
+    // this existed means "use the platform default", not "allow zero".
+    seoPromptsPerWebsite: args.seoPromptsPerWebsite,
     isActive: args.isActive,
     createdAt: now,
   };
