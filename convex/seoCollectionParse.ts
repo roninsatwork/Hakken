@@ -2,7 +2,8 @@ import { v } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { parseSeoResultFor } from "./dataForSeoParsers";
+import { isBulkOperation, parseBulkByTarget, parseSeoResultFor } from "./dataForSeoParsers";
+import { resolveWebsiteIdsByHost } from "./websites";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
 
@@ -27,7 +28,34 @@ export const parseSeoResult = internalAction({
     const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, {
       pullId: args.pullId,
     });
-    if (!pull?.resultJson || !pull.websiteId) return null;
+    if (!pull?.resultJson) return null;
+
+    // A bulk pull is about many websites and carries no single `websiteId`, so
+    // it is filed target by target rather than against the row's own site.
+    if (isBulkOperation(pull.operationId)) {
+      try {
+        const rows = parseBulkByTarget(pull.operationId, JSON.parse(pull.resultJson));
+        if (rows.length > 0) {
+          await ctx.runMutation(internal.seoCollectionParse.writeBulkMetrics, {
+            pullId: args.pullId,
+            operationId: pull.operationId,
+            day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+            rows: rows.slice(0, MAX_BULK_ROWS).map((row) => ({
+              host: row.target,
+              metricsJson: JSON.stringify(row.metrics),
+            })),
+          });
+        }
+      } catch (error) {
+        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+          pullId: args.pullId,
+          error: getErrorMessage(error),
+        });
+      }
+      return null;
+    }
+
+    if (!pull.websiteId) return null;
 
     try {
       const parsed = parseSeoResultFor(
@@ -65,6 +93,16 @@ export const parseSeoResult = internalAction({
  * a cut.
  */
 const MAX_POSITION_ROWS = 1_000;
+
+/**
+ * Websites filed from one bulk response.
+ *
+ * A page of expansion is a hundred websites and a bulk endpoint takes a
+ * thousand, so this is well clear of both. It exists because the write happens
+ * inside one mutation and a transaction needs a ceiling, not because a real
+ * batch would ever approach it.
+ */
+const MAX_BULK_ROWS = 1_200;
 
 /**
  * How much of a previous parse one re-parse will clear.
@@ -170,6 +208,53 @@ export const writeSeoMetrics = internalMutation({
         ...(entry.url ? { url: entry.url } : {}),
         ...(entry.searchVolume !== undefined ? { searchVolume: entry.searchVolume } : {}),
         pullId: args.pullId,
+        createdAt: now,
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * File one bulk response against every website it covered.
+ *
+ * Matched on the host, because a bulk row names its target and nothing else. A
+ * target we do not hold is skipped rather than guessed at: filing a number
+ * against the wrong website is worse than filing none.
+ *
+ * Replaces by pull, like every other parse here, so a corrected parser can be
+ * re-run over stored payloads without anyone auditing the result afterwards.
+ */
+export const writeBulkMetrics = internalMutation({
+  args: {
+    pullId: v.id("seoDataPulls"),
+    operationId: v.string(),
+    day: v.string(),
+    rows: v.array(v.object({ host: v.string(), metricsJson: v.string() })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("seoWebsiteMetrics")
+      .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
+      .take(MAX_BULK_ROWS + 100);
+    for (const row of existing) await ctx.db.delete(row._id);
+
+    const byHost = await resolveWebsiteIdsByHost(ctx, args.rows.map((row) => row.host));
+
+    for (const row of args.rows) {
+      const websiteId = byHost.get(row.host);
+      // A target we do not hold is skipped rather than guessed at.
+      if (!websiteId) continue;
+
+      await ctx.db.insert("seoWebsiteMetrics", {
+        websiteId,
+        day: args.day,
+        operationId: args.operationId,
+        pullId: args.pullId,
+        metricsJson: row.metricsJson,
         createdAt: now,
       });
     }

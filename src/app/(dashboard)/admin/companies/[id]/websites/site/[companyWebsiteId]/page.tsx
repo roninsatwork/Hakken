@@ -16,6 +16,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate } from "@/src/lib/dates";
 import { WebsiteScheduleOverride } from "./WebsiteScheduleOverride";
+import { WatchLocation } from "./WatchLocation";
 
 const loadDialogs = () => import("./CompetitorDialogs");
 const AddCompetitorDialog = lazy(() =>
@@ -140,6 +141,11 @@ export default function CompanyWebsiteDetailPage() {
           collectionEnabled: website.collectionEnabled,
         }}
         effective={website.effective}
+      />
+
+      <WatchLocation
+        companyWebsiteId={companyWebsiteId}
+        savedCode={website.locationCode}
       />
 
       <DataTable

@@ -192,6 +192,54 @@ export function parseKeywordSearchVolume(result: unknown): ParsedSeoResult {
   };
 }
 
+/**
+ * One bulk response, which is about many websites rather than one.
+ *
+ * Every other parser answers about the host that was asked for. This one
+ * returns a row per target, because a single paid call covered all of them,
+ * and the caller has to file each against its own website.
+ *
+ * Matched on the target string DataForSEO echoes back, normalised the same way
+ * a host is stored, so a bulk row and a `websites` record are the same string.
+ */
+export function parseBulkByTarget(
+  operationId: string,
+  result: unknown,
+): Array<{ target: string; metrics: Record<string, number | string | null> }> {
+  const item = firstItem(result);
+  const rows = asArray(item?.items ?? result);
+  const parsed: Array<{ target: string; metrics: Record<string, number | string | null> }> = [];
+
+  for (const row of rows) {
+    const record = asRecord(row);
+    const target = asString(record?.target);
+    if (!record || !target) continue;
+
+    if (operationId === "bulk_backlinks") {
+      parsed.push({ target, metrics: { backlinks: asNumber(record.backlinks) ?? 0 } });
+      continue;
+    }
+    if (operationId === "bulk_referring_domains") {
+      parsed.push({
+        target,
+        metrics: { referringDomains: asNumber(record.referring_domains) ?? 0 },
+      });
+      continue;
+    }
+    if (operationId === "bulk_ranks") {
+      parsed.push({ target, metrics: { rank: asNumber(record.rank) ?? 0 } });
+      continue;
+    }
+  }
+
+  return parsed;
+}
+
+/** Whether an operation answers about many websites rather than one. */
+export function isBulkOperation(operationId: string): boolean {
+  return operationId.startsWith("bulk_");
+}
+
 /** The parser for an operation id, or null when nothing knows how to read it. */
 export function parseSeoResultFor(
   operationId: string,

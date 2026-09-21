@@ -70,6 +70,8 @@ export const listSeoPulls = superAdminQuery({
     host: v.string(),
     companyName: v.string(),
     operationId: v.string(),
+    /** Above one when a single call covered many websites. */
+    targetCount: v.number(),
     status: v.string(),
     costUsd: v.number(),
     sandbox: v.boolean(),
@@ -120,6 +122,12 @@ export const listSeoPulls = superAdminQuery({
         // pulled once for everyone watching it.
         companyName: pull.companyId ? names.get(pull.companyId) ?? "" : "",
         operationId: pull.operationId,
+        /**
+         * How many websites one paid call covered, when it covered more than
+         * one. A bulk pull has no single host, and a blank cell reads as
+         * missing data rather than as the saving it actually is.
+         */
+        targetCount: countTargets(pull.taskArgsJson),
         status: pull.status,
         costUsd: pull.costUsd,
         sandbox: pull.sandbox,
@@ -283,6 +291,22 @@ export const listSeoCycleLines = superAdminQuery({
 
 /** One screenful of detail. A cycle can hold far more; the list is a sample. */
 const MAX_LINES = 200;
+
+/**
+ * How many websites one pull was about, read from what was actually sent.
+ *
+ * From the stored arguments rather than from a column, because the arguments
+ * are the record of what was asked and cannot drift from it.
+ */
+function countTargets(taskArgsJson: string): number {
+  try {
+    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
+    const targets = args.targets;
+    return Array.isArray(targets) ? targets.length : 1;
+  } catch {
+    return 1;
+  }
+}
 
 function toCycleRow(cycle: Doc<"seoCollectionCycles">) {
   return {

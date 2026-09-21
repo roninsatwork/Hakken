@@ -139,7 +139,13 @@ export default function SeoCollectionPage() {
             header: t("hostColumn"),
             cell: (row) => (
               <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] font-medium text-foreground">{row.host}</span>
+                {/*
+                  A bulk pull has no single host. Saying how many it covered
+                  reads as the saving it is; a blank cell reads as missing data.
+                */}
+                <span className="text-[13px] font-medium text-foreground">
+                  {row.host || t("manySites", { count: row.targetCount })}
+                </span>
                 {/*
                   Whose cadence caused this, not somebody to charge. A shared
                   host is pulled once for everyone watching it.

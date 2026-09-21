@@ -39,8 +39,17 @@ const WEEKLY = JSON.stringify({
   timezone: "UTC",
 });
 
-/** The two whole-site operations a cycle runs for every website. */
+/** The whole-site operations a cycle runs once per website. */
 const SITE_OPERATIONS = 2;
+
+/**
+ * The operations that ask about every website on a page in one paid call.
+ *
+ * One pull each, however many websites the page held. That is the whole point
+ * of them, and it is why every count below is site operations times websites,
+ * plus this, rather than everything times websites.
+ */
+const BULK_OPERATIONS = 3;
 
 async function seedCompany(t: Harness, name: string) {
   return await t.run(async (ctx) => await ctx.db.insert("companies", { name, createdAt: Date.now() }));
@@ -113,8 +122,8 @@ describe("expanding a cycle", () => {
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
 
-    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS);
-    expect((await cycle(t, cycleId))?.plannedCount).toBe(SITE_OPERATIONS);
+    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS + BULK_OPERATIONS);
+    expect((await cycle(t, cycleId))?.plannedCount).toBe(SITE_OPERATIONS + BULK_OPERATIONS);
   });
 
   test("collects a competitor at the rate of the website it is measured against", async () => {
@@ -137,9 +146,34 @@ describe("expanding a cycle", () => {
 
     // The rival is pulled because the site it is compared with was pulled.
     // Numbers from different weeks are not a comparison.
-    const targets = new Set((await pulls(t)).map((row) => row.websiteId));
-    expect(targets.size).toBe(2);
-    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS * 2);
+    const perSite = (await pulls(t)).filter((row) => row.websiteId !== undefined);
+    expect(new Set(perSite.map((row) => row.websiteId)).size).toBe(2);
+    // Two websites: the per-site operations run twice each, the bulk ones once
+    // in total, because one call covered both hosts.
+    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS * 2 + BULK_OPERATIONS);
+  });
+
+  test("asks about every website on a page in one paid call", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Big Agency");
+    await seedSchedule(t, company, DAILY);
+    for (let index = 0; index < 8; index += 1) {
+      await seedCompanyWebsite(t, company, await seedWebsite(t, `site-${index}.com`));
+    }
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    // Eight websites, and the bulk operations are still three charges rather
+    // than twenty-four. This is the whole economics of the bulk shape.
+    const bulk = (await pulls(t)).filter((row) => row.operationId.startsWith("bulk_"));
+    expect(bulk).toHaveLength(BULK_OPERATIONS);
+
+    // Every website still gets its own line, so its history is complete, and
+    // all but one are marked as not having paid — because they did not.
+    const bulkLines = (await lines(t)).filter((line) => line.operationId === "bulk_backlinks");
+    expect(bulkLines).toHaveLength(8);
+    expect(bulkLines.filter((line) => !line.reused)).toHaveLength(1);
   });
 
   test("spaces the sends out instead of firing them together", async () => {
@@ -219,11 +253,15 @@ describe("the reuse ladder", () => {
     // One host is stored once and fetched once. Acme is served by the answer
     // Ronins already paid for, and a weekly watcher handed today's numbers is
     // being served correctly.
+    // Nothing new was bought at all. The per-site answers are fresh enough to
+    // reuse, and the bulk ones are keyed on the batch — both companies track
+    // exactly the one host, so it is the same batch and therefore the same
+    // question. Two customers with the same estate share even the bulk call.
     expect(await pulls(t)).toHaveLength(boughtBefore);
-    expect((await cycle(t, second))?.reusedCount).toBe(SITE_OPERATIONS);
+
+    const secondLines = (await lines(t)).filter((line) => line.cycleId === second);
+    expect(secondLines.every((line) => line.reused)).toBe(true);
     expect((await cycle(t, second))?.plannedCount).toBe(0);
-    // It still gets its own lines, so its history is complete.
-    expect((await lines(t)).filter((line) => line.cycleId === second)).toHaveLength(SITE_OPERATIONS);
   });
 
   test("a stale answer is bought again", async () => {
@@ -255,7 +293,7 @@ describe("the reuse ladder", () => {
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
 
     // Five days old for a daily watcher is not an answer any more.
-    expect((await cycle(t, cycleId))?.plannedCount).toBe(SITE_OPERATIONS);
+    expect((await cycle(t, cycleId))?.plannedCount).toBe(SITE_OPERATIONS + BULK_OPERATIONS);
   });
 
   test("two cycles in the same hour share the one in-flight pull", async () => {
@@ -279,11 +317,12 @@ describe("the reuse ladder", () => {
     // Nothing has come back yet, so freshness cannot save the second company.
     // The idempotency key does: the same question on the same day is one
     // purchase, and both cycles point at it.
-    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS);
-    expect((await cycle(t, second))?.reusedCount).toBe(SITE_OPERATIONS);
+    const perSitePulls = (await pulls(t)).filter((row) => !row.operationId.startsWith("bulk_"));
+    expect(perSitePulls).toHaveLength(SITE_OPERATIONS);
 
-    const pullIds = new Set((await lines(t)).map((line) => line.pullId));
-    expect(pullIds.size).toBe(SITE_OPERATIONS);
+    const perSiteLines = (await lines(t))
+      .filter((line) => line.cycleId === second && !line.operationId.startsWith("bulk_"));
+    expect(perSiteLines.every((line) => line.reused)).toBe(true);
   });
 
   test("a website with a slower schedule of its own is left alone", async () => {
@@ -363,7 +402,9 @@ describe("chunking", () => {
     // Everything before and including the cursor was done by an earlier page.
     // Redoing it would not double-charge, because the idempotency key would
     // catch it — but it would waste the page and never reach the end.
-    const touched = new Set((await pulls(t)).map((row) => row.websiteId));
+    const touched = new Set(
+      (await pulls(t)).map((row) => row.websiteId).filter((id) => id !== undefined),
+    );
     expect(touched.size).toBe(2);
   });
 });

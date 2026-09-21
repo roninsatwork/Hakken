@@ -1,4 +1,5 @@
 import { readWebsiteHost } from "./websiteIdentity";
+import { appError } from "./utils/appError";
 
 /**
  * What Hakken can ask DataForSEO, as a list.
@@ -36,7 +37,7 @@ import { readWebsiteHost } from "./websiteIdentity";
  */
 export type SeoOperationMode = "QUEUED" | "LIVE";
 
-export type SeoParamKind = "host" | "keyword" | "keywords" | "number";
+export type SeoParamKind = "host" | "hosts" | "keyword" | "keywords" | "number";
 
 export type SeoOperationParam = {
   kind: SeoParamKind;
@@ -74,6 +75,19 @@ export type SeoOperation = {
    * the ledger records.
    */
   costBand: "low" | "medium" | "high";
+  /**
+   * How many hosts one call can ask about, when the endpoint takes a list.
+   *
+   * **The number that decides the bill.** Every operation above asks about one
+   * host and is charged once. DataForSEO's bulk endpoints accept up to a
+   * thousand targets in a single request for a single charge, so a thousand
+   * tracked sites costs one call rather than a thousand. Absent means this
+   * operation is about one host, which is the shape everything started as.
+   *
+   * The parameter carrying the list is named here too, because it differs
+   * between families and guessing it is a charged request that returns nothing.
+   */
+  bulk?: { targetsParam: string; maxTargets: number };
 };
 
 /**
@@ -173,6 +187,54 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     },
   },
   {
+    id: "bulk_backlinks",
+    question: "How many links point at each of these websites?",
+    family: "Backlinks",
+    mode: "LIVE",
+    path: "/v3/backlinks/bulk_backlinks/live",
+    costBand: "low",
+    bulk: { targetsParam: "targets", maxTargets: 1000 },
+    params: {
+      targets: {
+        kind: "hosts",
+        required: true,
+        description: "The websites to look up, as domains.",
+      },
+    },
+  },
+  {
+    id: "bulk_referring_domains",
+    question: "How many different sites link to each of these websites?",
+    family: "Backlinks",
+    mode: "LIVE",
+    path: "/v3/backlinks/bulk_referring_domains/live",
+    costBand: "low",
+    bulk: { targetsParam: "targets", maxTargets: 1000 },
+    params: {
+      targets: {
+        kind: "hosts",
+        required: true,
+        description: "The websites to look up, as domains.",
+      },
+    },
+  },
+  {
+    id: "bulk_ranks",
+    question: "How strong is each of these websites, as a single score?",
+    family: "Backlinks",
+    mode: "LIVE",
+    path: "/v3/backlinks/bulk_ranks/live",
+    costBand: "low",
+    bulk: { targetsParam: "targets", maxTargets: 1000 },
+    params: {
+      targets: {
+        kind: "hosts",
+        required: true,
+        description: "The websites to look up, as domains.",
+      },
+    },
+  },
+  {
     id: "backlinks_summary",
     question: "How many sites link to this one, and how strong are they?",
     family: "Backlinks",
@@ -191,6 +253,21 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
 ];
 
 /**
+ * The operations that ask about many websites in one paid call.
+ *
+ * Derived the same way the per-site set is, and separated from it because the
+ * pipeline has to do something different with them: a bulk operation is not one
+ * pull per website but one pull per *batch* of websites, and every website's
+ * cycle line points at that single pull.
+ *
+ * This is the cheapest thing in the registry by a wide margin. A thousand
+ * tracked sites is four bulk calls a cycle instead of a thousand charges.
+ */
+export function seoBulkOperations(): readonly SeoOperation[] {
+  return SEO_OPERATIONS.filter((operation) => operation.bulk !== undefined);
+}
+
+/**
  * The operations a collection cycle runs for every website, with no further
  * input than the host itself.
  *
@@ -206,9 +283,42 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
  */
 export function seoSiteOperations(): readonly SeoOperation[] {
   return SEO_OPERATIONS.filter((operation) => {
+    if (operation.bulk) return false;
     const required = Object.entries(operation.params).filter(([, param]) => param.required);
     return required.length === 1 && required[0][1].kind === "host";
   });
+}
+
+/**
+ * What a bulk operation is sent: the hosts, plus the registry's own defaults.
+ *
+ * Refuses a batch over the endpoint's cap rather than truncating it, because a
+ * request over the limit is rejected whole and a silent truncation would leave
+ * the missing websites looking collected.
+ */
+export function seoBulkOperationParams(
+  operation: SeoOperation,
+  hosts: readonly string[],
+): Record<string, unknown> {
+  if (!operation.bulk) {
+    throw appError("INVALID_INPUT", `${operation.id} is not a bulk operation.`);
+  }
+  if (hosts.length === 0) {
+    throw appError("INVALID_INPUT", `${operation.id} was given no websites.`);
+  }
+  if (hosts.length > operation.bulk.maxTargets) {
+    throw appError(
+      "INVALID_INPUT",
+      `${operation.id} takes at most ${operation.bulk.maxTargets} websites, not ${hosts.length}.`,
+    );
+  }
+
+  const params: Record<string, unknown> = { [operation.bulk.targetsParam]: [...hosts] };
+  for (const [name, param] of Object.entries(operation.params)) {
+    if (param.kind === "hosts") continue;
+    if (param.default !== undefined) params[name] = param.default;
+  }
+  return params;
 }
 
 /**
@@ -353,6 +463,24 @@ function coerceParam(param: SeoOperationParam, raw: unknown): Coerced {
         return { ok: false, message: `"${String(raw)}" is not a website address.` };
       }
       return { ok: true, value: parsed.host };
+    }
+    case "hosts": {
+      // A list of websites for one bulk call. Each is normalised the same way a
+      // single host is, so a bulk result can be matched back to the records it
+      // was about — and one bad entry refuses the batch rather than quietly
+      // dropping a website that would then look collected.
+      const list = Array.isArray(raw) ? raw : String(raw).split(",");
+      if (list.length === 0) return { ok: false, message: "Give at least one website." };
+
+      const hosts: string[] = [];
+      for (const entry of list) {
+        const parsed = readWebsiteHost(String(entry));
+        if (!parsed.ok) {
+          return { ok: false, message: `"${String(entry)}" is not a website address.` };
+        }
+        hosts.push(parsed.host);
+      }
+      return { ok: true, value: hosts };
     }
     case "keyword": {
       const text = String(raw).trim();

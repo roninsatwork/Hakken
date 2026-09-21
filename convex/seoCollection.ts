@@ -4,6 +4,8 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   findSeoOperation,
+  seoBulkOperationParams,
+  seoBulkOperations,
   seoSiteOperationParams,
   seoSiteOperations,
 } from "./dataForSeoRegistry";
@@ -147,6 +149,11 @@ async function expandPage(
   let lastCursor: Id<"companyWebsites"> | null = cursor ?? null;
   let sendIndex = cycle.plannedCount;
 
+  // Every website this page touched, for the bulk operations below. Collected
+  // as it goes rather than re-read afterwards, because the same walk already
+  // resolves each site's schedule and its competitors.
+  const batch: Array<{ websiteId: Id<"websites">; host: string }> = [];
+
   for (const companyWebsite of websites) {
     lastCursor = companyWebsite._id;
 
@@ -177,6 +184,9 @@ async function expandPage(
     const targets = [companyWebsite.websiteId, ...competitors.map((row) => row.websiteId)];
 
     for (const websiteId of targets) {
+      const target = await ctx.db.get(websiteId);
+      if (target) batch.push({ websiteId, host: target.host });
+
       for (const operation of operations) {
         if (planned + cycle.plannedCount >= SEO_MAX_SENDS_PER_CYCLE) {
           return { planned, reused, lastCursor, exhausted: false, cappedPlan: true };
@@ -200,13 +210,119 @@ async function expandPage(
     }
   }
 
+  const bulkPlanned = await planBulkPulls(ctx, cycle, batch, sendIndex);
+
   return {
-    planned,
-    reused,
+    planned: planned + bulkPlanned.planned,
+    reused: reused + bulkPlanned.reused,
     lastCursor,
     exhausted: after.length <= SEO_EXPANSION_PAGE,
     cappedPlan: false,
   };
+}
+
+/**
+ * One paid call about every website on this page.
+ *
+ * DataForSEO's bulk endpoints take up to a thousand targets for a single
+ * charge, so a thousand tracked sites costs one call rather than a thousand.
+ * This is the cheapest thing the pipeline does by a wide margin.
+ *
+ * **Batched per page rather than per cycle**, which is a deliberate trade. A
+ * cycle-wide batch would be one call for a thousand sites instead of ten, but
+ * expansion is chunked and accumulating hosts across pages would mean holding
+ * them somewhere between mutations. Ten calls instead of a thousand is already
+ * ninety-nine per cent of the saving, for none of the complexity. The page size
+ * is well inside every endpoint's cap, so a batch is never refused for length.
+ *
+ * One pull, many lines. Each website gets its own line so its history is
+ * complete, and all but the first are marked as not having paid — because they
+ * did not. One charge happened, and the counts have to say so.
+ */
+async function planBulkPulls(
+  ctx: MutationCtx,
+  cycle: Doc<"seoCollectionCycles">,
+  batch: Array<{ websiteId: Id<"websites">; host: string }>,
+  startIndex: number,
+): Promise<{ planned: number; reused: number }> {
+  if (batch.length === 0) return { planned: 0, reused: 0 };
+
+  // The same host can arrive twice on one page — a competitor of two sites, or
+  // a site somebody also tracks as a rival. It is one target either way.
+  const unique = new Map<string, { websiteId: Id<"websites">; host: string }>();
+  for (const entry of batch) unique.set(entry.host, entry);
+  const hosts = [...unique.values()];
+
+  let planned = 0;
+  let reused = 0;
+  let sendIndex = startIndex;
+
+  for (const operation of seoBulkOperations()) {
+    let params: Record<string, unknown>;
+    try {
+      params = seoBulkOperationParams(operation, hosts.map((entry) => entry.host));
+    } catch {
+      // A batch the registry refuses is a bug in the page size, not in the
+      // data. Skipping is better than failing a cycle over it.
+      continue;
+    }
+
+    const idempotencyKey = buildSeoIdempotencyKey({
+      operationId: operation.id,
+      // A batch has no single website, so the key is keyed on the batch itself.
+      // The params hash covers every host in it, so two pages with the same
+      // sites in the same order are one question and two different pages are
+      // two.
+      websiteId: `batch:${hosts.length}`,
+      params,
+      cycleStartedAt: cycle.startedAt,
+    });
+
+    const existing = await ctx.db
+      .query("seoDataPulls")
+      .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
+      .first();
+
+    const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
+      operationId: operation.id,
+      family: operation.family,
+      mode: operation.mode,
+      companyId: cycle.companyId,
+      taskArgsJson: JSON.stringify(params),
+      status: "PENDING",
+      tag: idempotencyKey,
+      idempotencyKey,
+      cycleId: cycle._id,
+      dueAt: cycle.startedAt + sendIndex * SEO_DUE_SPACING_MS,
+      attempts: 0,
+      costUsd: 0,
+      sandbox: false,
+      ...(cycle.agentRunId ? { agentRunId: cycle.agentRunId } : {}),
+      submittedAt: Date.now(),
+    });
+
+    if (!existing) {
+      planned += 1;
+      sendIndex += 1;
+    }
+
+    for (const [index, entry] of hosts.entries()) {
+      await ctx.db.insert("seoCycleLines", {
+        cycleId: cycle._id,
+        companyId: cycle.companyId,
+        websiteId: entry.websiteId,
+        operationId: operation.id,
+        pullId,
+        // One charge covered all of them, so only one line can claim to have
+        // paid for it. The rest are true reuse.
+        reused: Boolean(existing) || index > 0,
+        createdAt: Date.now(),
+      });
+      if (existing || index > 0) reused += 1;
+    }
+  }
+
+  return { planned, reused };
 }
 
 /**

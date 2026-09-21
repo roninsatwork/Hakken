@@ -893,3 +893,35 @@ export const setCompanyWebsiteLocation = superAdminMutation({
     return null;
   },
 });
+
+
+/**
+ * Resolve hosts to the website records they name.
+ *
+ * Here rather than at the call site because the tenancy guard allows exactly
+ * two files to read the `websites` table, and that narrowness is the point: the
+ * leak it prevents is a query that starts from a shared record and walks
+ * outward to its watchers. This walks nowhere — it turns a host into an id so a
+ * bulk result can be filed against the right site — but the rule is structural
+ * on purpose, because a rule with exceptions is a rule nobody can check.
+ *
+ * A host with no record is simply absent from the answer. Filing a number
+ * against the wrong website would be worse than filing none.
+ */
+export async function resolveWebsiteIdsByHost(
+  ctx: QueryCtx | MutationCtx,
+  hosts: readonly string[],
+): Promise<Map<string, Id<"websites">>> {
+  const found = new Map<string, Id<"websites">>();
+
+  for (const host of hosts) {
+    if (found.has(host)) continue;
+    const website = await ctx.db
+      .query("websites")
+      .withIndex("by_host", (q) => q.eq("host", host))
+      .unique();
+    if (website) found.set(host, website._id);
+  }
+
+  return found;
+}

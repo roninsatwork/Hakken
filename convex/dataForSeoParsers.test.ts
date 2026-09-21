@@ -6,6 +6,8 @@ import {
   parseKeywordSearchVolume,
   parseSeoResultFor,
   parseSerpGoogleOrganic,
+  parseBulkByTarget,
+  isBulkOperation,
 } from "./dataForSeoParsers";
 
 /**
@@ -148,5 +150,50 @@ describe("choosing a parser", () => {
     ]) {
       expect(parseSeoResultFor(id, [])).not.toBeNull();
     }
+  });
+});
+
+describe("a bulk response", () => {
+  const payload = [{
+    items: [
+      { target: "a.com", backlinks: 4213 },
+      { target: "b.com", backlinks: 91 },
+      { target: "c.com", backlinks: 0 },
+    ],
+  }];
+
+  test("answers about every website the one call covered", () => {
+    // Every other parser answers about the host that was asked for. This one
+    // has to file a row against each of many, because one charge covered them.
+    const rows = parseBulkByTarget("bulk_backlinks", payload);
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toEqual({ target: "a.com", metrics: { backlinks: 4213 } });
+    expect(rows[2].metrics.backlinks).toBe(0);
+  });
+
+  test("skips a row with no target rather than guessing whose it is", () => {
+    // Filing a number against the wrong website is worse than filing none.
+    const rows = parseBulkByTarget("bulk_backlinks", [{ items: [{ backlinks: 12 }] }]);
+    expect(rows).toEqual([]);
+  });
+
+  test("reads each bulk operation's own field", () => {
+    expect(parseBulkByTarget("bulk_referring_domains",
+      [{ items: [{ target: "a.com", referring_domains: 312 }] }])[0].metrics.referringDomains)
+      .toBe(312);
+    expect(parseBulkByTarget("bulk_ranks",
+      [{ items: [{ target: "a.com", rank: 241 }] }])[0].metrics.rank)
+      .toBe(241);
+  });
+
+  test("survives a payload it does not recognise", () => {
+    expect(parseBulkByTarget("bulk_backlinks", null)).toEqual([]);
+    expect(parseBulkByTarget("bulk_unknown", payload)).toEqual([]);
+  });
+
+  test("knows which operations are bulk", () => {
+    expect(isBulkOperation("bulk_backlinks")).toBe(true);
+    expect(isBulkOperation("backlinks_summary")).toBe(false);
   });
 });

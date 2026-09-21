@@ -1442,7 +1442,16 @@
       "sourceNone": "nothing scheduled",
       "overrideLabel": "Use its own schedule",
       "overrideDescription": "Off follows {company}, and moves whenever that changes.",
-      "collectionDescription": "Off stops this website alone, leaving the rest of the company collecting."
+      "collectionDescription": "Off stops this website alone, leaving the rest of the company collecting.",
+      "location": {
+        "title": "Where you watch from",
+        "subtitle": "Search results differ by place. This is the location used when collecting rankings and AI citations for this website, for this client only.",
+        "save": "Save location",
+        "saved": "Saved",
+        "errors": {
+          "saveFailed": "Could not save this location. Try again."
+        }
+      }
     },
     "companyDataCollection": {
       "title": "Data Collection",
@@ -5034,7 +5043,10 @@
         "backlinks_summary": "Who links to it",
         "domain_ranked_keywords": "What it ranks for",
         "serp_google_organic": "Where it ranks for one search",
-        "keyword_search_volume": "How often terms are searched"
+        "keyword_search_volume": "How often terms are searched",
+        "bulk_backlinks": "Link counts, many sites at once",
+        "bulk_referring_domains": "Linking sites, many at once",
+        "bulk_ranks": "Strength scores, many sites at once"
       },
       "queueCounts": "{pending} waiting · {claimed} being sent · {submitted} awaiting an answer",
       "attempts": "{count} attempt(s) so far",
@@ -5052,7 +5064,8 @@
         "all": "Any state",
         "search": "Filter states...",
         "noMatches": "No state matches that."
-      }
+      },
+      "manySites": "{count, plural, one {# website} other {# websites}} in one call"
     },
     "seoCosts": {
       "title": "Cost to serve",

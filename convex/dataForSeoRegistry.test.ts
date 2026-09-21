@@ -10,6 +10,8 @@ import {
   seoResultPath,
   seoSiteOperations,
   seoSiteOperationParams,
+  seoBulkOperations,
+  seoBulkOperationParams,
 } from "./dataForSeoRegistry";
 
 /**
@@ -272,5 +274,60 @@ describe("seoSiteOperationParams", () => {
     expect(params.location_code).toBe(2826);
     expect(params.language_code).toBe("en");
     expect(params.limit).toBe(100);
+  });
+});
+
+describe("seoBulkOperations", () => {
+  test("is every operation that asks about many websites in one charge", () => {
+    const ids = seoBulkOperations().map((operation) => operation.id);
+
+    // The cheapest thing in the registry by a wide margin: a thousand tracked
+    // sites is one call rather than a thousand charges.
+    expect(ids).toContain("bulk_backlinks");
+    expect(ids).toContain("bulk_referring_domains");
+    expect(ids).toContain("bulk_ranks");
+  });
+
+  test("is not also counted as a per-site operation", () => {
+    // The pipeline does something different with each: a per-site operation is
+    // one pull per website, a bulk one is a single pull the whole batch shares.
+    const perSite = seoSiteOperations().map((operation) => operation.id);
+    for (const bulk of seoBulkOperations()) {
+      expect(perSite).not.toContain(bulk.id);
+    }
+  });
+
+  test("every bulk operation names the parameter carrying its list", () => {
+    // It differs between families, and guessing it is a charged request that
+    // returns nothing useful.
+    for (const operation of seoBulkOperations()) {
+      expect(operation.bulk?.targetsParam.length).toBeGreaterThan(0);
+      expect(operation.bulk?.maxTargets).toBeGreaterThan(1);
+    }
+  });
+});
+
+describe("seoBulkOperationParams", () => {
+  const bulk = () => seoBulkOperations().find((operation) => operation.id === "bulk_backlinks")!;
+
+  test("sends the hosts under the parameter the endpoint expects", () => {
+    const params = seoBulkOperationParams(bulk(), ["a.com", "b.com"]);
+    expect(params.targets).toEqual(["a.com", "b.com"]);
+  });
+
+  test("refuses a batch over the cap rather than truncating it", () => {
+    // A request over the limit is rejected whole, so a silent truncation would
+    // leave the missing websites looking collected.
+    const tooMany = Array.from({ length: 1001 }, (_, index) => `site-${index}.com`);
+    expect(() => seoBulkOperationParams(bulk(), tooMany)).toThrow(/at most 1000/);
+  });
+
+  test("refuses an empty batch", () => {
+    expect(() => seoBulkOperationParams(bulk(), [])).toThrow(/no websites/);
+  });
+
+  test("refuses to treat a per-site operation as bulk", () => {
+    const perSite = seoSiteOperations()[0];
+    expect(() => seoBulkOperationParams(perSite, ["a.com"])).toThrow(/not a bulk operation/);
   });
 });
