@@ -1,7 +1,7 @@
 # Brands, Places and AI Citations
 
-Status: **designed 2026-09-21 in discussion with Anthony, not built.**
-Owner: Anthony
+Status: **steps 1 to 4 built 2026-09-21. Step 5, the citations themselves, is
+designed and not built.** Owner: Anthony
 
 The collection pipeline works. It asks DataForSEO two questions about a host —
 what links to it, what it ranks for — and files the answers. This plan is about
@@ -98,6 +98,46 @@ for one company-website. DataForSEO accepts `latitude,longitude,radius` to seven
 decimal places, so this is buildable — and it is one charge per point per
 keyword, which makes it the most expensive thing in this document by a wide
 margin. It is designed here and deliberately not built; see Not in this plan.
+
+## What DataForSEO actually sells here
+
+Verified against their docs and pricing pages on 2026-09-21, after a first pass
+that guessed and got the recommendation backwards. Re-verify before building.
+
+**We never call an AI engine ourselves.** DataForSEO asks them and sells us the
+answer. No per-engine keys, no per-engine rate limits, one bill. That removes
+most of what would otherwise make this feature hard.
+
+They sell it two ways, and the difference decides the product.
+
+**LLM Responses.** We supply a question, they put it to the engine, we get the
+answer back. Four platforms: ChatGPT, Claude, Gemini and Perplexity. Location
+targeting. Queued costs about a penny a question per engine and takes up to 72
+hours; live costs less to DataForSEO but passes through the engine's own token
+price and answers within 120 seconds. Ten questions across four engines is
+roughly 40p per website per collection.
+
+**LLM Mentions.** No question needed. Give it a domain or a brand name, up to
+ten per call, and it returns how often that name comes up in AI answers, the AI
+search volume behind it, which domains were cited as sources, which other brands
+appeared alongside, and — usefully — the actual questions and answers it saw.
+About ten pence a request plus a tenth of a penny a row.
+
+**The fact that decides it: ChatGPT data in Mentions is United States and
+English only.** The other platform Mentions covers is Google's AI Overviews.
+
+So for a UK business, Mentions is effectively Google AI Overviews, and Responses
+is the only way to see ChatGPT, Claude, Gemini or Perplexity for a UK audience.
+
+**Which reverses the obvious answer.** Mentions looks like it should be the
+default because it needs no setup and costs a fraction as much. For a US
+product it would be. Here it is a cheap discovery layer — Google AI Overview
+visibility, plus a source of real questions people are actually asking, which is
+exactly what a client who cannot think of a question needs — and Responses is
+the product.
+
+That is why the prompts feature built on 2026-09-21 stands, and why the plan
+allowance sits on it: Responses is the metered thing.
 
 ## The manifest's cost shapes
 
@@ -260,7 +300,12 @@ request body.
    immediately.
 4. **Prompts,** captured and stored, not yet asked.
 5. **The AI citation operations** in the registry, the matcher, the parse into
-   `aiCitations`, and the citations screen.
+   `aiCitations`, and the citations screen. **LLM Responses, not Mentions** —
+   see the pricing and coverage section: Mentions cannot see ChatGPT outside the
+   United States, and Responses is the only route to four engines for a UK
+   audience. Queued rather than live, because a collection nobody is waiting on
+   does not need an answer inside two minutes and queued has no engine token
+   cost passed through.
 6. **Docs and plan close-out.**
 
 Steps 1 and 2 are independent of everything else and could ship on their own.
@@ -269,11 +314,10 @@ Steps 1 and 2 are independent of everything else and could ship on their own.
 
 Recorded as open rather than quietly decided. Each changes code.
 
-1. **Who writes the prompts?** By hand is simpler and immediately wrong for most
-   customers, who will not know what to ask. Generated from a site's ranked
-   keywords is better product and needs the agent, which currently does nothing
-   but open cycles. My recommendation is generated, with the customer able to
-   edit and add.
+1. ~~**Who writes the prompts?**~~ **Decided 2026-09-21 by Anthony: admins and
+   clients write them.** Not generated, so the collecting agent gains no new
+   job. LLM Mentions returns the questions it actually saw being asked, which is
+   the obvious place to draw suggestions from later without generating anything.
 2. **Is a brand variant tagged as correct-or-misspelling?** One small field, and
    it turns "you were mentioned 40 times" into "40 times, 6 of them under the
    wrong name", which is something a customer can act on.
@@ -293,6 +337,10 @@ question answered first.
 **OnPage crawls.** Task-based, charged per page, and a different cadence from
 everything else. It fits the existing pipeline unchanged — it is queued with a
 pingback — but it needs a per-plan page budget, which is question 3 again.
+
+**LLM Mentions as a discovery layer.** Cheap, needs no setup, and returns the
+questions people really ask plus who is cited alongside a brand. Worth having
+after Responses, not before, and it is a third bulk shape at ten targets a call.
 
 **Retail and local listings.** Merchant for Google Shopping and Amazon, Business
 Data for Google Business Profile, Trustpilot and TripAdvisor, App Data for the
