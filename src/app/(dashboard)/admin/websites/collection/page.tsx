@@ -14,6 +14,7 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -34,14 +35,38 @@ export default function SeoCollectionPage() {
   const t = useTranslations("admin.seoCollection");
   const router = useRouter();
   const [failedOnly, setFailedOnly] = useState(false);
+  const [queueSearch, setQueueSearch] = useState("");
+  const [queuePage, setQueuePage] = useState(1);
+  const [historySearch, setHistorySearch] = useState("");
+  const debouncedQueueSearch = useDebounce(queueSearch, 400);
+  const debouncedHistorySearch = useDebounce(historySearch, 400);
 
-  const queue = useQuery(api.seoCollectionReports.listSeoQueue, {});
+  const queue = useQuery(api.seoCollectionReports.listSeoQueue, {
+    searchTerm: debouncedQueueSearch,
+    page: queuePage,
+    pageSize: TABLE_PAGE_SIZE,
+  });
   const spend = useQuery(api.seoCollectionReports.readSeoSpend, {});
   const history = useServerPagedTable(
     api.seoCollectionReports.listSeoHistory,
-    failedOnly ? { status: "FAILED" as const } : {},
+    {
+      ...(failedOnly ? { status: "FAILED" as const } : {}),
+      searchTerm: debouncedHistorySearch,
+    },
     TABLE_PAGE_SIZE,
   );
+
+  const queueLoading = queue === undefined;
+
+  // A new search must not leave the reader on page nine of a shorter list.
+  const searchQueue = (value: string) => {
+    setQueueSearch(value);
+    setQueuePage(1);
+  };
+  const searchHistory = (value: string) => {
+    setHistorySearch(value);
+    history.goToPage(1);
+  };
 
   const openCycle = (cycleId: string | null) => {
     if (cycleId) router.push(`/admin/websites/collection/${cycleId}`);
@@ -50,31 +75,57 @@ export default function SeoCollectionPage() {
   return (
     <div className="flex w-full flex-col gap-8 pb-12">
       <PageHeader
+        divider
         icon={<Layers className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
       />
 
+      {/*
+        Section heading above the table, matching `admin/websites/[websiteId]`
+        — the sibling screen in this same feature. A title passed to
+        `cardHeader` renders flush against the card edge while the columns stay
+        indented, which is the failure the screen-kit guard names outright.
+      */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {t("queueTitle")}
+        </h2>
+        <p className="max-w-3xl text-[13px] text-secondary">
+          {queue
+            ? t("queueCounts", {
+              pending: count(queue.pending, queue.countsAreCapped),
+              claimed: count(queue.claimed, queue.countsAreCapped),
+              submitted: count(queue.submitted, queue.countsAreCapped),
+            })
+            : t("queueSubtitle")}
+        </p>
+      </div>
+
       <DataTable
-        cardHeader={
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("queueTitle")}</h2>
-            {queue ? (
-              <span className="text-[12px] text-muted">
-                {t("queueCounts", {
-                  pending: count(queue.pending, queue.countsAreCapped),
-                  claimed: count(queue.claimed, queue.countsAreCapped),
-                  submitted: count(queue.submitted, queue.countsAreCapped),
-                })}
-              </span>
-            ) : null}
-          </div>
-        }
-        rows={queue?.rows}
+        rows={queueLoading ? undefined : queue.data}
         rowKey={(row) => row._id}
         minWidthClassName="min-w-[820px]"
         onRowClick={(row) => openCycle(row.cycleId)}
-        empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: t("queueEmpty") }}
+        search={{
+          value: queueSearch,
+          onChange: searchQueue,
+          placeholder: t("queueSearchPlaceholder"),
+        }}
+        empty={{
+          icon: <Layers className="h-8 w-8 text-muted/30" />,
+          label: queueSearch ? t("noMatch") : t("queueEmpty"),
+        }}
+        footer={{
+          mode: "paged",
+          page: queuePage,
+          totalPages: queue?.totalPages ?? 1,
+          totalCount: queue?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: queueLoading,
+          onPageChange: setQueuePage,
+          labels: { empty: queueSearch ? t("noMatch") : t("queueEmpty") },
+        }}
         columns={[
           {
             key: "website",
@@ -127,27 +178,23 @@ export default function SeoCollectionPage() {
         ]}
       />
 
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {t("historyTitle")}
+        </h2>
+        <p className="max-w-3xl text-[13px] text-secondary">
+          {spend
+            ? t("spend", {
+              // USD as DataForSEO reports it. Never converted on the way in,
+              // so it can still be checked against an invoice.
+              cost: spend.totalCostUsd.toFixed(2),
+              pulls: spend.totalPulls,
+            })
+            : t("historySubtitle")}
+        </p>
+      </div>
+
       <DataTable
-        cardHeader={
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("historyTitle")}</h2>
-            {spend ? (
-              <span className="text-[12px] text-muted">
-                {t("spend", {
-                  // USD as DataForSEO reports it. Never converted on the way
-                  // in, so it can still be checked against an invoice.
-                  cost: spend.totalCostUsd.toFixed(2),
-                  pulls: spend.totalPulls,
-                })}
-              </span>
-            ) : null}
-          </div>
-        }
-        rows={history.isLoading ? undefined : history.rows}
-        rowKey={(row) => row._id}
-        minWidthClassName="min-w-[820px]"
-        onRowClick={(row) => openCycle(row.cycleId)}
-        empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: t("historyEmpty") }}
         filters={
           <FilterToggle
             label={t("failedOnly")}
@@ -158,6 +205,19 @@ export default function SeoCollectionPage() {
             }}
           />
         }
+        rows={history.isLoading ? undefined : history.rows}
+        rowKey={(row) => row._id}
+        minWidthClassName="min-w-[820px]"
+        onRowClick={(row) => openCycle(row.cycleId)}
+        search={{
+          value: historySearch,
+          onChange: searchHistory,
+          placeholder: t("historySearchPlaceholder"),
+        }}
+        empty={{
+          icon: <Layers className="h-8 w-8 text-muted/30" />,
+          label: historySearch ? t("noMatch") : t("historyEmpty"),
+        }}
         footer={{
           mode: "paged",
           page: history.page,
@@ -166,7 +226,7 @@ export default function SeoCollectionPage() {
           pageSize: TABLE_PAGE_SIZE,
           isLoading: history.isBusy,
           onPageChange: history.goToPage,
-          labels: { empty: t("historyEmpty") },
+          labels: { empty: historySearch ? t("noMatch") : t("historyEmpty") },
         }}
         columns={[
           {

@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 
 import { superAdminQuery } from "./tenantFunctions";
+import {
+  includesSearchTerm,
+  normalizeSearchTerm,
+  paginateItems,
+} from "./adminQueryService";
 import type { Doc } from "./_generated/dataModel";
 
 /**
@@ -49,9 +54,13 @@ const cycleRow = v.object({
  * rather than a heap.
  */
 export const listSeoQueue = superAdminQuery({
-  args: {},
+  args: {
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number(),
+  },
   returns: v.object({
-    rows: v.array(v.object({
+    data: v.array(v.object({
       _id: v.id("seoDataPulls"),
       host: v.string(),
       companyName: v.string(),
@@ -62,13 +71,15 @@ export const listSeoQueue = superAdminQuery({
       attempts: v.number(),
       cycleId: v.union(v.id("seoCollectionCycles"), v.null()),
     })),
+    totalCount: v.number(),
+    totalPages: v.number(),
     /** Totals behind the window, so a short list cannot read as a quiet queue. */
     pending: v.number(),
     claimed: v.number(),
     submitted: v.number(),
     countsAreCapped: v.boolean(),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const counts: Record<string, number> = {};
     let countsAreCapped = false;
     const collected = [];
@@ -118,8 +129,16 @@ export const listSeoQueue = superAdminQuery({
       };
     }));
 
+    const term = normalizeSearchTerm(args.searchTerm ?? "");
+    const matching = term
+      ? rows.filter((row) =>
+        includesSearchTerm(row.host, term) || includesSearchTerm(row.companyName, term))
+      : rows;
+
+    const paged = paginateItems(matching, args.page, args.pageSize);
+
     return {
-      rows,
+      ...paged,
       pending: counts.PENDING ?? 0,
       claimed: counts.CLAIMED ?? 0,
       submitted: counts.SUBMITTED ?? 0,
@@ -143,6 +162,7 @@ export const listSeoHistory = superAdminQuery({
     paginationOpts: paginationOptsValidator,
     /** "FAILED" narrows to what went wrong, which is the usual reason to look. */
     status: v.optional(v.union(v.literal("READY"), v.literal("FAILED"))),
+    searchTerm: v.optional(v.string()),
   },
   returns: paginationResultValidator(v.object({
     _id: v.id("seoDataPulls"),
@@ -197,12 +217,27 @@ export const listSeoHistory = superAdminQuery({
       };
     }));
 
-    return { ...page, page: rows };
+    // Filtered after the page is read, so a search narrows the page rather
+    // than the archive. The alternative is a search index over a table that
+    // exists to be written to, not searched.
+    const term = normalizeSearchTerm(args.searchTerm ?? "");
+    const matching = term
+      ? rows.filter((row) =>
+        includesSearchTerm(row.host, term) || includesSearchTerm(row.companyName, term))
+      : rows;
+
+    return { ...page, page: matching };
   },
 });
 
-/** How many rows the screen shows. A live window, not an archive. */
-const QUEUE_WINDOW = 100;
+/**
+ * How much of the queue the screen can page through.
+ *
+ * Still a window rather than an archive — the queue is meant to be short-lived,
+ * and the rows beyond this are the same rows with later due times. Large enough
+ * that a draining cycle is legible, small enough to stay a cheap read.
+ */
+const QUEUE_WINDOW = 500;
 
 /** The ceiling on counting. Over it the screen says "more than", which is honest. */
 const QUEUE_COUNT_CEILING = 500;
@@ -259,7 +294,41 @@ export const getSeoCycle = superAdminQuery({
     ...cycleRow.fields,
     companyId: v.id("companies"),
     companyName: v.string(),
-    lines: v.array(v.object({
+  })),
+  handler: async (ctx, args) => {
+    const cycle = await ctx.db.get(args.cycleId);
+    if (!cycle) return null;
+
+    const company = await ctx.db.get(cycle.companyId);
+
+    return {
+      ...toCycleRow(cycle),
+      companyId: cycle.companyId,
+      companyName: company?.name ?? "",
+    };
+  },
+});
+
+/** One screenful of detail. A cycle can hold far more; the list is a sample. */
+const MAX_LINES = 200;
+
+/**
+ * One run's lines, searchable and paged like every other admin table.
+ *
+ * Split out of `getSeoCycle` so the screen reads the way the rest of admin
+ * reads: title, description, search, table, footer. The summary above the
+ * table and the rows inside it are different reads because they change at
+ * different rates.
+ */
+export const listSeoCycleLines = superAdminQuery({
+  args: {
+    cycleId: v.id("seoCollectionCycles"),
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number(),
+  },
+  returns: v.object({
+    data: v.array(v.object({
       _id: v.id("seoCycleLines"),
       host: v.string(),
       operationId: v.string(),
@@ -268,16 +337,14 @@ export const getSeoCycle = superAdminQuery({
       costUsd: v.number(),
       error: v.union(v.string(), v.null()),
     })),
-    lineCountIsCapped: v.boolean(),
-  })),
+    totalCount: v.number(),
+    totalPages: v.number(),
+    isCapped: v.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const cycle = await ctx.db.get(args.cycleId);
-    if (!cycle) return null;
-
-    const company = await ctx.db.get(cycle.companyId);
     const lines = await ctx.db
       .query("seoCycleLines")
-      .withIndex("by_cycle", (q) => q.eq("cycleId", cycle._id))
+      .withIndex("by_cycle", (q) => q.eq("cycleId", args.cycleId))
       .take(MAX_LINES + 1);
 
     const hosts = new Map<string, string>();
@@ -295,24 +362,24 @@ export const getSeoCycle = superAdminQuery({
         reused: line.reused,
         status: pull?.status ?? "",
         // A reused line shows nothing, because this run did not pay for it.
-        // Showing the original pull's cost here would count one charge twice.
+        // Showing the original pull's cost would count one charge twice.
         costUsd: line.reused ? 0 : pull?.costUsd ?? 0,
         error: pull?.error ?? null,
       };
     }));
 
+    const term = normalizeSearchTerm(args.searchTerm ?? "");
+    const matching = term
+      ? rows.filter((row) =>
+        includesSearchTerm(row.host, term) || includesSearchTerm(row.operationId, term))
+      : rows;
+
     return {
-      ...toCycleRow(cycle),
-      companyId: cycle.companyId,
-      companyName: company?.name ?? "",
-      lines: rows,
-      lineCountIsCapped: lines.length > MAX_LINES,
+      ...paginateItems(matching, args.page, args.pageSize),
+      isCapped: lines.length > MAX_LINES,
     };
   },
 });
-
-/** One screenful of detail. A cycle can hold far more; the list is a sample. */
-const MAX_LINES = 200;
 
 function toCycleRow(cycle: Doc<"seoCollectionCycles">) {
   return {

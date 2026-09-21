@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -11,6 +12,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 
@@ -47,7 +50,25 @@ export default function SeoCycleDetailPage() {
   const params = useParams();
   const cycleId = params.cycleId as Id<"seoCollectionCycles">;
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 400);
+
   const cycle = useQuery(api.seoCollectionReports.getSeoCycle, { cycleId });
+  // The summary and the rows are separate reads because they change at
+  // different rates: the pills settle once, the table is searched and paged.
+  const lines = useQuery(api.seoCollectionReports.listSeoCycleLines, {
+    cycleId,
+    searchTerm: debouncedSearch,
+    page,
+    pageSize: TABLE_PAGE_SIZE,
+  });
+
+  // A new search must not leave the reader on page nine of a shorter list.
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
 
   if (cycle === undefined) {
     return <p className="py-12 text-center text-[13px] text-muted">{t("loading")}</p>;
@@ -104,19 +125,45 @@ export default function SeoCycleDetailPage() {
         </p>
       ) : null}
 
+      {/*
+        Section heading above the table, matching `admin/websites/[websiteId]`
+        — the sibling screen in this same feature. An earlier version put the
+        title inside `cardHeader`, where it renders flush against the card edge
+        while the columns stay indented, which is the exact failure the
+        screen-kit guard describes in its own words.
+      */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {t("linesTitle")}
+        </h2>
+        <p className="max-w-3xl text-[13px] text-secondary">
+          {lines?.isCapped ? t("linesCapped") : t("linesSubtitle")}
+        </p>
+      </div>
+
       <DataTable
-        cardHeader={
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("linesTitle")}</h2>
-            {cycle.lineCountIsCapped ? (
-              <span className="text-[12px] text-muted">{t("linesCapped")}</span>
-            ) : null}
-          </div>
-        }
-        rows={cycle.lines}
+        rows={lines === undefined ? undefined : lines.data}
         rowKey={(row) => row._id}
         minWidthClassName="min-w-[780px]"
-        empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: t("noLines") }}
+        search={{
+          value: searchTerm,
+          onChange: handleSearch,
+          placeholder: t("linesSearchPlaceholder"),
+        }}
+        empty={{
+          icon: <Layers className="h-8 w-8 text-muted/30" />,
+          label: searchTerm ? t("noMatch") : t("noLines"),
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages: lines?.totalPages ?? 1,
+          totalCount: lines?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: lines === undefined,
+          onPageChange: setPage,
+          labels: { empty: searchTerm ? t("noMatch") : t("noLines") },
+        }}
         columns={[
           {
             key: "host",

@@ -270,11 +270,60 @@ async function countSettled(
         failedCount: cycle.failedCount + (status === "FAILED" ? 1 : 0),
         totalCostUsd: cycle.totalCostUsd + costUsd,
       });
+      await closeCycleIfSettled(ctx, cycle._id);
     }
   }
 
   await bumpRollup(ctx, "platform", day, status, costUsd);
   if (row.companyId) await bumpRollup(ctx, `company:${row.companyId}`, day, status, costUsd);
+}
+
+/**
+ * Close a cycle the moment its last pull settles.
+ *
+ * The hourly sweep closes cycles too, and for a while that was the only thing
+ * that did — which meant a run whose every line had come back still read
+ * "Sending" on screen for up to an hour. A status that lags reality by an hour
+ * is not a status, it is a guess, and the screen is the main way anyone will
+ * ever look at this pipeline.
+ *
+ * One indexed read per settle, ending at the first row still in flight. The
+ * sweep keeps its own copy of this duty, because a cycle whose last pull failed
+ * in a way that never reached here still has to be closed by something.
+ */
+async function closeCycleIfSettled(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">) {
+  const cycle = await ctx.db.get(cycleId);
+  if (!cycle) return;
+  // Only a cycle that is actually running. A capped or failed one has already
+  // said something more specific about why it stopped.
+  if (cycle.status !== "SENDING" && cycle.status !== "COLLECTING") return;
+
+  const inFlight = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_cycle", (q) => q.eq("cycleId", cycleId))
+    .filter((q) =>
+      q.or(
+        q.eq(q.field("status"), "PENDING"),
+        q.eq(q.field("status"), "CLAIMED"),
+        q.eq(q.field("status"), "SUBMITTED"),
+      ))
+    .first();
+
+  if (inFlight) {
+    // Something is still out. Say so plainly rather than leaving the cycle
+    // reading "Sending" while it is really waiting on an answer.
+    if (cycle.status === "SENDING" && !inFlightIsUnsent(inFlight)) {
+      await ctx.db.patch(cycleId, { status: "COLLECTING" });
+    }
+    return;
+  }
+
+  await ctx.db.patch(cycleId, { status: "DONE", finishedAt: Date.now() });
+}
+
+/** A row still queued or claimed has not gone out yet; one submitted has. */
+function inFlightIsUnsent(row: Doc<"seoDataPulls">) {
+  return row.status === "PENDING" || row.status === "CLAIMED";
 }
 
 export async function bumpRollup(

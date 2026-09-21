@@ -5021,7 +5021,14 @@
       "sentAt": "Inviata {when}",
       "attempts": "{count} tentativo/i finora",
       "sandbox": "Sandbox",
-      "spend": "${cost} su {pulls} richieste negli ultimi 30 giorni"
+      "spend": "${cost} su {pulls} richieste negli ultimi 30 giorni",
+      "queueSubtitle": "Non c'è nulla in attesa di invio.",
+      "historySubtitle": "Non è ancora stato raccolto nulla.",
+      "linesSubtitle": "Ogni sito richiesto da questa esecuzione e se è stato pagato.",
+      "queueSearchPlaceholder": "Cerca nella coda per sito o cliente...",
+      "historySearchPlaceholder": "Cerca i dati raccolti per sito o cliente...",
+      "linesSearchPlaceholder": "Cerca in questa esecuzione per sito...",
+      "noMatch": "Nessun risultato per questa ricerca."
     }
   },
   "ai": {

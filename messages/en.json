@@ -5021,7 +5021,14 @@
       "sentAt": "Sent {when}",
       "attempts": "{count} attempt(s) so far",
       "sandbox": "Sandbox",
-      "spend": "${cost} across {pulls} pulls in the last 30 days"
+      "spend": "${cost} across {pulls} pulls in the last 30 days",
+      "queueSubtitle": "Nothing is waiting to go out.",
+      "historySubtitle": "Nothing has been collected yet.",
+      "linesSubtitle": "Every website this run asked about, and whether it paid.",
+      "queueSearchPlaceholder": "Search the queue by website or client...",
+      "historySearchPlaceholder": "Search collected data by website or client...",
+      "linesSearchPlaceholder": "Search this run by website...",
+      "noMatch": "Nothing matches that search."
     }
   },
   "ai": {

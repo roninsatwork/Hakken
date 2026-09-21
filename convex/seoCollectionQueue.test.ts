@@ -303,3 +303,101 @@ describe("settling a result", () => {
     expect(rollups.find((row) => row.scopeKey === "platform")?.ready).toBe(1);
   });
 });
+
+describe("closing a cycle", () => {
+  test("a run whose last pull settles is done at once, not in an hour", async () => {
+    const t = harness();
+    const company = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() }));
+    const cycleId = await t.run(async (ctx) =>
+      await ctx.db.insert("seoCollectionCycles", {
+        companyId: company,
+        trigger: "MANUAL",
+        status: "SENDING",
+        plannedCount: 1,
+        reusedCount: 0,
+        sentCount: 0,
+        readyCount: 0,
+        failedCount: 0,
+        totalCostUsd: 0,
+        startedAt: Date.now(),
+      }));
+    const pullId = await seedPull(t, { cycleId, companyId: company });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId,
+      costUsd: 0,
+      sandbox: true,
+      ready: true,
+    });
+
+    // The hourly sweep closes cycles too, but it used to be the only thing
+    // that did — so a finished run read "Sending" on screen for up to an hour.
+    const cycle = await t.run(async (ctx) => await ctx.db.get(cycleId));
+    expect(cycle?.status).toBe("DONE");
+    expect(cycle?.finishedAt).toBeTruthy();
+  });
+
+  test("a run still waiting on an answer says so rather than 'sending'", async () => {
+    const t = harness();
+    const company = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() }));
+    const cycleId = await t.run(async (ctx) =>
+      await ctx.db.insert("seoCollectionCycles", {
+        companyId: company,
+        trigger: "MANUAL",
+        status: "SENDING",
+        plannedCount: 2,
+        reusedCount: 0,
+        sentCount: 0,
+        readyCount: 0,
+        failedCount: 0,
+        totalCostUsd: 0,
+        startedAt: Date.now(),
+      }));
+    const first = await seedPull(t, { cycleId, companyId: company });
+    await seedPull(t, { cycleId, companyId: company, status: "SUBMITTED", taskId: "t" });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId: first,
+      costUsd: 0,
+      sandbox: true,
+      ready: true,
+    });
+
+    // Everything this cycle had to send has gone; what is left is waiting on
+    // DataForSEO, which is a different thing and reads differently.
+    expect((await t.run(async (ctx) => await ctx.db.get(cycleId)))?.status).toBe("COLLECTING");
+  });
+
+  test("a capped cycle keeps the more specific thing it already said", async () => {
+    const t = harness();
+    const company = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() }));
+    const cycleId = await t.run(async (ctx) =>
+      await ctx.db.insert("seoCollectionCycles", {
+        companyId: company,
+        trigger: "SCHEDULE",
+        status: "CAPPED_PLAN",
+        plannedCount: 1,
+        reusedCount: 0,
+        sentCount: 0,
+        readyCount: 0,
+        failedCount: 0,
+        totalCostUsd: 0,
+        startedAt: Date.now(),
+      }));
+    const pullId = await seedPull(t, { cycleId, companyId: company });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId,
+      costUsd: 0,
+      sandbox: true,
+      ready: true,
+    });
+
+    // "Done" would hide why it stopped, which is the one thing somebody
+    // looking at a capped run needs to know.
+    expect((await t.run(async (ctx) => await ctx.db.get(cycleId)))?.status).toBe("CAPPED_PLAN");
+  });
+});
