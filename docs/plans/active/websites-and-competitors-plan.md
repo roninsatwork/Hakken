@@ -544,8 +544,7 @@ Each step ends green on the full guard list below and on `npx convex dev
 
 **Steps 1 to 11 were built on 2026-09-21 and are committed.** What the build
 found is recorded against each step; the two corrections it forced are decision
-10 and decision 11b above. Step 12 is this document. What remains is live
-credentials and a first real run.
+10 and decision 11b above. Step 12 is this document.
 
 1. **Fix the four failing UI tests** left by the schedules rework. They assert
    the old cadence shape: `src/app/(dashboard)/admin/websites/page.test.tsx`
@@ -614,22 +613,24 @@ credentials and a first real run.
     `docs/developer/workflow-runtime-internals.md` get a section on the SEO
     cycle; this plan gets a "Built" date.
 
-### What is left
+### Where it stands
 
-Everything above is committed on `dev` and deployed. Three things stand between
-this and a first real collection.
+Everything above is committed on `dev` and deployed.
 
-1. **Credentials.** `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` and, until the
-   first bill is expected, `DATAFORSEO_SANDBOX=1` in the backend environment.
-   The owner sets these; nothing in the codebase reads them except
-   `dataForSeoRest.ts`, and they are never to be printed or stored.
-2. **The connector installed and the agent switched on.** The DataForSEO
-   connector appears under Tools but has not been added, so the agent created
-   from its template holds no tools yet and is still a draft.
-3. **A first real run,** with a company's collection switched on. Until then
-   the pipeline has been exercised only by its tests and by one manual cycle
-   that correctly planned nothing, because the company it ran for had
-   collection switched off.
+The pipeline has run only against its own tests and one manual cycle, which
+correctly planned nothing because the company it ran for had collection
+switched off. It has never spoken to DataForSEO.
+
+It stays that way by design until three switches are thrown, and each is
+deliberately somebody's decision rather than a default. Credentials —
+`DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD`, and `DATAFORSEO_SANDBOX=1` while the
+first bill is still a surprise — live in the backend environment and are read
+by `dataForSeoRest.ts` alone. The connector is defined but not added, so the
+agent created from its template holds no tools. And no company has collection
+switched on, because absent reads as off.
+
+That is not an oversight in any of the three cases. It is the same rule three
+times: nothing here starts spending because it was merely installed.
 
 ### Guards that must pass
 

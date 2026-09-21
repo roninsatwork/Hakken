@@ -17,8 +17,9 @@ completed work.
   of claim-then-send workers drains `seoDataPulls` — because DataForSEO charges
   when a task is posted, not when its result is read. Pingback carries a task
   id and nothing else. The queue and its costs live on one global screen, never
-  inside a company. **Built 2026-09-21**; awaiting live credentials and a first
-  real run.
+  inside a company. **Built 2026-09-21.** It has never spoken to DataForSEO:
+  credentials, the connector and every company's collection switch are all off
+  until somebody decides otherwise, which is the same rule three times.
 
 - [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
 - [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.
