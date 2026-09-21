@@ -16,9 +16,11 @@ import {
   Building2,
   ClipboardCheck,
   Code2,
+  Clock,
   Cpu,
   FileText,
   Gauge,
+  Globe,
   LayoutDashboard,
   ListPlus,
   Loader2,
@@ -79,9 +81,39 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
 
   const companyHref = `/admin/companies/${companyId}`;
   const aiHref = `${companyHref}/ai`;
+  const websitesHref = `${companyHref}/websites`;
   const tabs = [
     { label: t("tabs.dashboard"), href: companyHref, icon: LayoutDashboard },
     { label: t("tabs.overview"), href: `${companyHref}/overview`, icon: FileText },
+    {
+      // The company's estate: the websites it owns, each holding the
+      // competitors it is measured against. A rival is only meaningful
+      // relative to the site it is compared with, so competitors live inside
+      // a website rather than beside it.
+      label: t("tabs.websites"),
+      href: websitesHref,
+      icon: Globe,
+      matches: (pathname: string) => matchesCompanyRoute(pathname, websitesHref),
+      dropdownItems: [
+        {
+          label: t("tabs.companyWebsites"),
+          href: websitesHref,
+          icon: Globe,
+          matches: (pathname: string) => (
+            pathname === websitesHref
+            || matchesCompanyRoute(pathname, `${websitesHref}/site`)
+          ),
+        },
+        {
+          // How often DataForSEO is asked for this company's numbers. Here
+          // rather than on Overview because it is a setting about websites,
+          // and that is where someone looks for it.
+          label: t("tabs.dataCollection"),
+          href: `${websitesHref}/data`,
+          icon: Clock,
+        },
+      ],
+    },
     {
       label: t("tabs.directory"),
       href: `${companyHref}/directory`,

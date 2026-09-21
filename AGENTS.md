@@ -191,6 +191,48 @@ npm run convex:dev
 
 ## Project Guardrails
 
+- **Reuse before you build. Look first, every time.** Before writing a
+  component, a hook, a helper or a Convex service, find out whether one already
+  exists and use it. This is the rule most easily broken by accident, because a
+  fresh file always compiles and a duplicate never announces itself — it just
+  drifts from the original a token at a time until the two behave differently
+  and nobody knows which is right.
+
+  Where to look, in this order:
+  - **Screens and UI**: `src/ui/components/screens/` is the kit — table, modal,
+    headers, fields, pills, save controls, pagination. `docs/developer/screen-kit.md`
+    lists every part. Genuinely admin-only pieces live in
+    `src/app/(dashboard)/admin/_components/`.
+  - **Hooks**: `src/hooks/` — `useServerPagedTable` for a paged list,
+    `useAdminAction` for any admin write, `useDebounce` for a search box.
+  - **Shared logic**: `src/lib/` for dates, formatting and the rest;
+    `convex/adminQueryService.ts` for search, slicing and pagination on the
+    backend; `convex/utils/` for validators and row shapes.
+
+  If the existing part nearly fits, extend it rather than forking it, and say in
+  a comment what the extension is for. If it genuinely does not fit, give the new
+  thing a name that says what it adds — `RunStatusPill`, not a second
+  `StatusPill` — and render the shared part inside it. `npm run check:screen-kit`
+  already fails a component declared under a name the kit exports, which is the
+  machine-checkable corner of this rule; the rest is on whoever is writing.
+
+  Three copies of a thing is the signal to stop and share it. When you do, move
+  the shared version to the narrowest folder both callers can reach — not
+  automatically into the kit, which is for parts every screen may want.
+
+- **Layouts are fluid. Do not put a fixed width on a layout.** The dashboard
+  shell (`FluidWorkspace`) owns the scrollable column and its padding, and
+  everything inside fills it. A `max-w-*` on a card, a section or a page wrapper
+  leaves half a wide screen empty and is the most common way a new screen stops
+  matching the ones beside it.
+
+  The two sanctioned uses of `max-w-*` are both about the *content*, never the
+  container: on a paragraph, where a long line is genuinely harder to read
+  (`max-w-2xl` on prose), and on a single control that would look broken
+  stretched across a monitor — a date picker, a short select. Put two such
+  controls side by side in a responsive grid rather than stacking them down a
+  narrow column. `ApprovalExpirySection` is the screen to copy.
+
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.

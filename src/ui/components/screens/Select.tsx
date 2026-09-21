@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { cn } from "@/src/ui/lib/utils";
+
 /**
  * A dropdown with its arrow where a designer would put it.
  *
@@ -41,19 +43,29 @@ export function Select({
    * dropdown stretching to the full row and wrapping onto its own line.
    */
   className?: string;
-  /** Border and state classes for the select itself. */
+  /**
+   * Classes for the select itself.
+   *
+   * Merged rather than appended, so a caller can actually replace the height,
+   * radius or padding — two class names for the same property in one string
+   * leave the winner to stylesheet order, which is how a dropdown ended up 8px
+   * shorter than the box beside it on the same row.
+   */
   selectClassName?: string;
   "aria-label"?: string;
 }) {
   return (
-    <div className={`relative inline-flex items-center ${className}`}>
+    <div className={cn("relative inline-flex items-center", className)}>
       <select
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         aria-label={ariaLabel}
-        className={`h-[38px] w-full appearance-none rounded-[10px] border border-border-dim bg-background pl-3 pr-10 text-[13px] text-foreground outline-none transition-colors focus:border-brand/50 disabled:opacity-60 ${selectClassName}`}
+        className={cn(
+          "h-[38px] w-full appearance-none rounded-[10px] border border-border-dim bg-background pl-3 pr-10 text-[13px] text-foreground outline-none transition-colors focus:border-brand/50 disabled:opacity-60",
+          selectClassName,
+        )}
       >
         {children}
       </select>

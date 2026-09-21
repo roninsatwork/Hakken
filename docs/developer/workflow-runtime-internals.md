@@ -214,7 +214,7 @@ Targeted tests for this area include:
 - `convex/webhooks.test.ts`
 - `src/app/(dashboard)/admin/workflows/page.test.tsx`
 - `src/app/(dashboard)/admin/workflows/schedules/page.test.tsx`
-- `src/app/(dashboard)/admin/workflows/schedules/_lib/scheduleConfig.test.ts`
+- `src/app/(dashboard)/admin/_lib/scheduleConfig.test.ts`
 - `src/ui/components/workflows/WorkflowComponents.test.tsx`
 
 Before merging implementation changes in this area, run the normal project gates from `AGENTS.md`. For documentation-only changes, still run `git diff --check`.

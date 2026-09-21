@@ -116,3 +116,13 @@ export function seoBackoffMs(attempt: number): number {
  * that was never the problem is the failure those two statuses avoid.
  */
 export const SEO_MAX_SENDS_PER_CYCLE = 25_000;
+
+/**
+ * Competitors collected for one website in a cycle.
+ *
+ * Every one of them is a paid pull at the parent website's own rate, so this
+ * is a cost ceiling as much as a transaction one. A hundred rivals against a
+ * single site is a plan conversation, not something a cycle should discover
+ * halfway through writing itself.
+ */
+export const SEO_COMPETITORS_PER_WEBSITE = 100;

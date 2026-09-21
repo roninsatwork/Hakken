@@ -105,6 +105,10 @@ describe("appError conversion holds and spreads", () => {
       "convex/mcpToolCall.ts:162 is its only consumer and converts it into an `{ ok: false, error }` return value; nothing rethrows it.",
     ],
     [
+      "DataForSeoBackoff",
+      "convex/seoCollectionActions.ts catches it at the one call site and turns it into a queue release — the batch goes back to PENDING with a later due time. It never leaves the worker chain, and no screen is waiting on the action that throws it.",
+    ],
+    [
       "ProviderRuntimeError",
       "carries provider status and retry metadata for `withProviderRetry` to branch on. It escapes to callers, so its message must stay safe — `safeProviderMessage` is what it is built from — but it is deliberately not a ConvexError: the agent runtime catches it and writes the failure into the run record rather than throwing at a screen.",
     ],

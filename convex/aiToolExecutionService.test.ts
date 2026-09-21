@@ -370,6 +370,13 @@ describe("ai tool execution service", () => {
       // Runs an Apify job the admin has configured.
       "apify.actor.run",
       "company.overview.update",
+      // The four DataForSEO doors: what can be asked, start a company's
+      // collection, ask for one website now, and read back what was collected.
+      // Each takes its company from the run, never from a model argument.
+      "dataforseo.collection.start",
+      "dataforseo.metrics.read",
+      "dataforseo.operations.list",
+      "dataforseo.pull.request",
       // The Gmail mailbox: read the connected inbox, and reply inside the
       // rails (sender-only, no no-reply, per-thread and per-day caps).
       "gmail.read",

@@ -523,6 +523,55 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    * shape being typed into an agent's instructions by hand. Apify publishes
    * both; the agent reads them itself.
    */
+  /**
+   * The four DataForSEO doors.
+   *
+   * Every one of them takes its company from the run context and never from a
+   * model argument. That is the rule the whole connector rests on: the website
+   * record is shared between everyone tracking a host, so a company id an
+   * injected instruction could set would be a way to read another customer's
+   * competitors. There is no field here for it to set.
+   */
+  "dataforseo.operations.list": async (input) => {
+    return await input.ctx.runQuery(internal.seoTools.listSeoOperations, {});
+  },
+  "dataforseo.collection.start": async (input) => {
+    if (!input.companyId) {
+      throw appError(
+        "INVALID_INPUT",
+        "A collection run belongs to a company, and this run is not attached to one.",
+      );
+    }
+    return await input.ctx.runMutation(internal.seoTools.startSeoCollection, {
+      companyId: input.companyId,
+      ...(input.runId ? { agentRunId: input.runId } : {}),
+      // A person asking through an agent is a manual run whatever woke the
+      // agent; the schedule's own path opens its cycle without a tool call.
+      trigger: "MANUAL",
+    });
+  },
+  "dataforseo.pull.request": async (input) => {
+    if (!input.companyId) {
+      throw appError("INVALID_INPUT", "This run is not attached to a company.");
+    }
+    return await input.ctx.runMutation(internal.seoTools.requestSeoPull, {
+      companyId: input.companyId,
+      host: getStringToolArg(input.args, "website"),
+      operationId: getStringToolArg(input.args, "data_type"),
+      ...(input.runId ? { agentRunId: input.runId } : {}),
+    });
+  },
+  "dataforseo.metrics.read": async (input) => {
+    if (!input.companyId) {
+      throw appError("INVALID_INPUT", "This run is not attached to a company.");
+    }
+    const days = getNumberToolArg(input.args, "days");
+    return await input.ctx.runQuery(internal.seoTools.readSeoMetrics, {
+      companyId: input.companyId,
+      host: getStringToolArg(input.args, "website"),
+      ...(days !== undefined ? { days } : {}),
+    });
+  },
   "apify.actor.describe": async (input) => {
     const search = getOptionalStringToolArg(input.args, "search");
     const job = getOptionalStringToolArg(input.args, "job");

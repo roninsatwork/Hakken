@@ -12,6 +12,7 @@ import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
+  SEO_COMPETITORS_PER_WEBSITE,
   SEO_MAX_SENDS_PER_CYCLE,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -163,10 +164,13 @@ async function expandPage(
       .first();
     if (lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
 
+    // Bounded rather than collected. A website with more rivals than this is
+    // a plan question, not something one transaction should discover the hard
+    // way at the moment it runs out of room.
     const competitors = await ctx.db
       .query("trackedCompetitors")
       .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsite._id))
-      .collect();
+      .take(SEO_COMPETITORS_PER_WEBSITE);
 
     // A competitor is collected at the rate of the website it is measured
     // against. Numbers from different weeks are not a comparison.

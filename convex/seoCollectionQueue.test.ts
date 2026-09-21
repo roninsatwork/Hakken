@@ -107,7 +107,9 @@ describe("claiming", () => {
     const agent = await t.run(async (ctx) =>
       await ctx.db.insert("agents", {
         name: "DataForSEO Agent",
-        modelId: "claude-sonnet-5",
+        // Not a real model id: nothing here calls a model, and a literal one
+        // would be a runtime model choice hidden in a fixture.
+        modelId: "test-model",
         thinkingMode: false,
         isActive: true,
         maxCostGBP: 5,

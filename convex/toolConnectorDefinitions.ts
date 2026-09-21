@@ -101,6 +101,103 @@ export const TWILIO_AUTH_TOKEN_SECRET_REF = "twilio/auth-token";
 
 export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
   {
+    key: "dataforseo",
+    name: "DataForSEO",
+    description:
+      "Collects search data for the websites a company holds — what they rank for, who links "
+      + "to them, and how their competitors compare. The agent says which company to collect "
+      + "for; the platform decides what to ask and when.",
+    category: "HTTP",
+    // The account stays in the backend environment, so the agent never handles
+    // the credential and cannot be talked into revealing it.
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["dataforseo:collect"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "See what search data can be collected",
+        description:
+          "Lists the kinds of search data that can be asked for, and what each one needs. "
+          + "Read this before asking for something rather than guessing a name.",
+        handlerMapping: "dataforseo.operations.list",
+        modelName: "list_search_data_types",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Start a company's collection run",
+        description:
+          "Begins the scheduled collection for a company: every website it holds, and the "
+          + "competitors tracked against each. Returns as soon as the work list is opened — "
+          + "the collecting happens afterwards and takes as long as it takes.",
+        handlerMapping: "dataforseo.collection.start",
+        modelName: "start_collection_run",
+        requiredRole: "ADMIN",
+        // It commits the platform to spending money, even though the agent
+        // never sends a request itself.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Ask for one website's data now",
+        description:
+          "Asks for one kind of search data about one website the company holds, without "
+          + "waiting for its schedule. If that question was already asked today, this costs "
+          + "nothing and the existing answer is used.",
+        handlerMapping: "dataforseo.pull.request",
+        modelName: "request_website_data",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            website: {
+              type: "string",
+              description: "The website to ask about, as a domain — 'example.com'.",
+            },
+            data_type: {
+              type: "string",
+              description:
+                "Which kind of data to ask for. Use the listing tool to see the names.",
+            },
+          },
+          required: ["website", "data_type"],
+        }),
+      },
+      {
+        name: "Read a website's collected numbers",
+        description:
+          "The search numbers already held for one website the company holds: rankings, "
+          + "backlink counts and keyword positions by day. Reads what has been collected; "
+          + "collects nothing and costs nothing.",
+        handlerMapping: "dataforseo.metrics.read",
+        modelName: "read_website_search_data",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            website: {
+              type: "string",
+              description: "The website to read, as a domain — 'example.com'.",
+            },
+            days: {
+              type: "number",
+              description: "How many days back to read. Leave unset for 30.",
+            },
+          },
+          required: ["website"],
+        }),
+      },
+    ],
+  },
+  {
     key: "apify-actor",
     name: "Apify",
     description:

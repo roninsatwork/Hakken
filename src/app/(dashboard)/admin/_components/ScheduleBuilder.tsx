@@ -15,7 +15,7 @@ import {
   type ScheduleCadence,
   type ScheduleDraft,
   type ScheduleTargetKind,
-} from "../_lib/scheduleConfig";
+} from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 
 type ScheduleBuilderProps = {
   draft: ScheduleDraft;

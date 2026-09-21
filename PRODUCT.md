@@ -692,13 +692,15 @@ connection in §9 still has to be built on it.
 
 ## 31. Hakken Product Surface
 
-**None of the product described in Part One exists in this codebase.** Listed
-so that nothing above has to be hedged, and ordered roughly by the phases in
-§17.
+**Almost none of the product described in Part One exists in this codebase.**
+Listed so that nothing above has to be hedged, and ordered roughly by the phases
+in §17. The first exception is dated in its row: the website record, the first
+piece of the asset record, landed on 2026-09-21. Every other row is still unbuilt, and a
+row that says so must not be described as though it exists.
 
 | Area | Current state |
 |---|---|
-| The asset record | Not built. No asset entity, no per-asset P&L, no stage model (found → visited → converted → enquired/ordered → won). The business record described in §5 does not exist; company records today hold workspace configuration, not decision-ready facts. |
+| The asset record | **Started 2026-09-21.** The website entity exists and is shared: a website is stored once, identified by normalised host, and every company holding or tracking it reads that one record, so DataForSEO is paid once. A company holds its own websites and the competitors each is measured against sit inside them, with refresh cadence set on the company and inherited by each website. Super admin only, under the company's Websites tab and a top-level Websites section. Nothing else of §5 does — no data is fetched, no per-asset P&L, no stage model (found → visited → converted → enquired/ordered → won). Company records still hold workspace configuration, not decision-ready facts. |
 | DataForSEO connection | Not built. No AI Optimization, SERP, Keywords or Labs integration. Phase 0's sandbox test (billable rows, UK coverage, cited-versus-chosen) has not been run. |
 | Cited vs chosen monitoring | Not built. No per-engine monitoring record, no "share of AI decisions" metric. |
 | Prompt panels | Not built. No buyer-intent derivation, no target-blind variant generation, no contamination QA, no panel versioning with separate aided/unaided denominators. |
@@ -778,18 +780,21 @@ running against the Sonae deployment.
 
 ## Change Log
 
-* **2026-09-21** — Cloned from Sonae into its own repository as the Hakken
-  product, and rewrote Part One against
-  `docs/product/app-vision-v2.md` (v2.3). The product is now the asset-P&L and
-  AI-visibility platform, not a general-purpose framework. Part Two was retained
-  unchanged as verified platform capability and reframed as inherited
-  foundation, with a "*For Hakken:*" note on each section saying what it gives
-  the new product and what it does not. Part Three gained §31, the Hakken
-  product surface, all of it unbuilt; the previous gap table became §32; §33
-  records the legacy demo modules. The five research documents were brought into
-  `docs/product/`. A follow-up pass the same day renamed every remaining
-  `sonae` identifier, filename and deployment name to `hakken`, knowingly
-  breaking external integrations; the cutover checklist is §33.
+* **2026-09-21 (later)** — The first piece of Hakken's own product surface: the
+  **website record**. A website is stored once, keyed on its normalised host, so
+  a competitor two clients both watch is one record with one DataForSEO pull —
+  the constraint the whole model is built to keep. A company holds its own
+  websites; the competitors each site is measured against sit inside that site,
+  because a rival is only meaningful relative to what it is compared with.
+  Refresh cadence (daily, weekly, fortnightly, monthly, plus an on/off switch)
+  is set on the company and inherited by each website, with inheritance
+  expressed as absence so changing the company moves every website that has not
+  been set differently. Because there is one record per host, the fastest
+  watcher sets its rate for everyone and cost never multiplies. Divisions were
+  built and removed the same day: they added a level that earned nothing once
+  competitors moved inside a website rather than sitting beside it. Nothing is
+  fetched yet — these are structures and settings, and the agent that reads them
+  and calls DataForSEO is the next slice.
 * **2026-09-13** — Corrected OAuth, MCP and health-endpoint implementation
   claims against the code. Live deployment readiness remains a separate check.
 * **2026-08-23 (later)** — Three claims corrected against the code. Tenant

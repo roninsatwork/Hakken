@@ -1,6 +1,6 @@
 export type ScheduleTargetKind = "agent" | "workflow";
 export type ScheduleBuilderMode = "recurring" | "targetedTimes";
-export type ScheduleCadence = "hourly" | "daily" | "weekly" | "monthly";
+export type ScheduleCadence = "hourly" | "daily" | "weekly" | "fortnightly" | "monthly";
 
 export type ScheduleDraft = {
   mode: ScheduleBuilderMode;
@@ -10,6 +10,14 @@ export type ScheduleDraft = {
   startTimeLocal: string;
   dayOfWeek: number;
   dayOfMonth: number;
+  /**
+   * The week a fortnightly schedule counts from, as YYYY-MM-DD.
+   *
+   * "Every other Monday" needs to know which Monday. Anchoring to a date the
+   * user picked means a pause, a failure or a backfill cannot shift the
+   * fortnight onto the wrong week, which counting from the last run would.
+   */
+  anchorDate: string;
   timesLocal: string[];
   timezone: string;
 };
@@ -35,6 +43,16 @@ type ScheduleConfigV2 =
       kind: "recurring";
       cadence: "weekly";
       dayOfWeek: number;
+      timeLocal: string;
+      timezone: string;
+    }
+  | {
+      version: 2;
+      kind: "recurring";
+      cadence: "fortnightly";
+      dayOfWeek: number;
+      /** The week the fortnight counts from, as YYYY-MM-DD. */
+      anchorDate: string;
       timeLocal: string;
       timezone: string;
     }
@@ -86,6 +104,15 @@ function normalizeTime(value: string) {
   return isValidTime(value) ? value : "09:00";
 }
 
+function isValidAnchorDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
+}
+
+function normalizeAnchorDate(value: string) {
+  return isValidAnchorDate(value) ? value : new Date().toISOString().slice(0, 10);
+}
+
 export function getBrowserTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE;
 }
@@ -99,6 +126,7 @@ export function createDefaultScheduleDraft(): ScheduleDraft {
     startTimeLocal: "09:00",
     dayOfWeek: 1,
     dayOfMonth: 1,
+    anchorDate: new Date().toISOString().slice(0, 10),
     timesLocal: [],
     timezone: getBrowserTimezone(),
   };
@@ -191,6 +219,17 @@ function hydrateConfigV2(value: Record<string, unknown>): Partial<ScheduleDraft>
       mode: "recurring",
       cadence: "weekly",
       dayOfWeek: typeof value.dayOfWeek === "number" ? value.dayOfWeek : 1,
+      timeLocal: normalizeTime(String(value.timeLocal ?? "09:00")),
+      timezone,
+    };
+  }
+
+  if (value.cadence === "fortnightly") {
+    return {
+      mode: "recurring",
+      cadence: "fortnightly",
+      dayOfWeek: typeof value.dayOfWeek === "number" ? value.dayOfWeek : 1,
+      anchorDate: normalizeAnchorDate(String(value.anchorDate ?? "")),
       timeLocal: normalizeTime(String(value.timeLocal ?? "09:00")),
       timezone,
     };
@@ -308,6 +347,18 @@ export function buildScheduleConfig(draft: ScheduleDraft): ScheduleConfigV2 {
       kind: "recurring",
       cadence: "weekly",
       dayOfWeek: Math.min(Math.max(Math.floor(draft.dayOfWeek), 0), 6),
+      timeLocal: normalizeTime(draft.timeLocal),
+      timezone,
+    };
+  }
+
+  if (draft.cadence === "fortnightly") {
+    return {
+      version: 2,
+      kind: "recurring",
+      cadence: "fortnightly",
+      dayOfWeek: Math.min(Math.max(Math.floor(draft.dayOfWeek), 0), 6),
+      anchorDate: normalizeAnchorDate(draft.anchorDate),
       timeLocal: normalizeTime(draft.timeLocal),
       timezone,
     };

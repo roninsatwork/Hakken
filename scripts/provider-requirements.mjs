@@ -12,6 +12,7 @@ export const PROVIDER_GROUPS = {
   typesafe: { label: "TypeSafe decisions", keys: [["TYPESAFE_API_KEY"]] },
   webIngestion: { label: "Website ingestion", keys: [["FIRECRAWL_API_KEY"]] },
   apify: { label: "Apify callbacks", keys: [["APIFY_API_TOKEN"], ["APIFY_WEBHOOK_SECRET"]] },
+  dataForSeo: { label: "DataForSEO", keys: [["DATAFORSEO_LOGIN"], ["DATAFORSEO_PASSWORD"], ["DATAFORSEO_SANDBOX"]] },
   gmail: { label: "Gmail OAuth", keys: [["CONNECTOR_GOOGLE_CLIENT_ID"], ["CONNECTOR_GOOGLE_CLIENT_SECRET"], ["CONNECTOR_TOKEN_ENCRYPTION_KEY"]] },
   voice: { label: "Voice sessions", keys: [["VOICE_RELAY_URL"], ["VOICE_RELAY_SECRET"]] },
   telephony: { label: "Telephone agent", keys: [["TWILIO_ACCOUNT_SID"], ["TWILIO_AUTH_TOKEN"], ["TELEPHONY_NUMBER_OWNERS"], ["TELEPHONY_PUBLIC_URL"], ["TELEPHONY_STATUS_PUBLIC_URL"], ["TELEPHONY_STREAM_URL"]] },

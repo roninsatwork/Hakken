@@ -52,17 +52,32 @@ export const textAreaClassName =
  * setting with three states, and reading them as three separate boxes is what
  * made the create screen's version look like something else.
  */
+const SEGMENT_COLUMNS: Record<number, string> = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
+
 export function SegmentedChoice<T extends string>({ label, value, options, onChange }: {
   label: string;
   value: T;
   options: Array<{ value: T; label: string }>;
   onChange: (next: T) => void;
 }) {
+  // Three was hardcoded because reasoning effort has three levels. A two-way
+  // choice left an empty column and a four-way one wrapped, so anything but a
+  // triple had to fork the control — which is how a second segmented control
+  // gets written. Tailwind cannot take a computed class name, hence the map.
+  const columns = SEGMENT_COLUMNS[options.length] ?? "grid-cols-3";
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid h-[46px] grid-cols-3 gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1"
+      className={cn(
+        "grid h-[46px] gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1",
+        columns,
+      )}
     >
       {options.map((option) => (
         // Raw on purpose: a segment of a radio group, not a standalone button —

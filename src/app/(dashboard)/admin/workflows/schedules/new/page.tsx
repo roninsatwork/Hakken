@@ -15,7 +15,7 @@ import {
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useTranslations } from "next-intl";
-import ScheduleBuilder from "../_components/ScheduleBuilder";
+import ScheduleBuilder from "@/src/app/(dashboard)/admin/_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { InlineSearchInput } from "@/src/ui/components/screens/Table";
@@ -24,7 +24,7 @@ import {
   createDefaultScheduleDraft,
   serializeScheduleDraft,
   validateScheduleDraft,
-} from "../_lib/scheduleConfig";
+} from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 
 type PayloadType = "workflow" | "agent";
 type WorkflowRow = Doc<"workflows">;

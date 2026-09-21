@@ -66,6 +66,21 @@ export const parseSeoResult = internalAction({
  */
 const MAX_POSITION_ROWS = 1_000;
 
+/**
+ * How much of a previous parse one re-parse will clear.
+ *
+ * A parse writes at most `MAX_POSITION_ROWS` positions and one metrics row, so
+ * this is that with room to spare. Anything beyond it was not written here.
+ */
+const REPLACE_LIMIT = MAX_POSITION_ROWS + 100;
+
+/**
+ * One keyword on one day is one fact, so this should only ever find one row.
+ * The small ceiling is the assertion: if it is ever hit, something upstream
+ * has been writing duplicates.
+ */
+const SAME_DAY_LIMIT = 5;
+
 export const getPullForParse = internalQuery({
   args: { pullId: v.id("seoDataPulls") },
   returns: v.union(v.null(), v.object({
@@ -113,10 +128,13 @@ export const writeSeoMetrics = internalMutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
+    // Bounded, like every read here: a re-parse replaces at most what one
+    // parse wrote, and a query with no ceiling is a query that works until the
+    // day the table is large.
     const existing = await ctx.db
       .query("seoWebsiteMetrics")
       .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
-      .collect();
+      .take(REPLACE_LIMIT);
     for (const row of existing) await ctx.db.delete(row._id);
 
     await ctx.db.insert("seoWebsiteMetrics", {
@@ -131,7 +149,7 @@ export const writeSeoMetrics = internalMutation({
     const priorPositions = await ctx.db
       .query("seoKeywordPositions")
       .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
-      .collect();
+      .take(REPLACE_LIMIT);
     for (const row of priorPositions) await ctx.db.delete(row._id);
 
     for (const entry of args.positions) {
@@ -141,7 +159,7 @@ export const writeSeoMetrics = internalMutation({
         .query("seoKeywordPositions")
         .withIndex("by_website_keyword_day", (q) =>
           q.eq("websiteId", args.websiteId).eq("keyword", entry.keyword).eq("day", args.day))
-        .collect();
+        .take(SAME_DAY_LIMIT);
       for (const row of sameDay) await ctx.db.delete(row._id);
 
       await ctx.db.insert("seoKeywordPositions", {

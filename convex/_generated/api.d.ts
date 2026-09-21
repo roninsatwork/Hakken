@@ -234,6 +234,7 @@ import type * as seoCollectionSweep from "../seoCollectionSweep.js";
 import type * as seoIdempotency from "../seoIdempotency.js";
 import type * as seoPingback from "../seoPingback.js";
 import type * as seoScheduleService from "../seoScheduleService.js";
+import type * as seoTools from "../seoTools.js";
 import type * as settings from "../settings.js";
 import type * as settingsService from "../settingsService.js";
 import type * as signInThrottleService from "../signInThrottleService.js";
@@ -608,6 +609,7 @@ declare const fullApi: ApiFromModules<{
   seoIdempotency: typeof seoIdempotency;
   seoPingback: typeof seoPingback;
   seoScheduleService: typeof seoScheduleService;
+  seoTools: typeof seoTools;
   settings: typeof settings;
   settingsService: typeof settingsService;
   signInThrottleService: typeof signInThrottleService;

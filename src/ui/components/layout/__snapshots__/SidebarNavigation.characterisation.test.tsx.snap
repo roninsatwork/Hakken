@@ -56,6 +56,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "Hakken -> /",
     "aiRegister -> /admin/governance/register",
     "allUsers -> /admin/directory",
+    "allWebsites -> /admin/websites",
     "analytics -> /admin/settings/analytics",
     "apiKeys -> /admin/settings/api-keys",
     "auditTrail -> /admin/governance/audit-trail",
@@ -89,6 +90,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "maintenance",
     "settings",
     "userManagement",
+    "websites",
   ],
 }
 `;

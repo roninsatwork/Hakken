@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
+  Globe,
   Bot,
   Workflow,
   ShieldCheck,
@@ -79,6 +80,27 @@ export function AdminNavTree({
       onToggle={() => toggleSection('companies')}
     >
       <SubNavItem label={t('manageCompanies')} href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+    </NavItem>
+  )}
+
+  {/*
+    Websites, in a section of its own rather than under Companies. A website is
+    the core object of this product, not an administrative detail of a tenant,
+    and the screens that come next — the fetch queue, cost per target, the
+    collecting agent's runs — belong beside it rather than inside company
+    management.
+  */}
+  {canSeeAdminSections && (
+    <NavItem
+      icon={Globe}
+      label={t('websites')}
+      isActive={activeItem === 'Websites' || pathname.startsWith('/admin/websites')}
+      onClick={() => setActiveItem('Websites')}
+      hasChildren
+      isOpen={openSections.websites}
+      onToggle={() => toggleSection('websites')}
+    >
+      <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites')} onClick={() => setActiveItem('Websites')} />
     </NavItem>
   )}
 

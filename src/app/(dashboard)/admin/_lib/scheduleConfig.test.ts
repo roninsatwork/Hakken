@@ -7,7 +7,7 @@ import {
   removeTargetedTime,
   serializeScheduleDraft,
   validateScheduleDraft,
-} from "./scheduleConfig";
+} from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 
 describe("schedule config helpers", () => {
   test("serializes recurring hourly schedules as v2 configs", () => {
