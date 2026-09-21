@@ -127,6 +127,18 @@ The current schedule config v2 supports recurring hourly, daily, weekly, monthly
 
 The schedule-list force-run button calls `api.scheduler.manualRunSchedule`. For agent targets this queues a durable agent run. For workflow targets it creates a workflow execution and schedules `internal.scheduler.completeSimulation` after two seconds. That means it verifies logging and schedule controls but does not execute the workflow graph. Use the workflow designer's manual run or the due schedule dispatcher path when testing real workflow graph execution.
 
+## SEO Collection
+
+SEO collection is an ordinary agent schedule, not a second scheduling system. A company's `schedules` row carries `companyId` and a `by_company_agent` index, `convex/scheduler.ts` finds it with `getCompanySchedule`, and the minute dispatcher above wakes it exactly as it wakes any other agent schedule. The run appears in the agent's runs, logs and costs alongside every other run. A parallel scheduler was built for this once and deleted; do not build another.
+
+The cadence vocabulary gained fortnightly for this feature, anchored to a chosen date rather than "every 14 days", so a pause or a backfill cannot shift it onto the wrong week. `convex/fortnightlySchedule.test.ts` covers it, including a missed-three-weeks catch-up. `ScheduleBuilder` and `scheduleConfig` moved up to `src/app/(dashboard)/admin/_components/` and `src/app/(dashboard)/admin/_lib/` because the workflow screens and the SEO screens both use them.
+
+Cadence is set on the company and inherited by each website. `companyWebsites.refreshIntervalStr` and `companyWebsites.collectionEnabled` are both optional, and **absence is what makes inheritance real**: a website following its company stores nothing, so changing the company moves it while an overridden one stays put. Absent `collectionEnabled` reads as off, so shipping the fetcher never starts spending on every client at once. `convex/seoScheduleService.ts` resolves all of this and delegates every interval calculation to `workflowScheduleService.ts`.
+
+What the woken agent does is open a cycle and stop. It sends nothing; see the SEO collection section of `workflow-runtime-internals.md` for what happens afterwards.
+
+Two screens are called Data Collection and they are not the same screen. `/admin/companies/[id]/websites/data` is the company's cadence setting. `/admin/websites/collection` is the platform's queue, its history and its cost, and it is global because the queue is one shared pipeline and every figure on it is the operator's own spend. Keep costs, queues and runs off the company screen: that workspace becomes customer-facing.
+
 ## Verification
 
 Relevant tests include:

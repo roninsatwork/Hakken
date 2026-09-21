@@ -170,6 +170,32 @@ Version 2 schedule configs support:
 
 Paused schedules have no `nextRunAt`. Toggling a schedule active recalculates `nextRunAt` from the saved interval, previous `lastRunTs`, and current time.
 
+## SEO Collection Runtime
+
+The collection pipeline hangs off the schedule dispatcher and then runs on its own. Everything about its shape follows from one fact: **DataForSEO charges when a task is posted, not when its result is read.** A duplicate is an invoice line, not an untidy log.
+
+Files: `seoCollection.ts` writes the work list, `seoCollectionQueue.ts` holds the transactional claim and settle, `seoCollectionActions.ts` is the only place that reaches the network, `seoCollectionParse.ts` turns payloads into metrics, `seoCollectionSweep.ts` is the watchdog, `seoCollectionReports.ts` feeds the screens, `seoTools.ts` is the agent's four doors, and `seoCollectionPolicy.ts` holds every number with its reasoning.
+
+**Expansion is chunked because a mutation is a transaction.** `expandSeoCycle` walks `SEO_EXPANSION_PAGE` company websites, stores the last one as a cursor and reschedules itself. A company with thousands of websites cannot be expanded in one mutation; this is not an optimisation.
+
+**The reuse ladder runs before anything is planned.** A finished pull the asker would still call fresh is reused, then a pull already in flight for the same question today, then a new one is planned. Freshness has to look across days, so it is found by website and operation and judged by `isWebsiteDue` against the asker's own schedule — a weekly watcher handed six-day-old numbers is served correctly. An in-flight duplicate is only ever today's, so it is matched on the exact idempotency key, which carries the UTC cycle date.
+
+**`dueAt` spacing is the entire rate limiter.** Rows are enqueued at `cycleStart + index × SEO_DUE_SPACING_MS`. That one line gives rate limiting, tenant fairness and thundering-herd protection with no scheduler and no fairness algorithm: a small tenant queued behind a large one is never stuck, because its rows come due sooner than the large one's tail.
+
+**Workers claim before they send.** `claimSeoBatch` reads and patches to `CLAIMED` in one transaction, so two chains can never hold one row. A batch is one operation, because one request is one endpoint. The spend cap is checked before every batch and not once at run start, because a cycle outlives the agent run that opened it by hours. `SEO_WORKER_WIDTH` chains self-schedule; an empty queue starts nothing, which is why there is no per-minute cron here.
+
+**A rate limit is not a failure.** A 429 or 5xx raises `DataForSeoBackoff`, caught at the one call site and turned into a queue release with a later `dueAt`. **A row holding a `taskId` is never posted again** — it was paid for, and a missing result is fetched, never re-bought.
+
+**The pingback carries a task id and nothing else.** DataForSEO's callback cannot carry an auth header, so `POST|GET /api/seo/pingback` looks the id up among our own `SUBMITTED` rows and, on a match, fetches the result ourselves over authenticated HTTPS. An unknown id is a plain 200 and nothing else; that cheap miss is what stops a flood of invented ids becoming a flood of our own outbound requests. The route never logs the query string. Collection is free, so nothing is lost by refusing to trust the caller.
+
+**Raw payloads live on the pull row with a TTL, not in file storage.** Convex file storage on this platform is swept of anything without an upload reservation, so a payload parked there would be deleted within a day. `resultJson` is cleared by the sweep after `SEO_RAW_RETENTION_DAYS`; the row survives because it is the cost record. Parsing is idempotent by `pullId`, so a parser bug is fixed by re-running parse over stored payloads rather than re-buying data.
+
+**No agent reads result text.** `seo_read_metrics` returns positions, counts and keywords we asked about. A SERP title can be written to read as an instruction; it is not filtered out, it is never read in the first place.
+
+**Tenancy lives only on the join rows.** A `websites` row is shared by everyone tracking that host, so `requireCompanyWebsite` in `seoTools.ts` is the only way a host becomes a website id, and it proves the caller's own `companyWebsites` or `trackedCompetitors` row first. A host another company holds is refused in the same words as a host that does not exist. `convex/websiteTenancyGuard.test.ts` enforces this structurally by allowing exactly two files to query the websites table.
+
+**The hourly sweep is the watchdog, not the driver.** `seo-collection-sweep` runs through `jobLedger` like every other job. It reclaims claims older than `SEO_CLAIM_TIMEOUT_MS`, chases submitted tasks whose pingback never arrived, fails those past `SEO_RESULT_TIMEOUT_MS`, closes settled cycles, opens `OVERRIDE_SWEEP` cycles for websites on their own faster schedule, restarts the drain if anything is due, and clears expired payloads and cycles. Hourly and not minutely: it exists to catch failure. Starting a second set of worker chains beside a live one is harmless, because claiming is atomic, which is why liveness is never tracked.
+
 ## Webhook Runtime Boundaries
 
 Webhook runtime is intentionally narrow:

@@ -175,7 +175,7 @@ names those companies before it happens.
   list, purge internals. 41 tests.
 - `convex/utils/websiteShapes.ts` — return shapes.
 - `convex/seoScheduleService.ts` — schedule resolution, above.
-- `convex/dataForSeoRegistry.ts` — the registry of DataForSEO operations, 32
+- `convex/dataForSeoRegistry.ts` — the registry of DataForSEO operations, 35
   tests. Four operations: `serp_google_organic` (queued, one keyword),
   `keyword_search_volume` (queued, up to 1,000 keywords), `domain_ranked_keywords`
   (live), `backlinks_summary` (live). The agent names an operation id plus
@@ -192,6 +192,37 @@ names those companies before it happens.
 - `ScheduleBuilder` and `scheduleConfig` live under `admin/_components/` and
   `admin/_lib/` because the workflow screens and the SEO screens both use them.
 - The screens above, with their tests.
+
+The pipeline, built 2026-09-21:
+
+- `convex/seoCollectionPolicy.ts` — every number the pipeline runs on, each
+  with the reasoning that chose it. No tests: it is constants, and a test would
+  only restate them.
+- `convex/seoIdempotency.ts` — what a pull *is*, as one string. 10 tests.
+- `convex/seoCollection.ts` — chunked expansion and the reuse ladder. 10 tests.
+- `convex/seoCollectionQueue.ts` — the transactional half: claim, release,
+  settle, and the pingback's own mutation. 14 tests.
+- `convex/seoCollectionActions.ts` — the only file here that reaches the
+  network. Worker chains and result fetching.
+- `convex/seoPingback.ts` + the route in `convex/http.ts` — a task id and
+  nothing else.
+- `convex/dataForSeoParsers.ts` — one parser per operation, pure. 10 tests,
+  one of which asserts a result title written as an instruction never reaches
+  the output.
+- `convex/seoCollectionParse.ts` — payload to metrics, idempotent by `pullId`.
+- `convex/seoCollectionSweep.ts` — the hourly watchdog and both retention
+  passes, registered through `jobLedger`.
+- `convex/seoCollectionReports.ts` — the queue, the history and the cost, for
+  the screens. Super admin only, every one.
+- `convex/seoTools.ts` — the agent's four doors, and `requireCompanyWebsite`,
+  the only way a host becomes a website id. 10 tests.
+- `convex/websiteTenancyGuard.test.ts` — 3 tests that keep the tenancy rule
+  structural rather than remembered.
+- `src/app/(dashboard)/admin/websites/collection/` — the global queue, its
+  history, and one run behind them.
+- The connector in `convex/toolConnectorDefinitions.ts`, its handlers in
+  `convex/aiToolExecutionService.ts`, and the `DataForSEO Agent` template in
+  `convex/agentTemplates.ts`.
 
 ## Part 2 — The collection pipeline
 
@@ -544,7 +575,7 @@ Each step ends green on the full guard list below and on `npx convex dev
 
 **Steps 1 to 11 were built on 2026-09-21 and are committed.** What the build
 found is recorded against each step; the two corrections it forced are decision
-10 and decision 11b above. Step 12 is this document.
+10 and decision 11b above.
 
 1. **Fix the four failing UI tests** left by the schedules rework. They assert
    the old cadence shape: `src/app/(dashboard)/admin/websites/page.test.tsx`
@@ -611,7 +642,10 @@ found is recorded against each step; the two corrections it forced are decision
     cost record and has to stay checkable against an invoice.
 12. **Docs.** `docs/developer/workflow-automation.md` and
     `docs/developer/workflow-runtime-internals.md` get a section on the SEO
-    cycle; this plan gets a "Built" date.
+    cycle; this plan gets a "Built" date. **Done.** Automation covers the
+    schedule and inheritance side, internals covers the runtime: chunked
+    expansion, claim-before-send, the pingback boundary, why raw payloads are
+    not in file storage, and the tenancy rule.
 
 ### Where it stands
 
