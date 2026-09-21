@@ -325,10 +325,20 @@ export default function CompanyWebsiteDetailPage() {
           On screen rather than discovered by hitting it: each question is a
           paid call per engine, every time this website is collected.
         */}
-        <span className="text-[11px] text-muted">
+        {/*
+          An over-allowance website is said outright rather than trimmed. A
+          downgrade leaves a client holding more questions than their plan
+          includes, and quietly stopping some of them shows up weeks later as a
+          gap in a chart nobody can account for.
+        */}
+        <span
+          className={`text-[11px] ${prompts?.isOverAllowance ? "text-warning" : "text-muted"}`}
+        >
           {prompts === undefined
             ? tPrompts("loading")
-            : tPrompts("remaining", { count: prompts.remaining })}
+            : prompts.isOverAllowance
+              ? tPrompts("overAllowance", { used: prompts.used, allowance: prompts.allowance })
+              : tPrompts("remaining", { count: prompts.remaining })}
         </span>
         <SaveError>{promptError}</SaveError>
       </div>

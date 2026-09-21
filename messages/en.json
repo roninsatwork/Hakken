@@ -1486,7 +1486,8 @@
           "addFailed": "Could not add that question. Try again.",
           "toggleFailed": "Could not change that question. Try again.",
           "removeFailed": "Could not remove that question. Try again."
-        }
+        },
+        "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for."
       }
     },
     "companyDataCollection": {

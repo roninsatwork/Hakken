@@ -1486,7 +1486,8 @@
           "addFailed": "Non è stato possibile aggiungere la domanda. Riprova.",
           "toggleFailed": "Non è stato possibile modificare la domanda. Riprova.",
           "removeFailed": "Non è stato possibile rimuovere la domanda. Riprova."
-        }
+        },
+        "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate."
       }
     },
     "companyDataCollection": {

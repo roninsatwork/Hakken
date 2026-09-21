@@ -264,3 +264,51 @@ describe("where the allowance comes from", () => {
     expect(allowance.planName).toBe("Test tier");
   });
 });
+
+describe("more questions than the plan now allows", () => {
+  test("a downgrade is shown, not trimmed", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const companyWebsiteId = await seedHold(t, 3);
+
+    for (const question of ["first question here", "second question here", "third question here"]) {
+      await admin.mutation(api.seoPrompts.addTrackedPrompt, { companyWebsiteId, prompt: question });
+    }
+
+    // The client moves to a cheaper tier holding three questions.
+    await t.run(async (ctx) => {
+      const hold = await ctx.db.get(companyWebsiteId);
+      const company = await ctx.db.get(hold!.companyId);
+      await ctx.db.patch(company!.planId!, { seoPromptsPerWebsite: 1 });
+    });
+
+    const listed = await admin.query(api.seoPrompts.listTrackedPrompts, {
+      companyWebsiteId, ...firstPage,
+    });
+
+    // Nothing is deleted and nothing stops being asked. Quietly stopping a
+    // question shows up weeks later as a gap in a chart nobody can explain.
+    expect(listed.data).toHaveLength(3);
+    expect(listed.used).toBe(3);
+    expect(listed.allowance).toBe(1);
+    expect(listed.isOverAllowance).toBe(true);
+    // And no room to add more, so the overage cannot grow.
+    expect(listed.remaining).toBe(0);
+  });
+
+  test("a website inside its allowance says so plainly", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const companyWebsiteId = await seedHold(t, 5);
+
+    await admin.mutation(api.seoPrompts.addTrackedPrompt, {
+      companyWebsiteId, prompt: "one question here",
+    });
+
+    const listed = await admin.query(api.seoPrompts.listTrackedPrompts, {
+      companyWebsiteId, ...firstPage,
+    });
+    expect(listed.isOverAllowance).toBe(false);
+    expect(listed.remaining).toBe(4);
+  });
+});

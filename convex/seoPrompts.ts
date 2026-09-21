@@ -128,6 +128,19 @@ export const listTrackedPrompts = superAdminQuery({
     totalPages: v.number(),
     /** How many more this website may add, so a screen can say so before saving. */
     remaining: v.number(),
+    /** What the plan allows per website, and how many are actually here. */
+    allowance: v.number(),
+    used: v.number(),
+    /**
+     * True when this website holds more questions than its plan now allows.
+     *
+     * It happens by downgrade rather than by anybody breaking a rule: a client
+     * on ten questions moved to a plan allowing five keeps their ten. Nothing
+     * is trimmed, because silently stopping a question is the kind of thing
+     * somebody notices weeks later as a gap in a chart nobody can explain. So
+     * it is shown instead, and whether to trim it is a decision a person makes.
+     */
+    isOverAllowance: v.boolean(),
   }),
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
@@ -157,6 +170,9 @@ export const listTrackedPrompts = superAdminQuery({
         args.pageSize,
       ),
       remaining: Math.max(0, allowance - rows.length),
+      allowance,
+      used: rows.length,
+      isOverAllowance: rows.length > allowance,
     };
   },
 });
