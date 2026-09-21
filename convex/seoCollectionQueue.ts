@@ -253,6 +253,73 @@ export const settleSeoSend = internalMutation({
  * had millions of rows in it. Same rule the governance and inventory screens
  * already follow.
  */
+/**
+ * Credit every company that was served by a pull it did not buy.
+ *
+ * One host is fetched once for everyone watching it, so a company whose rival
+ * happened to trigger a pull is served for nothing. That saving is real, but a
+ * cost report that only counts money out would call such a company cheap to
+ * serve — and pricing against that figure breaks the day the paying customer
+ * leaves. So the value is recorded against everyone who received it, priced at
+ * what it cost the one who paid.
+ *
+ * Bounded: a pull answering more companies than this is already an outlier, and
+ * this runs inside the transaction that settles it.
+ */
+async function creditReusers(
+  ctx: MutationCtx,
+  row: Doc<"seoDataPulls">,
+  day: string,
+  costUsd: number,
+) {
+  if (costUsd <= 0) return;
+
+  const lines = await ctx.db
+    .query("seoCycleLines")
+    .withIndex("by_pull", (q) => q.eq("pullId", row._id))
+    .take(REUSE_CREDIT_LIMIT);
+
+  const credited = new Set<string>();
+  for (const line of lines) {
+    // The company that paid is not also given it free, and a company with two
+    // lines against one pull is credited once.
+    if (line.companyId === row.companyId) continue;
+    if (credited.has(line.companyId)) continue;
+    credited.add(line.companyId);
+
+    const scopeKey = `company:${line.companyId}`;
+    const existing = await ctx.db
+      .query("seoDayRollups")
+      .withIndex("by_scope_day", (q) => q.eq("scopeKey", scopeKey).eq("day", day))
+      .unique();
+
+    if (!existing) {
+      await ctx.db.insert("seoDayRollups", {
+        scopeKey,
+        day,
+        pulls: 0,
+        reused: 1,
+        sent: 0,
+        ready: 0,
+        failed: 0,
+        costUsd: 0,
+        reusedValueUsd: costUsd,
+        updatedAt: Date.now(),
+      });
+      continue;
+    }
+
+    await ctx.db.patch(existing._id, {
+      reused: existing.reused + 1,
+      reusedValueUsd: (existing.reusedValueUsd ?? 0) + costUsd,
+      updatedAt: Date.now(),
+    });
+  }
+}
+
+/** A pull answering more companies than this in one cycle is an outlier. */
+const REUSE_CREDIT_LIMIT = 100;
+
 async function countSettled(
   ctx: MutationCtx,
   row: Doc<"seoDataPulls">,
@@ -276,6 +343,9 @@ async function countSettled(
 
   await bumpRollup(ctx, "platform", day, status, costUsd);
   if (row.companyId) await bumpRollup(ctx, `company:${row.companyId}`, day, status, costUsd);
+
+  // Only once the answer exists is it worth anything to anyone else.
+  if (status === "READY") await creditReusers(ctx, row, day, costUsd);
 }
 
 /**
@@ -348,7 +418,13 @@ export async function bumpRollup(
   };
 
   if (!existing) {
-    await ctx.db.insert("seoDayRollups", { scopeKey, day, ...delta, updatedAt: Date.now() });
+    await ctx.db.insert("seoDayRollups", {
+      scopeKey,
+      day,
+      ...delta,
+      reusedValueUsd: 0,
+      updatedAt: Date.now(),
+    });
     return;
   }
 

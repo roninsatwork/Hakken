@@ -401,3 +401,124 @@ describe("closing a cycle", () => {
     expect((await t.run(async (ctx) => await ctx.db.get(cycleId)))?.status).toBe("CAPPED_PLAN");
   });
 });
+
+describe("what a company costs to serve", () => {
+  test("a company served by somebody else's pull is credited, not called free", async () => {
+    const t = harness();
+    const payer = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Payer Ltd", createdAt: Date.now() }));
+    const freeloader = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Reuser Ltd", createdAt: Date.now() }));
+    const website = await t.run(async (ctx) =>
+      await ctx.db.insert("websites", {
+        host: "shared.com", displayHost: "shared.com", firstSeenAt: Date.now(),
+      }));
+
+    const pullId = await seedPull(t, { companyId: payer });
+
+    // Both companies have a line against the one pull: the payer's own cycle
+    // bought it, and the other's cycle reused it.
+    await t.run(async (ctx) => {
+      for (const [companyId, reused] of [[payer, false], [freeloader, true]] as const) {
+        const cycleId = await ctx.db.insert("seoCollectionCycles", {
+          companyId, trigger: "SCHEDULE", status: "SENDING",
+          plannedCount: 1, reusedCount: 0, sentCount: 0, readyCount: 0, failedCount: 0,
+          totalCostUsd: 0, startedAt: Date.now(),
+        });
+        await ctx.db.insert("seoCycleLines", {
+          cycleId, companyId, websiteId: website,
+          operationId: "backlinks_summary", pullId, reused, createdAt: Date.now(),
+        });
+      }
+    });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId, costUsd: 0.4, sandbox: false, ready: true,
+    });
+
+    const rollups = await t.run(async (ctx) => await ctx.db.query("seoDayRollups").collect());
+    const paid = rollups.find((row) => row.scopeKey === `company:${payer}`);
+    const free = rollups.find((row) => row.scopeKey === `company:${freeloader}`);
+
+    // Money out belongs to whoever spent it.
+    expect(paid?.costUsd).toBe(0.4);
+    expect(paid?.reusedValueUsd).toBe(0);
+
+    // And the other company is not free to serve. Reading it as free is how a
+    // price gets set that breaks the day the paying customer leaves.
+    expect(free?.costUsd).toBe(0);
+    expect(free?.reusedValueUsd).toBe(0.4);
+  });
+
+  test("the payer is never also credited for its own pull", async () => {
+    const t = harness();
+    const company = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Only Client", createdAt: Date.now() }));
+    const website = await t.run(async (ctx) =>
+      await ctx.db.insert("websites", {
+        host: "a.com", displayHost: "a.com", firstSeenAt: Date.now(),
+      }));
+    const pullId = await seedPull(t, { companyId: company });
+
+    await t.run(async (ctx) => {
+      const cycleId = await ctx.db.insert("seoCollectionCycles", {
+        companyId: company, trigger: "SCHEDULE", status: "SENDING",
+        plannedCount: 1, reusedCount: 0, sentCount: 0, readyCount: 0, failedCount: 0,
+        totalCostUsd: 0, startedAt: Date.now(),
+      });
+      // Two lines, one pull: the same company asked twice in one cycle.
+      for (const reused of [false, true]) {
+        await ctx.db.insert("seoCycleLines", {
+          cycleId, companyId: company, websiteId: website,
+          operationId: "backlinks_summary", pullId, reused, createdAt: Date.now(),
+        });
+      }
+    });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId, costUsd: 0.4, sandbox: false, ready: true,
+    });
+
+    // Standalone cost would otherwise read as double what was spent.
+    const rollups = await t.run(async (ctx) => await ctx.db.query("seoDayRollups").collect());
+    const own = rollups.find((row) => row.scopeKey === `company:${company}`);
+    expect(own?.costUsd).toBe(0.4);
+    expect(own?.reusedValueUsd).toBe(0);
+  });
+
+  test("nothing is credited for an answer that never arrived", async () => {
+    const t = harness();
+    const payer = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Payer Ltd", createdAt: Date.now() }));
+    const other = await t.run(async (ctx) =>
+      await ctx.db.insert("companies", { name: "Reuser Ltd", createdAt: Date.now() }));
+    const website = await t.run(async (ctx) =>
+      await ctx.db.insert("websites", {
+        host: "a.com", displayHost: "a.com", firstSeenAt: Date.now(),
+      }));
+    const pullId = await seedPull(t, { companyId: payer });
+
+    await t.run(async (ctx) => {
+      const cycleId = await ctx.db.insert("seoCollectionCycles", {
+        companyId: other, trigger: "SCHEDULE", status: "SENDING",
+        plannedCount: 0, reusedCount: 1, sentCount: 0, readyCount: 0, failedCount: 0,
+        totalCostUsd: 0, startedAt: Date.now(),
+      });
+      await ctx.db.insert("seoCycleLines", {
+        cycleId, companyId: other, websiteId: website,
+        operationId: "backlinks_summary", pullId, reused: true, createdAt: Date.now(),
+      });
+    });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId, costUsd: 0.4, sandbox: false, error: "Invalid Field", ready: false,
+    });
+
+    // A failed pull still costs the payer, because DataForSEO charges on
+    // submission. It is worth nothing to anybody else.
+    const rollups = await t.run(async (ctx) => await ctx.db.query("seoDayRollups").collect());
+    expect(rollups.find((row) => row.scopeKey === `company:${payer}`)?.costUsd).toBe(0.4);
+    expect(rollups.find((row) => row.scopeKey === `company:${other}`)?.reusedValueUsd)
+      .toBeUndefined();
+  });
+});

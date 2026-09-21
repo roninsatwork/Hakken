@@ -43,6 +43,9 @@ describe('Provider Classification Drift', () => {
       'docs/product/data-sources-and-integrations-sept-2026.md',
       'docs/product/research-gaps-closed-sept-2026.md',
       'docs/product/research-note-dooley-search-stack-sept-2026.md',
+      // Same reason: this plan lists the AI engines whose answers we track for
+      // citations. Naming them is the subject.
+      'docs/plans/active/brands-places-and-ai-citations-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 

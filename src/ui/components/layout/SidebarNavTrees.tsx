@@ -105,8 +105,9 @@ export function AdminNavTree({
         active test excludes the collection routes rather than matching the
         whole prefix. Two lit rows is how a reader stops trusting the sidebar.
       */}
-      <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites') && !pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
+      <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites') && !pathname.startsWith('/admin/websites/collection') && !pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
       <SubNavItem label={t('seoCollection')} href="/admin/websites/collection" isActive={pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
+      <SubNavItem label={t('seoCosts')} href="/admin/websites/costs" isActive={pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
     </NavItem>
   )}
 

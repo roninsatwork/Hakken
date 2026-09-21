@@ -546,6 +546,7 @@
     "websites": "Siti web",
     "allWebsites": "Tutti i siti web",
     "seoCollection": "Raccolta dati",
+    "seoCosts": "Costo del servizio",
     "ai": "Intelligenza Artificiale",
     "manageAi": "Gestisci AI",
     "manageGlobalAi": "Gestisci AI Globale",
@@ -1480,7 +1481,17 @@
       "methodQueued": "In coda — più economico",
       "methodLive": "Live — immediato",
       "summary": "{schedule}",
-      "notCollecting": "Non viene raccolto nulla per questa azienda."
+      "notCollecting": "Non viene raccolto nulla per questa azienda.",
+      "cost": {
+        "title": "Costo del servizio · ultimi 30 giorni",
+        "subtitle": "Quanto costa questo cliente in spesa DataForSEO negli ultimi 30 giorni. Mai mostrato a lui.",
+        "paid": "Pagato · 30gg",
+        "paidHint": "Spesa reale, su {pulls} richieste.",
+        "standalone": "Da solo · 30gg",
+        "standaloneHint": "Quanto costerebbe senza altri clienti che condividono i dati. Basa il prezzo su questo.",
+        "saving": "Risparmiato · 30gg",
+        "savingHint": "Servito con dati già pagati da un altro cliente."
+      }
     },
     "websites": {
       "title": "Tutti i siti web",
@@ -1540,7 +1551,22 @@
         "deleteFailed": "Impossibile eliminare questo sito web. Riprova."
       },
       "nextPullAt": "Prossimo scarico {when}",
-      "scheduled": "Pianificato"
+      "scheduled": "Pianificato",
+      "brands": {
+        "title": "Nomi del brand",
+        "subtitle": "I nomi con cui è conosciuto questo sito. L'elenco è condiviso da tutte le aziende che seguono questo host, quindi una modifica qui cambia ciò che vedono tutte.",
+        "nameLabel": "Nome {number}",
+        "placeholder": "Il nome con cui si conosce il sito",
+        "makePrimary": "Imposta come nome principale",
+        "removeName": "Rimuovi questo nome",
+        "addName": "Aggiungi un nome ({used} di {max})",
+        "shortNameWarning": "Due parole sono molto più sicure di una. Una sola parola breve corrisponderà a testi che parlano d'altro.",
+        "save": "Salva i nomi",
+        "saved": "Salvato",
+        "errors": {
+          "saveFailed": "Non è stato possibile salvare questi nomi. Riprova."
+        }
+      }
     },
     "workflows": {
       "title": "Workflow Autonomi",
@@ -5027,6 +5053,21 @@
         "search": "Filtra stati...",
         "noMatches": "Nessuno stato corrisponde."
       }
+    },
+    "seoCosts": {
+      "title": "Costo del servizio",
+      "subtitle": "Quanto costa ogni cliente in spesa DataForSEO negli ultimi 30 giorni, dal più caro. Mai visibile a un cliente.",
+      "companiesTitle": "Per azienda · ultimi 30 giorni",
+      "platformTotal": "${paid} spesi negli ultimi 30 giorni, più ${saved} serviti con dati già disponibili.",
+      "loading": "Calcolo in corso.",
+      "searchPlaceholder": "Cerca per cliente...",
+      "empty": "Non è ancora stato raccolto nulla per nessun cliente.",
+      "noMatch": "Nessun cliente corrisponde alla ricerca.",
+      "companyColumn": "Cliente",
+      "standaloneColumn": "Da soli · 30gg",
+      "paidColumn": "Pagato · 30gg",
+      "savingColumn": "Risparmiato · 30gg",
+      "pullsColumn": "Richieste · 30gg"
     }
   },
   "ai": {

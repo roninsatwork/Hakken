@@ -337,6 +337,7 @@ import type * as webhookDeliveries from "../webhookDeliveries.js";
 import type * as webhookDeliveryActions from "../webhookDeliveryActions.js";
 import type * as webhookSignatureService from "../webhookSignatureService.js";
 import type * as webhooks from "../webhooks.js";
+import type * as websiteBrands from "../websiteBrands.js";
 import type * as websiteIdentity from "../websiteIdentity.js";
 import type * as websites from "../websites.js";
 import type * as widgets from "../widgets.js";
@@ -713,6 +714,7 @@ declare const fullApi: ApiFromModules<{
   webhookDeliveryActions: typeof webhookDeliveryActions;
   webhookSignatureService: typeof webhookSignatureService;
   webhooks: typeof webhooks;
+  websiteBrands: typeof websiteBrands;
   websiteIdentity: typeof websiteIdentity;
   websites: typeof websites;
   widgets: typeof widgets;

@@ -7,7 +7,7 @@ import {
   normalizeSearchTerm,
   paginateItems,
 } from "./adminQueryService";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 
 /**
  * What the collection screens read.
@@ -330,6 +330,14 @@ export const listCompanyCycles = superAdminQuery({
  * economics of storing one host once made visible: a rising reuse count on a
  * flat spend is the shared record doing its job.
  */
+/**
+ * What collection has cost one company, or the platform, by day.
+ *
+ * **Two figures, because one of them lies when asked about pricing.** `paid` is
+ * money out. `standalone` is what this company would have cost on its own, and
+ * it is the number a price has to clear: a company whose rival happens to
+ * trigger the pulls looks almost free to serve until that rival leaves.
+ */
 export const readSeoSpend = superAdminQuery({
   args: {
     companyId: v.optional(v.id("companies")),
@@ -339,12 +347,16 @@ export const readSeoSpend = superAdminQuery({
     days: v.array(v.object({
       day: v.string(),
       pulls: v.number(),
-      sent: v.number(),
-      ready: v.number(),
+      reused: v.number(),
       failed: v.number(),
-      costUsd: v.number(),
+      paidUsd: v.number(),
+      reusedValueUsd: v.number(),
     })),
-    totalCostUsd: v.number(),
+    paidUsd: v.number(),
+    /** Priced at what it cost whoever did pay. The saving, made countable. */
+    reusedValueUsd: v.number(),
+    /** paid + reusedValue: what this company would have cost standing alone. */
+    standaloneUsd: v.number(),
     totalPulls: v.number(),
   }),
   handler: async (ctx, args) => {
@@ -359,20 +371,108 @@ export const readSeoSpend = superAdminQuery({
       .order("desc")
       .take(MAX_DAYS);
 
+    const paidUsd = rows.reduce((sum, row) => sum + row.costUsd, 0);
+    const reusedValueUsd = rows.reduce((sum, row) => sum + (row.reusedValueUsd ?? 0), 0);
+
     return {
       days: rows.map((row) => ({
         day: row.day,
         pulls: row.pulls,
-        sent: row.sent,
-        ready: row.ready,
+        reused: row.reused,
         failed: row.failed,
-        costUsd: row.costUsd,
+        paidUsd: row.costUsd,
+        reusedValueUsd: row.reusedValueUsd ?? 0,
       })),
-      totalCostUsd: rows.reduce((sum, row) => sum + row.costUsd, 0),
+      paidUsd,
+      reusedValueUsd,
+      standaloneUsd: paidUsd + reusedValueUsd,
       totalPulls: rows.reduce((sum, row) => sum + row.pulls, 0),
     };
   },
 });
+
+/**
+ * Every company, by what it costs to serve.
+ *
+ * Company-led and rolled up, which is the order the question is actually asked
+ * in: "am I charging enough" is really "who are my most expensive clients, and
+ * what do they pay me". Sorted by standalone rather than by paid, because that
+ * is the figure that survives another customer churning.
+ *
+ * Read from the day rollups, never from the pull table. Same rule the
+ * governance and inventory screens follow.
+ */
+export const listCompanyCosts = superAdminQuery({
+  args: { days: v.optional(v.number()) },
+  returns: v.object({
+    companies: v.array(v.object({
+      companyId: v.id("companies"),
+      companyName: v.string(),
+      pulls: v.number(),
+      paidUsd: v.number(),
+      reusedValueUsd: v.number(),
+      standaloneUsd: v.number(),
+    })),
+    paidUsd: v.number(),
+    reusedValueUsd: v.number(),
+    /** True when a scope hit the read ceiling, so the totals read as partial. */
+    isCapped: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const since = new Date(Date.now() - (args.days ?? 30) * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    const rows = await ctx.db
+      .query("seoDayRollups")
+      .withIndex("by_scope_day")
+      .take(MAX_ROLLUP_ROWS);
+
+    const byCompany = new Map<string, {
+      pulls: number; paidUsd: number; reusedValueUsd: number;
+    }>();
+
+    for (const row of rows) {
+      if (row.day < since) continue;
+      if (!row.scopeKey.startsWith("company:")) continue;
+      const companyId = row.scopeKey.slice("company:".length);
+      const entry = byCompany.get(companyId)
+        ?? { pulls: 0, paidUsd: 0, reusedValueUsd: 0 };
+      entry.pulls += row.pulls;
+      entry.paidUsd += row.costUsd;
+      entry.reusedValueUsd += row.reusedValueUsd ?? 0;
+      byCompany.set(companyId, entry);
+    }
+
+    const companies = await Promise.all([...byCompany.entries()].map(async ([id, entry]) => {
+      const company = await ctx.db.get(id as Id<"companies">);
+      return {
+        companyId: id as Id<"companies">,
+        companyName: company?.name ?? "",
+        pulls: entry.pulls,
+        paidUsd: entry.paidUsd,
+        reusedValueUsd: entry.reusedValueUsd,
+        standaloneUsd: entry.paidUsd + entry.reusedValueUsd,
+      };
+    }));
+
+    companies.sort((left, right) => right.standaloneUsd - left.standaloneUsd);
+
+    return {
+      companies,
+      paidUsd: companies.reduce((sum, row) => sum + row.paidUsd, 0),
+      reusedValueUsd: companies.reduce((sum, row) => sum + row.reusedValueUsd, 0),
+      isCapped: rows.length === MAX_ROLLUP_ROWS,
+    };
+  },
+});
+
+/**
+ * One row per scope per day, so this is thirty days times the number of
+ * companies plus one. Generous, and bounded rather than collected, because a
+ * query with no ceiling is the one that works until the day it does not.
+ */
+const MAX_ROLLUP_ROWS = 5_000;
 
 /** A year of daily rows, which is far more than any screen asks for. */
 const MAX_DAYS = 400;

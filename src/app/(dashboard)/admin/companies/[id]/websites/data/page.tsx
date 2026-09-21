@@ -22,6 +22,7 @@ import {
   type ScheduleDraft,
 } from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
+import { CollectionCost } from "./CollectionCost";
 
 /**
  * When this company's SEO data gets collected.
@@ -233,6 +234,8 @@ export default function CompanyDataCollectionPage() {
           />
         </div>
       </SettingsCard>
+
+      <CollectionCost companyId={companyId} />
     </div>
   );
 }

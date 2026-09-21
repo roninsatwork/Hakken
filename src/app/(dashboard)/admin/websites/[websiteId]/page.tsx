@@ -15,6 +15,7 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
+import { BrandNames } from "./BrandNames";
 
 const loadDeleteDialog = () => import("./DeleteWebsiteDialog");
 const DeleteWebsiteDialog = lazy(() =>
@@ -95,6 +96,14 @@ export default function WebsiteDetailPage() {
           </PagePrimaryAction>
         }
       />
+
+      {/*
+        `?? []` rather than passing the field through: the panel cannot tell
+        "still loading" from "this site has no names yet" if both arrive as
+        undefined, and the second case has to show an empty row to type into.
+        By here the website itself has loaded, so absent means none.
+      */}
+      <BrandNames websiteId={websiteId} saved={website.brandNames ?? []} />
 
       <div className="flex flex-col gap-2">
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">

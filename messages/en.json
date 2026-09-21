@@ -546,6 +546,7 @@
     "websites": "Websites",
     "allWebsites": "All Websites",
     "seoCollection": "Data Collection",
+    "seoCosts": "Cost to serve",
     "ai": "Artificial Intelligence",
     "manageAi": "Manage AI",
     "manageGlobalAi": "Manage Global AI",
@@ -1480,7 +1481,17 @@
       "methodQueued": "Queued — cheaper",
       "methodLive": "Live — instant",
       "summary": "{schedule}",
-      "notCollecting": "Nothing is collected for this company."
+      "notCollecting": "Nothing is collected for this company.",
+      "cost": {
+        "title": "Cost to serve · last 30 days",
+        "subtitle": "What this client costs in DataForSEO spend over the last 30 days. Never shown to them.",
+        "paid": "Paid · 30d",
+        "paidHint": "Money out, across {pulls} pulls.",
+        "standalone": "On their own · 30d",
+        "standaloneHint": "What they would cost with no other client sharing the data. Price against this.",
+        "saving": "Saved by sharing · 30d",
+        "savingHint": "Served from data another client had already paid for."
+      }
     },
     "websites": {
       "title": "All Websites",
@@ -1540,7 +1551,22 @@
         "deleteFailed": "Could not delete this website. Try again."
       },
       "nextPullAt": "Next pull {when}",
-      "scheduled": "Scheduled"
+      "scheduled": "Scheduled",
+      "brands": {
+        "title": "Brand names",
+        "subtitle": "The names this website is known by. This list is shared by every company tracking this host, so an edit here changes what all of them see.",
+        "nameLabel": "Name {number}",
+        "placeholder": "The name people call this site",
+        "makePrimary": "Make this the main name",
+        "removeName": "Remove this name",
+        "addName": "Add a name ({used} of {max})",
+        "shortNameWarning": "Two words is far safer than one. A single short word will match text about something else.",
+        "save": "Save names",
+        "saved": "Saved",
+        "errors": {
+          "saveFailed": "Could not save these names. Try again."
+        }
+      }
     },
     "workflows": {
       "title": "Workflows",
@@ -5027,6 +5053,21 @@
         "search": "Filter states...",
         "noMatches": "No state matches that."
       }
+    },
+    "seoCosts": {
+      "title": "Cost to serve",
+      "subtitle": "What each client costs in DataForSEO spend over the last 30 days, most expensive first. Never seen by a customer.",
+      "companiesTitle": "By company · last 30 days",
+      "platformTotal": "${paid} spent in the last 30 days, with ${saved} more served from data already held.",
+      "loading": "Adding it up.",
+      "searchPlaceholder": "Search by client...",
+      "empty": "Nothing has been collected for any client yet.",
+      "noMatch": "No client matches that search.",
+      "companyColumn": "Client",
+      "standaloneColumn": "On their own · 30d",
+      "paidColumn": "Paid · 30d",
+      "savingColumn": "Saved by sharing · 30d",
+      "pullsColumn": "Pulls · 30d"
     }
   },
   "ai": {

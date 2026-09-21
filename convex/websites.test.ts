@@ -803,3 +803,164 @@ describe("Sweeps do not run away", () => {
     expect(await countWebsites(t)).toBe(2);
   });
 });
+
+describe("The names a site goes by", () => {
+  test("two companies tracking one host read the same names", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+
+    await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: ronins,
+      url: "shared.com",
+    });
+    await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: acme,
+      url: "shared.com",
+    });
+
+    const websiteId = (await t.run(async (ctx) =>
+      await ctx.db.query("websites").first()))!._id;
+
+    await admin.mutation(api.websites.setWebsiteBrandNames, {
+      websiteId,
+      names: [{ name: "Shared Co", isPrimary: true }, { name: "Shared Group" }],
+    });
+
+    // The point of putting them on the shared row: entered once, true for
+    // everyone. It is also what lets one citation purchase answer every
+    // watcher.
+    const website = await t.run(async (ctx) => await ctx.db.get(websiteId));
+    expect(website?.brandNames?.map((entry) => entry.name))
+      .toEqual(["Shared Co", "Shared Group"]);
+    expect(await allCompanyWebsites(t)).toHaveLength(2);
+  });
+
+  test("refuses a sixth name rather than silently dropping it", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
+    const websiteId = (await t.run(async (ctx) =>
+      await ctx.db.query("websites").first()))!._id;
+
+    // The cap lives here and not only in the form, because a limit living in a
+    // screen is a limit the next caller does not have.
+    await expect(admin.mutation(api.websites.setWebsiteBrandNames, {
+      websiteId,
+      names: ["one", "two", "three", "four", "five", "six"].map((name) => ({ name: `Name ${name}` })),
+    })).rejects.toThrow(/at most 5/);
+  });
+
+  test("records both sides of a change to a shared list", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
+    const websiteId = (await t.run(async (ctx) =>
+      await ctx.db.query("websites").first()))!._id;
+
+    await admin.mutation(api.websites.setWebsiteBrandNames, {
+      websiteId,
+      names: [{ name: "First Name" }, { name: "Second Name" }],
+    });
+    await admin.mutation(api.websites.setWebsiteBrandNames, {
+      websiteId,
+      names: [{ name: "First Name" }],
+    });
+
+    // Someone else was relying on "Second Name". A shared record that was
+    // blanked has to be recoverable from the trail rather than from memory.
+    const entries = await t.run(async (ctx) =>
+      await ctx.db.query("auditLogs")
+        .filter((q) => q.eq(q.field("actionType"), "SET_WEBSITE_BRAND_NAMES"))
+        .collect());
+    const last = JSON.parse(entries[entries.length - 1].metadata ?? "{}") as {
+      before: string[]; after: string[];
+    };
+    expect(last.before).toEqual(["First Name", "Second Name"]);
+    expect(last.after).toEqual(["First Name"]);
+  });
+
+  test("an ordinary admin cannot touch a record everyone shares", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
+    const websiteId = (await t.run(async (ctx) =>
+      await ctx.db.query("websites").first()))!._id;
+
+    const tenantAdmin = t.withIdentity({ subject: await seedUser(t, "ADMIN", company) });
+
+    await expect(tenantAdmin.mutation(api.websites.setWebsiteBrandNames, {
+      websiteId,
+      names: [{ name: "Their Own Name" }],
+    })).rejects.toThrow();
+  });
+});
+
+describe("Where a company watches from", () => {
+  test("two companies can watch one host from different places", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "shared.com" });
+    const holds = await allCompanyWebsites(t);
+
+    await admin.mutation(api.websites.setCompanyWebsiteLocation, {
+      companyWebsiteId: holds[0]._id,
+      locationCode: 1006886,
+      locationLabel: "Leeds,England,United Kingdom",
+    });
+
+    // This is the difference from brand names: here two companies genuinely do
+    // disagree, so it sits on the hold and not on the website.
+    const after = await allCompanyWebsites(t);
+    const leeds = after.find((row) => row._id === holds[0]._id);
+    const other = after.find((row) => row._id === holds[1]._id);
+    expect(leeds?.locationCode).toBe(1006886);
+    expect(other?.locationCode).toBeUndefined();
+  });
+
+  test("clearing the place is an instruction, not a missing argument", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
+    const hold = (await allCompanyWebsites(t))[0];
+
+    await admin.mutation(api.websites.setCompanyWebsiteLocation, {
+      companyWebsiteId: hold._id,
+      locationCode: 1006886,
+      locationLabel: "Leeds,England,United Kingdom",
+    });
+    await admin.mutation(api.websites.setCompanyWebsiteLocation, {
+      companyWebsiteId: hold._id,
+      locationCode: null,
+      locationLabel: null,
+    });
+
+    // Absent means the registry's default, which is the United Kingdom.
+    const after = (await allCompanyWebsites(t))[0];
+    expect(after.locationCode).toBeUndefined();
+    expect(after.locationLabel).toBeUndefined();
+  });
+
+  test("refuses a place with no name to show", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
+    const hold = (await allCompanyWebsites(t))[0];
+
+    await expect(admin.mutation(api.websites.setCompanyWebsiteLocation, {
+      companyWebsiteId: hold._id,
+      locationCode: 1006886,
+      locationLabel: null,
+    })).rejects.toThrow(/Pick a place/);
+  });
+});

@@ -6,6 +6,10 @@ import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import {
+  BRAND_NAME_MESSAGES,
+  readBrandNames,
+} from "./websiteBrands";
+import {
   WEBSITE_IDENTITY_MESSAGES,
   readWebsiteHost,
   type WebsiteIdentity,
@@ -783,6 +787,109 @@ export const purgeCompanyWebsitesInternal = internalMutation({
         companyId: args.companyId,
       });
     }
+    return null;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Writing — the names a site goes by, and where a company watches it from
+// ---------------------------------------------------------------------------
+
+/**
+ * Set the names this website is known by.
+ *
+ * **Super admin only, and deliberately so.** The list sits on the shared
+ * `websites` row, so one operator editing it changes what every company
+ * tracking that host sees. Anthony, 2026-09-21: *"let's make it super admin for
+ * now as I don't fully understand it yet."* Every edit is audited, including
+ * what the list was before, because a shared record that someone blanked needs
+ * to be recoverable from the trail rather than from memory.
+ *
+ * It is on the website rather than on a company's hold of it because two
+ * companies would not disagree: anyone tracking a host writes down the same
+ * names for it. The dedupe rule's test is disagreement, not ownership.
+ */
+export const setWebsiteBrandNames = superAdminMutation({
+  args: {
+    websiteId: v.id("websites"),
+    names: v.array(v.object({
+      name: v.string(),
+      isPrimary: v.optional(v.boolean()),
+    })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const website = await ctx.db.get(args.websiteId);
+    if (!website) throw appError("NOT_FOUND", "That website no longer exists.");
+
+    const read = readBrandNames(args.names);
+    if (!read.ok) throw appError("INVALID_INPUT", BRAND_NAME_MESSAGES[read.problem]);
+
+    const now = Date.now();
+    await ctx.db.patch(args.websiteId, { brandNames: read.names });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: ctx.userId,
+      actionType: "SET_WEBSITE_BRAND_NAMES",
+      entityId: args.websiteId,
+      entityType: "websites",
+      // Both sides of the change: this list is shared, so an edit that removed
+      // somebody else's name has to be readable afterwards.
+      metadata: JSON.stringify({
+        host: website.host,
+        before: (website.brandNames ?? []).map((entry) => entry.name),
+        after: read.names.map((entry) => entry.name),
+      }),
+      timestamp: now,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Set where this company watches this website from.
+ *
+ * On the hold rather than on the website, and unlike brand names this really is
+ * per-company: a London agency and a Manchester one tracking the same host care
+ * about different places.
+ *
+ * Absent means the registry's own default, which is the United Kingdom. Clearing
+ * it is how a company goes back to that, so `null` is a real instruction here
+ * rather than a missing argument.
+ */
+export const setCompanyWebsiteLocation = superAdminMutation({
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    locationCode: v.union(v.number(), v.null()),
+    locationLabel: v.union(v.string(), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const companyWebsite = await ctx.db.get(args.companyWebsiteId);
+    if (!companyWebsite) throw appError("NOT_FOUND", "That website is no longer held by this company.");
+
+    const label = args.locationLabel?.trim();
+    if (args.locationCode !== null && !label) {
+      throw appError("INVALID_INPUT", "Pick a place from the list so its name can be shown.");
+    }
+
+    await ctx.db.patch(args.companyWebsiteId, {
+      locationCode: args.locationCode ?? undefined,
+      locationLabel: args.locationCode === null ? undefined : label,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: ctx.userId,
+      actionType: "SET_COMPANY_WEBSITE_LOCATION",
+      entityId: args.companyWebsiteId,
+      entityType: "companyWebsites",
+      companyId: companyWebsite.companyId,
+      metadata: JSON.stringify({ locationCode: args.locationCode, locationLabel: label ?? null }),
+      timestamp: Date.now(),
+    });
+
     return null;
   },
 });

@@ -108,6 +108,31 @@ export default defineSchema({
     host: v.string(),
     /** The same host as a person reads it — `münchen.de`, not `xn--mnchen-3ya.de`. */
     displayHost: v.string(),
+    /**
+     * What this site calls itself. At most five, one of them primary.
+     *
+     * **The one company-neutral thing this row has ever gained, and it belongs
+     * here for the same reason the host does.** The test the dedupe rule sets
+     * is whether two companies would need different values: for an owning
+     * company, yes; for brand names, no. Anyone tracking one host would write
+     * down the same trading name, group name and shortened name, because those
+     * are facts about the site rather than about who is watching it.
+     *
+     * It is also what makes AI citation tracking affordable. With the names
+     * here, one purchase can ask "who is mentioned for this prompt" and every
+     * tracked site whose name appears reads its own citation out of the answer.
+     * On a join row the same response would be matched per customer for no
+     * benefit at all.
+     *
+     * Shared means shared: one operator editing this changes what every company
+     * tracking the host sees, which is why editing is super-admin only and
+     * audited. See docs/plans/active/brands-places-and-ai-citations-plan.md.
+     */
+    brandNames: v.optional(v.array(v.object({
+      name: v.string(),
+      /** Exactly one is primary — a screen needs a name to print. */
+      isPrimary: v.boolean(),
+    }))),
     firstSeenAt: v.number(),
   })
     .index("by_host", ["host"])
@@ -146,6 +171,22 @@ export default defineSchema({
     refreshIntervalStr: v.optional(v.string()),
     /** Absent follows the company's schedule; false stops this site alone. */
     collectionEnabled: v.optional(v.boolean()),
+    /**
+     * Where this company watches this site from.
+     *
+     * On the join row rather than on `websites`, and unlike brand names this
+     * really is per-company: a London agency and a Manchester one tracking the
+     * same host care about different places. The original plan already names
+     * "a country or language" as belonging here.
+     *
+     * `locationCode` is DataForSEO's own identifier, passed straight through to
+     * the `location_code` parameter the registry's operations already accept —
+     * so local rank becomes location-aware with no new operation. Absent means
+     * the registry's default, which is the United Kingdom.
+     */
+    locationCode: v.optional(v.number()),
+    /** The same place as a person reads it — "Leeds, England, United Kingdom". */
+    locationLabel: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
@@ -311,11 +352,32 @@ export default defineSchema({
     scopeKey: v.string(),
     day: v.string(),
     pulls: v.number(),
+    /** Lines this scope was served without paying, because somebody else had. */
     reused: v.number(),
     sent: v.number(),
     ready: v.number(),
     failed: v.number(),
+    /** What this scope actually paid, in USD as DataForSEO reported it. */
     costUsd: v.number(),
+    /**
+     * What this scope was given for nothing, priced at what it cost whoever
+     * bought it.
+     *
+     * **Two numbers, because one of them lies when asked about pricing.** One
+     * host is fetched once for everyone watching it, so a company whose rival
+     * happened to trigger the pull looks free to serve — and reading that as
+     * "cheap client" underprices them, because the day the other customer
+     * leaves they start paying for those pulls themselves.
+     *
+     * `costUsd` is real money out. `costUsd + reusedValueUsd` is what this
+     * company would have cost standing alone, which is the figure a price has
+     * to clear. The gap between them is what sharing is saving, per client.
+     *
+     * Optional because rows written before this figure existed cannot have one,
+     * and absent reads as zero — which is the truth about them: nothing was
+     * recorded as shared, so nothing is claimed as saved.
+     */
+    reusedValueUsd: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_scope_day", ["scopeKey", "day"]),
 
