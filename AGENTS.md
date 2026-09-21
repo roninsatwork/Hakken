@@ -67,7 +67,7 @@ Before changing billing, read the [approved billing experience and handoff](docs
 - In Codex Desktop, prefer Apple system Git for network operations: `/usr/bin/git pull`, `/usr/bin/git fetch`, and `/usr/bin/git push`.
 - The bundled Codex Git can fail against the HTTPS GitHub remote with `could not read Username for 'https://github.com': Device not configured`, even when the user's normal machine credentials work.
 - If a normal `git pull` or `git fetch` fails with that credential error, retry the same operation with `/usr/bin/git` before asking the user to fix GitHub auth.
-- The remote is expected to be `https://github.com/roninsatwork/Sonae.git`; do not switch it to SSH just to work around Codex auth unless the user asks.
+- The remote is expected to be `https://github.com/roninsatwork/Hakken.git`; do not change its transport without the owner's instruction.
 
 ## Progress Reporting
 

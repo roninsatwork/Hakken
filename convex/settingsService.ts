@@ -1,9 +1,10 @@
+import { productIdentity } from "../product.identity";
 import type { Doc } from "./_generated/dataModel";
 import { summariseAuditValue } from "./auditLogService";
 
 export const DEFAULT_SETTINGS = {
-  platformName: "Sonae",
-  brandColorHex: "#E26D28",
+  platformName: productIdentity.name,
+  brandColorHex: productIdentity.brandColorHex,
   fontFamily: undefined as string | undefined,
   headingFontFamily: undefined as string | undefined,
   bodyFontFamily: undefined as string | undefined,
@@ -11,8 +12,8 @@ export const DEFAULT_SETTINGS = {
   headingSizeGlobal: undefined as string | undefined,
   subTextSizeGlobal: undefined as string | undefined,
   borderRadius: undefined as string | undefined,
-  logoUrlLight: undefined as string | undefined,
-  logoUrlDark: undefined as string | undefined,
+  logoUrlLight: (productIdentity.logoUrlLight || undefined) as string | undefined,
+  logoUrlDark: (productIdentity.logoUrlDark || undefined) as string | undefined,
   emailSenderName: undefined as string | undefined,
   emailSenderAddress: undefined as string | undefined,
   salesContactEmail: undefined as string | undefined,

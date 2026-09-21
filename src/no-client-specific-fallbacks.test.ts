@@ -70,7 +70,7 @@ const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
   "convex/gmailWatcher.ts": 1,
   "convex/localDemoSeed.ts": 2,
   "convex/memoryMigration.ts": 1,
-  "convex/settingsService.ts": 1,
+  "convex/settingsService.ts": 0,
   "convex/webhookDeliveryActions.ts": 1,
   "convex/webhookSignatureService.ts": 2,
 };

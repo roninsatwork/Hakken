@@ -1,3 +1,4 @@
+import { productIdentity } from "@/product.identity";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { ContactLink } from "./ContactLink";
@@ -28,12 +29,10 @@ export function PublicFooter() {
               <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--ps-orange)] text-white">
                 <Sparkles className="h-4 w-4" />
               </span>
-              <span className="ps-display text-[15px] tracking-[0.18em]">SONAE</span>
+              <span className="ps-display text-[15px] tracking-[0.18em]">{productIdentity.name.toUpperCase()}</span>
             </div>
             <p className="text-[13px] leading-relaxed text-[var(--ps-ink-60)]">
-              備え — to be prepared. The production layer behind AI products,
-              already built and running, so your budget goes on the part only
-              you can make.
+              {productIdentity.tagline}
             </p>
           </div>
 
@@ -68,7 +67,7 @@ export function PublicFooter() {
 
         <div className="flex flex-col items-start justify-between gap-3 border-t border-[var(--ps-line)] pt-6 sm:flex-row sm:items-center">
           <p className="text-[12px] uppercase tracking-widest text-[var(--ps-ink-60)]">
-            © {new Date().getFullYear()} Sonae. All rights reserved.
+            © {new Date().getFullYear()} {productIdentity.name}. All rights reserved.
           </p>
           <p className="text-[12px] uppercase tracking-widest text-[var(--ps-ink-60)]">
             {companyUrl ? (

@@ -1,4 +1,5 @@
 "use client";
+import { productIdentity } from "@/product.identity";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -35,7 +36,7 @@ export function PublicNav() {
           <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-[var(--ps-orange)] text-white">
             <Sparkles className="h-[15px] w-[15px]" />
           </span>
-          <span className="ps-display text-[16px] tracking-[0.14em]">SONAE</span>
+          <span className="ps-display text-[16px] tracking-[0.14em]">{productIdentity.name.toUpperCase()}</span>
         </Link>
 
         <div className="ml-auto hidden items-center gap-[clamp(12px,1.5vw,22px)] md:flex">

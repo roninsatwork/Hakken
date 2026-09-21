@@ -1,25 +1,38 @@
 {
   "schemaVersion": 1,
   "identity": {
-    "name": "Sonae",
-    "slug": "sonae",
-    "title": "Sonae - Protocol",
-    "description": "Sonae Living Dossier",
-    "tagline": "備え — to be prepared. The production layer behind AI products, already built and running, so your budget goes on the part only you can make.",
+    "name": "Hakken",
+    "slug": "hakken",
+    "title": "Hakken",
+    "description": "Hakken — digital asset P&L and AI visibility",
+    "tagline": "発見 — discovery. Work out which digital assets make money and why the rest don't, fix the broken stage, and prove it in leads and sales.",
     "brandColorHex": "#E26D28",
     "logoUrlLight": "",
     "logoUrlDark": ""
   },
   "deployment": {
-    "repositoryUrl": "https://github.com/roninsatwork/Sonae.git",
+    "repositoryUrl": "https://github.com/roninsatwork/Hakken.git",
     "appUrl": "",
     "region": "us-central1",
     "service": "sonae-app",
     "artifactRepository": "sonae-repo"
   },
-  "bootstrap": { "adminEmail": "" },
-  "email": { "senderName": "", "senderAddress": "" },
-  "providers": { "auth": ["google", "resend"], "ai": ["vertex"] },
+  "bootstrap": {
+    "adminEmail": ""
+  },
+  "email": {
+    "senderName": "",
+    "senderAddress": ""
+  },
+  "providers": {
+    "auth": [
+      "google",
+      "resend"
+    ],
+    "ai": [
+      "vertex"
+    ]
+  },
   "features": {
     "email": true,
     "knowledge": true,

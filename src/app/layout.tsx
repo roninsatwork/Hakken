@@ -1,3 +1,4 @@
+import { productIdentity } from "@/product.identity";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
@@ -26,8 +27,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sonae - Protocol",
-  description: "Sonae Living Dossier",
+  title: productIdentity.title,
+  description: productIdentity.description,
 };
 
 export default async function RootLayout({
