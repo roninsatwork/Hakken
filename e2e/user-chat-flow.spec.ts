@@ -13,7 +13,7 @@ test.describe('End-User Chat Journey @smoke', () => {
     await expect(chatInput).toHaveAttribute('placeholder', /Ask anything/i);
 
     // 2. Simulate User Input
-    const testMessage = `Hello Sonae, run system diagnostic ${Date.now()}`;
+    const testMessage = `Hello Hakken, run system diagnostic ${Date.now()}`;
     await chatInput.click();
     await chatInput.pressSequentially(testMessage);
     await expect(chatInput).toHaveValue(testMessage);

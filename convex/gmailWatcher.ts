@@ -35,7 +35,7 @@ import { appError } from "./utils/appError";
  * itself. A rename starts labelling under the new name from then on — Gmail
  * keeps the old label on old mail, which is the honest history.
  */
-export const PROCESSED_LABEL_NAME = "Sonae";
+export const PROCESSED_LABEL_NAME = "Hakken";
 
 /**
  * Sent only when the model call itself failed and no written reply exists —
@@ -48,7 +48,7 @@ const FALLBACK_HOLDING_REPLY =
 /**
  * Every outgoing reply is dressed here, in code, so its manners and its
  * honesty can never depend on the model's mood: a greeting by name when the
- * model didn't write one, and always the sign-off naming Ask Sonae, the
+ * model didn't write one, and always the sign-off naming Ask Hakken, the
  * workspace, and the fact that the reply was written by AI and may contain
  * mistakes — the EU AI Act's transparency duty, kept where it cannot be
  * forgotten.

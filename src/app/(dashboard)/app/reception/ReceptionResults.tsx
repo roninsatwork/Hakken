@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { formatDateTime } from "@/src/lib/dates";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 
 type ReceptionScreens = FunctionReturnType<typeof api.kiosk.listMyReceptionScreens>;
 
@@ -13,7 +13,7 @@ export default function ReceptionResults({ screens }: { screens: ReceptionScreen
   const t = useTranslations("reception");
 
   if (screens.length === 0) {
-    return <SonaeEmptyState title={t("empty")} description={t("emptyHint")} />;
+    return <HakkenEmptyState title={t("empty")} description={t("emptyHint")} />;
   }
 
   return screens.map((screen) => (

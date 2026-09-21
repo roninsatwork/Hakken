@@ -65,7 +65,7 @@ const DESCRIPTIONS = {
 const all = Object.keys(scripts);
 const movement = all.filter((name) => name.startsWith("movement:"));
 
-console.log("\nSonae platform scripts\n");
+console.log("\nHakken platform scripts\n");
 
 for (const group of GROUPS) {
   const available = group.entries.filter((name) => name in scripts);

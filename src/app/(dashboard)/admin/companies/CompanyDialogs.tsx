@@ -3,7 +3,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
   ModalField,
@@ -66,7 +66,7 @@ export function CompanyDialogs({
         modules take the other and wrap into two of their own on a wide
         screen.
       */}
-      <SonaeModal
+      <HakkenModal
         isOpen={isFormOpen}
         onClose={onCloseForm}
         title={isEditing ? t("editTitle") : t("createTitle")}
@@ -131,7 +131,7 @@ export function CompanyDialogs({
             onCancel={onCloseForm}
           />
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={deletingCompanyName !== null}

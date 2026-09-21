@@ -82,8 +82,8 @@ Seeded company:
 
 Seeded users:
 
-- `demo-super-admin@sonae.test` as `SUPER_ADMIN`
-- `demo-company-admin@sonae.test` as `ADMIN` for the demo company
+- `demo-super-admin@hakken.test` as `SUPER_ADMIN`
+- `demo-company-admin@hakken.test` as `ADMIN` for the demo company
 
 Seeded provider and models:
 

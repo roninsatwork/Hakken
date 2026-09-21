@@ -15,7 +15,7 @@ import {
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -66,7 +66,7 @@ export function KnowledgeUploadModal({
   const t = useTranslations("ai.knowledge.manager");
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={isOpen}
       onClose={onClose}
       title={t("uploadModal.title")}
@@ -196,7 +196,7 @@ export function KnowledgeUploadModal({
           </div>
         )}
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }
 
@@ -221,7 +221,7 @@ export function KnowledgeDocumentDeleteModal({
   const t = useTranslations("ai.knowledge.manager");
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={!!document}
       onClose={onClose}
       title={t("deleteModal.title")}
@@ -256,7 +256,7 @@ export function KnowledgeDocumentDeleteModal({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }
 
@@ -277,7 +277,7 @@ export function KnowledgeDocumentInspectModal({
   const t = useTranslations("ai.knowledge.manager");
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={!!document}
       onClose={onClose}
       title={t("inspectModal.title")}
@@ -412,7 +412,7 @@ export function KnowledgeDocumentInspectModal({
           </>
         )}
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }
 
@@ -434,7 +434,7 @@ export function KnowledgeWebsiteDeleteModal({
   const { platformName } = useSystemSettings();
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={!!root}
       onClose={onClose}
       title={t("websiteDeleteModal.title")}
@@ -467,6 +467,6 @@ export function KnowledgeWebsiteDeleteModal({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

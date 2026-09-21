@@ -14,7 +14,7 @@
   --color-muted: var(--text-muted);
   --color-hover: var(--bg-hover);
   
-  /* Sonae Brand.
+  /* Hakken Brand.
      The source variables (--brand, --success-src, --destructive-src, --ring)
      are written by SystemSettingsContext; the hex here is the real fallback
      for first paint and for deployments that never saved a theme. The names
@@ -103,7 +103,7 @@ h1 {
 
 /* h1 above forces its size with !important but honours the variable, which is
    the same escape hatch `.ps-hero-h1` uses. */
-.sonae-hero-h1 {
+.hakken-hero-h1 {
   --h1-size-override: clamp(30px, 3.5vw, 52px);
   font-size: clamp(30px, 3.5vw, 52px);
   line-height: 1;

@@ -47,7 +47,7 @@ vi.mock("@/src/context/UIContext", () => ({
 
 vi.mock("@/src/context/SystemSettingsContext", () => ({
   useSystemSettings: () => ({
-    platformName: "Sonae",
+    platformName: "Hakken",
   }),
 }));
 

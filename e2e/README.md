@@ -25,7 +25,7 @@ The generated `e2e/.auth/*.json` files are ignored by git.
 
 ## Deterministic Auth Harness
 
-When `E2E_AUTH_ENABLED=1`, the proxy accepts a test-only `sonae_e2e_auth` cookie and routes users by role. The Next config also aliases `convex/react` to a local e2e mock so browser tests can render authenticated admin and app surfaces without external Convex Auth state.
+When `E2E_AUTH_ENABLED=1`, the proxy accepts a test-only `hakken_e2e_auth` cookie and routes users by role. The Next config also aliases `convex/react` to a local e2e mock so browser tests can render authenticated admin and app surfaces without external Convex Auth state.
 
 Authenticated specs should not skip when redirected to login. The shared `skipWhenRedirectedToLogin` helper now asserts that role projects stayed authenticated, so CI fails if deterministic auth regresses.
 
@@ -102,25 +102,25 @@ engine coverage does not establish physical iPhone or macOS Safari acceptance.
 
 ## Local Real Auth Lane
 
-Hakken also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `sonae_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.
+Hakken also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `hakken_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.
 
 Before running it, configure the local app shell and Convex backend with:
 
 ```bash
 LOCAL_TEST_AUTH_ENABLED=1
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth
 ```
 
 Then seed deterministic users:
 
 ```bash
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run auth:local:seed
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run auth:local:seed
 ```
 
 Run the focused real-auth suite with:
 
 ```bash
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run test:e2e:real-auth
 ```
 
 The focused smoke tests in `e2e/local-real-auth-smoke.spec.ts` sign in dynamically through `/local-test-auth` at test start. They do not require pre-generated storage states.
@@ -130,7 +130,7 @@ requests into `main` until 2026-08-26; CI now runs them only on demand (see
 `docs/developer/deployment.md`), so locally is where they normally run:
 
 ```bash
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth -- --grep @real-auth-smoke
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run test:e2e:real-auth -- --grep @real-auth-smoke
 ```
 
 Adding the tag to a spec in that file is what puts it in CI; untagged specs stay
@@ -139,8 +139,8 @@ local-only. Clear the data a run leaves behind with `npm run auth:local:cleanup`
 For tests that need a reusable Playwright storage state, start the app locally and run:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run dev -- -p 3100
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run dev -- -p 3100
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
 ```
 
 Generated storage states are written to `e2e/.auth/` and ignored by git.

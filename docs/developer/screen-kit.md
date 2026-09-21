@@ -4,7 +4,7 @@ The screen kit provides the table, pagination, modal, detail-layout, settings-se
 
 **It serves both halves of the app.** The kit began inside the admin folder and moved to `src/ui/components/screens/` on 2026-08-16 so the screens under `/app` — the ones a client actually uses — can reach it too, and so a product cloned from this repo inherits a kit rather than rebuilding one. Nothing here is admin-only; a name carrying `Admin` means the part is genuinely specific to an administration surface. See [Every Screen Is Built From The Same Parts](../plans/completed/shared-screen-kit-plan.md).
 
-Read this before changing `src/ui/components/screens/**`, `src/hooks/useServerPagedTable.ts`, `src/ui/components/feedback/SonaeModal.tsx`, `src/ui/components/feedback/SonaeEmptyState.tsx`, `src/ui/components/settings/JsonSchemaBuilder.tsx`, or any page that repeats table/search/pagination/form patterns. For the route and role model around admin pages, see [Administration](./administration.md). For global styling guidance, see [Frontend](./frontend.md).
+Read this before changing `src/ui/components/screens/**`, `src/hooks/useServerPagedTable.ts`, `src/ui/components/feedback/HakkenModal.tsx`, `src/ui/components/feedback/HakkenEmptyState.tsx`, `src/ui/components/settings/JsonSchemaBuilder.tsx`, or any page that repeats table/search/pagination/form patterns. For the route and role model around admin pages, see [Administration](./administration.md). For global styling guidance, see [Frontend](./frontend.md).
 
 ## Where A Kit Component Lives
 
@@ -27,7 +27,7 @@ A new part goes in `screens/` with its test beside it. Nothing else to decide.
 Core components live under `src/ui/components/screens/`:
 
 - `src/ui/components/screens/Table.tsx`: search bar, table shell, header rows/cells, loading row, empty row, row action wrapper, icon action button, pagination footer, and load-more footer.
-- `src/ui/components/screens/ConfirmationModal.tsx`: destructive confirmation wrapper around `SonaeModal`.
+- `src/ui/components/screens/ConfirmationModal.tsx`: destructive confirmation wrapper around `HakkenModal`.
 - `src/ui/components/screens/CompactList.tsx`: compact table-semantic row lists that live inside a panel that already introduced itself.
 - `src/ui/components/screens/ModalForm.tsx`: modal form field, error, action, input, and textarea helpers.
 - `src/ui/components/screens/DetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
@@ -53,8 +53,8 @@ Supporting shared UI:
 
 - `src/ui/components/screens/pagination.ts`
 - `src/hooks/useServerPagedTable.ts`: the house table footer over a Convex query that pages on the server.
-- `src/ui/components/feedback/SonaeModal.tsx`
-- `src/ui/components/feedback/SonaeEmptyState.tsx`
+- `src/ui/components/feedback/HakkenModal.tsx`
+- `src/ui/components/feedback/HakkenEmptyState.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.tsx`
 
 Shared backend helpers for admin-style listing behavior live in `convex/adminQueryService.ts`. They are used by Convex modules such as `chatAdminService.ts`, `aiModels.ts`, `aiRules.ts`, and `agentLogs.ts` when data has to be collected or enriched before filtering and pagination.
@@ -105,7 +105,7 @@ page count for cursor data.
 
 ## Modals And Forms
 
-Use `SonaeModal` for custom modal surfaces. It renders through a `document.body` portal, uses a black blurred backdrop, Framer Motion entrance/exit animation, and size classes:
+Use `HakkenModal` for custom modal surfaces. It renders through a `document.body` portal, uses a black blurred backdrop, Framer Motion entrance/exit animation, and size classes:
 
 - `sm`: `max-w-md`
 - `md`: `max-w-xl`
@@ -114,7 +114,7 @@ Use `SonaeModal` for custom modal surfaces. It renders through a `document.body`
 
 Do not use native `alert`, `confirm`, or `prompt` dialogs in app UI. A current source scan found no app-source native dialog calls; the only `alert(` match is a string fixture in `src/lib/constants/uploads.test.ts`.
 
-Use `ConfirmationModal` for destructive actions. It wraps `SonaeModal`, supports optional warning copy, shows `ModalFormError`, disables cancel/confirm buttons while submitting, and prevents close while submitting.
+Use `ConfirmationModal` for destructive actions. It wraps `HakkenModal`, supports optional warning copy, shows `ModalFormError`, disables cancel/confirm buttons while submitting, and prevents close while submitting.
 
 Use `ModalFormField`, `ModalFormError`, `ModalFormActions`, `modalInputClassName`, and `modalTextareaClassName` for form content inside modals. `ModalFormActions` keeps the submit button typed as `submit` and disables cancel/submit while saving.
 
@@ -145,7 +145,7 @@ Use `FeedbackPill` for smaller success or error messages. Success pills are roun
 
 ## Empty States
 
-Use `TableEmptyRow` inside tables and `SonaeEmptyState` for full-panel empty views. `SonaeEmptyState` accepts an optional Lucide icon, title, description, and action.
+Use `TableEmptyRow` inside tables and `HakkenEmptyState` for full-panel empty views. `HakkenEmptyState` accepts an optional Lucide icon, title, description, and action.
 
 Empty states should explain the current result, not speculate. For example, distinguish:
 
@@ -221,7 +221,7 @@ When adding a new screen, under `/admin` or `/app`:
 1. Build a list screen in the order set out in [Anatomy Of A List Screen](#anatomy-of-a-list-screen) — header, explanation, search, table, footer, save. The build enforces the header; the rest is the standard the reference screens follow.
 2. Use `TABLE_PAGE_SIZE` for tables and feeds.
 3. Use shared table components for searchable/paginated records.
-4. Use `SonaeModal` or `ConfirmationModal` instead of native dialogs.
+4. Use `HakkenModal` or `ConfirmationModal` instead of native dialogs.
 5. Surface backend errors with `SaveError`, `ModalFormError`, or `SaveFeedback`.
 6. Keep row action buttons labelled and stop propagation when the row itself navigates.
 7. Keep destructive actions confirmation-gated.
@@ -332,8 +332,8 @@ Focused tests include:
 - `src/ui/components/screens/SaveControls.test.tsx`
 - `src/ui/components/screens/pagination.test.ts`
 - `convex/adminQueryService.test.ts`
-- `src/ui/components/feedback/SonaeModal.test.tsx`
-- `src/ui/components/feedback/SonaeEmptyState.test.tsx`
+- `src/ui/components/feedback/HakkenModal.test.tsx`
+- `src/ui/components/feedback/HakkenEmptyState.test.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.test.tsx`
 - `scripts/check-screen-kit.test.mjs`
 

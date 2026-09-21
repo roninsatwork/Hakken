@@ -21,7 +21,7 @@ async function seedComaxWorkspace(
     const now = Date.now();
     const superAdminId = await ctx.db.insert("users", {
       email: "super@test.com",
-      name: "Sonae Operator",
+      name: "Hakken Operator",
       role: "SUPER_ADMIN",
       createdAt: now,
     });
@@ -118,7 +118,7 @@ describe("comax agent provisioning", () => {
       expect(byKey.get(key)?.installStatus).toBe("INSTALLED");
     }
     // The web reader serves the whole platform, so it takes no workspace.
-    expect(byKey.get("sonae-firecrawl")?.companyId).toBeUndefined();
+    expect(byKey.get("hakken-firecrawl")?.companyId).toBeUndefined();
   });
 
   test("running it twice changes nothing the second time", async () => {

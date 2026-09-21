@@ -77,7 +77,7 @@ export const ensureAboutPageInternal = internalMutation({
       subjectKey: ABOUT_PAGE_SUBJECT,
       title: "About this company",
       content:
-        "Facts about this company that people have pinned. The pins below are human truth: Sonae must always respect them and can never rewrite them.",
+        "Facts about this company that people have pinned. The pins below are human truth: Hakken must always respect them and can never rewrite them.",
       links: [],
       pinnedCorrections: [],
       rewriteCount: 1,

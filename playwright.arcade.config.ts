@@ -12,7 +12,7 @@ export default defineConfig({
   outputDir: "test-results/arcade",
   webServer: {
     ...baseConfig.webServer,
-    command: "SONAE_ARCADE_CHECK=1 E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100",
+    command: "HAKKEN_ARCADE_CHECK=1 E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100",
     url: "http://localhost:3100/login",
     reuseExistingServer: false,
     timeout: 180_000,

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 
@@ -45,7 +45,7 @@ export function ConfirmationModal({
   };
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={handleClose} title={title} size={size}>
+    <HakkenModal isOpen={isOpen} onClose={handleClose} title={title} size={size}>
       <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
         {children}
         {warning ? (
@@ -83,6 +83,6 @@ export function ConfirmationModal({
           </button>
         ) : null}
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

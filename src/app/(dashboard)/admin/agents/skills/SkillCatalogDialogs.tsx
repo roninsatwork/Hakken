@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import {
   ModalField,
   ModalFormField,
@@ -71,7 +71,7 @@ export function SkillCatalogDialogs({
   return (
     <>
       {editTarget && (
-        <SonaeModal isOpen onClose={onCloseEdit} title={t("editTitle")} size="lg">
+        <HakkenModal isOpen onClose={onCloseEdit} title={t("editTitle")} size="lg">
           <form onSubmit={onSaveEdit} className="flex flex-col gap-4 px-1 pb-2">
             {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
             <ModalField
@@ -110,11 +110,11 @@ export function SkillCatalogDialogs({
               </WriteButton>
             </div>
           </form>
-        </SonaeModal>
+        </HakkenModal>
       )}
 
       {deleteTarget && (
-        <SonaeModal isOpen onClose={onCloseDelete} title={t("deleteTitle")} size="sm">
+        <HakkenModal isOpen onClose={onCloseDelete} title={t("deleteTitle")} size="sm">
           <div className="flex flex-col gap-5 px-1 pb-2">
             <p className="text-[13px] leading-relaxed text-secondary">
               {t.rich("deleteBody", {
@@ -137,11 +137,11 @@ export function SkillCatalogDialogs({
               </WriteButton>
             </div>
           </div>
-        </SonaeModal>
+        </HakkenModal>
       )}
 
       {isMarkdownOpen && (
-        <SonaeModal isOpen onClose={onCloseMarkdown} title={t("addTitle")} size="lg">
+        <HakkenModal isOpen onClose={onCloseMarkdown} title={t("addTitle")} size="lg">
           <form onSubmit={onAddSkill} className="flex flex-col gap-4 px-1 pb-2">
             {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
             <ModalField
@@ -177,7 +177,7 @@ export function SkillCatalogDialogs({
               </WriteButton>
             </div>
           </form>
-        </SonaeModal>
+        </HakkenModal>
       )}
     </>
   );

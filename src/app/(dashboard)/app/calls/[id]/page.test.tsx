@@ -12,7 +12,7 @@ vi.mock("@/src/ui/components/layout/Header", () => ({
 }));
 
 vi.mock("@/src/context/SystemSettingsContext", () => ({
-  useSystemSettings: () => ({ platformName: "Sonae" }),
+  useSystemSettings: () => ({ platformName: "Hakken" }),
 }));
 
 const params = Object.assign(Promise.resolve({ id: "call_1" }), {

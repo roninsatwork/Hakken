@@ -32,7 +32,7 @@ import { appError } from "./utils/appError";
  *
  * This is the step that turns the governance section from a set of screens into
  * a deliverable. Until it existed the platform recorded everything and none of
- * it could leave, which meant the claim that Sonae generates a customer's
+ * it could leave, which meant the claim that Hakken generates a customer's
  * evidence automatically failed at the last step.
  *
  * Produced by a `governanceAction` rather than a query for one reason: an

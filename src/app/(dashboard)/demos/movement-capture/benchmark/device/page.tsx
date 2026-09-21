@@ -247,7 +247,7 @@ export default function DenseCaptureDeviceBenchmarkPage() {
               <p className="mt-1 max-w-3xl text-sm leading-6 text-secondary">
                 Select one of the recordings you already made. The video stays inside this browser,
                 runs a sustained two-minute adaptive dense-capture soak, and is never uploaded to Convex,
-                Sonae, or an external GPU service. After the run, record whether the device stayed cool,
+                Hakken, or an external GPU service. After the run, record whether the device stayed cool,
                 became warm but responsive, or became hot or unstable before downloading its report.
               </p>
             </div>

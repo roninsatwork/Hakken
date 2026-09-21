@@ -37,7 +37,7 @@ export function evaluateSetup(env, config, { profile = "local", strict = false, 
         failures.push(key + ": use a valid " + (profile === "production" ? "public HTTPS" : "HTTP(S)") + " URL without credentials.");
       }
       if (profile === "production" && config.deployment.appUrl && ["NEXT_PUBLIC_APP_URL", "SITE_URL"].includes(key) && url.origin !== new URL(config.deployment.appUrl).origin) {
-        failures.push(key + ": does not match deployment.appUrl in sonae.product.json.");
+        failures.push(key + ": does not match deployment.appUrl in hakken.product.json.");
       }
     } catch { failures.push(key + ": must be a valid URL."); }
   }
@@ -56,7 +56,7 @@ export function evaluateSetup(env, config, { profile = "local", strict = false, 
 
 export function setupMain(argv = process.argv.slice(2)) {
   let profile = "local";
-  let configPath = "sonae.product.json";
+  let configPath = "hakken.product.json";
   let strict = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];

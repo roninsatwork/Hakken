@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Users } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { CursorPaginationFooter, useCursorPagination } from "@/src/ui/components/screens/CursorPagination";
@@ -223,7 +223,7 @@ function CustomerList() {
                 ) : result.page.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-0 border-none">
-                      <SonaeEmptyState
+                      <HakkenEmptyState
                         title={isNarrowed ? t("emptyNarrowedTitle") : t("emptyTitle")}
                         description={
                           isNarrowed ? t("emptyNarrowedDescription") : t("emptyDescription")

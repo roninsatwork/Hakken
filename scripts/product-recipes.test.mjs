@@ -19,7 +19,7 @@ const tree = () =>
     .sort()
     .map((file) => [file, read(file)]);
 beforeEach(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-recipes-"));
+  root = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-recipes-"));
   const files = {
     "convex/schema.ts":
       'import { defineSchema, defineTable } from "convex/server";\nimport { v } from "convex/values";\nexport default defineSchema({});\n',
@@ -31,7 +31,7 @@ beforeEach(() => {
       '"use client";\nconst allowed = ADMIN_SECTION_ROLES.includes(user?.role ?? "");\n',
     "src/ui/components/layout/SidebarNavigation.tsx":
       '"use client";\nfunction getActiveItemFromPathname(pathname: string) { return pathname; }\n{isAdmin ? (\n                  <AdminNavTree />) : <UserNavTree />}',
-    "sonae.product.json": fs.readFileSync("sonae.product.json", "utf8"),
+    "hakken.product.json": fs.readFileSync("hakken.product.json", "utf8"),
     "messages/en.json": '{"admin":{},"sidebar":{}}',
     "messages/it.json": '{"admin":{},"sidebar":{}}',
   };
@@ -101,14 +101,14 @@ test("a late write failure rolls back every earlier feature and shared file", ()
   expect(tree()).toEqual(before);
 });
 test("knowledge setup writes only the guide/registry and preserves product configuration", () => {
-  const before = read("sonae.product.json");
+  const before = read("hakken.product.json");
   const plan = planRecipe(root, "knowledge-assistant");
   expect(plan.edits.map((edit) => edit.path)).toEqual([
     "docs/product/knowledge-assistant.md",
     "product.recipes.json",
   ]);
   applyEntity(plan);
-  expect(read("sonae.product.json")).toBe(before);
+  expect(read("hakken.product.json")).toBe(before);
   expect(read("docs/product/knowledge-assistant.md")).toContain(
     "No new tables, pages, agents, credentials",
   );

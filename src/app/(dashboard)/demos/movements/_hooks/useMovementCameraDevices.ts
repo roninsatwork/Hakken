@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
-export const MOVEMENT_CAMERA_PREFERENCE_KEY = "sonae.movement.cameraDeviceId";
+export const MOVEMENT_CAMERA_PREFERENCE_KEY = "hakken.movement.cameraDeviceId";
 
 export type MovementCameraDevice = {
   deviceId: string;

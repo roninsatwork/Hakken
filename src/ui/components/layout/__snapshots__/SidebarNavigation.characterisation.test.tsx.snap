@@ -3,7 +3,7 @@
 exports[`sidebar navigation characterisation > company admin navigation is unchanged 1`] = `
 {
   "links": [
-    "Sonae -> /",
+    "Hakken -> /",
     "aiRegister -> /app/governance/register",
     "askPlatform -> /app/assistant",
     "auditTrail -> /app/governance/audit-trail",
@@ -40,7 +40,7 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
 exports[`sidebar navigation characterisation > signed-out navigation is unchanged 1`] = `
 {
   "links": [
-    "Sonae -> /",
+    "Hakken -> /",
     "askPlatform -> /app/assistant",
     "dashboard -> /app",
   ],
@@ -51,7 +51,7 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
 exports[`sidebar navigation characterisation > standard user navigation is unchanged 1`] = `
 {
   "links": [
-    "Sonae -> /",
+    "Hakken -> /",
     "askPlatform -> /app/assistant",
     "calls -> /app/calls",
     "dashboard -> /app",
@@ -78,7 +78,7 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
 exports[`sidebar navigation characterisation > super admin navigation is unchanged 1`] = `
 {
   "links": [
-    "Sonae -> /",
+    "Hakken -> /",
     "aiRegister -> /admin/governance/register",
     "allUsers -> /admin/directory",
     "analytics -> /admin/settings/analytics",

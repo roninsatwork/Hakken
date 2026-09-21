@@ -43,7 +43,7 @@ Use restricted domains before handing a widget to a customer. A broad allowlist 
 The integration tab shows the script tag to place on the external site:
 
 ```html
-<script src="https://your-sonae-host.example/embed.js" data-widget-id="..."></script>
+<script src="https://your-hakken-host.example/embed.js" data-widget-id="..."></script>
 ```
 
 The company widget integration section also links to `/sandbox/[widgetId]`. The sandbox loads the public embed script into a simulated host page so admins can inspect branding, greeting behavior, and iframe loading before installing the widget on a real customer site.

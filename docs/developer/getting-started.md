@@ -62,10 +62,10 @@ It previews product defaults and provider requirements before applying local fil
 For deterministic local E2E sessions, use the local test-auth helpers only in an explicitly configured local environment:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run convex:dev
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run auth:local:seed
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run convex:dev
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run auth:local:seed
 LOCAL_TEST_AUTH_ENABLED=1 npm run dev
-LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3000 npm run auth:local:state
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3000 npm run auth:local:state
 ```
 
 The `/local-test-auth` route also needs `LOCAL_TEST_AUTH_ENABLED=1` in the Next.js process; the backend provider and seed/authorize functions need it in the Convex process. The generated storage states live under `e2e/.auth/` and should not be committed. For details, read [Local Test Auth Runbook](../operator/local-test-auth-runbook.md).
@@ -112,5 +112,5 @@ git diff --check
 - Use the `dev` branch for all active coding.
 - Push to `main` only when you intend to trigger the production deploy workflow.
 - Run `npm run setup:validate -- --profile=production` before handing a new product or deployment environment to operators.
-- Never use `window.alert` or `confirm`. Use the **`SonaeModal`** component found in `src/ui/components/feedback`.
+- Never use `window.alert` or `confirm`. Use the **`HakkenModal`** component found in `src/ui/components/feedback`.
 - Layouts are fluid by default; avoid fixed widths in your CSS/Tailwind classes.

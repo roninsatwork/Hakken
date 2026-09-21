@@ -36,7 +36,7 @@ async function signIn(page, baseUrl, secret) {
 
 async function main() {
   const baseUrl = argValue("--base-url", "http://localhost:3100");
-  const secret = argValue("--secret", process.env.LOCAL_TEST_AUTH_SECRET ?? "sonae-local-test-auth");
+  const secret = argValue("--secret", process.env.LOCAL_TEST_AUTH_SECRET ?? "hakken-local-test-auth");
   const saveRecording = process.argv.includes("--save-recording");
   const saveTitle = argValue("--title", "Automated Deep Capture Browser Proof");
   const clips = argValue("--clips", DEFAULT_CLIPS.join(",")).split(",").map((clip) => clip.trim()).filter(Boolean);
@@ -90,7 +90,7 @@ async function main() {
           video.addEventListener("ended", () => void playFixture());
         }
         await playFixture();
-        window.__sonaeDeepCaptureFixture = { video };
+        window.__hakkenDeepCaptureFixture = { video };
         return video.captureStream();
       };
     }, clips);

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
-import { SonaeMarkdown } from "./SonaeMarkdown";
+import { HakkenMarkdown } from "./HakkenMarkdown";
 import { formatTime } from "@/src/lib/dates";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
@@ -149,7 +149,7 @@ export default function ChatMessage({
       {/* Held to a reading measure. Tables and code inside the markdown break
           out to the full column on their own. */}
       <div className="text-[14px] leading-[1.75] text-foreground/90 max-w-[34rem]">
-        <SonaeMarkdown content={reveal.text} />
+        <HakkenMarkdown content={reveal.text} />
         {isStreaming && (
           <span
             aria-label={t("stillWriting")}

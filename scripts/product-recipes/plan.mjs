@@ -13,7 +13,7 @@ export function planRecipe(root, id) {
   root = fs.realpathSync(root);
   const recipe = recipes.find((entry) => entry.id === id);
   if (!recipe) throw new Error(`Unknown recipe: ${id}. Use --list.`);
-  validateProduct(JSON.parse(readFile(root, "sonae.product.json")));
+  validateProduct(JSON.parse(readFile(root, "hakken.product.json")));
   const before = readFile(root, REGISTRY, true);
   const registry =
     before === null ? { version: 1, recipes: [] } : JSON.parse(before);

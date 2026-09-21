@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Check, Loader2, MessageSquare, MinusCircle, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslations } from "next-intl";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/components/screens/Button";
@@ -79,7 +79,7 @@ export function FeedbackModal({
   };
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={!!draft}
       onClose={() => !action.isBusy() && onClose()}
       title={t("title")}
@@ -171,6 +171,6 @@ export function FeedbackModal({
           </div>
         </div>
       )}
-    </SonaeModal>
+    </HakkenModal>
   );
 }

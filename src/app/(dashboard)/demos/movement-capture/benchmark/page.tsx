@@ -192,7 +192,7 @@ export default function DenseBenchmarkCapturePage() {
               onChange={(event) => setConsent(event.target.checked)}
               type="checkbox"
             />
-            <span>I consent to recording these local RGB clips for Sonae dense-model benchmarking. I understand they are downloaded locally and must be deliberately placed in the private benchmark folder.</span>
+            <span>I consent to recording these local RGB clips for Hakken dense-model benchmarking. I understand they are downloaded locally and must be deliberately placed in the private benchmark folder.</span>
           </label>
         </section>
 

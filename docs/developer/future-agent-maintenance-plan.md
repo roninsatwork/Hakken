@@ -154,7 +154,7 @@ Acceptance:
 
 - `src/provider-classification-drift.test.ts` continues to classify Gemini-era references before they spread.
 - Any newly allowed provider-specific reference is added to the drift test allowlist with a clear reason.
-- Generic tests use neutral model IDs such as `model-fast`, `safe-model`, or `sonae-test-model` unless testing a provider adapter.
+- Generic tests use neutral model IDs such as `model-fast`, `safe-model`, or `hakken-test-model` unless testing a provider adapter.
 - Runtime model selection remains configuration-driven.
 - `npm run check` passes.
 

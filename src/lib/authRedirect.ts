@@ -1,5 +1,5 @@
 const DEFAULT_AUTH_REDIRECT = "/app";
-const AUTH_REDIRECT_BASE = "https://sonae.local";
+const AUTH_REDIRECT_BASE = "https://hakken.local";
 const ALLOWED_AUTH_REDIRECT_PREFIXES = ["/admin", "/app", "/demos"] as const;
 
 export function sanitizeAuthRedirect(value: string | null | undefined) {

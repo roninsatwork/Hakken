@@ -20,7 +20,7 @@ describe("movementRecordingLocalBackup", () => {
       schemaVersion: 3,
       title: "  Full Motion: Eyes & Hands!  ",
     })).toBe(
-      "sonae-movement-schema-v3-full-motion-eyes-hands-2026-07-18T08-09-10-123Z.json",
+      "hakken-movement-schema-v3-full-motion-eyes-hands-2026-07-18T08-09-10-123Z.json",
     );
   });
 
@@ -41,7 +41,7 @@ describe("movementRecordingLocalBackup", () => {
     });
 
     expect(result).toEqual({
-      filename: "sonae-movement-schema-v3-full-motion-2026-07-18T08-09-10-123Z.json",
+      filename: "hakken-movement-schema-v3-full-motion-2026-07-18T08-09-10-123Z.json",
       packetHash: packet.sourcePacketHash,
     });
     expect(click).toHaveBeenCalledTimes(1);

@@ -42,14 +42,14 @@ export type MovementAvatarRetargetDebugRegistry = Record<
 >;
 
 export type MovementAvatarRetargetDebugRegistryWindow = {
-  __sonaeMovementAvatarDebug?: Partial<Record<
+  __hakkenMovementAvatarDebug?: Partial<Record<
     "instructor" | "player",
     MovementTrackingDebugState & {
       avatarName: string;
       frameUpdatedAt: number;
     }
   >>;
-  __sonaeMovementRetargetDebug?: Partial<MovementAvatarRetargetDebugRegistry>;
+  __hakkenMovementRetargetDebug?: Partial<MovementAvatarRetargetDebugRegistry>;
 };
 
 export function buildMovementAvatarRootDebug({
@@ -200,8 +200,8 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
     });
   }
   if (registryWindow) {
-    registryWindow.__sonaeMovementAvatarDebug = {
-      ...registryWindow.__sonaeMovementAvatarDebug,
+    registryWindow.__hakkenMovementAvatarDebug = {
+      ...registryWindow.__hakkenMovementAvatarDebug,
       [registryRole]: {
         ...nextState,
         avatarName,
@@ -290,8 +290,8 @@ export function writeMovementAvatarRetargetDebugRegistry({
   registryWindow: MovementAvatarRetargetDebugRegistryWindow;
   retarget: NonNullable<MovementTrackingDebugState["retarget"]>;
 }) {
-  registryWindow.__sonaeMovementRetargetDebug = {
-    ...registryWindow.__sonaeMovementRetargetDebug,
+  registryWindow.__hakkenMovementRetargetDebug = {
+    ...registryWindow.__hakkenMovementRetargetDebug,
     [avatarRole]: {
       ...retarget,
       avatarName,
@@ -299,5 +299,5 @@ export function writeMovementAvatarRetargetDebugRegistry({
     },
   };
 
-  return registryWindow.__sonaeMovementRetargetDebug;
+  return registryWindow.__hakkenMovementRetargetDebug;
 }

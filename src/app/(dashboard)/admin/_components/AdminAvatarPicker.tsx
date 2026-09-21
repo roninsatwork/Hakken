@@ -10,7 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/src/ui/lib/utils";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 
 /**
@@ -126,7 +126,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
         </div>
       </div>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={isOpen}
         onClose={() => !isUploading && setIsOpen(false)}
         title={labels.modalTitle}
@@ -188,7 +188,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

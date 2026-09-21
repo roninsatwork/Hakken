@@ -38,7 +38,7 @@ describe("GET /api/e2e-auth", () => {
     expect(response.headers.get("location")).toBe(
       "http://127.0.0.1:3000/demos/movement-capture/readiness-proof",
     );
-    expect(response.cookies.get("sonae_e2e_auth")?.value).toBe("super-admin");
+    expect(response.cookies.get("hakken_e2e_auth")?.value).toBe("super-admin");
   });
 
   it("falls back to the app for an external redirect", () => {

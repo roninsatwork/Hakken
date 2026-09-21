@@ -45,11 +45,11 @@ async function readPoseDebug(page, args, mode) {
   url.searchParams.set("debugPlayerPose", mode);
   url.searchParams.set("debugPoseTransition", "1");
   await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual), null, {
+  await page.waitForFunction(() => Boolean(window.__hakkenMovementAvatarDebug?.player?.avatarVisual), null, {
     timeout: 60_000,
   });
   await page.waitForTimeout(1_800);
-  return page.evaluate(() => structuredClone(window.__sonaeMovementAvatarDebug.player));
+  return page.evaluate(() => structuredClone(window.__hakkenMovementAvatarDebug.player));
 }
 
 function segment(debug, name) {

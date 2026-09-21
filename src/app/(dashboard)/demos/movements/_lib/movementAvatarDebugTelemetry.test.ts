@@ -945,12 +945,12 @@ describe("movement avatar debug telemetry", () => {
       footLockDrift: 0.5678,
       footLockStrength: 0.9,
     });
-    expect(registryWindow.__sonaeMovementRetargetDebug?.player).toMatchObject({
+    expect(registryWindow.__hakkenMovementRetargetDebug?.player).toMatchObject({
       avatarName: "Player",
       footLockCorrection: 0.1234,
       frameUpdatedAt: 456,
     });
-    expect(registryWindow.__sonaeMovementAvatarDebug?.player).toMatchObject({
+    expect(registryWindow.__hakkenMovementAvatarDebug?.player).toMatchObject({
       avatarName: "Player",
       avatarVisual: expect.objectContaining({
         comparedUpperBodySegments: 1,
@@ -1099,12 +1099,12 @@ describe("movement avatar debug telemetry", () => {
     });
 
     expect(updated?.avatarVisual?.comparedUpperBodySegments).toBe(1);
-    expect(registryWindow.__sonaeMovementRetargetDebug?.player?.avatarName).toBe("Player");
+    expect(registryWindow.__hakkenMovementRetargetDebug?.player?.avatarName).toBe("Player");
   });
 
   it("writes role-keyed retarget debug registry entries", () => {
     const registryWindow: MovementAvatarRetargetDebugRegistryWindow = {
-      __sonaeMovementRetargetDebug: {
+      __hakkenMovementRetargetDebug: {
         instructor: {
           appliedLowerBody: 1,
           appliedUpperBody: 1,
@@ -1159,7 +1159,7 @@ describe("movement avatar debug telemetry", () => {
       },
     });
 
-    expect(registryWindow.__sonaeMovementRetargetDebug).toMatchObject({
+    expect(registryWindow.__hakkenMovementRetargetDebug).toMatchObject({
       instructor: {
         avatarName: "Guide",
       },

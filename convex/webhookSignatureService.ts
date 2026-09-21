@@ -1,7 +1,7 @@
 /**
  * Proving a webhook came from here.
  *
- * Anything receiving data from Sonae had no way to tell it apart from anyone
+ * Anything receiving data from Hakken had no way to tell it apart from anyone
  * else posting the same shape at the same URL. A receiver acting on an
  * unverified payload is acting on whatever the internet sends it.
  *

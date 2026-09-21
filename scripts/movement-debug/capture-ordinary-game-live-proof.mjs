@@ -19,7 +19,7 @@ function argValue(flag, fallback) {
 
 async function main() {
   const baseUrl = argValue("--base-url", "http://localhost:3000");
-  const secret = argValue("--secret", process.env.LOCAL_TEST_AUTH_SECRET ?? "sonae-local-test-auth");
+  const secret = argValue("--secret", process.env.LOCAL_TEST_AUTH_SECRET ?? "hakken-local-test-auth");
   const recordingId = argValue("--recording-id", "");
   const clip = argValue("--clip", "far-camera-2026-07-18T10-52-32Z.webm");
   const watchSeconds = Number(argValue("--watch-seconds", "20"));

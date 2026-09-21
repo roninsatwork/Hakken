@@ -1,7 +1,7 @@
 "use client";
 
 import Typography from "@/src/ui/components/screens/typography";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ModalField } from "@/src/ui/components/screens/ModalForm";
 import { MIN_MOVEMENT_CAPTURE_FRAMES } from "../_lib/saveMovementRecording";
 import {
@@ -84,7 +84,7 @@ export default function MovementSaveDialog({
   };
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title="Save Practice">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title="Save Practice">
       <div className="flex flex-col gap-6">
         <ModalField
           label="Practice Name"
@@ -216,6 +216,6 @@ export default function MovementSaveDialog({
           {isSaving ? "Saving..." : "Save Practice"}
         </button>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

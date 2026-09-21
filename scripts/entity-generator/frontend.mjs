@@ -54,7 +54,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 ${imports}
-${refs.length ? 'import type { Id } from "@/convex/_generated/dataModel";\n' : ""}import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+${refs.length ? 'import type { Id } from "@/convex/_generated/dataModel";\n' : ""}import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Field } from "@/src/ui/components/screens/Field";
 ${e.fields.some((f) => f.type === "boolean") ? 'import { Checkbox } from "@/src/ui/components/screens/Checkbox";\n' : ""}import { Button } from "@/src/ui/components/screens/Button";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -100,7 +100,7 @@ ${e.fields.map((f) => `        ${f.name}: ${f.type === "boolean" ? `values.${f.n
   }
   if (!canWrite) return null;
   return (
-    <SonaeModal isOpen onClose={() => { if (!saving) onClose(); }} title={t(original ? "actions.edit" : "actions.create")}>
+    <HakkenModal isOpen onClose={() => { if (!saving) onClose(); }} title={t(original ? "actions.edit" : "actions.create")}>
       <form className="flex flex-col gap-4" onSubmit={submit}>
 ${e.fields.map((f) => (f.target ? `        <${pascal(f.name)}Picker value={values.${f.name}} disabled={saving} onChange={value => setValues(current => ({ ...current, ${f.name}: value }))} />` : f.type === "boolean" ? `        <Checkbox label={t("columns.${f.name}")} checked={values.${f.name}} disabled={saving} onChange={value => setValues(current => ({ ...current, ${f.name}: value }))} />` : `        <Field label={t("columns.${f.name}")} type="${f.type === "string" ? "text" : f.type}" ${f.type === "number" ? 'step="any"' : f.type === "string" ? `maxLength={${f.name === e.labelField ? 200 : 2000}}` : ""} required value={values.${f.name}} disabled={saving} onChange={event => setValues(current => ({ ...current, ${f.name}: event.target.value }))} />`)).join("\n")}
         <SaveError>{validationError || action.error}</SaveError>
@@ -109,7 +109,7 @@ ${e.fields.map((f) => (f.target ? `        <${pascal(f.name)}Picker value={value
           <SaveAction type="submit" isSaving={saving} label={t("actions.save")} savingLabel={t("actions.saving")} />
         </div>
       </form>
-    </SonaeModal>
+    </HakkenModal>
   );
 }
 `;

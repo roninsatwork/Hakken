@@ -15,7 +15,7 @@ describe("assistant safety policy", () => {
     if (!decision.allowed) {
       expect(decision.category).toBe("hidden_instructions");
       expect(decision.response).toContain("can't reveal hidden system instructions");
-      expect(decision.response).not.toContain("ASK SONAE PLATFORM SAFETY CONTRACT");
+      expect(decision.response).not.toContain("ASK HAKKEN PLATFORM SAFETY CONTRACT");
     }
   });
 

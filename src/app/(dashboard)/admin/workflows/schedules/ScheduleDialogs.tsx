@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 
 type ScheduleDialogsProps = {
@@ -40,7 +40,7 @@ export function ScheduleDialogs({
         </p>
       </ConfirmationModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={!!messageModal}
         onClose={onCloseMessage}
         title={messageModal?.title || ""}
@@ -57,7 +57,7 @@ export function ScheduleDialogs({
             {t("modals.error.dismiss")}
           </Button>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

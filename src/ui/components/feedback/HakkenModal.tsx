@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
 import { LAYER } from "@/src/ui/lib/layers";
 
-interface SonaeModalProps {
+interface HakkenModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
@@ -36,14 +36,14 @@ function useMounted() {
   );
 }
 
-export default function SonaeModal({ 
+export default function HakkenModal({ 
   isOpen, 
   onClose, 
   title, 
   children, 
   className,
   size = 'md'
-}: SonaeModalProps) {
+}: HakkenModalProps) {
   const t = useTranslations("ui.modal");
   const mounted = useMounted();
   const dialogRef = useRef<HTMLDivElement>(null);

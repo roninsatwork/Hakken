@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PRODUCT_FILE = "sonae.product.json";
+export const PRODUCT_FILE = "hakken.product.json";
 export const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const AUTH_PROVIDERS = ["google", "resend"];
 export const AI_PROVIDERS = ["vertex", "openai", "anthropic", "openrouter", "typesafe"];

@@ -97,7 +97,7 @@ async function readPersonActivity(ctx: QueryCtx, args: {
  * Deliberately about people rather than spend. The screen this feeds replaced a
  * company "Dashboard" that reported tokens, quota and provider cost — a billing
  * view under a name that promised an account view. Cost still has a home, on the
- * AI Usage screen; this answers who is using Sonae, how often, and who has gone
+ * AI Usage screen; this answers who is using Hakken, how often, and who has gone
  * quiet.
  *
  * Super admins are excluded throughout. They are the people running the

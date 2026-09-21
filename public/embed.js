@@ -1,4 +1,4 @@
-// Sonae Widget Embed Script
+// Hakken Widget Embed Script
 // Minimal vanilla JS to inject the interactive Iframe without conflicting with the host website.
 
 (function() {
@@ -23,7 +23,7 @@
     }
 
     if (!widgetId) {
-        console.error("Sonae Widget: Missing data-widget-id attribute on the script tag.");
+        console.error("Hakken Widget: Missing data-widget-id attribute on the script tag.");
         return;
     }
 
@@ -161,7 +161,7 @@
             pointer-events: none !important;
         }
 
-        @keyframes sonaeBounceIn {
+        @keyframes hakkenBounceIn {
             0% { opacity: 0; transform: translateY(20px) scale(0.9); }
             60% { opacity: 1; transform: translateY(-5px) scale(1.02); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -235,7 +235,7 @@
 
     // Listen for events from the Iframe
     window.addEventListener('message', (event) => {
-        // Strict security check: ensure origin matches the trusted Sonae deployment
+        // Strict security check: ensure origin matches the trusted Hakken deployment
         if (event.origin !== hostUrl) return;
         
         if (event.data && event.data.type === 'SONAE_WIDGET_CONFIG') {
@@ -252,7 +252,7 @@
                // Delay animation slightly for dramatic entry
                setTimeout(() => {
                    popup.classList.add('sonae-show-popup');
-                   popup.style.animation = "sonaeBounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
+                   popup.style.animation = "hakkenBounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
                }, 1000);
             }
         }

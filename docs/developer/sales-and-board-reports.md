@@ -38,7 +38,7 @@ a legacy fallback for older report rows that do not have newer structured
 sections such as `closingWindows`, `riskRadar`, or `teamSpotlight`.
 
 The page-level `Export to Board` action uses `html2canvas` against the report
-container and downloads `sonae-board-report-YYYY-MM-DD.png`. This is client-side
+container and downloads `hakken-board-report-YYYY-MM-DD.png`. This is client-side
 image export only. There is no server-side PDF, slide, or editable workbook
 generation in this route.
 

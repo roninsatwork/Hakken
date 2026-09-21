@@ -375,7 +375,7 @@ describe("upper body standing support readiness audit", () => {
       ],
       requiredRecordedProofCases: broadManifestProofCases,
       safeLabel: "broad-explicit-",
-      schema: "sonae-broad-upper-body-capture-contract/v1",
+      schema: "hakken-broad-upper-body-capture-contract/v1",
       supportClaimBlockers: {
         missingBroadGamePlanCases: [],
         missingBroadManifestProofCases: [],
@@ -543,7 +543,7 @@ describe("upper body standing support readiness audit", () => {
       requiredRecordedProofCases: ["standing-arm-raise"],
       schema: "old-contract/v0",
     })).toEqual([
-      "expected schema sonae-broad-upper-body-capture-contract/v1",
+      "expected schema hakken-broad-upper-body-capture-contract/v1",
       "expected command ids initial-analysis,replay-session-export,replay-proof-set,replay-review,reviewed-analysis,focused-game-visual-plan,focused-game-visual-capture,focused-game-visual-review,merged-readiness-audit",
       "expected recorded proof cases standing-arm-raise,standing-twist,standing-reach,shoulder-scapula-control",
       "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",

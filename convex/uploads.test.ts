@@ -11,7 +11,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -43,7 +43,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -94,7 +94,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -144,7 +144,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -177,7 +177,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -220,7 +220,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });
@@ -264,7 +264,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
 
     const userId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
-        email: "visitor@sonae.com",
+        email: "visitor@hakken.com",
         role: "USER"
       });
     });

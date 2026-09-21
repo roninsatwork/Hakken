@@ -39,13 +39,17 @@ Three things to hold onto:
   Sonae itself still live upstream. PRODUCT.md Part
   Two is what the code does today; Part Three §31 is the Hakken product surface,
   all of it unbuilt. Never describe a Part Three item as though it exists.
-- **The rebrand covered documentation prose only.** Code identifiers, config
-  filenames, schema fields, env vars, deployment names and the git remote still
-  read `sonae` and are still correct — `SonaeModal`, `generateSonaeResponse`,
-  `sonae.product.json`, `x-sonae-secret`, `sonae-app` and the rest. Do not
-  "fix" them. The full list is in PRODUCT.md §33. The user-facing
-  `projectName` in `messages/en.json` is also still `Sonae`; changing it is a
-  `npm run product:init` job, not a find-and-replace.
+- **The product is Hakken everywhere it can be.** Components, Convex
+  functions, config filenames, test fixtures, CSS classes and every
+  user-facing string were renamed on 2026-09-21 — `HakkenModal`,
+  `generateHakkenResponse`, `hakken.product.json`, `projectName: "Hakken"`.
+  The `sonae` names that remain are deliberate external contracts: webhook
+  headers (`x-sonae-secret`), Stripe metadata (`sonaeBillingAccount`), the
+  embedded widget surface (`SONAE_WIDGET_CONFIG`, `sonae-widget-*`), live
+  infrastructure (`sonae-app`, `sonae.ronins.co.uk`) and the upstream remote.
+  Renaming those breaks a running system — do not "fix" them. Full list and
+  reasons in PRODUCT.md §33. `docs/plans/completed/` and `docs/product/` are
+  dated records and keep the old identifier names; read them as history.
 - **Everything in `docs/product/` is a dated record.** Do not edit those files
   to match later decisions. Supersede them with a new dated document, or record
   the change in PRODUCT.md's change log.
@@ -228,7 +232,7 @@ When debugging Game Studio movement, do not ask the user to repeat live motions 
 ## Project Guardrails
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
-- Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `SonaeModal` patterns.
+- Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.
 - Read `docs/developer/screen-kit.md` before building or restyling any screen,
   and copy an existing screen that already does it — Subscription Plans and

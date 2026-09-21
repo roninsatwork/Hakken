@@ -11,7 +11,7 @@ const defaultSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-p
 const defaultSupplementalBroadSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.broad-upper-body.codex-semantic-review.json";
 const defaultBroadCaptureContractPath = "tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json";
 const defaultBroadCaptureLabel = "movement-proof-upper-body-standing-broad-explicit";
-const BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "sonae-broad-upper-body-capture-contract/v1";
+const BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "hakken-broad-upper-body-capture-contract/v1";
 const BROAD_UPPER_BODY_GAME_PROOF_CASES = [
   "strongest-standing-arm-raise",
   "strongest-standing-twist",
@@ -692,7 +692,7 @@ function buildBroadCaptureWorkflow({
     },
     {
       id: "replay-proof-set",
-      command: `npx -p node@22.13.0 npm run movement:replay:proof-set -- --analysis ${paths.analysis} --manifest ${paths.manifest} --out ${paths.replayCapture} --debug-session-json ${paths.replaySession} --base-url http://localhost:3100 --local-test-auth --secret sonae-local-test-auth`,
+      command: `npx -p node@22.13.0 npm run movement:replay:proof-set -- --analysis ${paths.analysis} --manifest ${paths.manifest} --out ${paths.replayCapture} --debug-session-json ${paths.replaySession} --base-url http://localhost:3100 --local-test-auth --secret hakken-local-test-auth`,
     },
     {
       id: "replay-review",
@@ -708,7 +708,7 @@ function buildBroadCaptureWorkflow({
     },
     {
       id: "focused-game-visual-capture",
-      command: `npx -p node@22.13.0 npm run movement:game-visual-capture -- --base-url http://localhost:3100 --plan ${paths.gameVisualPlan} --out ${paths.gameCapture} --local-test-auth --secret sonae-local-test-auth`,
+      command: `npx -p node@22.13.0 npm run movement:game-visual-capture -- --base-url http://localhost:3100 --plan ${paths.gameVisualPlan} --out ${paths.gameCapture} --local-test-auth --secret hakken-local-test-auth`,
     },
     {
       id: "focused-game-visual-review",

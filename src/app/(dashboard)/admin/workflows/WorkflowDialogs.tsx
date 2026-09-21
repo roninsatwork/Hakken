@@ -2,7 +2,7 @@
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useTranslations } from "next-intl";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
   ModalField,
@@ -43,7 +43,7 @@ export function WorkflowDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={editorOpen}
         onClose={onEditorClose}
         title={t("modal.initTitle")}
@@ -75,7 +75,7 @@ export function WorkflowDialogs({
             onCancel={onEditorClose}
           />
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={deletingWorkflowName !== null}

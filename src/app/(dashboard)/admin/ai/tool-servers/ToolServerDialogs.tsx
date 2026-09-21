@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, Loader2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField, ModalFormActions } from "@/src/ui/components/screens/ModalForm";
 
@@ -69,7 +69,7 @@ export function ToolServerDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={isAddOpen}
         onClose={onCloseAdd}
         title={t("modal.title")}
@@ -108,7 +108,7 @@ export function ToolServerDialogs({
             onCancel={onCloseAdd}
           />
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       {/*
         * The answer to "did that work".
@@ -119,7 +119,7 @@ export function ToolServerDialogs({
         * what the server actually offers, because a count is not an answer to
         * whether the connection is worth having.
         */}
-      <SonaeModal
+      <HakkenModal
         isOpen={!!checked}
         onClose={onCloseChecked}
         title={checked?.ok ? t("checked.passedTitle") : t("checked.failedTitle")}
@@ -172,7 +172,7 @@ export function ToolServerDialogs({
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={!!deleting}

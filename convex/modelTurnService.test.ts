@@ -408,7 +408,7 @@ describe("both assistants flow through the same shared turn", () => {
       return { threadId, agentId };
     });
 
-    await t.action(internal.aiChat.generateSonaeResponse, {
+    await t.action(internal.aiChat.generateHakkenResponse, {
       threadId,
       content: UNSAFE_CONTENT,
     });

@@ -19,7 +19,7 @@ export function createMovementRecordingBackupFilename({
   title: string;
 }) {
   const timestamp = now.toISOString().replace(/[:.]/g, "-");
-  return `sonae-movement-schema-v${schemaVersion}-${slugifyBackupTitle(title)}-${timestamp}.json`;
+  return `hakken-movement-schema-v${schemaVersion}-${slugifyBackupTitle(title)}-${timestamp}.json`;
 }
 
 export function serializeMovementRecordingBackupPacket(packet: MovementFrameEnvelope) {

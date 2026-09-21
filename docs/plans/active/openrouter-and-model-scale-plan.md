@@ -357,7 +357,7 @@ a count per row. The health message keeps its place under the provider name,
 where the raw provider key and `authMode` used to sit.
 
 **Found by looking at it, not by the tests.** The rebuilt screen crashed on load
-in the browser while all 2,685 tests passed. `SonaeModal` builds its children
+in the browser while all 2,685 tests passed. `HakkenModal` builds its children
 whether or not it is open, so the confirmation body ran against a
 `getProviderDefaultUsage` result of an unexpected shape and took the whole page
 down with it. Guarding on "is this the shape I expect" rather than on "is this

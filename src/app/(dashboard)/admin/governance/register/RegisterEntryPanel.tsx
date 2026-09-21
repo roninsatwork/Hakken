@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { AiSystemEntry, AiSystemRisk } from "@/convex/governanceRegisterService";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -109,7 +109,7 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
   };
 
   return (
-    <SonaeModal isOpen onClose={onClose} title={entry.name}>
+    <HakkenModal isOpen onClose={onClose} title={entry.name}>
       <p className="mb-5 text-[12px] text-muted">
         {[
           tRegister(`kind.${entry.kind}`),
@@ -225,6 +225,6 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
           </div>
         </div>
       )}
-    </SonaeModal>
+    </HakkenModal>
   );
 }

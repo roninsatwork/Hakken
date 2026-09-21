@@ -498,11 +498,11 @@ phoneDoor.on("connection", (phone) => {
       session.on("message", (payload) => {
         const text = payload.toString();
 
-        // The session is up: have Sonae speak first, the way a person
+        // The session is up: have Hakken speak first, the way a person
         // answering a phone does. A screen waits for you; a phone must not.
         if (text.includes('"relay.ready"')) {
           session.send(buildGreetingNudge());
-          say("session ready — asked Sonae to greet the caller");
+          say("session ready — asked Hakken to greet the caller");
           return;
         }
 

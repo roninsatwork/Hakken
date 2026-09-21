@@ -160,7 +160,7 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
  * Hand a job to a person from a workflow.
  *
  * The connector that has been sitting blocked in the outstanding list —
- * blocked only because Sonae had no concept of a task. The tenant comes from
+ * blocked only because Hakken had no concept of a task. The tenant comes from
  * the workflow's own owner, exactly as the agent node resolves it, so a
  * template cannot address work into another workspace.
  */

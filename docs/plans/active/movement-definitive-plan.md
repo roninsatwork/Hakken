@@ -183,7 +183,7 @@ him right. Do not re-litigate this.*
      same prefix setup/player lane; dead `buildInstructorRetargetSourceModel` +
      `buildMovementRecordedInstructorCalibration` usages removed from replay-lab.
    - `registryRole` threaded through the frame-application/telemetry chain so the unified
-     instructor still registers as "instructor" in `__sonaeMovementAvatarDebug` (the
+     instructor still registers as "instructor" in `__hakkenMovementAvatarDebug` (the
      alignment harness requires both roles; motion role stays "player").
    - Tests updated to the unified contract: `movementRecordedMotionFrame.test.ts`
      (facing-player, mirrored display, no standby blanking) and
@@ -312,7 +312,7 @@ Real clients will wear glasses and must stand far enough back to be full-body in
 
 **How to measure (the loop):**
 - Full-video alignment + follow proof (≈10 min, needs the dev server running on :3000):
-  `npm run movement:replay-game:deep-latest-proof -- --base-url http://localhost:3000 --local-test-auth --secret sonae-local-test-auth --export tmp/movement-replay-lab/full-motion-set-london-proof-2026-07-20/source.convex-export.zip --out tmp/movement-replay-lab/<name>`
+  `npm run movement:replay-game:deep-latest-proof -- --base-url http://localhost:3000 --local-test-auth --secret hakken-local-test-auth --export tmp/movement-replay-lab/full-motion-set-london-proof-2026-07-20/source.convex-export.zip --out tmp/movement-replay-lab/<name>`
   Then read `tmp/movement-replay-lab/<name>/commissioning-proof/packet-proof/mounted-game.json`:
   head follow = `playerVisual.semantic.headChain.sourceError` per frame; body segments =
   `playerVisual.segments.*.sourceError`; alignment = `comparison.json` `exactChecksumDivergenceCount`.
@@ -524,7 +524,7 @@ live.
   full-frame repro could not reproduce it, and the real confirmation is
   Anthony seeing his avatar follow in a live game.
 - Automated live-game repro after the fix: player follows (moved, 3 distinct
-  poses, gate "applied"). Instrumentation (`window.__sonaeMovementLivePlayerGate`)
+  poses, gate "applied"). Instrumentation (`window.__hakkenMovementLivePlayerGate`)
   left in place for live diagnosis.
 - Still open: instructor head/arms fidelity (case A — the floor-stare from
   looking at the screen while recording).
@@ -532,7 +532,7 @@ live.
 ### Fix steps (in order)
 
 1. **Instrument the reproduction.** The harness dumps the avatar's internal
-   gate verdicts (`window.__sonaeMovementAvatarDebug`, frame application
+   gate verdicts (`window.__hakkenMovementAvatarDebug`, frame application
    proof counters) alongside each screenshot so every run states *why* a
    frame was or was not applied.
 2. **Fix the player apply gate.** Find the gate that rejects live motion

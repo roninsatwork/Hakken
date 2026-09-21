@@ -11,7 +11,7 @@ describe("Replay Studio diagnosis wrapper", () => {
     const tempDirPrefix = diagnoseReplayStudioBundleTempDir();
     const bundlePath = resolve(tempDirPrefix, diagnoseReplayStudioBundleFilename(1234));
 
-    expect(tempDirPrefix).toBe(resolve(tmpdir(), "sonae-movement-diagnose-"));
+    expect(tempDirPrefix).toBe(resolve(tmpdir(), "hakken-movement-diagnose-"));
     expect(bundlePath).toContain(resolve(tmpdir()));
     expect(bundlePath).not.toContain(resolve("tmp/movement-replay-lab"));
     expect(bundlePath).not.toContain(resolve("scripts/movement-debug"));

@@ -50,7 +50,7 @@ export function parseEnvListOutput(output) {
 
 export function deploymentMain(argv = process.argv.slice(2), run = execFileSync) {
   const prod = argv.includes("--prod");
-  let configPath = "sonae.product.json";
+  let configPath = "hakken.product.json";
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--prod") continue;
     if (argv[i] === "--config" && argv[i + 1]) configPath = argv[++i];
@@ -78,5 +78,5 @@ export function deploymentMain(argv = process.argv.slice(2), run = execFileSync)
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { process.exitCode = deploymentMain(); }
-  catch { console.error("Cannot validate deployment. Check the options and sonae.product.json; values are not printed."); process.exitCode = 1; }
+  catch { console.error("Cannot validate deployment. Check the options and hakken.product.json; values are not printed."); process.exitCode = 1; }
 }

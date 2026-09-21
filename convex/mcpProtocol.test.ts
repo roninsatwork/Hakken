@@ -23,7 +23,7 @@ describe("the opening handshake", () => {
   test("declares no client capabilities", () => {
     // `sampling` would let a server ask this platform to run a model on its
     // behalf. Declaring a capability is what invites its use, so none are.
-    const request = buildInitialiseRequest(1, "Sonae");
+    const request = buildInitialiseRequest(1, "Hakken");
     expect(request.params.capabilities).toEqual({});
     expect(request.params.protocolVersion).toBe(MCP_PROTOCOL_VERSION);
     expect(request.jsonrpc).toBe("2.0");
@@ -31,7 +31,7 @@ describe("the opening handshake", () => {
 
   test("introduces itself by the deployment's own name", () => {
     // A product cloned from this repo and renamed must not tell every server it
-    // connects to that it is Sonae.
+    // connects to that it is Hakken.
     expect(buildInitialiseRequest(1, "Northwind Assist").params.clientInfo.name)
       .toBe("Northwind Assist");
   });

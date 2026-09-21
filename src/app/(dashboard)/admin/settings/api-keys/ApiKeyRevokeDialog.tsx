@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 
@@ -37,7 +37,7 @@ export function ApiKeyRevokeDialog({
   title,
 }: ApiKeyRevokeDialogProps) {
   return (
-    <SonaeModal isOpen onClose={onClose} title={title} size="sm">
+    <HakkenModal isOpen onClose={onClose} title={title} size="sm">
       <div className="flex flex-col gap-4">
         <p className="text-[13px] leading-relaxed text-secondary">{body}</p>
         <Field
@@ -67,6 +67,6 @@ export function ApiKeyRevokeDialog({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

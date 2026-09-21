@@ -208,7 +208,7 @@ export const getMessages = publicQuery({
 /**
  * Note which real phase the assistant run is in, for the pre-reply pill.
  *
- * Written by `generateSonaeResponse` as it enters each phase and cleared when
+ * Written by `generateHakkenResponse` as it enters each phase and cleared when
  * the reply lands or fails, so the pill can only ever claim work that is
  * actually happening. Passing no stage clears it.
  */
@@ -248,7 +248,7 @@ export const getAssistantStage = publicQuery({
 /**
  * Just enough of a thread to title the header bar.
  *
- * The bar used to repeat "Ask Sonae", which the highlighted sidebar item
+ * The bar used to repeat "Ask Hakken", which the highlighted sidebar item
  * already says. Naming the conversation costs one small read and tells the
  * reader something they do not already know.
  */
@@ -396,7 +396,7 @@ export const sendMessage = publicMutation({
     // 3. Evaluate Limit
     if (isChatQuotaExceeded(quota) || widgetBusy) {
        const messageDimensions = getThreadMessageDimensions(thread);
-       // Sonae Rejection Soft Block
+       // Hakken Rejection Soft Block
        await ctx.db.insert("messages", {
           threadId: args.threadId,
           role: "user",
@@ -457,7 +457,7 @@ export const sendMessage = publicMutation({
          content: safeContent,
        });
     } else {
-       await ctx.scheduler.runAfter(0, internal.aiChat.generateSonaeResponse, {
+       await ctx.scheduler.runAfter(0, internal.aiChat.generateHakkenResponse, {
          threadId: args.threadId,
          content: safeContent,
          modelId: args.modelId,

@@ -140,7 +140,7 @@ function replayFrameMotionPayload(
 }
 
 type MovementReplayLabDeterministicDebugWindow = Window & {
-  __sonaeReplayGameBoundaryProof?: {
+  __hakkenReplayGameBoundaryProof?: {
     boundaries: {
       acquisition: unknown;
       calibration: unknown;
@@ -167,16 +167,16 @@ type MovementReplayLabDeterministicDebugWindow = Window & {
     };
     frameIndex: number;
   };
-  __sonaeReplayLabPlaybackClock?: {
+  __hakkenReplayLabPlaybackClock?: {
     currentCapturedAt?: number;
     delayMs: number;
     frameIndex: number;
     nextCapturedAt?: number;
     processedFrameIndexes?: number[];
   };
-  __sonaeReplayLabCommittedAt?: number;
-  __sonaeReplayLabCommittedFrameIndex?: number;
-  __sonaeReplayLabStepToFrame?: (frameIndex: number) => number;
+  __hakkenReplayLabCommittedAt?: number;
+  __hakkenReplayLabCommittedFrameIndex?: number;
+  __hakkenReplayLabStepToFrame?: (frameIndex: number) => number;
 };
 
 export default function MovementReplayLabPage() {
@@ -499,8 +499,8 @@ export default function MovementReplayLabPage() {
   const replayPlayerRetargetSourceModel = replayPlayerSetup?.retargetSourceModel ?? null;
   useEffect(() => {
     (window as Window & {
-      __sonaeMovementRecordedPlayerSetup?: typeof replayPlayerSetup;
-    }).__sonaeMovementRecordedPlayerSetup = replayPlayerSetup;
+      __hakkenMovementRecordedPlayerSetup?: typeof replayPlayerSetup;
+    }).__hakkenMovementRecordedPlayerSetup = replayPlayerSetup;
   }, [replayPlayerSetup]);
   const replayThreePartyPlayerSetup = useMemo(() => {
     if (!replaySession || !isThreePartyMirrorProof) return null;
@@ -831,7 +831,7 @@ export default function MovementReplayLabPage() {
       !replaySession ||
       !currentThreePartyPlayerPayload
     ) {
-      delete debugWindow.__sonaeReplayGameBoundaryProof;
+      delete debugWindow.__hakkenReplayGameBoundaryProof;
       return undefined;
     }
 
@@ -880,7 +880,7 @@ export default function MovementReplayLabPage() {
             : null,
           setup: structuredClone(replayThreePartyPlayerSetup),
         };
-        debugWindow.__sonaeReplayGameBoundaryProof = {
+        debugWindow.__hakkenReplayGameBoundaryProof = {
           boundaries,
           checksums: {
             acquisition: movementBoundaryChecksum(boundaries.acquisition),
@@ -902,7 +902,7 @@ export default function MovementReplayLabPage() {
     publish();
     return () => {
       window.cancelAnimationFrame(animationFrameId);
-      delete debugWindow.__sonaeReplayGameBoundaryProof;
+      delete debugWindow.__hakkenReplayGameBoundaryProof;
     };
   }, [
     currentThreePartyPlayerPayload,
@@ -922,9 +922,9 @@ export default function MovementReplayLabPage() {
       : null;
     replaySourceMotionRef.current = sourceMotion;
     const debugWindow = window as MovementReplayLabDeterministicDebugWindow;
-    if (debugWindow.__sonaeReplayLabStepToFrame) {
-      debugWindow.__sonaeReplayLabCommittedAt = performance.now();
-      debugWindow.__sonaeReplayLabCommittedFrameIndex = safeFrameIndex;
+    if (debugWindow.__hakkenReplayLabStepToFrame) {
+      debugWindow.__hakkenReplayLabCommittedAt = performance.now();
+      debugWindow.__hakkenReplayLabCommittedFrameIndex = safeFrameIndex;
     }
 
     const canvas = canvasRef.current;
@@ -1057,7 +1057,7 @@ export default function MovementReplayLabPage() {
         return;
       }
       const delayMs = playbackStep.delayMs;
-      (window as MovementReplayLabDeterministicDebugWindow).__sonaeReplayLabPlaybackClock = {
+      (window as MovementReplayLabDeterministicDebugWindow).__hakkenReplayLabPlaybackClock = {
         currentCapturedAt: replaySession.samples[playbackFrameIndex]?.capturedAt,
         delayMs,
         frameIndex: playbackFrameIndex,
@@ -1072,7 +1072,7 @@ export default function MovementReplayLabPage() {
       fallbackFps: replaySession.fps,
       samples: replaySession.samples,
     });
-    (window as MovementReplayLabDeterministicDebugWindow).__sonaeReplayLabPlaybackClock = {
+    (window as MovementReplayLabDeterministicDebugWindow).__hakkenReplayLabPlaybackClock = {
       currentCapturedAt: replaySession.samples[playbackFrameIndex]?.capturedAt,
       delayMs: firstDelayMs,
       frameIndex: playbackFrameIndex,
@@ -1106,8 +1106,8 @@ export default function MovementReplayLabPage() {
     if (query.get("debugDeterministicReplay") !== "1") return;
 
     const debugWindow = window as MovementReplayLabDeterministicDebugWindow;
-    debugWindow.__sonaeReplayLabCommittedFrameIndex = 0;
-    debugWindow.__sonaeReplayLabStepToFrame = (requestedFrameIndex) => {
+    debugWindow.__hakkenReplayLabCommittedFrameIndex = 0;
+    debugWindow.__hakkenReplayLabStepToFrame = (requestedFrameIndex) => {
       const nextFrameIndex = clampFrame(requestedFrameIndex, frameCount);
       setIsPlaying(false);
       setFrameIndex(nextFrameIndex);
@@ -1115,8 +1115,8 @@ export default function MovementReplayLabPage() {
     };
 
     return () => {
-      delete debugWindow.__sonaeReplayLabCommittedFrameIndex;
-      delete debugWindow.__sonaeReplayLabStepToFrame;
+      delete debugWindow.__hakkenReplayLabCommittedFrameIndex;
+      delete debugWindow.__hakkenReplayLabStepToFrame;
     };
   }, [frameCount]);
 

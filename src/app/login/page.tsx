@@ -121,7 +121,7 @@ export default function LoginPage() {
           <span className="ps-login-mark">
             <Sparkles className="h-[15px] w-[15px]" />
           </span>
-          <span className="ps-display text-[16px] tracking-[0.14em]">SONAE</span>
+          <span className="ps-display text-[16px] tracking-[0.14em]">HAKKEN</span>
         </Link>
 
         <motion.div

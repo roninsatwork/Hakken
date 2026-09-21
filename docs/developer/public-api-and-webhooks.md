@@ -38,7 +38,7 @@ Supported scopes are:
 
 `internal.apiKeys.authenticatePublicRequest` is the gate for public endpoints. It:
 
-- extracts and validates the `sonae_...` key prefix
+- extracts and validates the `hakken_...` key prefix
 - looks up the key by prefix
 - hashes the presented key and compares it with the stored digest
 - rejects revoked and expired keys

@@ -12,7 +12,7 @@ Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserPr
 - Resend email magic links through `@auth/core/providers/resend`
 - an optional local-test credentials provider when local test auth is explicitly enabled
 
-The auth callback `createOrUpdateUser` is `createOrUpdateSonaeAuthUser` from `convex/authUserProvisioning.ts`. That callback is the invite-only provisioning gate for real auth providers.
+The auth callback `createOrUpdateUser` is `createOrUpdateHakkenAuthUser` from `convex/authUserProvisioning.ts`. That callback is the invite-only provisioning gate for real auth providers.
 
 `convex/auth.config.ts` exposes the Convex site provider configuration used by the frontend auth provider.
 
@@ -62,7 +62,7 @@ scanners because there is no link in the email that can spend the code.
 
 ## Invite-Only Provisioning
 
-`createOrUpdateSonaeAuthUser` is the source of truth for user creation during auth callbacks.
+`createOrUpdateHakkenAuthUser` is the source of truth for user creation during auth callbacks.
 
 It extracts email, name, and image from provider payloads, lowercases the email, and then:
 
@@ -178,7 +178,7 @@ This provider must never be enabled in production. Tests assert that it fails cl
 
 Playwright E2E tests use a separate deterministic cookie helper:
 
-- `e2e/auth.setup.ts` writes storage states with a `sonae_e2e_auth` cookie.
+- `e2e/auth.setup.ts` writes storage states with a `hakken_e2e_auth` cookie.
 - `e2e/helpers/auth.ts` can set the same cookie in a test.
 - `src/e2e/convexReactMock.tsx` reads the cookie and returns deterministic users from mocked `useQuery` calls.
 

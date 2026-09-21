@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Bed, Bath, Home, User, Phone, ExternalLink, Loader2, Zap, LayoutTemplate, CheckCircle2, Map, Clock, TrendingDown, Tag, Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { use } from "react";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import Header from "@/src/ui/components/layout/Header";
 import PropertyDescription from "./PropertyDescription";
 import Image from "next/image";
@@ -37,7 +37,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
       <>
         <Header />
         <div className="flex flex-col gap-6 h-[calc(100vh-100px)] items-center justify-center">
-          <SonaeEmptyState 
+          <HakkenEmptyState 
             title={t("notFoundTitle")} 
             description={t("notFoundBody")} 
           />

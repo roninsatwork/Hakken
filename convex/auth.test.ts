@@ -96,10 +96,10 @@ describe("the provider roster", () => {
     expect(providerIds()).not.toContain("local-test");
   });
 
-  test("wires Sonae user provisioning as the createOrUpdateUser callback", async () => {
+  test("wires Hakken user provisioning as the createOrUpdateUser callback", async () => {
     const { provisioning } = await loadAuth();
     expect(captured.config?.callbacks?.createOrUpdateUser).toBe(
-      provisioning.createOrUpdateSonaeAuthUser
+      provisioning.createOrUpdateHakkenAuthUser
     );
   });
 });

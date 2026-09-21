@@ -43,7 +43,7 @@ export type DownloadedDeviceBenchmarkReport = DeviceBenchmarkReport & {
 };
 
 export function deviceReportFilename(report: DownloadedDeviceBenchmarkReport) {
-  return `sonae-dense-device-${report.deviceClass}-${Date.parse(report.physicalObservation.observedAt)}.json`;
+  return `hakken-dense-device-${report.deviceClass}-${Date.parse(report.physicalObservation.observedAt)}.json`;
 }
 
 function deviceReportFile(report: DownloadedDeviceBenchmarkReport) {
@@ -64,7 +64,7 @@ export async function shareDeviceBenchmarkReport(
   }
   await navigatorApi.share({
     files: [file],
-    text: "Sonae browser Deep Capture device measurements. No video is included.",
-    title: `Sonae ${report.deviceClass} Deep Capture report`,
+    text: "Hakken browser Deep Capture device measurements. No video is included.",
+    title: `Hakken ${report.deviceClass} Deep Capture report`,
   });
 }

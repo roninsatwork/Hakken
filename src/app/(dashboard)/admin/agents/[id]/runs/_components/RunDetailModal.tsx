@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ClipboardCheck, Lightbulb, Loader2, RotateCcw } from "lucide-react";
 import { formatDateTime } from "@/src/lib/dates";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import {
   canReplay,
   formatRunDuration,
@@ -62,7 +62,7 @@ export function RunDetailModal({
   const runDetail = useQuery(api.agentRuns.getRunDetail, detailRunId ? { runId: detailRunId } : "skip");
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen={!!detailRunId}
       onClose={onClose}
       title={t("title")}
@@ -513,6 +513,6 @@ export function RunDetailModal({
           )}
         </div>
       )}
-    </SonaeModal>
+    </HakkenModal>
   );
 }

@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
-export const PROVENANCE = ".sonae/framework.json";
+export const PROVENANCE = ".hakken/framework.json";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const stable = (value) =>
   Array.isArray(value)
@@ -110,7 +110,7 @@ export function writeProvenance(sourceRoot, outputRoot, keep, files) {
     keep: [...new Set(keep)].sort(),
     files: Object.fromEntries(
       [...files].sort().map((file) => {
-        if (file.startsWith(".sonae/"))
+        if (file.startsWith(".hakken/"))
           throw new Error("Provenance cannot fingerprint itself.");
         const value = fingerprint(outputRoot, file);
         if (!value) throw new Error(`Export file is missing: ${file}`);
@@ -164,7 +164,7 @@ export function readProvenance(root) {
   for (const [file, value] of Object.entries(snapshot.files)) {
     safeFile(root, file);
     if (
-      file.startsWith(".sonae/") ||
+      file.startsWith(".hakken/") ||
       !value ||
       !/^[a-f0-9]{64}$/.test(value.sha256) ||
       typeof value.executable !== "boolean"

@@ -4,8 +4,8 @@ import { api } from "./_generated/api";
 import schema from "./schema";
 
 const modelConfig = {
-  modelId: "sonae-test-model",
-  displayName: "Sonae Test Model",
+  modelId: "hakken-test-model",
+  displayName: "Hakken Test Model",
   friendlyName: "Test Model",
   isEnabled: true,
   isDefault: true,
@@ -30,7 +30,7 @@ describe("Analytics MRR Strict Isolation", () => {
     // Create system config needed for MRR
     await t.run(async (ctx) => {
       await ctx.db.insert("systemSettings", {
-        platformName: "Sonae Testing"
+        platformName: "Hakken Testing"
       });
     });
 
@@ -200,7 +200,7 @@ describe("Analytics MRR Strict Isolation", () => {
         userId,
         inputTokens: 1_000_000,
         outputTokens: 500_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         analyticsDimensionsVersion: 1,
         createdAt: now,
       });
@@ -210,7 +210,7 @@ describe("Analytics MRR Strict Isolation", () => {
         content: "User messages should not be costed",
         inputTokens: 1_000_000,
         outputTokens: 1_000_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         createdAt: now,
       });
       await ctx.db.insert("messages", {
@@ -220,7 +220,7 @@ describe("Analytics MRR Strict Isolation", () => {
         userId,
         inputTokens: 1_000_000,
         outputTokens: 1_000_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         analyticsDimensionsVersion: 1,
         createdAt: now - 10_000,
       });
@@ -298,7 +298,7 @@ describe("Analytics MRR Strict Isolation", () => {
         userId: userAId,
         inputTokens: 200_000,
         outputTokens: 100_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         analyticsDimensionsVersion: 1,
         createdAt: now,
       });
@@ -384,7 +384,7 @@ describe("Analytics MRR Strict Isolation", () => {
       });
       const agentId = await ctx.db.insert("agents", {
         name: "Support Agent",
-        modelId: "sonae-test-model",
+        modelId: "hakken-test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: now,
@@ -414,7 +414,7 @@ describe("Analytics MRR Strict Isolation", () => {
         content: "Live company message",
         inputTokens: 300_000,
         outputTokens: 200_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         createdAt: now,
         companyId: companyAId,
         userId: userAId,
@@ -429,7 +429,7 @@ describe("Analytics MRR Strict Isolation", () => {
         actionContext: "Workflow",
         inputTokens: 100_000,
         outputTokens: 100_000,
-        modelUsed: "sonae-test-model",
+        modelUsed: "hakken-test-model",
         costGBP: 0,
         status: "SUCCESS",
         createdAt: now,
@@ -445,7 +445,7 @@ describe("Analytics MRR Strict Isolation", () => {
           costGBP: 3,
         },
         uniqueUserIds: [userAId],
-        modelMetrics: [{ model: "sonae-test-model", cost: 3, calls: 2 }],
+        modelMetrics: [{ model: "hakken-test-model", cost: 3, calls: 2 }],
         leaderboards: {
           topAgents: [
             {
@@ -663,7 +663,7 @@ describe("the platform-wide analytics read", () => {
           companyId: userId === inCompany ? companyId : undefined,
           inputTokens: 1_000_000,
           outputTokens: 500_000,
-          modelUsed: "sonae-test-model",
+          modelUsed: "hakken-test-model",
           analyticsDimensionsVersion: 1,
           createdAt: now,
         });

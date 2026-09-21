@@ -95,7 +95,7 @@ Output your intent alignment as JSON.
 
     } catch (error) {
         console.error("Orchestrator Routing Error:", error);
-        // Fail-open: default to Sonae global assistant
+        // Fail-open: default to Hakken global assistant
         return { matchedAgentId: null, confidence: 0 };
     }
   },

@@ -6,7 +6,7 @@ import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 
 /**
- * The Google live voices Sonae can speak with. Declared here — not in
+ * The Google live voices Hakken can speak with. Declared here — not in
  * ai.ts — because that file runs under Node ("use node") and this one
  * cannot: queries and mutations live in the default runtime, and a
  * default-runtime file must not import a Node one.
@@ -15,12 +15,12 @@ export const SPEECH_VOICE_KEYS = ["Kore", "Puck", "Charon", "Aoede"] as const;
 export type SpeechVoiceKey = (typeof SPEECH_VOICE_KEYS)[number];
 
 /**
- * One voice for everywhere Sonae speaks.
+ * One voice for everywhere Hakken speaks.
  *
- * Ask Sonae's voice overlay, the phone line and the reception screen all
+ * Ask Hakken's voice overlay, the phone line and the reception screen all
  * mint their live sessions from the same relay, and each used to fall back
  * to a hard-coded voice of its own. This is the single setting they all
- * read instead: change it once, and Sonae sounds the same at every door.
+ * read instead: change it once, and Hakken sounds the same at every door.
  * Stored on the company, because a workspace should sound like itself —
  * and two workspaces need not sound alike.
  */

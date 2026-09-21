@@ -81,7 +81,7 @@ export default defineSchema({
      */
     enabledModules: v.optional(v.array(v.string())),
     /**
-     * The voice Sonae speaks with, everywhere it speaks — Ask Sonae's voice
+     * The voice Hakken speaks with, everywhere it speaks — Ask Hakken's voice
      * overlay, the phone line, the reception screen. One of the Google live
      * voices (SPEECH_VOICE_KEYS); absent means the platform default.
      */
@@ -426,7 +426,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
-    // Sonae Custom Fields
+    // Hakken Custom Fields
     companyId: v.optional(v.id("companies")),
     impersonatingCompanyId: v.optional(v.id("companies")),
     /**
@@ -534,7 +534,7 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_type", ["templateType"]),
 
-  // Sonae System Configurations
+  // Hakken System Configurations
   systemConfig: defineTable({
     key: v.string(), // e.g. "SYSTEM_PROMPT"
     value: v.string(),
@@ -600,7 +600,7 @@ export default defineSchema({
     .index("by_user_unread", ["userId", "readAt"]),
 
   /**
-   * A question Sonae re-asks on a schedule, reporting when the answer moves.
+   * A question Hakken re-asks on a schedule, reporting when the answer moves.
    *
    * The scheduler could already run an agent; it could not ask a question
    * and notice that the answer changed. That is the difference between a
@@ -723,7 +723,7 @@ export default defineSchema({
     .index("by_expires_at", ["expiresAt"]),
 
   /**
-   * A phone call Sonae answered.
+   * A phone call Hakken answered.
    *
    * A call is not a chat thread and is deliberately not stored as one: it has
    * a caller rather than a user, a duration, a ringing state, and an ending
@@ -757,7 +757,7 @@ export default defineSchema({
      */
     turns: v.array(
       v.object({
-        role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+        role: v.union(v.literal("CALLER"), v.literal("HAKKEN")),
         text: v.string(),
         at: v.number(),
       })
@@ -2225,7 +2225,7 @@ export default defineSchema({
     // 16.7MB per-execution read limit.
     .index("by_embedding_model", ["embeddingModelId"]),
 
-  // Sonae Assistant Tables
+  // Hakken Assistant Tables
   threads: defineTable({
     userId: v.optional(v.id("users")),
     companyId: v.optional(v.id("companies")),
@@ -2252,7 +2252,7 @@ export default defineSchema({
     /**
      * What the assistant is actually doing right now, for the pre-reply pill.
      *
-     * Written by `generateSonaeResponse` as it passes each real phase —
+     * Written by `generateHakkenResponse` as it passes each real phase —
      * checking, reading files, searching knowledge, writing — and cleared when
      * the reply lands or fails. Replaced a client-side rotation of invented
      * phrases on a timer; a stage shown on screen must be one the run is in.
@@ -2280,7 +2280,7 @@ export default defineSchema({
     /** Stamped when a person saved this answer into the wiki, so the same
      * answer is filed once however many times the button is pressed. */
     savedToWikiAt: v.optional(v.number()),
-    // Sonae AI Logistics
+    // Hakken AI Logistics
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),
@@ -3650,7 +3650,7 @@ export default defineSchema({
   // salesData-free template losing its entire wiki (24 files failing to
   // compile). The fence closes here and reopens after wikiPageRevisions.
   /**
-   * The self-improving wiki: whole pages Sonae writes and tends itself, one
+   * The self-improving wiki: whole pages Hakken writes and tends itself, one
    * per subject, rewritten after conversations — never chunked, never
    * embedded (self-improving-wiki-plan.md, decisions 1-3). The machine's
    * text lives in `content`; pinned human corrections are a separate layer

@@ -1,5 +1,5 @@
 {
-  "projectName": "Sonae",
+  "projectName": "Hakken",
   "common": {
     "loading": "Loading...",
     "cancel": "Cancel",
@@ -83,8 +83,8 @@
     "getStarted": "Get Started",
     "toBePrepared": "To be prepared",
     "frameworkTitle": "The Premium Foundation for Exceptional Products",
-    "frameworkDescription": "Skip the boilerplate and start building. Sonae provides a highly polished, high-performance canvas that lets you launch beautiful, secure, and scalable applications in a fraction of the time.",
-    "copyright": "© {year} Sonae. All rights reserved."
+    "frameworkDescription": "Skip the boilerplate and start building. Hakken provides a highly polished, high-performance canvas that lets you launch beautiful, secure, and scalable applications in a fraction of the time.",
+    "copyright": "© {year} Hakken. All rights reserved."
   },
   "dashboard": {
     "hero": {
@@ -98,7 +98,7 @@
       "title": "Your product on top. Everything underneath already built.",
       "yours": "Your product",
       "yoursLabel": "The bit only you can make",
-      "platform": "Sonae",
+      "platform": "Hakken",
       "rows": [
         {
           "title": "Assistant, agents and flows",
@@ -134,7 +134,7 @@
       "items": [
         {
           "title": "Agents that do the work",
-          "body": "Multi-step jobs that pull a report together, watch for something changing, or send a summary on — run on a schedule or a trigger. Each agent has its own skills, its own memory, and a ceiling it cannot spend past. A step that fails for a moment tries again; a step that sends or changes something outside Sonae only ever gets one try.",
+          "body": "Multi-step jobs that pull a report together, watch for something changing, or send a summary on — run on a schedule or a trigger. Each agent has its own skills, its own memory, and a ceiling it cannot spend past. A step that fails for a moment tries again; a step that sends or changes something outside Hakken only ever gets one try.",
           "tags": [
             "Its own skills",
             "Its own memory",
@@ -151,7 +151,7 @@
         },
         {
           "title": "A person in the loop",
-          "body": "Before an agent writes, sends or changes anything outside Sonae it stops and waits. You set how much rope each agent gets. Waiting work sits in one queue somebody owns, and an unanswered request expires rather than hanging there forever.",
+          "body": "Before an agent writes, sends or changes anything outside Hakken it stops and waits. You set how much rope each agent gets. Waiting work sits in one queue somebody owns, and an unanswered request expires rather than hanging there forever.",
           "tags": [
             "You set how far it can go",
             "One queue for what is waiting"
@@ -478,7 +478,7 @@
         },
         {
           "title": "AWS",
-          "body": "For teams who want Sonae inside their established Amazon environment and account structure."
+          "body": "For teams who want Hakken inside their established Amazon environment and account structure."
         },
         {
           "title": "Azure",
@@ -4772,7 +4772,7 @@
         "avatar": "Neural Frame (Avatar URL)",
         "avatarHint": "Image URL for the user's visual identity.",
         "namePlaceholder": "e.g. John Doe",
-        "emailPlaceholder": "e.g. john@sonae.ai",
+        "emailPlaceholder": "e.g. john@hakken.ai",
         "avatarPlaceholder": "https://..."
       },
       "invitePage": {
@@ -6864,7 +6864,7 @@
     "turns": "{count} exchanges",
     "viewCall": "Open",
     "caller": "Caller",
-    "sonae": "{platformName}",
+    "hakken": "{platformName}",
     "summary": "What it was about",
     "transcript": "The conversation",
     "noTranscript": "Nothing was said on this call.",

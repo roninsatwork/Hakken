@@ -302,11 +302,11 @@ export function useVrmAvatarFrameRuntime({
       trackingDebugRef.current.sourceCapturedAt = motionFrame.source.capturedAt;
       trackingDebugRef.current.sourceFrameId = motionFrame.source.frameId;
       const registry = (window as Window & {
-        __sonaeMovementAvatarDebug?: Partial<Record<
+        __hakkenMovementAvatarDebug?: Partial<Record<
           "instructor" | "player",
           MovementTrackingDebugState
         >>;
-      }).__sonaeMovementAvatarDebug;
+      }).__hakkenMovementAvatarDebug;
       const registryDebug = registry?.[registryRole ?? (usesPlayerMotionPath ? "player" : "instructor")];
       if (registryDebug) {
         registryDebug.sourceCapturedAt = motionFrame.source.capturedAt;

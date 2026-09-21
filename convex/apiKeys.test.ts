@@ -49,7 +49,7 @@ describe("Public API key governance", () => {
       rateLimitPerMinute: 120,
     });
 
-    expect(created.apiKey).toMatch(/^sonae_[a-f0-9]{12}_[a-f0-9]+$/);
+    expect(created.apiKey).toMatch(/^hakken_[a-f0-9]{12}_[a-f0-9]+$/);
     expect(created.record).toMatchObject({
       companyId: companyAId,
       companyName: "Company A",

@@ -291,7 +291,7 @@ seconds instead of ten minutes, and a long healthy run can no longer be wrongly
 cut off either.
 
 What has *not* been established is why the run died in the first place. The
-message ended mid-clause with no failure notice, and `generateSonaeResponse`
+message ended mid-clause with no failure notice, and `generateHakkenResponse`
 appends one from its catch — so the action did not throw, it stopped. That points
 at the action being killed rather than failing, which would be a Convex action
 limit or a broken provider stream, but one observation is not a diagnosis and
@@ -303,7 +303,7 @@ no longer urgent and wants a real reproduction rather than a guess.
 cleanup mutation added by WP01 only exists in local code — the dev deployment
 runs whatever was last pushed, so `auth:local:cleanup` had nothing to call. CI is
 unaffected: that job deploys the functions before it seeds. They are under
-`local-user@sonae.test` and clear the moment the functions next deploy and the
+`local-user@hakken.test` and clear the moment the functions next deploy and the
 command is run.
 
 ---

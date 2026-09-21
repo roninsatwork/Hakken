@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 
 export type DeletingProperty = {
   _id: Id<"properties">;
@@ -25,7 +25,7 @@ export default function ScrapedDataDeleteDialog({
   const t = useTranslations("properties.scrapedData");
 
   return (
-    <SonaeModal isOpen onClose={onClose} title={t("deleteTitle")}>
+    <HakkenModal isOpen onClose={onClose} title={t("deleteTitle")}>
       <p className="text-secondary mb-6 text-[15px] leading-relaxed">
         {t.rich("deleteBody", {
           address: property.address,
@@ -48,6 +48,6 @@ export default function ScrapedDataDeleteDialog({
           {t("delete")}
         </Button>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

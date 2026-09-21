@@ -91,7 +91,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
      *
      * Absent for scheduled and manually started work. The loop then does its
      * job silently rather than posting into somebody's chat history — a
-     * scheduled run appearing in Ask Sonae would read as though the agent had
+     * scheduled run appearing in Ask Hakken would read as though the agent had
      * spoken to them unprompted.
      */
     threadId?: Id<"threads">;

@@ -21,7 +21,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { AgentNode, type AgentNodeType } from "@/src/ui/components/workflows/AgentNode";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
 import { useTranslations } from "next-intl";
@@ -254,7 +254,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
         </div>
 
         {/* Manual Run Modal */}
-        <SonaeModal
+        <HakkenModal
           isOpen={isManualRunModalOpen}
           onClose={() => setIsManualRunModalOpen(false)}
           title={t('runModal.title')}
@@ -269,7 +269,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
               {t('runModal.acknowledge')}
             </Button>
           </div>
-        </SonaeModal>
+        </HakkenModal>
 
         {editingNode?.type === 'agentNode' ? (
           <AgentEditorModal

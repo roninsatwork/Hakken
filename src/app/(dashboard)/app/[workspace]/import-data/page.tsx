@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { TableHeaderCell, TableHeaderRow, TableLoadingRow, TableShell } from "@/src/ui/components/screens/Table";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
 
@@ -325,7 +325,7 @@ export default function SalesDataImportPage() {
                 ) : imports.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-0 border-none">
-                      <SonaeEmptyState
+                      <HakkenEmptyState
                         title={t("historyEmptyTitle")}
                         description={t("historyEmptyDescription")}
                       />

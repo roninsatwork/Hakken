@@ -401,7 +401,7 @@ screens; the Health page probes it; the cost screens can price it.
   Key from `TYPESAFE_API_KEY`, documented in
   `docs/developer/convex-environment-variables.md`, in the
   `scripts/provider-requirements.mjs` groups (and `typesafe` allowed in
-  `sonae.product.json`'s `providers.ai`, to be added there at go-live).
+  `hakken.product.json`'s `providers.ai`, to be added there at go-live).
 - Sync and test actions in `convex/aiModelsActions.ts`; `syncActionsByProvider`
   entry on the providers page (the type forces it). Capability inference by
   id substring is **not** extended; TypeSafe models are stamped

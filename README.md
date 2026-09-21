@@ -34,7 +34,7 @@ The **[/docs](./docs/index.md)** folder is the documentation hub. It is organize
 - **[Optional Stripe Billing](./docs/operator/stripe-billing.md)**: Configure monthly company subscriptions in a clone; disabled by default.
 - **[Getting Started](./docs/developer/getting-started.md)**: Local setup and environment.
 - **[System Architecture](./docs/developer/architecture.md)**: Tech stack and system design.
-- **[Frontend Development](./docs/developer/frontend.md)**: Design system and the `SonaeModal` protocol.
+- **[Frontend Development](./docs/developer/frontend.md)**: Design system and the `HakkenModal` protocol.
 - **[Backend & Data Layer](./docs/developer/backend.md)**: Convex and AI orchestration.
 - **[Tenancy Enforcement](./docs/developer/tenancy-enforcement.md)**: Required builders for client-callable Convex functions.
 - **[Deployment](./docs/developer/deployment.md)**: CI/CD and hosting.

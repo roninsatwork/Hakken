@@ -1,7 +1,7 @@
 import React from "react";
 import { act, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { describe, expect, it, vi } from "vitest";
-import SonaeModal from "./SonaeModal";
+import HakkenModal from "./HakkenModal";
 
 // Cached per tag, and that matters: handing back a fresh component on every
 // property access gives React a new element *type* each render, so it
@@ -35,12 +35,12 @@ vi.mock("framer-motion", () => ({
  * screen reader needs. These tests are the reason it cannot regress: one
  * component, every screen.
  */
-describe("SonaeModal accessibility", () => {
+describe("HakkenModal accessibility", () => {
   it("announces itself as a dialog and names itself by its title", () => {
     render(
-      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+      <HakkenModal isOpen onClose={vi.fn()} title="Confirm deletion">
         <button type="button">Erase</button>
-      </SonaeModal>,
+      </HakkenModal>,
     );
 
     const dialog = screen.getByRole("dialog");
@@ -52,9 +52,9 @@ describe("SonaeModal accessibility", () => {
   it("closes on Escape", () => {
     const onClose = vi.fn();
     render(
-      <SonaeModal isOpen onClose={onClose} title="Confirm deletion">
+      <HakkenModal isOpen onClose={onClose} title="Confirm deletion">
         <button type="button">Erase</button>
-      </SonaeModal>,
+      </HakkenModal>,
     );
 
     fireEvent.keyDown(document, { key: "Escape" });
@@ -63,10 +63,10 @@ describe("SonaeModal accessibility", () => {
 
   it("keeps Tab inside the dialog rather than letting it walk into the page behind", () => {
     render(
-      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+      <HakkenModal isOpen onClose={vi.fn()} title="Confirm deletion">
         <button type="button">Cancel</button>
         <button type="button">Erase</button>
-      </SonaeModal>,
+      </HakkenModal>,
     );
 
     const erase = screen.getByRole("button", { name: "Erase" });
@@ -85,9 +85,9 @@ describe("SonaeModal accessibility", () => {
 
   it("gives the close control a name instead of leaving it an unlabelled icon", () => {
     render(
-      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+      <HakkenModal isOpen onClose={vi.fn()} title="Confirm deletion">
         <p>Body</p>
-      </SonaeModal>,
+      </HakkenModal>,
     );
 
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
@@ -95,9 +95,9 @@ describe("SonaeModal accessibility", () => {
 
   it("renders nothing at all when closed", () => {
     render(
-      <SonaeModal isOpen={false} onClose={vi.fn()} title="Confirm deletion">
+      <HakkenModal isOpen={false} onClose={vi.fn()} title="Confirm deletion">
         <p>Body</p>
-      </SonaeModal>,
+      </HakkenModal>,
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("SonaeModal accessibility", () => {
  * focusing the first field. Every modal form in the app took one character
  * and threw focus away.
  */
-describe("SonaeModal keeps focus while a parent re-renders", () => {
+describe("HakkenModal keeps focus while a parent re-renders", () => {
   /**
    * Mirrors a real screen: a button opens the dialog, so the element focus
    * is restored *to* is a real control rather than the body. That detail is
@@ -130,7 +130,7 @@ describe("SonaeModal keeps focus while a parent re-renders", () => {
         <button type="button" onClick={() => setIsOpen(true)}>
           Add company
         </button>
-        <SonaeModal
+        <HakkenModal
           isOpen={isOpen}
           // Deliberately inline: a new identity on every render, exactly as
           // every real caller writes it.
@@ -142,7 +142,7 @@ describe("SonaeModal keeps focus while a parent re-renders", () => {
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
-        </SonaeModal>
+        </HakkenModal>
       </div>
     );
   }

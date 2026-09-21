@@ -15,10 +15,10 @@ describe("widget config utils", () => {
   });
 
   test("builds embed snippet only when a widget id exists", () => {
-    expect(buildWidgetEmbedSnippet("https://sonae.local", "widget123")).toBe(
-      '<script src="https://sonae.local/embed.js" data-widget-id="widget123"></script>',
+    expect(buildWidgetEmbedSnippet("https://hakken.local", "widget123")).toBe(
+      '<script src="https://hakken.local/embed.js" data-widget-id="widget123"></script>',
     );
-    expect(buildWidgetEmbedSnippet("https://sonae.local")).toBe("");
+    expect(buildWidgetEmbedSnippet("https://hakken.local")).toBe("");
   });
 
   test("only browser-displayable logos are treated as preview urls", () => {

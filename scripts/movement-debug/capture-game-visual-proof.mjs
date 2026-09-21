@@ -307,10 +307,10 @@ async function captureTarget(page, target, outDir) {
   const pageBuffer = await page.screenshot({ fullPage: false, path: pagePath });
   const metrics = canvasPixelMetrics(canvasBuffer);
   const avatarDebug = await page.evaluate(() => (
-    window.__sonaeMovementAvatarDebug ?? null
+    window.__hakkenMovementAvatarDebug ?? null
   ));
   const runtimeSetup = await page.evaluate(() => (
-    window.__sonaeMovementRecordedPlayerSetup ?? null
+    window.__hakkenMovementRecordedPlayerSetup ?? null
   ));
 
   return {

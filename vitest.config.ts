@@ -15,7 +15,7 @@ const coverageThresholds = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
 ).current
 
-type SonaeCoverageConfig = {
+type HakkenCoverageConfig = {
   provider: 'v8'
   reportsDirectory: string
   reporter: Array<'text' | 'html' | 'json-summary'>
@@ -47,7 +47,7 @@ const coverageConfig = {
     'vitest.setup.ts',
   ],
   thresholds: coverageThresholds,
-} satisfies SonaeCoverageConfig
+} satisfies HakkenCoverageConfig
 
 export default defineConfig({
   plugins: [reactPlugin],

@@ -1,4 +1,4 @@
-import source from "../sonae.billing.json";
+import source from "../hakken.billing.json";
 import { parseBillingConfig, type BillingConfig } from "../billing.config";
 import type { Doc } from "./_generated/dataModel";
 import type { ActionCtx, QueryCtx } from "./_generated/server";

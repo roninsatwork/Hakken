@@ -31,7 +31,7 @@ describe("optional billing configuration", () => {
     { recoveryPortalConfigurationId: "" }, { recoveryPortalConfigurationId: "bpc_portal" },
     { offers: [] }, { provider: "other" }, { mode: "unknown" }, { secret: "sk_live_never_echo" },
   ])("refuses incomplete or unsupported policy %j", change => {
-    expect(() => parseBillingConfig({ ...enabled(), ...change })).toThrow("Invalid sonae.billing.json");
+    expect(() => parseBillingConfig({ ...enabled(), ...change })).toThrow("Invalid hakken.billing.json");
   });
   test("requires unique prices and integer amounts in supported currencies", () => {
     const c = enabled();

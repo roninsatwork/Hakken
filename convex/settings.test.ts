@@ -67,11 +67,11 @@ describe("OWASP: Broken Access Control - Settings", () => {
 
     await expect(
       superAdminClient.mutation(api.settings.update, {
-        platformName: "Sonae Ops",
+        platformName: "Hakken Ops",
         currencySymbol: "$",
         monthlyBasePrice: 100,
         monthlySeatPrice: 10,
-        emailSenderName: "Sonae Ops",
+        emailSenderName: "Hakken Ops",
         emailSenderAddress: "ops@example.com",
         brandColorHex: "#123456",
         headingFontFamily: "Inter",
@@ -81,7 +81,7 @@ describe("OWASP: Broken Access Control - Settings", () => {
     ).resolves.toBe(true);
     await expect(
       superAdminClient.mutation(api.settings.update, {
-        platformName: "Sonae Ops Updated",
+        platformName: "Hakken Ops Updated",
         lightBg: "#ffffff",
         darkBg: "#000000",
       })
@@ -95,7 +95,7 @@ describe("OWASP: Broken Access Control - Settings", () => {
     }));
 
     expect(settings).toMatchObject({
-      platformName: "Sonae Ops Updated",
+      platformName: "Hakken Ops Updated",
       brandColorHex: "#123456",
       lightBg: "#ffffff",
       darkBg: "#000000",
@@ -117,11 +117,11 @@ describe("OWASP: Broken Access Control - Settings", () => {
     await expect(t.query(api.settings.getForAdmin, {})).rejects.toThrow();
     await expect(userClient.query(api.settings.getForAdmin, {})).rejects.toThrow();
     expect(await superAdminClient.query(api.settings.getForAdmin, {})).toMatchObject({
-      platformName: "Sonae Ops Updated",
+      platformName: "Hakken Ops Updated",
       currencySymbol: "$",
       monthlyBasePrice: 100,
       monthlySeatPrice: 10,
-      emailSenderName: "Sonae Ops",
+      emailSenderName: "Hakken Ops",
       emailSenderAddress: "ops@example.com",
     });
     expect(settingsRows).toHaveLength(1);

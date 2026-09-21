@@ -9,7 +9,7 @@ async function seedSuperAdmin(t: ReturnType<typeof makeTest>) {
   const superAdminId = await t.run(async (ctx) =>
     ctx.db.insert("users", {
       email: "super@test.com",
-      name: "Sonae Operator",
+      name: "Hakken Operator",
       role: "SUPER_ADMIN",
       createdAt: Date.now(),
     }),
@@ -46,7 +46,7 @@ describe("maintenance scripts", () => {
     const { superAdminId, planId } = await t.run(async (ctx) => {
       const superAdminId = await ctx.db.insert("users", {
         email: "super@test.com",
-        name: "Sonae Operator",
+        name: "Hakken Operator",
         role: "SUPER_ADMIN",
         createdAt: Date.now(),
       });
@@ -100,7 +100,7 @@ describe("maintenance scripts", () => {
     });
     expect(script?.lastRun).toMatchObject({
       status: "SUCCESS",
-      actorName: "Sonae Operator",
+      actorName: "Hakken Operator",
     });
     expect(script?.history).toHaveLength(1);
 

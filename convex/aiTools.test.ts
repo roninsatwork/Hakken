@@ -146,9 +146,9 @@ describe("AI Tools Authorization", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
     const adminClient = t.withIdentity({ subject: adminId });
 
-    await expect(adminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" })).rejects.toThrow("Unauthorized");
+    await expect(adminClient.mutation(api.aiTools.installConnector, { key: "hakken-knowledge" })).rejects.toThrow("Unauthorized");
 
-    const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" });
+    const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "hakken-knowledge" });
     const connectionTest = await superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId });
     const { connector, tools } = await t.run(async (ctx) => ({
       connector: await ctx.db.get(connectorId),
@@ -158,7 +158,7 @@ describe("AI Tools Authorization", () => {
         .collect(),
     }));
     const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
-    const knowledgeConnector = marketplace.find((entry) => entry.key === "sonae-knowledge");
+    const knowledgeConnector = marketplace.find((entry) => entry.key === "hakken-knowledge");
     const details = await superAdminClient.query(api.aiTools.getConnectorInstallDetails, { connectorId });
 
     expect(connectionTest).toMatchObject({
@@ -168,7 +168,7 @@ describe("AI Tools Authorization", () => {
       missingSecretRefs: [],
     });
     expect(connector).toMatchObject({
-      key: "sonae-knowledge",
+      key: "hakken-knowledge",
       installStatus: "INSTALLED",
       testStatus: "SUCCESS",
       enabledToolMappings: ["knowledge.search"],
@@ -179,7 +179,7 @@ describe("AI Tools Authorization", () => {
       name: "Knowledge Search",
       handlerMapping: "knowledge.search",
       connectorId,
-      connectorKey: "sonae-knowledge",
+      connectorKey: "hakken-knowledge",
       sideEffectLevel: "READ",
       confirmationRequired: false,
       isActive: true,
@@ -206,7 +206,7 @@ describe("AI Tools Authorization", () => {
     });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" });
+    const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "hakken-knowledge" });
     await superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId });
     await expect(
       superAdminClient.mutation(api.aiTools.updateConnectorInstall, {
@@ -272,7 +272,7 @@ describe("AI Tools Authorization", () => {
     const otherAdminClient = t.withIdentity({ subject: otherAdminId });
 
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
-      key: "sonae-company-profile",
+      key: "hakken-company-profile",
       companyId,
     });
 
@@ -286,8 +286,8 @@ describe("AI Tools Authorization", () => {
     const visibleMarketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
     const otherMarketplace = await otherAdminClient.query(api.aiTools.getConnectorMarketplace, {});
 
-    expect(visibleMarketplace.find((entry) => entry.key === "sonae-company-profile")?.installation?._id).toBe(connectorId);
-    expect(otherMarketplace.find((entry) => entry.key === "sonae-company-profile")?.installation).toBeNull();
+    expect(visibleMarketplace.find((entry) => entry.key === "hakken-company-profile")?.installation?._id).toBe(connectorId);
+    expect(otherMarketplace.find((entry) => entry.key === "hakken-company-profile")?.installation).toBeNull();
   });
 
   test("super admins can move tenant-capable connector installs between global and tenant scopes", async () => {
@@ -314,7 +314,7 @@ describe("AI Tools Authorization", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
     const adminClient = t.withIdentity({ subject: adminId });
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
-      key: "sonae-company-profile",
+      key: "hakken-company-profile",
       tenantAvailability: "GLOBAL",
     });
 
@@ -662,7 +662,7 @@ describe("connector marketplace honesty", () => {
     const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
     expect(marketplace.length).toBeGreaterThan(0);
 
-    const knowledge = marketplace.find((connector) => connector.key === "sonae-knowledge");
+    const knowledge = marketplace.find((connector) => connector.key === "hakken-knowledge");
     expect(knowledge?.availability).toBe("AVAILABLE");
     expect(knowledge?.toolDefinitions.every((tool) => tool.isExecutable)).toBe(true);
 

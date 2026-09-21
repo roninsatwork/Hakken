@@ -68,7 +68,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
   const [availableHeight, setAvailableHeight] = useState<number | null>(null);
 
   // A column of conversations is read by scrolling, not by turning pages, so
-  // it loads a batch at a time the way Ask Sonae's own history does. The pager
+  // it loads a batch at a time the way Ask Hakken's own history does. The pager
   // that used to sit here had three sets of controls in a 320px column and wore
   // more space than the conversations it was counting.
   //
@@ -304,7 +304,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
               const isSelected = selectedThreadId === thread._id;
               return (
                 // A thin accent bar marks the open conversation instead of a
-                // filled block — the same mark Ask Sonae uses, and it reads at
+                // filled block — the same mark Ask Hakken uses, and it reads at
                 // a glance down a column of similar titles.
                 /* Raw: a whole list row is the hit target — a layout, not a button recipe. */
                 <button

@@ -5,7 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 /**
- * One voice for everywhere Sonae speaks. What matters here: the setting is
+ * One voice for everywhere Hakken speaks. What matters here: the setting is
  * workspace-scoped, only a real voice can be chosen, every mint point reads
  * the same answer, and the change leaves an audit entry.
  */

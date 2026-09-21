@@ -26,7 +26,7 @@ configuration ownership and rollout steps.
 
 Verification used fresh isolated installs under Node 24.18.0, with no real Stripe
 credentials or deployment. Evidence directory:
-`/var/folders/hl/3xx1pfvs1mndcjbzbnp0qs1m0000gn/T/sonae-billing-ui-g00pc2th/`.
+`/var/folders/hl/3xx1pfvs1mndcjbzbnp0qs1m0000gn/T/hakken-billing-ui-g00pc2th/`.
 These temporary logs are local evidence and may later be removed; the tests and
 commands below are the reproducible checks retained in the repository.
 
@@ -87,7 +87,7 @@ Stripe price screen, and company Overview renders the Stripe subscription card.
 The Billing overview was opened in the user's dev tab. Recovery: **100%**.
 After installing and regenerating component types, **4 files / 51 tests passed**
 for operator billing, the webhook adapter, documentation and exporter regressions
-(`/private/tmp/sonae-billing-dev-recovery-tests.log`).
+(`/private/tmp/hakken-billing-dev-recovery-tests.log`).
 `git diff --check` also passed. This is additional
 dev integration evidence beyond the earlier browser fixtures. It is not a
 completed real Stripe lifecycle exercise: billing remains disabled, no provider
@@ -134,7 +134,7 @@ The approved repairs now:
 - Exercise explicit initialized and uninitialized layout fixtures, asserting that
   ambiguous bindings fail without writes in both source and branded products.
 
-Verification in `/private/tmp/sonae-completion-repairs-z9oz91nf/`:
+Verification in `/private/tmp/hakken-completion-repairs-z9oz91nf/`:
 
 - Fresh offline lockfile installs under Node 24.18.0, with 59 direct dependencies
   verified in the full framework and 49 in the Base + Arcade export.
@@ -171,7 +171,7 @@ the explicit post-clone setup and release checks.
 
 ## Phase 1 implementation
 
-- `sonae.product.json` describes identity, deployment names and credential
+- `hakken.product.json` describes identity, deployment names and credential
   requirements without storing secrets.
 - `scripts/init-product.mjs` previews by default. Explicit application updates a
   clone's package/lock names, public identity bindings, backend branding defaults,
@@ -222,7 +222,7 @@ A production build and live provider/hosting checks remain separate verification
   temporary fixture received their generated product bindings.
 - No production build, live provider check, deployment, commit or push was run.
 
-Fixture evidence: `/private/tmp/sonae-product-phase1-2pwphlxa/`, including
+Fixture evidence: `/private/tmp/hakken-product-phase1-2pwphlxa/`, including
 `phase1-all-tests-final.log`, `phase1-final-safety.log`,
 `phase1-typecheck-final.log` and `phase1-lint-final.log`.
 
@@ -244,7 +244,7 @@ Fixture evidence: `/private/tmp/sonae-product-phase1-2pwphlxa/`, including
 
 ## Phase 2 verification — 2026-09-13
 
-Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
+Fixture: `/private/tmp/hakken-product-phase2-p9kwn79i/`.
 
 - Fresh offline lockfile install; Node 24.18.0 and all 57 direct dependencies
   verified before checks. Verification uses no live environment files or source
@@ -287,7 +287,7 @@ Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
 - Record recipes cover staff workflows and linked company records. The knowledge
   recipe reuses existing knowledge/agent/assistant surfaces. Provider credentials,
   live agents, external sends, tenant setup and activation remain explicit.
-- Exports now record `.sonae/framework.json`: source version/dirty state, module
+- Exports now record `.hakken/framework.json`: source version/dirty state, module
   cut and fingerprints of the final exported bytes and executable bits. Product
   re-exports are identified and cannot masquerade as upstream framework baselines.
 - `npm run framework:update -- --upstream <export>` compares a matching pristine
@@ -305,7 +305,7 @@ Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
 ## Phase 3 verification — 2026-09-13
 
 - Fresh offline `npm ci --ignore-scripts` in
-  `/private/tmp/sonae-product-phase3-egxp1oqn/`; Node 24.18.0 and 57 locked
+  `/private/tmp/hakken-product-phase3-egxp1oqn/`; Node 24.18.0 and 57 locked
   direct dependencies verified before checks.
 - **81 focused tests passed**, including recipe CLI previews, composition,
   collisions, stale plans, rollback, provenance, update classification, binary
@@ -330,7 +330,7 @@ Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
 
 Evidence: `phase3-source-check.log`, `phase3-focused.log`,
 `phase3-review-final.log` in the source fixture, and per-case logs under
-`/private/tmp/sonae-phase3-export-matrix/`. The full five-case export matrix
+`/private/tmp/hakken-phase3-export-matrix/`. The full five-case export matrix
 completed successfully, including fresh offline installs, `check`, `lint:all`
 and production builds in every case. Arcade remains in all five.
 
@@ -438,11 +438,11 @@ The base export's original full run predates two extra recovery tests; both pass
 in its final focused review and in the enabled clone's full 4,314-test run.
 These configurations share tests; their totals must not be added together.
 
-Evidence is in `/private/tmp/sonae-product-phase4-98qombyp/`
+Evidence is in `/private/tmp/hakken-product-phase4-98qombyp/`
 (`phase4-check-final.log`, `phase4-tests-complete.log`, `phase4-build.log`,
 `phase4-review-types.log`, `phase4-lint-final.log`, `phase4-setup-final.log`),
-`/private/tmp/sonae-phase4-export-matrix/` (per-case check/build and final-review
-logs), and `/private/tmp/sonae-phase4-enabled/` (`enabled-tests-final.log`,
+`/private/tmp/hakken-phase4-export-matrix/` (per-case check/build and final-review
+logs), and `/private/tmp/hakken-phase4-enabled/` (`enabled-tests-final.log`,
 `enabled-build.log`). Temporary evidence is not committed as source.
 
 Live Stripe sandbox checkout/webhook/portal acceptance, actual Convex component

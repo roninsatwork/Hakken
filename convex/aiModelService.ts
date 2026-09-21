@@ -62,7 +62,7 @@ export const OPENROUTER_PROVIDER_KEY = "openrouter";
  * TypeSafe is a judgment provider, not a text one. Its models answer typed
  * questions (yes/no, pick-one, score) with probabilities and never write prose,
  * so it can only ever serve the `decision` job. That job takes any model —
- * Sonae must never depend on TypeSafe (Anthony, 2026-09-17); an ordinary
+ * Hakken must never depend on TypeSafe (Anthony, 2026-09-17); an ordinary
  * text model answers the same questions in JSON with its own estimate of
  * how sure it is. See `docs/plans/active/decisions-typesafe-plan.md`.
  */
@@ -226,7 +226,7 @@ export function canProviderServeUseCase(providerKey: string | undefined, useCase
 
   // TypeSafe's only job is decisions: a judgment model in a text row would
   // throw at the first call. The Decisions job itself takes any model
-  // (Anthony's ruling, 2026-09-17: Sonae must never depend on TypeSafe) —
+  // (Anthony's ruling, 2026-09-17: Hakken must never depend on TypeSafe) —
   // a text model answers the same question in JSON with its own estimate of
   // how sure it is.
   if (provider === TYPESAFE_PROVIDER_KEY) return useCase === DECISION_MODEL_USE_CASE;

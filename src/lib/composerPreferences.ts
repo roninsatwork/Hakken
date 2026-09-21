@@ -16,7 +16,7 @@ export const THINKING_LEVEL_IDS = ["NONE", "LOW", "MEDIUM", "HIGH"] as const;
 export type ThinkingLevelId = (typeof THINKING_LEVEL_IDS)[number];
 
 export const DEFAULT_THINKING_LEVEL: ThinkingLevelId = "NONE";
-const THINKING_LEVEL_KEY = "sonae.composer.thinkingLevel";
+const THINKING_LEVEL_KEY = "hakken.composer.thinkingLevel";
 
 export function isThinkingLevelId(value: unknown): value is ThinkingLevelId {
   return typeof value === "string" && (THINKING_LEVEL_IDS as readonly string[]).includes(value);

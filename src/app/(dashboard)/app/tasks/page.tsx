@@ -12,7 +12,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatTaskDue, groupTasks, type TaskGroup } from "@/src/lib/taskGrouping";
 import Header from "@/src/ui/components/layout/Header";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -211,7 +211,7 @@ export default function TasksPage() {
         )}
 
         {tasks.length === 0 && status !== "LoadingFirstPage" ? (
-          <SonaeEmptyState
+          <HakkenEmptyState
             icon={ListChecks}
             title={t("title")}
             description={mineOnly ? t("emptyMine") : t("empty")}

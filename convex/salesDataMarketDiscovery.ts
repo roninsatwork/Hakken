@@ -308,7 +308,7 @@ const MARKET_DISCOVERY_TOOL_MAPPINGS = [
 ] as const;
 
 function builtInToolForMapping(mapping: string) {
-  for (const connectorKey of [MARKET_DISCOVERY_CONNECTOR_KEY, "sonae-firecrawl"]) {
+  for (const connectorKey of [MARKET_DISCOVERY_CONNECTOR_KEY, "hakken-firecrawl"]) {
     const connector = getBuiltInToolConnector(connectorKey);
     const definition = connector?.toolDefinitions.find((tool) => tool.handlerMapping === mapping);
     if (connector && definition) return { connector, definition };

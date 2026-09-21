@@ -33,7 +33,7 @@ const BUILDER_DOMAINS = ["ronins.co.uk"];
  * `resolvePlatformName` / `getEmailBranding` rather than baking in the
  * shipped default.
  */
-const BUILDER_STRINGS = ["Sonae"];
+const BUILDER_STRINGS = ["Hakken"];
 
 const SEARCH_ROOTS = ["src", "convex", "scripts", "messages", "public"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mjs", ".js", ".json"]);
@@ -45,7 +45,7 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mjs", ".js", ".json"]);
 const ALLOWED_FILES = new Set(["convex/seedUsers.ts"]);
 
 /**
- * Where "Sonae" may still appear inside a string literal in convex/, and how
+ * Where "Hakken" may still appear inside a string literal in convex/, and how
  * many times. SHRINK-ONLY: entries exist for the deliberate sites below and
  * for nothing else — remove or reduce them as sites are converted, never add
  * or raise one without the same review the site itself had.
@@ -59,7 +59,8 @@ const ALLOWED_FILES = new Set(["convex/seedUsers.ts"]);
  *   label actually written is the configured platform name.
  * - webhookSignatureService.ts / webhookDeliveryActions.ts: outbound header
  *   names and User-Agent — wire protocol existing consumers parse; renaming
- *   them breaks every receiver in production.
+ *   them breaks every receiver in production. These still carry the original
+ *   `Hakken` wire names for that reason, so their builder-name count is now 0.
  * - localDemoSeed.ts / memoryMigration.ts: operator-run seed and one-time
  *   migration, not on any request path.
  *
@@ -71,8 +72,8 @@ const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
   "convex/localDemoSeed.ts": 2,
   "convex/memoryMigration.ts": 1,
   "convex/settingsService.ts": 0,
-  "convex/webhookDeliveryActions.ts": 1,
-  "convex/webhookSignatureService.ts": 2,
+  "convex/webhookDeliveryActions.ts": 0,
+  "convex/webhookSignatureService.ts": 0,
 };
 
 /**
@@ -90,7 +91,7 @@ const ALLOWED_ADMIN_BUILDER_STRING_COUNTS: Record<string, number> = {};
 /**
  * The catalogues are copy too. Phase 4 moved admin wording into
  * `messages/*.json`, which the source scans above cannot see — the audit
- * caught three "Sonae" values that had escaped the de-brand that way. Every
+ * caught three "Hakken" values that had escaped the de-brand that way. Every
  * catalogue value containing a builder name must be one of the reviewed key
  * paths below: all public-site or user-front-end surfaces, which stay
  * branded until each clone rebuilds them. Shrink-only; an admin-consumed
@@ -303,7 +304,7 @@ describe("no client-specific fallbacks", () => {
         let count = 0;
         for (const literal of strings) {
           // Module specifiers are string literals too, and the internal
-          // component names (SonaeModal etc.) live in import paths. A path
+          // component names (HakkenModal etc.) live in import paths. A path
           // is not user-visible copy; the components' own rendered text is
           // still scanned like any other literal.
           if (literal.startsWith("@/") || literal.startsWith("./") || literal.startsWith("../")) continue;

@@ -418,8 +418,8 @@ Movement stays and keeps working. But it should stop taxing the platform:
 
 ### P2.3 — Extract the brand
 
-- `SonaeModal`, `SonaeMarkdown`, `SonaeEmptyState`, `generateSonaeResponse`,
-  `createOrUpdateSonaeAuthUser` — rename to neutral identifiers.
+- `HakkenModal`, `HakkenMarkdown`, `HakkenEmptyState`, `generateHakkenResponse`,
+  `createOrUpdateHakkenAuthUser` — rename to neutral identifiers.
 - Brand strings embedded in prompt assembly (`convex/aiPromptAssembly.ts:4,68`,
   `convex/orchestrator.ts:55`, `convex/aiSafetyPolicy.ts:58,67`,
   `convex/salesReportActions.ts:156`) must read from `systemSettings`, so a fork

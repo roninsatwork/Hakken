@@ -16,7 +16,7 @@ import { useRef } from "react";
 import dynamic from "next/dynamic";
 import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 import Header from "@/src/ui/components/layout/Header";
-import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
+import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 
 const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
@@ -50,7 +50,7 @@ export default function ReportsPage() {
     });
     const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
-    link.download = `sonae-board-report-${new Date().toISOString().split('T')[0]}.png`;
+    link.download = `hakken-board-report-${new Date().toISOString().split('T')[0]}.png`;
     link.href = url;
     link.click();
   };
@@ -134,7 +134,7 @@ export default function ReportsPage() {
                 <div>
                   <h2 className="text-[22px] font-medium tracking-wide text-foreground mb-4 leading-snug">{headline}</h2>
                   <div className="text-secondary text-base leading-relaxed max-w-4xl opacity-90 prose prose-invert prose-brand">
-                     <SonaeMarkdown content={executiveSummary || markdownReport || t("noSummary")} />
+                     <HakkenMarkdown content={executiveSummary || markdownReport || t("noSummary")} />
                   </div>
                 </div>
               </div>

@@ -7,7 +7,7 @@ import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -670,7 +670,7 @@ export function WikiPagesListScreen({
         ]}
       />
 
-      <SonaeModal
+      <HakkenModal
         isOpen={!!pageToDelete}
         onClose={() => {
           if (!isDeletingPage) {
@@ -708,9 +708,9 @@ export function WikiPagesListScreen({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={isGoalFormOpen}
         onClose={() => {
           if (!isSavingGoal) {
@@ -764,9 +764,9 @@ export function WikiPagesListScreen({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={isClearConfirmOpen}
         onClose={() => {
           if (!isClearingWiki) {
@@ -802,7 +802,7 @@ export function WikiPagesListScreen({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </div>
   );
 }

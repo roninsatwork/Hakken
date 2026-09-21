@@ -1,5 +1,5 @@
 {
-  "projectName": "Sonae",
+  "projectName": "Hakken",
   "common": {
     "loading": "Caricamento...",
     "cancel": "Annulla",
@@ -83,8 +83,8 @@
     "getStarted": "Inizia ora",
     "toBePrepared": "Prepararsi al futuro",
     "frameworkTitle": "La base premium per prodotti eccezionali",
-    "frameworkDescription": "Salta la configurazione iniziale e inizia a costruire. Sonae offre una base altamente rifinita e ad alte prestazioni che ti consente di lanciare applicazioni splendide, sicure e scalabili in una frazione di tempo.",
-    "copyright": "© {year} Sonae. Tutti i diritti riservati."
+    "frameworkDescription": "Salta la configurazione iniziale e inizia a costruire. Hakken offre una base altamente rifinita e ad alte prestazioni che ti consente di lanciare applicazioni splendide, sicure e scalabili in una frazione di tempo.",
+    "copyright": "© {year} Hakken. Tutti i diritti riservati."
   },
   "dashboard": {
     "hero": {
@@ -98,7 +98,7 @@
       "title": "Il tuo prodotto sopra. Tutto quello che sta sotto è già costruito.",
       "yours": "Il tuo prodotto",
       "yoursLabel": "La parte che solo tu puoi fare",
-      "platform": "Sonae",
+      "platform": "Hakken",
       "rows": [
         {
           "title": "Assistente, agenti e flussi",
@@ -134,7 +134,7 @@
       "items": [
         {
           "title": "Agenti che fanno il lavoro",
-          "body": "Lavori a più passaggi che mettono insieme un report, tengono d'occhio un cambiamento o inoltrano un riepilogo, eseguiti su pianificazione o su evento. Ogni agente ha le proprie competenze, la propria memoria e un tetto di spesa che non può superare. Un passaggio che fallisce per un momento riprova; un passaggio che invia o modifica qualcosa fuori da Sonae ha sempre e solo un tentativo.",
+          "body": "Lavori a più passaggi che mettono insieme un report, tengono d'occhio un cambiamento o inoltrano un riepilogo, eseguiti su pianificazione o su evento. Ogni agente ha le proprie competenze, la propria memoria e un tetto di spesa che non può superare. Un passaggio che fallisce per un momento riprova; un passaggio che invia o modifica qualcosa fuori da Hakken ha sempre e solo un tentativo.",
           "tags": [
             "Competenze proprie",
             "Memoria propria",
@@ -151,7 +151,7 @@
         },
         {
           "title": "Una persona che decide",
-          "body": "Prima che un agente scriva, invii o modifichi qualcosa fuori da Sonae si ferma e aspetta. Sei tu a stabilire quanta libertà ha ciascun agente. Il lavoro in attesa sta in un'unica coda con un responsabile, e una richiesta senza risposta scade invece di restare lì per sempre.",
+          "body": "Prima che un agente scriva, invii o modifichi qualcosa fuori da Hakken si ferma e aspetta. Sei tu a stabilire quanta libertà ha ciascun agente. Il lavoro in attesa sta in un'unica coda con un responsabile, e una richiesta senza risposta scade invece di restare lì per sempre.",
           "tags": [
             "Decidi tu fin dove può spingersi",
             "Una sola coda per ciò che attende"
@@ -478,7 +478,7 @@
         },
         {
           "title": "AWS",
-          "body": "Per team che vogliono Sonae dentro il loro ambiente Amazon già consolidato."
+          "body": "Per team che vogliono Hakken dentro il loro ambiente Amazon già consolidato."
         },
         {
           "title": "Azure",
@@ -4772,7 +4772,7 @@
         "avatar": "Frame Neurale (URL Avatar)",
         "avatarHint": "URL dell'immagine per l'identità visiva dell'utente.",
         "namePlaceholder": "es. Mario Rossi",
-        "emailPlaceholder": "es. mario@sonae.ai",
+        "emailPlaceholder": "es. mario@hakken.ai",
         "avatarPlaceholder": "https://..."
       },
       "invitePage": {
@@ -6864,7 +6864,7 @@
     "turns": "{count} scambi",
     "viewCall": "Apri",
     "caller": "Chiamante",
-    "sonae": "{platformName}",
+    "hakken": "{platformName}",
     "summary": "Di cosa si trattava",
     "transcript": "La conversazione",
     "noTranscript": "In questa chiamata non è stato detto nulla.",

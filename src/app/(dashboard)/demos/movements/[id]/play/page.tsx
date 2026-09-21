@@ -1,6 +1,6 @@
 "use client";
 /**
- * Sonae Movement Demo - Premium Posture Studio Interface
+ * Hakken Movement Demo - Premium Posture Studio Interface
  * Last Updated: 2026-06-14 - pitch polish pass
  */
 
@@ -492,8 +492,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   React.useEffect(() => {
     if (!isDebugGameFrameRoute) return;
     (window as Window & {
-      __sonaeMovementRecordedPlayerSetup?: typeof automaticPlayerSetup;
-    }).__sonaeMovementRecordedPlayerSetup = automaticPlayerSetup;
+      __hakkenMovementRecordedPlayerSetup?: typeof automaticPlayerSetup;
+    }).__hakkenMovementRecordedPlayerSetup = automaticPlayerSetup;
   }, [automaticPlayerSetup, isDebugGameFrameRoute]);
   const effectivePlayerCalibration =
     debugPlayerCalibration ?? calibration ?? automaticPlayerSetup?.calibration ?? null;
@@ -689,7 +689,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   React.useEffect(() => {
     if (!gameProofPacket) return;
     const debugWindow = window as Window & {
-      __sonaeMovementGamePacketProof?: unknown;
+      __hakkenMovementGamePacketProof?: unknown;
     };
     recordedGameRenderedFramesRef.current.clear();
     recordedGameFirstRenderedBoundaryRef.current = null;
@@ -826,7 +826,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       const preStartFrameIndexes = activeFrameStartIndex === null
         ? expectedFrameIndexes.slice(gameProofPacket.setupFrameCount, playback.frameIndex + 1)
         : expectedFrameIndexes.slice(gameProofPacket.setupFrameCount, activeFrameStartIndex);
-      debugWindow.__sonaeMovementGamePacketProof = {
+      debugWindow.__hakkenMovementGamePacketProof = {
         activeFrameStartIndex,
         avatarProfile: getMovementAvatarTrackingProfileName(playerAvatarUrl),
         instructorAvatarProfile: getMovementAvatarTrackingProfileName(instructorAvatarUrl),
@@ -893,7 +893,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     publish();
     return () => {
       window.cancelAnimationFrame(animationFrameId);
-      delete debugWindow.__sonaeMovementGamePacketProof;
+      delete debugWindow.__hakkenMovementGamePacketProof;
     };
   }, [
     automaticPlayerSetup,
@@ -1403,16 +1403,16 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     if (!isDebugTracking || typeof window === "undefined") return;
 
     const debugWindow = window as Window & {
-      __sonaeMovementRecordingRetargetAnalysis?: typeof instructorRetargetAnalysis;
+      __hakkenMovementRecordingRetargetAnalysis?: typeof instructorRetargetAnalysis;
     };
-    debugWindow.__sonaeMovementRecordingRetargetAnalysis = instructorRetargetAnalysis;
+    debugWindow.__hakkenMovementRecordingRetargetAnalysis = instructorRetargetAnalysis;
   }, [instructorRetargetAnalysis, isDebugTracking]);
 
   useEffect(() => {
     if (!isDebugTracking || typeof window === "undefined") return undefined;
 
     const debugWindow = window as Window & {
-      __sonaeMovementLiveInputDebug?: {
+      __hakkenMovementLiveInputDebug?: {
         leftElbow: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
         leftShoulder: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
         leftWrist: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
@@ -1425,7 +1425,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     const updateLiveInputDebug = () => {
       const landmarks = effectivePlayerLiveLmRef.current?.landmarks;
       if (!landmarks || landmarks.length < 17) return;
-      debugWindow.__sonaeMovementLiveInputDebug = {
+      debugWindow.__hakkenMovementLiveInputDebug = {
         leftElbow: landmarks[13] ?? null,
         leftShoulder: landmarks[11] ?? null,
         leftWrist: landmarks[15] ?? null,
@@ -1440,7 +1440,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
     return () => {
       window.clearInterval(intervalId);
-      delete debugWindow.__sonaeMovementLiveInputDebug;
+      delete debugWindow.__hakkenMovementLiveInputDebug;
     };
   }, [effectivePlayerLiveLmRef, isDebugTracking]);
 

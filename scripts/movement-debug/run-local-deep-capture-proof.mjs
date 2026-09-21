@@ -43,7 +43,7 @@ function printHelp() {
   console.log(`Recover a browser-downloaded schema-v3 packet and run its Replay/mounted Game proof.
 
 Usage:
-  npm run movement:replay-game:deep-local-proof -- --packet ~/Downloads/sonae-movement-schema-v3-*.json --local-test-auth --secret <secret>
+  npm run movement:replay-game:deep-local-proof -- --packet ~/Downloads/hakken-movement-schema-v3-*.json --local-test-auth --secret <secret>
 
 Options:
   --out <directory>        Recovery and proof artifacts directory

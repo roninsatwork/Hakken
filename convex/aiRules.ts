@@ -287,7 +287,7 @@ export const createRule = tenantMutation({
     const { userId, user } = ctx;
 
     if (user.role !== "SUPER_ADMIN" && args.agentId) {
-       // Agents are global in Sonae. If an ADMIN creates a rule for an agent,
+       // Agents are global in Hakken. If an ADMIN creates a rule for an agent,
        // it must still be strictly scoped by their companyId.
     }
     assertAdminCanAccessCompany(user, args.companyId, "Unauthorized: System Protocol creation requires valid permissions.");

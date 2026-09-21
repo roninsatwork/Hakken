@@ -164,7 +164,7 @@ describe("settings sections", () => {
     const setFormData = vi.fn();
     const onFileUpload = vi.fn();
     const formData: SystemSettingsFormData = {
-      platformName: "Sonae",
+      platformName: "Hakken",
       logoUrlLight: "/light.png",
       logoUrlDark: "/dark.png",
     };
@@ -181,7 +181,7 @@ describe("settings sections", () => {
       />
     );
 
-    fireEvent.change(screen.getByDisplayValue("Sonae"), { target: { value: "New Sonae" } });
+    fireEvent.change(screen.getByDisplayValue("Hakken"), { target: { value: "New Hakken" } });
 
     const fileInputs = container.querySelectorAll('input[type="file"]');
     fireEvent.change(fileInputs[0], { target: { files: [new File(["light"], "light.png")] } });
@@ -191,7 +191,7 @@ describe("settings sections", () => {
     // the card titles.
     expect(screen.getByAltText("Light logo")).toBeInTheDocument();
     expect(screen.getByAltText("Dark logo")).toBeInTheDocument();
-    expect(setFormData).toHaveBeenCalledWith({ ...formData, platformName: "New Sonae" });
+    expect(setFormData).toHaveBeenCalledWith({ ...formData, platformName: "New Hakken" });
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "light");
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "dark");
   });

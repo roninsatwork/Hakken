@@ -17,7 +17,7 @@ if (process.env.E2E_AUTH_ENABLED === '1' && process.env.NODE_ENV === 'production
 
 const nextConfig: NextConfig = {
   // The optional local Arcade check must not replace the running app's cache.
-  ...(process.env.SONAE_ARCADE_CHECK === '1'
+  ...(process.env.HAKKEN_ARCADE_CHECK === '1'
     ? { distDir: '.next-arcade', typescript: { tsconfigPath: 'tsconfig.arcade.json' } }
     : {}),
   env: {

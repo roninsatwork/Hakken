@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck, Activity, Ban } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -214,7 +214,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     >
       {children}
 
-      <SonaeModal
+      <HakkenModal
         isOpen={stopRunId !== null}
         onClose={() => (isStoppingAgent ? undefined : setStopRunId(null))}
         title={t("stopModal.title")}
@@ -243,9 +243,9 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={!!modalState}
         onClose={() => setModalState(null)}
         title={modalState?.title || ""}
@@ -263,7 +263,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
              </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </DetailLayout>
   );
 }

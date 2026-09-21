@@ -31,7 +31,7 @@ The goal is to make product-specific changes through configuration, translations
 
 ## 3. Custom Domains And Public Surfaces
 
-- Record the public app origin in `sonae.product.json` and check the hosting/domain configuration outside the app.
+- Record the public app origin in `hakken.product.json` and check the hosting/domain configuration outside the app.
 - Confirm the primary production app host with the hosting provider.
 - Confirm widget allowed domains are restricted and do not include wildcard-only public exposure.
 - Confirm the branded email sender domain is verified or `RESEND_FROM_EMAIL` is set.
@@ -64,7 +64,7 @@ The goal is to make product-specific changes through configuration, translations
 
 - Run `npm run setup:validate` for local development.
 - Run `npm run setup:validate -- --profile=production` before production handoff.
-- Configure the providers and feature credentials selected in `sonae.product.json`. Knowledge embeddings, voice and telephony require Vertex independently of the text-model provider.
+- Configure the providers and feature credentials selected in `hakken.product.json`. Knowledge embeddings, voice and telephony require Vertex independently of the text-model provider.
 - Set model defaults from stored configuration, not hardcoded runtime literals.
 - Install connector definitions and configure secret references outside source control.
 - Keep write, destructive, and external tools approval-gated unless explicitly reviewed.

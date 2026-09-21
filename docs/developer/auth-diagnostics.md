@@ -68,7 +68,7 @@ Keep this list in sync between the schema, `AuthEventType`, and the UI filter li
 - `INVITE_FOUND` when an invite exists
 - `INVITE_REVOKED`, `INVITE_EXPIRED`, or `INVITE_STALE_ACCEPTED_RECOVERED` for invite status edge cases
 
-`createOrUpdateSonaeAuthUser` logs provisioning events while handling auth-provider callbacks. It logs existing user discovery, verified magic-link completions, magic-link starts, invite discovery, stale accepted invite recovery, and provisioning of invited users.
+`createOrUpdateHakkenAuthUser` logs provisioning events while handling auth-provider callbacks. It logs existing user discovery, verified magic-link completions, magic-link starts, invite discovery, stale accepted invite recovery, and provisioning of invited users.
 
 Initial super-admin provisioning through `INITIAL_SUPER_ADMIN_EMAIL` creates the user directly and does not currently log an auth event. Treat that as current behavior, not a documented diagnostics event.
 

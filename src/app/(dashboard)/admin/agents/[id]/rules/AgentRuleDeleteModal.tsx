@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertOctagon, RefreshCcw, Trash2 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type AgentRuleDeleteModalProps = {
@@ -29,7 +29,7 @@ export default function AgentRuleDeleteModal({
   confirmLabel,
 }: AgentRuleDeleteModalProps) {
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
@@ -49,6 +49,6 @@ export default function AgentRuleDeleteModal({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

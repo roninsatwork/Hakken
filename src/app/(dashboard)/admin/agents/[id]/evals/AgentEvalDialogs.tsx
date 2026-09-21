@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import {
   ModalField,
   ModalFormError,
@@ -56,7 +56,7 @@ export function AgentEvalDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={isFormOpen}
         onClose={onCloseForm}
         title={isEditing ? t("form.editTitle") : t("form.newTitle")}
@@ -119,9 +119,9 @@ export function AgentEvalDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal isOpen={archiveOpen} onClose={onCloseArchive} title={t("removeModal.title")} size="sm">
+      <HakkenModal isOpen={archiveOpen} onClose={onCloseArchive} title={t("removeModal.title")} size="sm">
         <div className="flex flex-col gap-6">
           <p className="text-[13px] leading-relaxed text-secondary">{t("removeModal.body")}</p>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
@@ -134,7 +134,7 @@ export function AgentEvalDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type ModelDefaultsEveryJobDialogProps = {
@@ -33,7 +33,7 @@ export function ModelDefaultsEveryJobDialog({
   const t = useTranslations("ai.models.defaults");
 
   return (
-    <SonaeModal isOpen onClose={onClose} title={t("everyJobTitle")} size="sm">
+    <HakkenModal isOpen onClose={onClose} title={t("everyJobTitle")} size="sm">
       <div className="flex flex-col gap-5 px-1 pb-2">
         <p className="text-[13px] leading-relaxed text-secondary">
           {t.rich("modalTakeOver", {
@@ -73,6 +73,6 @@ export function ModelDefaultsEveryJobDialog({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

@@ -39,8 +39,8 @@ describe("local demo seed", () => {
     const firstSeed = await t.mutation(api.localDemoSeed.seed, { secret: "demo-secret" });
     const secondSeed = await t.mutation(api.localDemoSeed.seed, { secret: "demo-secret" });
 
-    expect(firstSeed.company).toMatchObject({ name: "Sonae Demo Company", action: "created" });
-    expect(secondSeed.company).toMatchObject({ name: "Sonae Demo Company", action: "updated" });
+    expect(firstSeed.company).toMatchObject({ name: "Hakken Demo Company", action: "created" });
+    expect(secondSeed.company).toMatchObject({ name: "Hakken Demo Company", action: "updated" });
     expect(firstSeed.users.map((user) => user.action)).toEqual(["created", "created"]);
     expect(secondSeed.users.map((user) => user.action)).toEqual(["updated", "updated"]);
     expect(firstSeed.agent).toMatchObject({
@@ -60,15 +60,15 @@ describe("local demo seed", () => {
       const [company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures] = await Promise.all([
         ctx.db
           .query("companies")
-          .withIndex("by_name", (q) => q.eq("name", "Sonae Demo Company"))
+          .withIndex("by_name", (q) => q.eq("name", "Hakken Demo Company"))
           .first(),
         ctx.db
           .query("users")
-          .withIndex("email", (q) => q.eq("email", "demo-super-admin@sonae.test"))
+          .withIndex("email", (q) => q.eq("email", "demo-super-admin@hakken.test"))
           .first(),
         ctx.db
           .query("users")
-          .withIndex("email", (q) => q.eq("email", "demo-company-admin@sonae.test"))
+          .withIndex("email", (q) => q.eq("email", "demo-company-admin@hakken.test"))
           .first(),
         ctx.db
           .query("agents")

@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
 
 type MovementDeleteDialogProps = {
@@ -21,7 +21,7 @@ export default function MovementDeleteDialog({
   const routineTitle = getStudioRoutineTitle(movement?.title);
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title="Delete Routine">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title="Delete Routine">
       <div className="flex flex-col gap-6">
         <p className="text-secondary text-sm">
           Are you sure you want to delete{" "}
@@ -44,6 +44,6 @@ export default function MovementDeleteDialog({
           </button>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

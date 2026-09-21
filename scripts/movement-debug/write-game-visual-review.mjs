@@ -116,7 +116,7 @@ export function buildGameVisualReview(manifest, options = {}) {
   });
 
   const decisionTemplate = {
-    schema: "sonae-game-visual-review-decisions/v1",
+    schema: "hakken-game-visual-review-decisions/v1",
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     manifestPath: options.manifestPath ?? "",
     validDecisions,

@@ -10,9 +10,9 @@ import { deploymentMain, evaluateDeployment, parseEnvListOutput } from "./verify
 import { applyProduct, buildProductEnvironment, planProduct } from "./init-product.mjs";
 
 const roots = [];
-function temporary() { const root = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-product-test-")); roots.push(root); return root; }
+function temporary() { const root = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-product-test-")); roots.push(root); return root; }
 const targetFiles = [
-  "src/no-client-specific-fallbacks.test.ts", "sonae.product.json", "package.json", "package-lock.json", "template.verticals.json", "AGENTS.md", "README.md",
+  "src/no-client-specific-fallbacks.test.ts", "hakken.product.json", "package.json", "package-lock.json", "template.verticals.json", "AGENTS.md", "README.md",
   "scripts/strip-verticals.mjs", "src/app/layout.tsx", "src/app/(public)/_components/PublicNav.tsx",
   "src/app/(public)/_components/PublicFooter.tsx", "convex/settingsService.ts", ".github/workflows/deploy.yml",
 ];
@@ -182,7 +182,7 @@ describe("product initialiser on temporary clones", () => {
     expect(fs.readFileSync(path.join(root, "convex/settingsService.ts"), "utf8")).toContain("product team's own work");
   });
   it("refuses drift before any writes", () => {
-    const root = fixture(); const target = path.join(root, "src/app/layout.tsx"); fs.writeFileSync(target, fs.readFileSync(target, "utf8").replace(/title: (?:"Sonae - Protocol"|productIdentity.title)/, 'title: "Custom"'));
+    const root = fixture(); const target = path.join(root, "src/app/layout.tsx"); fs.writeFileSync(target, fs.readFileSync(target, "utf8").replace(/title: (?:"Hakken - Protocol"|productIdentity.title)/, 'title: "Custom"'));
     const before = snapshot(root); expect(() => planProduct(root, product())).toThrow("expected template code"); expect(snapshot(root)).toEqual(before);
   });
   it.each([false, true])("refuses ambiguous bindings without writes (initialised=%s)", initialised => {
@@ -191,9 +191,9 @@ describe("product initialiser on temporary clones", () => {
     if (initialised) applyProduct(planProduct(root, product()));
     else fs.writeFileSync(target, fs.readFileSync(target, "utf8")
       .replace('import { productIdentity } from "@/product.identity";\n', "")
-      .replace("title: productIdentity.title,", 'title: "Sonae - Protocol",')
-      .replace("description: productIdentity.description,", 'description: "Sonae Living Dossier",'));
-    fs.appendFileSync(target, '\n// title: "Sonae - Protocol",\n// title: productIdentity.title,\n');
+      .replace("title: productIdentity.title,", 'title: "Hakken - Protocol",')
+      .replace("description: productIdentity.description,", 'description: "Hakken Living Dossier",'));
+    fs.appendFileSync(target, '\n// title: "Hakken - Protocol",\n// title: productIdentity.title,\n');
     const before = snapshot(root);
     expect(() => planProduct(root, product())).toThrow(initialised ? "expected template code" : "binding already exists");
     expect(snapshot(root)).toEqual(before);

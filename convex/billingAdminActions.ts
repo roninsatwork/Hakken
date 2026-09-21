@@ -37,13 +37,13 @@ async function prepareConfig(config: BillingConfig, revision: number): Promise<B
     .map(n => n.toString(16).padStart(2, "0")).join("");
   const recovery = await stripe.billingPortal.configurations.create({
     name: "Company payment recovery", features: { ...common, subscription_update: { enabled: false } },
-  }, { idempotencyKey: `sonae-recovery-${revision}-${digest}` });
+  }, { idempotencyKey: `hakken-recovery-${revision}-${digest}` });
   const portal = await stripe.billingPortal.configurations.create({
     name: "Company subscriptions", features: { ...common, subscription_update: {
       enabled: true, default_allowed_updates: ["price"], proration_behavior: "always_invoice", billing_cycle_anchor: "unchanged",
       products: [...products].map(([product, prices]) => ({ product, prices })),
     } },
-  }, { idempotencyKey: `sonae-portal-${revision}-${digest}` });
+  }, { idempotencyKey: `hakken-portal-${revision}-${digest}` });
   const ready = parseBillingConfig({ ...config, portalConfigurationId: portal.id, recoveryPortalConfigurationId: recovery.id });
   await validatePortal(stripe, ready.offers, ready);
   await validateRecoveryPortal(stripe, ready);

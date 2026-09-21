@@ -7,7 +7,7 @@ set -e
 
 if [[ $# -lt 2 ]]; then
     echo "Usage: $0 <PROJECT_ID> <BILLING_ACCOUNT_ID> [REGION]"
-    echo "Example: $0 sonae-client-abc 012345-6789AB-CDEF01 us-central1"
+    echo "Example: $0 hakken-client-abc 012345-6789AB-CDEF01 us-central1"
     exit 1
 fi
 
@@ -21,7 +21,7 @@ echo "🚀 Starting GCP Provisioning for Project: $PROJECT_ID..."
 
 # 1. Create Project
 echo "🏗️ Creating project $PROJECT_ID..."
-gcloud projects create "$PROJECT_ID" --name="Sonae Platform - $PROJECT_ID"
+gcloud projects create "$PROJECT_ID" --name="Hakken Platform - $PROJECT_ID"
 
 # 2. Link Billing
 echo "💳 Linking billing account $BILLING_ACCOUNT_ID..."

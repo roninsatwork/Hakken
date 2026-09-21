@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import type { Translate } from "./types";
 
 type AssistantModalsProps = {
@@ -23,7 +23,7 @@ export function AssistantModals({
 }: AssistantModalsProps) {
   return (
     <>
-      <SonaeModal isOpen={permissionError} onClose={onPermissionErrorClose} title={t("errors.mic.title")}>
+      <HakkenModal isOpen={permissionError} onClose={onPermissionErrorClose} title={t("errors.mic.title")}>
         <div className="flex flex-col gap-5 pt-2">
           <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
             <AlertTriangle className="w-6 h-6 text-red-500 opacity-80" />
@@ -46,9 +46,9 @@ export function AssistantModals({
             </button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal isOpen={!!uploadError} onClose={onClearUploadError} title={t("errors.upload.title")}>
+      <HakkenModal isOpen={!!uploadError} onClose={onClearUploadError} title={t("errors.upload.title")}>
         <div className="flex flex-col gap-5 pt-2">
           <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
             <AlertTriangle className="w-6 h-6 text-red-500 opacity-80" />
@@ -69,7 +69,7 @@ export function AssistantModals({
             </button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

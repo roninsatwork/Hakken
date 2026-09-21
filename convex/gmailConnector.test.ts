@@ -399,8 +399,8 @@ describe("gmail plumbing helpers", () => {
   });
 
   test("the html twin keeps paragraphs and line breaks, and escapes markup", () => {
-    expect(renderBodyHtml("Best <deal> & price\n\nAsk Sonae\nAI assistant")).toBe(
-      "<div><p>Best &lt;deal&gt; &amp; price</p>\n<p>Ask Sonae<br>AI assistant</p></div>"
+    expect(renderBodyHtml("Best <deal> & price\n\nAsk Hakken\nAI assistant")).toBe(
+      "<div><p>Best &lt;deal&gt; &amp; price</p>\n<p>Ask Hakken<br>AI assistant</p></div>"
     );
   });
 

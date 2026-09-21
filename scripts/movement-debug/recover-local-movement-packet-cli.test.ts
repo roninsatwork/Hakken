@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe("recoverLocalMovementPacket", () => {
   it("recovers the exact browser packet into a proof-ready Replay/Game session", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "sonae-local-packet-test-"));
+    const directory = mkdtempSync(join(tmpdir(), "hakken-local-packet-test-"));
     tempDirs.push(directory);
     const packetPath = join(directory, "downloaded-packet.json");
     const outPath = join(directory, "recovered-session.json");

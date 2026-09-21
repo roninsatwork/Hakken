@@ -8,7 +8,7 @@ import {
   auditDenseCaptureDeviceReport,
 } from "./review-dense-capture-device-reports.mjs";
 
-const REPORT_NAME = /^sonae-dense-device-(ipad|older-laptop)-[0-9]+\.json$/;
+const REPORT_NAME = /^hakken-dense-device-(ipad|older-laptop)-[0-9]+\.json$/;
 
 export function planDenseCaptureDeviceReportIngest({ entries }) {
   const failures = [];

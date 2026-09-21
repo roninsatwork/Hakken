@@ -835,7 +835,7 @@ export const listOrphanSourceNotesInternal = internalQuery({
 /**
  * The hubs (Anthony's Obsidian steer, 2026-08-15): every wiki needs a
  * spine, and his vault's is its index pages — the directory every profile
- * hangs off. Sonae's hubs are mechanical, not model-written: one index page
+ * hangs off. Hakken's hubs are mechanical, not model-written: one index page
  * per topic kind, listing its members as [[references]], linked both ways.
  * Always accurate, never costs a model call, and gives the map its centres.
  */

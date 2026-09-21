@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getFunctionName } from "convex/server";
 import { useQuery, useAction, usePaginatedQuery } from "convex/react";
 import messages from "@/messages/en.json";
-import defaults from "@/sonae.billing.json";
+import defaults from "@/hakken.billing.json";
 import { ToastProvider } from "@/src/context/ToastContext";
 import { BillingOperatorGate } from "./BillingOperatorGate";
 import CustomerBilling from "@/src/app/(dashboard)/app/settings/billing/page";

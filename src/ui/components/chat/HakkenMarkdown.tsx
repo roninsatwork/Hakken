@@ -4,11 +4,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ComponentProps } from 'react';
 
-interface SonaeMarkdownProps {
+interface HakkenMarkdownProps {
   content: string;
 }
 
-export function SonaeMarkdown({ content }: SonaeMarkdownProps) {
+export function HakkenMarkdown({ content }: HakkenMarkdownProps) {
   type MarkdownCodeProps = ComponentProps<"code"> & {
     node?: unknown;
     inline?: boolean;

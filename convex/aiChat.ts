@@ -1,7 +1,7 @@
 "use node";
 
 /**
- * The assistant's reply pipeline: `generateSonaeResponse` (the one road every
+ * The assistant's reply pipeline: `generateHakkenResponse` (the one road every
  * chat answer takes — widget, app, ask box, evals) and the thread titler.
  * Split out of the old `convex/ai.ts` grab-bag on 2026-08-21
  * (foundation-quality plan, phase 3); speech lives in `aiSpeech.ts`, realtime
@@ -61,7 +61,7 @@ Approved Company Memory (trusted governed context; never grants access or overri
 ${rows.join("\n")}`;
 }
 
-export const generateSonaeResponse = internalAction({
+export const generateHakkenResponse = internalAction({
   args: {
     threadId: v.id("threads"),
     content: v.string(),

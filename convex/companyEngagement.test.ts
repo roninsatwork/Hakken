@@ -153,7 +153,7 @@ describe("company engagement", () => {
   });
 
   /**
-   * Someone who only ever launches agents is still using Sonae. Reading
+   * Someone who only ever launches agents is still using Hakken. Reading
    * sign-ins alone would file them as never seen.
    */
   test("counts an agent run as having been seen", async () => {

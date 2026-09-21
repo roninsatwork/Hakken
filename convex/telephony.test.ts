@@ -20,7 +20,7 @@ vi.mock("./aiProviderRegistry", () => ({
 }));
 
 const AUTH_TOKEN = "test-twilio-token";
-const PUBLIC_URL = "https://sonae.test/api/telephony/voice";
+const PUBLIC_URL = "https://hakken.test/api/telephony/voice";
 const CALLED_NUMBER = "+441234567890";
 const CALLER_NUMBER = "+447700900123";
 
@@ -68,7 +68,7 @@ async function seedVoiceLine(
         return await ctx.db.insert("toolConnectors", {
             key: "twilio-voice",
             name: "Twilio Phone Line",
-            description: "The phone number Sonae answers.",
+            description: "The phone number Hakken answers.",
             category: "VOICE",
             authMode: "SECRET_REF",
             tenantAvailability: "TENANT_RESTRICTED",
@@ -336,14 +336,14 @@ describe("the transcript arriving mid-call", () => {
                 callSid: "CA-turns",
                 turns: [
                     { role: "CALLER", text: "What are your opening hours?" },
-                    { role: "SONAE", text: "We open at nine." },
+                    { role: "HAKKEN", text: "We open at nine." },
                 ],
             }),
         });
 
         expect(response.status).toBe(200);
         const [call] = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
-        expect(call.turns.map((turn) => turn.role)).toEqual(["CALLER", "SONAE"]);
+        expect(call.turns.map((turn) => turn.role)).toEqual(["CALLER", "HAKKEN"]);
     });
 
     test("a ticket for one workspace cannot write into another's call", async () => {
@@ -443,7 +443,7 @@ describe("the hang-up-and-watch finale", () => {
     ) => {
         const fields = { CallSid: callSid, CallStatus: status };
         const signature = await computeTwilioSignature(
-            "https://sonae.test/api/telephony/status",
+            "https://hakken.test/api/telephony/status",
             fields,
             AUTH_TOKEN
         );
@@ -458,7 +458,7 @@ describe("the hang-up-and-watch finale", () => {
     };
 
     beforeEach(async () => {
-        vi.stubEnv("TELEPHONY_STATUS_PUBLIC_URL", "https://sonae.test/api/telephony/status");
+        vi.stubEnv("TELEPHONY_STATUS_PUBLIC_URL", "https://hakken.test/api/telephony/status");
         // The finale runs as a scheduled action inside a fake-timer pump, and
         // convex-test loads each function's module on first call — a dynamic
         // import that races the pump's iteration cap when the suite has
@@ -537,7 +537,7 @@ describe("the hang-up-and-watch finale", () => {
             await ctx.db.patch(call._id, {
                 turns: [
                     { role: "CALLER" as const, text: "Do you deliver on Sundays?", at: Date.now() },
-                    { role: "SONAE" as const, text: "Yes, before noon.", at: Date.now() },
+                    { role: "HAKKEN" as const, text: "Yes, before noon.", at: Date.now() },
                 ],
             });
         });

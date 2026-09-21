@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Table2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import {
@@ -415,7 +415,7 @@ function SalesDataTables() {
                 ) : result.page.length === 0 ? (
                   <tr>
                     <td colSpan={columnCount} className="p-0 border-none">
-                      <SonaeEmptyState
+                      <HakkenEmptyState
                         title={isNarrowed ? t("emptyTitleNarrowed") : t("emptyTitle")}
                         description={
                           isNarrowed

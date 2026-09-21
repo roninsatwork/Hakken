@@ -22,7 +22,7 @@ type WidgetPreviewPanelProps = {
  * A picture of the customer's chat widget as it will look on their own website.
  *
  * Every box below is hand-written and stays that way. This is not a form on a
- * Sonae screen — nothing here can be typed into, nothing is submitted, and the
+ * Hakken screen — nothing here can be typed into, nothing is submitted, and the
  * styling is deliberately the widget's own rather than the house one: white
  * background, grey borders, the customer's brand colour. Putting the shared
  * field in here would make the preview stop looking like the thing it is

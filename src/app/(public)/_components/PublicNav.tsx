@@ -8,7 +8,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { ContactLink } from "./ContactLink";
 
 /*
- * No link list yet. Platform, Built on Sonae and Trust & Security are unbuilt
+ * No link list yet. Platform, Built on Hakken and Trust & Security are unbuilt
  * and would 404, and Contact went to the same place as "Talk to us" beside it.
  * Links come back one at a time as each page ships.
  */

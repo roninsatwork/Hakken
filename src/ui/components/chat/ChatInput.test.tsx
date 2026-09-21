@@ -46,7 +46,7 @@ vi.mock('@/src/hooks/useVoiceToText', () => ({
 
 vi.mock('@/src/context/SystemSettingsContext', () => ({
   useSystemSettings: vi.fn(() => ({
-    platformName: 'Sonae',
+    platformName: 'Hakken',
   })),
 }))
 
@@ -57,7 +57,7 @@ vi.mock('next-intl', () => ({
 }))
 
 // 4. Mock complex nested components if necessary (like Modals)
-vi.mock('../feedback/SonaeModal', () => ({
+vi.mock('../feedback/HakkenModal', () => ({
   default: ({ isOpen, children }: PropsWithChildren<{ isOpen: boolean }>) => (
     isOpen ? <div data-testid="mock-modal">{children}</div> : null
   ),
@@ -87,10 +87,10 @@ describe('ChatInput Component', () => {
     render(<ChatInput threadId={threadId} />)
     
     // Check placeholder uses system settings
-    expect(screen.getByPlaceholderText('Reply to Sonae')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Reply to Hakken')).toBeInTheDocument()
     
     // Check legal text uses system settings
-    expect(screen.getByText(/Sonae Assistant is AI/i)).toBeInTheDocument()
+    expect(screen.getByText(/Hakken Assistant is AI/i)).toBeInTheDocument()
     
     // Check default model text (can be twice if dropdown is rendered)
     expect(screen.getAllByText('Fast')[0]).toBeInTheDocument()
@@ -99,7 +99,7 @@ describe('ChatInput Component', () => {
   it('handles typing and calling sendMessage on submit', async () => {
     render(<ChatInput threadId={threadId} />)
     
-    const textarea = screen.getByPlaceholderText('Reply to Sonae')
+    const textarea = screen.getByPlaceholderText('Reply to Hakken')
     // The send control now carries an accessible name rather than being an
     // unlabelled icon button.
     const submitButton = screen.getByRole('button', { name: 'Send' })

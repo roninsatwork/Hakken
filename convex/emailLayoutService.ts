@@ -39,7 +39,7 @@ const WIDTH = 600;
  * Side padding on the panel.
  *
  * Raised from 22 to 32 on 2026-08-06. Anthony, comparing our system health
- * alert against a well-made intelligence digest: *"the Sonae emails are
+ * alert against a well-made intelligence digest: *"the Hakken emails are
  * terrible, can we make them look more like the Conterra email in terms of
  * colour."* Half of what separated the two was not colour at all — it was air.
  * Tight padding is what made our panel read as a form rather than a document.
@@ -84,7 +84,7 @@ export const MAX_CARDS = 8;
  *
  * ## The 2026-08-08 revision: the Conterra readability pass
  *
- * Anthony compared the Sonae alert against a Conterra alert and then clarified
+ * Anthony compared the Hakken alert against a Conterra alert and then clarified
  * that every outbound email should be easy to read in that colour scheme. The
  * shell now takes the Conterra cues that matter in email clients: near-black
  * page, black card, readable white body copy, quiet grey metadata, a soft grey
@@ -508,7 +508,7 @@ function renderFacts(facts: EmailFact[]) {
 }
 
 export function renderEmail(content: EmailContent, options: RenderEmailOptions = {}): RenderedEmail {
-  const platformName = (options.platformName || "Sonae").trim() || "Sonae";
+  const platformName = (options.platformName || "Hakken").trim() || "Hakken";
   const creditLine = options.creditLine ?? `${platformName} · Powered by Ronins`;
   const initial = platformName.slice(0, 1).toUpperCase();
   const preheader = content.preheader || content.lede || content.verdict;

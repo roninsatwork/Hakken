@@ -4,7 +4,7 @@ import type { ClientInvite } from "@/convex/invites";
 import type { FormEvent, ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { ModalField } from "@/src/ui/components/screens/ModalForm";
 
 type TeamUserFormData = {
@@ -50,7 +50,7 @@ export function TeamDialogs({
 
   return (
     <>
-      <SonaeModal isOpen={isAddModalOpen} onClose={onCloseEditor} title={editingUser ? t("modal.editTitle") : t("modal.inviteTitle")}>
+      <HakkenModal isOpen={isAddModalOpen} onClose={onCloseEditor} title={editingUser ? t("modal.editTitle") : t("modal.inviteTitle")}>
         <p className="text-secondary mb-6 text-[15px]">{editingUser ? t("modal.editDesc") : t("modal.inviteDesc")}</p>
         <form onSubmit={onSubmit} className="flex flex-col gap-5">
           <ModalField label={t("modal.fullName")} type="text" required value={formData.name} onChange={(event) => onFormDataChange({ ...formData, name: event.target.value })} placeholder={t("modal.namePlaceholder")} />
@@ -61,15 +61,15 @@ export function TeamDialogs({
           </ModalField>
           {editorActions}
         </form>
-      </SonaeModal>
-      <SonaeModal isOpen={deletingUser !== null} onClose={onCloseDelete} title={t("modal.deleteTitle")}>
+      </HakkenModal>
+      <HakkenModal isOpen={deletingUser !== null} onClose={onCloseDelete} title={t("modal.deleteTitle")}>
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">{t("modal.deleteConfirm", { name: deletingUser?.name ?? "" })}</p>
         {deleteActions}
-      </SonaeModal>
-      <SonaeModal isOpen={deletingInvite !== null} onClose={onCloseRevoke} title={t("modal.revokeTitle")}>
+      </HakkenModal>
+      <HakkenModal isOpen={deletingInvite !== null} onClose={onCloseRevoke} title={t("modal.revokeTitle")}>
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">{t("modal.revokeConfirm", { email: deletingInvite?.email ?? "" })}</p>
         {revokeActions}
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

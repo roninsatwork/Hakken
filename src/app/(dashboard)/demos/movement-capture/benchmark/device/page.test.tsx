@@ -47,7 +47,7 @@ describe("DenseCaptureDeviceBenchmarkPage", () => {
     expect(canShare).toHaveBeenCalledWith({ files: [expect.any(File)] });
     expect(share).toHaveBeenCalledWith(expect.objectContaining({
       files: [expect.objectContaining({
-        name: `sonae-dense-device-ipad-${Date.parse(report.physicalObservation.observedAt)}.json`,
+        name: `hakken-dense-device-ipad-${Date.parse(report.physicalObservation.observedAt)}.json`,
         type: "application/json",
       })],
       text: expect.stringMatching(/No video is included/),

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ensureGsap, prefersReducedMotion } from "../../_motion/motion";
 
 /**
- * The elaboration beat: the hero introduces Sonae, this section says what it
+ * The elaboration beat: the hero introduces Hakken, this section says what it
  * actually is. A thesis on the left, the detail passing it on the right, and a
  * counter tracking which part is being read.
  *
@@ -14,27 +14,27 @@ import { ensureGsap, prefersReducedMotion } from "../../_motion/motion";
 const PARTS = [
   {
     title: "Launch AI products faster",
-    body: "Sonae gives you the platform foundations upfront: workspaces, knowledge ingestion, model routing, assistants, agents, workflows, APIs, webhooks and embedded widgets. That means you can spend your time building the product experience, not rebuilding the AI infrastructure underneath it.",
+    body: "Hakken gives you the platform foundations upfront: workspaces, knowledge ingestion, model routing, assistants, agents, workflows, APIs, webhooks and embedded widgets. That means you can spend your time building the product experience, not rebuilding the AI infrastructure underneath it.",
   },
   {
     title: "Stay in control as AI does more",
-    body: "As AI moves from answering questions to taking action, Sonae keeps control in the system. Tools, workflows and agents can be governed with permissions, approval steps, tenant boundaries, schemas, rules and human review before anything sensitive happens.",
+    body: "As AI moves from answering questions to taking action, Hakken keeps control in the system. Tools, workflows and agents can be governed with permissions, approval steps, tenant boundaries, schemas, rules and human review before anything sensitive happens.",
   },
   {
     title: "Improve AI without guessing",
-    body: "Sonae gives you evals, smoke tests, replay, release gates, memory review, reflections and improvement suggestions. You can see what worked, what failed, what should become a test, what should be remembered, and what should never happen again.",
+    body: "Hakken gives you evals, smoke tests, replay, release gates, memory review, reflections and improvement suggestions. You can see what worked, what failed, what should become a test, what should be remembered, and what should never happen again.",
   },
   {
     title: "Use the right model for the job",
-    body: "Sonae is model agnostic. It can sit across many providers and hundreds of models, with administrators controlling defaults, capabilities, pricing and use cases from one place. The product is not trapped inside one AI vendor’s limits.",
+    body: "Hakken is model agnostic. It can sit across many providers and hundreds of models, with administrators controlling defaults, capabilities, pricing and use cases from one place. The product is not trapped inside one AI vendor’s limits.",
   },
   {
     title: "Know what it costs and what happened",
-    body: "Sonae makes production AI visible. Operators can see runs, failures, approvals, tool calls, model usage, token usage, latency, provider health, quotas and cost. Spend can be capped, problems can be investigated, and AI stops being a black box.",
+    body: "Hakken makes production AI visible. Operators can see runs, failures, approvals, tool calls, model usage, token usage, latency, provider health, quotas and cost. Spend can be capped, problems can be investigated, and AI stops being a black box.",
   },
 ];
 
-export function WhatSonaeIs() {
+export function WhatHakkenIs() {
   const rootRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
 
@@ -65,13 +65,13 @@ export function WhatSonaeIs() {
         <div className="ps-what-thesis">
           <div className="ps-what-thesis-inner">
             <span className="ps-eyebrow" data-reveal>
-              What Sonae is
+              What Hakken is
             </span>
             <h2 className="ps-display ps-what-h2 mt-3" data-reveal>
               The production layer behind AI products.
             </h2>
             <p className="ps-what-lede mt-5" data-reveal>
-              Sonae gives you the parts every serious AI product needs before it
+              Hakken gives you the parts every serious AI product needs before it
               can be trusted in the real world: knowledge, models, agents, evals,
               memory, approvals, workflows, observability and cost control.
             </p>

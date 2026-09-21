@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
-import config from "../sonae.billing.json";
+import config from "../hakken.billing.json";
 import { hasPaidAccess, safeStripeUrl } from "./billingPolicy";
 import { resolveChatQuota } from "./chatService";
 import { effectiveModulesFor } from "./tenantFunctions";
@@ -133,7 +133,7 @@ describe("Company Stripe billing", () => {
     const account = (await f.account())!;
     const [params, options] = provider.checkout.sessions.create.mock.calls[0];
     expect(params).toMatchObject({ customer: "cus_owned", client_reference_id: account._id, line_items: [{ price: "price_month", quantity: 1 }], success_url: "https://product.example.com/app/settings/billing" });
-    expect(options).toEqual({ idempotencyKey: `sonae-checkout-${account.attemptId}` });
+    expect(options).toEqual({ idempotencyKey: `hakken-checkout-${account.attemptId}` });
     provider.checkout.sessions.retrieve.mockResolvedValue({ ...params, id: "cs_owned", status: "open", url: "https://checkout.stripe.com/c/session" });
     await f.purchase();
     expect(provider.customers.create).toHaveBeenCalledTimes(1);

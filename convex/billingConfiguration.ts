@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import source from "../sonae.billing.json";
+import source from "../hakken.billing.json";
 import { parseBillingConfig } from "../billing.config";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { billingConfigShape } from "./billingSchema";

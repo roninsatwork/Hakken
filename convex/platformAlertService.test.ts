@@ -322,7 +322,7 @@ describe("platform alert service", () => {
     const report = buildScreenshotReport();
     const decision = buildSystemHealthPlatformAlertDecision(report);
     const email = buildSystemHealthAlertEmail(report, decision, {
-      platformName: "Sonae",
+      platformName: "Hakken",
       baseUrl: "https://app.test",
     });
 

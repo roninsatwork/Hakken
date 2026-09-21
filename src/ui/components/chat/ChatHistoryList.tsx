@@ -247,7 +247,7 @@ export default function ChatHistoryList() {
         )}
       </div>
 
-      {/* Sonae Modal Overlay for Deletion - Escaped via Portal */}
+      {/* Hakken Modal Overlay for Deletion - Escaped via Portal */}
       {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {threadToDelete && (

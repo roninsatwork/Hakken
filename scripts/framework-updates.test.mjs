@@ -58,7 +58,7 @@ function commit() {
   );
 }
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-framework-review-"));
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-framework-review-"));
   source = path.join(directory, "source");
   product = path.join(directory, "product");
   upstream = path.join(directory, "incoming");
@@ -320,7 +320,7 @@ test("a history write failure restores the previous baseline", () => {
   saveReview(plan);
   const original = fs.linkSync;
   vi.spyOn(fs, "linkSync").mockImplementation((source, target) => {
-    if (String(target).includes("/.sonae/reviews/"))
+    if (String(target).includes("/.hakken/reviews/"))
       throw new Error("history disk failure");
     return original(source, target);
   });

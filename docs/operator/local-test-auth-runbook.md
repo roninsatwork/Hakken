@@ -92,9 +92,9 @@ Seeded company:
 
 Seeded users:
 
-- `local-super-admin@sonae.test` as `SUPER_ADMIN`, with no required company assignment
-- `local-company-admin@sonae.test` as `ADMIN` for `Local Test Company`
-- `local-user@sonae.test` as `USER` for `Local Test Company`
+- `local-super-admin@hakken.test` as `SUPER_ADMIN`, with no required company assignment
+- `local-company-admin@hakken.test` as `ADMIN` for `Local Test Company`
+- `local-user@hakken.test` as `USER` for `Local Test Company`
 
 The seed is idempotent. Re-running it updates the deterministic rows instead of creating duplicate users.
 

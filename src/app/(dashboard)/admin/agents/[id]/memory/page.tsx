@@ -39,7 +39,7 @@ import {
   type MemoryApplyMode,
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import { formatDateTime } from "@/src/lib/dates";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
@@ -795,7 +795,7 @@ export default function AgentMemoryPage() {
         )}
       </section>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         title={editorTarget ? t("editor.editTitle") : t("editor.addTitle")}
@@ -823,9 +823,9 @@ export default function AgentMemoryPage() {
             onCancel={() => setIsEditorOpen(false)}
           />
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         title={t("removeModal.title")}
@@ -856,9 +856,9 @@ export default function AgentMemoryPage() {
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={Boolean(rejectTarget)}
         onClose={() => setRejectTarget(null)}
         title={t("rejectModal.title")}
@@ -894,7 +894,7 @@ export default function AgentMemoryPage() {
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </div>
   );
 }

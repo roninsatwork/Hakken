@@ -81,8 +81,8 @@ describe("settings service helpers", () => {
 
   test("records what a setting was changed from, not only that it was", () => {
     const metadata = buildSettingsAuditMetadata(
-      { platformName: "Sonae", brandColorHex: "#ffffff" },
-      { platformName: "Sonae", brandColorHex: "#E26D28" }
+      { platformName: "Hakken", brandColorHex: "#ffffff" },
+      { platformName: "Hakken", brandColorHex: "#E26D28" }
     );
 
     // The screen posts the whole form on every save, so a field saved as the

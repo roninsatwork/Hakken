@@ -9,7 +9,7 @@
  * this replaces.
  *
  * It stops working the moment a deployment maps its own domains. Ours are
- * `sonae-db` for the API and `sonae-auth` for HTTP actions — two unrelated
+ * `sonae-db` for the API and `hakken-auth` for HTTP actions — two unrelated
  * names, with no `.cloud` in either. The swap left the string untouched and
  * handed people a webhook URL pointing at the API origin, which does not route
  * `/api/webhooks/*` and answers "No matching routes found". Silently wrong, and

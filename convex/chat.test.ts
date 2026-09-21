@@ -411,7 +411,7 @@ describe("Message Quotas Enforcements", () => {
       });
       const agentId = await ctx.db.insert("agents", {
         name: "Dimension Agent",
-        modelId: "sonae-test-model",
+        modelId: "hakken-test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: now,
@@ -444,7 +444,7 @@ describe("Message Quotas Enforcements", () => {
       content: "Dimensioned assistant response",
       inputTokens: 10,
       outputTokens: 20,
-      modelUsed: "sonae-test-model",
+      modelUsed: "hakken-test-model",
       providerKey: "openai",
       providerModelId: "gpt-test",
     });
@@ -463,7 +463,7 @@ describe("Message Quotas Enforcements", () => {
       analyticsDimensionsVersion: 1,
       inputTokens: 10,
       outputTokens: 20,
-      modelUsed: "sonae-test-model",
+      modelUsed: "hakken-test-model",
       providerKey: "openai",
       providerModelId: "gpt-test",
     });
@@ -544,7 +544,7 @@ describe("Message Quotas Enforcements", () => {
       });
       const agentId = await ctx.db.insert("agents", {
         name: "Widget Agent",
-        modelId: "sonae-test-model",
+        modelId: "hakken-test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: now,

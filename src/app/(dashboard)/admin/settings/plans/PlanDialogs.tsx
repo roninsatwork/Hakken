@@ -2,7 +2,7 @@
 
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useTranslations } from "next-intl";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
@@ -53,7 +53,7 @@ export function PlanDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={editorOpen}
         onClose={onEditorClose}
         title={editing ? t("editTitle") : t("createTitle")}
@@ -124,7 +124,7 @@ export function PlanDialogs({
             </WriteButton>
           </div>
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={deletingPlanName !== null}

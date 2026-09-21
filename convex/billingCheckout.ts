@@ -10,7 +10,7 @@ export async function ensureCustomer(ctx: Pick<ActionCtx, "runMutation">, stripe
   if (account.customerId) return account;
   // This step cannot charge: checkout is unreachable until the binding is durably saved.
   // A retry after Stripe prunes the key may leave an unused empty customer, never a second subscription.
-  const customer = await stripe.customers.create({ metadata: { sonaeBillingAccount: account._id } }, { idempotencyKey: `sonae-customer-${account._id}` });
+  const customer = await stripe.customers.create({ metadata: { sonaeBillingAccount: account._id } }, { idempotencyKey: `hakken-customer-${account._id}` });
   if (customer.livemode !== (account.mode === "live")) throw appError("NOT_CONFIGURED", "Stripe customer uses the wrong mode.");
   await ctx.runMutation(internal.billingState.bindCustomer, { accountId: account._id, revision: account.revision, customerId: customer.id });
   return { ...account, customerId: customer.id };
@@ -36,7 +36,7 @@ async function sessionForAttempt(stripe: Stripe, account: Doc<"billingAccounts">
     success_url: attempt.returnUrl, cancel_url: attempt.returnUrl,
     metadata: { sonaeBillingAccount: account._id, sonaeCheckoutAttempt: attempt._id },
     subscription_data: { metadata: { sonaeBillingAccount: account._id, sonaeCheckoutAttempt: attempt._id } },
-  }, { idempotencyKey: `sonae-checkout-${attempt._id}` });
+  }, { idempotencyKey: `hakken-checkout-${attempt._id}` });
 }
 
 export async function checkoutUrl(ctx: Pick<ActionCtx, "runQuery" | "runMutation">, stripe: Stripe, account: Doc<"billingAccounts">, offerKey: string) {

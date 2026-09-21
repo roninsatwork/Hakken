@@ -34,7 +34,7 @@ Options:
   --frames <list|auto>   Comma-separated frame indexes, or auto. Defaults to auto
   --slider-seek-frames <list>
                          Ordered frame targets for real slider-drag convergence proof
-  --e2e-auth             Use the deterministic sonae_e2e_auth role cookie in memory
+  --e2e-auth             Use the deterministic hakken_e2e_auth role cookie in memory
   --local-test-auth      Sign in through /local-test-auth before capture
   --role <role>          Local-test-auth role. Defaults to super-admin
   --secret <secret>      Local-test-auth secret. Defaults to LOCAL_TEST_AUTH_SECRET
@@ -202,7 +202,7 @@ async function signInWithLocalTestAuth(page, args) {
 
 async function readPlayerAvatarDebug(page) {
   return page.evaluate(() => {
-    const debug = window.__sonaeMovementAvatarDebug?.player;
+    const debug = window.__hakkenMovementAvatarDebug?.player;
     return debug ? structuredClone(debug) : null;
   });
 }
@@ -267,8 +267,8 @@ async function captureSliderSeekProof({
   const slider = page.getByTestId("movement-replay-frame-slider");
   await slider.waitFor({ state: "visible" });
   await page.waitForFunction(() => (
-    typeof window.__sonaeReplayLabStepToFrame === "function" &&
-    Number.isFinite(window.__sonaeReplayLabCommittedFrameIndex)
+    typeof window.__hakkenReplayLabStepToFrame === "function" &&
+    Number.isFinite(window.__hakkenReplayLabCommittedFrameIndex)
   ));
   const events = [];
 
@@ -290,12 +290,12 @@ async function captureSliderSeekProof({
         return (
           Number(root?.getAttribute("data-current-frame-index") || -1) === frameIndex &&
           Number(range?.value || -1) === frameIndex &&
-          window.__sonaeReplayLabCommittedFrameIndex === frameIndex
+          window.__hakkenReplayLabCommittedFrameIndex === frameIndex
         );
       }, requestedFrameIndex);
     } catch (error) {
       const failedState = await page.evaluate(() => ({
-        committedFrameIndex: window.__sonaeReplayLabCommittedFrameIndex ?? null,
+        committedFrameIndex: window.__hakkenReplayLabCommittedFrameIndex ?? null,
         currentFrameIndex: Number(
           document.querySelector('[data-testid="movement-replay-lab"]')
             ?.getAttribute("data-current-frame-index") ?? -1,
@@ -317,7 +317,7 @@ async function captureSliderSeekProof({
       previousDebug?.frameUpdatedAt ?? -1,
     );
     const state = await lab.evaluate((element) => ({
-      committedFrameIndex: window.__sonaeReplayLabCommittedFrameIndex ?? -1,
+      committedFrameIndex: window.__hakkenReplayLabCommittedFrameIndex ?? -1,
       observedFrameIndex: Number(element.getAttribute("data-current-frame-index") || -1),
     }));
     const sliderValue = Number.parseInt(await slider.inputValue(), 10);
@@ -388,7 +388,7 @@ async function main() {
         domain: baseUrl.hostname,
         expires: -1,
         httpOnly: false,
-        name: "sonae_e2e_auth",
+        name: "hakken_e2e_auth",
         path: "/",
         sameSite: "Lax",
         secure: baseUrl.protocol === "https:",
@@ -613,10 +613,10 @@ async function main() {
       await page.getByTestId("movement-replay-avatar-section").screenshot({ path: avatarPath });
       await page.getByTestId("movement-replay-source-canvas").screenshot({ path: sourcePath });
       const avatarDebug = await page.evaluate(() => (
-        window.__sonaeMovementAvatarDebug ?? null
+        window.__hakkenMovementAvatarDebug ?? null
       ));
       const runtimeSetup = await page.evaluate(() => (
-        window.__sonaeMovementRecordedPlayerSetup ?? null
+        window.__hakkenMovementRecordedPlayerSetup ?? null
       ));
 
       captures.push({

@@ -455,7 +455,7 @@ export default function KioskPage() {
           </button>
         ) : (
           <span className="text-[11px] font-mono uppercase tracking-widest text-muted/60">
-            Powered by Sonae
+            Powered by Hakken
           </span>
         )}
       </footer>

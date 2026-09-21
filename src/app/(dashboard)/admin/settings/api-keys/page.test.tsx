@@ -47,7 +47,7 @@ const apiKeys = [
     companyId: "company_1",
     companyName: "Acme",
     name: "Production agent trigger",
-    keyPrefix: "sonae_abc123def456",
+    keyPrefix: "hakken_abc123def456",
     scopes: ["agent:run", "run:read"],
     status: "ACTIVE",
     rateLimitPerMinute: 60,
@@ -88,8 +88,8 @@ describe("ApiKeysPage", () => {
       return revokeApiKey as unknown as ReturnType<typeof useMutation>;
     });
     createApiKey.mockResolvedValue({
-      apiKey: "sonae_newsecret_abcdef",
-      record: { keyPrefix: "sonae_newsecret" },
+      apiKey: "hakken_newsecret_abcdef",
+      record: { keyPrefix: "hakken_newsecret" },
     });
     revokeApiKey.mockResolvedValue(undefined);
   });
@@ -140,7 +140,7 @@ describe("ApiKeysPage", () => {
         rateLimitPerMinute: 60,
       }));
     });
-    expect(screen.getByText("sonae_newsecret_abcdef")).toBeInTheDocument();
+    expect(screen.getByText("hakken_newsecret_abcdef")).toBeInTheDocument();
     expect(screen.getByText(/only time it will be shown/)).toBeInTheDocument();
   });
 

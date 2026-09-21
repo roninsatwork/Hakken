@@ -19,7 +19,7 @@ API keys can be revoked with an optional reason. Revoked and expired keys stop a
 Public API requests use bearer authentication:
 
 ```text
-Authorization: Bearer sonae_...
+Authorization: Bearer hakken_...
 ```
 
 Current public endpoints are:

@@ -54,7 +54,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => (key === "projectName" ? "Sonae" : key),
+  useTranslations: () => (key: string) => (key === "projectName" ? "Hakken" : key),
 }));
 
 vi.mock("next-themes", () => ({

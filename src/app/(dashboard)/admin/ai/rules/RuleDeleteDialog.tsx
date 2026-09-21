@@ -2,7 +2,7 @@
 
 import { AlertOctagon, RefreshCcw, Trash2 } from "lucide-react";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type RuleDeleteDialogProps = {
@@ -25,7 +25,7 @@ export function RuleDeleteDialog({
   onConfirm,
 }: RuleDeleteDialogProps) {
   return (
-    <SonaeModal isOpen onClose={onClose} title={labels.title} size="sm">
+    <HakkenModal isOpen onClose={onClose} title={labels.title} size="sm">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
@@ -55,6 +55,6 @@ export function RuleDeleteDialog({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

@@ -27,7 +27,7 @@ describe("remembering the thinking level", () => {
   });
 
   test("a value written by a different build is ignored, not trusted", () => {
-    window.localStorage.setItem("sonae.composer.thinkingLevel", "EXTREME");
+    window.localStorage.setItem("hakken.composer.thinkingLevel", "EXTREME");
     expect(readRememberedThinkingLevel()).toBe(DEFAULT_THINKING_LEVEL);
   });
 

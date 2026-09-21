@@ -8,7 +8,7 @@ import { appError } from "./utils/appError";
 /**
  * The platform telling one person that something happened.
  *
- * Before this, the only way Sonae could reach anybody was email, so a task
+ * Before this, the only way Hakken could reach anybody was email, so a task
  * assigned, an approval waiting or a run that failed had nowhere to land
  * inside the product.
  *

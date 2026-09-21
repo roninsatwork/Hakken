@@ -66,7 +66,7 @@ describe("write game visual review", () => {
     expect(review.markdown).toContain("first-scoring-frame");
     expect(review.decisionTemplate).toMatchObject({
       manifestPath: "/repo/tmp/manifest.json",
-      schema: "sonae-game-visual-review-decisions/v1",
+      schema: "hakken-game-visual-review-decisions/v1",
       summary: {
         capturedCount: 1,
         errorCount: 0,

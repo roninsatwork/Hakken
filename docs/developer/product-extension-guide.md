@@ -43,7 +43,7 @@ with `divider` for a top-level page, `DetailLayout` for tabbed sections and
 15-row pages and shared field/action/feedback components, and supply both locales.
 Follow an existing screen and the current generator instead of copying incomplete
 CRUD snippets. Agree product validation and any schema migration before adding
-real data. Keep `.sonae/framework.json` with the clone and follow
+real data. Keep `.hakken/framework.json` with the clone and follow
 [Framework Updates](../operator/framework-updates.md) for later core changes.
 
 ## Add A New Workflow Node Type

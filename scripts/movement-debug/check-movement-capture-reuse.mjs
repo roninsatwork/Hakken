@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const entryPoint = resolve("scripts/movement-debug/check-movement-capture-reuse-cli.ts");
-const bundleTempDir = mkdtempSync(join(tmpdir(), "sonae-capture-reuse-"));
+const bundleTempDir = mkdtempSync(join(tmpdir(), "hakken-capture-reuse-"));
 const bundlePath = join(bundleTempDir, "check-movement-capture-reuse-cli.bundle.mjs");
 await build({
   bundle: true,

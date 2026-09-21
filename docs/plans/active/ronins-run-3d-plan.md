@@ -363,7 +363,7 @@ Final repository verification:
 - `npm run check` passed: source guards, ESLint, cold TypeScript and all 6,406
   tests in 738 files. ESLint reports one existing `Header.tsx` effect dependency
   warning; the movement tests also retain their existing nested-mock warnings.
-- `SONAE_ARCADE_CHECK=1 npm run build` passed, including production TypeScript
+- `HAKKEN_ARCADE_CHECK=1 npm run build` passed, including production TypeScript
   validation and all 108 static-page generation steps. This built into the
   isolated cache while the normal app remained on port 3000. `npx next typegen`
   then restored the normal generated route-type references without a restart.

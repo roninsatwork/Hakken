@@ -27,8 +27,8 @@ type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: 
 type GlobalSkill = Doc<"agentSkills">;
 type SkillStatus = CompanySkill["status"];
 
-const loadSonaeModal = () => import("@/src/ui/components/feedback/SonaeModal");
-const DeferredSonaeModal = lazy(loadSonaeModal);
+const loadHakkenModal = () => import("@/src/ui/components/feedback/HakkenModal");
+const DeferredHakkenModal = lazy(loadHakkenModal);
 
 export default function CompanyAiSkillsPage() {
   const t = useTranslations("admin.companyDetails.skills");
@@ -141,9 +141,9 @@ export default function CompanyAiSkillsPage() {
             <Button
               variant="brand"
               disabled={skills.results.length >= MAX_SKILLS_PER_COMPANY}
-              onPointerEnter={() => void loadSonaeModal()}
-              onPointerDown={() => void loadSonaeModal()}
-              onFocus={() => void loadSonaeModal()}
+              onPointerEnter={() => void loadHakkenModal()}
+              onPointerDown={() => void loadHakkenModal()}
+              onFocus={() => void loadHakkenModal()}
               onClick={() => {
                 setDialogsActivated(true);
                 setIsImportOpen(true);
@@ -247,9 +247,9 @@ export default function CompanyAiSkillsPage() {
               <WriteButton
                 type="button"
                 aria-label={t("removeAria", { name: skill.name })}
-                onPointerEnter={() => void loadSonaeModal()}
-                onPointerDown={() => void loadSonaeModal()}
-                onFocus={() => void loadSonaeModal()}
+                onPointerEnter={() => void loadHakkenModal()}
+                onPointerDown={() => void loadHakkenModal()}
+                onFocus={() => void loadHakkenModal()}
                 onClick={() => {
                   setDialogsActivated(true);
                   setArchiveTarget(skill);
@@ -265,7 +265,7 @@ export default function CompanyAiSkillsPage() {
 
       {dialogsActivated ? (
         <Suspense fallback={null}>
-          <DeferredSonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title={t("addModalTitle")} size="lg">
+          <DeferredHakkenModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title={t("addModalTitle")} size="lg">
         {/* Tick what you want and add it. The previous version made the reader
             select one skill, read a preview of its instructions, confirm, and
             start again for the next one. */}
@@ -342,10 +342,10 @@ export default function CompanyAiSkillsPage() {
             </WriteButton>
           </div>
         </div>
-          </DeferredSonaeModal>
+          </DeferredHakkenModal>
 
 
-          <DeferredSonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModalTitle")} size="sm">
+          <DeferredHakkenModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title={t("removeModalTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
             {t.rich("removeBody", {
@@ -363,7 +363,7 @@ export default function CompanyAiSkillsPage() {
             </WriteButton>
           </div>
         </div>
-          </DeferredSonaeModal>
+          </DeferredHakkenModal>
         </Suspense>
       ) : null}
     </div>

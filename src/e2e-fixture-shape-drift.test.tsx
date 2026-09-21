@@ -113,7 +113,7 @@ function rowsShapeOf(validator: ExportedValidator) {
 }
 
 test("every stand-in answer matches what the real function declares", async () => {
-  document.cookie = "sonae_e2e_auth=super-admin";
+  document.cookie = "hakken_e2e_auth=super-admin";
 
   const undeclared: string[] = [];
   const notPaged: string[] = [];
@@ -136,9 +136,9 @@ test("every stand-in answer matches what the real function declares", async () =
 
     // Company billing is deliberately absent for platform operators. Compare
     // its populated answer using the company role that actually opens it.
-    if (fullPath === "billing:getStatus") document.cookie = "sonae_e2e_auth=company-admin";
+    if (fullPath === "billing:getStatus") document.cookie = "hakken_e2e_auth=company-admin";
     const value = fixtureValue(fullPath, paged);
-    document.cookie = "sonae_e2e_auth=super-admin";
+    document.cookie = "hakken_e2e_auth=super-admin";
     // `undefined` is how the stand-in spells "still loading", which no
     // declaration describes and nothing can be concluded from.
     if (value === undefined) return;

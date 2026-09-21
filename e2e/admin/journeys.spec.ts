@@ -46,6 +46,6 @@ test.describe("Super admin browser journeys", () => {
 
     await expect(page.getByText(/Edit Protocol Identity/i)).toBeVisible();
     await expect(page.getByPlaceholder(/John Doe/i)).toHaveValue("E2E User");
-    await expect(page.getByPlaceholder(/john@sonae\.ai/i)).toHaveValue("user.e2e@example.com");
+    await expect(page.getByPlaceholder(/john@hakken\.ai/i)).toHaveValue("user.e2e@example.com");
   });
 });

@@ -49,7 +49,7 @@ export default function WidgetSandboxPresentation({
             The ultimate layer for <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-blue-500">enterprise orchestration.</span>
           </h1>
           <p className="text-lg text-[#666] dark:text-[#888] leading-relaxed mt-4">
-            This is a simulated Sandbox Environment hosted safely inside Sonae. The external widget loader script has been automatically injected into this page&apos;s DOM.
+            This is a simulated Sandbox Environment hosted safely inside Hakken. The external widget loader script has been automatically injected into this page&apos;s DOM.
           </p>
 
           {actions}
@@ -61,7 +61,7 @@ export default function WidgetSandboxPresentation({
             <Activity className="w-6 h-6 text-brand" />
             <h3 className="font-bold text-lg">Real-time Synchronization</h3>
             <p className="text-[14px] text-[#666] dark:text-[#999] leading-relaxed">
-              Observe how the Sonae widget handles immediate websocket upgrades without disrupting the host thread.
+              Observe how the Hakken widget handles immediate websocket upgrades without disrupting the host thread.
             </p>
           </div>
           <div className="p-8 rounded-[24px] bg-white dark:bg-card border border-black/5 dark:border-white/5 shadow-sm flex flex-col gap-4">

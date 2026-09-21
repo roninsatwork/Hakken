@@ -29,7 +29,7 @@ import { appError } from "./utils/appError";
 const RESEARCH_CONNECTOR_KEY = "sales-customer-research";
 const MARKET_DISCOVERY_CONNECTOR_KEY = "sales-market-discovery";
 const OPPORTUNITY_CONNECTOR_KEY = "sales-opportunity-report";
-const WEB_READER_CONNECTOR_KEY = "sonae-firecrawl";
+const WEB_READER_CONNECTOR_KEY = "hakken-firecrawl";
 
 const WEB_READER_MAPPING = "web.scrape";
 

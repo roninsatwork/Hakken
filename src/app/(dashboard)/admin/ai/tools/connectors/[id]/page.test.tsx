@@ -40,10 +40,10 @@ vi.mock("@/src/context/ToastContext", () => ({
 const baseDetails = {
   connector: {
     _id: "connector_1",
-    key: "sonae-knowledge",
+    key: "hakken-knowledge",
     // Deliberately stale: the name and description are copied into the install
     // row at install time and never updated afterwards.
-    name: "Sonae Knowledge",
+    name: "Hakken Knowledge",
     description: "Search approved tenant knowledge through the governed RAG path.",
     configuredSecretRefs: [],
     enabledToolMappings: ["knowledge.search"],
@@ -52,7 +52,7 @@ const baseDetails = {
     companyId: undefined,
   },
   definition: {
-    key: "sonae-knowledge",
+    key: "hakken-knowledge",
     name: "Knowledge search",
     description: "Lets an agent search the documents you have uploaded, and quote from them.",
     requiredSecretRefs: [] as string[],

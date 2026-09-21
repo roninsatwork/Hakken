@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { EXPECTED_RETENTION_DAYS } from "@/convex/governanceDashboardService";
 import { AlertTriangle, Clock, Loader2, Play, Square } from "lucide-react";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import type { PurgeConfigMap, PurgePipelineConfig, PurgePipelineKey } from "./types";
@@ -68,7 +68,7 @@ export function RetentionRuleDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={configModalOpen}
         onClose={closeConfigModal}
         title={configModalPipeline ? t("purges.modals.config.title", { category: t(`purges.categories.${configModalPipeline}.title`) }) : ""}
@@ -216,9 +216,9 @@ export function RetentionRuleDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={confirmModalOpen}
         onClose={closeConfirmModal}
         title={t("purges.modals.confirm.title")}
@@ -256,9 +256,9 @@ export function RetentionRuleDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={cancelModalOpen}
         onClose={closeCancelModal}
         title={t("purges.modals.cancelConfirm.title")}
@@ -294,7 +294,7 @@ export function RetentionRuleDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

@@ -9,7 +9,7 @@ import { writeProvenance } from "./framework-snapshot.mjs";
 const MARKER = /^\s*(?:\/\/|\{\/\*|<!--)\s*template:remove:(start|end)(?:[ \t]+([A-Za-z0-9_,]+))?/;
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".md"]);
 const EXCLUDED_DIRS = new Set([
-  "node_modules", ".git", ".sonae", ".next", ".next-arcade", ".claude", ".codex", ".agents", ".agent",
+  "node_modules", ".git", ".hakken", ".next", ".next-arcade", ".claude", ".codex", ".agents", ".agent",
   ".auth", ".vercel", ".vscode", ".idea", ".npm-cache", "tmp", "coverage", "out",
   "build", "dist", "playwright-report", "test-results", "dev-export", "output",
 ]);
@@ -19,8 +19,8 @@ const FRAMEWORK_PATHS = [
   "scripts/product-recipe.mjs", "scripts/product-recipes/**",
   "scripts/framework-snapshot.mjs", "scripts/framework-update.mjs", "scripts/framework-updates/**",
   MANIFEST, "package.json", "package-lock.json", "code-ratchets.json", "convex/schema.ts",
-  "sonae.product.json", "product.identity.ts", "scripts/init-product.mjs",
-  "sonae.billing.json", "billing.config.ts", "scripts/billing-config.mjs",
+  "hakken.product.json", "product.identity.ts", "scripts/init-product.mjs",
+  "hakken.billing.json", "billing.config.ts", "scripts/billing-config.mjs",
   "convex/billing*", "convex/convex.config.ts",
   "src/app/(dashboard)/app/settings/billing/**", "src/app/(dashboard)/app/settings/_components/BillingLink.tsx",
   "scripts/product-config.mjs", "scripts/provider-requirements.mjs",
@@ -444,7 +444,7 @@ export function buildTemplate(root, keep, out) {
   if (!plan.errors.length) plan.errors.push(...checkReferences(root, plan));
   if (plan.errors.length) return { ...plan, copied: 0, changed: 0 };
   fs.mkdirSync(path.dirname(resolvedOut), { recursive: true });
-  const stage = fs.mkdtempSync(path.join(path.dirname(resolvedOut), ".sonae-template-"));
+  const stage = fs.mkdtempSync(path.join(path.dirname(resolvedOut), ".hakken-template-"));
   try {
     for (const relative of plan.files) {
       const source = path.join(root, relative);

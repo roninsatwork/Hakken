@@ -12,7 +12,7 @@ BLUE="\033[34m"
 YELLOW="\033[33m"
 RESET="\033[0m"
 
-echo "${BOLD}${BLUE}🔱 Sonae Bespoke Installation Orchestrator${RESET}"
+echo "${BOLD}${BLUE}🔱 Hakken Bespoke Installation Orchestrator${RESET}"
 echo "-----------------------------------------------"
 
 # 1. Inputs
@@ -28,7 +28,7 @@ read "RESEND_API_KEY?Enter Resend API Key: "
 read "RESEND_FROM?Enter Resend From Email (e.g. ai@acme.com): "
 read "SUPER_ADMIN_EMAIL?Enter the client's super-admin email (first sign-in with this address becomes SUPER_ADMIN): "
 
-PROJECT_ID="sonae-prod-$CLIENT_NAME"
+PROJECT_ID="hakken-prod-$CLIENT_NAME"
 CONVEX_SITE_URL="${CONVEX_URL/convex.cloud/convex.site}" 
 
 # 2. GCP Provisioning

@@ -20,7 +20,7 @@ export type BillingConfig = {
 };
 
 export function parseBillingConfig(input: unknown): BillingConfig {
-  const fail = (): never => { throw new Error("Invalid sonae.billing.json; see the Stripe billing setup guide."); };
+  const fail = (): never => { throw new Error("Invalid hakken.billing.json; see the Stripe billing setup guide."); };
   if (!input || typeof input !== "object" || Array.isArray(input)) return fail();
   const c = input as Record<string, unknown>;
   const keys = ["schemaVersion", "enabled", "provider", "mode", "appOrigin", "portalConfigurationId", "recoveryPortalConfigurationId", "graceDays", "quotaWindow", "offers"];

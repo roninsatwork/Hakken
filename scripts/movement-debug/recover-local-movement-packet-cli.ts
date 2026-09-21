@@ -36,7 +36,7 @@ function printHelp() {
   console.log(`Recover a browser-downloaded movement packet as a Replay/Game harness session.
 
 Usage:
-  npm run movement:replay:recover-local-packet -- --packet ~/Downloads/sonae-movement-schema-v3-*.json --out tmp/movement-replay-lab/recovered-session.json
+  npm run movement:replay:recover-local-packet -- --packet ~/Downloads/hakken-movement-schema-v3-*.json --out tmp/movement-replay-lab/recovered-session.json
 
 The input is derived tracking JSON only. This command does not upload, move, or delete it.
 `);

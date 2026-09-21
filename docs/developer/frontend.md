@@ -79,7 +79,7 @@ name, and is held to the rule like any other.
 
 Prefer existing shared components before creating page-local variants:
 
-- Feedback: `SonaeModal`, `SonaeEmptyState`, admin modal and confirmation wrappers.
+- Feedback: `HakkenModal`, `HakkenEmptyState`, admin modal and confirmation wrappers.
 - Admin tables and layouts: `src/app/(dashboard)/admin/_components/**` — genuinely
   admin-only parts. A `/app` route must not import from here, and ESLint now
   refuses it: a customer-facing page reaching into an admin folder is the
@@ -90,7 +90,7 @@ Prefer existing shared components before creating page-local variants:
   `AuditLogsTable` and the activity chart parts). These moved out of
   `admin/_components` on 2026-08-25 because the `/app` governance pages had been
   reaching in for them.
-- Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/SonaeMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
+- Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/HakkenMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
 - Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
   `src/ui/components/charts/ChartTooltip.tsx`.
 - Workflows: `WorkflowSidebar`, `ConfigDrawer` and the three files holding its node-type field sets (`ConfigDrawerEntryPanels`, `ConfigDrawerDataPanels`, `ConfigDrawerHumanPanels`), `AgentEditorModal`, node components, and workflow types.
@@ -101,7 +101,7 @@ Prefer existing shared components before creating page-local variants:
 
 The movement demo's generated `gltfjsx` avatar components live inside the demo boundary; keep them there. The authenticated dashboard header is `src/ui/components/layout/Header.tsx`; the old public-shell `header.tsx`/`footer.tsx` pair no longer exists.
 
-Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use `SonaeModal` or inline feedback patterns.
+Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use `HakkenModal` or inline feedback patterns.
 
 ## Chart Exporting And The Tailwind v4 Oklab Constraint
 

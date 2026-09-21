@@ -38,7 +38,7 @@ const tools = [
 
 const marketplace = [
   {
-    key: "sonae-knowledge",
+    key: "hakken-knowledge",
     name: "Knowledge search",
     description: "Lets an agent search the documents you have uploaded.",
     category: "KNOWLEDGE",
@@ -114,7 +114,7 @@ describe("ToolsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Add/ }));
 
     await waitFor(() => {
-      expect(mutationMock).toHaveBeenCalledWith({ key: "sonae-knowledge" });
+      expect(mutationMock).toHaveBeenCalledWith({ key: "hakken-knowledge" });
     });
   });
 

@@ -19,7 +19,7 @@ export const FALLBACK_ASSISTANT_SYSTEM_PROMPT = buildFallbackAssistantSystemProm
 type AssistantRule = Pick<Doc<"aiRules">, "priority" | "trigger" | "instruction">;
 type ConversationMessage = Pick<Doc<"messages">, "role" | "content">;
 
-export const ASK_SONAE_PLATFORM_SAFETY_CONTRACT = `ASK SONAE PLATFORM SAFETY CONTRACT:
+export const ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT = `ASK HAKKEN PLATFORM SAFETY CONTRACT:
 
 Instruction priority, highest to lowest:
 1. Platform safety, tenant isolation, backend authorization, and tool-execution policy.
@@ -82,7 +82,7 @@ export function buildAssistantSystemInstruction(args: {
       ? args.globalSystemPrompt
       : buildFallbackAssistantSystemPrompt(args.platformName);
 
-  let instruction = `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
+  let instruction = `${ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT}
 
 ====================
 CONFIGURED PLATFORM BEHAVIOR:
@@ -182,7 +182,7 @@ export function buildAgentSystemInstruction(
       ? agentSystemPrompt
       : `You are an autonomous ${resolvePlatformName(platformName)} Agent. Use available tools to fulfill user requests.`;
 
-  let instruction = `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
+  let instruction = `${ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT}
 
 ====================
 CONFIGURED AGENT BEHAVIOR:

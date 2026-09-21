@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Loader2, Play, Trash2 } from "lucide-react";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type DialogCopy = {
@@ -39,7 +39,7 @@ export function EvalDialogs({
     <>
       {/* Running is real provider work, so the dialog says what it will do
           before it does it. */}
-      <SonaeModal isOpen={batch.open} onClose={onBatchClose} title={batch.title} size="sm">
+      <HakkenModal isOpen={batch.open} onClose={onBatchClose} title={batch.title} size="sm">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-[13px] leading-relaxed text-secondary">
             <p>{batch.body}</p>
@@ -70,9 +70,9 @@ export function EvalDialogs({
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={deletion.open}
         onClose={onDeleteClose}
         title={deletion.title}
@@ -104,7 +104,7 @@ export function EvalDialogs({
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

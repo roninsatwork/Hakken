@@ -112,7 +112,7 @@ export function ProductHero() {
               <i />
               <i />
             </span>
-            <span className="ps-ws-name">Sonae · Acme workspace</span>
+            <span className="ps-ws-name">Hakken · Acme workspace</span>
             <span className="ps-ws-user">JS</span>
           </div>
 

@@ -104,7 +104,7 @@ export function buildReplyMime(args: {
  * parts travel base64-encoded, and no base64 line can ever begin with the
  * "--" that marks a boundary.
  */
-const ALTERNATIVE_BOUNDARY = "=_sonae_alternative";
+const ALTERNATIVE_BOUNDARY = "=_hakken_alternative";
 
 /** &, <, > and " made harmless before prose is placed into HTML. */
 function escapeHtml(text: string) {

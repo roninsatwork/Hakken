@@ -88,7 +88,7 @@ export const dispatchInternal = internalAction({
 
     const attemptNumber = delivery.attemptCount + 1;
     try {
-      // The receiver had no way to tell a delivery from Sonae apart from
+      // The receiver had no way to tell a delivery from Hakken apart from
       // anyone else posting the same shape at the same URL.
       const signatureHeaders = await buildSignatureHeaders({
         secret: args.signingSecret,

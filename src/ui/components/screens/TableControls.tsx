@@ -38,7 +38,7 @@ export function TableSearchInput({
   clearLabel: string;
   /**
    * "boxed" sits above a table, where it needs an edge of its own to read as a
-   * control. "underline" sits at the head of a reading column — Ask Sonae's
+   * control. "underline" sits at the head of a reading column — Ask Hakken's
    * conversation list and the chat logs that mirror it — where a second border
    * inside the panel is the thing that makes a screen look busy.
    */

@@ -107,12 +107,12 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
   test("rendered player bones follow mirror-side arms, head pitch, side bend, and raised legs", async ({ page }) => {
     const readPlayerDebug = async () => {
       await page.waitForFunction(() => Boolean(
-        (window as Window & { __sonaeMovementAvatarDebug?: { player?: { avatarVisual?: unknown } } })
-          .__sonaeMovementAvatarDebug?.player?.avatarVisual,
+        (window as Window & { __hakkenMovementAvatarDebug?: { player?: { avatarVisual?: unknown } } })
+          .__hakkenMovementAvatarDebug?.player?.avatarVisual,
       ), undefined, { timeout: 30000 });
       return page.evaluate(() => (
-        (window as Window & { __sonaeMovementAvatarDebug?: { player?: Record<string, unknown> } })
-          .__sonaeMovementAvatarDebug?.player
+        (window as Window & { __hakkenMovementAvatarDebug?: { player?: Record<string, unknown> } })
+          .__hakkenMovementAvatarDebug?.player
       ));
     };
 

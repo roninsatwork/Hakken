@@ -40,7 +40,7 @@ vi.mock("@/src/context/SystemSettingsContext", () => ({
     diagnosticRoutingEnabled: false,
     logoUrlDark: "",
     logoUrlLight: "",
-    platformName: "Sonae",
+    platformName: "Hakken",
   }),
 }));
 

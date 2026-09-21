@@ -100,7 +100,7 @@ Switching an agent from draft to live is guarded in `agents.ts`. Only four thing
 
 Agent admin pages use shared admin components for tables, load-more footers, save controls, modals, and detail layouts. Keep the 15-row admin pagination standard by using `ADMIN_PAGE_SIZE` for agent tables and review queues unless there is a specific product requirement.
 
-Avoid native browser dialogs. Existing pages use `SonaeModal`, `AdminConfirmationModal`, inline feedback banners, and admin save controls. Keep locale parity for any user-visible text in `messages/en.json` and `messages/it.json`; some newer agent screens still contain inline English text, so prefer reducing drift when touching those files.
+Avoid native browser dialogs. Existing pages use `HakkenModal`, `AdminConfirmationModal`, inline feedback banners, and admin save controls. Keep locale parity for any user-visible text in `messages/en.json` and `messages/it.json`; some newer agent screens still contain inline English text, so prefer reducing drift when touching those files.
 
 Avatar uploads in the settings page use `api.users.generateUploadUrl`, `validateUploadFile`, `validateStoredUpload`, and image metadata validation before storing the resolved URL. Do not bypass upload policy when adding new agent media fields.
 

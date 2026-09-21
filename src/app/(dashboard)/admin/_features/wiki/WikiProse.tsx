@@ -14,7 +14,7 @@ export type ResolvedWikiLink = {
   excerpt: string;
 };
 
-const WIKI_SCHEME = "sonae-wiki:";
+const WIKI_SCHEME = "hakken-wiki:";
 
 /**
  * A wiki page rendered for READING (reading-wiki designs, screen 1):

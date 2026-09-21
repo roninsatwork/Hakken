@@ -70,7 +70,7 @@ function assertInviteCanProvisionUser(invite: Doc<"invitations">, now: number) {
   }
 }
 
-export async function createOrUpdateSonaeAuthUser(
+export async function createOrUpdateHakkenAuthUser(
   ctx: AuthProvisioningCtx,
   args: CreateOrUpdateUserArgs,
   now = Date.now()

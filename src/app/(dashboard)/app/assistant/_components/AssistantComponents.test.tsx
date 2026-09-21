@@ -26,7 +26,7 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
-vi.mock("@/src/ui/components/feedback/SonaeModal", () => ({
+vi.mock("@/src/ui/components/feedback/HakkenModal", () => ({
   default: ({
     children,
     isOpen,
@@ -222,7 +222,7 @@ describe("assistant shared components", () => {
         onClearUploadError={onClearUploadError}
         onPermissionErrorClose={onPermissionErrorClose}
         permissionError
-        platformName="Sonae"
+        platformName="Hakken"
         t={t}
         tCommon={tCommon}
         uploadError="PDF only"
@@ -232,7 +232,7 @@ describe("assistant shared components", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear Alert" }));
 
-    expect(screen.getByText("Allow Sonae")).toBeInTheDocument();
+    expect(screen.getByText("Allow Hakken")).toBeInTheDocument();
     expect(screen.getByText("PDF only")).toBeInTheDocument();
     expect(onPermissionErrorClose).toHaveBeenCalled();
     expect(onClearUploadError).toHaveBeenCalled();
@@ -269,7 +269,7 @@ describe("assistant shared components", () => {
       onThinkingDropdownChange: vi.fn(),
       onToggleRecording: vi.fn(),
       pendingFiles: [new File(["brief"], "brief.pdf")],
-      platformName: "Sonae",
+      platformName: "Hakken",
       selectedModelData: models[0],
       selectedThinkingId: "LOW" as const,
       setContent: vi.fn(),

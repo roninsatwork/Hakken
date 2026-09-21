@@ -25,7 +25,7 @@ export function GET(request: NextRequest) {
   const response = NextResponse.redirect(
     new URL(sanitizeAuthRedirect(requestedRedirect), `${protocol}://${host}`),
   );
-  response.cookies.set("sonae_e2e_auth", role, {
+  response.cookies.set("hakken_e2e_auth", role, {
     httpOnly: false,
     path: "/",
     sameSite: "lax",

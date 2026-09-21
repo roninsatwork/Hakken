@@ -461,7 +461,7 @@ describe("agent runtime", () => {
       userId,
     });
 
-    // Scheduled work appearing in Ask Sonae would read as the agent speaking to
+    // Scheduled work appearing in Ask Hakken would read as the agent speaking to
     // somebody unprompted. The answer lives on the run instead.
     const messages = await t.run(async (ctx) => await ctx.db.query("messages").collect());
     expect(messages).toHaveLength(0);
@@ -1528,7 +1528,7 @@ describe("human-in-the-loop approval", () => {
    */
   async function seedApprovalReviewer(t: TestConvex) {
     return await t.run(async (ctx) => await ctx.db.insert("users", {
-      email: "reviewer@sonae.test",
+      email: "reviewer@hakken.test",
       role: "SUPER_ADMIN",
       createdAt: Date.now(),
     }));
@@ -1833,7 +1833,7 @@ describe("a batch of approvals", () => {
       (await ctx.db.query("agentRunApprovals").collect())
         .sort((left, right) => left.requestedAt - right.requestedAt));
     const reviewerId = await t.run(async (ctx) => await ctx.db.insert("users", {
-      email: "reviewer@sonae.test",
+      email: "reviewer@hakken.test",
       role: "SUPER_ADMIN",
       createdAt: Date.now(),
     }));
@@ -3419,7 +3419,7 @@ describe("a tool that changes something on a connected server", () => {
     const { approval } = await runUntilServerWriteParks(t, false);
 
     const reviewer = t.withIdentity({ subject: await t.run(async (ctx) =>
-      await ctx.db.insert("users", { email: "reviewer@sonae.test", role: "SUPER_ADMIN" })) });
+      await ctx.db.insert("users", { email: "reviewer@hakken.test", role: "SUPER_ADMIN" })) });
     await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "APPROVED",
@@ -3438,7 +3438,7 @@ describe("a tool that changes something on a connected server", () => {
     const { approval } = await runUntilServerWriteParks(t, false);
 
     const reviewer = t.withIdentity({ subject: await t.run(async (ctx) =>
-      await ctx.db.insert("users", { email: "reviewer@sonae.test", role: "SUPER_ADMIN" })) });
+      await ctx.db.insert("users", { email: "reviewer@hakken.test", role: "SUPER_ADMIN" })) });
     await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",

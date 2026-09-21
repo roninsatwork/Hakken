@@ -52,7 +52,7 @@ files are reintroduced in implementation.
 
 `convex/aiPromptAssembly.ts` owns instruction assembly and prompt-injection hardening:
 
-- `ASK_SONAE_PLATFORM_SAFETY_CONTRACT` is prepended above configurable behavior.
+- `ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT` is prepended above configurable behavior.
 - `buildAssistantSystemInstruction` layers platform safety, configured global prompt, optional company prompt, and active rules.
 - `buildAgentSystemInstruction` layers platform safety, agent prompt, and enabled skill instructions.
 - `buildUntrustedConversationHistory` and `buildUntrustedKnowledgeContext` wrap untrusted context and neutralize delimiter injection.

@@ -39,7 +39,7 @@ because a script passes locally.
 | `npm run check:guards` | Runs the project guard checks as a grouped command. |
 | `npm run check` | Runs environment verification, lint, typecheck, and Vitest. |
 | `npm run gate` | Runs lint, typecheck, unit tests, E2E, coverage, and coverage threshold check. |
-| `npm run setup:validate` | Checks local files/environment against the providers and capabilities in `sonae.product.json`; no network calls. |
+| `npm run setup:validate` | Checks local files/environment against the providers and capabilities in `hakken.product.json`; no network calls. |
 | `npm run verify:deployment` | Reads the selected Convex deployment's environment and checks required key names using the same product rules; `--prod` selects production. |
 
 These npm lifecycle guards run automatically before their matching scripts:

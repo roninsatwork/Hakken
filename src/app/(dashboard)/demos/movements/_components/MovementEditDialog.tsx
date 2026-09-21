@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import {
   ModalField,
   ModalFormActions,
@@ -104,7 +104,7 @@ export default function MovementEditDialog({
   )?.description;
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title="Edit Routine">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title="Edit Routine">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <ModalField
           label="Routine Name"
@@ -165,6 +165,6 @@ export default function MovementEditDialog({
           onCancel={onClose}
         />
       </form>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

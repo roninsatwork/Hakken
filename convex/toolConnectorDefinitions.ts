@@ -179,7 +179,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
-    key: "sonae-firecrawl",
+    key: "hakken-firecrawl",
     name: "Firecrawl",
     description: "Lets an agent read a page on the web and use what it says.",
     category: "KNOWLEDGE",
@@ -220,7 +220,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
-    key: "sonae-knowledge",
+    key: "hakken-knowledge",
     name: "Knowledge search",
     description: "Lets an agent search the documents you have uploaded, and quote from them.",
     category: "KNOWLEDGE",
@@ -249,7 +249,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
-    key: "sonae-company-profile",
+    key: "hakken-company-profile",
     name: "Company profile",
     description: "Lets an agent read and update the company details it is working for.",
     category: "PROFILE",
@@ -277,7 +277,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
-    key: "sonae-tasks",
+    key: "hakken-tasks",
     name: "Tasks",
     description: "Lets an agent leave a job for a person, instead of only writing an answer nobody returns to.",
     category: "PROFILE",

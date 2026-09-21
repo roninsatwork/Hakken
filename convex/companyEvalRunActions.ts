@@ -21,7 +21,7 @@ import { appError } from "./utils/appError";
  * Two things make this a test rather than paperwork, and both were absent before.
  *
  * The answer comes from the **real** company assistant. The question is sent down
- * `generateSonaeResponse`, the same path a customer message takes, so the answer is
+ * `generateHakkenResponse`, the same path a customer message takes, so the answer is
  * produced with the same system prompt, rules, skills, memories and retrieval the
  * live assistant has. The previous batch runner wrote a template string describing
  * the check and then scored that string, so it graded the system's own description
@@ -125,7 +125,7 @@ export const runCompanyCheck = internalAction({
           userId: args.userId,
         });
 
-        await ctx.runAction(internal.aiChat.generateSonaeResponse, {
+        await ctx.runAction(internal.aiChat.generateHakkenResponse, {
           threadId,
           content: evalCase.prompt,
         });

@@ -96,7 +96,7 @@ export default convexAuthNextjsMiddleware(async (request) => {
   }
 
   if (process.env.E2E_AUTH_ENABLED === "1") {
-    const e2eRole = request.cookies.get("sonae_e2e_auth")?.value;
+    const e2eRole = request.cookies.get("hakken_e2e_auth")?.value;
     if (e2eRole) {
       if (isSignInPage(request)) {
         return nextjsMiddlewareRedirect(

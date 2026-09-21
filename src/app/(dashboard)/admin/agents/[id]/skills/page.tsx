@@ -8,7 +8,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Trash2 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { formatDateTime } from "@/src/lib/dates";
@@ -242,7 +242,7 @@ export default function AgentSkillsPage() {
         ]}
       />
 
-      <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title={t("pickerTitle")} size="lg">
+      <HakkenModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title={t("pickerTitle")} size="lg">
         {/* The same tick-list the company screen uses. It replaced a two-pane
             browser that made the reader pick one skill, read a preview of its
             instructions, attach it, and start again for the next. */}
@@ -311,9 +311,9 @@ export default function AgentSkillsPage() {
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
-      <SonaeModal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t("removeTitle")} size="sm">
+      <HakkenModal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t("removeTitle")} size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2 text-[13px] text-secondary">
           <p>
             {t("removeBody", { name: removeTarget?.skill.name ?? "" })}
@@ -332,7 +332,7 @@ export default function AgentSkillsPage() {
             </WriteButton>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </div>
   );
 }

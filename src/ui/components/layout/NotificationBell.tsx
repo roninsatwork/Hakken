@@ -18,14 +18,14 @@ const NOTIFICATION_PAGE_SIZE = 15;
 /**
  * The platform's one in-app voice.
  *
- * Before this the only way Sonae could reach anybody was email, so a task
+ * Before this the only way Hakken could reach anybody was email, so a task
  * assigned or a run that failed had nowhere to land inside the product.
  *
  * The count is absent at zero rather than shown as a grey nought — the same
  * rule the approvals badge in the sidebar already follows, because a badge
  * that is always there stops being read.
  *
- * Deliberately not built on `SonaeModal`: that component has no focus trap,
+ * Deliberately not built on `HakkenModal`: that component has no focus trap,
  * no Escape handler and no dialog role. This panel handles its own Escape
  * and outside-press, and is labelled.
  */

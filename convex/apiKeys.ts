@@ -81,14 +81,14 @@ async function digestApiKey(value: string) {
 
 function getKeyPrefixFromSecret(value: string) {
   const parts = value.trim().split("_");
-  return parts.length >= 3 && parts[0] === "sonae" && parts[1]
-    ? `sonae_${parts[1]}`
+  return parts.length >= 3 && parts[0] === "hakken" && parts[1]
+    ? `hakken_${parts[1]}`
     : "";
 }
 
 async function buildOneTimeApiKey() {
   const secret = `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
-  const keyPrefix = `sonae_${secret.slice(0, 12)}`;
+  const keyPrefix = `hakken_${secret.slice(0, 12)}`;
   const apiKey = `${keyPrefix}_${secret.slice(12)}`;
   const keyDigest = await digestApiKey(apiKey);
   return { apiKey, keyPrefix, keyDigest };

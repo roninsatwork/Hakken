@@ -73,7 +73,7 @@ function validReport(deviceClass) {
 }
 
 function temporaryDirectory() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-device-ingest-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-device-ingest-"));
   temporaryDirectories.push(directory);
   return directory;
 }
@@ -86,25 +86,25 @@ describe("dense capture device-report ingest", () => {
   it("selects the newest non-empty report for both required device classes", () => {
     const report = planDenseCaptureDeviceReportIngest({
       entries: [
-        entry("sonae-dense-device-ipad-1.json", 1),
-        entry("sonae-dense-device-ipad-2.json", 2),
-        entry("sonae-dense-device-older-laptop-3.json", 3),
+        entry("hakken-dense-device-ipad-1.json", 1),
+        entry("hakken-dense-device-ipad-2.json", 2),
+        entry("hakken-dense-device-older-laptop-3.json", 3),
         entry("unrelated.json", 4),
       ],
     });
 
     expect(report).toMatchObject({ failures: [], passed: true });
     expect(report.selected).toEqual(expect.arrayContaining([
-      expect.objectContaining({ deviceClass: "ipad", name: "sonae-dense-device-ipad-2.json" }),
-      expect.objectContaining({ deviceClass: "older-laptop", name: "sonae-dense-device-older-laptop-3.json" }),
+      expect.objectContaining({ deviceClass: "ipad", name: "hakken-dense-device-ipad-2.json" }),
+      expect.objectContaining({ deviceClass: "older-laptop", name: "hakken-dense-device-older-laptop-3.json" }),
     ]));
   });
 
   it("copies valid reports without moving or overwriting the originals", () => {
     const sourceDir = temporaryDirectory();
     const destinationDir = path.join(temporaryDirectory(), "private-reports");
-    const ipadName = "sonae-dense-device-ipad-1.json";
-    const laptopName = "sonae-dense-device-older-laptop-2.json";
+    const ipadName = "hakken-dense-device-ipad-1.json";
+    const laptopName = "hakken-dense-device-older-laptop-2.json";
     fs.writeFileSync(path.join(sourceDir, ipadName), JSON.stringify(validReport("ipad")));
     fs.writeFileSync(path.join(sourceDir, laptopName), JSON.stringify(validReport("older-laptop")));
 
@@ -125,7 +125,7 @@ describe("dense capture device-report ingest", () => {
   it("rejects missing consent, incomplete packs, and invalid newest evidence", () => {
     const sourceDir = temporaryDirectory();
     const destinationDir = path.join(temporaryDirectory(), "private-reports");
-    fs.writeFileSync(path.join(sourceDir, "sonae-dense-device-ipad-1.json"), "{}");
+    fs.writeFileSync(path.join(sourceDir, "hakken-dense-device-ipad-1.json"), "{}");
 
     expect(ingestDenseCaptureDeviceReports({
       confirmLocalDeviceReportCopy: false,

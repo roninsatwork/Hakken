@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ScheduleErrorDialog } from "./ScheduleErrorDialog";
 
-vi.mock("@/src/ui/components/feedback/SonaeModal", () => ({
+vi.mock("@/src/ui/components/feedback/HakkenModal", () => ({
   default: ({
     children,
     onClose,

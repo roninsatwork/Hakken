@@ -315,7 +315,7 @@ export default function AppDashboardPage() {
         <div className="relative grid items-center gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14">
           <div className="flex flex-col items-start gap-5">
             <Eyebrow brand>{t("hero.eyebrow")}</Eyebrow>
-            <h1 className="sonae-display sonae-hero-h1 text-foreground">{t("hero.title")}</h1>
+            <h1 className="sonae-display hakken-hero-h1 text-foreground">{t("hero.title")}</h1>
             <p className="max-w-[46ch] text-[clamp(15px,1.25vw,18px)] font-light leading-[1.5] text-secondary">
               {t("hero.body")}
             </p>

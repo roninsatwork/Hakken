@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Bot, BrainCircuit, Globe, Key, Settings2, Database, Code2, Wand2, Loader2 } from "lucide-react";
@@ -328,7 +328,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
 	  return (
       <>
-	    <SonaeModal size="xl" isOpen={!!node} onClose={onClose} title={formData.name || t('configureAgent')}>
+	    <HakkenModal size="xl" isOpen={!!node} onClose={onClose} title={formData.name || t('configureAgent')}>
 	      {isLoading ? (
 	        <div className="py-8 text-center text-muted text-sm border border-border-dim rounded-[12px]">{t('loading')}</div>
 	      ) : (
@@ -672,8 +672,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
           </div>
 	        </form>
 	      )}
-	    </SonaeModal>
-      <SonaeModal
+	    </HakkenModal>
+      <HakkenModal
         isOpen={isPromoteModalOpen}
         onClose={() => setIsPromoteModalOpen(false)}
         title={t('promote')}
@@ -700,7 +700,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
             </button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
       </>
 	  );
 }

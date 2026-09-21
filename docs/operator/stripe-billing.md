@@ -1,7 +1,7 @@
 # Stripe billing after cloning
 
 Hakken includes optional company subscription billing. It ships disabled in
-[`sonae.billing.json`](../../sonae.billing.json). Cloning, exporting and product
+[`hakken.billing.json`](../../hakken.billing.json). Cloning, exporting and product
 initialisation create no Stripe customers, checkout sessions or charges.
 Arcade remains part of the framework.
 
@@ -143,7 +143,7 @@ Use a separate test deployment before configuring a production deployment.
 
 ### Configuration ownership
 
-`sonae.billing.json` is the non-secret **clone/deployment default**. Once a super
+`hakken.billing.json` is the non-secret **clone/deployment default**. Once a super
 admin saves settings or a price mapping, the `billingSettings` record becomes
 the runtime authority. Checkout, portal creation, reconciliation, webhook gating,
 plan deletion and paid access all read that same configuration. Later JSON edits

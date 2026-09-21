@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatModelTag } from "../_components/modelAdminUtils";
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 
 type DefaultModelConfirmationProps = {
   allJobs: readonly string[];
@@ -28,7 +28,7 @@ export default function DefaultModelConfirmation({
   const t = useTranslations("ai.models.detail");
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title={t("modalTitle")} size="sm">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title={t("modalTitle")} size="sm">
       <div className="flex flex-col gap-5 px-1 pb-2">
         <p className="text-[13px] leading-relaxed text-secondary">
           {t.rich("modalWillHandle", {
@@ -62,6 +62,6 @@ export default function DefaultModelConfirmation({
           </Button>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

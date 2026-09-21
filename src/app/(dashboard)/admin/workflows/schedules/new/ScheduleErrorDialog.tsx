@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 
 type ScheduleErrorDialogProps = {
   dismissLabel: string;
@@ -17,7 +17,7 @@ export function ScheduleErrorDialog({
   title,
 }: ScheduleErrorDialogProps) {
   return (
-    <SonaeModal isOpen onClose={onClose} title={title}>
+    <HakkenModal isOpen onClose={onClose} title={title}>
       <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
         <p>{message}</p>
       </div>
@@ -31,6 +31,6 @@ export function ScheduleErrorDialog({
           {dismissLabel}
         </Button>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

@@ -39,7 +39,7 @@ describe("the admin's view of a company's work", () => {
           status: "COMPLETED",
           turns: [
             { role: "CALLER", text: "Are you open on Saturdays?", at: now - 60_000 },
-            { role: "SONAE", text: "We are, nine until one.", at: now - 55_000 },
+            { role: "HAKKEN", text: "We are, nine until one.", at: now - 55_000 },
           ],
           summary: "Asked about Saturday opening.",
           startedAt: now - 90_000,

@@ -51,7 +51,7 @@ export async function askCore(
     ...(args.companyId ? { companyId: args.companyId } : {}),
     userId: args.userId,
   });
-  await ctx.runAction(internal.aiChat.generateSonaeResponse, {
+  await ctx.runAction(internal.aiChat.generateHakkenResponse, {
     threadId,
     content: args.question.slice(0, 500),
   });

@@ -95,7 +95,7 @@ model hears, it transcribes at its own discretion. The client hook
 (`src/hooks/useVoiceToText.ts`) sets no `lang` anywhere.
 
 **No reply-language rule exists.** Nothing in the prompt assembly for
-`generateSonaeResponse` (`convex/aiChat.ts:154`) mentions language.
+`generateHakkenResponse` (`convex/aiChat.ts:154`) mentions language.
 
 **Messages carry no language field** (`messages`,
 `convex/schema.ts:1930-1971`) — and this plan does not add one; language
@@ -142,7 +142,7 @@ voice for it.
 - The voice session passes the detected code with `sendMessage`, and the
   prompt assembly for voice-session turns gains one instruction: reply in
   the language of the user's message. (Anchor the change where
-  `generateSonaeResponse` builds its system content, `convex/aiChat.ts:154` —
+  `generateHakkenResponse` builds its system content, `convex/aiChat.ts:154` —
   scoped so typed chat behaviour is untouched.)
 - `synthesizeSpeech` accepts the language code and picks the voice from
   the config map (commitment 3).

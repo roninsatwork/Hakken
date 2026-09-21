@@ -32,7 +32,7 @@ vi.mock("./aiChat", async () => {
   const { internalAction } = await import("./_generated/server");
   const { v } = await import("convex/values");
   return {
-    generateSonaeResponse: internalAction({
+    generateHakkenResponse: internalAction({
       args: {
         threadId: v.id("threads"),
         content: v.string(),

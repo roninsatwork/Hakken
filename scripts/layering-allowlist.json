@@ -50,7 +50,7 @@
     "src/ui/components/charts/ChartExportWrapper.tsx",
     "src/ui/components/chat/ChatHistoryList.tsx",
     "src/ui/components/chat/ChatInput.tsx",
-    "src/ui/components/feedback/SonaeModal.tsx",
+    "src/ui/components/feedback/HakkenModal.tsx",
     "src/ui/components/layout/FluidWorkspace.tsx",
     "src/ui/components/layout/SidebarNavigation.tsx",
     "src/ui/components/workflows/ConfigDrawer.tsx",

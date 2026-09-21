@@ -33,7 +33,7 @@ export function WhoItsFor() {
           </div>
           <div>
             <p className="ps-who-lede" data-reveal>
-              Sonae suits anyone who wants a robust MVP or a finished product in
+              Hakken suits anyone who wants a robust MVP or a finished product in
               the market sooner, and for less than a bespoke build would cost,
               whether that is a founder proving an idea before raising or a
               business that has outgrown the spreadsheets it runs on or a team
@@ -69,9 +69,9 @@ export function WhoItsFor() {
             </div>
           </div>
 
-          <div className="ps-who-col ps-who-col-sonae" data-reveal data-reveal-delay="0.12">
+          <div className="ps-who-col ps-who-col-hakken" data-reveal data-reveal-delay="0.12">
             <div className="ps-who-col-head">
-              <span className="ps-who-col-title">The same product, on Sonae</span>
+              <span className="ps-who-col-title">The same product, on Hakken</span>
               <span className="ps-who-col-note">One thing to build</span>
             </div>
             <div className="ps-who-stack">

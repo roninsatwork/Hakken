@@ -22,12 +22,12 @@ import {
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import Header from "@/src/ui/components/layout/Header";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { LAYER } from "@/src/ui/lib/layers";
 import dynamic from "next/dynamic";
 
-const SonaeMarkdown = dynamic(() =>
-  import("@/src/ui/components/chat/SonaeMarkdown").then((module) => module.SonaeMarkdown)
+const HakkenMarkdown = dynamic(() =>
+  import("@/src/ui/components/chat/HakkenMarkdown").then((module) => module.HakkenMarkdown)
 );
 
 /**
@@ -343,7 +343,7 @@ function RunBar({ report }: { report: Report | null }) {
 function EmptyState({ failureReason }: { failureReason: string | null }) {
   const t = useTranslations("salesData.opportunityReport");
   return (
-    <SonaeEmptyState
+    <HakkenEmptyState
       icon={Sparkles}
       title={t("emptyTitle")}
       description={failureReason ? t("failed", { reason: failureReason }) : t("emptyBody")}
@@ -1300,7 +1300,7 @@ function AgentSummary({ summary, exporting }: { summary: string; exporting: bool
       </div>
       {expanded && (
         <div className="text-secondary text-[14px] leading-relaxed max-w-4xl prose prose-invert prose-brand mt-4">
-          <SonaeMarkdown content={summary} />
+          <HakkenMarkdown content={summary} />
         </div>
       )}
     </div>

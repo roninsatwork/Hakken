@@ -15,9 +15,9 @@ import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 /**
- * One voice for everywhere Sonae speaks.
+ * One voice for everywhere Hakken speaks.
  *
- * Ask Sonae's voice overlay, the phone line and the reception screen all
+ * Ask Hakken's voice overlay, the phone line and the reception screen all
  * read the same workspace setting, so the choice made here is the voice at
  * every door at once. Each row can be heard before it is chosen — the
  * preview is the production loop itself (the real relay, the real model,

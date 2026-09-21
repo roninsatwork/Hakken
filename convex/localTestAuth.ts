@@ -27,19 +27,19 @@ const LOCAL_TEST_USERS: Record<
   }
 > = {
   "super-admin": {
-    email: "local-super-admin@sonae.test",
+    email: "local-super-admin@hakken.test",
     name: "Local Super Admin",
     role: "SUPER_ADMIN",
     needsCompany: false,
   },
   "company-admin": {
-    email: "local-company-admin@sonae.test",
+    email: "local-company-admin@hakken.test",
     name: "Local Company Admin",
     role: "ADMIN",
     needsCompany: true,
   },
   user: {
-    email: "local-user@sonae.test",
+    email: "local-user@hakken.test",
     name: "Local User",
     role: "USER",
     needsCompany: true,

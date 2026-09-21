@@ -24,7 +24,7 @@ if (selectedCase && selectedCase !== "base" && args.includes("--browser")) {
 }
 const boundaries = checkCombinations(root);
 if (boundaries.errors.length) throw new Error(boundaries.errors.join("\n"));
-const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-template-verify-"));
+const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-template-verify-"));
 const cases = args.includes("--matrix") ? availableCases : [selectedCase ?? "base"];
 console.log(`Verification copies and logs: ${workspace}`);
 const environment = {

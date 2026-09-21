@@ -95,7 +95,7 @@ export default function AdminCallDetailContent({ call }: { call: Call }) {
                 }`}
               >
                 <p className="mb-1 text-[11px] uppercase tracking-widest text-secondary">
-                  {turn.role === "CALLER" ? t("caller") : t("sonae", { platformName })}
+                  {turn.role === "CALLER" ? t("caller") : t("hakken", { platformName })}
                 </p>
                 {turn.text}
               </li>

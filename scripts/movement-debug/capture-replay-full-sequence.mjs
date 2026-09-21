@@ -207,7 +207,7 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           throw new Error(message);
         };
         const root = document.querySelector('[data-testid="movement-replay-lab"]');
-        const stepToFrame = window.__sonaeReplayLabStepToFrame;
+        const stepToFrame = window.__hakkenReplayLabStepToFrame;
         if (!root || typeof stepToFrame !== "function") {
           throw new Error("Replay Lab deterministic frame-step bridge is unavailable.");
         }
@@ -227,30 +227,30 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
             "Replay Lab did not select deterministic initial frame 0.",
           );
           await waitFor(
-            () => window.__sonaeReplayLabCommittedFrameIndex === 0,
+            () => window.__hakkenReplayLabCommittedFrameIndex === 0,
             "Replay refs did not commit deterministic initial frame 0.",
           );
           if (playerWindowStart === 0) {
             await waitFor(
-              () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual) &&
-                window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(":0"),
+              () => Boolean(window.__hakkenMovementAvatarDebug?.player?.avatarVisual) &&
+                window.__hakkenMovementAvatarDebug?.player?.sourceFrameId?.endsWith(":0"),
               "Player avatar telemetry did not render deterministic initial frame 0.",
             );
           }
           if (threeParty) {
             await waitFor(
-              () => Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual) &&
-                window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(":0"),
+              () => Boolean(window.__hakkenMovementAvatarDebug?.instructor?.avatarVisual) &&
+                window.__hakkenMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(":0"),
               "Instructor avatar telemetry did not render deterministic initial frame 0.",
             );
             await waitFor(
-              () => window.__sonaeReplayGameBoundaryProof?.frameIndex === 0,
+              () => window.__hakkenReplayGameBoundaryProof?.frameIndex === 0,
               "Replay/Game boundary proof did not commit deterministic initial frame 0.",
             );
           }
-          const playerDebug = window.__sonaeMovementAvatarDebug?.player;
-          const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
-          const replayGameBoundaryProof = window.__sonaeReplayGameBoundaryProof;
+          const playerDebug = window.__hakkenMovementAvatarDebug?.player;
+          const instructorDebug = window.__hakkenMovementAvatarDebug?.instructor;
+          const replayGameBoundaryProof = window.__hakkenReplayGameBoundaryProof;
           chunkFrames.push({
             avatars: threeParty
               ? {
@@ -278,29 +278,29 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
             `Replay Lab did not select deterministic frame ${frameIndex}.`,
           );
           await waitFor(
-            () => window.__sonaeReplayLabCommittedFrameIndex === frameIndex,
+            () => window.__hakkenReplayLabCommittedFrameIndex === frameIndex,
             `Replay refs did not commit deterministic frame ${frameIndex}.`,
           );
           if (frameIndex >= playerWindowStart) {
             await waitFor(
-              () => window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(`:${frameIndex}`),
+              () => window.__hakkenMovementAvatarDebug?.player?.sourceFrameId?.endsWith(`:${frameIndex}`),
               `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
             );
           }
           if (threeParty) {
             await waitFor(
-              () => window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(`:${frameIndex}`),
+              () => window.__hakkenMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(`:${frameIndex}`),
               `Instructor avatar telemetry did not render deterministic frame ${frameIndex}.`,
             );
             await waitFor(
-              () => window.__sonaeReplayGameBoundaryProof?.frameIndex === frameIndex,
+              () => window.__hakkenReplayGameBoundaryProof?.frameIndex === frameIndex,
               `Replay/Game boundary proof did not commit deterministic frame ${frameIndex}.`,
             );
           }
           const renderedFrameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
-          const playerDebug = window.__sonaeMovementAvatarDebug?.player;
-          const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
-          const replayGameBoundaryProof = window.__sonaeReplayGameBoundaryProof;
+          const playerDebug = window.__hakkenMovementAvatarDebug?.player;
+          const instructorDebug = window.__hakkenMovementAvatarDebug?.instructor;
+          const replayGameBoundaryProof = window.__hakkenReplayGameBoundaryProof;
           if (
             (frameIndex >= playerWindowStart && !playerDebug?.avatarVisual) ||
             (threeParty && !instructorDebug?.avatarVisual) ||
@@ -415,8 +415,8 @@ async function main() {
     try {
       await page.waitForFunction((threeParty) => {
         const root = document.querySelector('[data-testid="movement-replay-lab"]');
-        const player = window.__sonaeMovementAvatarDebug?.player;
-        const instructor = window.__sonaeMovementAvatarDebug?.instructor;
+        const player = window.__hakkenMovementAvatarDebug?.player;
+        const instructor = window.__hakkenMovementAvatarDebug?.instructor;
         // When the shared sliding setup starts after frame 0, the player
         // avatar legitimately has no motion telemetry until playback reaches
         // the accepted window; only require it up front for window start 0.
@@ -428,9 +428,9 @@ async function main() {
     } catch (error) {
       const startupState = await page.evaluate(() => ({
         frameCount: Number(document.querySelector('[data-testid="movement-replay-lab"]')?.getAttribute("data-frame-count") || 0),
-        instructor: Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual),
-        player: Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual),
-        roles: Object.keys(window.__sonaeMovementAvatarDebug ?? {}),
+        instructor: Boolean(window.__hakkenMovementAvatarDebug?.instructor?.avatarVisual),
+        player: Boolean(window.__hakkenMovementAvatarDebug?.player?.avatarVisual),
+        roles: Object.keys(window.__hakkenMovementAvatarDebug ?? {}),
       }));
       throw new Error(`Replay avatar telemetry startup failed: ${JSON.stringify(startupState)}. ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -465,7 +465,7 @@ async function main() {
     const captureFrameCount = args.deterministic ? frameEnd - frameStart + 1 : meta.frameCount;
 
     if (!args.deterministic) await page.evaluate(() => {
-      window.__sonaeFullSequenceCapture = { frames: [] };
+      window.__hakkenFullSequenceCapture = { frames: [] };
       const root = document.querySelector('[data-testid="movement-replay-lab"]');
       if (!root) throw new Error("Replay Lab root is missing.");
 
@@ -474,7 +474,7 @@ async function main() {
       const captureCurrentRenderedFrame = () => {
         const frameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
         if (frameIndex >= 0 && frameIndex !== lastCapturedFrame) {
-          const sourceDebug = window.__sonaeMovementAvatarDebug?.player;
+          const sourceDebug = window.__hakkenMovementAvatarDebug?.player;
           const debug = sourceDebug ? structuredClone({
             avatarHead: sourceDebug.avatarHead,
             avatarName: sourceDebug.avatarName,
@@ -489,7 +489,7 @@ async function main() {
             retarget: sourceDebug.retarget,
             spineDrive: sourceDebug.spineDrive,
           }) : null;
-          window.__sonaeFullSequenceCapture.frames.push({
+          window.__hakkenFullSequenceCapture.frames.push({
             debug,
             frameIndex,
           });
@@ -498,7 +498,7 @@ async function main() {
         if (captureActive) requestAnimationFrame(captureCurrentRenderedFrame);
       };
 
-      window.__sonaeFullSequenceCapture.disconnect = () => {
+      window.__hakkenFullSequenceCapture.disconnect = () => {
         captureActive = false;
       };
       captureCurrentRenderedFrame();
@@ -548,13 +548,13 @@ async function main() {
 
       capture = await page.evaluate(() => {
         const root = document.querySelector('[data-testid="movement-replay-lab"]');
-        window.__sonaeFullSequenceCapture?.disconnect?.();
-        const playbackClock = window.__sonaeReplayLabPlaybackClock ?? null;
+        window.__hakkenFullSequenceCapture?.disconnect?.();
+        const playbackClock = window.__hakkenReplayLabPlaybackClock ?? null;
         return {
           playbackClock,
           processedFrameIndexes: playbackClock?.processedFrameIndexes ?? [],
           currentFrameIndex: Number(root?.getAttribute("data-current-frame-index") || -1),
-          frames: window.__sonaeFullSequenceCapture?.frames ?? [],
+          frames: window.__hakkenFullSequenceCapture?.frames ?? [],
         };
       });
     }

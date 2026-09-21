@@ -7,7 +7,7 @@ import { finishDenseCaptureDeviceReview } from "./finish-dense-capture-device-re
 const temporaryDirectories = [];
 
 function temporaryDirectory() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "sonae-device-finish-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "hakken-device-finish-"));
   temporaryDirectories.push(directory);
   return directory;
 }

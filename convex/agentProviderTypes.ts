@@ -3,7 +3,7 @@
  *
  * The loop was written against Google's SDK types and called
  * `getGoogleVertexProviderModelId`, which throws for anything else — so
- * "Sonae supports any model" was true of the catalogue and the chat assistant,
+ * "Hakken supports any model" was true of the catalogue and the chat assistant,
  * but not of the agent runtime, where only Vertex could actually run.
  *
  * This is the seam. It is deliberately narrow: one call that streams a turn and

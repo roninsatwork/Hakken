@@ -222,7 +222,7 @@ appearing only at the end.
 Anthony and built 2026-08-11.** `useProgressiveLoading.ts` (four random
 phrases on a 1.2s timer) is deleted along with its `loadingStages` strings in
 both locales. The run itself now notes which phase it is in —
-`threads.assistantStage`, written by `generateSonaeResponse` as it enters
+`threads.assistantStage`, written by `generateHakkenResponse` as it enters
 checking / reading files / searching knowledge / writing, cleared however the
 run exits (proven by three tests in `convex/ai.test.ts`) — and the pill
 (`AssistantStagePill.tsx`, reading `getPresentableAssistantStage` in

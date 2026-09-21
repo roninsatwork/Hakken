@@ -12,7 +12,7 @@ async function writeStorageState(role: "super-admin" | "company-admin" | "user")
       {
         cookies: [
           {
-            name: "sonae_e2e_auth",
+            name: "hakken_e2e_auth",
             value: role,
             domain: "localhost",
             path: "/",

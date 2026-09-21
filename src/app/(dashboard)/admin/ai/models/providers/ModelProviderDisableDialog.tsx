@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/src/ui/components/screens/Button";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { formatModelTag } from "../_components/modelAdminUtils";
 
@@ -32,7 +32,7 @@ export function ModelProviderDisableDialog({
   const t = useTranslations("ai.models.providers");
 
   return (
-    <SonaeModal
+    <HakkenModal
       isOpen
       onClose={onClose}
       title={t("switchOffTitle", { provider: providerName })}
@@ -98,6 +98,6 @@ export function ModelProviderDisableDialog({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

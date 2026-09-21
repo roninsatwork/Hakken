@@ -129,7 +129,7 @@ less precise average and should be treated as weaker.
 
 The `Export to Board` button downloads a PNG image of the visible report
 dashboard. The file name includes the current date in the form
-`sonae-board-report-YYYY-MM-DD.png`.
+`hakken-board-report-YYYY-MM-DD.png`.
 
 This export is a visual capture. It is not an editable spreadsheet, PowerPoint
 deck, or PDF. Let the charts finish rendering before exporting, especially after

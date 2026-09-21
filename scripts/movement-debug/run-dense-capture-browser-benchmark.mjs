@@ -277,7 +277,7 @@ export async function runDenseCaptureBrowserBenchmark({
   const clips = manifest.clips.map((clip) => ({ ...clip, path: path.resolve(rootDir, clip.path) }));
   const privateRoot = path.resolve(rootDir, "tmp/movement-replay-lab/dense-capture");
   const modelRoot = path.join(privateRoot, "models");
-  const transientRoot = await mkdtemp(path.join(tmpdir(), "sonae-dense-browser-benchmark-"));
+  const transientRoot = await mkdtemp(path.join(tmpdir(), "hakken-dense-browser-benchmark-"));
   const bundlePath = path.join(transientRoot, "benchmark.js");
   const token = randomBytes(18).toString("hex");
   let browser;

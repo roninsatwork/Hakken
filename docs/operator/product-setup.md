@@ -10,7 +10,7 @@ Start with the copy described in [Cloning Hakken](./cloning-hakken.md). Run the
 following commands **inside that new application's directory**, using Node
 `24.18.0`. These are operator instructions, not steps run against Hakken itself.
 
-1. Copy `sonae.product.json` to a separate input file, for example
+1. Copy `hakken.product.json` to a separate input file, for example
    `my-product.json`, and edit the values below. Keep credentials out of both.
 2. Preview the exact target file list and intended product settings:
 
@@ -37,7 +37,7 @@ workflow. Keep existing work committed or backed up before any bulk file change.
 
 ## Configuration
 
-`sonae.product.json` is the applied configuration. It contains **no credentials**.
+`hakken.product.json` is the applied configuration. It contains **no credentials**.
 `schemaVersion` versions this configuration format; it is not a framework release
 version or an upgrade history.
 
@@ -69,7 +69,7 @@ those requirements off is appropriate only when the product will not use them.
 
 ## Files the initialiser owns or updates
 
-- Applies `sonae.product.json` and generates `product.identity.ts`, containing
+- Applies `hakken.product.json` and generates `product.identity.ts`, containing
   **public identity only**. Private setup metadata is not included in that browser
   module. Edit the configuration and rerun the preview to update it.
 - Wires root page metadata, public navigation/footer and backend branding

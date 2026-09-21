@@ -72,7 +72,7 @@ export const getPlatformOverview = superAdminQuery({
     const planById = new Map(plans.map((plan) => [plan._id as Id<"plans">, plan]));
     const { modelMap } = buildModelCostContext(models);
 
-    // Platform staff are excluded everywhere: counting the people who run Sonae
+    // Platform staff are excluded everywhere: counting the people who run Hakken
     // as client engagement is how an unused platform looks busy.
     const clientUsers = users.filter((candidate) => candidate.role !== "SUPER_ADMIN");
     const usersByCompany = new Map<string, Doc<"users">[]>();

@@ -34,7 +34,7 @@ describe("SystemSettingsProvider CSS injection", () => {
   });
 
   const renderWithSettings = (settings: Record<string, unknown>) => {
-    vi.mocked(useQuery).mockReturnValue({ platformName: "Sonae", brandColorHex: "#FF5A1F", ...settings });
+    vi.mocked(useQuery).mockReturnValue({ platformName: "Hakken", brandColorHex: "#FF5A1F", ...settings });
     return render(<SystemSettingsProvider><div /></SystemSettingsProvider>);
   };
 

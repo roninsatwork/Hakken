@@ -228,7 +228,7 @@ tool passes; the full gate is green.
 - The approvals badge in `SidebarNavigation.tsx` is hard-wired to approvals.
   Once notifications exist it is arguably the same idea twice; leaving both
   until the bell has proven itself is deliberate.
-- The shared modal (`src/ui/components/feedback/SonaeModal.tsx`) has no
+- The shared modal (`src/ui/components/feedback/HakkenModal.tsx`) has no
   focus trap, no Escape handler and no dialog role. The bell panel must not
   copy it. Fixing the modal is item 5 on Anthony's list, not this plan.
 

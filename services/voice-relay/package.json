@@ -1,5 +1,5 @@
 {
-  "name": "sonae-voice-relay",
+  "name": "hakken-voice-relay",
   "private": true,
   "version": "1.0.0",
   "description": "The live voice relay: browser or phone on one side, Vertex on the other, with one-time platform tickets.",

@@ -84,7 +84,7 @@ async function seed(args: { installTools?: boolean } = {}) {
         description: "Read a page.",
         handlerMapping: "web.scrape",
         modelName: "read_web_page",
-        connectorKey: "sonae-firecrawl",
+        connectorKey: "hakken-firecrawl",
         requiredRole: "ADMIN",
         sideEffectLevel: "EXTERNAL",
         confirmationRequired: false,

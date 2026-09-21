@@ -293,7 +293,7 @@ every private TypeScript helper one-by-one.
 | `agentSkills.ts` | skill import/preview, catalog, analytics, CRUD, archive/delete, binding, upgrade, runtime skill queries |
 | `agentTransactions.ts` | `seedForAgent`, `insertTransactionInternal` |
 | `agents.ts` | agent list/get/create/update/delete, templates, inherited model lookup, internal agent/tool lookup, inline agent creation, promotion |
-| `aiChat.ts` | `generateSonaeResponse`, `generateThreadTitle` |
+| `aiChat.ts` | `generateHakkenResponse`, `generateThreadTitle` |
 | `aiSpeech.ts` | `transcribeAudio`, `synthesizeSpeech` |
 | `aiVoiceSession.ts` | `searchKnowledgeForVoice`, realtime voice session/ticket creation |
 | `workflowNodeConfig.ts` | `generateNodeConfig` |

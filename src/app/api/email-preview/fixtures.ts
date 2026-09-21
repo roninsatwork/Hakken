@@ -20,7 +20,7 @@ import {
 } from "../../../../convex/platformAlertService";
 
 const BASE_URL = "https://app.example";
-const PLATFORM_NAME = "Sonae";
+const PLATFORM_NAME = "Hakken";
 
 const EMPTY_BUCKET = { count: 0, examples: [] as OperationalFailureExample[] };
 

@@ -54,14 +54,14 @@ describe("local test auth", () => {
     expect(snapshot.users).toHaveLength(3);
     expect(snapshot.users).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ email: "local-super-admin@sonae.test", role: "SUPER_ADMIN" }),
+        expect.objectContaining({ email: "local-super-admin@hakken.test", role: "SUPER_ADMIN" }),
         expect.objectContaining({
-          email: "local-company-admin@sonae.test",
+          email: "local-company-admin@hakken.test",
           role: "ADMIN",
           companyId: snapshot.company?._id,
         }),
         expect.objectContaining({
-          email: "local-user@sonae.test",
+          email: "local-user@hakken.test",
           role: "USER",
           companyId: snapshot.company?._id,
         }),
@@ -78,7 +78,7 @@ describe("local test auth", () => {
       secret: "test-secret",
     });
 
-    const seededUser = seed.users.find((user) => user.email === "local-user@sonae.test");
+    const seededUser = seed.users.find((user) => user.email === "local-user@hakken.test");
     expect(authorized?.userId).toBe(seededUser?.userId);
 
     await expect(
@@ -89,7 +89,7 @@ describe("local test auth", () => {
   test("cleanup clears the seeded users' threads and keeps the identities", async () => {
     const t = setup();
     const seed = await t.mutation(api.localTestAuth.seed, { secret: "test-secret" });
-    const seededUser = seed.users.find((user) => user.email === "local-user@sonae.test");
+    const seededUser = seed.users.find((user) => user.email === "local-user@hakken.test");
 
     await t.run(async (ctx) => {
       const threadId = await ctx.db.insert("threads", {
@@ -110,9 +110,9 @@ describe("local test auth", () => {
     const result = await t.mutation(api.localTestAuth.cleanup, { secret: "test-secret" });
     expect(result.cleared).toEqual(
       expect.arrayContaining([
-        "local-super-admin@sonae.test",
-        "local-company-admin@sonae.test",
-        "local-user@sonae.test",
+        "local-super-admin@hakken.test",
+        "local-company-admin@hakken.test",
+        "local-user@hakken.test",
       ])
     );
 

@@ -3,19 +3,19 @@
 import { motion } from "framer-motion";
 import { LucideIcon, SearchX } from "lucide-react";
 
-interface SonaeEmptyStateProps {
+interface HakkenEmptyStateProps {
   icon?: LucideIcon;
   title: string;
   description: string;
   action?: React.ReactNode;
 }
 
-export default function SonaeEmptyState({
+export default function HakkenEmptyState({
   icon: Icon = SearchX,
   title,
   description,
   action
-}: SonaeEmptyStateProps) {
+}: HakkenEmptyStateProps) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}

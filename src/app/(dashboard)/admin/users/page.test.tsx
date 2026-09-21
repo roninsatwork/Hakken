@@ -81,7 +81,7 @@ vi.mock("next-intl", () => ({
       "table.noMatches": "No users",
       "table.pending": "Pending",
       "table.role": "Role",
-      "table.sonaeGlobal": "Sonae Global",
+      "table.sonaeGlobal": "Hakken Global",
       "table.systemLevel": "System Level",
       "table.user": "User",
       "table.workspace": "Workspace",

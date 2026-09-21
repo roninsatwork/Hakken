@@ -16,8 +16,8 @@ import type { SystemSettingsFormData } from "./types";
  */
 describe("pickSettingsFields", () => {
   const form: SystemSettingsFormData = {
-    platformName: "Sonae",
-    emailSenderName: "Sonae",
+    platformName: "Hakken",
+    emailSenderName: "Hakken",
     logoUrlLight: "https://storage.example/resolved-url-1",
     logoUrlDark: "https://storage.example/resolved-url-2",
     brandColorHex: "#E26D28",
@@ -38,7 +38,7 @@ describe("pickSettingsFields", () => {
     // Logos save themselves at upload time through their own mutation calls;
     // riding along here would rewrite stored storage IDs as resolved URLs.
     const payload = pickSettingsFields(form, IDENTITY_SETTINGS_FIELDS);
-    expect(payload).toEqual({ platformName: "Sonae", emailSenderName: "Sonae" });
+    expect(payload).toEqual({ platformName: "Hakken", emailSenderName: "Hakken" });
   });
 
   it("a diagnostics save carries exactly its one switch", () => {

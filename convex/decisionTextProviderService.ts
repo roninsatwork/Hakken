@@ -9,7 +9,7 @@ import { appError } from "./utils/appError";
 /**
  * A Decision answered by an ordinary text model.
  *
- * Anthony's ruling, 2026-09-17: Sonae must never depend on TypeSafe. So the
+ * Anthony's ruling, 2026-09-17: Hakken must never depend on TypeSafe. So the
  * Decisions job takes any model, and this is the path for the ones that
  * write text. The model is handed the same state and the same questions
  * TypeSafe would get, and asked for the same shape back — a probability of

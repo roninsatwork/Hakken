@@ -168,7 +168,7 @@
     "src/ui/components/chat/MessageFeedbackControls.tsx": 5,
     "src/ui/components/chat/PhotoActionChip.tsx": 1,
     "src/ui/components/chat/RealtimeVoiceOverlay.tsx": 2,
-    "src/ui/components/feedback/SonaeModal.tsx": 1,
+    "src/ui/components/feedback/HakkenModal.tsx": 1,
     "src/ui/components/governance/GovernanceActivity.tsx": 1,
     "src/ui/components/governance/PersonalDataPanel.tsx": 2,
     "src/ui/components/layout/Header.tsx": 2,

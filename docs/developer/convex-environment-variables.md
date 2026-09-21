@@ -45,7 +45,7 @@ Notes:
   app acting as a client of Google on a tenant's behalf.
 - Sign-in works with either Google OAuth or email magic links (via Resend
   below); the setup validator requires every sign-in provider selected in
-  `sonae.product.json` to be complete in production.
+  `hakken.product.json` to be complete in production.
   Partial Google configuration is treated as a failure, not a fallback.
 - If `SITE_URL` is missing, the connector OAuth return URL falls back to
   `http://localhost:3000` — correct locally, wrong everywhere else.
@@ -79,7 +79,7 @@ Notes:
 
 ## Optional Stripe Billing
 
-Billing ships disabled in `sonae.billing.json`; existing Hakken deployments do not
+Billing ships disabled in `hakken.billing.json`; existing Hakken deployments do not
 need Stripe credentials. Enabled clones require both keys below in the backend.
 No key belongs in a `NEXT_PUBLIC_` variable.
 
@@ -111,7 +111,7 @@ Notes:
   refuses that provider's models with a clear "not configured" error, and with
   no provider at all the assistant writes a "Core Offline" notice instead of
   replying. The setup and deployment validators require the provider groups selected in
-  `sonae.product.json`, plus feature dependencies such as Vertex for knowledge
+  `hakken.product.json`, plus feature dependencies such as Vertex for knowledge
   embeddings. Both use `scripts/provider-requirements.mjs`; see
   [Product Setup](../operator/product-setup.md).
 - Vertex targets project `sonae-dev-491717` in location `global` by default;

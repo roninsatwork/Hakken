@@ -73,7 +73,7 @@ build output. Symlinks are not copied. Review any new data or secret file format
 before adding it to source control; packaging is not a secret-content scanner.
 
 Each export also records its source version, working-tree state, retained modules
-and final file fingerprints in `.sonae/framework.json`. Commit that file with the
+and final file fingerprints in `.hakken/framework.json`. Commit that file with the
 new product. A re-export gets new provenance and is marked as a product re-export;
 it is not an upstream framework release.
 

@@ -8,9 +8,9 @@ import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { publicMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 
-const DEMO_COMPANY_NAME = "Sonae Demo Company";
-const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@sonae.test";
-const DEMO_COMPANY_ADMIN_EMAIL = "demo-company-admin@sonae.test";
+const DEMO_COMPANY_NAME = "Hakken Demo Company";
+const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@hakken.test";
+const DEMO_COMPANY_ADMIN_EMAIL = "demo-company-admin@hakken.test";
 const DEMO_MODEL_ID = SYSTEM_FAILSAFE_MODEL_ID;
 const DEMO_TEMPLATE_ID = "internal-knowledge-assistant";
 const DEMO_KNOWLEDGE_TITLE = "Demo Knowledge Handbook";
@@ -285,7 +285,7 @@ async function upsertKnowledgeDocument(ctx: MutationCtx, args: {
   const fields = {
     title: DEMO_KNOWLEDGE_TITLE,
     textContent: [
-      "Sonae Demo Company support policy:",
+      "Hakken Demo Company support policy:",
       "Use tenant-scoped knowledge before answering.",
       "Escalate billing, refunds, account changes, and destructive operations to a human admin.",
       "If the answer is not present in approved knowledge, say what is missing and ask for the right source document.",

@@ -5,7 +5,7 @@ import schema from "./schema";
 // The pinned package publishes its component sources, but its advertised /test export is absent.
 import stripeSchema from "../node_modules/@convex-dev/stripe/src/component/schema";
 import { components } from "./_generated/api";
-import config from "../sonae.billing.json";
+import config from "../hakken.billing.json";
 
 const original = structuredClone(config);
 const secret = "whsec_local_fixture_only";

@@ -17,7 +17,7 @@ Before starting, ensure you have the following tools and information:
 ## 🏗️ 1. Infrastructure Preparation
 
 ### A. Google Cloud Platform (GCP)
-1.  **Create Project:** Create a new project named `sonae-[client-name]`.
+1.  **Create Project:** Create a new project named `hakken-[client-name]`.
 2.  **Enable APIs:** Enable the following services:
     *   Compute Engine API
     *   Cloud Run API
@@ -75,7 +75,7 @@ Add these to **GitHub Settings > Secrets and variables > Actions**:
 *   `GCP_PROJECT`: GCP Project ID.
 *   `GCP_CREDENTIALS`: Full content of the Service Account JSON key.
 *   `CONVEX_DEPLOY_KEY`: From Convex Settings.
-*   `CONVEX_DEPLOYMENT`: Convex deployment name (e.g. `prod-sonae-client`).
+*   `CONVEX_DEPLOYMENT`: Convex deployment name (e.g. `prod-hakken-client`).
 *   `NEXT_PUBLIC_CONVEX_URL`: Convex Production URL.
 
 ---

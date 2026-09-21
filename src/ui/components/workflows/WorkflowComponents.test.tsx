@@ -32,7 +32,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "workflow_1" }),
 }));
 
-vi.mock("@/src/ui/components/feedback/SonaeModal", () => ({
+vi.mock("@/src/ui/components/feedback/HakkenModal", () => ({
   default: ({ children, isOpen, title }: { children: React.ReactNode; isOpen: boolean; title?: string }) =>
     isOpen ? <section aria-label={title ?? "modal"}>{children}</section> : null,
 }));

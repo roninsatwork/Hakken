@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { sendResendEmail } from "./resendEmailService";
 
 const emailPayload = {
-  from: "Sonae <noreply@example.com>",
+  from: "Hakken <noreply@example.com>",
   to: "user@example.com",
   subject: "Invite",
   html: "<p>Hello</p>",

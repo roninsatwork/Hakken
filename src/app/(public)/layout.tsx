@@ -13,11 +13,11 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sonae — Launch AI products, not AI experiments",
-    template: "%s · Sonae",
+    default: "Hakken — Launch AI products, not AI experiments",
+    template: "%s · Hakken",
   },
   description:
-    "Sonae is everything underneath an AI product — knowledge, approvals, cost control, a record of what the AI actually did — already built, so you start on the part your customers care about.",
+    "Hakken is everything underneath an AI product — knowledge, approvals, cost control, a record of what the AI actually did — already built, so you start on the part your customers care about.",
 };
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {

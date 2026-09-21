@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ProductHero } from "./_components/home/ProductHero";
-import { WhatSonaeIs } from "./_components/home/WhatSonaeIs";
+import { WhatHakkenIs } from "./_components/home/WhatHakkenIs";
 // template:remove:start properties,salesReports,movement,salesData
 import { DemosIntro } from "./_components/home/DemosIntro";
 // template:remove:end
@@ -14,7 +14,7 @@ import { ProductPanels } from "./_components/home/ProductPanels";
 import { ContactLink } from "./_components/ContactLink";
 
 export const metadata: Metadata = {
-  title: "Sonae — Build agent-powered products with governance built in",
+  title: "Hakken — Build agent-powered products with governance built in",
 };
 
 export default function HomePage() {
@@ -22,7 +22,7 @@ export default function HomePage() {
     <div>
       <ProductHero />
 
-      <WhatSonaeIs />
+      <WhatHakkenIs />
 
       {/* template:remove:start properties,salesReports,movement,salesData */}
       <DemosIntro />
@@ -40,7 +40,7 @@ export default function HomePage() {
               Prepared before the moment arrives.
             </h2>
             <p className="mt-4 max-w-[54ch] text-[15.5px] leading-relaxed text-[#B7AD9F]">
-              Sonae is Japanese for preparedness — readiness in place before it
+              Hakken is Japanese for preparedness — readiness in place before it
               is needed. That is why the name was chosen, and it is the whole
               idea: by the time your product needs knowledge, approvals, models
               and a memory, the foundation is already standing.

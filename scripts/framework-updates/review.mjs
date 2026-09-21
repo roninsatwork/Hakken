@@ -37,7 +37,7 @@ export function compareFramework(root, upstream) {
   const incoming = readProvenance(upstream);
   if (base.source.kind !== "framework" || incoming.source.kind !== "framework")
     throw new Error(
-      "Product re-exports cannot be used as framework update baselines. Use an export made directly from Sonae.",
+      "Product re-exports cannot be used as framework update baselines. Use an export made directly from Hakken.",
     );
   if (
     JSON.stringify([...base.keep].sort()) !==
@@ -214,7 +214,7 @@ export function recordReview(root, upstream, reviewFile) {
     checkpoint(current.root) !== commit
   )
     throw new Error("Product or export changed while recording. Review again.");
-  const historyPath = `.sonae/reviews/${current.incomingId}.json`;
+  const historyPath = `.hakken/reviews/${current.incomingId}.json`;
   if (readFile(current.root, historyPath, true) !== null)
     throw new Error("A review for this snapshot already exists.");
   const history = {

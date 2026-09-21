@@ -121,7 +121,7 @@ The invite link currently points to `/login`. It does not expose the stored toke
 
 `convex/authUserProvisioning.ts` connects login to invitations.
 
-`createOrUpdateSonaeAuthUser` extracts email, name, and image from the auth provider payload. It then:
+`createOrUpdateHakkenAuthUser` extracts email, name, and image from the auth provider payload. It then:
 
 - returns an existing user and logs auth events when one exists
 - accepts pending invites on verified-email login

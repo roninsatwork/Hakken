@@ -140,7 +140,7 @@ export const runAgentObjective = internalAction({
             threadId: args.threadId,
         });
 
-        // Map Sonae generic messages into expected Vertex AI Content arrays
+        // Map Hakken generic messages into expected Vertex AI Content arrays
         const conversationHistory: Content[] = messages.slice(-20).map((msg) => {
             return {
                 role: msg.role === "user" ? "user" : "model",

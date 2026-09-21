@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { CONSENT_CODE_PARAM, buildConsentUrl } from "./magicLinkUrlService";
 
-const SITE = "https://sonae.example.com";
+const SITE = "https://hakken.example.com";
 
 describe("buildConsentUrl", () => {
   /**

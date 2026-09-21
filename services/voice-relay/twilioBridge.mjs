@@ -105,7 +105,7 @@ export function buildTwilioClear(streamSid) {
 }
 
 /**
- * The nudge that makes Sonae speak first.
+ * The nudge that makes Hakken speak first.
  *
  * A live model waits to be spoken to, which is right for a screen and wrong
  * for a telephone: a receptionist answers "hello, how can I help?", not with
@@ -154,7 +154,7 @@ export function readModelSpeech(raw) {
     result.callerText = serverContent.inputTranscription.text;
   }
   if (serverContent.outputTranscription?.text) {
-    result.sonaeText = serverContent.outputTranscription.text;
+    result.hakkenText = serverContent.outputTranscription.text;
   }
   return Object.keys(result).length > 0 ? result : null;
 }
@@ -169,14 +169,14 @@ export function readModelSpeech(raw) {
  */
 export function createTranscriptCollector() {
   let callerText = "";
-  let sonaeText = "";
+  let hakkenText = "";
 
   const flush = () => {
     const turns = [];
     if (callerText.trim()) turns.push({ role: "CALLER", text: callerText.trim() });
-    if (sonaeText.trim()) turns.push({ role: "SONAE", text: sonaeText.trim() });
+    if (hakkenText.trim()) turns.push({ role: "HAKKEN", text: hakkenText.trim() });
     callerText = "";
-    sonaeText = "";
+    hakkenText = "";
     return turns;
   };
 
@@ -184,7 +184,7 @@ export function createTranscriptCollector() {
     /** @returns finished turns to report, empty if the exchange is mid-flow */
     hear(speech) {
       if (speech.callerText) callerText += speech.callerText;
-      if (speech.sonaeText) sonaeText += speech.sonaeText;
+      if (speech.hakkenText) hakkenText += speech.hakkenText;
       return speech.turnComplete ? flush() : [];
     },
     /** The call is over: whatever is still unspoken-for becomes the last turns. */

@@ -21,7 +21,7 @@ Current implementation files include:
 - `src/app/(public)/_motion/motion.ts`
 - `src/app/(public)/_motion/PublicMotion.tsx`
 - `src/app/(public)/_components/home/ProductHero.tsx`
-- `src/app/(public)/_components/home/WhatSonaeIs.tsx`
+- `src/app/(public)/_components/home/WhatHakkenIs.tsx`
 - `src/app/(public)/_components/home/DemosIntro.tsx`
 - `src/app/(public)/_components/home/ProductPanels.tsx`
 - `src/app/(public)/_components/home/WhoItsFor.tsx`
@@ -43,7 +43,7 @@ present those pages as live behavior until the files exist.
 
 There is current drift to resolve under the Public Website Plan:
 
-- `src/app/(public)/_components/home/WhatSonaeIs.tsx` links to `/platform`.
+- `src/app/(public)/_components/home/WhatHakkenIs.tsx` links to `/platform`.
 - `src/app/(public)/_components/ContactLink.tsx` falls back to `/contact` when
   `NEXT_PUBLIC_CONTACT_URL` is unset.
 
@@ -108,7 +108,7 @@ Public motion is split into a small helper and a mounted client component:
 
 Home sections can also mount their own GSAP timelines. `ProductHero` animates
 hero lines, the drawn dashboard surface, stat tiles, bars, and the activity
-chart line. `WhatSonaeIs` uses ScrollTrigger to track the active reading row.
+chart line. `WhatHakkenIs` uses ScrollTrigger to track the active reading row.
 `ProductPanels` uses ScrollTrigger for the stacked product-panel behavior.
 
 Every animation path should respect reduced-motion preferences. Avoid adding a
@@ -119,7 +119,7 @@ new animation style that bypasses `prefersReducedMotion`.
 `page.tsx` renders sections in this order:
 
 1. `ProductHero`
-2. `WhatSonaeIs`
+2. `WhatHakkenIs`
 3. `DemosIntro`
 4. `ProductPanels`
 5. `WhoItsFor`

@@ -70,7 +70,7 @@ function stubGmail(messages: StubMessage[]) {
         });
       }
       if (url.includes("/labels") && init?.method === "POST") {
-        return Response.json({ id: "label-sonae" });
+        return Response.json({ id: "label-hakken" });
       }
       if (url.endsWith("/labels")) {
         return Response.json({ labels: [] });

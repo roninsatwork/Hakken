@@ -73,7 +73,7 @@ If the sandbox fails, fix the widget configuration before involving the customer
 The integration tab shows a snippet like:
 
 ```html
-<script src="https://your-sonae-host.example/embed.js" data-widget-id="..."></script>
+<script src="https://your-hakken-host.example/embed.js" data-widget-id="..."></script>
 ```
 
 Install it on the allowed host page. The script injects a floating launcher and opens `/w/[widgetId]` inside an iframe.

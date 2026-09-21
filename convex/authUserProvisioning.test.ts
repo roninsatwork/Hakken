@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
-import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
+import { createOrUpdateHakkenAuthUser } from "./authUserProvisioning";
 import schema from "./schema";
 
 const NOW = Date.UTC(2026, 5, 2, 9, 30, 0);
@@ -22,7 +22,7 @@ async function getAuthEventTypes(t: ReturnType<typeof setup>, email: string) {
   return events.map((event) => event.eventType);
 }
 
-describe("Sonae auth user provisioning", () => {
+describe("Hakken auth user provisioning", () => {
   test("provisions a pending invite without accepting it before email verification", async () => {
     const t = setup();
 
@@ -37,7 +37,7 @@ describe("Sonae auth user provisioning", () => {
         invitedAt: NOW,
       });
 
-      const userId = await createOrUpdateSonaeAuthUser(
+      const userId = await createOrUpdateHakkenAuthUser(
         ctx,
         { provider: { id: "resend", type: "email" }, email: "INVITED@example.com" },
         NOW
@@ -97,7 +97,7 @@ describe("Sonae auth user provisioning", () => {
         invitedAt: NOW,
       });
 
-      const returnedUserId = await createOrUpdateSonaeAuthUser(
+      const returnedUserId = await createOrUpdateHakkenAuthUser(
         ctx,
         { provider: { id: "resend", type: "email" }, profile: { email: "verified@example.com", emailVerified: true } },
         NOW + 1000
@@ -135,7 +135,7 @@ describe("Sonae auth user provisioning", () => {
         createdAt: NOW,
       });
 
-      await createOrUpdateSonaeAuthUser(
+      await createOrUpdateHakkenAuthUser(
         ctx,
         {
           provider: { id: "one-time-code", type: "email" },
@@ -181,7 +181,7 @@ describe("Sonae auth user provisioning", () => {
 
       // Exactly what Auth.js hands over for Google: no `emailVerified`, because
       // the default profile mapper drops it.
-      const returnedUserId = await createOrUpdateSonaeAuthUser(
+      const returnedUserId = await createOrUpdateHakkenAuthUser(
         ctx,
         {
           provider: { id: "google", type: "oidc" },
@@ -227,7 +227,7 @@ describe("Sonae auth user provisioning", () => {
         invitedAt: NOW,
       });
 
-      const userId = await createOrUpdateSonaeAuthUser(
+      const userId = await createOrUpdateHakkenAuthUser(
         ctx,
         {
           provider: { id: "google", type: "oidc" },
@@ -276,7 +276,7 @@ describe("Sonae auth user provisioning", () => {
         acceptedAt: NOW + 500,
       });
 
-      const userId = await createOrUpdateSonaeAuthUser(
+      const userId = await createOrUpdateHakkenAuthUser(
         ctx,
         { provider: { id: "resend", type: "email" }, email: "stale@example.com" },
         NOW + 1000
@@ -326,7 +326,7 @@ describe("Sonae auth user provisioning", () => {
 
     await expect(
       t.run((ctx) =>
-        createOrUpdateSonaeAuthUser(
+        createOrUpdateHakkenAuthUser(
           ctx,
           { provider: { id: "resend", type: "email" }, email: "revoked@example.com" },
           NOW
@@ -335,7 +335,7 @@ describe("Sonae auth user provisioning", () => {
     ).rejects.toThrow("invite-only platform");
     await expect(
       t.run((ctx) =>
-        createOrUpdateSonaeAuthUser(
+        createOrUpdateHakkenAuthUser(
           ctx,
           { provider: { id: "resend", type: "email" }, email: "expired@example.com" },
           NOW
@@ -429,7 +429,7 @@ describe("Sonae auth user provisioning", () => {
     vi.stubEnv("INITIAL_SUPER_ADMIN_EMAIL", "founder@example.com");
 
     const user = await t.run(async (ctx) => {
-      const userId = await createOrUpdateSonaeAuthUser(ctx, { email: "Founder@Example.com" }, NOW);
+      const userId = await createOrUpdateHakkenAuthUser(ctx, { email: "Founder@Example.com" }, NOW);
       return await ctx.db.get(userId);
     });
 

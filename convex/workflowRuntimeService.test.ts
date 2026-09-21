@@ -292,10 +292,10 @@ describe("workflow runtime service", () => {
           },
         },
         globalStatePayload: { name: "Ada", message: "Approved" },
-        defaultFromAddress: "Sonae <hello@example.com>",
+        defaultFromAddress: "Hakken <hello@example.com>",
       })
     ).toEqual({
-      fromAddress: "Sonae <hello@example.com>",
+      fromAddress: "Hakken <hello@example.com>",
       toAddresses: ["ada@example.com", "grace@example.com"],
       subject: "Hello Ada",
       body: "<p>Approved</p>",
@@ -427,7 +427,7 @@ describe("workflow runtime service", () => {
 
 /**
  * The task node lets a workflow hand a job to a person — the connector that
- * sat blocked in the outstanding list because Sonae had no concept of a task.
+ * sat blocked in the outstanding list because Hakken had no concept of a task.
  * The author writes the words; the run fills the blanks.
  */
 describe("task node", () => {

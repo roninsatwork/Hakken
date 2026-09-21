@@ -31,7 +31,7 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/src/context/SystemSettingsContext", () => ({
-  useSystemSettings: () => ({ platformName: "Sonae" }),
+  useSystemSettings: () => ({ platformName: "Hakken" }),
 }));
 
 vi.mock("@/src/hooks/useVoiceToText", () => ({
@@ -123,7 +123,7 @@ describe("AssistantWelcomePage", () => {
 
     expect(screen.getByText(/Good morning Ada/)).toBeInTheDocument();
     expect(screen.getByText("models:1")).toBeInTheDocument();
-    expect(screen.getByText("Powered by Sonae")).toBeInTheDocument();
+    expect(screen.getByText("Powered by Hakken")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Find my leads" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));

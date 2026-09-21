@@ -13,7 +13,7 @@ import { assertCanAccessThread } from "./chatService";
 /**
  * Tasks: work the platform holds for a named person.
  *
- * Sonae could find things and never ask anyone to act on them — an agent
+ * Hakken could find things and never ask anyone to act on them — an agent
  * finished, wrote an answer into a conversation nobody returned to, and the
  * finding died there. A task is the missing half: a title, a person, a date,
  * and a state.

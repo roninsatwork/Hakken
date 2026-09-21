@@ -15,7 +15,7 @@ import {
   ChevronDown,
   RefreshCw
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import Link from "next/link";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -349,7 +349,7 @@ export default function CompanyUsersPage() {
       />
 
       {/* Add/Edit Modal */}
-      <SonaeModal
+      <HakkenModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title={editingUser ? "Edit User" : "Invite User"}
@@ -437,7 +437,7 @@ export default function CompanyUsersPage() {
             </WriteButton>
           </div>
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={!!deletingUser}
@@ -469,7 +469,7 @@ export default function CompanyUsersPage() {
       </ConfirmationModal>
 
       {/* Assign System Admin Modal */}
-      <SonaeModal
+      <HakkenModal
         isOpen={isAssignModalOpen}
         onClose={() => { setIsAssignModalOpen(false); setSubmitError(""); }}
         title={t("assignSystemAdmin")}
@@ -521,7 +521,7 @@ export default function CompanyUsersPage() {
             </WriteButton>
           </div>
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={!!detachingAdmin}

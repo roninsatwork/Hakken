@@ -29,7 +29,7 @@ import {
 import { rowShape } from "./utils/rowShape";
 
 /**
- * Sonae answering the phone.
+ * Hakken answering the phone.
  *
  * This is a public endpoint that spends a company's model budget every time
  * it says yes, so it refuses first and answers second: the provider's
@@ -375,7 +375,7 @@ export const appendCallTurns = internalMutation({
     companyId: v.id("companies"),
     turns: v.array(
       v.object({
-        role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+        role: v.union(v.literal("CALLER"), v.literal("HAKKEN")),
         text: v.string(),
         at: v.number(),
       })
@@ -428,9 +428,9 @@ export const handleCallTurns = httpAction(async (ctx, request) => {
   const turns = Array.isArray(body.turns)
     ? body.turns
         .filter(
-          (turn): turn is { role: "CALLER" | "SONAE"; text: string } =>
+          (turn): turn is { role: "CALLER" | "HAKKEN"; text: string } =>
             !!turn &&
-            (turn.role === "CALLER" || turn.role === "SONAE") &&
+            (turn.role === "CALLER" || turn.role === "HAKKEN") &&
             typeof turn.text === "string" &&
             turn.text.trim().length > 0
         )
@@ -673,7 +673,7 @@ export const getCall = moduleQuery({
       taskId: v.optional(v.id("tasks")),
       turns: v.array(
         v.object({
-          role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+          role: v.union(v.literal("CALLER"), v.literal("HAKKEN")),
           text: v.string(),
         })
       ),

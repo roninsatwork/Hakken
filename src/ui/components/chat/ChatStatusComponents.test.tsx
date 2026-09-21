@@ -63,7 +63,7 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/src/context/SystemSettingsContext", () => ({
-  useSystemSettings: () => ({ platformName: "Sonae" }),
+  useSystemSettings: () => ({ platformName: "Hakken" }),
 }));
 
 vi.mock("next/image", () => ({

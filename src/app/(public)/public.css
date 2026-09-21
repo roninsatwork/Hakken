@@ -365,7 +365,7 @@ div:has(> .public-site) {
   }
 }
 
-/* ---------- what Sonae is: sticky thesis, scrolling detail ---------- */
+/* ---------- what Hakken is: sticky thesis, scrolling detail ---------- */
 .ps-what {
   padding: clamp(80px, 9vw, 140px) 0 clamp(52px, 5.5vw, 88px);
 }
@@ -560,7 +560,7 @@ div:has(> .public-site) {
   padding: 20px;
   background: rgba(255, 255, 255, 0.5);
 }
-.ps-who-col-sonae {
+.ps-who-col-hakken {
   background: #fff;
   border-color: rgba(62, 122, 85, 0.28);
   box-shadow: 0 30px 60px -40px rgba(27, 22, 17, 0.4);

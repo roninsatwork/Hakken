@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const entryPoint = resolve("scripts/movement-debug/recover-local-movement-packet-cli.ts");
-const bundleTempDir = mkdtempSync(join(tmpdir(), "sonae-local-movement-recovery-"));
+const bundleTempDir = mkdtempSync(join(tmpdir(), "hakken-local-movement-recovery-"));
 const bundlePath = join(bundleTempDir, "recover-local-movement-packet-cli.bundle.mjs");
 
 await build({

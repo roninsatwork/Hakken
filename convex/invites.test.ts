@@ -126,13 +126,13 @@ describe("OWASP: Broken Access Control - Invites", () => {
     });
 
     await superAdminClient.mutation(api.invites.saveTemplate, {
-      subject: "Join Sonae",
+      subject: "Join Hakken",
       headline: "Welcome",
       body: "Join us",
       ctaText: "Accept",
     });
     await superAdminClient.mutation(api.invites.saveTemplate, {
-      subject: "Join Sonae Updated",
+      subject: "Join Hakken Updated",
       headline: "Welcome Back",
       body: "Join us again",
       ctaText: "Accept Now",
@@ -146,7 +146,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
     expect(templates).toHaveLength(1);
     expect(templates[0]).toMatchObject({
       templateType: "INVITE",
-      subject: "Join Sonae Updated",
+      subject: "Join Hakken Updated",
       headline: "Welcome Back",
       body: "Join us again",
       ctaText: "Accept Now",
@@ -157,7 +157,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
       actorId: superAdminId,
       entityType: "systemConfig",
       entityId: "INVITE_TEMPLATE",
-      metadata: JSON.stringify({ subject: "Join Sonae Updated", headline: "Welcome Back" }),
+      metadata: JSON.stringify({ subject: "Join Hakken Updated", headline: "Welcome Back" }),
     });
   });
 

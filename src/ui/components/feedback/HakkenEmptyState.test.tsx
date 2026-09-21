@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import SonaeEmptyState from './SonaeEmptyState';
+import HakkenEmptyState from './HakkenEmptyState';
 
-describe('SonaeEmptyState Component', () => {
+describe('HakkenEmptyState Component', () => {
   it('renders title and description properly', () => {
-    render(<SonaeEmptyState title="No Users Found" description="Try adjusting your search filters." />);
+    render(<HakkenEmptyState title="No Users Found" description="Try adjusting your search filters." />);
     
     expect(screen.getByText('No Users Found')).toBeDefined();
     expect(screen.getByText('Try adjusting your search filters.')).toBeDefined();
@@ -14,7 +14,7 @@ describe('SonaeEmptyState Component', () => {
     const actionNode = <button data-testid="mock-action">Click Me</button>;
     
     render(
-      <SonaeEmptyState 
+      <HakkenEmptyState 
         title="Empty" 
         description="Nothing here" 
         action={actionNode} 

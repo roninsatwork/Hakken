@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
-import source from "../sonae.billing.json";
+import source from "../hakken.billing.json";
 import { hasPaidAccess } from "./billingPolicy";
 
 const provider = vi.hoisted(() => ({

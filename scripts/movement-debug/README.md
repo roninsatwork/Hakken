@@ -234,8 +234,8 @@ Use repeated `--proof-case <case>` values for focused supplemental plans, such a
 To capture those selected frames through Game Studio, run the app with local test auth enabled and then run the focused capture helper:
 
 ```bash
-LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npx -p node@22.13.0 npm run dev -- -p 3100
-npx -p node@22.13.0 npm run movement:game-visual-capture -- --base-url http://localhost:3100 --plan tmp/movement-replay-lab/latest-game-visual-proof-plan.json --out tmp/movement-replay-lab/captures/latest-game-visual-proof --local-test-auth --secret sonae-local-test-auth
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npx -p node@22.13.0 npm run dev -- -p 3100
+npx -p node@22.13.0 npm run movement:game-visual-capture -- --base-url http://localhost:3100 --plan tmp/movement-replay-lab/latest-game-visual-proof-plan.json --out tmp/movement-replay-lab/captures/latest-game-visual-proof --local-test-auth --secret hakken-local-test-auth
 ```
 
 The capture helper uses the debug-only route shape `?debugTracking=1&guidedPreview=1&debugGameFrame=<frameIndex>` so each screenshot renders the exact stored frame selected by the analyzer. Its manifest records page screenshots, canvas screenshots, canvas pixel metrics, the captured debug frame index, capture errors, and nonblank failures. The helper fails a row when the debug scrubber's captured frame does not match the requested `debugGameFrame`. A clean capture manifest is still a screenshot-production proof; semantic Replay/Game review remains a separate decision step.

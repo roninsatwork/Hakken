@@ -4,10 +4,10 @@ import {
   extractDeclarationBody,
 } from './test/driftUtils';
 
-describe('Ask Sonae Safety Drift', () => {
+describe('Ask Hakken Safety Drift', () => {
 
-  test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
-    const assistantBody = extractDeclarationBody('convex/aiChat.ts', 'generateSonaeResponse');
+  test('Ask Hakken assistant runtimes keep the shared safety spine', () => {
+    const assistantBody = extractDeclarationBody('convex/aiChat.ts', 'generateHakkenResponse');
 
     // The safety check and refusal write moved behind `guardModelTurn` in
     // `convex/modelTurnService.ts` (maintenance plan, Phase 8), so the spine
@@ -25,7 +25,7 @@ describe('Ask Sonae Safety Drift', () => {
 
     expect(
       assistantMissing,
-      `generateSonaeResponse must keep preflight refusal, prompt hierarchy, untrusted history, and untrusted RAG helpers:\n${assistantMissing.join('\n')}`
+      `generateHakkenResponse must keep preflight refusal, prompt hierarchy, untrusted history, and untrusted RAG helpers:\n${assistantMissing.join('\n')}`
     ).toEqual([]);
 
     // The agent run is no longer one function. It starts in `runAgentObjective`

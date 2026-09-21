@@ -3,7 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-export const MOVEMENT_EXPANSION_HANDOFF_SCHEMA = "sonae-movement-expansion-preview-handoff/v1";
+export const MOVEMENT_EXPANSION_HANDOFF_SCHEMA = "hakken-movement-expansion-preview-handoff/v1";
 
 export const MOVEMENT_EXPANSION_HANDOFFS = {
   "facing-occlusion": {
@@ -280,7 +280,7 @@ function commandListForHandoff({
         `--plan ${gameVisualPlanPath}`,
         `--out ${gameVisualCapturePath}`,
         "--local-test-auth",
-        "--secret sonae-local-test-auth",
+        "--secret hakken-local-test-auth",
       ].join(" "),
       id: "game-visual-capture",
       purpose: `Capture focused Game Studio screenshots for the ${family} proof cases.`,

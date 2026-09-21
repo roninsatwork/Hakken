@@ -8,7 +8,7 @@ import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials"
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { publicAction } from "./tenantFunctions";
-import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
+import { createOrUpdateHakkenAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
 import { buildConsentUrl } from "./magicLinkUrlService";
@@ -200,7 +200,7 @@ const authRuntime = convexAuth({
   providers,
 
   callbacks: {
-    createOrUpdateUser: createOrUpdateSonaeAuthUser,
+    createOrUpdateUser: createOrUpdateHakkenAuthUser,
   },
 });
 

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 
 export function CompanyRuleDeleteDialog({
   isOpen,
@@ -21,7 +21,7 @@ export function CompanyRuleDeleteDialog({
   const t = useTranslations("admin.companyDetails.rules");
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title={t("deleteTitle")} size="sm">
+    <HakkenModal isOpen={isOpen} onClose={onClose} title={t("deleteTitle")} size="sm">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <AlertOctagon className="mb-2 h-12 w-12 text-rose-500 opacity-80" />
@@ -48,6 +48,6 @@ export function CompanyRuleDeleteDialog({
           </WriteButton>
         </div>
       </div>
-    </SonaeModal>
+    </HakkenModal>
   );
 }

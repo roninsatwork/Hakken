@@ -374,7 +374,7 @@ function observabilityLogGroupsFixture() {
 }
 
 const settings = {
-  platformName: "Sonae E2E",
+  platformName: "Hakken E2E",
   brandColorHex: "#8b5cf6",
   headingFontFamily: "Inter",
   bodyFontFamily: "Inter",
@@ -418,7 +418,7 @@ const modelProviders = [
 ];
 
 const inviteTemplateFixture = {
-  subject: "Join E2E Company on Sonae",
+  subject: "Join E2E Company on Hakken",
   headline: "Your workspace is ready",
   body: "Use this invitation to join the deterministic E2E workspace.",
   ctaText: "Join Workspace",
@@ -761,7 +761,7 @@ function getCookie(name: string) {
 }
 
 function getRole(): E2ERole | null {
-  const role = getCookie("sonae_e2e_auth");
+  const role = getCookie("hakken_e2e_auth");
   if (role === "super-admin" || role === "company-admin" || role === "user" || role === "read-only" || role === "auditor") return role;
   return null;
 }
@@ -851,7 +851,7 @@ function pageData<T>(data: T[], page = 1, pageSize = 15) {
  */
 function readThreadMessages(threadId: string) {
   if (typeof window === "undefined") return undefined;
-  const raw = window.localStorage.getItem(`sonae:e2e:thread:${threadId}`);
+  const raw = window.localStorage.getItem(`hakken:e2e:thread:${threadId}`);
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -880,7 +880,7 @@ function writeThreadMessages(threadId: string, content: string) {
       threadId,
     },
   ];
-  window.localStorage.setItem(`sonae:e2e:thread:${threadId}`, JSON.stringify(messages));
+  window.localStorage.setItem(`hakken:e2e:thread:${threadId}`, JSON.stringify(messages));
 }
 
 type E2EFeedbackEntry = {
@@ -889,7 +889,7 @@ type E2EFeedbackEntry = {
   hasCorrection: boolean;
 };
 
-const FEEDBACK_STORAGE_KEY = "sonae:e2e:feedback";
+const FEEDBACK_STORAGE_KEY = "hakken:e2e:feedback";
 
 /** As above: absent on the server means "not loaded", not "nothing recorded". */
 function readFeedbackStore(): Record<string, E2EFeedbackEntry> {
@@ -1028,7 +1028,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "aiTools:getConnectorMarketplace") {
     return [
       {
-        key: "sonae-knowledge",
+        key: "hakken-knowledge",
         name: "Knowledge search",
         description: "Lets an agent search the documents you have uploaded, and quote from them.",
         category: "KNOWLEDGE",
@@ -1042,7 +1042,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         toolDefinitions: [],
         // An installed connector is the whole stored row, not a summary of it.
         installation: {
-          key: "sonae-knowledge",
+          key: "hakken-knowledge",
           name: "Knowledge search",
           description: "Lets an agent search the documents you have uploaded, and quote from them.",
           category: "KNOWLEDGE",
@@ -1079,8 +1079,8 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       connector: {
         _id: "connector_e2e",
         _creationTime: now,
-        key: "sonae-knowledge",
-        name: "Sonae Knowledge",
+        key: "hakken-knowledge",
+        name: "Hakken Knowledge",
         description: "Search approved tenant knowledge through the governed RAG path.",
         category: "KNOWLEDGE",
         authMode: "NONE",
@@ -1094,7 +1094,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         updatedAt: now,
       },
       definition: {
-        key: "sonae-knowledge",
+        key: "hakken-knowledge",
         name: "Knowledge search",
         description: "Lets an agent search the documents you have uploaded, and quote from them.",
         category: "KNOWLEDGE",
@@ -1134,7 +1134,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
           _id: "log_e2e",
           _creationTime: now,
           connectorId: "connector_e2e",
-          key: "sonae-knowledge",
+          key: "hakken-knowledge",
           status: "SUCCESS",
           message: "Connection test passed.",
           testedAt: now - 60000,
@@ -1549,7 +1549,7 @@ export function useMutation(functionReference: FunctionReference) {
     if (path === "chat:createThread") {
       const threadId = `thread_e2e_${Date.now()}`;
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(`sonae:e2e:thread:${threadId}`, JSON.stringify([]));
+        window.localStorage.setItem(`hakken:e2e:thread:${threadId}`, JSON.stringify([]));
       }
       return threadId;
     }

@@ -17,7 +17,7 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -253,7 +253,7 @@ export default function MaintenanceScriptDetailPage() {
         </aside>
       </div>
 
-      <SonaeModal
+      <HakkenModal
         isOpen={isConfirmOpen}
         onClose={() => {
           if (!isRunning) setIsConfirmOpen(false);
@@ -293,7 +293,7 @@ export default function MaintenanceScriptDetailPage() {
             {t("runScript")}
           </Button>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </div>
   );
 }

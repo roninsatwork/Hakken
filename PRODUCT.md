@@ -15,8 +15,9 @@
 > taken on 2026-09-21. Sonae is Ronins' general-purpose agentic application
 > framework and continues to exist and be maintained separately; Hakken is the
 > product built on that foundation, developed here and only here. Code
-> identifiers, config filenames, deployment names and schema fields that still
-> read `sonae` are unchanged and remain correct — see §33.
+> identifiers and user-facing strings are now `Hakken`; the `sonae` names that
+> remain are external contracts (webhook headers, Stripe metadata, live
+> infrastructure) — see §33.
 >
 > Platform sections last verified against the code on 2026-09-13. Vision last
 > updated 2026-09-21 from `docs/product/app-vision-v2.md` (v2.3).
@@ -741,28 +742,34 @@ They are not Hakken product surface. The clone tooling
 most of them as optional modules. Decide per module whether to keep, park or
 strip it before phase 1; nothing in Part One depends on any of them.
 
-### Identifiers that still read `sonae`
+### Identifiers that deliberately still read `sonae`
 
-The 2026-09-21 rename covered documentation prose only. These are unchanged,
-still correct, and should be read as `sonae` wherever they appear:
+The 2026-09-21 rebrand renamed documentation prose. A follow-up pass the same
+day renamed the rest: React components, Convex functions, config filenames,
+test fixtures, CSS classes, debug globals and every user-facing string are now
+`Hakken`, including `projectName` in `messages/en.json`.
 
-| Kind | Examples |
-|---|---|
-| React components | `SonaeModal`, `SonaeEmptyState`, `SonaeMarkdown` |
-| Convex functions | `generateSonaeResponse`, `createOrUpdateSonaeAuthUser` |
-| Schema tables | `sonaeCheckoutAttempt`, `sonaeBillingAccount` |
-| Config files | `sonae.product.json`, `sonae.billing.json`, `.sonae/framework.json` |
-| Constants / headers | `ASK_SONAE_PLATFORM_SAFETY_CONTRACT`, `x-sonae-secret`, `SONAE_WIDGET_CONFIG` |
-| Auth and cookies | `sonae-local-test-auth`, `sonae_e2e_auth`, `sonae_widget_` |
-| Deployment | `sonae-app` (Cloud Run service), `sonae-repo` (Artifact Registry), `sonae.ronins.co.uk` |
-| Git remote | `https://github.com/roninsatwork/Sonae.git` |
+What still reads `sonae` is deliberate. Each one is a contract with something
+outside this repository, and renaming it breaks a running system:
 
-**The user-facing name has not been changed either.** `messages/en.json` sets
-`projectName: "Sonae"` and the UI renders the assistant as "Ask {platformName}",
-so the running app still says Sonae while these documents say Hakken. Closing
-that gap is a product-configuration change, not a documentation one: see
-[docs/operator/product-setup.md](./docs/operator/product-setup.md) and run
-`npm run product:init` with a Hakken configuration.
+| Kind | Examples | Why it stays |
+|---|---|---|
+| Webhook wire protocol | `x-sonae-secret`, `X-Sonae-Signature`, `X-Sonae-Timestamp`, `Sonae-Webhook-Dispatcher` | Receivers already parse these headers |
+| Stripe metadata | `sonaeBillingAccount`, `sonaeCheckoutAttempt` | Written on live customers and subscriptions |
+| Embedded widget surface | `sonae_widget_*`, `SONAE_WIDGET_CONFIG`, `SonaeWidgetInitialized`, and the `sonae-widget-*` / `sonae-open` / `sonae-display` / `sonae-icon-*` CSS classes | Third-party sites set the global, listen for the event and target the classes |
+| Deployment and DNS | `sonae-app` (Cloud Run), `sonae-repo` (Artifact Registry), `sonae-dev-491717` (GCP project), `sonae.ronins.co.uk`, `sonae-auth.ronins.co.uk`, `sonae-db.ronins.co.uk` | Live infrastructure |
+| Persisted format ids | `sonae.agentSkillBundle.v1`, `sonae-swarm-cluster-v1`, `sonae-voice-ticket-v2` | Stored in existing records |
+| Provider-side ids | `G-SONAE`, `sonae-stripe-portal-*` | Configured in the provider, not here |
+| Upstream framework | `https://github.com/roninsatwork/Sonae.git` and the `product:init` origin guard | Names the actual repository this was cloned from |
+| Convex table | `sonaeGlobal` | Renaming a table is a data migration |
+
+Renaming any of these is a migration with a cutover, not a find-and-replace.
+
+**Historical records keep their original names.** `docs/plans/completed/` and
+`docs/product/` are dated records of decisions as they were made, so they still
+say `SonaeModal`, `generateSonaeResponse`, `sonae-local-test-auth` and the like.
+Read them as history: the code those names refer to is now `HakkenModal`,
+`generateHakkenResponse` and `hakken-local-test-auth`.
 
 ---
 

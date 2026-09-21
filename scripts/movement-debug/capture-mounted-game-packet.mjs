@@ -221,7 +221,7 @@ async function readMountedGamePacketProof(page) {
       sourceFrameId: debug.sourceFrameId,
       updatedAt: debug.updatedAt,
     }) : null;
-    const proof = window.__sonaeMovementGamePacketProof;
+    const proof = window.__hakkenMovementGamePacketProof;
     if (!proof || typeof proof !== "object") return null;
     return {
       ...proof,
@@ -247,7 +247,7 @@ async function readMountedGamePacketProof(page) {
   for (let startIndex = 0; startIndex < renderedFrameCount; startIndex += mountedGameRenderedFrameBatchSize) {
     const endIndex = Math.min(renderedFrameCount, startIndex + mountedGameRenderedFrameBatchSize);
     const chunk = await page.evaluate(({ endIndex, startIndex }) => {
-      const proof = window.__sonaeMovementGamePacketProof;
+      const proof = window.__hakkenMovementGamePacketProof;
       const frames = Array.isArray(proof?.renderedFrames) ? proof.renderedFrames : [];
       return frames.slice(startIndex, endIndex).map((frame) => ({
         checksums: structuredClone(frame.checksums),
@@ -323,55 +323,55 @@ export async function runMountedGamePacketCapture(argv) {
     } catch (error) {
       const pageState = await page.evaluate(() => ({
         bodyText: document.body?.innerText?.slice(0, 1000) ?? "",
-        proof: window.__sonaeMovementGamePacketProof ?? null,
+        proof: window.__hakkenMovementGamePacketProof ?? null,
         title: document.title,
         url: window.location.href,
       }));
       throw new Error(`Mounted Game lobby did not render: ${JSON.stringify(pageState)}. ${error instanceof Error ? error.message : String(error)}`);
     }
     try {
-      await page.waitForFunction(() => window.__sonaeMovementGamePacketProof?.phase === "ready");
+      await page.waitForFunction(() => window.__hakkenMovementGamePacketProof?.phase === "ready");
     } catch (error) {
       const setupState = await page.evaluate(() => ({
         bodyText: document.body?.innerText?.slice(-1200) ?? "",
-        proof: window.__sonaeMovementGamePacketProof ?? null,
+        proof: window.__hakkenMovementGamePacketProof ?? null,
       }));
       throw new Error(`Mounted Game packet setup did not become ready: ${JSON.stringify(setupState)}. ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    const lobbyProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
+    const lobbyProof = await page.evaluate(() => window.__hakkenMovementGamePacketProof);
     await page.getByRole("button", { name: "Begin Practice" }).click();
     const startButton = page.getByRole("button", { name: "Start practice" });
     await startButton.waitFor();
     await startButton.click();
     try {
       await page.waitForFunction(() => {
-        const proof = window.__sonaeMovementGamePacketProof;
+        const proof = window.__hakkenMovementGamePacketProof;
         return proof?.isPlaying === true || proof?.startGate?.status === "blocked";
       }, null, {
         timeout: 30_000,
       });
-      const startProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
+      const startProof = await page.evaluate(() => window.__hakkenMovementGamePacketProof);
       if (startProof?.isPlaying !== true) {
         throw new Error(`Game start gate blocked after ${startProof?.preStartFrameCount ?? 0} chronological pre-start frame(s).`);
       }
     } catch (error) {
       const startState = await page.evaluate(() => ({
         bodyText: document.body?.innerText?.slice(-1200) ?? "",
-        proof: window.__sonaeMovementGamePacketProof ?? null,
+        proof: window.__hakkenMovementGamePacketProof ?? null,
       }));
       throw new Error(`Mounted Game did not start through its normal gate: ${JSON.stringify(startState)}. ${error instanceof Error ? error.message : String(error)}`);
     }
     try {
       await page.waitForFunction(() => {
-        const proof = window.__sonaeMovementGamePacketProof;
+        const proof = window.__hakkenMovementGamePacketProof;
         return proof && proof.activeFrameStartIndex !== null &&
           proof.playerFrameIndex >= proof.activeFrameStartIndex + 2 &&
           proof.instructorFrameIndex === proof.playerFrameIndex &&
           proof.lastRenderedFrameIndex === proof.playerFrameIndex;
       }, null, { timeout: 15_000 });
     } catch (error) {
-      const playbackState = await page.evaluate(() => window.__sonaeMovementGamePacketProof ?? null);
+      const playbackState = await page.evaluate(() => window.__hakkenMovementGamePacketProof ?? null);
       throw new Error(`Mounted Game did not render its first active frames: ${JSON.stringify(playbackState)}. ${error instanceof Error ? error.message : String(error)}`);
     }
     let visibleScreenshotPath = null;
@@ -403,20 +403,20 @@ export async function runMountedGamePacketCapture(argv) {
     if (!args.skipPause) {
       await page.getByRole("button", { name: "Pause practice" }).click();
       try {
-        await page.waitForFunction(() => window.__sonaeMovementGamePacketProof?.phase === "paused");
+        await page.waitForFunction(() => window.__hakkenMovementGamePacketProof?.phase === "paused");
       } catch (error) {
-        const pauseState = await page.evaluate(() => window.__sonaeMovementGamePacketProof ?? null);
+        const pauseState = await page.evaluate(() => window.__hakkenMovementGamePacketProof ?? null);
         throw new Error(`Mounted Game did not pause recorded playback: ${JSON.stringify(pauseState)}. ${error instanceof Error ? error.message : String(error)}`);
       }
-      pausedProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
+      pausedProof = await page.evaluate(() => window.__hakkenMovementGamePacketProof);
       await page.waitForTimeout(300);
-      heldProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
+      heldProof = await page.evaluate(() => window.__hakkenMovementGamePacketProof);
       if (heldProof.playerFrameIndex !== pausedProof.playerFrameIndex) {
         throw new Error("Recorded Game playback advanced while paused.");
       }
 
       await page.getByRole("button", { name: "Start practice" }).click();
-      await page.waitForFunction(() => window.__sonaeMovementGamePacketProof?.isPlaying === true, null, {
+      await page.waitForFunction(() => window.__hakkenMovementGamePacketProof?.isPlaying === true, null, {
         timeout: 30_000,
       });
     }
@@ -432,7 +432,7 @@ export async function runMountedGamePacketCapture(argv) {
       stalled: false,
     };
     while (!completionWatchdog.complete) {
-      const completionState = await page.evaluate(() => window.__sonaeMovementGamePacketProof ?? null);
+      const completionState = await page.evaluate(() => window.__hakkenMovementGamePacketProof ?? null);
       completionWatchdog = updateMountedGamePlaybackWatchdog({
         nowMs: Date.now(),
         previous: completionWatchdog,

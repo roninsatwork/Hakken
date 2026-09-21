@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { formatPhoneNumberForDisplay } from "@/convex/telephonyService";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 
 type CompanyPhoneNumber = FunctionReturnType<typeof api.telephony.getCompanyPhoneNumber>;
 type Calls = FunctionReturnType<typeof api.telephony.listCalls>;
@@ -65,7 +65,7 @@ export function RecentCallsContent({ calls }: { calls: Calls }) {
   const t = useTranslations("calls");
 
   if (calls.length === 0) {
-    return <SonaeEmptyState icon={Phone} title={t("title")} description={t("empty")} />;
+    return <HakkenEmptyState icon={Phone} title={t("title")} description={t("empty")} />;
   }
 
   return (

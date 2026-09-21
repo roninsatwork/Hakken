@@ -7,7 +7,7 @@ merges, copies incoming code, installs packages, changes remotes or deploys.
 
 ## The export baseline
 
-Every new export includes `.sonae/framework.json`. Commit it with the initial
+Every new export includes `.hakken/framework.json`. Commit it with the initial
 product. It records the source commit when available, whether the source had
 uncommitted work, the retained modules, and SHA-256/executable-bit fingerprints of
 the actual exported files after fences and the lockfile were adjusted. Base and
@@ -30,7 +30,7 @@ copy today's provenance into an older product or guess its starting commit.
    requirements in a separate checkout. Preserve any existing local work when
    obtaining that version.
 2. From that source, export into a new sibling directory using the same module
-   list as the product's `.sonae/framework.json`:
+   list as the product's `.hakken/framework.json`:
 
    ```bash
    npm run template:build -- --keep base --out ../incoming-framework
@@ -99,8 +99,8 @@ npm run framework:update -- --upstream ../incoming-framework --record-review ../
 ```
 
 This verifies all decisions, the pristine incoming export and a clean committed
-product checkpoint. It writes only the new `.sonae/framework.json` and a review
-record under `.sonae/reviews/`, containing the checkpoint, decisions, resulting
+product checkpoint. It writes only the new `.hakken/framework.json` and a review
+record under `.hakken/reviews/`, containing the checkpoint, decisions, resulting
 product fingerprints and verification statement. Failed writes restore the prior
 baseline. Review and commit these metadata files locally with the update.
 

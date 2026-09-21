@@ -253,7 +253,7 @@ export function WikiPageDetailScreen({
       />
       <SaveError>{errorMessage}</SaveError>
 
-      {/* Pinned facts ride on top: Sonae always respects them. */}
+      {/* Pinned facts ride on top: Hakken always respects them. */}
       {detail.pinnedCorrections.map((correction) => (
         <div
           key={correction.pinnedAt}

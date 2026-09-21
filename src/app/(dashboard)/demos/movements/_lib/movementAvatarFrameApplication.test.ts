@@ -403,7 +403,7 @@ describe("movementAvatarPostFrameDebugRuntime (merged)", () => {
         footLockDrift: 0.2,
         footLockStrength: 0.3,
       });
-      expect(registryWindow.__sonaeMovementRetargetDebug).toMatchObject({
+      expect(registryWindow.__hakkenMovementRetargetDebug).toMatchObject({
         player: {
           avatarName: "Player",
           frameUpdatedAt: 10,

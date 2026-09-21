@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import SonaeModal from "../feedback/SonaeModal";
+import HakkenModal from "../feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -544,7 +544,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
       </div>
 
       {/* Access Denial Matrix */}
-      <SonaeModal 
+      <HakkenModal 
         isOpen={permissionError} 
         onClose={() => setPermissionError(false)}
         title="Microphone Access Blocked"
@@ -568,10 +568,10 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
 
       {/* File Upload Error Matrix */}
-      <SonaeModal 
+      <HakkenModal 
         isOpen={!!uploadError} 
         onClose={() => setUploadError(null)}
         title="File Upload Invalid"
@@ -595,7 +595,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             </Button>
           </div>
         </div>
-      </SonaeModal>
+      </HakkenModal>
     </>
   );
 }

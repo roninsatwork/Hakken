@@ -2,7 +2,7 @@
 
 import type { ClientInvite } from "@/convex/invites";
 import type { FormEvent } from "react";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField } from "@/src/ui/components/screens/ModalForm";
@@ -55,7 +55,7 @@ export default function UserDirectoryDialogs({
 }) {
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={isAddModalOpen}
         onClose={onCloseAdd}
         title={editingUser ? t("modal.editTitle") : t("modal.inviteTitle")}
@@ -117,7 +117,7 @@ export default function UserDirectoryDialogs({
             </WriteButton>
           </div>
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={!!deletingUser}

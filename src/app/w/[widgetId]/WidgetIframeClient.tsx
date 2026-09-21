@@ -16,8 +16,8 @@ import Image from "next/image";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { PhotoActionChip } from "@/src/ui/components/chat/PhotoActionChip";
 
-const SonaeMarkdown = dynamic(() =>
-  import("@/src/ui/components/chat/SonaeMarkdown").then((module) => module.SonaeMarkdown)
+const HakkenMarkdown = dynamic(() =>
+  import("@/src/ui/components/chat/HakkenMarkdown").then((module) => module.HakkenMarkdown)
 );
 
 
@@ -47,7 +47,7 @@ function WidgetAssistantContent({
 
     return (
         <>
-            <SonaeMarkdown content={reveal.text} />
+            <HakkenMarkdown content={reveal.text} />
             {(presentation === "streaming" || reveal.isRevealing) && (
                 <span
                     role="status"
@@ -426,7 +426,7 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
                    )}
                </div>
                <div className="flex flex-col">
-                   <h2 className="text-[14px] font-bold text-foreground">{widget.name || "Sonae Assistant"}</h2>
+                   <h2 className="text-[14px] font-bold text-foreground">{widget.name || "Hakken Assistant"}</h2>
                    <span className="text-[11px] text-secondary flex items-center gap-1">
                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
                    </span>
@@ -656,7 +656,7 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
                </button>
            </form>
            <div className="w-full text-center mt-3">
-               <span className="text-[10px] text-muted font-mono uppercase tracking-widest">Powered by Sonae</span>
+               <span className="text-[10px] text-muted font-mono uppercase tracking-widest">Powered by Hakken</span>
            </div>
        </div>
 

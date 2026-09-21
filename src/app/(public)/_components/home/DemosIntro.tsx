@@ -24,14 +24,14 @@ export function DemosIntro() {
       <div className="ps-demos-intro-grid">
         <div>
           <span className="ps-eyebrow" data-reveal>
-            Built on Sonae
+            Built on Hakken
           </span>
           <h2 className="ps-display ps-demos-intro-h2 mt-3" data-reveal>
             {count} {demos.length === 1 ? "demo" : "demos"}, pre-built in record time.
           </h2>
         </div>
         <p className="ps-demos-intro-lede" data-reveal>
-          None of them were possible before Sonae existed. The foundations were
+          None of them were possible before Hakken existed. The foundations were
           already standing, so each demo only needed the part that makes it
           different.
         </p>

@@ -164,10 +164,10 @@ describe("assembling the transcript", () => {
     const collector = createTranscriptCollector();
     expect(collector.hear({ callerText: "what are " })).toEqual([]);
     expect(collector.hear({ callerText: "your hours" })).toEqual([]);
-    expect(collector.hear({ sonaeText: "We open at nine." })).toEqual([]);
+    expect(collector.hear({ hakkenText: "We open at nine." })).toEqual([]);
     expect(collector.hear({ turnComplete: true })).toEqual([
       { role: "CALLER", text: "what are your hours" },
-      { role: "SONAE", text: "We open at nine." },
+      { role: "HAKKEN", text: "We open at nine." },
     ]);
     // And the next exchange starts clean.
     expect(collector.hear({ turnComplete: true })).toEqual([]);
@@ -184,6 +184,6 @@ describe("assembling the transcript", () => {
     const speech = readModelSpeech(
       JSON.stringify({ serverContent: { turnComplete: true, outputTranscription: { text: "Bye." } } })
     );
-    expect(speech).toEqual({ turnComplete: true, sonaeText: "Bye." });
+    expect(speech).toEqual({ turnComplete: true, hakkenText: "Bye." });
   });
 });

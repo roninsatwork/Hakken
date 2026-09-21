@@ -6,7 +6,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { useTranslations } from "next-intl";
 import type { Dispatch, FormEventHandler, SetStateAction } from "react";
 
@@ -54,7 +54,7 @@ export function SuperAdminDialogs({
 
   return (
     <>
-      <SonaeModal
+      <HakkenModal
         isOpen={isEditOpen}
         onClose={onCloseEdit}
         title={editingUser ? t("editTitle") : t("inviteTitle")}
@@ -122,7 +122,7 @@ export function SuperAdminDialogs({
             </WriteButton>
           </div>
         </form>
-      </SonaeModal>
+      </HakkenModal>
 
       <ConfirmationModal
         isOpen={!!deletingUser}

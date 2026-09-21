@@ -1323,7 +1323,7 @@ describe("movement architecture guard", () => {
       ],
       requiredGameProofCases: ["strongest-standing-arm-raise"],
       requiredRecordedProofCases: ["standing-arm-raise"],
-      schema: "sonae-broad-upper-body-capture-contract/v1",
+      schema: "hakken-broad-upper-body-capture-contract/v1",
       supportClaimStatus: "blocked-internal-demo-only",
     })).toEqual({
       broadPassedProofCandidateCount: 0,
@@ -1338,7 +1338,7 @@ describe("movement architecture guard", () => {
       missingBroadPassedProofCases: [],
       missingBroadReadableGameCases: [],
       recordedProofCases: ["standing-arm-raise"],
-      schema: "sonae-broad-upper-body-capture-contract/v1",
+      schema: "hakken-broad-upper-body-capture-contract/v1",
       supportClaimStatus: "blocked-internal-demo-only",
     });
     expect(summarizeBroadUpperBodyCaptureContract({
@@ -1830,7 +1830,7 @@ describe("movement architecture guard", () => {
       missingBroadPassedProofCases: [],
       missingBroadReadableGameCases: [],
       recordedProofCases: broadUpperBodyRecordedProofCases,
-      schema: "sonae-broad-upper-body-capture-contract/v1",
+      schema: "hakken-broad-upper-body-capture-contract/v1",
     });
   });
 
