@@ -27,7 +27,7 @@ export type VertexProviderConfig = {
   };
 };
 
-export const DEFAULT_VERTEX_PROJECT = "hakken-dev-491717";
+export const DEFAULT_VERTEX_PROJECT = "hakken-509309";
 export const DEFAULT_VERTEX_LOCATION = "global";
 
 export function buildVertexProviderConfig(args: {
@@ -152,10 +152,17 @@ export async function listVertexModels(
   const collected: VertexCatalogueModel[] = [];
   const seen = new Set<string>();
 
-  let pager = await ai.models.list({ config: { queryBase: true, pageSize: 100 } });
+  const pager = await ai.models.list({ config: { queryBase: true, pageSize: 100 } });
+
+  // `nextPage()` advances the pager and returns the new page's items — it does
+  // not return a pager. Assigning it back over `pager` left the second
+  // iteration reading `.page` off a plain array, which is undefined: the sync
+  // failed with "page is not iterable" the moment Vertex returned more than
+  // one page.
+  let page = pager.page;
 
   for (let pageCount = 0; pageCount < pageLimit; pageCount += 1) {
-    for (const model of pager.page) {
+    for (const model of page) {
       const modelId = parseVertexModelId(model.name);
       if (!modelId || seen.has(modelId)) continue;
       seen.add(modelId);
@@ -170,7 +177,7 @@ export async function listVertexModels(
     }
 
     if (!pager.hasNextPage()) break;
-    pager = await pager.nextPage() as unknown as typeof pager;
+    page = await pager.nextPage();
   }
 
   return collected;

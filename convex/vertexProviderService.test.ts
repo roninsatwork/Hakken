@@ -2,6 +2,7 @@ import type { GoogleGenAI } from "@google/genai";
 import { describe, expect, test, vi } from "vitest";
 import {
   buildVertexProviderConfig,
+  listVertexModels,
   DEFAULT_VERTEX_LOCATION,
   DEFAULT_VERTEX_PROJECT,
   embedVertexContentWithRetry,
@@ -20,7 +21,49 @@ function streamingClient(chunks: unknown[]) {
   } as unknown as GoogleGenAI;
 }
 
+/**
+ * A pager shaped as @google/genai shapes it: `page` is the current page's
+ * items, and `nextPage()` advances the pager and returns the new items — it
+ * does not return another pager.
+ */
+function pagingClient(pages: { name: string }[][]) {
+  let index = 0;
+  const pager = {
+    get page() { return pages[index]; },
+    hasNextPage: () => index < pages.length - 1,
+    nextPage: async () => { index += 1; return pages[index]; },
+  };
+  return { models: { list: vi.fn(async () => pager) } } as unknown as GoogleGenAI;
+}
+
 describe("vertex provider service", () => {
+  test("collects models from every page, not just the first", async () => {
+    const models = await listVertexModels(pagingClient([
+      [{ name: "publishers/google/models/alpha-model" }],
+      [{ name: "publishers/google/models/beta-model" }],
+      [{ name: "publishers/google/models/gamma-model" }],
+    ]));
+
+    expect(models.map((model) => model.modelId)).toEqual([
+      "alpha-model",
+      "beta-model",
+      "gamma-model",
+    ]);
+  });
+
+  test("stops at the page limit rather than following a pager forever", async () => {
+    const models = await listVertexModels(
+      pagingClient([
+        [{ name: "publishers/google/models/first-entry" }],
+        [{ name: "publishers/google/models/second-entry" }],
+        [{ name: "publishers/google/models/third-entry" }],
+      ]),
+      { pageLimit: 2 },
+    );
+
+    expect(models.map((model) => model.modelId)).toEqual(["first-entry", "second-entry"]);
+  });
+
   test("builds Vertex client config from environment values", () => {
     expect(
       buildVertexProviderConfig({
