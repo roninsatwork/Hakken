@@ -314,6 +314,13 @@ export const deleteCompany = superAdminMutation({
     const previousPlan = company?.planId ? await ctx.db.get(company.planId) : null;
 
     await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
+    // Scheduled here rather than inside the purge above, which reschedules
+    // itself while users and invites remain — a sweep started from there would
+    // be started once per batch.
+    // The company's websites and the competitors tracked against them go with
+    // it; the `websites` rows do not. A host this company held may still be
+    // watched by others, and even if not, its data was paid for.
+    await ctx.scheduler.runAfter(0, internal.websites.purgeCompanyWebsitesInternal, { companyId: args.id });
 
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
@@ -350,6 +357,38 @@ export const updateCompanyPrompt = superAdminMutation({
       entityType: "companies",
       metadata: buildCompanyPromptAuditMetadata(args.systemPrompt),
       timestamp: now,
+    });
+
+    return args.id;
+  },
+});
+
+/**
+ * Whether this company's SEO pulls prefer a live answer over a queued one.
+ *
+ * Separate from the schedule, because it is not a scheduling question: the
+ * schedule says when to ask, this says how to ask. Kept on the company rather
+ * than the `schedules` row so the generic schedule machinery stays generic.
+ */
+export const setCompanySeoMethod = superAdminMutation({
+  args: { id: v.id("companies"), preferLive: v.boolean() },
+  returns: v.id("companies"),
+  handler: async (ctx, args) => {
+    const company = await ctx.db.get(args.id);
+    if (!company) throw appError("NOT_FOUND", "Company not found");
+
+    await ctx.db.patch(args.id, { seoPreferLive: args.preferLive });
+
+    // Audited: live costs more per call than queued, so this is a spending
+    // decision even though it looks like a preference.
+    await ctx.db.insert("auditLogs", {
+      actorId: ctx.userId,
+      actionType: "UPDATE_COMPANY_SEO_METHOD",
+      entityId: args.id,
+      entityType: "companies",
+      companyId: args.id,
+      metadata: JSON.stringify({ preferLive: args.preferLive }),
+      timestamp: Date.now(),
     });
 
     return args.id;

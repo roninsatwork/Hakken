@@ -97,6 +97,15 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     treatment: "RETAIN",
     reason: "The record of who ran a maintenance script against live data.",
   },
+  {
+    table: "seoDataPulls",
+    fields: ["requestedBy"],
+    treatment: "DISSOCIATE",
+    reason:
+      "What this platform spent with DataForSEO, and on what. The spend is the operator's own "
+      + "accounting record and has to survive a person leaving; who asked for a particular "
+      + "pull does not, so the row stays and the name comes off.",
+  },
 
   {
     table: "tasks",

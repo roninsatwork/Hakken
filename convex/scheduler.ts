@@ -58,6 +58,8 @@ export const createSchedule = superAdminMutation({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
+    /** Set when this schedule runs for one client, as the SEO fetcher does. */
+    companyId: v.optional(v.id("companies")),
     intervalStr: v.string(), // e.g. "daily", "weekly"
     isActive: v.boolean(),
   },
@@ -73,6 +75,7 @@ export const createSchedule = superAdminMutation({
       name: args.name,
       workflowId: args.workflowId,
       agentId: args.agentId,
+      companyId: args.companyId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
       nextRunAt: args.isActive
@@ -98,6 +101,7 @@ export const updateSchedule = superAdminMutation({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
+    companyId: v.optional(v.id("companies")),
     intervalStr: v.string(),
     isActive: v.boolean(),
   },
@@ -111,6 +115,7 @@ export const updateSchedule = superAdminMutation({
       name: args.name,
       workflowId: args.workflowId,
       agentId: args.agentId,
+      companyId: args.companyId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
       nextRunAt: args.isActive
@@ -118,6 +123,24 @@ export const updateSchedule = superAdminMutation({
         : undefined,
     });
     return true;
+  },
+});
+
+/**
+ * The schedule one company's data collection runs on, if it has one.
+ *
+ * An ordinary `schedules` row found by company — the same table, dispatcher and
+ * helpers every other schedule uses. There is no separate cadence store for
+ * SEO, deliberately: the company screen is a view onto this row.
+ */
+export const getCompanySchedule = superAdminQuery({
+  args: { companyId: v.id("companies") },
+  returns: v.union(rowShape.schedules, v.null()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("schedules")
+      .withIndex("by_company_agent", (q) => q.eq("companyId", args.companyId))
+      .first();
   },
 });
 

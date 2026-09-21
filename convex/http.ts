@@ -4,6 +4,7 @@ import { registerBillingHttp } from "./billingHttp";
 import { auth } from "./auth";
 import { handleWebhook } from "./workflows";
 import { processApifyWebhook } from "./webhooks";
+import { handleSeoPingback } from "./seoPingback";
 import {
   handlePublicAgentRunTrigger,
   handlePublicApiPing,
@@ -26,6 +27,20 @@ http.route({
   path: "/api/webhooks/workflow",
   method: "POST",
   handler: handleWebhook,
+});
+
+// DataForSEO's "your task is ready" ping. Carries no result and is trusted
+// with nothing; see seoPingback.ts. GET as well as POST because their pingback
+// is a GET and their postback is not, and both should be harmless here.
+http.route({
+  path: "/api/seo/pingback",
+  method: "GET",
+  handler: handleSeoPingback,
+});
+http.route({
+  path: "/api/seo/pingback",
+  method: "POST",
+  handler: handleSeoPingback,
 });
 
 http.route({

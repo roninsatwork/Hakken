@@ -101,3 +101,18 @@ export function seoBackoffMs(attempt: number): number {
   const index = Math.min(Math.max(attempt, 0), SEO_BACKOFF_MS.length - 1);
   return SEO_BACKOFF_MS[index];
 }
+
+/**
+ * The most sends one cycle may plan.
+ *
+ * A placeholder for the per-plan keyword allowance, and deliberately a real
+ * limit rather than a TODO: a customer adding ten thousand keywords must not
+ * be able to set our throughput, and an enforcement point that does not exist
+ * yet enforces nothing. When the plan allowance is decided this becomes the
+ * fallback for a company with no plan, not a second rule beside it.
+ *
+ * Hitting it is `CAPPED_PLAN`, which is the customer's own limit and separate
+ * from `CAPPED_SPEND`, which is ours. Telling someone to buy more of something
+ * that was never the problem is the failure those two statuses avoid.
+ */
+export const SEO_MAX_SENDS_PER_CYCLE = 25_000;

@@ -410,20 +410,30 @@ export default defineSchema({
     /** When DataForSEO's pingback told us this was ready. */
     pingedAt: v.optional(v.number()),
     /**
-     * The raw response in file storage.
-     *
-     * Raw SERP payloads kept in documents forever would dominate storage cost,
-     * and they are only needed to re-parse after a parser bug, so they live in
-     * files with a TTL. `resultJson` below is the older inline field, kept for
-     * live operations small enough to be worth reading directly.
+     * True when the response was too large to keep and only its numbers
+     * survive. Such a pull cannot be re-parsed after a parser bug; it would
+     * have to be bought again, which is why the ceiling is generous.
      */
-    rawFileId: v.optional(v.id("_storage")),
+    rawTruncated: v.optional(v.boolean()),
     /** DataForSEO's task id, once they have given us one. */
     taskId: v.optional(v.string()),
     /** What DataForSEO charged, in USD, as reported by DataForSEO. */
     costUsd: v.number(),
     /** True when this went to the free sandbox and cost nothing. */
     sandbox: v.boolean(),
+    /**
+     * The raw response, kept only long enough to re-parse after a parser bug
+     * and then cleared by the sweep. Raw payloads kept forever would dominate
+     * storage cost; kept nowhere, a parser mistake would mean buying a month
+     * of data again.
+     *
+     * Deliberately *not* in file storage. Convex file storage on this platform
+     * is swept of anything without an upload reservation, because the upload
+     * gateway is the registry for browser-uploaded files — a raw payload
+     * parked there would be deleted within the day, and threading internal
+     * payloads through a gateway built for user uploads with tokens and quotas
+     * would be the wrong shape entirely.
+     */
     resultJson: v.optional(v.string()),
     error: v.optional(v.string()),
     /** The agent run that asked, when an agent asked. */

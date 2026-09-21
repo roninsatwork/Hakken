@@ -183,6 +183,17 @@ crons.interval(
   { job: "wiki-freshness-sweep" }
 );
 
+// The SEO collection watchdog. Hourly on purpose: the worker chains schedule
+// themselves and this exists only to catch the ways that can fail — a claim
+// whose worker died, a pingback that never arrived, a cycle nobody closed. A
+// per-minute version would be a second scheduler pretending to be a safety net.
+crons.interval(
+  "seo-collection-sweep",
+  { hours: 1 },
+  internal.jobLedger.runJob,
+  { job: "seo-collection-sweep" }
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.

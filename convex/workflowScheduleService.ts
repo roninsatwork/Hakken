@@ -37,6 +37,16 @@ export type ScheduleConfigV2 =
   | {
       version: 2;
       kind: "recurring";
+      cadence: "fortnightly";
+      dayOfWeek: number;
+      /** The week the fortnight counts from, as YYYY-MM-DD. */
+      anchorDate: string;
+      timeLocal: string;
+      timezone: string;
+    }
+  | {
+      version: 2;
+      kind: "recurring";
       cadence: "monthly";
       dayOfMonth: number;
       timeLocal: string;
@@ -119,6 +129,25 @@ function isScheduleConfigV2(value: unknown): value is ScheduleConfigV2 {
       Number.isInteger(value.dayOfWeek) &&
       value.dayOfWeek >= 0 &&
       value.dayOfWeek <= 6 &&
+      isValidTime(value.timeLocal);
+  }
+
+  /**
+   * Every other <weekday>, counted from a fixed date.
+   *
+   * The anchor is what separates this from "every 14 days". A plain interval
+   * counts from the last run, so pausing a schedule for three weeks moves every
+   * future run and the client quietly changes day. Counting whole weeks from a
+   * date the user chose means a fortnightly Monday is the same Monday after any
+   * pause, any failure and any backfill.
+   */
+  if (value.cadence === "fortnightly") {
+    return typeof value.dayOfWeek === "number" &&
+      Number.isInteger(value.dayOfWeek) &&
+      value.dayOfWeek >= 0 &&
+      value.dayOfWeek <= 6 &&
+      typeof value.anchorDate === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value.anchorDate) &&
       isValidTime(value.timeLocal);
   }
 
@@ -227,6 +256,16 @@ function getCandidateTimesForLocalDate(config: ScheduleConfigV2, date: { day: nu
 
   if (config.cadence === "daily") return [config.timeLocal];
   if (config.cadence === "weekly" && getLocalDayOfWeek(date) === config.dayOfWeek) return [config.timeLocal];
+  if (config.cadence === "fortnightly") {
+    if (getLocalDayOfWeek(date) !== config.dayOfWeek) return [];
+    // Whole weeks between the anchor and this date. Even means it is an "on"
+    // week; odd is the week in between.
+    const anchor = Date.parse(`${config.anchorDate}T00:00:00Z`);
+    const here = Date.UTC(date.year, date.month - 1, date.day);
+    if (!Number.isFinite(anchor)) return [];
+    const weeks = Math.floor((here - anchor) / (7 * 24 * 60 * 60 * 1000));
+    return weeks % 2 === 0 ? [config.timeLocal] : [];
+  }
   if (config.cadence === "monthly" && date.day === config.dayOfMonth) return [config.timeLocal];
   return [];
 }

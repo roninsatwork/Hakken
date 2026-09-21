@@ -42,6 +42,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runMutation(internal.agentSkills.rebuildSkillCatalogRollupInternal, {}),
   "governance-rollup-rebuild": (ctx) =>
     ctx.runMutation(internal.governanceRollups.rebuildGovernanceRollups, {}),
+  "seo-collection-sweep": (ctx) =>
+    ctx.runMutation(internal.seoCollectionSweep.sweepSeoCollection, {}),
   "company-memory-suggestion-sweep": (ctx) =>
     ctx.runAction(internal.companyMemorySuggestionActions.sweepDispatcher, {}),
   "user-memory-suggestion-sweep": (ctx) =>
@@ -87,6 +89,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "connector-oauth-token-refresh": 60,
   "connection-probes": 60,
   "knowledge-evidence-sweep": 60,
+  "seo-collection-sweep": 60,
   "unified-data-purge-dispatcher": 60,
   "vector-garbage-collection": 60,
   "tool-idempotency-purge": 60,
