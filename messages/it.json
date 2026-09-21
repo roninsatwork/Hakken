@@ -1658,7 +1658,6 @@
             "name": "Nome",
             "plan": "Piano",
             "company": "Azienda",
-            "rightmoveId": "Rightmove ID",
             "runId": "Run ID",
             "user": "Utente",
             "widget": "Widget",
@@ -3251,11 +3250,6 @@
             }
           },
           "run": {
-            "rightmove": {
-              "title": "Raccogli immobili da Rightmove",
-              "detailWithLimit": "Ricerca Rightmove · fino a {count} immobili",
-              "detail": "Ricerca Rightmove"
-            },
             "actionFailed": "Non ha funzionato.",
             "notFoundTitle": "Questo lavoro non è stato trovato",
             "notFoundBody": "Potrebbe essere stato rimosso, oppure appartiene a uno spazio di lavoro che non puoi vedere.",

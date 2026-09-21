@@ -89,11 +89,6 @@ export const workflowDbSelectIndexes: Record<string, WorkflowDbSelectIndexOption
     { indexName: "by_name", labelKey: "dbIndexes.name", filters: ["name"] },
     { indexName: "by_plan", labelKey: "dbIndexes.plan", filters: ["planId"] },
   ],
-  properties: [
-    { indexName: "by_company", labelKey: "dbIndexes.company", filters: ["companyId"] },
-    { indexName: "by_rightmoveId", labelKey: "dbIndexes.rightmoveId", filters: ["rightmoveId"] },
-    { indexName: "by_runId", labelKey: "dbIndexes.runId", filters: ["runId"] },
-  ],
   threads: [
     { indexName: "by_company", labelKey: "dbIndexes.company", filters: ["companyId"] },
     { indexName: "by_user", labelKey: "dbIndexes.user", filters: ["userId"] },

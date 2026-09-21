@@ -1658,7 +1658,6 @@
             "name": "Name",
             "plan": "Plan",
             "company": "Company",
-            "rightmoveId": "Rightmove ID",
             "runId": "Run ID",
             "user": "User",
             "widget": "Widget",
@@ -3251,11 +3250,6 @@
             }
           },
           "run": {
-            "rightmove": {
-              "title": "Gather Rightmove properties",
-              "detailWithLimit": "Rightmove search · up to {count} properties",
-              "detail": "Rightmove search"
-            },
             "actionFailed": "That did not work.",
             "notFoundTitle": "This job could not be found",
             "notFoundBody": "It may have been removed, or it belongs to a workspace you cannot see.",

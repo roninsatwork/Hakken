@@ -152,10 +152,10 @@ describe("Header route labels", () => {
   });
 
   it("shows app subsection labels for non-admin routes", () => {
-    vi.mocked(usePathname).mockReturnValue("/app/properties/search");
+    vi.mocked(usePathname).mockReturnValue("/app/settings/team");
 
     render(<Header />);
 
-    expect(screen.getByLabelText("Properties / Search")).toBeInTheDocument();
+    expect(screen.getByLabelText("Organization / Team Members")).toBeInTheDocument();
   });
 });

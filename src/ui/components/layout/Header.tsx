@@ -8,7 +8,6 @@ import {
   Gamepad2,
   LayoutDashboard,
   ListChecks,
-  LineChart,
   User,
   Settings,
   LogOut,
@@ -77,16 +76,10 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/assistant")) return [askLabel];
   if (pathname.startsWith("/app/tasks")) return [t("tasks")];
   if (pathname.startsWith("/app/calls")) return [t("calls")];
-  if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
-  if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
-  if (pathname.startsWith("/app/properties/logs")) return [t("properties"), t("logs")];
-  if (pathname.startsWith("/app/properties")) return [t("properties")];
-  if (pathname.startsWith("/app/reports")) return [t("reports")];
   if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
   if (pathname.startsWith("/app/settings")) return [t("organization")];
   if (pathname.startsWith("/app/arcade/ronins-run-3d")) return [t("arcade"), t("roninsRun3D")];
   if (pathname.startsWith("/app/arcade/ronins-run")) return [t("arcade"), t("roninsRun")];
-  if (pathname.startsWith("/demos")) return [t("postureStudio")];
   return [dashboardLabel];
 }
 
@@ -120,19 +113,17 @@ export default function Header({ onOpenModal }: HeaderProps) {
       : getAppHeaderSegments(pathname, sidebarT, askLabel, tc("dashboard"));
   const HeaderIcon = isAdmin && pathname.startsWith("/admin/ai")
     ? Bot
-    : pathname.startsWith("/admin/companies") || pathname.startsWith("/app/properties")
+    : pathname.startsWith("/admin/companies")
       ? Building2
       : pathname.startsWith("/app/tasks")
       ? ListChecks
       : pathname.startsWith("/app/calls")
       ? Phone
-      : pathname.startsWith("/app/reports")
-        ? LineChart
-        : pathname.startsWith("/app/arcade") || pathname.startsWith("/demos")
-          ? Gamepad2
-          : isAdmin
-            ? ShieldCheck
-            : LayoutDashboard;
+      : pathname.startsWith("/app/arcade")
+        ? Gamepad2
+        : isAdmin
+          ? ShieldCheck
+          : LayoutDashboard;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

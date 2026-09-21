@@ -36,10 +36,10 @@ const RUNS: [number, number, number][] = [
 const BAND_COLOURS = ["#a8d4b8", "#efd49b", "#f5c4b2"];
 
 const LEDGER = [
-  { name: "Weekly board report", meta: "Scheduled · Mon 07:00", state: "Waiting" },
-  { name: "Rightmove collection", meta: "Trigger · 986 listings", state: "Done" },
+  { name: "Weekly summary email", meta: "Scheduled · Mon 07:00", state: "Waiting" },
+  { name: "Call transcript filing", meta: "Trigger · 24 calls", state: "Done" },
   { name: "Knowledge re-index", meta: "Scheduled · nightly", state: "Done" },
-  { name: "Posture routine export", meta: "Manual · 2 files", state: "Done" },
+  { name: "Wiki page tending", meta: "Manual · 8 pages", state: "Done" },
 ];
 
 const CHART_W = 640;

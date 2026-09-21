@@ -66,27 +66,6 @@ const TONE_KEY: Record<WaterfallRow["tone"], string> = {
 
 type RunDetail = NonNullable<FunctionReturnType<typeof api.agentRuns.getRunDetail>>;
 
-function getRunDisplay(
-  objective: string,
-  t: (key: string, params?: Record<string, string | number>) => string,
-) {
-  const rightmoveUrl = objective.match(/^Rightmove search URL:\s*(.+)$/m)?.[1]?.trim();
-  const propertyLimit = objective.match(/^Gather up to\s+(\d+)\s+properties\./m)?.[1];
-  const isRightmoveCollection =
-    objective.startsWith("Collect property listings from this Rightmove search and file them for the team.")
-    && rightmoveUrl;
-
-  if (!isRightmoveCollection) {
-    return { title: objective, detail: null, url: null };
-  }
-
-  return {
-    title: t("rightmove.title"),
-    detail: propertyLimit ? t("rightmove.detailWithLimit", { count: propertyLimit }) : t("rightmove.detail"),
-    url: rightmoveUrl,
-  };
-}
-
 export function AgentJobDetailContent({
   agentId,
   runId,
@@ -208,8 +187,7 @@ export function AgentJobDetailContent({
   }
 
   const { run } = detail;
-  const derived = getRunDisplay(run.objective, t);
-  const runDisplay = run.title ? { ...derived, title: run.title } : derived;
+  const runTitle = run.title ?? run.objective;
   const durationMs = run.completedAt ? run.completedAt - run.startedAt : undefined;
   const canReplay = run.status === "FAILED" || run.status === "CANCELLED";
 
@@ -226,13 +204,7 @@ export function AgentJobDetailContent({
             <ArrowLeft className="w-3.5 h-3.5" />
             {t("backToOverview")}
           </RawButton>
-          <h2 className="text-[19px] font-semibold text-foreground tracking-tight">{runDisplay.title}</h2>
-          {runDisplay.detail && (
-            <p className="text-[13px] text-secondary mt-1.5">{runDisplay.detail}</p>
-          )}
-          {runDisplay.url && (
-            <p className="text-[12px] text-muted mt-1 break-all">{runDisplay.url}</p>
-          )}
+          <h2 className="text-[19px] font-semibold text-foreground tracking-tight">{runTitle}</h2>
           <p className="text-[13px] text-secondary mt-1.5">
             {label(describeTrigger(run.triggerType))} {label(formatRelativeTime(run.startedAt, now))}
             {durationMs === undefined ? ` ${t("stillRunning")}` : ` ${t("took", { duration: formatDuration(durationMs) })}`}
