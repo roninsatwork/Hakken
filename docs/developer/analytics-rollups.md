@@ -1,6 +1,6 @@
 # Analytics Rollups Developer Guide
 
-Analytics rollups are the daily precomputed usage snapshots behind Sonae's admin analytics dashboards and data-health checks. They reduce historical dashboard work by storing global, company, and user summaries in `analyticsDailySnapshots`, while the analytics queries add today's live messages and agent transactions on top.
+Analytics rollups are the daily precomputed usage snapshots behind Hakken's admin analytics dashboards and data-health checks. They reduce historical dashboard work by storing global, company, and user summaries in `analyticsDailySnapshots`, while the analytics queries add today's live messages and agent transactions on top.
 
 Read this before changing `convex/analytics.ts`, `convex/analyticsSnapshots.ts`, `convex/analyticsService.ts`, analytics snapshot schema, the analytics data-health checks in `convex/systemHealth.ts`, or the Global Analytics Engine settings page. For system health alerts that consume analytics health, see [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 

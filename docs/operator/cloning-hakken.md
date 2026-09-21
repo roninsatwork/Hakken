@@ -1,7 +1,7 @@
-# Build a new application from Sonae
+# Build a new application from Hakken
 
 The default copy contains the framework **and Arcade**. Posture Studio, Properties,
-Sales Reports and Sales Data are optional. Sonae itself keeps every feature.
+Sales Reports and Sales Data are optional. Hakken itself keeps every feature.
 
 ## Prepare and preview
 
@@ -45,7 +45,7 @@ npm run template:build -- --keep base,salesData,salesReports --out ../sales-app
 
 Both `base` and `arcade` are always included, even if omitted from `--keep`.
 Unknown names are rejected. A stripped copy can be cut again, but cannot restore
-code that was removed; return to the full Sonae source to add a missing module.
+code that was removed; return to the full Hakken source to add a missing module.
 
 The output is staged and published locally only after packaging succeeds. An
 existing output directory is refused. The result starts a new Git repository on
@@ -92,7 +92,7 @@ npm run check
 Use `.env.example` to configure a **new Convex deployment** and the app's own
 provider credentials. Then run `npm run build`, start the application and verify
 login, company access, the assistant and Arcade. The copy has no connection to
-Sonae's backend until you explicitly supply connection settings.
+Hakken's backend until you explicitly supply connection settings.
 
 For repeatable local packaging checks from the full source:
 

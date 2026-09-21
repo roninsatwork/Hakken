@@ -1,4 +1,4 @@
-# The Self-Improving Wiki — Sonae Tends Its Own Memory
+# The Self-Improving Wiki — Hakken Tends Its Own Memory
 
 Status: **Delivered 2026-08-14** — Anthony said go the same evening and all
 six phases were built, tested and proven in his browser that night. Honest
@@ -21,7 +21,7 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
 ## The decision
 
-Build Karpathy's LLM Wiki pattern into Sonae, faithfully. The reference is the
+Build Karpathy's LLM Wiki pattern into Hakken, faithfully. The reference is the
 pattern he published in April 2026: the AI keeps a wiki of small, whole,
 human-readable pages — one per person, topic, or thing — and **maintains it
 itself**. After an interaction it re-reads the relevant page and rewrites it:
@@ -46,7 +46,7 @@ watered-down version:
 3. **Normal Convex tables.** No graph database, no file store, no new storage
    system. A page is a row; a link is data on the row; the map screen is drawn
    from those rows.
-4. **Screens live in the company AI section.** Users only get Ask Sonae and
+4. **Screens live in the company AI section.** Users only get Ask Hakken and
    the doors; everything that makes the wiki work is a company-scoped admin
    screen in the AI menu, in the house pattern.
 5. **Seatbelts are non-negotiable.** Every rewrite is audited. Every fact
@@ -57,7 +57,7 @@ watered-down version:
 6. **First slice: customer pages.** One page per known customer, rewritten
    after every phone call and email, read by every door that knows who it is
    talking to. This is also the "one customer, one history" feature — the
-   caller who emailed yesterday is greeted by a Sonae that knows.
+   caller who emailed yesterday is greeted by a Hakken that knows.
 
 ## What is actually true today (verified 2026-08-14)
 
@@ -104,7 +104,7 @@ The heart, built first and judged hardest.
   links (array of page keys), per-fact provenance (which conversation taught
   it), pinned human corrections, timestamps.
 - The rewrite step: when a call ends (the seam where `attachCallSummary`
-  already runs) and when a Gmail conversation gets a reply, Sonae opens the
+  already runs) and when a Gmail conversation gets a reply, Hakken opens the
   customer's page, rewrites it in the light of what just happened, and saves —
   one audit row per rewrite, old text retained for the trail.
 - The seatbelts, in the same phase because they are the loop's spec, not
@@ -116,7 +116,7 @@ The heart, built first and judged hardest.
 
 ### Phase 2 — Every knowing door reads the page (2.5 days)
 
-Where Sonae knows who it is talking to — a matched caller, a mailbox sender,
+Where Hakken knows who it is talking to — a matched caller, a mailbox sender,
 a signed-in user, a widget visitor who gave their email at the gateway — the
 subject's page is read whole into the model's context before it answers, and
 is recorded in `companyRuntimeEvidenceJson` like any other source. Doors with
@@ -126,7 +126,7 @@ no identity (an anonymous kiosk tap) read nothing and lose nothing.
 
 In the company AI section, house pattern (standard table, search, 15-row
 pagination): every page, when it last changed and why; open a page to read
-what Sonae believes, see where each belief came from, edit the text, or pin a
+what Hakken believes, see where each belief came from, edit the text, or pin a
 correction. Editing writes the same audit row the machine's rewrites do.
 
 ### Phase 4 — The tending sweep (2 days)
@@ -140,7 +140,7 @@ too.
 ### Phase 5 — Pages beyond customers, and navigation (3 days)
 
 Page kinds for products, policies, and recurring issues; the title index —
-small enough for the model to read whole — as the way Sonae finds non-customer
+small enough for the model to read whole — as the way Hakken finds non-customer
 pages; links between pages followed wiki-fashion. No embeddings, no chunking,
 per decision 2.
 

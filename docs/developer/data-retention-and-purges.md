@@ -1,6 +1,6 @@
 # Data Retention And Purges Developer Guide
 
-Sonae has two purge paths: the unified data purge engine for configurable product and operations data, and a legacy audit-log purge scheduler. Both are super-admin-controlled retention tools. They delete old records in bounded Convex transactions, record operational history where implemented, and avoid arbitrary shell execution.
+Hakken has two purge paths: the unified data purge engine for configurable product and operations data, and a legacy audit-log purge scheduler. Both are super-admin-controlled retention tools. They delete old records in bounded Convex transactions, record operational history where implemented, and avoid arbitrary shell execution.
 
 Read this before changing purge schedules, retention floors, purge recursion, purge history, audit-log retention, or the System Settings purge UI. For the broader settings surface, see [Platform Operations Settings](./platform-operations-settings.md).
 

@@ -80,7 +80,7 @@ Company admins are restricted to their active company. Super admins can inspect 
 
 `convex/webhookDeliveryActions.ts` performs outbound delivery in Node:
 
-- sets JSON content type and `Sonae-Webhook-Dispatcher/1.0` user agent
+- sets JSON content type and `Hakken-Webhook-Dispatcher/1.0` user agent
 - ignores unsafe caller-supplied `Host` and `Content-Length` headers
 - records `DELIVERING` before the outbound request
 - records `SUCCESS` for 2xx responses

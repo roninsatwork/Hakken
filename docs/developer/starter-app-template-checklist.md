@@ -1,6 +1,6 @@
 # Starter App Template Checklist
 
-Use this checklist when designing or reviewing a reusable Sonae starter application. It is for a vertical or functional starter application, not just a single agent prompt.
+Use this checklist when designing or reviewing a reusable Hakken starter application. It is for a vertical or functional starter application, not just a single agent prompt.
 
 For how the pieces fit together across the platform, read [Agentic Starter Framework Overview](./agentic-starter-framework-overview.md) and [New Agentic App Setup Checklist](./new-agentic-app-setup-checklist.md).
 

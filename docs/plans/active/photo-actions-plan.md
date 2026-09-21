@@ -1,4 +1,4 @@
-# Show Sonae A Photo And It Acts
+# Show Hakken A Photo And It Acts
 
 Status: **Built and proven on dev 2026-08-14.** Phases A–D are all delivered:
 photos into chat (A), the widget camera and the agent path that can see (B),
@@ -40,14 +40,14 @@ that device.
 ## The decision
 
 A photo of a delivery note, a broken part, or a price ticket goes into
-chat or the widget; Sonae reads it, explains it, and — on the user's
+chat or the widget; Hakken reads it, explains it, and — on the user's
 say-so — does something with it: raises a task, or answers the question it
 contains. The showcase moment is a phone photo of a messy document
 becoming a tidy, structured answer and a filed follow-up in seconds.
 
 Recorded decisions:
 
-1. **Acting is human-confirmed.** Sonae proposes the action it read out of
+1. **Acting is human-confirmed.** Hakken proposes the action it read out of
    the photo (a pre-filled task); a person taps to confirm. No photo ever
    writes anything by itself.
 2. **Vision rides the provider that supports it.** Today that is Google
@@ -130,7 +130,7 @@ human-confirmed task needs no new machinery at all.
 
 ## Phase A — Photos into chat, honestly
 
-**Goal:** attach a photo in Ask Sonae, see it in the thread, get an answer
+**Goal:** attach a photo in Ask Hakken, see it in the thread, get an answer
 about it.
 
 - New `chatImage` upload policy client-side beside `chatDocument`; the
@@ -168,7 +168,7 @@ widget.
 
 **Goal:** the photo becomes a filed follow-up on one confirming tap.
 
-- After a reply to an image-bearing message, Sonae proposes an action
+- After a reply to an image-bearing message, Hakken proposes an action
   chip: "Raise this as a task" pre-filled with title and detail drawn from
   what it read (and the reasoning line, commitment 4). Confirming calls
   the existing `createTask` (`convex/tasks.ts:196`) as the signed-in user

@@ -1,6 +1,6 @@
 # Gmail Mailbox Developer Guide
 
-The Gmail mailbox is Sonae's implemented OAuth connector and inbound email
+The Gmail mailbox is Hakken's implemented OAuth connector and inbound email
 automation. It connects one dedicated Gmail account for a workspace, polls new
 mail, answers in-thread when company knowledge is enough, and files tasks when a
 person must follow up.
@@ -117,7 +117,7 @@ system prompt requires the reply to use only company knowledge, write in the
 sender's language, avoid invented facts, avoid bespoke commitments, and mark
 `needsHuman` when the knowledge does not settle the request.
 
-`dressReply` adds the greeting, thank-you, Ask Sonae sign-off, workspace name,
+`dressReply` adds the greeting, thank-you, Ask Hakken sign-off, workspace name,
 and AI disclosure in code. The model does not own those legal and product
 truthfulness lines.
 

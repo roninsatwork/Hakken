@@ -1,6 +1,6 @@
 # Email Branding Developer Guide
 
-Email branding controls the sender name and address used by Sonae outbound email helpers. Runtime email sender resolution is centralized in `convex/emailBrandingService.ts` and reads stored `systemSettings` unless the deployment provides `RESEND_FROM_EMAIL`.
+Email branding controls the sender name and address used by Hakken outbound email helpers. Runtime email sender resolution is centralized in `convex/emailBrandingService.ts` and reads stored `systemSettings` unless the deployment provides `RESEND_FROM_EMAIL`.
 
 Read this before changing invite emails, magic-link sender configuration, workflow email nodes, platform alert emails, white-label handoff output, or sender validation.
 
@@ -54,7 +54,7 @@ Invites load `internal.settings.getEmailBranding`, build branded copy, then reso
 
 Workflow runtime loads email branding before building email tool defaults so workflow email nodes have a safe sender even when node data omits one. Workflow email dispatch also uses `sendResendEmail` when `RESEND_API_KEY` is configured, and records simulated output when the key is absent.
 
-Platform alerts load email branding before Resend dispatch and use a dedicated fallback name of `Sonae Operations`. Alert dispatch uses an idempotency key for the alert type and report window.
+Platform alerts load email branding before Resend dispatch and use a dedicated fallback name of `Hakken Operations`. Alert dispatch uses an idempotency key for the alert type and report window.
 
 `sendResendEmail` posts to `https://api.resend.com/emails` with JSON content, an optional idempotency key, and a three-attempt retry policy capped at 15 seconds by default. Keep this helper as the single Resend transport path for runtime email so provider retries, error normalization, and tests stay consistent.
 

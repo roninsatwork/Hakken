@@ -1,6 +1,6 @@
 # AI Rules And Prompts
 
-Sonae uses prompts and rules to shape AI behavior without changing application code. These controls are powerful because they affect assistant, agent, workflow, and widget responses, so they should be changed deliberately and tested after each update.
+Hakken uses prompts and rules to shape AI behavior without changing application code. These controls are powerful because they affect assistant, agent, workflow, and widget responses, so they should be changed deliberately and tested after each update.
 
 This guide explains the implemented prompt and rule controls for operators, support teams, customer-success teams, and sales engineers.
 
@@ -32,7 +32,7 @@ They use the same rule structure but apply only when the relevant agent is in sc
 
 ## Prompt Layers
 
-Sonae assembles AI instructions in layers. Platform safety and backend authorization always come first. Configurable prompts and rules can guide behavior, but they cannot grant access to another tenant's data, reveal hidden platform instructions, bypass role checks, or execute tools without backend validation.
+Hakken assembles AI instructions in layers. Platform safety and backend authorization always come first. Configurable prompts and rules can guide behavior, but they cannot grant access to another tenant's data, reveal hidden platform instructions, bypass role checks, or execute tools without backend validation.
 
 The main configurable layers are:
 
@@ -48,7 +48,7 @@ Use the global prompt for broad platform behavior. Use company prompts for custo
 
 The global system prompt page shows the current configured prompt in a large editor. The page detects unsaved changes, offers a revert action, and only enables saving when the editor differs from the current stored prompt.
 
-When the prompt is saved, Sonae stores the new prompt and records an audit event. The editor also displays a safety warning panel when the prompt appears to include risky instructions, such as revealing hidden prompts, weakening safety rules, or allowing cross-tenant access.
+When the prompt is saved, Hakken stores the new prompt and records an audit event. The editor also displays a safety warning panel when the prompt appears to include risky instructions, such as revealing hidden prompts, weakening safety rules, or allowing cross-tenant access.
 
 Recommended operating approach:
 
@@ -84,7 +84,7 @@ Agent rules apply when a specific agent is used. Standard company admins can onl
 
 ## How Rules Affect Responses
 
-When an AI response is assembled, Sonae can include active global rules, active company rules, and active agent rules. The rules are compiled into the instruction context with their priority, trigger, and instruction.
+When an AI response is assembled, Hakken can include active global rules, active company rules, and active agent rules. The rules are compiled into the instruction context with their priority, trigger, and instruction.
 
 A rule should be written as a precise behavior, not as hidden policy text. Good rules explain what to do when a topic appears. Weak rules try to override safety boundaries, duplicate large prompt sections, or mix unrelated concerns.
 
@@ -101,7 +101,7 @@ Avoid using rules to store secrets, API keys, customer-private credentials, or i
 
 Global prompt changes require super-admin access. Global rule management is super-admin controlled. Company-scoped rules require admin access to the company. Company prompt controls follow company admin access.
 
-Sonae records audit events for global system prompt updates and rule creation, update, activation toggles, and deletion. Audit metadata can include safety warning categories when risky wording is detected.
+Hakken records audit events for global system prompt updates and rule creation, update, activation toggles, and deletion. Audit metadata can include safety warning categories when risky wording is detected.
 
 ## Troubleshooting
 

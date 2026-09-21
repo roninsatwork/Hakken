@@ -1,6 +1,6 @@
 # Stripe billing after cloning
 
-Sonae includes optional company subscription billing. It ships disabled in
+Hakken includes optional company subscription billing. It ships disabled in
 [`sonae.billing.json`](../../sonae.billing.json). Cloning, exporting and product
 initialisation create no Stripe customers, checkout sessions or charges.
 Arcade remains part of the framework.
@@ -17,7 +17,7 @@ Arcade remains part of the framework.
 - One monthly, fixed-price subscription per company, with Stripe-hosted card
   checkout and a customer portal for plan changes, invoices, payment recovery
   and cancellation. Stripe creates invoices, collects payment and calculates
-  adjustments; Sonae maps the confirmed paid plan to product access.
+  adjustments; Hakken maps the confirmed paid plan to product access.
   Hosted links use `checkout.stripe.com` and `billing.stripe.com`; custom
   Stripe-hosted domains need an explicit redirect-policy extension.
 - GBP, EUR and USD prices, configured in integer minor units (2900 means 29.00).
@@ -30,7 +30,7 @@ Arcade remains part of the framework.
   platform administrators cannot purchase or open another company's portal.
 - Webhook signatures and provider mirrors use `@convex-dev/stripe` 0.1.6.
   Stripe SDK 22.2.1 is pinned; configure the endpoint API version as
-  **2026-05-27.dahlia**. Sonae additionally caps webhook bodies at 256 KiB and
+  **2026-05-27.dahlia**. Hakken additionally caps webhook bodies at 256 KiB and
   reconciles current provider state before changing access. See the
   [Convex component reference](https://www.convex.dev/components/stripe) and
   [Stripe subscription lifecycle](https://docs.stripe.com/billing/subscriptions/overview).
@@ -90,7 +90,7 @@ Use a separate test deployment before configuring a production deployment.
 1. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in the clone's **Convex
    backend environment**, using the Convex dashboard. Never use `NEXT_PUBLIC_`
    for either value. Credentials are never entered, returned or displayed in
-   Sonae's billing screens. The Stripe key must match the chosen test/live mode.
+   Hakken's billing screens. The Stripe key must match the chosen test/live mode.
 2. Open **Admin → Settings → Billing → Stripe setup**. Select test/live mode,
    the product app origin (no path or trailing slash), and 0–30 recovery grace
    days. Save with company billing disabled while preparing the catalogue.
@@ -110,7 +110,7 @@ Use a separate test deployment before configuring a production deployment.
    portal readiness. Credential presence alone is not successful delivery:
    **Last verified webhook received** stays empty until a signed, mode-matching
    event actually reaches this deployment. Portal readiness also checks that
-   mapped Sonae plans are still active. The webhook route returns 404 while
+   mapped Hakken plans are still active. The webhook route returns 404 while
    company billing is disabled; verify event receipt after enabling in step 7.
    Before that, a successful connection check proves the key can reach Stripe,
    not that an event has arrived or portal setup is complete.
@@ -223,7 +223,7 @@ through the paid period; immediate cancellation stops it. A return from checkout
 or a subscription's `active` label alone is not payment evidence.
 
 **Manage billing in Stripe** opens Stripe's portal. A new plan is selected there;
-Sonae follows the subscription's current price only when it maps to an active
+Hakken follows the subscription's current price only when it maps to an active
 configured plan and Stripe confirms the corresponding invoice is paid. A paid
 mid-period adjustment changes access only within an already confirmed paid period;
 it cannot extend that period. Stripe owns all charge and credit calculations.
@@ -249,7 +249,7 @@ credited downgrade. Stripe remains the source for invoices and charge amounts.
 
 Enforcement happens before user quota overrides and the old no-plan/unlimited
 fallback. Company plan module grants stop when paid access stops; deliberate
-company-level grants remain. New Sonae companies normally receive core module
+company-level grants remain. New Hakken companies normally receive core module
 grants, so a product selling those modules must deliberately configure its
 provisioning grants. There is no universal application paywall: additional paid
 features should use the shared `billingBlocksPaidAccess` policy server-side.
@@ -290,7 +290,7 @@ invoice can approve a historical plan change: an earlier payment credited by a
 downgrade cannot buy a second upgrade. Ambiguous same-second history, missing
 prior evidence or changes older than that window retain the last confirmed plan
 and need operator review. The current Stripe invoice can resolve same-second
-changes directly. Invoice IDs/timestamps are access evidence, not a Sonae invoice
+changes directly. Invoice IDs/timestamps are access evidence, not a Hakken invoice
 ledger. See Stripe's [pending update lifecycle](https://docs.stripe.com/billing/subscriptions/pending-updates).
 
 If a provider response was lost and an idempotency window has expired, the

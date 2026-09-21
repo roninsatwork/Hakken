@@ -1,6 +1,6 @@
 # Audit Log Service Developer Guide
 
-Audit logs are Sonae's durable record for privileged administrative and operational actions. Feature modules usually write audit rows directly, while `convex/auditLogs.ts` provides an internal write helper, recent-feed reads, actor-name enrichment, and a separate audit-log purge configuration.
+Audit logs are Hakken's durable record for privileged administrative and operational actions. Feature modules usually write audit rows directly, while `convex/auditLogs.ts` provides an internal write helper, recent-feed reads, actor-name enrichment, and a separate audit-log purge configuration.
 
 Read this before changing audit log schema, audit feed behavior, audit detail routing, audit purge configuration, or the way privileged mutations record evidence. For broader platform operations, see [Platform Operations Settings](./platform-operations-settings.md). For unified retention purges, see [Data Retention And Purges](./data-retention-and-purges.md).
 

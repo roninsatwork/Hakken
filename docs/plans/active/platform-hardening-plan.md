@@ -7,7 +7,7 @@ Owner: Anthony
 
 ## Scope And Rules
 
-**In scope:** the Sonae platform core — agent runtime, tool/connector execution,
+**In scope:** the Hakken platform core — agent runtime, tool/connector execution,
 tenancy and authz, knowledge/RAG, workflows, admin surfaces, operational
 envelope, and the reusability of this repo as a starter for other products.
 
@@ -240,7 +240,7 @@ execution lands in Phase 3.
 ## Phase 1 — Operational Envelope
 
 Today a production failure is invisible and unrecoverable. This is the phase that
-decides whether a client-facing product built on Sonae is defensible.
+decides whether a client-facing product built on Hakken is defensible.
 
 ### P1.1 — Error tracking and health
 
@@ -423,14 +423,14 @@ Movement stays and keeps working. But it should stop taxing the platform:
 - Brand strings embedded in prompt assembly (`convex/aiPromptAssembly.ts:4,68`,
   `convex/orchestrator.ts:55`, `convex/aiSafetyPolicy.ts:58,67`,
   `convex/salesReportActions.ts:156`) must read from `systemSettings`, so a fork
-  does not ship an assistant that calls itself Sonae.
+  does not ship an assistant that calls itself Hakken.
 - `priceGBP` in `plans` and `inventoryRollups` → currency-neutral minor units,
   using the existing `systemSettings.currencySymbol`.
 - Give real credit to what already works: the runtime theming layer
   (`convex/schema.ts:60-100` — platform name, logos, brand colour, fonts, radius,
   20 palette tokens) is genuinely wired through `SystemSettingsContext`. This
   item finishes a job that is already 80% done.
-- **Acceptance:** a fork with `platformName` changed shows no "Sonae" anywhere in
+- **Acceptance:** a fork with `platformName` changed shows no "Hakken" anywhere in
   the UI or in any model-facing prompt.
 
 ### P2.4 — Navigation as configuration — DONE 2026-07-25
@@ -679,7 +679,7 @@ Zero caching existed. The full system prompt, skills, RAG context and memory wer
 re-sent on every turn of every run — direct, recurring, avoidable spend.
 
 **Scope correction (2026-07-25, Anthony):** the original prescription named two
-providers. Sonae takes any model and an OpenRouter-style gateway is coming, so
+providers. Hakken takes any model and an OpenRouter-style gateway is coming, so
 caching had to be built as a platform capability rather than a Vertex feature.
 
 **The design follows from how providers actually differ.** There are three
@@ -1303,7 +1303,7 @@ The existing `check:fences` guard validates ownership and remaining references
 for all 16 combinations. `npm run template:verify -- --matrix --browser`
 installs, checks and builds generated copies and runs base browser smoke tests.
 Final verification is tracked in the [Clean Cut plan](client-product-cut-plan.md).
-See [the cloning guide](../../operator/cloning-sonae.md) for the supported workflow.
+See [the cloning guide](../../operator/cloning-hakken.md) for the supported workflow.
 
 The historical descriptions below record earlier implementations and evidence;
 their removal of Arcade is superseded by the current requirement to retain it.

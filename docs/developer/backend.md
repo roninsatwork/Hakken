@@ -1,6 +1,6 @@
 # Backend And Data Layer
 
-Sonae's backend is implemented in `convex/`. Convex schema, generated types, queries, mutations, actions, HTTP actions, internal jobs, storage, and indexes form the authoritative server layer for the app.
+Hakken's backend is implemented in `convex/`. Convex schema, generated types, queries, mutations, actions, HTTP actions, internal jobs, storage, and indexes form the authoritative server layer for the app.
 
 Read this with [Architecture](./architecture.md), [Route Protection And Authentication](./route-protection-and-authentication.md), [Company And User Management](./company-user-management.md), and the feature-specific guide before changing backend behavior.
 

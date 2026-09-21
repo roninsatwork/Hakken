@@ -1,6 +1,6 @@
 # Infrastructure And Deployment
 
-Sonae is designed for high availability and continuous delivery via Google Cloud Platform and GitHub.
+Hakken is designed for high availability and continuous delivery via Google Cloud Platform and GitHub.
 
 ## 🚢 Hosting Environment
 
@@ -434,4 +434,4 @@ After deployment:
 ---
 
 > [!CAUTION]
-> **Vercel Prohibited**: Never deploy Sonae to Vercel. The infrastructure relies exclusively on the Google Cloud / Convex synchrony.
+> **Vercel Prohibited**: Never deploy Hakken to Vercel. The infrastructure relies exclusively on the Google Cloud / Convex synchrony.

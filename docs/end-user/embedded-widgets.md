@@ -1,6 +1,6 @@
 # Embedded Widgets
 
-Embedded widgets let a Sonae workspace expose a governed chat assistant on an external site. The current product has two widget setup surfaces:
+Embedded widgets let a Hakken workspace expose a governed chat assistant on an external site. The current product has two widget setup surfaces:
 
 For production handoff and support troubleshooting, see [Widget Handoff And Troubleshooting](./widget-handoff-and-troubleshooting.md).
 
@@ -34,7 +34,7 @@ Allowed domains decide where the widget may create a conversation. To allow broa
 
 An empty allowlist is not a production-ready allow-all setting for conversation creation. The iframe may still load enough public configuration to render, but the backend thread creation guard requires `*` or a matching configured domain before a visitor can start chatting.
 
-The browser iframe also checks the host page referrer before sending popup configuration back to the parent page. When Sonae serves `/w/[widgetId]`, the server mints a signed embed pass from the observed referrer host. The backend requires that pass before creating the anonymous widget thread, then checks the host against the widget allowlist. Blocked backend attempts are recorded in audit logs with `BLOCKED_WIDGET_ACCESS`.
+The browser iframe also checks the host page referrer before sending popup configuration back to the parent page. When Hakken serves `/w/[widgetId]`, the server mints a signed embed pass from the observed referrer host. The backend requires that pass before creating the anonymous widget thread, then checks the host against the widget allowlist. Blocked backend attempts are recorded in audit logs with `BLOCKED_WIDGET_ACCESS`.
 
 Use restricted domains before handing a widget to a customer. A broad allowlist is useful for internal testing but is not the preferred production posture.
 
@@ -64,7 +64,7 @@ Inside the widget iframe:
 - the first visitor message includes gateway metadata when name or email was collected
 - conversation starters can send the first message
 - visitors can attach a photo, send a photo-only message, and confirm a
-  suggested follow-up task when Sonae sees something actionable
+  suggested follow-up task when Hakken sees something actionable
 - the browser keeps a widget-specific session so returning visitors can continue the same browser conversation
 - if the saved browser session is incomplete or invalid, the widget clears the local session and creates a fresh conversation
 - visitors can reset the local widget thread from the iframe
@@ -78,7 +78,7 @@ Anonymous visitors do not see the customer's plan or billing state. If the compa
 The widget includes upload support for anonymous widget threads. Visitors can attach one image to the next message, preview it, remove it before sending, or send the photo without extra words. Uploads are only accepted for an active widget, a thread that belongs to that widget, and a matching widget session credential. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.
 
 Widget photo replies can show a suggested follow-up card. The visitor must press
-the confirmation button before Sonae files a task for the team. The broader
+the confirmation button before Hakken files a task for the team. The broader
 image-to-task behavior is covered in [Photo Actions](./photo-actions.md).
 
 ## Operational Notes

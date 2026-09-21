@@ -4,7 +4,7 @@
 
 # Roadmap And Technical Debt
 
-This document is the durable index for current Sonae roadmap and technical-debt priorities. Treat implementation and tests as the source of truth, then use the linked active plans for detailed execution order.
+This document is the durable index for current Hakken roadmap and technical-debt priorities. Treat implementation and tests as the source of truth, then use the linked active plans for detailed execution order.
 
 ## Current Operating Rules
 
@@ -32,7 +32,7 @@ Continue using [Future Agent Maintenance Plan](../../developer/future-agent-main
 
 ### Provider-Neutral AI Platform
 
-Sonae is moving toward a provider-neutral AI platform while still retaining provider-specific adapters and real provider model IDs where appropriate. Generic runtime paths should resolve models through stored configuration and provider-aware helpers, not hardcoded model literals.
+Hakken is moving toward a provider-neutral AI platform while still retaining provider-specific adapters and real provider model IDs where appropriate. Generic runtime paths should resolve models through stored configuration and provider-aware helpers, not hardcoded model literals.
 
 Use [Model Provider Agnostic Platform Plan](./model-provider-agnostic-plan.md) as the locked plan for provider records, model catalogue shape, defaults by use case, adapters, provider health, and analytics dimensions. Current implementation already exposes provider distribution in analytics surfaces, but the model/provider migration remains an active roadmap area.
 

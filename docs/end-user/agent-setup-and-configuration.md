@@ -1,6 +1,6 @@
 # Agent Setup And Configuration
 
-Agent setup is where an authorized administrator turns a repeatable AI task into a governed Sonae agent. Use this guide when creating an agent, choosing a template, attaching skills, editing schemas, or checking logs and transaction summaries before an agent is used operationally.
+Agent setup is where an authorized administrator turns a repeatable AI task into a governed Hakken agent. Use this guide when creating an agent, choosing a template, attaching skills, editing schemas, or checking logs and transaction summaries before an agent is used operationally.
 
 For day-to-day run review, approvals, replay, evals, memories, and release readiness, see [Agent Operations And Review](./agent-operations-and-review.md). For the broader feature overview, see [Agents](./agents.md).
 

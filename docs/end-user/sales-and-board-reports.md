@@ -1,6 +1,6 @@
 # Sales And Board Reports
 
-This guide explains Sonae's implemented sales report and board-reporting
+This guide explains Hakken's implemented sales report and board-reporting
 feature. It is for company admins, sales leaders, operators, and support teams
 who need to know what the product does from the user-facing screens.
 
@@ -14,7 +14,7 @@ found prospects to estimate where more revenue may exist inside known groups.
 
 ## Where To Find It
 
-Open the authenticated Sonae app and use the Reports section.
+Open the authenticated Hakken app and use the Reports section.
 
 There are three report pages:
 
@@ -77,7 +77,7 @@ It also links directly to the latest report page.
 
 The latest report page has three practical states.
 
-The loading state appears while Sonae is checking for the latest report. The
+The loading state appears while Hakken is checking for the latest report. The
 empty state appears when no report is available to the current user's workspace.
 The dashboard state appears when a report exists.
 
@@ -95,7 +95,7 @@ the report's structured sections:
 - patterns and signals;
 - this week's priorities.
 
-Older reports may not contain every structured section. When Sonae finds a
+Older reports may not contain every structured section. When Hakken finds a
 legacy report with only the older report shape, it still shows a safe reduced
 view instead of hiding the report completely.
 
@@ -122,7 +122,7 @@ against real accounts instead of seeing only a count.
 
 The report is most useful after the customer research job has filled or checked
 bedrooms for hotels and care homes, and pupils for schools. If those numbers are
-missing, Sonae still shows the opportunity, but the estimate falls back to a
+missing, Hakken still shows the opportunity, but the estimate falls back to a
 less precise average and should be treated as weaker.
 
 ## Export To Board
@@ -188,4 +188,4 @@ trigger report generation from the report viewer.
 
 The current export is a PNG. If a board pack needs editable tables, slide
 masters, speaker notes, or a formal PDF, use the PNG as a presentation artifact
-and keep the Sonae report available for review.
+and keep the Hakken report available for review.

@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-08-25
 Status: active documentation-control note
-Audience: agents keeping Sonae documentation aligned with the implementation.
+Audience: agents keeping Hakken documentation aligned with the implementation.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ route tree, sidebar navigation, Convex schema tables, Convex module inventory,
 recent commits since the previous documentation run, package scripts, and the
 existing Markdown indexes. The 2026-08-16 pass found real durable-doc gaps for
 the newly implemented Company Wiki pages/map/import/review surface and the
-spoken-channel surfaces that combine Ask Sonae live voice, inbound phone calls,
+spoken-channel surfaces that combine Ask Hakken live voice, inbound phone calls,
 and voice administration, the implemented Gmail mailbox connector/watch loop,
 and the photo-action flow that turns image-bearing chat/widget turns into
 human-confirmed tasks, plus the receptionist/kiosk screen and widget embed-pass
@@ -53,7 +53,7 @@ developer pairs or targeted refreshes.
   `src/app/(dashboard)/admin/_features/wiki/`, and the `convex/wiki*.ts`
   backend modules.
 - Spoken-channel routes and services, including `/app/calls`,
-  `/app/calls/[id]`, `/admin/ai/voice`, Ask Sonae's real-time voice overlay,
+  `/app/calls/[id]`, `/admin/ai/voice`, Ask Hakken's real-time voice overlay,
   `convex/aiVoiceSession.ts` live voice helpers, `convex/voice*.ts`, `convex/telephony*.ts`,
   and the browser voice-session helpers under `src/lib/`.
 - Gmail mailbox connector and watcher implementation, including the
@@ -123,7 +123,7 @@ as the durable documentation work queue.
   `docs/developer/sales-and-board-reports.md`.
 - Update coverage notes so they no longer read as an unexplained blanket
   assertion.
-- Run a second stale-content pass after recent Sonae changes. This corrected:
+- Run a second stale-content pass after recent Hakken changes. This corrected:
   Rightmove Agent execution docs, AI tool/connector OAuth availability, removed
   MCP/skill-detail routes, admin dashboard current behavior, company AI
   readiness routing, agent instructions/standing-job wording, public/frontend
@@ -356,7 +356,7 @@ The audit found:
 - no empty Markdown files under `docs/`
 - no broken local Markdown links under `docs/`
 - no `docs/features/`, `docs/product-documentation-index.md`, or
-  `docs/README.md` requirement in the Sonae docs structure
+  `docs/README.md` requirement in the Hakken docs structure
 - every implemented app/API route is listed in
   `docs/developer/route-reference.md`
 - every non-test top-level Convex source/config file is referenced from the

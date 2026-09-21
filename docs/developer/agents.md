@@ -1,6 +1,6 @@
 # Agents Developer Guide
 
-Agents are Sonae's governed AI worker implementation. The current system covers global agent configuration, template-based creation, reusable skills, tool and knowledge bindings, run telemetry, approvals, eval fixtures, release gates, version snapshots, memories, reflections, improvement suggestions, logs, and a sandbox prompt surface. This document describes the implementation that exists now and should be reviewed before changing agent runtime, admin UI, skills, evals, approvals, or release behavior.
+Agents are Hakken's governed AI worker implementation. The current system covers global agent configuration, template-based creation, reusable skills, tool and knowledge bindings, run telemetry, approvals, eval fixtures, release gates, version snapshots, memories, reflections, improvement suggestions, logs, and a sandbox prompt surface. This document describes the implementation that exists now and should be reviewed before changing agent runtime, admin UI, skills, evals, approvals, or release behavior.
 
 ## Product Surface
 

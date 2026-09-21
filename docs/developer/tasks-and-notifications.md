@@ -3,7 +3,7 @@
 Tasks and notifications are implemented by `/app/tasks`, `convex/tasks.ts`,
 `convex/notifications.ts`, `src/lib/taskGrouping.ts`,
 `src/ui/components/layout/NotificationBell.tsx`, and sidebar/header badge
-wiring. They give Sonae a tenant-scoped work queue and a per-user in-app signal
+wiring. They give Hakken a tenant-scoped work queue and a per-user in-app signal
 without turning tasks into approvals.
 
 Read this before changing task schema, task creation, assignment, state changes,
@@ -83,7 +83,7 @@ A notification belongs to exactly one user. There is no shared seen/read flag.
   proposal into one task after signed-in or widget-token thread access checks.
 - `completeTask`, `reopenTask`, and `cancelTask`: tenant mutations that preserve
   task history and write audit rows.
-- `createTaskFromAgent`: internal mutation used by the Sonae task tool. It
+- `createTaskFromAgent`: internal mutation used by the Hakken task tool. It
   resolves an assignee email within the acting tenant.
 - `createTaskFromWorkflow`: internal mutation used by workflow task nodes. It
   resolves an assignee email within the workflow tenant.
@@ -110,7 +110,7 @@ Task creation currently comes from several implemented areas:
 - workflow task nodes through `createTaskFromWorkflow`
 - telephone after-call follow-up
 - Gmail watcher fallback for mail that needs a human
-- photo-action confirmation from Ask Sonae or the anonymous widget
+- photo-action confirmation from Ask Hakken or the anonymous widget
 
 Assigning a task to someone else triggers `notifyUserInternal` with kind
 `TASK_ASSIGNED` and `href: "/app/tasks"`. Assigning a task to yourself does not
@@ -141,7 +141,7 @@ for a task to be completed; use approval infrastructure for gates.
 Task creation, completion, reopening, and cancellation write task audit rows.
 Cancelled tasks remain visible as history instead of being deleted.
 
-`sourceUrl` points back to the screen that produced the work when Sonae has a
+`sourceUrl` points back to the screen that produced the work when Hakken has a
 useful internal route. The Tasks page renders only internal source links that
 start with `/`.
 

@@ -1,6 +1,6 @@
 # AI Tools And Connectors Developer Guide
 
-AI tools and connectors are Sonae's governed action layer for agent runs. The implementation separates admin catalog records, connector install state, model-facing declarations, deterministic authorization, argument validation, and registered backend handlers.
+AI tools and connectors are Hakken's governed action layer for agent runs. The implementation separates admin catalog records, connector install state, model-facing declarations, deterministic authorization, argument validation, and registered backend handlers.
 
 Read this with `docs/developer/agents.md`, `docs/developer/ai-administration.md`, `docs/developer/ai-provider-tool-extension.md`, and `docs/developer/ai-rules-and-prompts.md` before changing runtime tool behavior.
 
@@ -9,7 +9,7 @@ Read this with `docs/developer/agents.md`, `docs/developer/ai-administration.md`
 Admin routes:
 
 - `src/app/(dashboard)/admin/ai/tools/page.tsx` renders the connector marketplace, installed connector controls, and paginated tool catalog.
-- `src/app/(dashboard)/admin/ai/tools/new/page.tsx` creates Sonae action tools.
+- `src/app/(dashboard)/admin/ai/tools/new/page.tsx` creates Hakken action tools.
 - `src/app/(dashboard)/admin/ai/tools/[id]/page.tsx` edits tool contracts.
 - `src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx` manages connector install details, secret references, enabled tool mappings, OAuth state, and test logs.
 
@@ -22,7 +22,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
 - `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions now back the Gmail mailbox connector and are guarded by provider credential availability.
-- `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Sonae action tools.
+- `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Hakken action tools.
 - `getAgentTools` supports agent tool binding reads.
 
 `convex/toolConnectorDefinitions.ts` contains built-in connector definitions, categories, auth modes, required scopes, required secret reference keys, and generated tool definitions.
@@ -58,7 +58,7 @@ Connector installs can be global or tenant-restricted. Tenant-restricted connect
 
 There is no implemented dedicated MCP tool creation route in the current app. Custom or connector-style behavior must go through the implemented tool creation route, connector detail pages, and the registered runtime handler system. Do not document MCP proxy creation as live behavior unless a concrete route and runtime handler are added.
 
-The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Sonae-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail is the live exception: `google-gmail` has registered `gmail.read` and `gmail.reply` handlers and dedicated behavior in [Gmail Mailbox](./gmail-mailbox.md). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
+The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Hakken-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail is the live exception: `google-gmail` has registered `gmail.read` and `gmail.reply` handlers and dedicated behavior in [Gmail Mailbox](./gmail-mailbox.md). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
 
 ## Tool Contract Validation
 

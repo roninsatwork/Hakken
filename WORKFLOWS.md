@@ -1,8 +1,8 @@
-# Sonae Workflows: Visual Orchestration Guide
+# Hakken Workflows: Visual Orchestration Guide
 
-Welcome to the Sonae Workflow Orchestrator. Workflows allow you to build deeply complex automation pipelines, routing data between AI Agents, databases, custom code, and external APIs without writing a single line of backend infrastructure code.
+Welcome to the Hakken Workflow Orchestrator. Workflows allow you to build deeply complex automation pipelines, routing data between AI Agents, databases, custom code, and external APIs without writing a single line of backend infrastructure code.
 
-Sonae's workflow uses a visual **Node Graph** to execute tasks asynchronously.
+Hakken's workflow uses a visual **Node Graph** to execute tasks asynchronously.
 
 ---
 
@@ -18,13 +18,13 @@ A Workflow is constructed by connecting **Nodes** together using wires (edges). 
 
 ## 2. Navigating the Canvas
 
-When you open a Workflow in the Sonae Admin Dashboard, you will see the **Canvas**:
+When you open a Workflow in the Hakken Admin Dashboard, you will see the **Canvas**:
 
 *   **Left Sidebar (The Palette):** Contains all the available Nodes (Triggers, Agents, Logic, Outputs). You drag and drop these onto the Canvas.
 *   **The Grid:** Where you connect nodes together.
 *   **Right Config Drawer:** Double-clicking any Node on the Canvas opens its configuration properties.
 
-> **Important:** Workflows run sequentially. Sonae's engine will mathematically prevent you from creating "loops" (connecting a downstream node back to an upstream node) to prevent infinite loops and runaway billing.
+> **Important:** Workflows run sequentially. Hakken's engine will mathematically prevent you from creating "loops" (connecting a downstream node back to an upstream node) to prevent infinite loops and runaway billing.
 
 ---
 
@@ -40,11 +40,11 @@ This mode is designed for speed and simplicity. You simply type what you want th
 2. In the AI prompt box, type: *"Take the body of the email we just received and summarize it into 3 bullet points."*
 3. Click **✨ Auto-Configure Mapping**.
 
-Sonae will automatically scan your graph, identify the Email trigger, and write the mathematical routing code for you in the background!
+Hakken will automatically scan your graph, identify the Email trigger, and write the mathematical routing code for you in the background!
 
 ### ⚡️ Developer Mode
 If you click over to Developer Mode, you can see the raw JSON data. Technical users can manually adjust the JSON bindings.
-Sonae uses a bracket syntax to pass data between nodes.
+Hakken uses a bracket syntax to pass data between nodes.
 *   Format: `{{nodes.[upstream-node-id].output.[field-name]}}`
 *   Example: `{ "content": "Analyze this text: {{nodes.trigger-123.output.body}}" }`
 

@@ -1,4 +1,4 @@
-# Sonae Speaks — The Voice Session And The Talking Character
+# Hakken Speaks — The Voice Session And The Talking Character
 
 Status: **Built and documented by 2026-08-16.** Phase 1 of the
 showcase channels roadmap (`showcase-channels-plan.md`). Current live voice
@@ -12,7 +12,7 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
 ## Current implementation state (verified 2026-08-16)
 
-Ask Sonae live voice is implemented as a realtime spoken session, not the
+Ask Hakken live voice is implemented as a realtime spoken session, not the
 original turn-based transcription plus text-to-speech path. The browser opens a
 live session from an assistant thread, streams microphone audio, receives
 streamed speech back, shows listening/thinking/speaking state and captions, can
@@ -28,7 +28,7 @@ helpers under `src/lib/`. See `docs/end-user/spoken-channels.md` and
 
 ## The decision
 
-Ask Sonae gets a voice session: the user talks, Sonae talks back in a natural
+Ask Hakken gets a voice session: the user talks, Hakken talks back in a natural
 voice, and a character on screen speaks the words. This is the foundation
 phase — the languages phase, the telephone agent, and the receptionist kiosk
 all reuse what is built here.
@@ -56,7 +56,7 @@ Recorded decisions:
    require a gesture for the microphone); from there the session hears for
    itself when the speaker starts and stops — sustained sound opens a turn,
    a conversational pause (~1.4s) commits it — and listening resumes
-   automatically after Sonae speaks. Interrupting Sonae mid-sentence
+   automatically after Hakken speaks. Interrupting Hakken mid-sentence
    ("barge-in") stays out: tapping while it speaks skips the rest instead.
    A quiet room never accumulates a silent recording (the clip recycles
    until speech is heard), and three missed turns in a row stop the loop
@@ -223,7 +223,7 @@ code exists anywhere.)
    transcription ride the `aiActionRequests` rate limits, not the message
    quota.
 
-## Phase A — Sonae can make sound
+## Phase A — Hakken can make sound
 
 **Goal:** a Convex action turns text into speech audio, the house way.
 
@@ -244,7 +244,7 @@ code exists anywhere.)
 
 ## Phase B — The voice session surface
 
-**Goal:** a full-screen voice mode inside Ask Sonae with the turn loop.
+**Goal:** a full-screen voice mode inside Ask Hakken with the turn loop.
 
 - Entry: a "Speak" control in the assistant composer (the i18n key already
   exists) opening a full-screen session overlay on the current thread (or a
@@ -255,7 +255,7 @@ code exists anywhere.)
   watch the reply row via the existing `getMessages` subscription →
   synthesize and play → back to listening.
 - **Sentence-buffered speaking:** as flushed content grows in the streaming
-  row, completed sentences are cut, synthesized, and queued, so Sonae
+  row, completed sentences are cut, synthesized, and queued, so Hakken
   starts talking a beat after the first sentence lands rather than waiting
   for the whole answer; `isStreaming === false` closes the queue. Ordering
   is strictly FIFO; a turn's queue is abandoned wholesale if the user

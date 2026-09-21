@@ -1,12 +1,12 @@
 # Property Research And Board Reports
 
-This guide explains the property research and board-reporting features in Sonae. It is for client admins, operators, sales leaders, support teams, and anyone who needs to understand what users can do from the product screens. It describes the implemented product behavior only.
+This guide explains the property research and board-reporting features in Hakken. It is for client admins, operators, sales leaders, support teams, and anyone who needs to understand what users can do from the product screens. It describes the implemented product behavior only.
 
 The feature area has two connected parts. The first part helps teams collect property listings from Rightmove through the Rightmove Agent, review saved listings, inspect individual property details, and monitor extraction jobs. The second part shows the latest generated sales board report, built from uploaded sales pipeline data and rendered as a visual executive dashboard. Full report-specific behavior is documented in [Sales And Board Reports](./sales-and-board-reports.md). Both parts are company-aware: users normally see the data for their own company workspace, while super admins can have broader visibility depending on their active context.
 
 ## Where To Find It
 
-Open the main Sonae app and use the left navigation.
+Open the main Hakken app and use the left navigation.
 
 The Properties section contains three pages:
 
@@ -20,13 +20,13 @@ These pages are part of the authenticated app experience. Access still depends o
 
 ## Property Search
 
-The property search page is used to start collection from Rightmove. The workflow begins outside Sonae: go to Rightmove, run the search you care about, apply filters such as location, price, property type, tenure, parking, or other Rightmove options, then copy the search URL from the browser. In Sonae, paste that Rightmove URL into the Search page.
+The property search page is used to start collection from Rightmove. The workflow begins outside Hakken: go to Rightmove, run the search you care about, apply filters such as location, price, property type, tenure, parking, or other Rightmove options, then copy the search URL from the browser. In Hakken, paste that Rightmove URL into the Search page.
 
-The form has two steps. Step 1 asks for the Rightmove URL. Sonae accepts HTTPS `rightmove.co.uk` property-for-sale search result links, not single property pages or unrelated Rightmove pages. Step 2 asks how many properties to gather. The screen supports 10 to 1000 properties. Choose a smaller number when testing a new search and a larger number when you are ready to collect a broader market sample.
+The form has two steps. Step 1 asks for the Rightmove URL. Hakken accepts HTTPS `rightmove.co.uk` property-for-sale search result links, not single property pages or unrelated Rightmove pages. Step 2 asks how many properties to gather. The screen supports 10 to 1000 properties. Choose a smaller number when testing a new search and a larger number when you are ready to collect a broader market sample.
 
-When you press the gather button, Sonae queues a manual run for the active Rightmove Agent in the current company workspace. The request is asynchronous. That means the button starts the job; it does not wait on the page until every listing has been collected. The agent receives the Rightmove search URL and the property limit as its objective, starts collection, and stops rather than waiting for every listing. After a successful start, the page shows a success message and clears the URL. If the URL is invalid, the user has no active workspace, the Rightmove Agent is not configured or active, or another error occurs, the page shows an inline error message.
+When you press the gather button, Hakken queues a manual run for the active Rightmove Agent in the current company workspace. The request is asynchronous. That means the button starts the job; it does not wait on the page until every listing has been collected. The agent receives the Rightmove search URL and the property limit as its objective, starts collection, and stops rather than waiting for every listing. After a successful start, the page shows a success message and clears the URL. If the URL is invalid, the user has no active workspace, the Rightmove Agent is not configured or active, or another error occurs, the page shows an inline error message.
 
-The search uses the filters contained in the Rightmove URL. Sonae does not provide a separate filter builder on this screen. If the resulting data looks broader or narrower than expected, check the original Rightmove URL and rerun the search with the right filters on Rightmove first.
+The search uses the filters contained in the Rightmove URL. Hakken does not provide a separate filter builder on this screen. If the resulting data looks broader or narrower than expected, check the original Rightmove URL and rerun the search with the right filters on Rightmove first.
 
 ## Extraction Logs
 
@@ -38,7 +38,7 @@ There are three status groups:
 - Completed means the extraction finished successfully and the results have been saved.
 - Failed means the external run failed, was aborted, or timed out.
 
-Pending jobs have a Sync Status control. The page also checks pending runs automatically about every 30 seconds while it is open. Syncing asks the extraction service for the latest run status. If the run has succeeded, Sonae imports the extracted dataset into the property database. If it has not succeeded yet, Sonae keeps the job pending or marks it failed when the external service reports a terminal failure.
+Pending jobs have a Sync Status control. The page also checks pending runs automatically about every 30 seconds while it is open. Syncing asks the extraction service for the latest run status. If the run has succeeded, Hakken imports the extracted dataset into the property database. If it has not succeeded yet, Hakken keeps the job pending or marks it failed when the external service reports a terminal failure.
 
 Manual sync is still company-scoped. A normal company user can sync only a run that belongs to their active company workspace. If a run is no longer visible to the current workspace, or a user is in the wrong company context, the sync action can fail instead of importing data. Super admins can have broader sync access when they are working globally.
 
@@ -52,7 +52,7 @@ The search box filters by address. This is useful after a large extraction when 
 
 When there are no saved properties, the table shows an empty state telling you to run a new search. When a search term does not match any property address, the empty state explains that the current query returned no results.
 
-Each row has a View Details action. This opens the property detail screen for that saved listing. Each row also has a Delete action. Delete opens a confirmation modal that names the property address. Confirming removes the saved property row from Sonae. It does not delete anything on Rightmove, stop an extraction run, or remove historical run logs. Deletion cannot be undone from the product screen, so use it only for records that should no longer be available in the workspace.
+Each row has a View Details action. This opens the property detail screen for that saved listing. Each row also has a Delete action. Delete opens a confirmation modal that names the property address. Confirming removes the saved property row from Hakken. It does not delete anything on Rightmove, stop an extraction run, or remove historical run logs. Deletion cannot be undone from the product screen, so use it only for records that should no longer be available in the workspace.
 
 ## Property Detail Screen
 
@@ -75,7 +75,7 @@ The Sales Report page shows the latest generated report for the user's accessibl
 
 If no report exists, the page shows No Reports Available and explains that a pipeline CSV should be uploaded and the Sales Report Agent should be scheduled. Once a report exists, the page switches to the board report dashboard.
 
-The report begins with an executive headline and summary. Below that are KPI cards such as total pipeline, weighted pipeline, open deals, average deal size, cycle days, and win rate. Older reports may only contain a reduced set of KPI fields; Sonae still displays those reports with a safe fallback rather than hiding them.
+The report begins with an executive headline and summary. Below that are KPI cards such as total pipeline, weighted pipeline, open deals, average deal size, cycle days, and win rate. Older reports may only contain a reduced set of KPI fields; Hakken still displays those reports with a safe fallback rather than hiding them.
 
 The Closing Windows section visualizes upcoming pipeline value over time and highlights top deals to watch. The Pipeline Health section breaks down value by stage and by sales rep, with observations for each group. The Risk Radar section groups deals into categories such as critical, at risk, and quiet, with reasons and recommended actions. The Team Spotlight section calls out momentum and coaching needs. Patterns and Signals captures non-obvious observations from the pipeline data. This Week's Priorities turns the analysis into a short action list.
 
@@ -91,13 +91,13 @@ The tenant boundary matters in practical use. If a colleague says they can see a
 
 ## Data Created And Changed
 
-Starting a property extraction from the Search page creates an agent run first. When that agent starts the underlying extraction service, Sonae records the extraction run. When the run succeeds, Sonae saves property records for the listings returned by the extraction service. If the same Rightmove listing is collected again for the same company, Sonae updates the existing saved row with fresh data instead of creating a duplicate. The same listing can still exist separately for different companies.
+Starting a property extraction from the Search page creates an agent run first. When that agent starts the underlying extraction service, Hakken records the extraction run. When the run succeeds, Hakken saves property records for the listings returned by the extraction service. If the same Rightmove listing is collected again for the same company, Hakken updates the existing saved row with fresh data instead of creating a duplicate. The same listing can still exist separately for different companies.
 
 Saved property records can include address, price, property type, bedroom and bathroom counts, original URL, images, floorplans, description, features, EPC rating, coordinates, agent details, listing dates, update reason, product label, size fields, and scrape time. Not every listing contains every field.
 
-Deleting a property removes the saved record from Sonae. It does not remove the extraction log. It also does not affect Rightmove or the external extraction service.
+Deleting a property removes the saved record from Hakken. It does not remove the extraction log. It also does not affect Rightmove or the external extraction service.
 
-Generated board reports create report records in Sonae. The report stores the generated headline, summary, metrics, charts, risk items, team notes, patterns, priorities, and creation time. The report is based on the pipeline data and AI rules available when the agent ran. If the pipeline CSV or model configuration changes later, the existing report does not automatically rewrite itself; a new agent run is needed to produce a new report.
+Generated board reports create report records in Hakken. The report stores the generated headline, summary, metrics, charts, risk items, team notes, patterns, priorities, and creation time. The report is based on the pipeline data and AI rules available when the agent ran. If the pipeline CSV or model configuration changes later, the existing report does not automatically rewrite itself; a new agent run is needed to produce a new report.
 
 ## Common Operating Guidance
 
@@ -111,8 +111,8 @@ For reports, keep the source pipeline CSV current and make sure the Sales Report
 
 ## Caveats
 
-Rightmove listings and external extraction services can change independently of Sonae. A property detail page reflects the data captured at extraction time or during the latest update for that listing. Use the original listing link when you need to verify the live Rightmove state.
+Rightmove listings and external extraction services can change independently of Hakken. A property detail page reflects the data captured at extraction time or during the latest update for that listing. Use the original listing link when you need to verify the live Rightmove state.
 
 The report is AI-generated from structured input and rules. It is designed to summarize pipeline signals quickly, but leaders should still review source pipeline data before making material commercial decisions. Missing, stale, or inconsistent pipeline CSV data can lead to weak or misleading report sections.
 
-The current export creates an image. If a board pack needs editable slides, tables, or a formally generated PDF, use the PNG as a visual artifact and keep the original Sonae report available for review.
+The current export creates an image. If a board pack needs editable slides, tables, or a formally generated PDF, use the PNG as a visual artifact and keep the original Hakken report available for review.

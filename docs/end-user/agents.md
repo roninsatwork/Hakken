@@ -1,6 +1,6 @@
 # Agents
 
-Agents are Sonae's governed AI workers. They can be configured with a purpose, model behavior, reusable skills, knowledge, rules, schemas, integrations, evals, approvals, release controls, and run history. In the current product, agent creation and most agent administration live in the super-admin area. Company admins can participate in some company-scoped operational review flows, such as run evidence, evals, approvals, and memory review when backend permissions allow their company scope.
+Agents are Hakken's governed AI workers. They can be configured with a purpose, model behavior, reusable skills, knowledge, rules, schemas, integrations, evals, approvals, release controls, and run history. In the current product, agent creation and most agent administration live in the super-admin area. Company admins can participate in some company-scoped operational review flows, such as run evidence, evals, approvals, and memory review when backend permissions allow their company scope.
 
 This guide describes the feature as it is implemented now. It does not describe future agent marketplace, autonomous scheduling, or learning behavior unless it is already present in the app.
 
@@ -70,7 +70,7 @@ A skill can be draft, active, or archived. Only active skills can be attached to
 
 ## Agentic Testing Sandbox
 
-The agentic testing sandbox at `/app/agentic-testing` lets a user choose a specific agent or `Any (Auto-Route)` and send prompts into an isolated chat-like session. When auto-route is selected, Sonae tries to route the prompt to a matching agent; if no match is found, it can fall back to the global AI path. This screen is useful for trying agent behavior without navigating through each admin tab, but it does not replace evals, release gates, or approval review.
+The agentic testing sandbox at `/app/agentic-testing` lets a user choose a specific agent or `Any (Auto-Route)` and send prompts into an isolated chat-like session. When auto-route is selected, Hakken tries to route the prompt to a matching agent; if no match is found, it can fall back to the global AI path. This screen is useful for trying agent behavior without navigating through each admin tab, but it does not replace evals, release gates, or approval review.
 
 ## Permissions And Boundaries
 

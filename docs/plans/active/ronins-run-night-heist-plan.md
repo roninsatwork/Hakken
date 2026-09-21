@@ -19,7 +19,7 @@ and local verification. The user then approved Spirit Power: “i love this idae
 
 ## 1. Purpose and decision status
 
-Build towards a complete, original browser arcade game inside Sonae: an agile
+Build towards a complete, original browser arcade game inside Hakken: an agile
 ronin steals seals, misdirects patrols, and escapes four lantern-lit districts.
 The approved build now spans four original, replayable heists. Preserve the
 first level and the improved distance-driven running animation while expanding.
@@ -162,7 +162,7 @@ alignment; routine implementation fixes do not create repeated approval steps.
 | 1 — Movement and rules | A clearly labelled prototype of the original level: movement, blocking, detection, decoy, objectives, win/failure and retry. | Repeatable complete runs; focused simulation tests; movement and threats make sense in the browser. | Full simulation and Chrome escapes pass; further threat-cue and corner-fairness review remains — 98%. |
 | 2 — Art in motion | A representative courtyard section with the real hero, patrol, foreground/background layers, lantern light and rain. | Actual browser capture compared with the reference; consistent animation, depth and readability at play size. | Live Chrome scene compared with the preserved reference; hero run/idle rebuilt after glide feedback; final animation/depth acceptance remains — 90%. |
 | 3 — Complete first level | Apply the proven art throughout the level; finish sound, feedback, controls and results. | Full start-to-result playthrough with no final-art placeholders; both win and capture/retry demonstrated. | Start, capture/retry, escape and saved result demonstrated; controls hardened; final play balancing remains — 85%. |
-| 4 — Sonae integration and verification | Agreed score identity and visibility, locale parity, failure handling, focused checks and repository gates. | Recorded functional, visual and performance results; verified score isolation from the old game. | Saved browser score survives reload; two development frame samples recorded; full production validation still blocked by existing route exports — 97%. |
+| 4 — Hakken integration and verification | Agreed score identity and visibility, locale parity, failure handling, focused checks and repository gates. | Recorded functional, visual and performance results; verified score isolation from the old game. | Saved browser score survives reload; two development frame samples recorded; full production validation still blocked by existing route exports — 97%. |
 
 Phase 2 happens before producing a whole asset pack: prove that the visual
 direction works with real animation and navigation while changes are still

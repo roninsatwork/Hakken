@@ -1,4 +1,4 @@
-# Outstanding tasks — Sonae
+# Outstanding tasks — Hakken
 
 **Last updated: 2026-08-19.**
 
@@ -43,7 +43,7 @@ Free tier is enough to start.
 message, create a Google Doc. Today there is no way for a customer to grant that
 permission properly.
 
-**State.** Blocked on two things: Anthony registering Sonae as an application
+**State.** Blocked on two things: Anthony registering Hakken as an application
 with each provider (Google, Slack, and so on), and a decision on where the
 resulting access tokens are stored. The second is a security decision, not a
 typing one, and it should be made deliberately rather than in passing.
@@ -157,7 +157,7 @@ pushes. `ci.yml` and `deploy.yml` both cap themselves; this one was missed.
 - **The CI result for today's three pushes has not been read.** All three ran
   the full gate locally first, so a failure would most likely be an environment
   difference rather than the code. Check
-  https://github.com/roninsatwork/Sonae/actions — the top three rows.
+  https://github.com/roninsatwork/Hakken/actions — the top three rows.
 
   **Why it needed a human.** The repo is private, so it cannot be read without
   logging in. The `gh` command line tool is now installed but not logged in, and

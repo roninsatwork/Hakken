@@ -12,7 +12,7 @@ version of this paragraph recorded the hour when the frontend was on
 dev but the functions were not, which is why the new screens errored
 when Anthony first opened them. Live remains untouched behind the
 usual gate. Written 2026-08-21 after Anthony reviewed a
-"second brain" reference architecture against what Sonae has built.
+"second brain" reference architecture against what Hakken has built.
 The comparison found the core loop complete (raw in → wiki grows →
 answers use it → learnings flow back) and two real gaps: the system
 learns about the company but not about each person, and it learns

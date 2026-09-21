@@ -1,12 +1,12 @@
 # End User Documentation
 
-End-user docs are customer-friendly explanations of the Sonae platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
+End-user docs are customer-friendly explanations of the Hakken platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
 
 Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, the company Wiki pages/map/import/review/diary/unanswered experience, real-time voice, inbound phone calls, the receptionist screen, the connected Gmail mailbox, tool-server connections, photo actions, tasks and in-app notifications, safe workflow retries, rehearsal evals, autonomous-memory controls, personal assistant notes, company-plan feature gates, company-plan widget quota privacy, maintenance connection checks, and the rebuilt settings/retention surfaces.
 
 ## Platform
 
-- [Product Vision And Specification](../../PRODUCT.md) — the single source of truth for what Sonae is
+- [Product Vision And Specification](../../PRODUCT.md) — the single source of truth for what Hakken is
 - [Platform Overview](./platform-overview.md)
 - [Public Website](./public-website.md)
 
@@ -31,7 +31,7 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [Agent Operations And Review](./agent-operations-and-review.md)
 - [Auxiliary App Experiences](./auxiliary-app-experiences.md)
 - [Embedded Widgets](./embedded-widgets.md)
-- [Emails From Sonae](./emails.md)
+- [Emails From Hakken](./emails.md)
 - [Gmail Mailbox](./gmail-mailbox.md)
 - [Knowledge Management](./knowledge-management.md)
 - [Company Wiki](./company-wiki.md)

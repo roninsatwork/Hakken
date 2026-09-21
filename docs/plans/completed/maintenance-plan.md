@@ -23,7 +23,7 @@ Notable deviations from the written plan, all recorded in place:
   platform-hardening-plan.md P4.3.
 - Phase 11: 408 raw buttons frozen (audit's 387 was dashboard-only), seven
   real variants shipped, first ten migrated.
-- Webhook signature header names keep "Sonae" (wire protocol; renaming
+- Webhook signature header names keep "Hakken" (wire protocol; renaming
   breaks existing consumers) — commented at the site.
 
 ## Scope And Rules
@@ -38,7 +38,7 @@ stripper, and a Button primitive.
   stay in `package.json`. Anthony has confirmed Apify and Resend are in use.
   Do not remove any dependency under this plan.
 - **Finding 15 — movement/Posture Studio.** The demo and its debug lab
-  (`scripts/movement-debug/`, the 101 `movement:*` scripts) stay in Sonae.
+  (`scripts/movement-debug/`, the 101 `movement:*` scripts) stay in Hakken.
   It is a live demo / POC. Movement work is governed by
   [Movement Definitive Plan](../active/movement-definitive-plan.md).
 
@@ -47,7 +47,7 @@ stripper, and a Button primitive.
   desired behaviour** (owner decision 2026-08-19). Phase 2 repairs the setup
   path around it; it does not remove it.
 - "Powered by Ronins" credit on emails and public pages is **deliberate
-  branding** and stays. Phase 9 is about the platform *name* ("Sonae"
+  branding** and stays. Phase 9 is about the platform *name* ("Hakken"
   hardcoded where `systemSettings.platformName` should be read), not the
   credit.
 
@@ -320,7 +320,7 @@ pick it up (write one test proving this on each side).
 
 ## Phase 9 — Platform name, not builder name (Days 15–16) *(audit finding 10)*
 
-**Where:** "Sonae" is hardcoded in 369 non-test places despite
+**Where:** "Hakken" is hardcoded in 369 non-test places despite
 `systemSettings.platformName` existing. Customer-visible offenders: AI
 system prompts (`convex/aiPromptAssembly.ts:4,121`), safety refusal text
 (`convex/aiSafetyPolicy.ts:58,67`), invite email subject/body
@@ -337,7 +337,7 @@ the platform *name* only.
 replace the Ronins-specific wiki exam fixtures with neutral ones; widen the
 guard in `src/no-client-specific-fallbacks.test.ts` to a `BUILDER_STRINGS`
 list so new hardcoding fails CI. Internal comments and header names may
-keep "Sonae".
+keep "Hakken".
 
 **Acceptance:** the widened guard test passes; changing `platformName` on a
 dev deployment changes the invite email, the AI's self-identification, and

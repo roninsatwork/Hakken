@@ -487,7 +487,7 @@ Tasks:
   - movement loaded.
 - Add a low-motion or fallback mode for devices that cannot initialize GPU MediaPipe or WebGL.
 - Add "try again" flows for camera/model/frame failures.
-- Keep visual styling aligned with Sonae UI where possible, while allowing the demo to stay more expressive than the operational admin surfaces.
+- Keep visual styling aligned with Hakken UI where possible, while allowing the demo to stay more expressive than the operational admin surfaces.
 
 Tests:
 

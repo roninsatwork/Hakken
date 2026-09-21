@@ -177,7 +177,7 @@ the explicit post-clone setup and release checks.
   clone's package/lock names, public identity bindings, backend branding defaults,
   branding ratchet, repository guidance, deployment resource names and a
   credential-free environment example. Runtime edits happen in the target only.
-- The original Sonae runtime defaults are preserved. Stored settings continue to
+- The original Hakken runtime defaults are preserved. Stored settings continue to
   override backend defaults. Initialisation never changes Git remotes, tenants,
   agents, provider credentials, company capabilities or model defaults.
 - Both setup checkers use `scripts/provider-requirements.mjs`. Selected providers
@@ -194,7 +194,7 @@ the explicit post-clone setup and release checks.
 ## Verification boundary
 
 The approved verification runs in temporary fixtures only. No initialiser or
-exporter is applied to Sonae, no real tenant is created, no live environment is
+exporter is applied to Hakken, no real tenant is created, no live environment is
 listed or changed, and nothing is deployed, committed or pushed.
 
 A fresh offline lockfile install under Node 24.18.0 provides the test toolchain.
@@ -217,7 +217,7 @@ A production build and live provider/hosting checks remain separate verification
 - Full fixture TypeScript (`--noEmit --incremental false`) and targeted lint for
   changed/generated code passed. Seven changed guides had no broken local links;
   `git diff --check` passed.
-- Sonae's root layout, public navigation/footer, backend branding-default module
+- Hakken's root layout, public navigation/footer, backend branding-default module
   and live deployment workflow have no changes from this phase. Only the
   temporary fixture received their generated product bindings.
 - No production build, live provider check, deployment, commit or push was run.
@@ -264,7 +264,7 @@ Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
   before the successful tests/types above. Table definitions now live in separate
   modules; root schema growth is a one-time three-line registry binding, with
   an explicitly previewed size-band adjustment only when needed.
-- No feature artifacts were generated into Sonae. No tenant, provider, live
+- No feature artifacts were generated into Hakken. No tenant, provider, live
   environment, deployment, commit or push was changed.
 - Production build passed (`phase2-build-clean.log`), including supplier and
   purchase-order list/detail routes. The first sandboxed attempt could not open
@@ -321,10 +321,10 @@ Fixture: `/private/tmp/sonae-product-phase2-p9kwn79i/`.
   All four generated list/detail route pairs are included in the build.
 - All 12 changed guides/indexes and all three generated recipe guides have valid
   local links. No recipe records, runtime pages or provenance were generated
-  into Sonae itself.
+  into Hakken itself.
 - Verification uses temporary copies and loopback backend URLs with Sentry
   uploads/runtime reporting disabled. Synthetic Git checkpoints exist only in
-  temporary test repositories to exercise review recording. No Sonae commit,
+  temporary test repositories to exercise review recording. No Hakken commit,
   push, tenant/provider change or deployment was made. Live provider/browser
   acceptance remains part of each product's release checks.
 
@@ -371,7 +371,7 @@ repair verification above.
 Stripe now owns plan selection after purchase, proration invoices, payment
 collection, invoice history and cancellation through its hosted portal. The
 company button reads **Manage billing in Stripe** in English and Italian.
-Sonae validates the portal catalog and maps a confirmed paid price change to
+Hakken validates the portal catalog and maps a confirmed paid price change to
 the company's plan, without resetting usage. Pending/failed changes keep the
 last paid plan; scheduled downgrades apply when Stripe changes and bills the
 subscription. A paid adjustment cannot extend an already paid period.
@@ -396,7 +396,7 @@ Verification in `/private/tmp/sonae-stripe-portal-7_nu19ts`:
   The restricted build stalled during compilation; the same build passed with
   normal build permissions. `git diff --check` and changed-guide links passed.
 
-Sonae's billing configuration remains disabled. No live Stripe setup, payment,
+Hakken's billing configuration remains disabled. No live Stripe setup, payment,
 Convex deployment, source cleanup, commit or push is part of this follow-up.
 
 ## Phase 4 verification — 2026-09-13
@@ -422,7 +422,7 @@ Convex deployment, source cleanup, commit or push is part of this follow-up.
   **108 focused tests**, TypeScript and targeted lint in each updated copy.
   Sales Data's full export run already contains the final billing files.
 - Documentation links and `git diff --check` pass. No initialiser/exporter was
-  applied to Sonae, no live Stripe operation or deployment command was run, and
+  applied to Hakken, no live Stripe operation or deployment command was run, and
   nothing was committed or pushed. No Convex development watcher was running
   when checked. The source billing config remains disabled with zero offers.
 

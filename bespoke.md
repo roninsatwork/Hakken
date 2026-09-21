@@ -1,6 +1,6 @@
-# Bespoke Deployment Guide: Sonae Platform
+# Bespoke Deployment Guide: Hakken Platform
 
-This document outlines the process for deploying a fresh, isolated white-label instance of the Sonae Platform for a specific client.
+This document outlines the process for deploying a fresh, isolated white-label instance of the Hakken Platform for a specific client.
 
 ## 🛠️ Prerequisites
 
@@ -30,7 +30,7 @@ Before starting, ensure you have the following tools and information:
         *   `Artifact Registry Administrator`
         *   `Storage Admin`
         *   `Service Account User`
-        *   **`Vertex AI User`** (Crucial for Sonae AI features)
+        *   **`Vertex AI User`** (Crucial for Hakken AI features)
     *   **Generate Key:** Create a new JSON key. This key is used for both GitHub Actions and backend AI authentication.
 4.  **Create Artifact Registry:** Repository named `sonae-repo` in the desired region (e.g., `us-central1`).
 5.  **OAuth Consent Screen:** 
@@ -46,7 +46,7 @@ Before starting, ensure you have the following tools and information:
 1.  **Verify Domain:** Add the client's sending domain to Resend.
 2.  **DNS Records:** Add the required MX and SPF records to the client's DNS provider.
 3.  **API Key:** Generate a new API Key with "Sending" permissions.
-4.  **From Email:** Ensure the `RESEND_FROM_EMAIL` matches a verified domain (e.g., `Sonae <ai@client-domain.com>`).
+4.  **From Email:** Ensure the `RESEND_FROM_EMAIL` matches a verified domain (e.g., `Hakken <ai@client-domain.com>`).
 
 ---
 
@@ -80,7 +80,7 @@ Add these to **GitHub Settings > Secrets and variables > Actions**:
 
 ---
 
-## 🚀 4. Initial Deployment & Sonae Polish
+## 🚀 4. Initial Deployment & Hakken Polish
 
 1.  **First Admin:** Set the client's primary email as the initial super admin — `master-setup.zsh` does this for you, or run it by hand: `npx convex env set INITIAL_SUPER_ADMIN_EMAIL <client-email> --prod`. Their first sign-in with that address becomes SUPER_ADMIN. (There is no super-admin setting in `convex/auth.ts` — an older version of this runbook pointed there and left deployments with no admin at all.)
 2.  **Environment Coverage:** Run `npm run verify:deployment -- --prod`. It names any required key still missing and lists which optional features (telephony, research, voice, alerts) stay off.

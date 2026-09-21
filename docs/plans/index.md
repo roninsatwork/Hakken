@@ -19,13 +19,13 @@ completed work.
   reference and improved running animation. Final balance and release checks remain.
   Updated 2026-09-12; overall approximately 93%; four-map progression and Spirit Power complete locally; gentler opening and louder sound verified in Chrome.
 
-- [Sonae Speaks The Standard Tool Plug](./active/tool-server-plan.md) — connect
+- [Hakken Speaks The Standard Tool Plug](./active/tool-server-plan.md) — connect
   to a service's own published tool server and get its tools without writing an
   integration. Read-only first; the real work is that tools become tenant-shaped
   for the first time. Agreed 2026-08-23, **delivered 2026-08-24**; all eight phases built, verified and documented.
 
 - [Knowing When It Breaks — PARKED](./active/monitoring-plan.md) — nothing tells
-  anyone when Sonae breaks. Better Stack across both halves, with the engine
+  anyone when Hakken breaks. Better Stack across both halves, with the engine
   reported by our own code so the vendor stays swappable. **Decided then parked
   2026-08-23, not started.** The problem it solves is still open. ~5.5 days.
 
@@ -33,7 +33,7 @@ completed work.
   **delivered locally 2026-09-13; 100% complete.** Framework + Arcade always
   remain; four optional areas can be removed with their files, packages and
   shared references. Source checks, five generated builds and base/Arcade browser
-  checks passed. See the [cloning guide](../operator/cloning-sonae.md).
+  checks passed. See the [cloning guide](../operator/cloning-hakken.md).
 
 - [The Governance Screens Read A Summary, Not The Estate](./active/governance-screens-read-a-summary-plan.md) —
   why the governance overview is the one admin screen that is not instant, and
@@ -257,29 +257,29 @@ completed work.
   `OUTSTANDING-TASKS.md` item 6. Read it before adding anything that assigns
   work to a person or tells them something happened. A task is not an
   approval — approvals stay with the Agent Autonomy And Approvals Plan.
-- [Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo](./active/showcase-channels-plan.md) —
+- [Hakken Can Be Spoken To, Phoned, Emailed, And Shown A Photo](./active/showcase-channels-plan.md) —
   the showcase roadmap giving the one brain more doors: voice-to-voice with a
   talking character, spoken answers in the caller's own language, an inbound
   telephone agent with the hang-up-and-watch finale, acting on photos, a
   dedicated Gmail inbox the agent reads and replies from, and the
   receptionist kiosk screen. Owns the build order and the recorded decisions
-  that Sonae answers calls but never makes them, that the email phase builds
+  that Hakken answers calls but never makes them, that the email phase builds
   the platform's first working connector (Gmail, one dedicated mailbox,
   consent-screen key, no passwords ever), and that the rest of the connector
   catalogue stays out of scope. Each phase has its own detailed plan, listed
   next.
-- [Sonae Speaks — The Voice Session And The Talking Character](./active/voice-session-plan.md) —
-  phase 1: the voice session in Ask Sonae — speech in, spoken replies out,
+- [Hakken Speaks — The Voice Session And The Talking Character](./active/voice-session-plan.md) —
+  phase 1: the voice session in Ask Hakken — speech in, spoken replies out,
   the moving sound-shape on screen. Owns the `speech` use case, the
   `synthesizeSpeech` action, the session surface and turn loop,
   sentence-buffered speaking, and the `SpeakingCharacter` interface.
   Records the decision that the character is a sound-shape (VRM avatars
   rejected as childlike) and that barge-in and open-mic are out of scope.
-- [Ask In Any Language, Sonae Answers In Kind](./active/voice-languages-plan.md) —
+- [Ask In Any Language, Hakken Answers In Kind](./active/voice-languages-plan.md) —
   phase 2: the reply follows the language of the caller's latest turn.
   Owns language detection in `transcribeAudio`'s return shape, the
   reply-language rule for voice turns, and the language→voice map.
-- [Show Sonae A Photo And It Acts](./active/photo-actions-plan.md) —
+- [Show Hakken A Photo And It Acts](./active/photo-actions-plan.md) —
   phase 4: photos into chat and widget, vision-aware model routing, and
   the human-confirmed action chip that files a task from what the photo
   says. Owns the `chatImage` upload policy, attachment rendering, the
@@ -347,7 +347,7 @@ If work touches assigning work to a person, or telling someone in the app that
 something happened, use the Tasks And Notifications Plan. It takes approval
 behaviour from the Agent Autonomy And Approvals Plan and email from the Email
 Design System Plan; it owns neither.
-If work touches a new way of reaching Sonae, the umbrella Sonae Can Be
+If work touches a new way of reaching Hakken, the umbrella Hakken Can Be
 Spoken To, Phoned, Emailed, And Shown A Photo plan owns the build order and
 the channel decisions, and the six phase plans own their features: voice
 sessions, speech synthesis, and the sound-shape belong to the Voice Session
@@ -415,9 +415,9 @@ instructions unless they are deliberately reopened.
   their own. Still the document to read before adding a screen.
 - [The Self-Improving Wiki](./completed/self-improving-wiki-plan.md) —
   delivered 2026-08-14: Karpathy's LLM Wiki pattern built faithfully into
-  Sonae — whole pages the AI rewrites after every conversation, tended on a
+  Hakken — whole pages the AI rewrites after every conversation, tended on a
   schedule, readable and correctable in the company AI section.
-- [Sonae Answers The Phone](./completed/telephone-agent-plan.md) — delivered
+- [Hakken Answers The Phone](./completed/telephone-agent-plan.md) — delivered
   and proven live 2026-08-14: phase 3 of the showcase channels roadmap — the
   inbound number, the turn-based call loop over provider webhooks, the
   hang-up-and-watch finale, the `phoneCalls` table and its purge pipeline,

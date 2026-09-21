@@ -4,7 +4,7 @@
 
 # Comprehensive Test Coverage Plan
 
-This plan describes how to move Sonae from a healthy tested app to a comprehensively covered product surface across backend, frontend, and browser journeys.
+This plan describes how to move Hakken from a healthy tested app to a comprehensively covered product surface across backend, frontend, and browser journeys.
 
 The goal is not to chase a single coverage percentage. The goal is to make regressions hard to ship in the places where they would hurt most: authentication, authorization, tenant boundaries, AI/model controls, workflows, uploads, knowledge, admin operations, and user-facing chat flows.
 

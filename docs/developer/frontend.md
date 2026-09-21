@@ -1,6 +1,6 @@
 # Frontend Development
 
-Sonae's frontend is a Next.js App Router application with authenticated dashboard routes, super-admin routes, public widget routes, and a small number of support pages. This guide covers current layout, styling, component, and verification expectations.
+Hakken's frontend is a Next.js App Router application with authenticated dashboard routes, super-admin routes, public widget routes, and a small number of support pages. This guide covers current layout, styling, component, and verification expectations.
 
 Read this with [Screen Kit](./screen-kit.md), [Architecture](./architecture.md), and the feature-specific guide before adding or changing UI.
 
@@ -101,7 +101,7 @@ Prefer existing shared components before creating page-local variants:
 
 The movement demo's generated `gltfjsx` avatar components live inside the demo boundary; keep them there. The authenticated dashboard header is `src/ui/components/layout/Header.tsx`; the old public-shell `header.tsx`/`footer.tsx` pair no longer exists.
 
-Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use Sonae modal or inline feedback patterns.
+Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use `SonaeModal` or inline feedback patterns.
 
 ## Chart Exporting And The Tailwind v4 Oklab Constraint
 

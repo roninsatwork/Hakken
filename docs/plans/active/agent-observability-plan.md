@@ -7,7 +7,7 @@ three unconnected trails, and the one surfaced most prominently is the weakest o
 the three.
 
 The proposed screens are drawn up here:
-[Sonae — Observability](https://claude.ai/code/artifact/c81cdf9b-9ecb-44d9-8493-0c87dbfd030e).
+[Hakken — Observability](https://claude.ai/code/artifact/c81cdf9b-9ecb-44d9-8493-0c87dbfd030e).
 
 **All five phases are built as of 2026-07-29.** What changed against the plan as
 written is recorded under each phase below. Two things named in "Not in scope"

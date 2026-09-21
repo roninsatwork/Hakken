@@ -56,7 +56,7 @@ Recorded decisions:
 2. **Tap to wake, then hands-free turns.** Browsers refuse microphone and
    audio until a person gestures, so the idle screen invites a tap; from
    that tap the session runs the voice loop hands-free, listening after
-   each spoken reply. A wake word ("Hey Sonae") is out of scope — it
+   each spoken reply. A wake word ("Hey Hakken") is out of scope — it
    fights browser audio policy and adds nothing the tap doesn't.
 3. **It forgets between visitors.** A quiet timeout ends the session:
    captions clear, a fresh conversation starts for the next visitor, and

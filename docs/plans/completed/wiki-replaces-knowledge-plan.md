@@ -20,7 +20,7 @@ decision 3's questions await his correction and re-seed via
 Owner: Anthony
 
 Screens: **https://claude.ai/code/artifact/db29f745-6d4a-4ff8-b87b-e17333d2bb72**
-— eight screens, drawn in Sonae's own visual language. The designs are the
+— eight screens, drawn in Hakken's own visual language. The designs are the
 specification; this document is the engineering behind them. Where the two
 disagree, the designs win and this document is wrong.
 
@@ -30,13 +30,13 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 ## The decision
 
 Anthony's words, 2026-08-15: *"I am asking for the LLM wiki that Andrej
-Karpathy pioneered and am looking to implement this in Sonae — it will replace
+Karpathy pioneered and am looking to implement this in Hakken — it will replace
 the existing knowledge import and storage."*
 
 So: **importing knowledge and writing the wiki become one act.** You add a
 website, a file or some text on the Wiki screen, and what comes back is
 pages — whole, plain, linked, correctable — not a document count and a
-fragment count. Asking Sonae something means it opens the pages it needs and
+fragment count. Asking Hakken something means it opens the pages it needs and
 reads them whole. Conversations keep sharpening those pages (built
 2026-08-14), the nightly gardener keeps them short (built 2026-08-14), and a
 staff correction outranks the machine forever (built 2026-08-14).
@@ -129,9 +129,9 @@ These are Anthony's, and the build does not start without them.
 1. **When a tended page and an original document disagree, which wins?**
    Recommended: **the page**. A phone call teaches this week's opening hours
    while the website still shows last year's; the living page is the truth
-   and staff can pin over it. The alternative means Sonae can never know
+   and staff can pin over it. The alternative means Hakken can never know
    anything newer than the website.
-2. **How do we switch over?** Recommended: **prove it on Ask Sonae first,
+2. **How do we switch over?** Recommended: **prove it on Ask Hakken first,
    then switch phone, email, widget and reception together** on a chosen day,
    so the product is never long half-and-half.
 3. **What proves it is good enough?** Recommended: **a written exam** — about

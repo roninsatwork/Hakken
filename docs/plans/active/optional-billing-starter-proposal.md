@@ -142,7 +142,7 @@ for existing scope: chat allowance is not a global AI-spending limit.
   New schema fields must be optional for existing data; no existing company is
   silently converted from manual billing to provider-managed billing.
 - For Stripe, use the maintained Convex component for customer/subscription
-  synchronisation and verified webhooks. Adapt its examples to Sonae's company
+  synchronisation and verified webhooks. Adapt its examples to Hakken's company
   tenancy, server-controlled prices and existing authentication. It is not a
   replacement for those checks. The component supports checkout, a customer
   portal and organization-linked subscriptions.
@@ -166,7 +166,7 @@ depends on configured retry rules. These states require deliberate access rules.
 ([Stripe subscription lifecycle](https://docs.stripe.com/billing/subscriptions/overview))
 
 The starter should require an enabled clone to declare its policy rather than
-silently imposing a commercial policy on every Sonae product:
+silently imposing a commercial policy on every Hakken product:
 
 | Decision | Proposed support |
 | --- | --- |
@@ -174,7 +174,7 @@ silently imposing a commercial policy on every Sonae product:
 | Failed renewals | Explicit grace duration, including zero; recovery and billing access remain available after paid features pause |
 | Free access or trials | Explicit free plan/trial configuration; absence of a billing plan is not an unlimited paid entitlement |
 | Quota windows | Explicit calendar-month or subscription-period policy, with idempotent resets and no double reset during migration |
-| Plan changes | Approved follow-up: Stripe portal owns changes and immediate proration invoices; Sonae follows paid mapped prices, including scheduled downgrades when applied by Stripe, without resetting usage |
+| Plan changes | Approved follow-up: Stripe portal owns changes and immediate proration invoices; Hakken follows paid mapped prices, including scheduled downgrades when applied by Stripe, without resetting usage |
 | Manual grants | Preserve deliberate operator-managed arrangements separately from payment-managed entitlements |
 
 Account sign-in, billing recovery and data access/retention must be considered

@@ -1,6 +1,6 @@
 # Governance And Trust
 
-Sonae's Governance area helps a workspace or platform operator explain what AI
+Hakken's Governance area helps a workspace or platform operator explain what AI
 systems exist, what rules govern them, what happened recently, and what evidence
 can be handed to an auditor or customer.
 

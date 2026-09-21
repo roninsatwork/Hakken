@@ -50,7 +50,7 @@ The profile page lets signed-in users update their own name, phone number, and p
 
 The profile page also has an Assistant Note tab. These notes are the user's own durable instructions or facts for the assistant. A user can add a note manually, see notes the assistant has learned about them, and delete notes. Admins do not have a separate screen for another person's Assistant Notes, so this tab is the visibility and control point for the subject of those notes.
 
-The profile page also shows the user's company AI messaging pool, current plan name, monthly reset note, and usage progress when the plan has a finite message limit. If assistant chat reaches that limit, Sonae records the attempted message and returns a quota-block assistant reply until the next billing cycle or a plan change.
+The profile page also shows the user's company AI messaging pool, current plan name, monthly reset note, and usage progress when the plan has a finite message limit. If assistant chat reaches that limit, Hakken records the attempted message and returns a quota-block assistant reply until the next billing cycle or a plan change.
 
 ## Company Workspaces For Super Admins
 

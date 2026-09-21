@@ -31,7 +31,7 @@ When working on backend tasks, follow this mental process:
 
 ### Phase 1: Constraint Analysis (ALWAYS FIRST)
 Before any implementation work, answer:
-1. **Mission Alignment:** Check `PRODUCT.md` for the core vision and data requirements. It is the single source of truth for what Sonae is.
+1. **Mission Alignment:** Check `PRODUCT.md` for the core vision and data requirements. It is the single source of truth for what Hakken is.
 2. **Data Volume:** How much data are we handling?
 3. **Access Patterns:** Is it read-heavy or write-heavy?
 4. **Real-time Requirements:** Does the UI need instant updates?

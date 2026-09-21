@@ -1,6 +1,30 @@
-# Sonae Agent Handoff
+# Hakken Agent Handoff
 
 This is the repo-level handoff for future coding agents. Treat this file as the first local project guide to read after the user's latest instructions.
+
+## Product Context — read this before you build anything
+
+**Hakken** (発見, discovery) works out which of a business's digital assets make
+money and why the rest don't, fixes the broken stage, and proves the result in
+leads and sales. Read [PRODUCT.md](PRODUCT.md) before any product work; the
+research behind it is in [docs/product/](docs/product/index.md).
+
+Three things to hold onto:
+
+- **The product is not built.** This repository is the agentic framework it will
+  be built on (formerly named **Sonae**, renamed 2026-09-21). PRODUCT.md Part
+  Two is what the code does today; Part Three §31 is the Hakken product surface,
+  all of it unbuilt. Never describe a Part Three item as though it exists.
+- **The rename covered documentation prose only.** Code identifiers, config
+  filenames, schema fields, env vars, deployment names and the git remote still
+  read `sonae` and are still correct — `SonaeModal`, `generateSonaeResponse`,
+  `sonae.product.json`, `x-sonae-secret`, `sonae-app` and the rest. Do not
+  "fix" them. The full list is in PRODUCT.md §33. The user-facing
+  `projectName` in `messages/en.json` is also still `Sonae`; changing it is a
+  `npm run product:init` job, not a find-and-replace.
+- **Everything in `docs/product/` is a dated record.** Do not edit those files
+  to match later decisions. Supersede them with a new dated document, or record
+  the change in PRODUCT.md's change log.
 
 ## Billing Framework Handoff
 
@@ -180,7 +204,7 @@ When debugging Game Studio movement, do not ask the user to repeat live motions 
 ## Project Guardrails
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
-- Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing Sonae modal patterns.
+- Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `SonaeModal` patterns.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.
 - Read `docs/developer/screen-kit.md` before building or restyling any screen,
   and copy an existing screen that already does it — Subscription Plans and

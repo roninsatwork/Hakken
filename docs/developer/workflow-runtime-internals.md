@@ -1,6 +1,6 @@
 # Workflow Runtime Internals
 
-This guide documents the backend runtime that executes Sonae workflow graphs. It is implementation-focused and complements [Workflow Automation](./workflow-automation.md), which covers the full admin product surface and visual builder.
+This guide documents the backend runtime that executes Hakken workflow graphs. It is implementation-focused and complements [Workflow Automation](./workflow-automation.md), which covers the full admin product surface and visual builder.
 
 The current implementation is Convex-driven. Workflow records store React Flow graph JSON, runtime actions schedule node execution, internal mutations claim and finalize execution steps, and execution logs are stored in the same tables used by schedule-driven agent runs. The runtime supports manual workflow runs, due scheduled workflow dispatch, and public webhook workflow triggers. The schedule-list force-run action for workflow targets is intentionally different today: it creates a workflow execution log and completes it through a simulated backend heartbeat instead of executing the visual graph.
 

@@ -4,7 +4,7 @@
 
 # Auth And Login Hardening Plan
 
-This is the source-of-truth plan for strengthening Sonae's invite-only authentication flow. Future agents should follow this plan in order unless the user explicitly changes the scope. If a phase must change, update this document in the same change set and explain why.
+This is the source-of-truth plan for strengthening Hakken's invite-only authentication flow. Future agents should follow this plan in order unless the user explicitly changes the scope. If a phase must change, update this document in the same change set and explain why.
 
 ## Non-Drift Rules
 

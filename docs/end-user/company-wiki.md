@@ -1,6 +1,6 @@
 # Company Wiki
 
-The Company Wiki is the company-specific knowledge space that Sonae writes and keeps current from approved company material and customer interactions. It is separate from ordinary document storage: stored sources remain available as receipts, while the wiki presents maintained pages that people can read, correct, and use for answers.
+The Company Wiki is the company-specific knowledge space that Hakken writes and keeps current from approved company material and customer interactions. It is separate from ordinary document storage: stored sources remain available as receipts, while the wiki presents maintained pages that people can read, correct, and use for answers.
 
 ## Where It Lives
 
@@ -38,9 +38,9 @@ The Wiki import box accepts:
 - one or more files, including folders
 - manual text with a title
 
-Imports use the same underlying knowledge upload and website ingestion machinery as the knowledge archive. When imported material becomes ready, Sonae can distil it into wiki pages. The Wiki screen shows reading progress while there are documents left to process.
+Imports use the same underlying knowledge upload and website ingestion machinery as the knowledge archive. When imported material becomes ready, Hakken can distil it into wiki pages. The Wiki screen shows reading progress while there are documents left to process.
 
-For sensitive material, tick **Review before it writes**. Sonae then extracts the claims it would teach the wiki, but the wiki learns nothing until an admin approves the review. Rejecting a review keeps the source in the library but prevents that material from being taught to the wiki.
+For sensitive material, tick **Review before it writes**. Hakken then extracts the claims it would teach the wiki, but the wiki learns nothing until an admin approves the review. Rejecting a review keeps the source in the library but prevents that material from being taught to the wiki.
 
 ## Reviewing And Correcting
 
@@ -50,7 +50,7 @@ People remain in charge of truth. The wiki has three user-facing correction path
 - Pin a correction when a fact must survive future machine rewrites.
 - Review pending claims before the wiki learns sensitive imported material.
 
-Pinned corrections are displayed separately from the machine-written body and are preserved when Sonae rewrites or tidies a page. Use pinned corrections for facts that must not be smoothed away by later summarisation.
+Pinned corrections are displayed separately from the machine-written body and are preserved when Hakken rewrites or tidies a page. Use pinned corrections for facts that must not be smoothed away by later summarisation.
 
 ## Open Questions
 

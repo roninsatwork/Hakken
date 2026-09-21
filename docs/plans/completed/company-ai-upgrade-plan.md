@@ -4,7 +4,7 @@
 
 # Company AI Upgrade Plan
 
-This plan defines how Sonae should turn the company AI workspace into a first-class company intelligence layer with knowledge, memory, skills, evals, readiness gates, and observability.
+This plan defines how Hakken should turn the company AI workspace into a first-class company intelligence layer with knowledge, memory, skills, evals, readiness gates, and observability.
 
 This is a planning document only. Do not implement this work unless the user explicitly asks to move from planning into coding.
 
@@ -20,7 +20,7 @@ The company AI area currently acts mostly as configuration and knowledge managem
 
 The target product claim is:
 
-> Sonae can prove a company's AI is ready because its knowledge, memories, skills, rules, models, and public surfaces pass company-specific evals before they are used in production.
+> Hakken can prove a company's AI is ready because its knowledge, memories, skills, rules, models, and public surfaces pass company-specific evals before they are used in production.
 
 The upgraded workspace should answer five questions:
 

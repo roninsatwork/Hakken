@@ -143,7 +143,7 @@ a real browser —
   and the `AGENT_INHERITANCE` eval category stay dormant until that decision
   is revisited — this plan is where that is recorded.
 - **Runtime enforcement of `requiredToolsJson` and `approvalPolicyJson`.**
-  Ask Sonae's chat path calls no tools, so there is nothing to gate at run
+  Ask Hakken's chat path calls no tools, so there is nothing to gate at run
   time; these stay readiness-screen concerns. If chat ever grows tools, that
   is its own plan.
 - **Per-widget bindings.** `surfaceId` allows binding a skill to one specific

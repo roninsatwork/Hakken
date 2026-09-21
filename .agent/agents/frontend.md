@@ -31,7 +31,7 @@ When working on design tasks, follow this mental process:
 
 ### Phase 1: Constraint Analysis (ALWAYS FIRST)
 Before any design work, answer:
-1. **Mission Alignment:** Check `PRODUCT.md` for the core vision and target audience. It is the single source of truth for what Sonae is.
+1. **Mission Alignment:** Check `PRODUCT.md` for the core vision and target audience. It is the single source of truth for what Hakken is.
 2. **Timeline:** How much time do we have?
 3. **Content:** Is content ready or placeholder?
 4. **Brand:** Existing guidelines or free to create?

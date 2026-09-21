@@ -1,7 +1,7 @@
-# Emails From Sonae
+# Emails From Hakken
 
-Sonae sends four kinds of platform email. All of them go to people who already
-have an account — Sonae never sends these platform messages to someone who has
+Hakken sends four kinds of platform email. All of them go to people who already
+have an account — Hakken never sends these platform messages to someone who has
 not been added to a workspace.
 
 This page is about outbound platform messages. The connected Gmail mailbox is
@@ -49,7 +49,7 @@ action that cannot be undone.
 two choices: approve it, or open it and read it first.
 
 **If you ignore it:** nothing is sent. The run waits, and eventually expires.
-Sonae will not proceed without an answer.
+Hakken will not proceed without an answer.
 
 ## Invitation
 
@@ -57,7 +57,7 @@ Sonae will not proceed without an answer.
 
 **What it shows:** who added you, which workspace, and what you can do there.
 There is no password to set — sign in with the address the invitation arrived
-at and Sonae recognises you.
+at and Hakken recognises you.
 
 Magic-link sign-in emails may open a confirmation page first. Pressing the
 button on that page proves a person, not a mail scanner, is spending the
@@ -89,5 +89,5 @@ go to whoever is responsible for approving that agent or workflow.
 
 Emails come from your organisation's own sending address, configured by your
 administrator. If one arrives from an address you do not recognise, or asks you
-to enter a password, treat it as suspicious — Sonae never asks for a password by
-email, and the only links in these messages go into your own Sonae workspace.
+to enter a password, treat it as suspicious — Hakken never asks for a password by
+email, and the only links in these messages go into your own Hakken workspace.

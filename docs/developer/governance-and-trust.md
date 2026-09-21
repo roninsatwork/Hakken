@@ -1,6 +1,6 @@
 # Governance And Trust Developer Guide
 
-Governance is the evidence layer over Sonae's AI systems. It spans platform
+Governance is the evidence layer over Hakken's AI systems. It spans platform
 super-admin routes, customer workspace routes, Convex governance queries/actions,
 audit exports, evidence packs, personal-data rights, and conformance checks.
 

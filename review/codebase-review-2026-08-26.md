@@ -1,4 +1,4 @@
-# Sonae Codebase Review — 2026-08-26
+# Hakken Codebase Review — 2026-08-26
 
 Scope: `src/` (215,686 lines), `convex/` (174,581 lines excluding `_generated`), `e2e/`, `scripts/`, CI. 1,676 TS/TSX source files, 632 test files. Measured directly against the repository rather than carried over from `codebase-review-2026-08-24.md`, since much of what that review flagged has since been fixed.
 

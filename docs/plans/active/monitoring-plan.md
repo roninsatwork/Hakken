@@ -9,17 +9,17 @@ research below cost real effort and the alternatives were genuinely weighed, so
 it is kept intact rather than rewritten from memory later.
 
 **The problem it was going to solve is still open.** Nothing tells anyone when
-Sonae breaks. That was true before this plan and remains true now.
+Hakken breaks. That was true before this plan and remains true now.
 
 The tool-server work that used to live in this document has moved to
-[Sonae Speaks The Standard Tool Plug](./tool-server-plan.md), which does not
+[Hakken Speaks The Standard Tool Plug](./tool-server-plan.md), which does not
 depend on any of this.
 
 ---
 
 ## The problem
 
-**When something in Sonae breaks, nobody finds out.** You hear it from a client,
+**When something in Hakken breaks, nobody finds out.** You hear it from a client,
 or you never hear it at all.
 
 Error monitoring is installed and wired into the code, but it has no account
@@ -34,7 +34,7 @@ for. Today that would be an untrue claim.
 
 ## Two setups, not four
 
-Sonae is two pieces that break separately.
+Hakken is two pieces that break separately.
 
 **One — everything people click on.** The public site, the user app, the admin
 screens and the embedded widget are all a single application. Setting up
@@ -116,7 +116,7 @@ written when a client actually asks, not speculatively.
 
 ### Copy the pattern already in the codebase
 
-Sonae solved this once, for AI providers. Monitoring should look the same rather
+Hakken solved this once, for AI providers. Monitoring should look the same rather
 than invent a second way:
 
 - **A narrow interface** — start up, report a failure, nothing else. Everything
@@ -255,7 +255,7 @@ the plan stops and the vendor choice reopens.
 5. Changing one configuration value switches vendor without a code change; an
    unknown value fails immediately with a message naming it.
 6. A cloned product can be built with no monitoring, or a different vendor from
-   Sonae's own, without editing source.
+   Hakken's own, without editing source.
 7. The Connections screen shows whether monitoring is on and working here.
 
 

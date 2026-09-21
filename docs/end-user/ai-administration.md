@@ -1,6 +1,6 @@
 # AI Administration
 
-AI administration is where Sonae operators govern the assistant, agent, workflow, widget, and model behavior that users experience across the platform. These controls decide which AI engines are available, which model is used by default for each use case, what global and company prompts apply, which rules are active, what knowledge can be retrieved, which tools and connectors agents may use, how embedded widgets look, and how cost and chat activity are monitored.
+AI administration is where Hakken operators govern the assistant, agent, workflow, widget, and model behavior that users experience across the platform. These controls decide which AI engines are available, which model is used by default for each use case, what global and company prompts apply, which rules are active, what knowledge can be retrieved, which tools and connectors agents may use, how embedded widgets look, and how cost and chat activity are monitored.
 
 This guide describes the implemented product surface. It is written for platform operators, customer-success teams, sales engineers, and support teams who need to understand what the AI administration screens do without reading the code.
 
@@ -22,7 +22,7 @@ Global AI administration is under `/admin/ai`:
 - `/admin/ai/widget` configures the global embeddable widget.
 - `/admin/ai/models` manages providers, model catalog entries, enabled status, and defaults.
 - `/admin/ai/models/[id]` edits model display and pricing configuration.
-- `/admin/ai/tools` manages the connector marketplace and Sonae action tools.
+- `/admin/ai/tools` manages the connector marketplace and Hakken action tools.
 - `/admin/ai/tools/new`, `/admin/ai/tools/[id]`, and `/admin/ai/tools/connectors/[id]` create or manage tool and connector records.
 - `/admin/ai/voice` manages the spoken voice used by live voice sessions, inbound phone calls, and reception.
 
@@ -46,7 +46,7 @@ Normal users do not manage these screens. Company admins use organization settin
 
 ## How AI Controls Layer Together
 
-Sonae uses layered AI configuration. Platform safety and tenant isolation always sit above configurable prompts, rules, knowledge, model defaults, widgets, and tools. A prompt or uploaded document cannot authorize cross-tenant access, reveal hidden platform instructions, or bypass permissions.
+Hakken uses layered AI configuration. Platform safety and tenant isolation always sit above configurable prompts, rules, knowledge, model defaults, widgets, and tools. A prompt or uploaded document cannot authorize cross-tenant access, reveal hidden platform instructions, or bypass permissions.
 
 The global system prompt applies platform-wide behavior. Company prompts tailor behavior for a specific tenant. Rules add targeted instructions or constraints. Knowledge supplies reference material for retrieval. Model defaults decide which model should be used for each product use case. Tools and connectors define actions that agents can ask to perform. Widgets expose a controlled chat experience outside the logged-in app.
 
@@ -68,7 +68,7 @@ Changing model defaults can affect live assistant, agent, workflow, title genera
 
 ## Spoken Voice
 
-The Voice screen lets an admin pick the spoken voice for the active workspace and preview each option. The selected voice is shared by Ask Sonae live voice, inbound phone calls, and reception. Previewing a voice uses the same live voice relay and real-time model path as production, so failures usually mean the real spoken channel is not fully configured.
+The Voice screen lets an admin pick the spoken voice for the active workspace and preview each option. The selected voice is shared by Ask Hakken live voice, inbound phone calls, and reception. Previewing a voice uses the same live voice relay and real-time model path as production, so failures usually mean the real spoken channel is not fully configured.
 
 ## Prompts And Rules
 
@@ -97,15 +97,15 @@ Wiki pages are the maintained answer layer over those sources. Diary screens sho
 
 ## Tools And Connectors
 
-The tools page has two related areas: connector marketplace installations and individual Sonae action tools. Connectors represent installable integrations such as knowledge, profile, workflow, HTTP, email, or custom integrations. A connector can require no auth, secret references, or OAuth. It can be globally available or tenant-restricted. Operators can install, sync, manage, and test connectors.
+The tools page has two related areas: connector marketplace installations and individual Hakken action tools. Connectors represent installable integrations such as knowledge, profile, workflow, HTTP, email, or custom integrations. A connector can require no auth, secret references, or OAuth. It can be globally available or tenant-restricted. Operators can install, sync, manage, and test connectors.
 
-Sonae action tools define model-callable capabilities. They include a name, description, handler mapping, optional connector link, required role, input and output schema, side-effect level, confirmation requirement, active state, version, and audit metadata. Side-effect levels help distinguish read-only, write, destructive, and external actions.
+Hakken action tools define model-callable capabilities. They include a name, description, handler mapping, optional connector link, required role, input and output schema, side-effect level, confirmation requirement, active state, version, and audit metadata. Side-effect levels help distinguish read-only, write, destructive, and external actions.
 
 Tools are powerful because AI models may request them during agent runs. The platform still validates tool availability, role requirements, input schema, tenant boundaries, side-effect level, and approval requirements before execution. Do not treat a model's requested tool call as permission to execute the tool.
 
 ## Widgets
 
-Widgets let Sonae expose chat outside the logged-in dashboard. The global widget page configures a system-wide widget, while company widget screens configure tenant-specific widgets.
+Widgets let Hakken expose chat outside the logged-in dashboard. The global widget page configures a system-wide widget, while company widget screens configure tenant-specific widgets.
 
 Widget configuration includes name, allowed domains, primary color, greeting text, logo, placeholder, sounds, popup preview, name/email gateway requirements, conversation starters, and integration snippet. The global widget page displays an embed script such as a `script` tag with a widget id. The sandbox route lets operators test the embedded widget in a simulated host page.
 
@@ -123,7 +123,7 @@ Chat logs list conversation threads in a split-pane viewer. Super admins can sea
 
 Global AI administration is super-admin controlled. Company AI screens still enforce backend company access. Global knowledge and global widgets are super-admin-only. Company-scoped knowledge, widgets, rules, chat logs, and model defaults require admin access to that company.
 
-Sonae also records audit events for many sensitive AI configuration changes, including model default changes, model enforcement changes, provider state changes, system prompt updates, rule changes, knowledge changes, tool changes, widget changes, and safety refusals where implemented. Audit coverage can vary by subsystem, so use feature-specific logs and admin notes when a change is operationally important.
+Hakken also records audit events for many sensitive AI configuration changes, including model default changes, model enforcement changes, provider state changes, system prompt updates, rule changes, knowledge changes, tool changes, widget changes, and safety refusals where implemented. Audit coverage can vary by subsystem, so use feature-specific logs and admin notes when a change is operationally important.
 
 ## Practical Guidance
 

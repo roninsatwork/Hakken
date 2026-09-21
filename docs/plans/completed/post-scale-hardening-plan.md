@@ -10,7 +10,7 @@ Follow this plan in order unless the user explicitly changes priority.
 
 ## Current Position
 
-Sonae has already completed the main scale-hardening work:
+Hakken has already completed the main scale-hardening work:
 
 - Analytics, AI running costs, admin dashboards, and company dashboards are snapshot-first or bounded by indexed overlays.
 - Admin inventory surfaces use paginated, indexed, server-filtered reads.

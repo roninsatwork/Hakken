@@ -1,11 +1,11 @@
 # Receptionist Screen
 
-The Receptionist screen turns a configured Sonae widget into a full-screen voice
+The Receptionist screen turns a configured Hakken widget into a full-screen voice
 assistant for a tablet at a reception desk, counter, showroom, or trade-show
 stand. Visitors tap once, talk to the assistant, and then the screen resets for
 the next visitor.
 
-It uses the same workspace voice setting as Ask Sonae voice mode and phone
+It uses the same workspace voice setting as Ask Hakken voice mode and phone
 calls. The screen is meant for unattended, public use, so it shows a permanent
 AI disclosure and a recording notice.
 
@@ -45,8 +45,8 @@ and requests microphone access through the browser.
 
 During the conversation:
 
-- the microphone streams to the live voice model through Sonae's relay
-- Sonae speaks back with streamed audio
+- the microphone streams to the live voice model through Hakken's relay
+- Hakken speaks back with streamed audio
 - captions show the visitor and assistant turns
 - the visitor can end the conversation from the screen
 - quiet periods show a gentle "Still there?" prompt
@@ -97,5 +97,5 @@ Before using the screen with customers:
 - check the last-seen timestamp from the widget Integration section or
   `/app/reception`
 
-Tablet or operating-system kiosk mode is outside Sonae. Locking the device to
+Tablet or operating-system kiosk mode is outside Hakken. Locking the device to
 the browser page is a venue/device policy decision.

@@ -46,7 +46,7 @@ the reported table and route before applying.
   Previous/Next pages of 15 records. Search is over the company index, not just
   the currently loaded page; it uses Convex full-text matching, not substring matching.
 - A create form, record detail route, edit form, delete confirmation, loading,
-  empty, unavailable and error states, using Sonae's screen kit.
+  empty, unavailable and error states, using Hakken's screen kit.
 - Required relationship selectors with indexed search, 15-result pages and
   readable labels. The detail page links to the related record.
 - English and Italian interface copy, sidebar links, frontend route permission

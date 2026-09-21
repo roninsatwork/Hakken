@@ -11,7 +11,7 @@ Owner: Anthony
 
 ## Why
 
-Sonae is about to be cloned as the foundation for a number of micro-SaaS
+Hakken is about to be cloned as the foundation for a number of micro-SaaS
 products. Every weakness in the base is inherited by every clone, so a flaw
 that is tolerable in one repo becomes N copies of the same flaw, each drifting
 apart. The 2026-08-21 review found the platform structurally sound (enforced
@@ -284,7 +284,7 @@ batch stick.
 
 - **Branding literals in screens.** The 2026-08-19 guard
   (`src/no-client-specific-fallbacks.test.ts`) cleaned `convex/` and named
-  `src/` "a follow-up phase". ~68 hardcoded "Sonae" strings remain across
+  `src/` "a follow-up phase". ~68 hardcoded "Hakken" strings remain across
   ~50 screens plus 32/34 entries in `messages/en.json`/`it.json`. The fix is
   routing them through `systemSettings.platformName` (via
   `useSystemSettings`) and widening the guard's scope to `src/` and

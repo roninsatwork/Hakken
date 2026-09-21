@@ -41,7 +41,7 @@ documentation automation.
 ## The decision
 
 A dedicated Gmail address — ask@ronins.co.uk — with a real, human-openable
-inbox. Sonae watches it, reads new mail, and replies from it using the
+inbox. Hakken watches it, reads new mail, and replies from it using the
 company's knowledge; when a human is genuinely needed it raises a task and
 a notification instead and tells the sender someone will be in touch.
 Ronins company policy (all company mail lives on Gmail, no exceptions)
@@ -245,7 +245,7 @@ dedicated mailbox, and shows its state honestly.
   the connection at Google's end → screen shows disconnected, nothing
   crashes, mail waits.
 - Done when Anthony can email the address from his phone in front of a
-  room and read Sonae's reply aloud a minute later — and then open the
+  room and read Hakken's reply aloud a minute later — and then open the
   inbox in Gmail to show the whole exchange sitting there like any
   colleague's mail.
 

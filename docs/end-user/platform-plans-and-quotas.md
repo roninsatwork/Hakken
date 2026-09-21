@@ -1,6 +1,6 @@
 # Platform Plans And Quotas
 
-Platform plans define commercial tiers and monthly AI message allocations for Sonae tenants. Use this guide when creating or editing a subscription plan, assigning a plan to a company, explaining plan usage on a profile page, or investigating quota-related AI pauses.
+Platform plans define commercial tiers and monthly AI message allocations for Hakken tenants. Use this guide when creating or editing a subscription plan, assigning a plan to a company, explaining plan usage on a profile page, or investigating quota-related AI pauses.
 
 For broader platform settings, see [Platform Operations Settings](./platform-operations-settings.md). For company setup and team handoff, see [Company Workspace Administration](./company-workspace-administration.md).
 
@@ -82,7 +82,7 @@ Plan quotas currently meter assistant chat messages. Other AI-backed workflows c
 
 ## Billing Cycle Reset
 
-Sonae has a backend monthly reset path for message usage counters. It resets company `messagesUsedThisPeriod` values and user override usage counters in batches.
+Hakken has a backend monthly reset path for message usage counters. It resets company `messagesUsedThisPeriod` values and user override usage counters in batches.
 
 Operators should treat reset behavior as a platform process. Do not manually edit plan usage unless there is a clear support or engineering reason and the effect is understood.
 

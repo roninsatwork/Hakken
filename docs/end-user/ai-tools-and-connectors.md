@@ -1,16 +1,16 @@
 # AI Tools And Connectors
 
-Sonae tools and connectors let agents use governed capabilities beyond plain text responses. A tool describes an action the AI may request. A connector represents an installed integration or capability bundle that can create one or more tools.
+Hakken tools and connectors let agents use governed capabilities beyond plain text responses. A tool describes an action the AI may request. A connector represents an installed integration or capability bundle that can create one or more tools.
 
-This guide explains the implemented operator surface for connector marketplace installs, Sonae action tools, runtime safety labels, and practical governance.
+This guide explains the implemented operator surface for connector marketplace installs, Hakken action tools, runtime safety labels, and practical governance.
 
 ## Where To Find It
 
 AI tools and connectors are managed from:
 
-- `/admin/ai/tools`: connector marketplace, installed connectors, and Sonae action tools.
-- `/admin/ai/tools/new`: create a Sonae action tool.
-- `/admin/ai/tools/[id]`: edit a Sonae action tool.
+- `/admin/ai/tools`: connector marketplace, installed connectors, and Hakken action tools.
+- `/admin/ai/tools/new`: create a Hakken action tool.
+- `/admin/ai/tools/[id]`: edit a Hakken action tool.
 - `/admin/ai/tools/connectors/[id]`: manage an installed connector.
 
 Agent-specific tool bindings are managed from agent administration screens. A tool must exist before it can be bound to an agent.
@@ -25,9 +25,9 @@ Connector install and sync actions are super-admin controlled. Connector detail 
 
 Secret references are reference keys, not raw secrets. Do not paste API keys, OAuth tokens, private keys, or passwords into connector reference fields unless the field is explicitly designed to store a secret reference managed elsewhere.
 
-## Sonae Action Tools
+## Hakken Action Tools
 
-A Sonae action tool defines a model-callable capability. Each tool has:
+A Hakken action tool defines a model-callable capability. Each tool has:
 
 - Name: the tool identity shown in administration.
 - Description: guidance for when the AI should request the tool.
@@ -47,9 +47,9 @@ Side-effect labels are part of operational safety:
 - `READ`: retrieves information and usually does not require confirmation by default.
 - `WRITE`: changes internal state and requires confirmation.
 - `DESTRUCTIVE`: deletes or materially damages data and requires confirmation.
-- `EXTERNAL`: sends data or performs an action outside Sonae and requires confirmation.
+- `EXTERNAL`: sends data or performs an action outside Hakken and requires confirmation.
 
-The AI can request a tool call, but that request is not permission to run the tool. Sonae still checks role, tenant boundaries, schema validity, side-effect policy, and confirmation state before execution.
+The AI can request a tool call, but that request is not permission to run the tool. Hakken still checks role, tenant boundaries, schema validity, side-effect policy, and confirmation state before execution.
 
 ## Connector-Backed Tools
 

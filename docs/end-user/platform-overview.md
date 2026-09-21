@@ -1,14 +1,19 @@
-# Sonae Platform Overview
+# Hakken Platform Overview
 
-> **What Sonae is, and why it exists, is defined in [PRODUCT.md](../../PRODUCT.md).**
+> **What Hakken is, and why it exists, is defined in [PRODUCT.md](../../PRODUCT.md).**
 > That document is the single source of truth. This page is the customer-facing
 > tour of the platform: who uses it, what each area does, and where to find
 > things. Where the two ever disagree, PRODUCT.md is right and this page needs
 > correcting.
+>
+> **Scope note.** This page describes the **platform capabilities that exist
+> today** — the agentic foundation. The Hakken product described in PRODUCT.md
+> Part One (asset P&L, AI-visibility monitoring, the weekly fixing loop) is not
+> built yet and is not described here.
 
 ## In Short
 
-Sonae is a multi-tenant AI platform for organisations that need controlled,
+Hakken is a multi-tenant AI platform for organisations that need controlled,
 configurable, and auditable AI assistance — across teams, companies, workflows,
 and customer-facing experiences.
 
@@ -27,14 +32,14 @@ It is built around three ideas:
 - Give platform operators visibility into cost, activity, health, audit history,
   and workflow execution.
 
-Sonae is **model-agnostic**. It runs across Google Vertex, Anthropic, OpenAI,
+Hakken is **model-agnostic**. It runs across Google Vertex, Anthropic, OpenAI,
 and OpenRouter, so a product built on it is not tied to one AI vendor.
 
 ## Who Uses It
 
 ### End Users
 
-End users work in the main app workspace. They can use the Sonae assistant,
+End users work in the main app workspace. They can use the Hakken assistant,
 upload files, view reports, use the tools their organisation has enabled, and
 access organisation features according to their role.
 
@@ -67,7 +72,7 @@ For signed-in super admins, the dashboard also redirects to `/admin` once per
 browser session as a convenience. This is a handoff, not a security boundary —
 admin access is enforced by the admin layout and by backend checks.
 
-### Ask Sonae Assistant
+### Ask Hakken Assistant
 
 The assistant is the main AI surface. Users can:
 
@@ -80,7 +85,7 @@ The assistant is the main AI surface. Users can:
 
 ### Reports
 
-Sonae includes a reports area, currently covering sales reporting.
+Hakken includes a reports area, currently covering sales reporting.
 
 ### Property Tools
 
@@ -176,7 +181,7 @@ assistant and agents behave.
 
 ### Knowledge Management
 
-Sonae includes a knowledge system for uploaded documents and retrieval. Knowledge
+Hakken includes a knowledge system for uploaded documents and retrieval. Knowledge
 exists at four scopes:
 
 - global knowledge, available to every tenant;
@@ -229,7 +234,7 @@ operational tasks run automatically.
 
 ## Embedded Widgets
 
-Sonae supports embeddable AI chat widgets for use outside the main app — on a
+Hakken supports embeddable AI chat widgets for use outside the main app — on a
 customer website or a tenant-owned page.
 
 Widget surfaces include the public widget route, a sandbox route, admin widget
@@ -251,7 +256,7 @@ audit-logged.
 
 ## Security And Governance
 
-Sonae is built around strict role and tenant boundaries:
+Hakken is built around strict role and tenant boundaries:
 
 - Super admins manage the whole platform.
 - Admins are scoped to their assigned company.
@@ -270,7 +275,7 @@ packs. For the full governance picture, see
 
 ## Technical Foundation
 
-Sonae is built with:
+Hakken is built with:
 
 - Next.js App Router for the frontend;
 - React for the user interface;

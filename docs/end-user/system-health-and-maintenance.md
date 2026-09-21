@@ -1,6 +1,6 @@
 # System Health And Maintenance
 
-System health and maintenance scripts are Sonae operator tools for finding operational drift and running allowlisted repairs. Use them before and after launches, after provider incidents, when scheduled work looks stuck, when agent runs or approvals look wrong, or when dashboard data appears inconsistent.
+System health and maintenance scripts are Hakken operator tools for finding operational drift and running allowlisted repairs. Use them before and after launches, after provider incidents, when scheduled work looks stuck, when agent runs or approvals look wrong, or when dashboard data appears inconsistent.
 
 For the broader settings map, see [Platform Operations Settings](./platform-operations-settings.md). For run triage and platform health, see [Health](./health.md).
 

@@ -4,9 +4,9 @@
 
 # Analytics Scale Optimization Plan
 
-This is the source-of-truth plan for scaling Sonae analytics, admin dashboards, AI running costs, and company dashboards. Follow this order unless the user explicitly changes scope.
+This is the source-of-truth plan for scaling Hakken analytics, admin dashboards, AI running costs, and company dashboards. Follow this order unless the user explicitly changes scope.
 
-The intent is not to make the dashboards merely faster for the current data size. The intent is to make their cost predictable as Sonae grows: historical data should come from snapshots, live data should be bounded by indexed ranges, and tenant isolation must remain non-negotiable.
+The intent is not to make the dashboards merely faster for the current data size. The intent is to make their cost predictable as Hakken grows: historical data should come from snapshots, live data should be bounded by indexed ranges, and tenant isolation must remain non-negotiable.
 
 ## Scope
 

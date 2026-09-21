@@ -1,6 +1,6 @@
 # New Agentic App Setup Checklist
 
-Use this checklist when creating a new customer setup, demo tenant, or vertical app on top of the Sonae foundation.
+Use this checklist when creating a new customer setup, demo tenant, or vertical app on top of the Hakken foundation.
 
 The goal is to get from empty tenant to tested draft agent without relying on production-only credentials or hidden manual steps.
 

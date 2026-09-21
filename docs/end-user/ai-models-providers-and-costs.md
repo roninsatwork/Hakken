@@ -1,6 +1,6 @@
 # AI Models, Providers, And Costs
 
-Sonae lets platform operators control which AI providers and models are available, which models are used by default for different AI use cases, and how AI usage cost is monitored. These controls affect live assistant, agent, workflow, report, embedding, transcription, widget, and analytics behavior.
+Hakken lets platform operators control which AI providers and models are available, which models are used by default for different AI use cases, and how AI usage cost is monitored. These controls affect live assistant, agent, workflow, report, embedding, transcription, widget, and analytics behavior.
 
 This guide is for operators, customer-success teams, support teams, and sales engineers who need to understand the implemented product surface.
 
@@ -58,13 +58,13 @@ Before changing a default:
 4. Save the default.
 5. Test the affected assistant, agent, workflow, or ingestion path.
 
-Embedding defaults need special care because the current vector index expects Google Vertex embedding behavior and 768-dimensional vectors. If no compatible embedding default is configured, Sonae falls back to the Google Vertex `text-embedding-004` failsafe for embedding execution.
+Embedding defaults need special care because the current vector index expects Google Vertex embedding behavior and 768-dimensional vectors. If no compatible embedding default is configured, Hakken falls back to the Google Vertex `text-embedding-004` failsafe for embedding execution.
 
 ## Model Details And Pricing
 
 The model detail page shows read-only provider metadata and editable operational pricing fields. Operators can set a friendly name and pricing values for standard input, cached input, response output, and reasoning output.
 
-Friendly names appear in user-facing selectors and toolbars. The current cost analytics calculation uses the standard input and response output pricing fields. Cached input and reasoning output prices are stored as model metadata for operator visibility and future reporting work, but they are not part of the implemented dashboard cost calculation yet. If a model has no positive standard-input or response-output price, Sonae treats its cost as not measurable rather than assuming it is free. Treat all pricing values as operational reporting inputs unless a separate billing process validates them.
+Friendly names appear in user-facing selectors and toolbars. The current cost analytics calculation uses the standard input and response output pricing fields. Cached input and reasoning output prices are stored as model metadata for operator visibility and future reporting work, but they are not part of the implemented dashboard cost calculation yet. If a model has no positive standard-input or response-output price, Hakken treats its cost as not measurable rather than assuming it is free. Treat all pricing values as operational reporting inputs unless a separate billing process validates them.
 
 The detail page also shows capabilities, supported use cases, context window, max output, provider model id, internal model id, sync date, pricing source, units, currency, and pricing effective date where recorded.
 

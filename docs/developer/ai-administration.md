@@ -1,6 +1,6 @@
 # AI Administration Developer Guide
 
-AI administration is the implementation surface for Sonae's model catalog, provider controls, AI defaults, global and company prompts, rules, knowledge, widgets, tools/connectors, chat logs, and cost reporting. It is split across global admin routes under `src/app/(dashboard)/admin/ai/`, company-scoped routes under `src/app/(dashboard)/admin/companies/[id]/`, public widget routes under `src/app/w/[widgetId]/` and `src/app/sandbox/[widgetId]/`, and Convex modules that enforce authorization and runtime resolution.
+AI administration is the implementation surface for Hakken's model catalog, provider controls, AI defaults, global and company prompts, rules, knowledge, widgets, tools/connectors, chat logs, and cost reporting. It is split across global admin routes under `src/app/(dashboard)/admin/ai/`, company-scoped routes under `src/app/(dashboard)/admin/companies/[id]/`, public widget routes under `src/app/w/[widgetId]/` and `src/app/sandbox/[widgetId]/`, and Convex modules that enforce authorization and runtime resolution.
 
 This guide describes current behavior only. It should be read with `docs/developer/assistant-chat.md`, `docs/developer/spoken-channels.md`, `docs/developer/upload-and-knowledge-policy.md`, `docs/developer/ai-provider-tool-extension.md`, and `docs/developer/agents.md` before changing AI runtime or administration behavior.
 
@@ -58,7 +58,7 @@ AI administration touches these schema areas in `convex/schema.ts`:
 - `aiTools` and `agentTools` store global tool definitions and agent bindings.
 - `widgets` stores global and company embeddable widget configuration.
 - `threads` and `messages` store chat, widget, and agent conversation messages with company/user/agent/widget analytics dimensions.
-- `companies.spokenVoice` stores the voice used by Ask Sonae live voice, phone calls, and reception.
+- `companies.spokenVoice` stores the voice used by Ask Hakken live voice, phone calls, and reception.
 - `aiActionRequests` stores lightweight reservations for provider-backed helper actions such as voice transcription, real-time voice session creation, voice preview, and workflow node configuration generation. These rows support per-actor rate limits before provider calls are made.
 - `analyticsDailySnapshots` and message metadata support cost and usage reporting.
 
@@ -70,7 +70,7 @@ Keep sparse scope fields meaningful. A global knowledge document has no company 
 
 `convex/aiModelsActions.ts` contains provider sync and test actions for Google, OpenAI, Anthropic, OpenRouter, and Vertex aliases. Provider sync updates catalog metadata; provider testing records health status and messages. Keep provider-specific API details in provider services and actions, not scattered through runtime callers.
 
-Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals. The `realtime` use case is the live spoken-channel default used by Ask Sonae voice, the phone line, and voice previews; it needs a compatible speech-to-speech model and the relay/provider configuration documented in [Spoken Channels](./spoken-channels.md).
+Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals. The `realtime` use case is the live spoken-channel default used by Ask Hakken voice, the phone line, and voice previews; it needs a compatible speech-to-speech model and the relay/provider configuration documented in [Spoken Channels](./spoken-channels.md).
 
 The model admin page filters by status, provider, capability, use case, and search term. It uses `ADMIN_PAGE_SIZE`. The model detail page updates friendly name and pricing fields through `updatePricingConfig`; pricing powers cost estimates and analytics, not provider billing.
 

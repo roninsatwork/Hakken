@@ -3,7 +3,7 @@
 Photo actions cover image-bearing chat turns, widget image attachments, model
 vision routing, structured follow-up proposals, and human-confirmed task
 creation. The current implementation delivers Phases A-C of
-[Show Sonae A Photo And It Acts](../plans/active/photo-actions-plan.md). The
+[Show Hakken A Photo And It Acts](../plans/active/photo-actions-plan.md). The
 remaining plan proof is Anthony's own phone demo against a reachable widget.
 
 ## Implementation Surface

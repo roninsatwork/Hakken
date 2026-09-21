@@ -1,6 +1,6 @@
 # Getting Started
 
-Follow these steps to set up the Sonae development environment on your local machine.
+Follow these steps to set up the Hakken development environment on your local machine.
 
 For a new product clone, start with [Product Setup](../operator/product-setup.md).
 Then use the [Feature Generator](./feature-generator.md) to add product records,
@@ -18,7 +18,7 @@ It previews product defaults and provider requirements before applying local fil
 1.  **Clone the Repository**:
     ```bash
     git clone <repository-url>
-    cd Sonae
+    cd Hakken
     ```
 
 2.  **Install Dependencies**:
@@ -72,7 +72,7 @@ The `/local-test-auth` route also needs `LOCAL_TEST_AUTH_ENABLED=1` in the Next.
 
 ## Running Tests
 
-Sonae uses Vitest for unit/integration tests and Playwright for browser tests.
+Hakken uses Vitest for unit/integration tests and Playwright for browser tests.
 
 - **Unit and integration tests**:
   ```bash
@@ -112,5 +112,5 @@ git diff --check
 - Use the `dev` branch for all active coding.
 - Push to `main` only when you intend to trigger the production deploy workflow.
 - Run `npm run setup:validate -- --profile=production` before handing a new product or deployment environment to operators.
-- Never use `window.alert` or `confirm`. Use the **Sonae Modal** component found in `src/ui/components/feedback`.
+- Never use `window.alert` or `confirm`. Use the **`SonaeModal`** component found in `src/ui/components/feedback`.
 - Layouts are fluid by default; avoid fixed widths in your CSS/Tailwind classes.

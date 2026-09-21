@@ -8,7 +8,7 @@ Follow the repo's working rules in `AGENTS.md`. Tests run with vitest
 `convex/agentRuntime.test.ts`, which drives the real runtime rather than
 mocking it.
 
-Sonae already has a real learning system: two memory tiers that reach every
+Hakken already has a real learning system: two memory tiers that reach every
 prompt, a six-hourly sweep that proposes new company memories from live
 conversations, a post-run candidate generator, a reflection taxonomy, and a
 prompt-evolution path. Every one of those was built with a human approval gate,

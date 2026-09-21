@@ -8,7 +8,7 @@ Owner: Anthony
 
 ## The model
 
-Sonae has one platform brain and many company brains, and they are
+Hakken has one platform brain and many company brains, and they are
 genuinely independent — the global AI is not merely a shelf that feeds
 companies, it is a complete AI in its own right.
 
@@ -26,7 +26,7 @@ company wiki first, with the Platform Wiki filling gaps. The company's
 truth always beats the platform's on the same subject. Global feeds
 every company; no company feeds global.
 
-**SaaS mode** is not a switch but a posture: a product built on Sonae
+**SaaS mode** is not a switch but a posture: a product built on Hakken
 where company wikis stay empty and every answer comes from the global
 brain. The platform already answers correctly in this posture; this
 document exists because the FEEDBACK side had to learn it too.

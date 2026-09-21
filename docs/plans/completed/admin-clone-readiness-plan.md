@@ -7,7 +7,7 @@ Owner: Anthony
 
 ## Why
 
-Sonae's admin section is the part every cloned product keeps. The 2026-08-21
+Hakken's admin section is the part every cloned product keeps. The 2026-08-21
 pre-clone review found its structure healthy — a real screen kit with
 shrink-only guards, ~1% duplication, thin pages over shared `_features`
 components — but three known debts remain hand-drawn, and each one is
@@ -113,13 +113,13 @@ threshold) over `src/app/(dashboard)/admin` reports no cross-scope clones.
 
 This executes the "follow-up phase" the 2026-08-19 branding guard
 (`src/no-client-specific-fallbacks.test.ts`) named for itself, scoped to
-admin. ~200 hardcoded "Sonae" strings sit in admin screens and the shared
+admin. ~200 hardcoded "Hakken" strings sit in admin screens and the shared
 components they use; the settings field `platformName` (via
 `useSystemSettings`) is the single source the backend already resolves.
 
 ### Tasks
 
-3.1 Route every user-visible "Sonae" literal in `admin/**` and the
+3.1 Route every user-visible "Hakken" literal in `admin/**` and the
 admin-serving `src/ui/**` components through `platformName`. Code comments
 and internal component names (`SonaeModal` etc.) are not user-visible and
 stay — renaming components is cosmetic churn, explicitly out of scope.
@@ -238,7 +238,7 @@ three entries in passing. 2,212 dashboard tests and all guards green.
 
 ## Phase 3 record (2026-08-21)
 
-Every user-visible "Sonae" in `admin/**` and `src/ui/**` now resolves
+Every user-visible "Hakken" in `admin/**` and `src/ui/**` now resolves
 through `useSystemSettings().platformName` (~20 component literals routed;
 21 catalogue keys parameterised as `{platformName}` in exact en/it parity;
 the two literals inside Phase 2's freshly collapsed screens caught in the
@@ -302,7 +302,7 @@ none breaking, all closed the same day:
   above, as are the Phase 2 line counts, now −585).
 - Nine raw buttons in three run-screen components lacked why-comments; all
   annotated.
-- Three "Sonae" values had escaped into the message catalogues (which the
+- Three "Hakken" values had escaped into the message catalogues (which the
   code-only guard could not see) plus two Italian-only slips; all
   parameterised or aligned, and the branding guard now scans both
   catalogues against a shrink-only list of the seven reviewed public-site

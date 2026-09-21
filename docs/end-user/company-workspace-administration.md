@@ -96,7 +96,7 @@ assistant keeps about them. They can add a note manually and delete manual or
 learned notes. This is the user's own visibility and control point; it is not a
 company-admin editing surface for someone else's memory.
 
-The profile page also shows company plan and AI message usage when a finite plan applies. If assistant chat reaches the plan limit, Sonae records the attempted message and returns a quota-block assistant reply until the reset cycle or a plan change.
+The profile page also shows company plan and AI message usage when a finite plan applies. If assistant chat reaches the plan limit, Hakken records the attempted message and returns a quota-block assistant reply until the reset cycle or a plan change.
 
 Profile image uploads use the platform upload policy. Do not ask users to paste arbitrary image links when the upload flow is available.
 

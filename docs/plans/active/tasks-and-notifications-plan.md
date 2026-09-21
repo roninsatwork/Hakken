@@ -1,4 +1,4 @@
-# Sonae Can Hand Someone A Job, And Tell Them About It
+# Hakken Can Hand Someone A Job, And Tell Them About It
 
 Status: **Built by 2026-08-16.** Tasks, in-app notifications, the `/app/tasks`
 screen, the notification bell, agent/workflow task creation, phone/Gmail/photo
@@ -13,7 +13,7 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
 ## The decision
 
-Sonae can find things and cannot ask anyone to act on them. An agent finishes,
+Hakken can find things and cannot ask anyone to act on them. An agent finishes,
 writes an answer into a conversation nobody returns to, and the finding dies
 there. The opportunity report names prospects worth chasing and nobody knows a
 month later whether a single one was contacted.
@@ -68,7 +68,7 @@ and nothing waits on it.
 
 **The workflow node is blocked on exactly this.**
 `docs/plans/active/OUTSTANDING-TASKS.md:105` — "A task connector for workflows
-(`workflow.task.create`) … Cannot be built yet because Sonae has no concept of
+(`workflow.task.create`) … Cannot be built yet because Hakken has no concept of
 a task — that data model and an admin screen for it have to exist first."
 The nine live node types in `convex/workflowRuntime.ts` are agent, api, code,
 logic, database, wait, approval, iterator, merge, email; a workflow can pause

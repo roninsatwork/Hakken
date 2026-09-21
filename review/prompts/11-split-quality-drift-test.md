@@ -2,7 +2,7 @@
 
 ## Context
 
-`src/quality-drift.test.ts` is 1,462 lines and ~40 tests mixing roughly ten unrelated enforcement concerns: native-dialog bans, the 15-row pagination standard, Recharts container rules, UI/runtime contract consistency (including parsing budget arithmetic out of source), admin table primitives, the Ask-Sonae safety spine, prompt-injection warning panels, confirmation-gated deletes, analytics read bounds with an ~80-entry annotated broad-read allowlist, provider SDK/model-literal classification, and a client-import layering check that duplicates an ESLint rule. The sibling drift tests (`theme-drift`, `movement-boundary`, `no-client-specific-fallbacks`, `admin-i18n-adoption`) are already correctly split by concern. The monolith is getting hard to review and its shared helpers are tangled.
+`src/quality-drift.test.ts` is 1,462 lines and ~40 tests mixing roughly ten unrelated enforcement concerns: native-dialog bans, the 15-row pagination standard, Recharts container rules, UI/runtime contract consistency (including parsing budget arithmetic out of source), admin table primitives, the Ask-Hakken safety spine, prompt-injection warning panels, confirmation-gated deletes, analytics read bounds with an ~80-entry annotated broad-read allowlist, provider SDK/model-literal classification, and a client-import layering check that duplicates an ESLint rule. The sibling drift tests (`theme-drift`, `movement-boundary`, `no-client-specific-fallbacks`, `admin-i18n-adoption`) are already correctly split by concern. The monolith is getting hard to review and its shared helpers are tangled.
 
 ## Task
 

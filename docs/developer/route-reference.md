@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-08-25
 Status: current route inventory
-Audience: engineers and agents changing Sonae routing, navigation, page ownership, or documentation coverage.
+Audience: engineers and agents changing Hakken routing, navigation, page ownership, or documentation coverage.
 
 ## Purpose
 
@@ -38,7 +38,7 @@ in the same documentation pass.
 
 | Route | Purpose | Owning docs |
 | --- | --- | --- |
-| `/app` | Authenticated app landing/dashboard handoff. | [Sonae Product Overview](../end-user/platform-overview.md), [Frontend Development](./frontend.md) |
+| `/app` | Authenticated app landing/dashboard handoff. | [Hakken Product Overview](../end-user/platform-overview.md), [Frontend Development](./frontend.md) |
 | `/app/assistant` | Assistant landing/new conversation surface. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
 | `/app/assistant/[threadId]` | Existing assistant thread view. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
 | `/app/calls` | Workspace calls display, dialable number, live state, and masked recent call list. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |

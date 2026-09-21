@@ -1,6 +1,6 @@
 # AI Models, Providers, And Costs Developer Guide
 
-Sonae's model administration implementation covers provider health, provider catalog sync, model enablement, use-case defaults, company overrides, runtime model resolution, model pricing metadata, and AI cost analytics. This guide documents the implementation surface so future work can preserve configuration-driven model behavior.
+Hakken's model administration implementation covers provider health, provider catalog sync, model enablement, use-case defaults, company overrides, runtime model resolution, model pricing metadata, and AI cost analytics. This guide documents the implementation surface so future work can preserve configuration-driven model behavior.
 
 Read this with `docs/developer/ai-administration.md`, `docs/developer/assistant-chat.md`, `docs/developer/agents.md`, and `docs/developer/ai-provider-tool-extension.md` before changing runtime model selection or provider integration code.
 

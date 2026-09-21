@@ -12,7 +12,7 @@ edited to match what happened teaches nobody anything next time.
 This stays in `active/` rather than moving to `completed/`, on purpose. Two
 things here outlive the build and are the reason to keep it in front of people:
 
-- **The framework test** at the top — what Sonae carries versus what belongs to
+- **The framework test** at the top — what Hakken carries versus what belongs to
   the products built on it. It is the rule for deciding anything proposed next,
   not a note about work that is finished.
 - **The decisions in the closing section** — no single sign-on, no two-factor,
@@ -37,8 +37,8 @@ less than one that does not:
 
 ## What this is
 
-This is the plan for the layer that lets Sonae be sold to organisations who take
-AI governance and data security seriously — and, because Sonae is the starter
+This is the plan for the layer that lets Hakken be sold to organisations who take
+AI governance and data security seriously — and, because Hakken is the starter
 framework every later product is built from, the layer every future product
 inherits rather than rebuilds.
 
@@ -62,11 +62,11 @@ prevent, so roles come first and everything else sits on them.
 Agreed 2026-08-05. Apply this to anything proposed for this plan, and to
 anything else that comes out of the same source material.
 
-**Sonae carries what every product needs and none should rebuild. Anything that
+**Hakken carries what every product needs and none should rebuild. Anything that
 depends on knowing a client's staff, their processes, or their business belongs
 one layer up.**
 
-The chain is: Sonae is the layer, a product is built on it, a client runs that
+The chain is: Hakken is the layer, a product is built on it, a client runs that
 product, and their people use it. A rule that needs to reach past the second
 link is not a framework feature, however good the justification sounds.
 
@@ -86,8 +86,8 @@ Fails the test:
   policies, or commercial arrangements.
 
 The value of writing this down is that the material this plan came from is a
-sales pitch for a finished enterprise product. Much of it is right for Sonae.
-Some of it is right for the products built on Sonae, and belongs to them.
+sales pitch for a finished enterprise product. Much of it is right for Hakken.
+Some of it is right for the products built on Hakken, and belongs to them.
 Telling the two apart is the judgement this test exists to make.
 
 ## What already exists
@@ -495,7 +495,7 @@ order once Phases 0 to 6 are done.
 be done in one run, and the first two are small enough to slot between larger
 work.
 
-- **Outbound webhook signing**, so a receiver can verify data came from Sonae.
+- **Outbound webhook signing**, so a receiver can verify data came from Hakken.
   *1 day.*
 - **Retention warnings** when a purge setting falls below the six months such
   records are expected to be kept. The current default is 90 days with purging
@@ -525,7 +525,7 @@ work.
 
 ## How every screen in this plan must be built
 
-Nothing in this plan justifies a new visual language. These are ordinary Sonae
+Nothing in this plan justifies a new visual language. These are ordinary Hakken
 screens that happen to be about governance, and a governance section that looks
 imported from somewhere else undermines the very thing it is selling.
 
@@ -568,7 +568,7 @@ every state. This is a hard rule, not a preference.
 - **Single sign-on.** Decided against on 2026-08-05. Sign-in stays as it is:
   Google, magic link, and the one-time code added in Phase 4. This is a
   deliberate choice, not an oversight — some enterprise buyers ask for SAML in a
-  security review, and the answer is that Sonae does not offer it. Revisit only
+  security review, and the answer is that Hakken does not offer it. Revisit only
   if a real deal turns on it, and scope it properly when that happens, because
   it touches every authenticated route.
 - **Automatic deprovisioning.** Follows from the above. Removing someone's
@@ -579,10 +579,10 @@ every state. This is a hard rule, not a preference.
   login flow stands.
 - **AI literacy and staff training.** Removed on 2026-08-05 after being written
   in, because it fails the framework test at the top of this plan. The duty to train staff falls on the
-  organisation running a finished product, which is three steps from Sonae:
-  Sonae is the layer, a product is built on it, a client runs that product, and
+  organisation running a finished product, which is three steps from Hakken:
+  Hakken is the layer, a product is built on it, a client runs that product, and
   their people use it. A framework cannot know anything about a client's staff.
-  If a product built on Sonae ever needs to show which of its users have been
+  If a product built on Hakken ever needs to show which of its users have been
   using high-risk AI, the raw data is already recorded — every conversation and
   every run stores who triggered it — so it is a query to write on the day a
   product needs it, not a feature the framework carries.

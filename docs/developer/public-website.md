@@ -69,7 +69,7 @@ Public Website Plan tracks later metadata and Open Graph hardening.
 
 `PublicNav` is a client component. It renders:
 
-- Sonae wordmark linking to `/`
+- Hakken wordmark linking to `/`
 - Sign in linking to `/login`
 - Talk to us through `ContactLink`
 - a mobile menu button that toggles the mobile action row
@@ -95,7 +95,7 @@ the credit remains plain text.
 
 Do not hardcode builder-owned domains into the public code. The repository has
 tests that block client-specific fallbacks, and the public site must remain
-portable across Sonae deployments.
+portable across Hakken deployments.
 
 ## Motion System
 
@@ -123,7 +123,7 @@ new animation style that bypasses `prefersReducedMotion`.
 3. `DemosIntro`
 4. `ProductPanels`
 5. `WhoItsFor`
-6. the Sonae name story block
+6. the Hakken name story block
 7. the closing contact CTA
 
 The hero uses a drawn interface rather than a captured screenshot. Its numbers
@@ -145,7 +145,7 @@ unclosed or names a vertical that does not exist.
 Public copy should stay buyer-facing and benefit-led. It should not read like
 developer documentation, and it should not describe planned pages as if they
 exist. The active Public Website Plan records the agreed public positioning,
-including the Sonae name story, the "Powered by Ronins" credit rule, no pricing,
+including the Hakken name story, the "Powered by Ronins" credit rule, no pricing,
 and contact-first calls to action.
 
 Avoid jargon on public pages unless the audience genuinely needs it. The public

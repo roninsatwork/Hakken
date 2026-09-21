@@ -78,7 +78,7 @@ The seed is idempotent. Re-running it updates existing deterministic records ins
 
 Seeded company:
 
-- `Sonae Demo Company`
+- `Hakken Demo Company`
 
 Seeded users:
 

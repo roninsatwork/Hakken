@@ -2,7 +2,7 @@
 
 ## Scope
 
-Administration covers the Sonae screens and backend APIs used to manage the platform, tenant companies, users, invitations, AI configuration, agents, workflows, settings, maintenance, analytics, and audit trails. The admin area is implemented under `src/app/(dashboard)/admin/` and is reached at `/admin`. It is rendered inside the shared dashboard layout from `src/app/(dashboard)/layout.tsx` and the admin-specific guard in `src/app/(dashboard)/admin/layout.tsx`. The current layout redirects any signed-in user whose role is not `SUPER_ADMIN` back to `/app`, and returns `null` during loading or redirect to prevent admin UI flashing.
+Administration covers the Hakken screens and backend APIs used to manage the platform, tenant companies, users, invitations, AI configuration, agents, workflows, settings, maintenance, analytics, and audit trails. The admin area is implemented under `src/app/(dashboard)/admin/` and is reached at `/admin`. It is rendered inside the shared dashboard layout from `src/app/(dashboard)/layout.tsx` and the admin-specific guard in `src/app/(dashboard)/admin/layout.tsx`. The current layout redirects any signed-in user whose role is not `SUPER_ADMIN` back to `/app`, and returns `null` during loading or redirect to prevent admin UI flashing.
 
 This guide focuses on current implemented behavior. It intentionally does not describe every nested admin feature in full detail because specialized areas have dedicated documents. Use this as the entry point for admin route structure, authorization expectations, tenancy rules, user and company management, invitations, and verification.
 

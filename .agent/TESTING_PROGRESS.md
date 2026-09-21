@@ -2,7 +2,7 @@
 
 **Date:** March 31, 2026
 **Status:** In Progress
-**Current Goal:** Implement a comprehensive testing suite (Unit -> Integration -> E2E) for Sonae.
+**Current Goal:** Implement a comprehensive testing suite (Unit -> Integration -> E2E) for Hakken.
 
 ## What's Completed (Tier 1: Frontend Unit Testing)
 - **Framework Installed:** Vitest, React Testing Library, jsdom.
@@ -22,6 +22,6 @@ When resuming development:
    - Target writes for `knowledge.ts`, `invites.ts`, and `auth.ts` to ensure mutations trigger properly and RAG nodes inject correctly.
 2. **Tier 3 (E2E Testing):**
    - Install Playwright (`npx playwright install`).
-   - Create workflows that simulate logging into the Sonae app with an invited user session.
+   - Create workflows that simulate logging into the Hakken app with an invited user session.
 
 *Note for AI Assistant: Use `npm run test` to verify the frontend still passes before starting Tier 2.*

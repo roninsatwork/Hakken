@@ -1,4 +1,4 @@
-# Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo
+# Hakken Can Be Spoken To, Phoned, Emailed, And Shown A Photo
 
 Status: **Mostly built by 2026-08-16.** The voice session, reply-language
 behavior, telephone answering, photo actions, Gmail mailbox implementation, and
@@ -16,7 +16,7 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 The current shipped channel set is documented in these maintained guides:
 
 - `docs/end-user/spoken-channels.md` and
-  `docs/developer/spoken-channels.md` for Ask Sonae live voice, phone calls,
+  `docs/developer/spoken-channels.md` for Ask Hakken live voice, phone calls,
   shared spoken voice, and reception's shared voice setting.
 - `docs/end-user/gmail-mailbox.md` and `docs/developer/gmail-mailbox.md` for
   the connected Gmail mailbox implementation and live-proof boundary.
@@ -30,17 +30,17 @@ above as the current implementation reference.
 
 ## The decision
 
-Sonae's brain is finished enough to be worth showing off: one company's
+Hakken's brain is finished enough to be worth showing off: one company's
 knowledge, rules, memories and audit trail behind every answer. But the only
 ways to reach that brain today are typed chat and the embedded widget — both
 keyboards. This plan gives the same brain more doors: a voice, a face, a phone
 number, an email address, a camera, and a screen in a reception area. Six
 features, one story — *wherever you are and however you talk, it is the same
-Sonae answering*.
+Hakken answering*.
 
 Anthony's calls, recorded 2026-08-13:
 
-1. **Sonae answers calls; it never makes them.** An inbound number demos
+1. **Hakken answers calls; it never makes them.** An inbound number demos
    better, raises no spam or consent questions, and needs no dialling rules.
    Outbound calling is not in this plan and needs a fresh decision before
    anyone builds it.
@@ -54,12 +54,12 @@ Anthony's calls, recorded 2026-08-13:
    official consent door (OAuth), scoped to one dedicated mailbox such as
    ask@ronins.co.uk. **MFA is not an obstacle on this route and never was:**
    a person connects the mailbox once, signing in with their normal password
-   and authenticator, and Google issues Sonae its own revocable key for that
+   and authenticator, and Google issues Hakken its own revocable key for that
    one mailbox. No password is ever seen or stored by the platform. What MFA
    blocks — rightly — is only the crude approach of giving software a
    password, and that approach stays rejected.
 3. **The connector catalogue stays out of scope, except Gmail.** The other
-   channels in this plan are ones Sonae owns outright (its own number, its
+   channels in this plan are ones Hakken owns outright (its own number, its
    own screen). The Gmail connector is deliberately the one exception, and
    it must be built so cloning still ships no credentials: connection keys
    live in tenant data, never in code or config, and each clone's owner
@@ -76,8 +76,8 @@ The following notes record the state before the showcase channels were built.
 Keep them as historical context for the roadmap; do not treat them as the
 current product state.
 
-**Sonae can hear but cannot speak.** `src/hooks/useVoiceToText.ts` gives Ask
-Sonae speech-to-text input. There is no text-to-speech anywhere; no reply has
+**Hakken can hear but cannot speak.** `src/hooks/useVoiceToText.ts` gives Ask
+Hakken speech-to-text input. There is no text-to-speech anywhere; no reply has
 ever been spoken aloud.
 
 **A talking character is closer than it looks.** The movement demo renders and
@@ -86,7 +86,7 @@ animates VRM avatars in real time
 The rendering knowledge transfers; the character work here is a new, separate
 surface — the movement demo itself is fenced and stays untouched.
 
-**Chat already accepts photos.** Images attach inline to Ask Sonae messages
+**Chat already accepts photos.** Images attach inline to Ask Hakken messages
 (`convex/chat.ts`, limits in `src/lib/constants/uploads.ts` —
 `CHAT_IMAGE_MAX_BYTES`, and `WIDGET_ATTACHMENT_IMAGE_MAX_BYTES` for the
 widget). What is missing is *acting* on a photo, not seeing one.
@@ -128,7 +128,7 @@ streaming. Confirmed absent; searched, zero matches.
    chat, produces a conversation record like any other, and appears in chat
    logs, usage, and the audit trail. PII masking and retention rules apply
    unchanged. No channel gets a private side-brain.
-3. **Inbound only.** Sonae never dials a phone number and never emails a
+3. **Inbound only.** Hakken never dials a phone number and never emails a
    person who has not emailed it first (replies only). Recorded above as
    Anthony's call.
 4. **Each phase ends with a performable demo.** Done means Anthony can stand
@@ -183,7 +183,7 @@ until that is true.
 
 ### Phase 1 — Voice-to-voice with a moving sound-shape
 
-**What the audience sees:** you talk to Sonae on the Ask Sonae screen; it
+**What the audience sees:** you talk to Hakken on the Ask Hakken screen; it
 talks back in a natural voice while an elegant animated shape moves with
 the sound — rippling as it listens, moving with the voice as it speaks.
 
@@ -197,7 +197,7 @@ none is planned.
 Builds on: `useVoiceToText.ts` (hearing), streaming replies (words arrive
 progressively, so speech can begin before the answer finishes).
 
-Genuinely new: text-to-speech; a voice-session mode in Ask Sonae that
+Genuinely new: text-to-speech; a voice-session mode in Ask Hakken that
 listens, speaks and shows the shape.
 
 This phase is the foundation — phases 2, 3 and 6 all stand on it.
@@ -205,7 +205,7 @@ Detailed plan: `voice-session-plan.md`.
 
 ### Phase 2 — Any language in, answers come back in kind
 
-**What the audience sees:** someone asks in Portuguese or Polish; Sonae
+**What the audience sees:** someone asks in Portuguese or Polish; Hakken
 answers aloud in the same language, from the company's English knowledge.
 
 Builds on: phase 1 whole. Genuinely new: almost nothing — detecting the
@@ -214,7 +214,7 @@ because it is the cheapest large impression in the plan.
 
 ### Phase 3 — The telephone agent, and the hang-up-and-watch finale — **DONE, proven live 2026-08-14**
 
-**What the audience sees:** you dial a number on speakerphone; Sonae answers,
+**What the audience sees:** you dial a number on speakerphone; Hakken answers,
 knows the company, and holds a conversation. You hang up — and on the screen
 behind you, within seconds, the caller appears in the customer list, a
 follow-up task lands with a named person, the bell notification fires, and
@@ -232,7 +232,7 @@ This is the flagship demo and the reason phases 1 and 2 come first.
 ### Phase 4 — Show it a photo, and it acts — **BUILT, proven on dev in a browser 2026-08-14; Anthony's own phone demo outstanding**
 
 **What the audience sees:** a photo of a delivery note, a broken part or a
-price ticket goes into chat or the widget; Sonae reads it, explains it, and
+price ticket goes into chat or the widget; Hakken reads it, explains it, and
 does something — logs it, raises a task, answers the question it contains.
 
 Builds on: inline chat images (already working), widget image attachments,
@@ -242,7 +242,7 @@ into a task, a customer note, or a structured answer, on the user's say-so.
 ### Phase 5 — A Gmail inbox that answers itself — **BUILT AND TESTED 2026-08-14; awaiting the mailbox, the Google app, and the live proof**
 
 **What the audience sees:** anyone emails ask@ronins.co.uk — a real Gmail
-address with a real inbox. Sonae reads the new message and replies from that
+address with a real inbox. Hakken reads the new message and replies from that
 same address using the company's knowledge — or, when a human is genuinely
 needed, raises a task and notification instead and tells the sender someone
 will be in touch. Anyone at Ronins can open the inbox in Gmail and see
@@ -258,10 +258,10 @@ token exchange, storage, refresh and revocation; a dedicated Gmail mailbox in
 Ronins' Workspace connected once by a person through Google's own login (MFA
 and all); Gmail read and reply tools for the agent; the answer-versus-task
 rules; and the connect/disconnect admin screen showing exactly which mailbox
-Sonae holds a key to.
+Hakken holds a key to.
 
-Boundaries, binding: Sonae is connected to **one dedicated mailbox only** —
-never a person's. The key is revocable from both sides (a Sonae admin screen
+Boundaries, binding: Hakken is connected to **one dedicated mailbox only** —
+never a person's. The key is revocable from both sides (a Hakken admin screen
 and Google's own security page). Replies go only to people who emailed first.
 The agent reading or sending a mail is audited like any other tool call.
 

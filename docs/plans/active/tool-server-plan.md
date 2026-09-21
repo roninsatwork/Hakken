@@ -1,4 +1,4 @@
-# Sonae Speaks The Standard Tool Plug
+# Hakken Speaks The Standard Tool Plug
 
 **Agreed 2026-08-23. Delivered 2026-08-24.** All eight phases are built,
 verified and documented. Kept in `active/` rather than moved to `completed/`
@@ -7,7 +7,7 @@ not buy, and why tool names are chosen rather than derived — are the reasons t
 code looks the way it does, and the first connection to a real server is still
 ahead.
 
-Give Sonae the ability to connect to a service's own published tool server, so
+Give Hakken the ability to connect to a service's own published tool server, so
 the tools that service offers become available to agents without anyone writing
 an integration for it.
 
@@ -23,7 +23,7 @@ may do with it. Days of work, useful for exactly one service, and owned forever 
 when X changes something, it breaks and Ronins fixes it.
 
 There is now a standard plug shape for this. A service publishes its own tool
-server; Sonae connects and asks what it can do; the service answers with its
+server; Hakken connects and asks what it can do; the service answers with its
 list. No integration written, and when the service changes something, the
 service fixes it.
 
@@ -45,7 +45,7 @@ Five parts.
 1. **A screen to connect one.** An admin pastes an address, names it, and
    supplies whatever login it needs. Stored per company. No developer involved.
 2. **Ask what it can do.** Fetch the server's tool list and read it.
-3. **Write it into the tools Sonae already has.** Convert each into the existing
+3. **Write it into the tools Hakken already has.** Convert each into the existing
    tool record shape, so agent binding, permission checks, the approval gate and
    the audit trail all apply without being rebuilt.
 4. **Carry out the calls.** Route an agent's tool call to the server and return
@@ -310,7 +310,7 @@ looking things up unattended is most of what an autonomous agent is for, and a
 read cannot change anything.
 
 **The reviewer is told the request leaves the platform.** Everything else an
-agent asks permission for happens inside Sonae. This one carries the workspace's
+agent asks permission for happens inside Hakken. This one carries the workspace's
 own credential to somebody else's system, and the approval message says so.
 
 **A pre-existing bug was found here and fixed.** Resuming a run after approval
@@ -437,7 +437,7 @@ is asking by then; a public server is enough otherwise.
 
 ## Out of scope
 
-- **Publishing Sonae's own tool server**, so outside AI tools could reach a
+- **Publishing Hakken's own tool server**, so outside AI tools could reach a
   workspace. Genuinely valuable and largely the same machinery, but a separate
   decision.
 - **Stocking connectors in advance.** Decided 2026-08-23: built per clone, as a

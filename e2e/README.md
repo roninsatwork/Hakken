@@ -102,7 +102,7 @@ engine coverage does not establish physical iPhone or macOS Safari acceptance.
 
 ## Local Real Auth Lane
 
-Sonae also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `sonae_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.
+Hakken also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `sonae_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.
 
 Before running it, configure the local app shell and Convex backend with:
 

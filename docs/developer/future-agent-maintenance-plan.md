@@ -1,6 +1,6 @@
 # Future Agent Maintenance Plan
 
-This plan is for future agents taking over Sonae development without relying on Gemini-specific instructions. The goal is to keep improving code quality outside the temporary movement demo.
+This plan is for future agents taking over Hakken development without relying on Gemini-specific instructions. The goal is to keep improving code quality outside the temporary movement demo.
 
 ## Operating Position
 
@@ -139,7 +139,7 @@ Acceptance:
 
 ## Phase 5A: Provider-Neutral Platform Cleanup
 
-Sonae should be a platform with provider adapters, not a Gemini-shaped app with provider support bolted on. Keep true provider details isolated while removing stale provider-specific language from generic product, admin, workflow, and runtime surfaces.
+Hakken should be a platform with provider adapters, not a Gemini-shaped app with provider support bolted on. Keep true provider details isolated while removing stale provider-specific language from generic product, admin, workflow, and runtime surfaces.
 
 Targets:
 

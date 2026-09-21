@@ -4,7 +4,7 @@
 
 # Platform Grade Refactor And Test Upgrade Plan
 
-This plan is for turning Sonae from a healthy app into a platform-grade core that can safely become the base for many future products.
+This plan is for turning Hakken from a healthy app into a platform-grade core that can safely become the base for many future products.
 
 The current codebase is in good shape: checks pass, the build passes, and the test suite now covers many important risks. This plan assumes we are willing to do a deeper refactor where it improves the long-term platform shape. Temporary breakage during a slice is acceptable as long as each slice ends with tests, build, a diff summary, and explicit commit/push approval.
 
@@ -376,7 +376,7 @@ Goal:
 
 Why:
 
-- If Sonae becomes a core for many apps, repeated page boilerplate will slow every future product.
+- If Hakken becomes a core for many apps, repeated page boilerplate will slow every future product.
 - Admin tables, detail pages, forms, mutation feedback, and empty/error/loading states should feel consistent and be easy to compose.
 
 Scope:
@@ -530,7 +530,7 @@ Status: Complete.
 
 Goal:
 
-- Make it obvious how future products should build on Sonae without copying random page internals.
+- Make it obvious how future products should build on Hakken without copying random page internals.
 
 Why:
 

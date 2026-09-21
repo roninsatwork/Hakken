@@ -1,6 +1,6 @@
 # Agent Skill Authoring Guide
 
-Use this guide when creating or reviewing reusable Sonae agent skills.
+Use this guide when creating or reviewing reusable Hakken agent skills.
 
 An agent skill is a governed capability package. It is not just a prompt snippet. A production-ready skill should include scoped instructions, tool expectations, risk level, starter evals, and upgrade notes.
 
@@ -129,7 +129,7 @@ Importer behavior:
 - Example, eval, or test sections seed starter eval fixture guidance.
 - Imported skills are always saved as `DRAFT` and should be reviewed before activation.
 
-The import review compares parsed tool names with active Sonae `aiTools.handlerMapping` values. Use the active mapping controls in the review step to replace aliases or external tool names with real handler mappings before rollout.
+The import review compares parsed tool names with active Hakken `aiTools.handlerMapping` values. Use the active mapping controls in the review step to replace aliases or external tool names with real handler mappings before rollout.
 
 ## Versioning And Rollout
 

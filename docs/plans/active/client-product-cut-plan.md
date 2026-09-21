@@ -1,11 +1,11 @@
 # The Clean Cut — turning a clone into a client's own product
 
 **Agreed 2026-08-23; scope updated 2026-09-13.** A new application receives
-Sonae's framework **including Arcade**, plus the optional product areas explicitly
-selected for that application. The source Sonae repository keeps everything.
+Hakken's framework **including Arcade**, plus the optional product areas explicitly
+selected for that application. The source Hakken repository keeps everything.
 
 This serves the client-owned lane in [PRODUCT.md](../../../PRODUCT.md).
-The operator instructions are [Build a new application from Sonae](../../operator/cloning-sonae.md).
+The operator instructions are [Build a new application from Hakken](../../operator/cloning-hakken.md).
 
 ## Agreed scope
 
@@ -70,7 +70,7 @@ type checks, tests and production builds:
 | Framework + Posture Studio | 6,025 | Passed |
 | Framework + Sales Data | 4,493 | Passed |
 
-Sonae itself passed environment verification, full lint, `npm run check` (6,428
+Hakken itself passed environment verification, full lint, `npm run check` (6,428
 tests) and its production build. After the final removal-boundary adjustments,
 55 focused regression tests, targeted lint and all 16 boundary combinations
 passed. The base copy additionally passed 19 browser smoke checks and two Arcade
@@ -85,10 +85,10 @@ prove a customer's live provider settings.
 
 The source must remain byte-identical before and after an export. Regression
 tests verify this on probe repositories, alongside destination safety and secret
-exclusion. Sonae's own runtime behaviour and optional applications remain intact.
+exclusion. Hakken's own runtime behaviour and optional applications remain intact.
 
 ## Out of scope
 
 Rebranding, creating a customer's hosted backend, provider configuration,
-publishing, and splitting Sonae into separate repositories remain separate work.
+publishing, and splitting Hakken into separate repositories remain separate work.
 The frozen movement implementation is unchanged.

@@ -14,19 +14,19 @@ the actual exported files after fences and the lockfile were adjusted. Base and
 Arcade are always present.
 
 The fingerprints describe an export; they are not a signature or proof of a
-trusted release. Use a reviewed Sonae source version. An export of uncommitted
+trusted release. Use a reviewed Hakken source version. An export of uncommitted
 work is labelled as a working-tree snapshot. A product re-export is identified
 separately and cannot become an upstream framework baseline: its product changes
 would otherwise be mistaken for framework changes.
 
 Clones created before provenance was added have no reliable baseline for this
 tool. Continue with an explicit manual comparison against the known original
-Sonae version, or start from a fresh export and port the product changes. Do not
+Hakken version, or start from a fresh export and port the product changes. Do not
 copy today's provenance into an older product or guess its starting commit.
 
 ## Prepare the comparison
 
-1. Review the incoming Sonae version, its release/security notes and migration
+1. Review the incoming Hakken version, its release/security notes and migration
    requirements in a separate checkout. Preserve any existing local work when
    obtaining that version.
 2. From that source, export into a new sibling directory using the same module
@@ -114,5 +114,5 @@ If integration fails verification, do not record the baseline. Use the local Git
 checkpoint and normal review process to revise or revert the integration. The
 tool performs no reset, stash or automatic conflict resolution.
 
-See [Cloning Sonae](./cloning-sonae.md), [Product Setup](./product-setup.md) and
+See [Cloning Hakken](./cloning-hakken.md), [Product Setup](./product-setup.md) and
 [Product Recipes](../developer/product-recipes.md).

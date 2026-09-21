@@ -1,6 +1,6 @@
 # Agent Operations And Review
 
-Agent operations is the day-to-day review layer for Sonae agents after they have been created. It covers run history, approval decisions, feedback, evals, memory review, improvement suggestions, and release readiness evidence.
+Agent operations is the day-to-day review layer for Hakken agents after they have been created. It covers run history, approval decisions, feedback, evals, memory review, improvement suggestions, and release readiness evidence.
 
 This guide is for operators, support teams, customer-success teams, and admins who need to understand what an agent did, whether it is safe to activate, and how to turn run evidence into better governance.
 
@@ -78,7 +78,7 @@ Implemented fixture types include:
 
 Smoke evals and eval suites produce readiness evidence. Some suites can require model grading. Skill-related fixtures help show whether a bound skill has enough coverage.
 
-Each fixture detail also offers **Rehearse**. A rehearsal runs the real agent loop against the configured model and performs real read-only tools, but records write, external, or destructive tool calls as `REHEARSED` instead of carrying them out. Sonae grades whether the run completed and called every tool handler required by the fixture. Rehearsal runs and drill results are labelled in run history so they are not mistaken for customer traffic.
+Each fixture detail also offers **Rehearse**. A rehearsal runs the real agent loop against the configured model and performs real read-only tools, but records write, external, or destructive tool calls as `REHEARSED` instead of carrying them out. Hakken grades whether the run completed and called every tool handler required by the fixture. Rehearsal runs and drill results are labelled in run history so they are not mistaken for customer traffic.
 
 Use rehearsal when a configuration-only smoke check is not enough and you need evidence of the tool plan the agent would actually choose. It is not a production side-effect test: a recorded write proves the agent selected the action, not that the external system accepted it.
 

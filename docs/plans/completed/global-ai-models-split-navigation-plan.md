@@ -26,7 +26,7 @@ The current global AI models page is doing too many jobs at once:
 2. model catalogue management,
 3. platform default model routing.
 
-This is workable with only a few providers, but it will not scale when Sonae supports more AI providers. The page should become three focused screens behind one `Models` dropdown in the global AI workspace navigation.
+This is workable with only a few providers, but it will not scale when Hakken supports more AI providers. The page should become three focused screens behind one `Models` dropdown in the global AI workspace navigation.
 
 The dropdown should follow the same interaction pattern now used for:
 
@@ -154,7 +154,7 @@ The catalogue should not show provider cards at the top. Provider status belongs
 
 Purpose:
 
-- answer which model Sonae should use for each runtime job,
+- answer which model Hakken should use for each runtime job,
 - make default model routing understandable.
 
 Controls:

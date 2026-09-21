@@ -6,7 +6,7 @@
 
 Last updated: 2026-07-08.
 
-This plan upgrades Sonae from governed individual agents, workflows, and a legacy swarm path into a full agentic team system: a powerful boss agent plans work, delegates to specialist worker agents, asks QA agents to review results, arbitrates the findings, and repeats bounded repair rounds until the objective passes quality gates or cleanly fails.
+This plan upgrades Hakken from governed individual agents, workflows, and a legacy swarm path into a full agentic team system: a powerful boss agent plans work, delegates to specialist worker agents, asks QA agents to review results, arbitrates the findings, and repeats bounded repair rounds until the objective passes quality gates or cleanly fails.
 
 Use this as the source of truth for the boss/worker/QA orchestration layer. It complements:
 
@@ -18,7 +18,7 @@ Use this as the source of truth for the boss/worker/QA orchestration layer. It c
 
 ## Goal
 
-Sonae should support governed agent teams where each team has:
+Hakken should support governed agent teams where each team has:
 
 - a boss agent for planning, delegation, arbitration, and final synthesis,
 - one or more worker agents for specialist task execution,
@@ -30,11 +30,11 @@ Sonae should support governed agent teams where each team has:
 
 The target product claim is:
 
-> Sonae lets teams create governed AI agent teams that plan, delegate, review, repair, and deliver complex work with tenant-scoped context, model controls, approvals, budgets, and a full audit trail.
+> Hakken lets teams create governed AI agent teams that plan, delegate, review, repair, and deliver complex work with tenant-scoped context, model controls, approvals, budgets, and a full audit trail.
 
 ## Current Position
 
-Sonae already has most of the platform foundations:
+Hakken already has most of the platform foundations:
 
 - `agents` records store configurable worker agents with model selection mode, model id, reasoning effort, tools, skills, knowledge, rules, schemas, activation state, and release gates.
 - `agentRuns`, `agentRunSteps`, `agentToolCalls`, and `agentRunApprovals` already persist durable single-agent execution evidence.
@@ -121,13 +121,13 @@ The boss agent should eventually be able to identify missing capabilities, propo
 
 ```text
 boss proposes
-Sonae validates
+Hakken validates
 admin or release gate approves
-Sonae creates or activates
+Hakken creates or activates
 boss assigns tasks
 ```
 
-Do not let the boss silently create active agents with tools and permissions. The model can recommend structure; Sonae owns authorization, creation, activation, and audit.
+Do not let the boss silently create active agents with tools and permissions. The model can recommend structure; Hakken owns authorization, creation, activation, and audit.
 
 Recommended capability levels:
 
@@ -137,7 +137,7 @@ Recommended capability levels:
 4. Level 4: boss-created draft agents can join the team only after admin review and smoke eval success.
 5. Level 5: tightly scoped auto-activation is allowed only for low-risk internal agents with no write/external/destructive tools, passing eval evidence, and explicit team policy.
 
-Start with Level 2 or Level 3. This gives Sonae the "agent creates agents" product story without allowing unreviewed privilege expansion.
+Start with Level 2 or Level 3. This gives Hakken the "agent creates agents" product story without allowing unreviewed privilege expansion.
 
 Boss-created agent proposals must include:
 

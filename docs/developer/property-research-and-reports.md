@@ -1,6 +1,6 @@
 # Property Research And Board Reports
 
-This document covers Sonae's implemented property research and board-reporting surfaces. It is written for engineers and agents who need to maintain the Rightmove extraction flow, company-scoped property inventory, extraction status screens, and the AI-generated sales report dashboard. The related user-facing documentation is `docs/end-user/property-research-and-reports.md`. Full report-specific behavior is documented in `docs/end-user/sales-and-board-reports.md` and `docs/developer/sales-and-board-reports.md`.
+This document covers Hakken's implemented property research and board-reporting surfaces. It is written for engineers and agents who need to maintain the Rightmove extraction flow, company-scoped property inventory, extraction status screens, and the AI-generated sales report dashboard. The related user-facing documentation is `docs/end-user/property-research-and-reports.md`. Full report-specific behavior is documented in `docs/end-user/sales-and-board-reports.md` and `docs/developer/sales-and-board-reports.md`.
 
 The implementation is split across customer routes under `src/app/(dashboard)/app/`, Convex queries and actions under `convex/`, shared navigation in `src/ui/components/layout/SidebarNavigation.tsx`, and tests that enforce tenant isolation, webhook persistence, and report access. The feature is not a generic CRM report builder. It has two concrete products today: a Rightmove property collection workflow and a latest-board-report viewer fed by a scheduled sales-report agent.
 

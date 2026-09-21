@@ -580,7 +580,7 @@ guards have the same blind spot by design: the copy guard needs eight
 characters and a space, and the parity guard the same, because a single word
 matching across languages is usually correct and reading those would bury the
 signal. Most of these 110 are correct — `Email`, `Widget`, `Wiki`, `Dashboard`,
-`Sonae`, `iPhone` are the same word in Italian. Perhaps twenty or thirty are
+`Hakken`, `iPhone` are the same word in Italian. Perhaps twenty or thirty are
 not, and telling them apart needs a judgement per word rather than a rule.
 
 Two were fixed on sight because they were visible on the Italian rules screen
@@ -688,7 +688,7 @@ other way, and he is right to overrule it.
 The advice given earlier was to leave the remaining declarations to drain — to
 let anyone touching one of those functions add its shape then, with the
 shrink-only ceiling making sure the number never rose. That is sound advice for
-*an application*. It is the wrong advice for *this* repository, because Sonae is
+*an application*. It is the wrong advice for *this* repository, because Hakken is
 the baseline every future product is forked from. Debt left here is not left
 here: it is copied into every client fork and every micro-SaaS built on it, and
 a fork cannot easily take a later fix back. The cost of leaving it is not one

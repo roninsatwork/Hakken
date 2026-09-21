@@ -2,7 +2,7 @@
 
 The temporary posture studio demo is a motion-capture and guided-practice prototype. It lets a signed-in user record a posture routine with a webcam, save the routine, inspect the saved frame data, and play the routine back in a split instructor/player studio with VRM avatars.
 
-This demo is frozen. It exists for a client presentation and is expected to be removed later. It should not be treated as a permanent Sonae product area or expanded without an explicit request.
+This demo is frozen. It exists for a client presentation and is expected to be removed later. It should not be treated as a permanent Hakken product area or expanded without an explicit request.
 
 ## Where To Find It
 

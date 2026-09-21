@@ -122,7 +122,7 @@ answer, and the form built on top of them was the mistake.
 
 ### These screens are designed as client-facing
 
-Sonae is the base for future client products, so someone other than Anthony will
+Hakken is the base for future client products, so someone other than Anthony will
 be looking at them. That sets the bar above "the person who built it can live
 with it".
 

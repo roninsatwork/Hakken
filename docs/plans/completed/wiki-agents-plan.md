@@ -17,7 +17,7 @@ The specification behind this plan is not mine: it is the prompt library
 Anthony runs his Obsidian/Karpathy wiki with, shared 2026-08-15 from
 `~/Projects/Second-Brain/Knowledge/04-prompts/` and its `AGENTS.md`. Where
 this plan and that playbook disagree, the playbook wins. Every claim about
-Sonae carries the file it rests on; verify anchors before editing.
+Hakken carries the file it rests on; verify anchors before editing.
 
 ## The decision
 
@@ -25,7 +25,7 @@ Anthony's words: *"we need to make some of these agents that auto run to
 tidy up etc and some can be called at ingest time."*
 
 So: the wiki gets a staff, and — corrected 2026-08-15 after Anthony pulled
-up the first draft — **the staff are real Sonae agents, on the Agents
+up the first draft — **the staff are real Hakken agents, on the Agents
 screen**, not hidden background jobs. "Agent" in this product means a thing
 with a face: a run history in the existing observability, an on/off switch,
 and instructions you can open and read the way Anthony reads his Obsidian
@@ -104,7 +104,7 @@ claim named.
 ### 3. Full-import-first — the structural one (≈1.5 days)
 
 The playbook's mandatory ingest order: **full import first, internal
-linking second, synthesis third** (`AGENTS.md`, Ingest Behaviour). Sonae
+linking second, synthesis third** (`AGENTS.md`, Ingest Behaviour). Hakken
 currently distils straight to topic pages — synthesis without the full
 layer. This phase adds the source-note layer: each ingested document gets
 its own full wiki note (a new page kind), substantially intact, linked
@@ -124,7 +124,7 @@ still passes the standing AI Checks.
 ### 4. The Reviewer — called at ingest (≈1 day)
 
 His `review-source-before-ingest.md`: for material a person marks as
-sensitive or high-impact, Sonae reads the source and **presents its main
+sensitive or high-impact, Hakken reads the source and **presents its main
 claims and the pages it proposes to write before writing anything** — a
 checkpoint, using the approvals machinery the platform already trusts.
 Routine material keeps flowing straight through, exactly as the playbook

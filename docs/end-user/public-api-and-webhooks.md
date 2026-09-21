@@ -1,10 +1,10 @@
 # Public API And Webhooks
 
-Sonae includes tenant-scoped API keys, public run-trigger endpoints, public run-status lookup, and webhook delivery monitoring. These features are intended for governed integrations rather than everyday chat use.
+Hakken includes tenant-scoped API keys, public run-trigger endpoints, public run-status lookup, and webhook delivery monitoring. These features are intended for governed integrations rather than everyday chat use.
 
 ## API Keys
 
-Admins manage API keys from `/admin/settings/api-keys`. A key belongs to a company, has one or more scopes, can expire, and has a per-minute rate limit. Raw key secrets are shown once at creation time. After creation, Sonae stores only a digest and key prefix.
+Admins manage API keys from `/admin/settings/api-keys`. A key belongs to a company, has one or more scopes, can expire, and has a per-minute rate limit. Raw key secrets are shown once at creation time. After creation, Hakken stores only a digest and key prefix.
 
 Available scopes are:
 
@@ -37,7 +37,7 @@ Workflow run triggers require the target workflow to be active and configured as
 
 ## Rate Limits And Audit Trail
 
-Each key has a rate limit, defaulting to 60 requests per minute and capped at 600 requests per minute. Sonae counts recent authorized requests for that key before allowing another request. Public API authentication attempts are logged so operators can inspect allowed, denied, forbidden, and rate-limited usage.
+Each key has a rate limit, defaulting to 60 requests per minute and capped at 600 requests per minute. Hakken counts recent authorized requests for that key before allowing another request. Public API authentication attempts are logged so operators can inspect allowed, denied, forbidden, and rate-limited usage.
 
 API key creation and revocation are also recorded in audit logs.
 

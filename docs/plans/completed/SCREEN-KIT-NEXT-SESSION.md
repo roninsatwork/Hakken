@@ -9,7 +9,7 @@ Copy everything below the line.
 
 ---
 
-Pick up the Sonae shared screen kit work. Phase 3.5 is a little over half done.
+Pick up the Hakken shared screen kit work. Phase 3.5 is a little over half done.
 
 **Read these first, in order:**
 

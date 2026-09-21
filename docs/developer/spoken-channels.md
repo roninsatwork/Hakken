@@ -1,6 +1,6 @@
 # Spoken Channels
 
-Spoken Channels cover real-time voice in Ask Sonae, inbound telephony, call records, the receptionist screen, the shared spoken voice setting, and the voice relay knowledge endpoint. They are implemented across `convex/aiVoiceSession.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `convex/kiosk.ts`, `convex/kioskActions.ts`, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, and the `/app/calls`, `/app/reception`, `/kiosk/[widgetId]`, and `/admin/ai/voice` routes.
+Spoken Channels cover real-time voice in Ask Hakken, inbound telephony, call records, the receptionist screen, the shared spoken voice setting, and the voice relay knowledge endpoint. They are implemented across `convex/aiVoiceSession.ts`, `convex/voiceRelay.ts`, `convex/voiceSettings.ts`, `convex/voicePreview.ts`, `convex/telephony.ts`, `convex/telephonyActions.ts`, `convex/telephonyService.ts`, `convex/kiosk.ts`, `convex/kioskActions.ts`, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, `src/lib/googleLiveVoice.ts`, `src/lib/voiceSession.ts`, and the `/app/calls`, `/app/reception`, `/kiosk/[widgetId]`, and `/admin/ai/voice` routes.
 
 Read this before changing real-time voice sessions, spoken model defaults, the voice relay, Twilio webhooks, call records, receptionist sessions, spoken-voice settings, or post-call follow-up behavior.
 
@@ -20,7 +20,7 @@ Voice dictation through `src/hooks/useVoiceToText.ts` remains a separate turn-ba
 
 ## Real-Time Voice Sessions
 
-`api.aiVoiceSession.createRealtimeVoiceSession` creates the session used by Ask Sonae voice mode. It:
+`api.aiVoiceSession.createRealtimeVoiceSession` creates the session used by Ask Hakken voice mode. It:
 
 - requires an authenticated tenant action
 - rate-limits session creation through `aiActionRequests`
@@ -112,13 +112,13 @@ Each step degrades independently. Do not make task creation, Wiki rewrite, or su
 
 `api.voiceSettings.setSpokenVoice` is an admin mutation. It validates the closed voice set, writes `UPDATE_SPOKEN_VOICE` to `auditLogs`, and stores the choice on the active company. `api.voicePreview.mintVoicePreviewTicket` lets admins preview a voice through the production relay/model path, rate-limited to 10 previews per minute per actor.
 
-Ask Sonae voice, phone calls, and reception sessions should all read this one setting. Do not add separate hardcoded voice defaults per surface.
+Ask Hakken voice, phone calls, and reception sessions should all read this one setting. Do not add separate hardcoded voice defaults per surface.
 
 ## Receptionist Screen
 
-The Receptionist screen is the kiosk version of Sonae's live voice experience.
+The Receptionist screen is the kiosk version of Hakken's live voice experience.
 It uses a widget's company, linked agent, and branding, but opens as a top-level
-Sonae page instead of an iframe. `convex/kioskActions.ts` creates Google relay
+Hakken page instead of an iframe. `convex/kioskActions.ts` creates Google relay
 tickets for anonymous kiosk visitors after `convex/kiosk.ts` validates the
 widget token and reserves a per-widget session slot.
 
@@ -171,4 +171,4 @@ Preserve these invariants:
 - Voice relay tickets are signed by the platform, redeemed once before provider access, and verified before knowledge or transcript writes.
 - Phone calls spend from company conversation allowance, not a hidden separate unlimited budget.
 - Post-call failures must not erase the transcript.
-- Spoken voice is one company setting shared by Ask Sonae, phone, and reception.
+- Spoken voice is one company setting shared by Ask Hakken, phone, and reception.

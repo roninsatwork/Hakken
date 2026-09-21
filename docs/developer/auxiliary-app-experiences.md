@@ -165,7 +165,7 @@ Response scheduling follows the shared chat rules:
 
 - A target agent schedules `internal.agentRuntime.runAgentObjective`.
 - `thinkingLevel: "SWARM"` schedules `internal.swarmActions.executeSwarmObjective`.
-- Otherwise the standard Sonae response path schedules `internal.aiChat.generateSonaeResponse`.
+- Otherwise the standard Hakken response path schedules `internal.aiChat.generateSonaeResponse`.
 
 ### Visibility And Navigation
 

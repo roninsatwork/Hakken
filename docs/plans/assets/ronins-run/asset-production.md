@@ -95,7 +95,7 @@ The chosen character and treasure files were checked for alpha ranging from 0 to
 - Patrols: four columns. Row bounds are 0/396/775/981/1254 pixels: guard front, guard back, hound front, hound back. Left-facing versions mirror the corresponding right-facing frame. Guard height is 83 pixels, hound height 46.
 - Treasure: two columns, closed/open. Both use the same 52-world-pixel width and bottom anchor.
 - Every level has a fixed 1586 × 992 coordinate system. Actor feet determine navigation and rendering depth. Courtyard uses two foreground masks; the other maps define their own in Levels.ts. Masks redraw matching environment pieces after actors behind them; an outline marks the hero when obscured.
-- Rain, seal runes, sight cones, glow and contact shadows are original code-native effects. UI and effect colours resolve Sonae theme variables; the illustrated bitmap keeps its own painted colours.
+- Rain, seal runes, sight cones, glow and contact shadows are original code-native effects. UI and effect colours resolve Hakken theme variables; the illustrated bitmap keeps its own painted colours.
 
 The v1 running sheet repeated nearly the same leg pose and its per-frame size fitting
 flattened vertical movement. The user identified the resulting glide on 2026-09-12;

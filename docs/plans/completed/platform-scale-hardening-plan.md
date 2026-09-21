@@ -4,7 +4,7 @@
 
 # Platform Scale Hardening Plan
 
-This is the belt-and-braces plan for scale-hardening the rest of Sonae after the analytics optimization work. The app is not expected to hit all of these limits immediately, but the goal is to make future growth predictable and to keep broad reads from quietly becoming product dependencies.
+This is the belt-and-braces plan for scale-hardening the rest of Hakken after the analytics optimization work. The app is not expected to hit all of these limits immediately, but the goal is to make future growth predictable and to keep broad reads from quietly becoming product dependencies.
 
 Follow this plan in order unless the user explicitly changes scope.
 

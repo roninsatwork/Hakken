@@ -14,7 +14,7 @@ the printer answers.
 
 A tool server works the same way. A supplier publishes a list of things their
 system can do — look up an invoice, check stock, raise a credit note. You give
-Sonae the address, Sonae asks what is on offer, and those become tools your
+Hakken the address, Hakken asks what is on offer, and those become tools your
 agents can be given.
 
 ## Connecting one
@@ -26,7 +26,7 @@ you decide it should.
 answers on. If it needs a login, enter the *reference* to that credential —
 never the credential itself. Connecting does not contact the server.
 
-**2. Ask what it offers.** Sonae contacts the server and records the list of
+**2. Ask what it offers.** Hakken contacts the server and records the list of
 tools it publishes. Nothing is available to an agent yet.
 
 **3. Add its tools.** The tools appear in your tool library, switched off.
@@ -40,7 +40,7 @@ other tool.
 
 Nothing breaks. Whatever the reason, it is written against the server and shown
 on the screen: the server did not answer, it answered too slowly, the login is
-missing, it speaks a version Sonae does not support, or it offers no tools at
+missing, it speaks a version Hakken does not support, or it offers no tools at
 all.
 
 Connected servers also appear on your **Connections** screen, alongside your
@@ -54,7 +54,7 @@ before it runs.
 
 That is deliberate. A server can describe its own tools however it likes, and a
 supplier who wanted a tool to run without anyone looking would describe it
-exactly the way a harmless one is described. So Sonae does not take a server's
+exactly the way a harmless one is described. So Hakken does not take a server's
 word for it.
 
 If you know a particular tool only *reads* information and changes nothing, you
@@ -67,25 +67,25 @@ If a tool on a connected server does anything other than look information up,
 an agent must ask a person before it runs — **even an agent you have set to work
 unattended**.
 
-Every other tool in Sonae is one we built, so you can see what it does by
+Every other tool in Hakken is one we built, so you can see what it does by
 looking. A tool on somebody else's system is not: the supplier can change what
 it does tomorrow without changing its name. So this one keeps a person in the
 loop.
 
 When you are asked to approve it, the message tells you the request is going
-outside Sonae.
+outside Hakken.
 
 Looking things up is unaffected — an unattended agent can still read.
 
 ## What your agents are told
 
-When a tool on a connected server answers, Sonae marks the answer as coming
+When a tool on a connected server answers, Hakken marks the answer as coming
 from outside and tells the assistant to use the facts in it but not to follow
 any instructions inside it.
 
 This matters more than it sounds. If somebody wanted to trick your assistant,
 the most convincing place to hide an instruction is in the answer to a question
-it just asked. Sonae treats those answers the same way it treats an uploaded
+it just asked. Hakken treats those answers the same way it treats an uploaded
 document: useful information, not orders.
 
 Images, audio and attachments a server sends back are not passed to the

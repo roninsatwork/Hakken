@@ -2,7 +2,7 @@
 
 Created: 2026-07-02
 
-This plan documents the product direction for turning the existing Sonae agent skills surface into the intended workflow: upload or import `SKILL.md` files into one central skill library, then select those approved skills anywhere the platform asks for agent capabilities.
+This plan documents the product direction for turning the existing Hakken agent skills surface into the intended workflow: upload or import `SKILL.md` files into one central skill library, then select those approved skills anywhere the platform asks for agent capabilities.
 
 Implementation started on 2026-07-02 after the user asked to build this out. This document records the completed product and engineering direction for the central skill library, importer, pickers, app-kit adoption, and workflow adoption.
 
@@ -16,11 +16,11 @@ Index keywords: SKILL.md import, agent skills, central skill library, skill uplo
 
 ## Goal
 
-Admins should be able to upload a `SKILL.md` file once, review what Sonae extracted from it, publish it into a governed central library, and then reuse that skill from pickers across agents, workflows, app kits, and company AI surfaces.
+Admins should be able to upload a `SKILL.md` file once, review what Hakken extracted from it, publish it into a governed central library, and then reuse that skill from pickers across agents, workflows, app kits, and company AI surfaces.
 
 The target product claim is:
 
-> Sonae has a central, governed skill library. Skills are imported once, validated, versioned, and selected everywhere else from a predefined list.
+> Hakken has a central, governed skill library. Skills are imported once, validated, versioned, and selected everywhere else from a predefined list.
 
 ## Implementation Status
 
@@ -28,7 +28,7 @@ Current estimate: overall 100% complete for the requested central skill library 
 
 Completed:
 
-- Phase 1 copy/navigation: the global Agent Skills catalog now exposes `Import SKILL.md` as the primary import path while preserving Sonae bundle import as a secondary path.
+- Phase 1 copy/navigation: the global Agent Skills catalog now exposes `Import SKILL.md` as the primary import path while preserving Hakken bundle import as a secondary path.
 - Phase 2 Markdown upload and parse: admins can upload a Markdown file and receive a deterministic parsed preview with warnings and suggestions.
 - Phase 3 import review and draft creation: parsed imports can be edited and saved as draft global skills.
 - Phase 4 validation slice: the import review shows active AI tool handler mappings as selectable controls and a production-readiness panel for tools, approval guidance, eval fixtures, and shared-scope review.
@@ -47,21 +47,21 @@ Remaining for this requested scope:
 
 ## Product Problem
 
-The current screen language can be confusing because the product already has an `Agent skills` area, but the primary import action is oriented around a Sonae JSON bundle or manual skill creation.
+The current screen language can be confusing because the product already has an `Agent skills` area, but the primary import action is oriented around a Hakken JSON bundle or manual skill creation.
 
 The user expectation is different:
 
 ```text
 I have a SKILL.md file.
-I want to upload it into Sonae.
-Sonae should understand it, validate it, and make it selectable later.
+I want to upload it into Hakken.
+Hakken should understand it, validate it, and make it selectable later.
 ```
 
 The product should not make users paste raw JSON or recreate a skill by hand when the source material is already a `SKILL.md` file.
 
 ## Current Code Position
 
-Sonae already has a substantial skills foundation. Build on it instead of creating a second skill system.
+Hakken already has a substantial skills foundation. Build on it instead of creating a second skill system.
 
 Already present:
 
@@ -76,10 +76,10 @@ Already present:
 Original gaps for the desired UX, now addressed in this implementation:
 
 - A first-class `SKILL.md` upload action.
-- A parser that extracts Sonae skill fields from Markdown.
+- A parser that extracts Hakken skill fields from Markdown.
 - An import review screen before saving.
 - A validation report that explains what is missing, unsafe, or ambiguous.
-- A clear difference between importing external `SKILL.md` files and importing existing Sonae JSON bundles.
+- A clear difference between importing external `SKILL.md` files and importing existing Hakken JSON bundles.
 - Reusable picker patterns across agent, company AI, eval, workflow, and app-kit surfaces.
 - A product label that makes the central library obvious in navigation.
 
@@ -94,7 +94,7 @@ Agents -> Agent Skills
 This page should become the primary repository for reusable skills. It should support:
 
 - Upload `SKILL.md`.
-- Import Sonae skill bundle JSON.
+- Import Hakken skill bundle JSON.
 - Create skill manually.
 - Seed starter skills.
 - Search, filter, archive, clone, export, and monitor rollout health.
@@ -140,7 +140,7 @@ Clicks Import SKILL.md
 Uploads one SKILL.md file, or a folder/zip containing SKILL.md plus references
         |
         v
-Sonae parses the file and shows an import review
+Hakken parses the file and shows an import review
         |
         v
 Admin fixes missing fields, confirms risk level, and checks required tools/evals
@@ -242,7 +242,7 @@ Warnings:
 Suggestions:
 
 - Add at least two starter eval fixtures.
-- Map named external tools to existing Sonae tool mappings.
+- Map named external tools to existing Hakken tool mappings.
 - Move tenant facts into knowledge documents instead of the shared skill.
 - Add approval handoff language for side-effecting actions.
 
@@ -398,7 +398,7 @@ Acceptance:
 
 ## Open Product Decisions
 
-- Should imported source Markdown be retained permanently, or should Sonae only store the parsed skill fields?
+- Should imported source Markdown be retained permanently, or should Hakken only store the parsed skill fields?
 - Should the importer support a folder/zip with `SKILL.md` plus references, or start with single-file Markdown only?
 - Should company-specific skills be able to import `SKILL.md`, or should import start as super-admin global library only?
 - Should AI help generate starter eval fixtures from examples, or should Phase 1 stay deterministic?
@@ -433,7 +433,7 @@ Recommended rollout:
 This work is successful when:
 
 - A super-admin can upload a normal `SKILL.md` file without hand-converting it to JSON.
-- Sonae parses the file into the existing governed skill model.
+- Hakken parses the file into the existing governed skill model.
 - The admin can review and save the imported skill as a draft.
 - Published skills appear in a central library.
 - Other surfaces select skills from that library instead of requiring file uploads, raw JSON, or pasted IDs.

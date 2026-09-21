@@ -4,7 +4,7 @@
 
 # AI Runtime Retry Hardening Plan
 
-This plan documents the current AI call-site audit and the phased work needed to make provider calls robust when providers throttle, time out, or return transient errors. The immediate product goal is: when a provider returns `429` or another retryable failure, Sonae should pause, retry with bounded backoff, and continue the in-flight task whenever it is safe to do so.
+This plan documents the current AI call-site audit and the phased work needed to make provider calls robust when providers throttle, time out, or return transient errors. The immediate product goal is: when a provider returns `429` or another retryable failure, Hakken should pause, retry with bounded backoff, and continue the in-flight task whenever it is safe to do so.
 
 ## Implementation Status
 
@@ -28,7 +28,7 @@ Remaining optional follow-ups:
 
 ## Current State
 
-Sonae has a provider-neutral generation path, but retry handling is still thin.
+Hakken has a provider-neutral generation path, but retry handling is still thin.
 
 - `convex/providerHttpService.ts` parses provider HTTP failures but does not classify status codes, read `Retry-After`, retry, add jitter, or preserve provider metadata on errors.
 - `convex/openaiProviderService.ts` calls OpenAI Responses and Models endpoints directly through `fetch`.

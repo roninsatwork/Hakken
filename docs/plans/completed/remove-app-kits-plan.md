@@ -113,7 +113,7 @@ mention in the releases empty state. Nothing else in the product depends on it.
 
 ### The decision behind the deletion
 
-The original intent was sound: prospects do not understand that Sonae is a
+The original intent was sound: prospects do not understand that Hakken is a
 framework, so a set of concrete use cases makes it tangible.
 
 A menu of twelve options does not demonstrate a framework — it demonstrates a

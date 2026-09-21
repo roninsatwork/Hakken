@@ -1,9 +1,10 @@
-# Sonae Documentation
+# Hakken Documentation
 
-This is the front door for Sonae documentation. Use the audience sections below to decide where a document belongs and where to start reading.
+This is the front door for Hakken documentation. Use the audience sections below to decide where a document belongs and where to start reading.
 
 ## Structure
 
+- [Product](./product/index.md): the dated research set behind PRODUCT.md — vision, competitive landscape, data sources, closed research gaps. Evidence, not specification; do not edit to match later decisions.
 - [Plans](./plans/index.md): active, completed, and historical plans created during product and engineering work.
 - [Developer](./developer/index.md): technical setup, architecture, implementation guides, platform extension notes, and agent handoff material.
 - [Operator](./operator/index.md): internal runbooks for release review, packaging, demos, and platform operations.
@@ -13,12 +14,13 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 - New coding agents: read [AGENTS.md](../AGENTS.md), then [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md).
 - Local development: read [Getting Started](./developer/getting-started.md), then [Deployment](./developer/deployment.md).
-- Product vision and strategy: read [PRODUCT.md](../PRODUCT.md). It is the single source of truth for what Sonae is.
+- Product vision and strategy: read [PRODUCT.md](../PRODUCT.md). It is the single source of truth for what Hakken is. The evidence behind it is in [Product Research](./product/index.md).
 - Customer-facing product tour: read [Platform Overview](./end-user/platform-overview.md).
 - Planning work: add new plans under [Plans](./plans/index.md), usually in `docs/plans/active/`.
 
 ## Placement Rules
 
+- Put dated product research, market evidence, and strategy source documents in `docs/product/`. These are records, not living docs: supersede them with a new dated document rather than editing them.
 - Put work plans, roadmaps, phased refactors, and cleanup checklists in `docs/plans/`.
 - Put implementation details, architecture, tests, backend/frontend rules, and future-agent guidance in `docs/developer/`.
 - Put internal human runbooks and launch/demo procedures in `docs/operator/`.
@@ -41,6 +43,15 @@ surfaces, connected inbound mailbox backend, and image-to-task/walk-up
 kiosk/task-routing behavior. Future upkeep should still treat broad guides and
 newly changed implementation areas as active audit targets because routes,
 Convex modules, workflows, scripts, and operator procedures continue to change.
+
+### Product
+
+- [Product Research Index](./product/index.md)
+- [App Vision v2.3](./product/app-vision-v2.md) — the current plan in full: what Hakken is, who it's for, the weekly loop, the engine, the moat, pricing, and the six phases.
+- [AI Visibility Landscape](./product/ai-visibility-landscape-sept-2026.md) — forty competitors by tier, funding, pricing, feature matrix, unit economics.
+- [Data Sources And Integrations](./product/data-sources-and-integrations-sept-2026.md) — every source by layer with read/write access, cost, priority, legal exposure, and build order.
+- [Research Gaps Closed](./product/research-gaps-closed-sept-2026.md) — market size, platform risk, incumbent roadmaps, the legal position, and the two phase-0 test protocols.
+- [Research Note: Dooley's Search Stack](./product/research-note-dooley-search-stack-sept-2026.md) — the six-layer SEO/SMO/AEO/GEO/DEO/SXO frame and where it stops.
 
 ### Plans
 
@@ -93,7 +104,7 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Gmail Inbox Plan](./plans/active/gmail-inbox-plan.md) — active plan for the dedicated Gmail connector, mailbox watcher, and reply/task handling.
 - [Receptionist Kiosk Plan](./plans/active/receptionist-kiosk-plan.md) — active plan for the walk-up kiosk surface and visitor-session handling.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
-- [Sonae Speaks The Standard Tool Plug](./plans/active/tool-server-plan.md) — active plan for connecting Sonae to a service's own published tool server, so its tools arrive without an integration being written.
+- [Hakken Speaks The Standard Tool Plug](./plans/active/tool-server-plan.md) — active plan for connecting Hakken to a service's own published tool server, so its tools arrive without an integration being written.
 - [Knowing When It Breaks — PARKED](./plans/active/monitoring-plan.md) — parked plan for real error monitoring across both halves of the product.
 - [The Clean Cut — Turning A Clone Into A Client's Own Product](./plans/active/client-product-cut-plan.md) — delivered locally 2026-09-13: verified framework + Arcade exports with four optional areas, folders and dependencies included.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
@@ -191,7 +202,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Local Demo Seed Runbook](./operator/local-demo-seed-runbook.md)
 - [Local Test Auth Runbook](./operator/local-test-auth-runbook.md)
 - [Vertical App Packaging Checklist](./operator/vertical-app-packaging-checklist.md)
-- [Build a new application from Sonae](./operator/cloning-sonae.md)
+- [Build a new application from Hakken](./operator/cloning-hakken.md)
 - [Product Setup After Cloning](./operator/product-setup.md)
 - [Optional Stripe Billing](./operator/stripe-billing.md)
 - [Generate a Product Feature](./developer/feature-generator.md)
@@ -226,7 +237,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Agent Operations And Review](./end-user/agent-operations-and-review.md)
 - [Auxiliary App Experiences](./end-user/auxiliary-app-experiences.md)
 - [Embedded Widgets](./end-user/embedded-widgets.md)
-- [Emails From Sonae](./end-user/emails.md)
+- [Emails From Hakken](./end-user/emails.md)
 - [Gmail Mailbox](./end-user/gmail-mailbox.md)
 - [Knowledge Management](./end-user/knowledge-management.md)
 - [Company Wiki](./end-user/company-wiki.md)

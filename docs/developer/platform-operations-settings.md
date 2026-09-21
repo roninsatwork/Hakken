@@ -90,7 +90,7 @@ The screen searches and paginates both tables client-side with
 `TABLE_PAGE_SIZE`. Status copy must include words, not colour alone. This page
 answers "can the outside dependency be reached?" and "has the scheduled
 machinery reported recently?" System Health answers a different question:
-whether Sonae's own stored data and operational thresholds look healthy.
+whether Hakken's own stored data and operational thresholds look healthy.
 
 Backend ownership lives in `convex/connectionProbes.ts`, `convex/jobLedger.ts`,
 and scheduled wiring in `convex/crons.ts`. Probe state is stored on existing

@@ -1,4 +1,4 @@
-# Sonae Answers The Phone
+# Hakken Answers The Phone
 
 Status: **COMPLETE — proven live 2026-08-14.** Anthony dialled the real
 number, held a conversation answered from company knowledge, including a
@@ -28,8 +28,8 @@ docs are `docs/end-user/spoken-channels.md` and
 
 ## The decision
 
-Sonae gets a phone number. You dial it on speakerphone in front of a room;
-Sonae answers, says it is an AI, knows the company, and holds a
+Hakken gets a phone number. You dial it on speakerphone in front of a room;
+Hakken answers, says it is an AI, knows the company, and holds a
 conversation — at the speed of a person, and you can cut it off mid-sentence.
 You hang up — and on the screen behind you, within seconds, a follow-up task
 lands with a named person, the bell rings, and the full transcript is there
@@ -37,7 +37,7 @@ to read. That finale is the flagship demo of the whole roadmap.
 
 Recorded decisions:
 
-1. **Inbound only.** Sonae answers calls and never dials out — umbrella
+1. **Inbound only.** Hakken answers calls and never dials out — umbrella
    plan decision 1. Nothing in this plan may place, schedule, or return a
    call.
 2. **The call joins the live audio loop. It does not get its own slower
@@ -90,7 +90,7 @@ tested (`services/voice-relay/protocol.test.mjs`).
 
 **Both halves of the transcript already arrive.** The relay asks Vertex for
 `inputAudioTranscription` and `outputAudioTranscription`, so what the caller
-said and what Sonae said both come back as text on the same connection. The
+said and what Hakken said both come back as text on the same connection. The
 call transcript is therefore a by-product of the loop, not a second system.
 
 **Barge-in already works.** Vertex reports `interrupted` when the caller
@@ -217,7 +217,7 @@ relay doing the answering.
 - **Proof before moving on:** ask the browser voice session a question only
   answerable from an uploaded document, and get the answer.
 
-## Phase A — Sonae picks up
+## Phase A — Hakken picks up
 
 **Goal:** dial the number, hear the disclosed greeting, say anything, be
 answered by the live model, hang up; the call record exists with both sides

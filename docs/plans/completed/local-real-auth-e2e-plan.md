@@ -4,7 +4,7 @@
 
 # Local Real Auth E2E Plan
 
-This plan documents how to add a local-only, real-session browser authentication lane for Sonae Playwright tests.
+This plan documents how to add a local-only, real-session browser authentication lane for Hakken Playwright tests.
 
 The goal is to let headless browsers sign in through Convex Auth itself, save Playwright `storageState`, and run selected browser tests against real authenticated sessions. This should complement, not immediately replace, the current mocked e2e harness.
 
@@ -22,14 +22,14 @@ Instead:
 
 This tests browser authentication, middleware, Convex Auth sessions, and backend authorization guards without depending on Google OAuth, magic links, or live email delivery.
 
-## Current Sonae Baseline
+## Current Hakken Baseline
 
-Sonae already has two useful pieces:
+Hakken already has two useful pieces:
 
 - Convex Auth is configured in `convex/auth.ts` with Google and Resend providers.
 - Playwright is configured in `playwright.config.ts`.
 
-Sonae also has a deterministic mocked e2e lane:
+Hakken also has a deterministic mocked e2e lane:
 
 - `e2e/auth.setup.ts` writes role cookies such as `sonae_e2e_auth`.
 - `src/proxy.ts` trusts that cookie only when `E2E_AUTH_ENABLED=1`.
@@ -39,7 +39,7 @@ That mocked lane is valuable for fast UI coverage and should remain in place whi
 
 ## Non-Drift Rules
 
-- Keep Sonae invite-only for normal providers.
+- Keep Hakken invite-only for normal providers.
 - Do not weaken production Google or Resend auth behavior.
 - Do not accept local-test auth unless `LOCAL_TEST_AUTH_ENABLED=1`.
 - Require `LOCAL_TEST_AUTH_SECRET` for every local-test sign-in.
@@ -52,7 +52,7 @@ That mocked lane is valuable for fast UI coverage and should remain in place whi
 
 ## Roles
 
-Use Sonae's existing role vocabulary:
+Use Hakken's existing role vocabulary:
 
 - `super-admin` maps to `SUPER_ADMIN`.
 - `company-admin` maps to `ADMIN`.

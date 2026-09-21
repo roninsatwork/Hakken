@@ -1,8 +1,8 @@
 # Vertical App Packaging Checklist
 
-Use this checklist when turning Sonae into a new customer-specific or vertical product starter.
+Use this checklist when turning Hakken into a new customer-specific or vertical product starter.
 
-First create the code copy using [Build a new application from Sonae](./cloning-sonae.md).
+First create the code copy using [Build a new application from Hakken](./cloning-hakken.md).
 The default keeps the framework and Arcade; the other four application areas are opt-in.
 
 The goal is to make product-specific changes through configuration, translations, templates, seed data, and extension points before editing core runtime code.

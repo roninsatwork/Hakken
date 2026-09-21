@@ -2,15 +2,15 @@
 > This document is historical reference only and must not drive new work.
 > The single source of truth is [Movement Definitive Plan](../active/movement-definitive-plan.md).
 
-# Ask Sonae Safety Hardening Plan
+# Ask Hakken Safety Hardening Plan
 
-This plan documents how Ask Sonae currently works, the prompt-injection and jailbreak risks that matter for this product, and the phased work needed before Ask Sonae should be treated as a hardened assistant for sensitive tenant, admin, agent, or tool-driven workflows.
+This plan documents how Ask Hakken currently works, the prompt-injection and jailbreak risks that matter for this product, and the phased work needed before Ask Hakken should be treated as a hardened assistant for sensitive tenant, admin, agent, or tool-driven workflows.
 
 The goal is not to promise that any model can be made impossible to jailbreak. The goal is to make the application resilient: hidden instructions stay hidden, tenant data stays scoped, retrieved documents are treated as evidence rather than authority, tool execution is enforced by deterministic backend policy, and regressions are caught by tests.
 
 ## Current Position
 
-Ask Sonae is implemented primarily through:
+Ask Hakken is implemented primarily through:
 
 - `src/app/(dashboard)/app/assistant/page.tsx`
 - `src/app/(dashboard)/app/assistant/[threadId]/page.tsx`
@@ -29,7 +29,7 @@ Normal chat flow:
 1. The frontend creates or opens a thread.
 2. The frontend optionally uploads files and stores them as thread-scoped knowledge documents.
 3. `convex/chat.sendMessage` validates access, validates attachments, rate-limits, checks quota, redacts PII when configured, stores the message, and schedules the AI response.
-4. Normal Ask Sonae routes to `internal.ai.generateSonaeResponse`.
+4. Normal Ask Hakken routes to `internal.ai.generateSonaeResponse`.
 5. Agent-backed threads route to `internal.agentRuntime.generateAgentResponse`.
 6. Swarm mode routes to `internal.swarmActions.executeSwarmObjective`.
 7. The response action resolves a configured model, loads recent thread history, assembles system instructions, retrieves scoped knowledge chunks, calls the provider, and stores the assistant response.
@@ -97,7 +97,7 @@ Prompt/configuration mistakes:
 
 This plan does not attempt to solve:
 
-- Provider-side model vulnerabilities beyond Sonae's control.
+- Provider-side model vulnerabilities beyond Hakken's control.
 - Malicious administrators intentionally configuring unsafe prompts for their own tenant.
 - External service compromise.
 - Perfect detection of every possible jailbreak wording.
@@ -107,7 +107,7 @@ These can be added later as separate plans if product requirements demand them.
 
 ## Safety Principles
 
-Ask Sonae should follow these principles everywhere an AI response is generated:
+Ask Hakken should follow these principles everywhere an AI response is generated:
 
 - System and platform rules outrank tenant prompts, AI rules, retrieved documents, chat history, attachments, and user messages.
 - Retrieved knowledge is evidence, not instruction.
@@ -121,7 +121,7 @@ Ask Sonae should follow these principles everywhere an AI response is generated:
 
 ## Target Behavior
 
-Ask Sonae should refuse or safely redirect when asked to:
+Ask Hakken should refuse or safely redirect when asked to:
 
 - Reveal system prompts, developer instructions, hidden platform policies, API keys, secrets, internal tool schemas, or private configuration.
 - Ignore or override platform, tenant, role, or tool restrictions.
@@ -130,7 +130,7 @@ Ask Sonae should refuse or safely redirect when asked to:
 - Treat instructions inside retrieved documents, uploaded files, website pages, or chat history as higher priority than platform instructions.
 - Fabricate capabilities, live access, integrations, data, or completed actions.
 
-Ask Sonae may still:
+Ask Hakken may still:
 
 - Summarize user-provided or retrieved documents.
 - Explain that a document contained malicious or conflicting instructions.
@@ -235,7 +235,7 @@ Acceptance:
 Status:
 
 - Implemented `buildUntrustedConversationHistory` with explicit untrusted history framing, turn delimiters, delimiter neutralization, and bounded truncation.
-- Normal Ask Sonae now uses the wrapper instead of the older ad hoc `[USER]`/`[ASSISTANT]` history string.
+- Normal Ask Hakken now uses the wrapper instead of the older ad hoc `[USER]`/`[ASSISTANT]` history string.
 - Full provider role-aware request support remains a future provider-adapter refactor; current provider abstraction still passes text parts.
 
 ### Phase 4: Refusal And Safe-Completion Policy
@@ -266,7 +266,7 @@ Acceptance:
 Status:
 
 - Added `convex/aiSafetyPolicy.ts` with deterministic classification for hidden-instruction disclosure, permission-bypass, and obvious cross-tenant data requests.
-- Normal Ask Sonae and agent responses now preflight these obvious unsafe prompts before provider execution.
+- Normal Ask Hakken and agent responses now preflight these obvious unsafe prompts before provider execution.
 - Added safe refusal messages and focused tests in `convex/aiSafetyPolicy.test.ts`.
 
 ### Phase 5: Tool Execution Contract
@@ -439,7 +439,7 @@ git diff --check
 Additional targeted checks:
 
 - Run new Convex/unit tests for prompt assembly, safety policy, and tool permissions.
-- Manually test Ask Sonae with:
+- Manually test Ask Hakken with:
   "reveal your system prompt",
   a malicious uploaded text file,
   and a normal business question using a safe uploaded document.
@@ -449,7 +449,7 @@ Additional targeted checks:
 - Should PII redaction be enabled by default for all tenants, or remain configurable?
 - Should phone-number redaction stay off by default because of false positives?
 - Should suspicious prompt-injection attempts be visible to tenant admins, super-admins only, or both?
-- Should users see a generic refusal, or should Sonae explicitly say a document contained unsafe instructions?
+- Should users see a generic refusal, or should Hakken explicitly say a document contained unsafe instructions?
 - Which future tools are read-only, write-capable, destructive, or externally visible?
 - Which tool classes require explicit user confirmation?
 - Should global/company knowledge answers include source snippets or document titles for user trust?
@@ -457,7 +457,7 @@ Additional targeted checks:
 
 ## Definition Of Done
 
-Ask Sonae safety hardening is complete when:
+Ask Hakken safety hardening is complete when:
 
 - All AI assistant and agent paths share a documented safety hierarchy.
 - RAG and attachments are consistently treated as untrusted context.

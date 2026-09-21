@@ -1,6 +1,6 @@
 # Knowledge Management
 
-Knowledge management is where Sonae operators add, inspect, test, and repair the source material that assistants, agents, widgets, and workflows can use. The current app supports global knowledge, company knowledge, agent knowledge, and chat-thread documents.
+Knowledge management is where Hakken operators add, inspect, test, and repair the source material that assistants, agents, widgets, and workflows can use. The current app supports global knowledge, company knowledge, agent knowledge, and chat-thread documents.
 
 For company-level maintained pages, maps, review checkpoints, source receipts, and open questions, use [Company Wiki](./company-wiki.md). The knowledge screens remain the source archive and repair layer; the Wiki is the current reading and company-memory layer.
 

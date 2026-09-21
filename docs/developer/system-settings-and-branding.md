@@ -1,6 +1,6 @@
 # System Settings And Branding Developer Guide
 
-System settings are Sonae's global configuration surface for platform identity, logos, email sender defaults, theme tokens, diagnostic routing, audit/PII controls, and analytics tracking. The implementation is split across the `systemSettings` table for branding and visual/runtime options, and the `systemConfig` table for keyed operational values such as system prompt, analytics id, and PII redaction.
+System settings are Hakken's global configuration surface for platform identity, logos, email sender defaults, theme tokens, diagnostic routing, audit/PII controls, and analytics tracking. The implementation is split across the `systemSettings` table for branding and visual/runtime options, and the `systemConfig` table for keyed operational values such as system prompt, analytics id, and PII redaction.
 
 Read this before changing `convex/settings.ts`, `convex/settingsService.ts`, `convex/system.ts`, `convex/systemService.ts`, `src/context/SystemSettingsContext.tsx`, the settings screens under `src/app/(dashboard)/admin/settings/(system)/`, or the settings page components. For email sender resolution, see [Email Branding](./email-branding.md). For platform operations settings around API keys, webhooks, health, purges, diagnostics, and maintenance scripts, see [Platform Operations Settings](./platform-operations-settings.md).
 

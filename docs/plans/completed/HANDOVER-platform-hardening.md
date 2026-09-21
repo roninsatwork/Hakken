@@ -1,4 +1,4 @@
-# Handover — Sonae platform hardening
+# Handover — Hakken platform hardening
 
 > **Completed — filed 2026-08-21.** This is a historical handover kept for the
 > technical detail behind the platform-hardening work. Its claims about

@@ -4,7 +4,7 @@
 
 # System Health Alerts Expansion Plan
 
-This plan documents the work needed to expand Sonae platform alerts beyond analytics data health so operators are notified when agent runs fail or scheduled automation stops behaving correctly.
+This plan documents the work needed to expand Hakken platform alerts beyond analytics data health so operators are notified when agent runs fail or scheduled automation stops behaving correctly.
 
 The immediate product goal is: daily platform alerts and the admin Maintenance UI should include agent failures and schedule failures, with enough examples and runbook guidance for an operator to investigate without reading source code first.
 
@@ -30,7 +30,7 @@ Still remaining:
 
 ## Current State
 
-Sonae already has a platform alert path, but the implementation is currently analytics-specific.
+Hakken already has a platform alert path, but the implementation is currently analytics-specific.
 
 - `convex/crons.ts` runs `analyticsCron.dispatchPlatformAlerts` daily at 00:25 UTC.
 - `convex/analyticsCron.ts` builds an analytics data-health report, decides whether to alert, and dispatches email through Resend.

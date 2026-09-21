@@ -145,7 +145,7 @@ Built-in connector definitions live in `convex/toolConnectorDefinitions.ts`. A d
 - `requiredSecretRefs`
 - one or more model-callable tool definitions
 
-The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. Built-in connector definitions use no auth, secret references, and OAuth. The first implemented OAuth connector is `google-gmail`, which uses provider authorization routes, callbacks, encrypted token storage, refresh, and revocation. Built-in connector definitions also include Sonae-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
+The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. Built-in connector definitions use no auth, secret references, and OAuth. The first implemented OAuth connector is `google-gmail`, which uses provider authorization routes, callbacks, encrypted token storage, refresh, and revocation. Built-in connector definitions also include Hakken-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
 
 Most external connector definitions are scaffolds. They can be installed, tested for configuration shape, exposed in the tool catalog, and bound to agents, but most real downstream API execution is intentionally not implemented yet. The Gmail mailbox is the implemented exception and is documented in [Gmail Mailbox](./gmail-mailbox.md). Scaffold handlers should return a clear not-implemented result instead of pretending an external action was completed.
 
@@ -161,7 +161,7 @@ Connector install state is managed by `convex/aiTools.ts`.
 
 `getConnectorInstallDetails` returns the connector, definition, company, synced tools, secret-reference rows, OAuth connection records, and recent test logs for the connector detail page.
 
-Secret reference fields are reference keys, not raw secrets. `assertSafeSecretRefs` and `assertSafeReferenceValue` reject values that look like raw API keys, OAuth tokens, GitHub tokens, or private keys. Store real secret material in the external secret system and put only opaque references in Sonae.
+Secret reference fields are reference keys, not raw secrets. `assertSafeSecretRefs` and `assertSafeReferenceValue` reject values that look like raw API keys, OAuth tokens, GitHub tokens, or private keys. Store real secret material in the external secret system and put only opaque references in Hakken.
 
 ## OAuth Connector State
 
@@ -206,7 +206,7 @@ Tool contract fields include:
 
 `syncConnectorTools` creates or updates `aiTools` rows from connector definitions. It increments versions on update, preserves connector metadata, and deactivates disabled mappings.
 
-Manual Sonae action tools are managed through the AI tools pages. Connector-backed tools should stay aligned with their connector definition rather than being edited as unrelated manual records.
+Manual Hakken action tools are managed through the AI tools pages. Connector-backed tools should stay aligned with their connector definition rather than being edited as unrelated manual records.
 
 ## Runtime Tool Declarations
 

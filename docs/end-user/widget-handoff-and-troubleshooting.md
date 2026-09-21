@@ -1,6 +1,6 @@
 # Widget Handoff And Troubleshooting
 
-Widget handoff and troubleshooting covers the public embedded chat widget after it has been configured in Sonae. Use this guide before giving a customer an embed snippet, when a widget does not load on a host site, or when a support team needs to understand where widget conversations and failures appear.
+Widget handoff and troubleshooting covers the public embedded chat widget after it has been configured in Hakken. Use this guide before giving a customer an embed snippet, when a widget does not load on a host site, or when a support team needs to understand where widget conversations and failures appear.
 
 For the widget feature overview, see [Embedded Widgets](./embedded-widgets.md). For white-label and domain readiness, see [Platform Operations Settings](./platform-operations-settings.md).
 
@@ -78,7 +78,7 @@ The integration tab shows a snippet like:
 
 Install it on the allowed host page. The script injects a floating launcher and opens `/w/[widgetId]` inside an iframe.
 
-If the customer has a strict content security policy, they may need to allow the Sonae host for scripts, frames, images, and connections according to their deployment policy.
+If the customer has a strict content security policy, they may need to allow the Hakken host for scripts, frames, images, and connections according to their deployment policy.
 
 ## Visitor Conversation Behavior
 
@@ -103,7 +103,7 @@ Check in this order:
 3. Test `/sandbox/[widgetId]`.
 4. Confirm the production host matches the allowed domains. If testing broadly, confirm `*` is configured explicitly.
 5. Check the browser console for blocked scripts, blocked frames, or content security policy errors.
-6. Confirm the Sonae host is reachable from the customer page.
+6. Confirm the Hakken host is reachable from the customer page.
 7. Check audit logs for `BLOCKED_WIDGET_ACCESS`.
 8. Check company chat logs for created widget threads.
 

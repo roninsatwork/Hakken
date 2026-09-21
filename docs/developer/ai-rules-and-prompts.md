@@ -1,6 +1,6 @@
 # AI Rules And Prompts Developer Guide
 
-AI rules and prompts are the configurable instruction layer for Sonae's assistant, agents, workflows, widgets, and tenant-specific AI behavior. The implementation spans global admin routes, company admin routes, Convex prompt/rule modules, audit logging, and prompt assembly helpers.
+AI rules and prompts are the configurable instruction layer for Hakken's assistant, agents, workflows, widgets, and tenant-specific AI behavior. The implementation spans global admin routes, company admin routes, Convex prompt/rule modules, audit logging, and prompt assembly helpers.
 
 This guide covers the implemented code paths as of the current documentation audit. It should be read with `docs/developer/ai-administration.md`, `docs/developer/assistant-chat.md`, `docs/developer/agents.md`, and `docs/developer/ai-provider-tool-extension.md` when changing AI runtime behavior.
 

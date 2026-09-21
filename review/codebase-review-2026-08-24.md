@@ -1,4 +1,4 @@
-# Sonae Codebase Review — 2026-08-24
+# Hakken Codebase Review — 2026-08-24
 
 Scope: full repository (`src/` ~1,006 files / 206k lines, `convex/` ~525 files / 172k lines, `e2e/`, `scripts/`, CI). Reviewed for coding best practices, architectural best practices, and consistency, against the project's own documented conventions (`docs/developer/*`, `AGENTS.md`).
 

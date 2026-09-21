@@ -1,6 +1,6 @@
 # Screen Kit Developer Guide
 
-The screen kit provides the table, pagination, modal, detail-layout, settings-section, empty-state, save-feedback, rule-list, and schema-builder patterns used across Sonae. Use them before adding another page-specific table, modal, confirmation flow, or settings block.
+The screen kit provides the table, pagination, modal, detail-layout, settings-section, empty-state, save-feedback, rule-list, and schema-builder patterns used across Hakken. Use them before adding another page-specific table, modal, confirmation flow, or settings block.
 
 **It serves both halves of the app.** The kit began inside the admin folder and moved to `src/ui/components/screens/` on 2026-08-16 so the screens under `/app` — the ones a client actually uses — can reach it too, and so a product cloned from this repo inherits a kit rather than rebuilding one. Nothing here is admin-only; a name carrying `Admin` means the part is genuinely specific to an administration surface. See [Every Screen Is Built From The Same Parts](../plans/completed/shared-screen-kit-plan.md).
 

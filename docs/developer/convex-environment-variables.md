@@ -79,7 +79,7 @@ Notes:
 
 ## Optional Stripe Billing
 
-Billing ships disabled in `sonae.billing.json`; existing Sonae deployments do not
+Billing ships disabled in `sonae.billing.json`; existing Hakken deployments do not
 need Stripe credentials. Enabled clones require both keys below in the backend.
 No key belongs in a `NEXT_PUBLIC_` variable.
 

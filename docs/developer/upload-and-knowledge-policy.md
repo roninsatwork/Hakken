@@ -1,6 +1,6 @@
 # Upload And Knowledge Policy
 
-This document records the shared upload and ingestion policy used by Sonae.
+This document records the shared upload and ingestion policy used by Hakken.
 
 ## Entry Points
 

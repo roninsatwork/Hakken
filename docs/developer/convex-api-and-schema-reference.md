@@ -11,7 +11,7 @@ It is not a replacement for feature guides. Use it when you need to know where a
 backend function family belongs before editing code or documentation.
 
 Before editing any file under `convex/`, follow the Convex repo guardrails and
-the Sonae auth/tenancy rules in `AGENTS.md`. Keep public, tenant, admin,
+the Hakken auth/tenancy rules in `AGENTS.md`. Keep public, tenant, admin,
 super-admin, and internal surfaces separate.
 
 ## Function Family Map

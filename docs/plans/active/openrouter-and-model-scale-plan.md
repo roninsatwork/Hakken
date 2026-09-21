@@ -118,7 +118,7 @@ than accepting a choice that fails at run time.
 
 OpenRouter's model listing is public and carries `pricing.prompt` and
 `pricing.completion` **per token**, plus context length and modalities — the three
-things Vertex does not report. Sonae stores rates **per million**
+things Vertex does not report. Hakken stores rates **per million**
 (`convex/aiCostService.ts:22`).
 
 That conversion is a multiplication by one million, which is the precise mistake

@@ -1,10 +1,10 @@
 # Product Extension Guide
 
-This guide describes the intended extension points for building future products on top of the Sonae core. Use it before copying patterns from a random page, because many surfaces have shared primitives or backend contracts that preserve tenancy, auditability, and provider neutrality.
+This guide describes the intended extension points for building future products on top of the Hakken core. Use it before copying patterns from a random page, because many surfaces have shared primitives or backend contracts that preserve tenancy, auditability, and provider neutrality.
 
 ## Platform Layers
 
-Sonae is organized around these layers:
+Hakken is organized around these layers:
 
 - App shell: `src/app/(dashboard)/layout.tsx`, `src/ui/components/layout/SidebarNavigation.tsx`, `src/ui/components/layout/Header.tsx`, and `src/ui/components/layout/FluidWorkspace.tsx`.
 - Admin shell: `src/app/(dashboard)/admin/layout.tsx` plus reusable admin UI in `src/app/(dashboard)/admin/_components`.
@@ -152,7 +152,7 @@ Branding checklist:
 
 ## Package A Vertical App Starter
 
-Use `docs/operator/vertical-app-packaging-checklist.md` when turning Sonae into a customer-specific or vertical starter.
+Use `docs/operator/vertical-app-packaging-checklist.md` when turning Hakken into a customer-specific or vertical starter.
 
 Packaging should happen in this order:
 

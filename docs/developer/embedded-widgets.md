@@ -104,7 +104,7 @@ The widget Integration section also controls `kioskEnabled`. When enabled, the
 same widget can be opened at `/kiosk/[widgetId]` as a full-screen spoken
 Receptionist screen. That path reuses the widget company, agent, branding, and
 anonymous token model, but it does not use the iframe route, embed script,
-frame-ancestor policy, or embed pass because it is opened on Sonae's own
+frame-ancestor policy, or embed pass because it is opened on Hakken's own
 top-level origin. See [Receptionist Screen](./receptionist-screen.md) for the
 kiosk-specific Convex functions, limits, relay behavior, and tests.
 

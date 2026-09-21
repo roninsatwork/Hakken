@@ -1,8 +1,8 @@
 # Login, Access, And Authentication
 
-Sonae uses invite-based access. Users sign in from `/login` with Google, an email magic link, or a typed one-time code, and the platform checks whether the email belongs to an existing user or a valid invitation.
+Hakken uses invite-based access. Users sign in from `/login` with Google, an email magic link, or a typed one-time code, and the platform checks whether the email belongs to an existing user or a valid invitation.
 
-This guide is for support, customer-success, admins, and operators who need to explain how people get into Sonae and how to troubleshoot access issues.
+This guide is for support, customer-success, admins, and operators who need to explain how people get into Hakken and how to troubleshoot access issues.
 
 ## Sign-In Methods
 
@@ -14,7 +14,7 @@ The login page supports:
 
 Successful sign-in sends users into the main app at `/app`. Super admins may then be redirected to `/admin`.
 
-When someone requests an email magic link or code, Sonae shows neutral success text even if the email is not currently allowed. This is intentional. It prevents the public login screen from revealing whether an email address belongs to a user or invite.
+When someone requests an email magic link or code, Hakken shows neutral success text even if the email is not currently allowed. This is intentional. It prevents the public login screen from revealing whether an email address belongs to a user or invite.
 
 Magic links land on `/verify` before signing in. That page does not redeem the link on load; the user must press the sign-in button. This protects one-use links from company mail scanners that open links before the person does. Typed one-time codes are useful when a mail system is especially aggressive about opening links.
 
@@ -34,7 +34,7 @@ Pending invites expire after seven days. If an invite is expired, revoked, missi
 
 ## Roles
 
-Sonae uses workspace, platform, and evidence-review roles:
+Hakken uses workspace, platform, and evidence-review roles:
 
 - `USER`: normal workspace user.
 - `ADMIN`: company admin who can manage tenant-scoped organization areas.
@@ -52,14 +52,14 @@ Super admins can impersonate a company workspace for setup and support. While im
 
 ## Login Tracking
 
-When a signed-in user opens the dashboard, Sonae records a best-effort login record with:
+When a signed-in user opens the dashboard, Hakken records a best-effort login record with:
 
 - browser/device information
 - IP address when available
 - approximate location when available
 - timestamp
 
-If the IP lookup fails, Sonae records a concealed or unknown fallback. Repeated identical login records are throttled to reduce noise.
+If the IP lookup fails, Hakken records a concealed or unknown fallback. Repeated identical login records are throttled to reduce noise.
 
 Admin and super-admin login and logout actions also create audit evidence.
 

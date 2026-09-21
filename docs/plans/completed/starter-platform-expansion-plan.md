@@ -4,13 +4,13 @@
 
 # Starter Platform Expansion Plan
 
-This plan captures the next platform layer for making Sonae an exceptional developer-led starter framework. It focuses on capabilities outside the connector marketplace.
+This plan captures the next platform layer for making Hakken an exceptional developer-led starter framework. It focuses on capabilities outside the connector marketplace.
 
-The goal is not to add random admin pages or turn Sonae into a no-code SaaS product. The goal is to make Sonae a product factory where developers and operators can assemble, test, govern, ship, observe, and extend many different agentic products from one core platform.
+The goal is not to add random admin pages or turn Hakken into a no-code SaaS product. The goal is to make Hakken a product factory where developers and operators can assemble, test, govern, ship, observe, and extend many different agentic products from one core platform.
 
 ## Direction Correction
 
-Sonae is not intended to be the final end-user application. It is the reusable core that gives a developer a strong starting point, reusable modules, governed defaults, and clear extension points.
+Hakken is not intended to be the final end-user application. It is the reusable core that gives a developer a strong starting point, reusable modules, governed defaults, and clear extension points.
 
 The admin surfaces should be treated as developer/operator tooling. They should help a builder prepare a product-specific implementation, not imply that a non-technical customer can self-serve the whole solution.
 
@@ -24,7 +24,7 @@ Build decisions should follow these rules:
 
 ## Product North Star
 
-Sonae should let a developer start with a customer or app idea and quickly produce a governed, product-specific starter that can then be completed with custom domain logic:
+Hakken should let a developer start with a customer or app idea and quickly produce a governed, product-specific starter that can then be completed with custom domain logic:
 
 1. Create or seed a workspace.
 2. Pick an app kit.
@@ -370,7 +370,7 @@ Primary areas:
 
 ### 8. Public API And Webhook Layer
 
-Make Sonae usable as infrastructure, not only a dashboard.
+Make Hakken usable as infrastructure, not only a dashboard.
 
 Capabilities:
 
@@ -399,7 +399,7 @@ Primary areas:
 
 ### 9. White-Label App Shell
 
-Let products built on Sonae feel like their own product.
+Let products built on Hakken feel like their own product.
 
 Capabilities:
 
@@ -608,7 +608,7 @@ Build:
 
 Why fourth:
 
-- Once the core experience is safe and observable, Sonae can power external products and customer systems.
+- Once the core experience is safe and observable, Hakken can power external products and customer systems.
 
 Current implementation status:
 
@@ -696,4 +696,4 @@ The next practical slice is:
 4. Create resources only after an explicit review step.
 5. Add demo seed coverage so the setup flow can be shown with realistic data.
 
-This slice gives Sonae the biggest product lift without requiring live third-party connector execution.
+This slice gives Hakken the biggest product lift without requiring live third-party connector execution.

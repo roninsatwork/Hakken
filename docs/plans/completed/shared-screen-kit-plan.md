@@ -6,7 +6,7 @@
 > one-shot migration `2026-08-18-core-company-modules-backfill` must run in
 > the deploy that takes the capability switch live.
 
-**Agreed 2026-08-16.** Sonae is the base layer that gets cloned to build the next
+**Agreed 2026-08-16.** Hakken is the base layer that gets cloned to build the next
 product on top. This plan is about what a clone would otherwise have to build
 again: a screen kit both halves of the app can reach, accessibility and small
 screens built into that kit once, and a way to sell a capability rather than
@@ -68,7 +68,7 @@ Screens carrying any accessibility markup at all:
 | `app/**` | 13 | 48 |
 | `src/ui/**` | 11 | 34 |
 
-Every product cloned from Sonae inherits this. It is the class of problem that
+Every product cloned from Hakken inherits this. It is the class of problem that
 loses an enterprise or public-sector deal at procurement rather than at pitch,
 and it is far cheaper to fix in a kit of ten parts than in 316 screens.
 
@@ -91,7 +91,7 @@ bought them, and cannot be given to one client ahead of the rest.
 ### 5. A plan sets a message count and nothing else
 
 The `plans` record is `name`, `description`, `messageLimit`, `priceGBP`,
-`isActive`. A plan cannot grant a capability. Any product built on Sonae that
+`isActive`. A plan cannot grant a capability. Any product built on Hakken that
 wants Starter / Pro / Enterprise tiers has to invent tiering for itself.
 
 ---
@@ -930,7 +930,7 @@ hidden, proven per module by test.
 > and stays ungated — starting a new collection is gated, and a status read on
 > an old run leaks no withheld capability. The assistant's internal wiki reads
 > are internal functions, not client-callable, so a withheld wiki removes the
-> browsing surfaces without silencing Ask Sonae — making the assistant forget
+> browsing surfaces without silencing Ask Hakken — making the assistant forget
 > the wiki is a different decision nobody has made.
 
 ## Phase 7 — A plan grants capabilities (1.5 days)

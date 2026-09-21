@@ -1,16 +1,30 @@
-# Sonae
+# Hakken
 
-A Next.js and Convex application for real-time AI orchestration, administration, chat, workflows, and tenant-scoped knowledge.
+**Hakken** (発見, *hakken*: discovery) works out which of a business's digital
+assets make money and why the rest don't — found, visited, converted, enquired
+or ordered, won — then fixes the broken stage and proves the result in leads and
+sales rather than positions or mentions.
 
-**What Sonae is, and where it is going, is defined in [PRODUCT.md](./PRODUCT.md).**
-That is the single source of truth for the product vision, the commercial
-strategy, what is built today, and what is not built yet. Every other document
-here defers to it.
+It is built on Ronins' agentic application framework (formerly **Sonae**), which
+supplies the multi-tenancy, agent runtime, tool governance, workflow scheduler,
+knowledge layer and governance evidence this product runs on.
+
+> **The product surface described above is not built yet.** This repository
+> currently contains the framework and its demo modules. Read
+> [PRODUCT.md](./PRODUCT.md) before assuming any Hakken capability exists — Part
+> Two is what the code does today, Part Three is everything still to build.
+
+**[PRODUCT.md](./PRODUCT.md) is the single source of truth** for the product
+vision, the commercial strategy, what is built today, and what is not built yet.
+Every other document here defers to it. The research behind it — the competitive
+landscape, the data sources, the closed research gaps — is in
+**[/docs/product](./docs/product/index.md)**.
 
 ## 📚 Internal Documentation
 
 The **[/docs](./docs/index.md)** folder is the documentation hub. It is organized by audience and lifecycle:
 
+- **[Product Research](./docs/product/index.md)**: The vision in full, competitive landscape, data sources, and the two phase-0 test protocols.
 - **[Product Setup](./docs/operator/product-setup.md)**: Preview/apply product defaults after cloning.
 - **[Feature Generator](./docs/developer/feature-generator.md)**: Add complete tenant features, forms and relationships.
 - **[Product Recipes](./docs/developer/product-recipes.md)**: Service desk, project tracker and knowledge assistant starting points.
@@ -18,7 +32,7 @@ The **[/docs](./docs/index.md)** folder is the documentation hub. It is organize
 - **[Optional Stripe Billing](./docs/operator/stripe-billing.md)**: Configure monthly company subscriptions in a clone; disabled by default.
 - **[Getting Started](./docs/developer/getting-started.md)**: Local setup and environment.
 - **[System Architecture](./docs/developer/architecture.md)**: Tech stack and system design.
-- **[Frontend Development](./docs/developer/frontend.md)**: Design system and Sonae Modal Protocol.
+- **[Frontend Development](./docs/developer/frontend.md)**: Design system and the `SonaeModal` protocol.
 - **[Backend & Data Layer](./docs/developer/backend.md)**: Convex and AI orchestration.
 - **[Tenancy Enforcement](./docs/developer/tenancy-enforcement.md)**: Required builders for client-callable Convex functions.
 - **[Deployment](./docs/developer/deployment.md)**: CI/CD and hosting.
@@ -27,7 +41,7 @@ The **[/docs](./docs/index.md)** folder is the documentation hub. It is organize
 - **[End User Docs](./docs/end-user/index.md)**: Customer-friendly platform documentation.
 - **[Agentic Starter Framework Overview](./docs/developer/agentic-starter-framework-overview.md)**: Start-here guide for building governed agentic apps on this foundation.
 - **[New Agentic App Setup Checklist](./docs/developer/new-agentic-app-setup-checklist.md)**: Tenant/customer setup checklist for model defaults, knowledge, tools, draft agents, evals, and activation.
-- **[Vertical App Packaging Checklist](./docs/operator/vertical-app-packaging-checklist.md)**: Rebrand, validate, and smoke-test a product-specific starter built on Sonae.
+- **[Vertical App Packaging Checklist](./docs/operator/vertical-app-packaging-checklist.md)**: Rebrand, validate, and smoke-test a product-specific starter built on Hakken.
 - **[Agent Handoff](./AGENTS.md)**: branch rules, quality gates, and future-agent guardrails.
 
 ---
@@ -127,5 +141,5 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 Run `npm ci`, then preview with `npm run template:build -- --dry-run`.
 Create a new application with `npm run template:build -- --out ../my-new-app`.
 The framework and Arcade are always kept; use `--keep` to include Posture Studio,
-Properties, Sales Reports or Sales Data. See the [clone guide](docs/operator/cloning-sonae.md)
+Properties, Sales Reports or Sales Data. See the [clone guide](docs/operator/cloning-hakken.md)
 for module names, safeguards and verification.

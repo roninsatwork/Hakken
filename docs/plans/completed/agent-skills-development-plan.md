@@ -4,7 +4,7 @@
 
 # Agent Skills Development Plan
 
-This plan defines how Sonae should turn its existing agent primitives into a first-class, reusable Agent Skills system.
+This plan defines how Hakken should turn its existing agent primitives into a first-class, reusable Agent Skills system.
 
 Use this document when building skill packages, agent skill binding, skill readiness, skill evals, or marketplace-style capability bundles for agents.
 
@@ -12,7 +12,7 @@ Index keywords: agent skills, agent capabilities, skill catalog, skill bindings,
 
 ## Goal
 
-Sonae agents are becoming a core product surface. The platform already has the right primitives:
+Hakken agents are becoming a core product surface. The platform already has the right primitives:
 
 - Agents with prompts, model configuration, rules, knowledge, schemas, activation gates, and release policy.
 - Tools and connectors with role requirements, schemas, side-effect levels, confirmation policy, and tenant checks.
@@ -24,7 +24,7 @@ The next layer should package those primitives into reusable, versioned skills t
 
 The target product claim is:
 
-> Sonae agents can be assembled from tested, governed skills: reusable capability packages that include instructions, required tools, safety constraints, evals, and readiness checks.
+> Hakken agents can be assembled from tested, governed skills: reusable capability packages that include instructions, required tools, safety constraints, evals, and readiness checks.
 
 ## Product Definition
 
@@ -481,7 +481,7 @@ Build the smallest useful slice:
 6. Seed skill eval fixtures on attach.
 7. Show skill readiness on Agent Settings.
 
-This gives Sonae a visible product layer quickly while preserving the existing governed runtime.
+This gives Hakken a visible product layer quickly while preserving the existing governed runtime.
 
 ## Current Implementation Status
 

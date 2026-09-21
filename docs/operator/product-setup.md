@@ -6,9 +6,9 @@ remotes, create tenants, set secrets, contact providers, or deploy anything.
 
 ## Preview, then apply to the clone
 
-Start with the copy described in [Cloning Sonae](./cloning-sonae.md). Run the
+Start with the copy described in [Cloning Hakken](./cloning-hakken.md). Run the
 following commands **inside that new application's directory**, using Node
-`24.18.0`. These are operator instructions, not steps run against Sonae itself.
+`24.18.0`. These are operator instructions, not steps run against Hakken itself.
 
 1. Copy `sonae.product.json` to a separate input file, for example
    `my-product.json`, and edit the values below. Keep credentials out of both.
@@ -27,7 +27,7 @@ following commands **inside that new application's directory**, using Node
 `--root <clone-directory>` targets another clone. `--json` produces machine-readable
 preview/apply output. Without `--apply`, no file is written. Unknown options,
 unknown configuration fields, invalid values, symlinked targets and changed
-runtime templates are rejected. Applying to the Sonae origin is refused; the
+runtime templates are rejected. Applying to the Hakken origin is refused; the
 fresh exporter repository has no remote. Configure its own remote separately.
 
 The initialiser validates every target before writing, refuses a stale plan and
@@ -61,7 +61,7 @@ environment example. If a combination of quote styles cannot be represented
 safely in dotenv, preview fails before any files are written; simplify the sender
 name and preview again. It never prints credentials in that error.
 
-The shipped configuration describes Sonae's Google sign-in, email and Vertex/
+The shipped configuration describes Hakken's Google sign-in, email and Vertex/
 knowledge requirements. For email sign-in plus another text-model provider,
 select `resend` and that provider. Knowledge embeddings still require Vertex;
 voice and telephony also require Vertex in the current implementation. Turning
@@ -89,7 +89,7 @@ still controlled by the site's own components/CSS; `identity.logoUrlLight`,
 `identity.logoUrlDark` and the brand colour feed the existing settings defaults.
 Public pages, translations, icons, screenshots and product-specific marketing
 copy still need editorial review. This is not a global search-and-replace of
-Sonae's history, documentation, tests or examples.
+Hakken's history, documentation, tests or examples.
 
 ## Configure environments deliberately
 

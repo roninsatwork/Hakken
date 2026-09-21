@@ -1,6 +1,6 @@
 # Platform Operations Settings
 
-Platform operations settings are the internal controls for API keys, maintenance scripts, system health, connection checks, auth diagnostics, and audit review. These screens help operators run Sonae safely after launch. They are not everyday customer-user workflows.
+Platform operations settings are the internal controls for API keys, maintenance scripts, system health, connection checks, auth diagnostics, and audit review. These screens help operators run Hakken safely after launch. They are not everyday customer-user workflows.
 
 For task-level incident health checks and maintenance scripts, see [System Health And Maintenance](./system-health-and-maintenance.md). For auth diagnostics, audit evidence, analytics health, and retention purges, see [Operational Diagnostics And Retention](./operational-diagnostics-and-retention.md).
 
@@ -42,7 +42,7 @@ API keys are tenant-scoped secrets for public API and webhook surfaces. The curr
 - `workflow:run`: trigger governed workflows.
 - `run:read`: read run status and evidence.
 
-When an API key is created, Sonae returns the raw secret once. After that, the system stores only a digest and a prefix. Operators should record the secret in the approved customer secret store immediately; it cannot be recovered from Sonae later.
+When an API key is created, Hakken returns the raw secret once. After that, the system stores only a digest and a prefix. Operators should record the secret in the approved customer secret store immediately; it cannot be recovered from Hakken later.
 
 Each key has a company, name, scopes, status, rate limit per minute, optional expiry, creator, and revocation metadata. Revoke a key when ownership changes, a secret is exposed, a customer no longer needs integration access, or a launch test key is no longer required.
 
@@ -84,7 +84,7 @@ backend to probe configured dependencies immediately.
 
 Use Connections when the app seems healthy internally but an integration,
 provider, or recurring job may have stopped responding. Use System Health when
-the question is about Sonae's own stored data, alerts, budgets, stale runs, or
+the question is about Hakken's own stored data, alerts, budgets, stale runs, or
 analytics.
 
 ## Unified Purges

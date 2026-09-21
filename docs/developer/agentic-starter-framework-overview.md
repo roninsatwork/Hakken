@@ -1,12 +1,18 @@
 # Agentic Starter Framework Overview
 
-This is the practical starting point for building a new governed agentic app on Sonae.
+This is the practical starting point for building a new governed agentic app on this foundation.
 
-**For what Sonae is and why it exists, read [PRODUCT.md](../../PRODUCT.md)** — the single source of truth for the product vision and the three strategic lanes it serves. This guide is the builder's view of the same thing: which parts of the repo are platform core, which parts are app-specific configuration, and where to add custom domain logic, data models, agents, tools, connectors, workflows, UI, or customer setup.
+> **Scope note.** "Hakken" below means the **framework layer** — the reusable
+> foundation this repository inherited from Sonae. The Hakken *product* (the
+> asset-P&L and AI-visibility platform) is described in
+> [PRODUCT.md](../../PRODUCT.md) Part One and is **not built yet**. This guide
+> covers the foundation it will be built on.
 
-## What Sonae Provides
+**For what Hakken is and why it exists, read [PRODUCT.md](../../PRODUCT.md)** — the single source of truth for the product vision, what is built today, and what is not. This guide is the builder's view of the foundation: which parts of the repo are platform core, which parts are app-specific configuration, and where to add custom domain logic, data models, agents, tools, connectors, workflows, UI, or customer setup.
 
-Sonae is a reusable foundation for agentic applications with:
+## What Hakken Provides
+
+Hakken is a reusable foundation for agentic applications with:
 
 - Tenant-scoped users, companies, roles, plans, audit logs, and knowledge.
 - Configurable agents with model defaults, system prompts, tools, approval policy, knowledge, runs, versions, memory, eval fixtures, and improvement suggestions.

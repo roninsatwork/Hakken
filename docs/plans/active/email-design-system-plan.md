@@ -68,7 +68,7 @@ Three reasons, recorded so this is not relitigated:
 1. **Audience.** Every one of these messages goes to someone who already has an
    account. The website's job is persuading strangers; that is not this job.
 2. **Recognition.** The app is neutral dark. A dark email with no colour in it
-   looks like every other SaaS alert in the inbox. Forest is recognisably Sonae.
+   looks like every other SaaS alert in the inbox. Forest is recognisably Hakken.
    `public.css:57-60` already states the logic: forest reads as a *colour*, not
    as dark mode.
 3. **Survival.** Outlook and Apple Mail force-invert light emails in dark mode
@@ -229,7 +229,7 @@ Verified against both deployments:
 
 | | Production | Dev (`silent-axolotl-121`) |
 | --- | --- | --- |
-| `RESEND_FROM_EMAIL` | `Sonae Auth <auth@ronins.co.uk>` | `anthony@ronins.co.uk` |
+| `RESEND_FROM_EMAIL` | `Hakken Auth <auth@ronins.co.uk>` | `anthony@ronins.co.uk` |
 | `SITE_URL` | `https://sonae.ronins.co.uk` | `http://localhost:3000` |
 
 DNS on `ronins.co.uk`:
@@ -250,13 +250,13 @@ DNS on `ronins.co.uk`:
 
 **Two follow-ups, neither blocking:**
 
-- [ ] **The display name is wrong now.** `Sonae Auth <auth@ronins.co.uk>` was set
+- [ ] **The display name is wrong now.** `Hakken Auth <auth@ronins.co.uk>` was set
       when authentication was the only mail this platform sent. All four surfaces
       now go through it, so an agent notification about property matches arrives
-      from "Sonae Auth". Suggest `Sonae <hello@ronins.co.uk>` or a per-surface
+      from "Hakken Auth". Suggest `Hakken <hello@ronins.co.uk>` or a per-surface
       sender. This is a user-visible label, not plumbing.
 - [ ] **`AUTH_EMAIL` is a landmine.** Both deployments still hold
-      `Sonae <onboarding@resend.dev>`. It is currently inert —
+      `Hakken <onboarding@resend.dev>`. It is currently inert —
       `EMAIL_SENDER_ENV_VARS` puts `RESEND_FROM_EMAIL` first — but if that
       variable is ever cleared, every email silently reverts to Resend's shared
       sandbox with no error. Clear it, or set it to the same address.
@@ -318,8 +318,8 @@ half of the problem.
 - [x] Add a deep link per signal into the agent log for that run. The alert is
       currently a dead end — this is the single highest-value addition.
 - [x] Move runbook text to small print under its signal, not a fourth column.
-- [x] Subject line from content, not shape: "Sonae · 2 issues need attention".
-- [x] Resolve `platformName` from settings instead of the hardcoded `[Sonae]`
+- [x] Subject line from content, not shape: "Hakken · 2 issues need attention".
+- [x] Resolve `platformName` from settings instead of the hardcoded `[Hakken]`
       prefix at `:439` and `:461`.
 - [x] Delete `buildPlatformAlertEmailHtml` (`:469`) and its test — dead code.
 
@@ -391,7 +391,7 @@ production.
 sends an all-clear email when nothing is wrong. It does not.
 `dispatchPlatformAlerts` returns early on `!decision.shouldAlert`
 (`convex/platformAlerts.ts:1425`), so a clean report sends nothing. The
-`"[Sonae] Platform alerts healthy"` subject exists on the decision object but is
+`"[Hakken] Platform alerts healthy"` subject exists on the decision object but is
 never dispatched — that string is what I mistook for a send.
 
 The cron is daily at 00:25 UTC (`convex/crons.ts:120`), which matches the 01:25
@@ -465,7 +465,7 @@ preview route gives us the source to hand to a render service at that point.
 
 - **2026-08-06 — the panel got darker and the design got air.** Anthony,
   comparing our system health alert against a Conterra intelligence digest:
-  *"the Sonae emails are terrible, can we make them look more like the Conterra
+  *"the Hakken emails are terrible, can we make them look more like the Conterra
   email in terms of colour."* Diagnosis: only half the gap was colour. Ground
   `#101114` against card `#1a1c21` read as one mid-grey slab, `#3a3e48` borders
   boxed every element inside it, side padding was 22px and the verdict was 25px

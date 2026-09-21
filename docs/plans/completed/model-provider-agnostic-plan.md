@@ -4,13 +4,13 @@
 
 # Model Provider Agnostic Platform Plan
 
-This plan turns Sonae from a mostly Vertex/Gemini-backed model catalogue into a provider-agnostic AI platform that can support Gemini, OpenAI, Anthropic, and future providers without leaking provider-specific logic through the app.
+This plan turns Hakken from a mostly Vertex/Gemini-backed model catalogue into a provider-agnostic AI platform that can support Gemini, OpenAI, Anthropic, and future providers without leaking provider-specific logic through the app.
 
 Use this as the locked source of truth for model/provider work. Follow the phases in order unless the user explicitly changes scope.
 
 ## Goal
 
-Sonae should let admins manage models across multiple providers while the rest of the app asks for provider-neutral capabilities and use cases.
+Hakken should let admins manage models across multiple providers while the rest of the app asks for provider-neutral capabilities and use cases.
 
 The platform should support:
 
@@ -376,7 +376,7 @@ Acceptance:
 Status:
 
 - Started with provider-aware resolver/runtime compatibility slice:
-  - added `resolveModelConfigForExecution` returning stable Sonae `modelId`, `providerKey`, provider-native `providerModelId`, and source,
+  - added `resolveModelConfigForExecution` returning stable Hakken `modelId`, `providerKey`, provider-native `providerModelId`, and source,
   - kept legacy `resolveModelForExecution` as a string-returning compatibility shim,
   - resolver now honors global use-case defaults without requiring the legacy `isDefault` flag,
   - chat, transcription, title generation, and workflow node configuration now resolve by use case and pass provider-native IDs to the current Google Vertex execution path,

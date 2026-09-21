@@ -1,6 +1,6 @@
 # Receptionist Screen
 
-The Receptionist screen is the kiosk runtime built on top of Sonae's widget and
+The Receptionist screen is the kiosk runtime built on top of Hakken's widget and
 spoken-channel machinery. It is implemented by `/app/reception`,
 `/kiosk/[widgetId]`, `convex/kiosk.ts`, `convex/kioskActions.ts`, the widget
 Integration section, and the existing live voice relay helpers.
@@ -37,7 +37,7 @@ set.
 - `createKioskThread` is a public mutation that creates a fresh anonymous
   widget-style thread for an opted-in kiosk widget and returns the raw access
   token to the page. It does not use widget embed-pass origin checks because the
-  kiosk is opened on Sonae's own top-level origin, not framed on a customer
+  kiosk is opened on Hakken's own top-level origin, not framed on a customer
   site.
 - `recordKioskVoiceTurn` stores the visitor and assistant transcript text in
   the kiosk thread after validating the raw widget session token.
@@ -159,4 +159,4 @@ Preserve these invariants:
 - The microphone is closed while idle.
 - The screen must reset between visitors.
 - Kiosk session/thread minting must remain bounded per widget.
-- Spoken voice stays a workspace setting shared with Ask Sonae and phone calls.
+- Spoken voice stays a workspace setting shared with Ask Hakken and phone calls.

@@ -4,7 +4,7 @@
 
 # Agentic App Foundation Build Plan
 
-This plan is the reference point for turning Sonae from a strong internal agentic platform into a reusable starter framework for building production agentic apps.
+This plan is the reference point for turning Hakken from a strong internal agentic platform into a reusable starter framework for building production agentic apps.
 
 Use this plan when deciding what to build next, what already exists, and where new work should land. It complements:
 
@@ -15,7 +15,7 @@ Use this plan when deciding what to build next, what already exists, and where n
 
 ## Goal
 
-Sonae should become a reusable foundation where a developer or product team can create a governed agentic app quickly:
+Hakken should become a reusable foundation where a developer or product team can create a governed agentic app quickly:
 
 1. Pick an app template.
 2. Configure a tenant, model defaults, knowledge, and tools.
@@ -27,7 +27,7 @@ Sonae should become a reusable foundation where a developer or product team can 
 
 The target product claim is:
 
-> Sonae is a reusable framework for building governed agentic applications with tenant-scoped context, approved tool execution, durable runs, workflow orchestration, observability, and deployment-ready admin controls.
+> Hakken is a reusable framework for building governed agentic applications with tenant-scoped context, approved tool execution, durable runs, workflow orchestration, observability, and deployment-ready admin controls.
 
 ## Current Code Position
 
@@ -87,7 +87,7 @@ These are new product/framework layers to add on top of the existing foundation.
 - Destructive, external, or high-risk actions must support explicit approval.
 - Keep English and Italian locale dictionaries in parity.
 - Admin tables and feeds should default to 15 rows per page.
-- Use existing admin UI primitives and Sonae modal patterns. Do not use native browser dialogs.
+- Use existing admin UI primitives and `SonaeModal` patterns. Do not use native browser dialogs.
 
 ## Implementation Progress
 
@@ -104,7 +104,7 @@ Last updated: 2026-06-16.
 | Phase 7: Run Timeline, Replay, And Debugging | Complete foundation | First run-detail timeline slice is implemented: the backend derives readable timeline entries from durable run steps, attaches linked tool calls and approval requests, summarizes inputs/outputs/errors with bounded previews, calculates step latency, and exposes model/token/cost metadata. Replay lineage now persists source run and replay mode, run detail exposes source/replay summaries plus comparison deltas, and the admin modal shows replay context for both original runs and replay runs. Replay details now include a timeline-level diff aligned by step index so admins can see added, removed, changed, and unchanged steps with source/replay summaries. Tool arguments now default to sanitized previews from the run-detail query itself: admins receive redacted arguments, super-admins receive raw previews, and raw persisted argument fields are not exposed directly to the frontend. Run detail now exposes eval fixture coverage and a learning-action panel so terminal runs can become or update eval fixtures from the same evidence view. Replay controls now support current-active replay and same-version replay that pins the replay run to the source agent version snapshot. Triggered same-version replays now hydrate prompt, model choice, temperature, historical rules, bounded historical memory contents, and historical tool declarations from `agentVersions.snapshotJson`, start after queued seed steps, and record version-hydration plus historical tool dry-run policy trace steps. Future snapshots now include bounded memory items and tool schemas/descriptions for replay fidelity. Write/destructive/external historical tool execution remains blocked unless a future sandbox executor is explicitly added. Next: Phase 8 operational hardening or optional historical tool sandbox execution. |
 | Phase 8: Memory And Improvement Review Inbox | Complete foundation | First unified review inbox slice is implemented on the agent Memory tab. Backend `getReviewInboxForAgent` returns tenant-scoped memory candidates, improvement suggestions, reflections, source run summaries, reviewer attribution, risk counts, semantic patch operations, applied suggestion effects, and filtered totals across open, reviewed, high-risk, and all modes. The Memory UI now shows a learning review inbox with approve/reject memory actions, apply/dismiss improvement suggestions, dismissible reflection evidence, reviewer filters, reviewer metadata, status labels, reviewed history, risk labels, richer source evidence summaries, semantic patch previews for prompt/rule/policy changes, applied version/effect summaries, per-column show-more pagination through the review batch, source-run deep links into the run detail modal, and reflection-to-eval fixture shortcuts that convert reflection evidence into reviewed history. Next: Phase 9 production hardening or optional full backend cursor pagination for very large review queues. |
 | Phase 9: Knowledge Quality Operations | Complete foundation | Shared quality-ops slices are implemented for global/company knowledge surfaces and the agent-specific Knowledge tab. Backend `getQualitySummary` returns tenant-scoped document status metrics, sampled chunk counts, ready coverage, embedding drift counts, and flagged failed/stale/ready-without-chunks/drift documents with source freshness and failure metadata. Backend `inspectDocument` returns bounded chunk previews, active embedding model comparison, recent ingestion/repair audit history, source freshness timestamps, crawl/ingestion failure reason, and embedding metadata with an explicit untrusted-reference safety notice. Backend `testRetrieval` lets admins run bounded, tenant-scoped lexical retrieval diagnostics across stored chunks. Backend `retryDocumentIngestion` and `repairFlaggedDocuments` requeue failed, stale, empty-ready, or drifted documents through the existing ingestion paths with audit logs. Agent-scoped knowledge writes now inherit the admin's active company for tenant visibility and inspection. The shared Knowledge Manager now shows quality tiles, drift metrics, flagged document cards, document inspection buttons, a retrieval test panel, single/bulk repair and re-embed controls, an inspection modal for sampled chunks, source freshness, failure reasons, and recent ingestion history; it is reused by the agent Knowledge tab. |
-| Phase 10: Public Agent API And Webhook Framework | Skipped / deferred | Product decision: do not build a broad inbound public API, Telegram channel, or generic external run-trigger surface as part of this foundation work. Sonae should continue to talk out to other apps through governed connectors/workflows. Revisit only if a specific customer or channel requirement makes inbound external access necessary. |
+| Phase 10: Public Agent API And Webhook Framework | Skipped / deferred | Product decision: do not build a broad inbound public API, Telegram channel, or generic external run-trigger surface as part of this foundation work. Hakken should continue to talk out to other apps through governed connectors/workflows. Revisit only if a specific customer or channel requirement makes inbound external access necessary. |
 | Phase 11: Observability, Billing, And Operations | Complete foundation | System Health now combines analytics drift, agent errors, failed transactions, stale queued/running runs, stale approvals, failed tool calls, provider failure clusters, schedule failures, stale scheduled executions, overdue schedules, and high-cost agents. Backend health is role-aware: super-admins see platform scope, tenant admins see only their active company. Existing plan quotas and run `maxCostGBP` values now produce budget-pressure signals for tenant message limits and agent run cost budgets. Derived alert rules cover stuck runs, stale approvals, repeated provider failures, cost/budget pressure, and tool failures with thresholds, concrete examples, and next actions. Platform alert emails include budget signals, and the System Health UI shows scope, budget controls, alert-rule status, investigation links, and an exportable JSON operational report. Next: Phase 12 framework packaging and white-label readiness. |
 | Phase 12: Framework Packaging And White-Label Readiness | Complete foundation | Added a dependency-free `npm run setup:validate` script for local and production profiles. The validator checks Convex URL/deployment, production public URL, bootstrap admin fallback, auth provider readiness, AI provider credential groups, and optional ingestion providers without printing secrets. Added `.env.example` guidance, a vertical app packaging checklist, fresh deployment smoke checks, and updated README/getting-started/deployment/product-extension docs so a new product build has a clear rebrand, validation, and handoff path. System Settings now includes a white-label readiness panel that automatically checks product identity, logo variants, brand color, diagnostic routing, and stored email sender configuration, and links/manual-flags widget branding and production setup validation. Runtime invite, workflow, auth fallback, and platform-alert email paths now resolve sender branding through stored settings when no deployment-level sender override is set. Public widget config now falls back to system platform name, brand color, logo, greeting, and placeholder when widget-specific theme values are unset. System Options now includes module presets for knowledge assistant, support widget, and operator workspace starter shapes so builders can choose visible modules, owner surfaces, and handoff checks without risky automatic route hiding. |
 
@@ -228,9 +228,9 @@ Build:
   - tenant availability
 - Add secure secret reference fields. Do not store raw secrets in tool schemas or prompts.
 - Start with internal/basic connectors:
-  - Sonae Knowledge.
-  - Sonae Company/Profile.
-  - Sonae Workflow/Task.
+  - Hakken Knowledge.
+  - Hakken Company/Profile.
+  - Hakken Workflow/Task.
   - HTTP REST connector.
   - Email/notification connector.
 - Later external connectors:
@@ -478,7 +478,7 @@ Skipped / deferred by product decision.
 Rationale:
 
 - The current product direction does not need a broad inbound platform API.
-- Sonae should talk to other apps through governed connectors, workflow nodes, and admin-configured integrations.
+- Hakken should talk to other apps through governed connectors, workflow nodes, and admin-configured integrations.
 - Inbound external channels should be considered only for a specific, concrete channel or customer requirement.
 - Telegram is explicitly not part of the current foundation work.
 
@@ -492,7 +492,7 @@ Do not build now:
 
 Revisit only if:
 
-- A named customer needs to call Sonae from their own system.
+- A named customer needs to call Hakken from their own system.
 - A specific channel integration becomes product-critical.
 - The security, rate-limit, tenant-boundary, audit, and support requirements are explicitly budgeted.
 
@@ -544,11 +544,11 @@ Primary files:
 
 ### Phase 12: Framework Packaging And White-Label Readiness
 
-Make Sonae reusable across new products.
+Make Hakken reusable across new products.
 
 Build:
 
-- Document how to fork or rebrand Sonae safely.
+- Document how to fork or rebrand Hakken safely.
 - Add a "vertical app checklist" for replacing product copy, navigation, templates, seed data, providers, and default tools.
 - Make demo/sample code clearly separable from platform core.
 - Add smoke checklist for a fresh deployment.
@@ -556,7 +556,7 @@ Build:
 
 Acceptance:
 
-- A fresh product build can start from Sonae without editing core runtime files.
+- A fresh product build can start from Hakken without editing core runtime files.
 - White-label changes happen through settings, translations, templates, and config where possible.
 - Setup validation fails with actionable messages.
 - Generated/sample data is not confused with production data.
@@ -653,7 +653,7 @@ These should be answered before the later phases.
 - Should evals run against live provider models by default, or use deterministic mocked provider responses for CI?
 - What is the first external connector worth building: Slack, Gmail/Outlook, Google Drive, HubSpot, Notion, Linear/Jira, or generic REST?
 - Is there any named customer or channel requirement strong enough to reopen the deferred inbound public API work?
-- What is the intended first vertical app built on top of Sonae?
+- What is the intended first vertical app built on top of Hakken?
 
 ## Parking Lot
 

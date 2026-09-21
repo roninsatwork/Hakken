@@ -4,21 +4,21 @@
 
 # True Agentic Platform Plan
 
-This plan turns Sonae from an AI workflow and configurable-agent system into a platform that can honestly be called a true agentic automation platform.
+This plan turns Hakken from an AI workflow and configurable-agent system into a platform that can honestly be called a true agentic automation platform.
 
 Use this as the locked source of truth for agent runtime, tool execution, durable runs, approvals, memory, and agent evaluation work. Follow the phases in order unless the user explicitly changes scope.
 
 ## Goal
 
-Sonae should support agents that can safely pursue a user or system objective over multiple steps by planning, calling real tools, inspecting results, asking for approval when needed, persisting progress, and completing or failing with a clear audit trail.
+Hakken should support agents that can safely pursue a user or system objective over multiple steps by planning, calling real tools, inspecting results, asking for approval when needed, persisting progress, and completing or failing with a clear audit trail.
 
 The target claim is:
 
-> Sonae is an agentic automation platform where governed agents can reason over tenant-scoped context, execute approved tools, run from chat, schedules, webhooks, or workflows, and leave durable, replayable traces of every step.
+> Hakken is an agentic automation platform where governed agents can reason over tenant-scoped context, execute approved tools, run from chat, schedules, webhooks, or workflows, and leave durable, replayable traces of every step.
 
 ## Current Position
 
-Sonae already has useful agentic foundations:
+Hakken already has useful agentic foundations:
 
 - `convex/chat.ts` routes user messages to normal assistant, agent-backed thread, or swarm execution.
 - `convex/agentRuntime.ts` loads an agent prompt, resolves a configured model, retrieves agent-scoped RAG context, and performs a model response.

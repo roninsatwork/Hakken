@@ -1,6 +1,6 @@
 # System Architecture
 
-Sonae is a multi-tenant AI application built with Next.js, React, Convex, and provider-backed AI services. This guide is the high-level map for coding agents before they choose a more specific implementation guide.
+Hakken is a multi-tenant AI application built with Next.js, React, Convex, and provider-backed AI services. This guide is the high-level map for coding agents before they choose a more specific implementation guide.
 
 For the product vision and what the platform is for, read [PRODUCT.md](../../PRODUCT.md). This guide covers how it is put together, not why it exists.
 
@@ -8,7 +8,7 @@ For local setup and verification, read [Getting Started](./getting-started.md). 
 
 ## Core Stack
 
-- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Framer Motion, Recharts, React Flow, and shared Sonae UI components.
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Framer Motion, Recharts, React Flow, and shared Hakken UI components.
 - Backend: Convex queries, mutations, actions, internal actions, HTTP actions, scheduled jobs, storage, and search/vector indexes.
 - Authentication: Convex Auth with invite-based provisioning, Google sign-in, email magic links, and local test-auth helpers.
 - AI runtime: model catalog/defaults in Convex, provider services for Google Vertex, OpenAI, Anthropic, and shared provider retry helpers.
@@ -28,7 +28,7 @@ Do not rely on route grouping alone for security. Sensitive Convex functions enf
 
 ## Roles And Tenancy
 
-Sonae uses workspace, platform, and evidence-review roles:
+Hakken uses workspace, platform, and evidence-review roles:
 
 - `SUPER_ADMIN`: platform operator. Can access `/admin`, global configuration, and cross-company operational views where queries permit it.
 - `ADMIN`: company administrator. Can manage tenant-scoped organization areas and company-scoped operational evidence.
@@ -55,7 +55,7 @@ Queries and mutations should stay fast and bounded. Provider calls, document ext
 
 ## AI And Orchestration
 
-Sonae has several AI execution paths:
+Hakken has several AI execution paths:
 
 - Assistant chat creates threads and messages, then schedules normal, agent, or swarm response generation.
 - Agents run governed objectives with version snapshots, tools, approvals, eval evidence, memories, transactions, logs, and replay support.

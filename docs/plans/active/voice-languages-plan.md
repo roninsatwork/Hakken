@@ -1,4 +1,4 @@
-# Ask In Any Language, Sonae Answers In Kind
+# Ask In Any Language, Hakken Answers In Kind
 
 Status: **Reply-language work done 2026-08-13.** Phase 2 of the showcase
 channels roadmap (`showcase-channels-plan.md`). Interpreter mode is still
@@ -33,7 +33,7 @@ because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 ## The decision
 
 Someone speaks to the voice session in Portuguese, Polish, or Italian;
-Sonae answers aloud in that same language, drawing on the company's
+Hakken answers aloud in that same language, drawing on the company's
 English knowledge. Deliberately scheduled second in the roadmap because it
 is the cheapest large impression in the plan: almost everything it needs
 is Phase 1 plus discipline about language.
@@ -42,7 +42,7 @@ Recorded decisions:
 
 1. **The user's language wins, turn by turn.** The reply language follows
    the language of the user's latest turn — switch mid-conversation and
-   Sonae switches with you. No language picker, no settings; detection is
+   Hakken switches with you. No language picker, no settings; detection is
    the feature.
 2. **Knowledge stays in its own language.** Nothing translates the
    company's stored knowledge; the model reads English knowledge and
@@ -63,7 +63,7 @@ The distinction that decides it: a translate model *renders* what you say
 into another language. It does not answer from company knowledge, follow
 company rules, or use skills — it interprets. So it cannot replace the
 conversation model; it earns its place as an **interpreter mode**, where
-two people who share no language talk through Sonae in the middle, live.
+two people who share no language talk through Hakken in the middle, live.
 That is a genuinely striking demo and a real product for a business with
 overseas customers.
 
@@ -154,7 +154,7 @@ voice for it.
 - Unit: language map fallback, uncertain-detection holdover, first-turn
   default.
 - Live, scripted for the showroom: ask in English, then switch to another
-  language mid-session and watch Sonae switch back with you; transcript
+  language mid-session and watch Hakken switch back with you; transcript
   afterwards shows both languages verbatim.
 - Done when a bilingual colleague can hold a two-language conversation
   without touching a setting.

@@ -1,6 +1,6 @@
 # Operational Diagnostics And Retention
 
-Operational diagnostics and retention controls help Sonae operators explain privileged changes, troubleshoot authentication, inspect analytics data health, and manage bounded purges. These are sensitive administration surfaces. Use them deliberately and keep customer data, secrets, and audit evidence in approved systems.
+Operational diagnostics and retention controls help Hakken operators explain privileged changes, troubleshoot authentication, inspect analytics data health, and manage bounded purges. These are sensitive administration surfaces. Use them deliberately and keep customer data, secrets, and audit evidence in approved systems.
 
 For incident health checks and maintenance scripts, see [System Health And Maintenance](./system-health-and-maintenance.md). For public integration operations, see [Public API And Webhooks](./public-api-and-webhooks.md).
 
@@ -93,7 +93,7 @@ Purges delete records permanently. Cancellation stops future recursive deletion 
 
 ## Audit Retention Caveat
 
-Sonae currently has both a unified purge pipeline for audit logs and an older audit-specific purge configuration path. They are related retention controls but not the same operational history.
+Hakken currently has both a unified purge pipeline for audit logs and an older audit-specific purge configuration path. They are related retention controls but not the same operational history.
 
 The unified audit-log purge creates purge history rows and supports cancellation while running. The older audit-specific path has its own monthly schedule and does not create unified purge history rows.
 

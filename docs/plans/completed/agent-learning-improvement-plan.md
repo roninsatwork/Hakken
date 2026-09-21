@@ -4,7 +4,7 @@
 
 # Agent Learning And Improvement Plan
 
-This document defines how Sonae agents should improve over time after the true agentic runtime foundation is in place.
+This document defines how Hakken agents should improve over time after the true agentic runtime foundation is in place.
 
 It is a follow-on plan to `docs/plans/active/true-agentic-platform-plan.md`. The goal is not to silently retrain model weights. The goal is to make agents improve operationally through governed memory, measured feedback, replayed failures, evaluation fixtures, and approved configuration updates.
 
@@ -12,13 +12,13 @@ It is a follow-on plan to `docs/plans/active/true-agentic-platform-plan.md`. The
 
 The stronger and safer product claim is:
 
-> Sonae agents improve over time through approved retained context, measured feedback, replay, evaluation, and governed behavior updates.
+> Hakken agents improve over time through approved retained context, measured feedback, replay, evaluation, and governed behavior updates.
 
 Avoid saying:
 
 > Agents train themselves.
 
-That implies autonomous model-weight training. Sonae should instead support a controlled learning loop where every retained fact, instruction, prompt change, rule change, tool contract change, and evaluator fixture is inspectable, reversible, tenant-scoped, and auditable.
+That implies autonomous model-weight training. Hakken should instead support a controlled learning loop where every retained fact, instruction, prompt change, rule change, tool contract change, and evaluator fixture is inspectable, reversible, tenant-scoped, and auditable.
 
 ## What "Learning" Means Here
 
@@ -581,7 +581,7 @@ The safest first slice is:
 4. Let admins convert a reflection into either a memory candidate or an eval fixture.
 5. Keep all applied learning human-approved at first.
 
-This gives Sonae a real learning loop without introducing unsafe self-modification.
+This gives Hakken a real learning loop without introducing unsafe self-modification.
 
 ## Verification Gates
 

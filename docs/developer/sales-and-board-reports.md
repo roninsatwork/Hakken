@@ -1,6 +1,6 @@
 # Sales And Board Reports
 
-This document covers Sonae's implemented sales report and board-reporting
+This document covers Hakken's implemented sales report and board-reporting
 surface. It is for engineers and agents maintaining the report information page,
 latest-report dashboard, Convex report storage, and internal report-generation
 action. The related user-facing documentation is
