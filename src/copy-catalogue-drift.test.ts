@@ -294,7 +294,7 @@ describe('screen copy stays in the catalogue', () => {
   for (const root of SCAN_ROOTS) {
     for (const file of walkFiles(path.join(repoRoot, root), SCAN_EXTENSIONS)) {
       const relative = relativePath(file).replaceAll(path.sep, '/');
-      if (relative.includes('/demos/') || /\.test\.tsx?$/.test(relative) || relative.endsWith('.d.ts')) continue;
+      if (/\.test\.tsx?$/.test(relative) || relative.endsWith('.d.ts')) continue;
       const hits = countHardcodedCopy(fs.readFileSync(file, 'utf8'), file);
       if (hits > 0) measured.set(relative, hits);
     }

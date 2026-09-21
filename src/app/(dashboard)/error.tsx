@@ -6,7 +6,7 @@ import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { reportError } from "@/src/lib/reportError";
 
 /**
- * Boundary for every authenticated surface (`/admin`, `/app`, `/demos`).
+ * Boundary for every authenticated surface (`/admin`, `/app`).
  *
  * The root layout is still mounted here, so theme and translations are
  * available. Only the failed segment is replaced — navigation stays usable,

@@ -40,7 +40,7 @@ describe('rich text arguments match the tags in their message', () => {
 
   const screenFiles = walkFiles(path.join(repoRoot, 'src'), new Set(['.tsx']))
     .map((filePath) => relativePath(filePath).replaceAll(path.sep, '/'))
-    .filter((file) => !file.includes('/demos/') && !/\.test\.tsx$/.test(file));
+    .filter((file) => !/\.test\.tsx$/.test(file));
 
   const readCalls = screenFiles.flatMap((file) => {
     const contents = fs.readFileSync(path.join(repoRoot, file), 'utf8');

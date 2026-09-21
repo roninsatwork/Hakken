@@ -154,25 +154,25 @@ describe("LoginPage", () => {
 
   it("returns Google sign-in to the requested Deep Capture route", () => {
     searchParamsGetMock.mockReturnValue(
-      "/demos/movement-capture?commissioning=1&deepCapture=1",
+      "/app/tasks?commissioning=1&deepCapture=1",
     );
     renderLoginPage();
 
     fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));
 
     expect(signInMock).toHaveBeenCalledWith("google", {
-      redirectTo: "/demos/movement-capture?commissioning=1&deepCapture=1",
+      redirectTo: "/app/tasks?commissioning=1&deepCapture=1",
     });
   });
 
   it("returns Google sign-in to the query-free locked Deep Capture route", () => {
-    searchParamsGetMock.mockReturnValue("/demos/movement-capture/deep");
+    searchParamsGetMock.mockReturnValue("/app/tasks/deep");
     renderLoginPage();
 
     fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));
 
     expect(signInMock).toHaveBeenCalledWith("google", {
-      redirectTo: "/demos/movement-capture/deep",
+      redirectTo: "/app/tasks/deep",
     });
   });
 

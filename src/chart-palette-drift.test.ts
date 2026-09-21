@@ -45,7 +45,7 @@ describe('charts paint from the shared palette', () => {
   const chartFiles = SCAN_ROOTS.flatMap((root) =>
     walkFiles(path.join(repoRoot, root), new Set(['.tsx']))
       .map((filePath) => relativePath(filePath).replaceAll(path.sep, '/'))
-      .filter((file) => !file.includes('/demos/') && !/\.test\.tsx$/.test(file))
+      .filter((file) => !/\.test\.tsx$/.test(file))
   );
 
   const offenders = chartFiles.flatMap((file) => {

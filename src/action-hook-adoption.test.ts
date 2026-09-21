@@ -312,7 +312,7 @@ type Scanned = {
 const scanned: Scanned[] = SCAN_ROOTS.flatMap((root) =>
   walkFiles(path.join(repoRoot, root), new Set(['.ts', '.tsx']))
     .map((filePath) => relativePath(filePath).replaceAll(path.sep, '/'))
-    .filter((file) => !file.includes('/demos/') && !/\.test\.tsx?$/.test(file))
+    .filter((file) => !/\.test\.tsx?$/.test(file))
     .filter((file) => writesToTheBackend(fs.readFileSync(path.join(repoRoot, file), 'utf8')))
     .map((file) => {
       const source = blankNonCode(fs.readFileSync(path.join(repoRoot, file), 'utf8'));

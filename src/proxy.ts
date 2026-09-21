@@ -9,7 +9,7 @@ import { decideWidgetEmbed, widgetIdFromPathname } from "@/src/lib/widgetEmbedPo
 
 const isSignInPage = createRouteMatcher(["/login"]);
 const isLandingPage = createRouteMatcher(["/"]);
-const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)", "/demos(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 /**

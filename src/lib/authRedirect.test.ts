@@ -4,10 +4,10 @@ import { sanitizeAuthRedirect } from "./authRedirect";
 describe("sanitizeAuthRedirect", () => {
   it("preserves internal protected routes and their query strings", () => {
     expect(sanitizeAuthRedirect(
-      "/demos/movement-capture?commissioning=1&deepCapture=1",
-    )).toBe("/demos/movement-capture?commissioning=1&deepCapture=1");
-    expect(sanitizeAuthRedirect("/demos/movement-capture/deep")).toBe(
-      "/demos/movement-capture/deep",
+      "/app/tasks?commissioning=1&deepCapture=1",
+    )).toBe("/app/tasks?commissioning=1&deepCapture=1");
+    expect(sanitizeAuthRedirect("/app/tasks/deep")).toBe(
+      "/app/tasks/deep",
     );
     expect(sanitizeAuthRedirect("/admin/companies?view=active")).toBe(
       "/admin/companies?view=active",

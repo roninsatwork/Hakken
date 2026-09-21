@@ -51,7 +51,7 @@ describe('render-time adoption keys on a value, not a record', () => {
   const files = SCAN_ROOTS.flatMap((root) =>
     walkFiles(path.join(repoRoot, root), new Set(['.tsx', '.ts']))
       .map((filePath) => relativePath(filePath).replaceAll(path.sep, '/'))
-      .filter((file) => !file.includes('/demos/') && !/\.test\.tsx?$/.test(file))
+      .filter((file) => !/\.test\.tsx?$/.test(file))
   );
 
   /** Every `const [name, setName] = useState<Type>(…)` in a file. */

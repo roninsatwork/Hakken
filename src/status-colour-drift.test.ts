@@ -160,7 +160,7 @@ function scan() {
   const files = SCAN_ROOTS.flatMap((root) =>
     walkFiles(path.join(repoRoot, root), new Set(['.tsx']))
       .map((file) => relativePath(file).replaceAll(path.sep, '/'))
-      .filter((file) => !file.includes('/demos/') && !file.endsWith('.test.tsx'))
+      .filter((file) => !file.endsWith('.test.tsx'))
   );
 
   const offences: string[] = [];

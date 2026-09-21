@@ -24,7 +24,6 @@ const SRC_ROOT = join(__dirname);
 
 const EXCLUDED_PATH_PARTS = [
   "/app/(public)/",
-  "/demos/movements/_lib/movementPalette.ts",
   "/ui/components/charts/chartPalette.ts",
   "/e2e/",
   "/test/",
@@ -114,7 +113,6 @@ const DRIFT_BASELINE = ratchets.theme;
  */
 const ALLOWED_COLOR_HELPER_FILES = [
   "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
-  "src/app/(dashboard)/demos/movements/_lib/movementSkeleton.ts",
 ];
 
 describe("status colour helpers stay consolidated", () => {

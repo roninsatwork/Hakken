@@ -31,12 +31,12 @@ describe("GET /api/e2e-auth", () => {
     process.env.E2E_AUTH_ENABLED = "1";
 
     const response = GET(buildRequest(
-      "/api/e2e-auth?role=super-admin&redirectTo=%2Fdemos%2Fmovement-capture%2Freadiness-proof",
+      "/api/e2e-auth?role=super-admin&redirectTo=%2Fapp%2Ftasks",
     ));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "http://127.0.0.1:3000/demos/movement-capture/readiness-proof",
+      "http://127.0.0.1:3000/app/tasks",
     );
     expect(response.cookies.get("hakken_e2e_auth")?.value).toBe("super-admin");
   });
