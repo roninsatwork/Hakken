@@ -33,6 +33,16 @@ describe('Provider Classification Drift', () => {
       'docs/plans/completed/model-provider-agnostic-plan.md',
       'messages/en.json',
       'messages/it.json',
+      // Hakken's product domain is AI visibility across assistants, so the
+      // product vision and its market research name Gemini alongside ChatGPT
+      // and Perplexity as tracked platforms. Naming them is the subject, not
+      // stale platform language.
+      'PRODUCT.md',
+      'docs/product/ai-visibility-landscape-sept-2026.md',
+      'docs/product/app-vision-v2.md',
+      'docs/product/data-sources-and-integrations-sept-2026.md',
+      'docs/product/research-gaps-closed-sept-2026.md',
+      'docs/product/research-note-dooley-search-stack-sept-2026.md',
       'src/provider-classification-drift.test.ts',
     ]);
 
@@ -225,6 +235,7 @@ describe('Provider Classification Drift', () => {
       'convex/seedWorkflows.ts',
       'convex/vertexProviderService.ts',
       'docs/plans/completed/model-provider-agnostic-plan.md',
+      'docs/product/ai-visibility-landscape-sept-2026.md',
       'src/app/(dashboard)/admin/ai/costs/_components/AICostCharts.test.tsx',
       'src/provider-classification-drift.test.ts',
     ]);
