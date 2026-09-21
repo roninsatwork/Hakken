@@ -62,12 +62,422 @@ export default defineSchema({
      * means the platform defaults. Never hidden maths. */
     moneyMinutesPerConversation: v.optional(v.number()),
     moneyMinutesPerCall: v.optional(v.number()),
+    /**
+     * Whether this company's SEO pulls should ask DataForSEO for a live answer
+     * rather than a queued one.
+     *
+     * **Absent reads as queued**, which is the cheaper of the two and what a
+     * nightly fetcher wants: nobody is waiting for the numbers, so paying extra
+     * for them to arrive in seconds buys nothing.
+     *
+     * It is a preference, not a guarantee. DataForSEO publishes both modes for
+     * SERP and Keywords Data but only `/live` for Labs and Backlinks — checked
+     * against their docs on 2026-09-21, where the `task_post` pages 404. Those
+     * operations stay live whatever this says, and `dataForSeoRegistry.ts`
+     * carries the mode per operation for that reason.
+     */
+    seoPreferLive: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])
     .index("by_plan", ["planId"])
     .searchIndex("search_name", { searchField: "name" }),
-  
+
+  /**
+   * Every website Hakken knows about, once each.
+   *
+   * This table is deliberately almost empty, and the emptiness is the design.
+   * Hakken buys its SEO data from DataForSEO per call, so a website exists once
+   * and everyone watching it reads the same record. That only holds while
+   * nothing company-specific lands here — an owning company, a country, a
+   * client's label, an owned-or-tracked flag. Each looks reasonable on its own
+   * and each would mean two companies need two rows, at which point the dedupe
+   * is gone and nothing on screen would show it.
+   *
+   * All of those live on `companyWebsites`, or on `trackedCompetitors` for a
+   * rival. If you are about to add a column here, check first whether it is
+   * true of the website itself or only of one company's interest in it.
+   */
+  websites: defineTable({
+    /**
+     * The identity: lowercase, no scheme, no `www.`, no path, punycode for
+     * internationalised names. `convex/websiteIdentity.ts` is the only thing
+     * that produces it, and one row per value is enforced there and in
+     * `websites.ts` rather than by the database.
+     */
+    host: v.string(),
+    /** The same host as a person reads it — `münchen.de`, not `xn--mnchen-3ya.de`. */
+    displayHost: v.string(),
+    firstSeenAt: v.number(),
+  })
+    .index("by_host", ["host"])
+    .searchIndex("search_host", { searchField: "displayHost" }),
+
+  /**
+   * One of a company's own websites.
+   *
+   * The company's side of a shared record: the `websites` row is the same one
+   * every other company watching that host reads, and this says that *this*
+   * company holds it. Everything company-specific lives here, never there.
+   *
+   * Competitors are not in this table. They hang off a row of it, in
+   * `trackedCompetitors` — a customer adds their own website, then adds the
+   * rivals they want it measured against.
+   */
+  companyWebsites: defineTable({
+    companyId: v.id("companies"),
+    websiteId: v.id("websites"),
+    /**
+     * This website's own refresh schedule, or absence meaning "follow the
+     * company".
+     *
+     * An `intervalStr` in exactly the format `schedules.intervalStr` uses, read
+     * by the same `workflowScheduleService` helpers and edited with the same
+     * `ScheduleBuilder` control. One field where there were three, because that
+     * format already carries the cadence, the time of day and the day of the
+     * week — a start moment could only say when the first run was.
+     *
+     * Optional is load-bearing rather than tidy. Copying the company's schedule
+     * onto a website when it is added would look identical on screen and behave
+     * differently the moment the company changed — the website would keep the
+     * old value and nobody could see why. Absence is what makes inheritance
+     * real.
+     */
+    refreshIntervalStr: v.optional(v.string()),
+    /** Absent follows the company's schedule; false stops this site alone. */
+    collectionEnabled: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_company", ["companyId"])
+    .index("by_website", ["websiteId"])
+    .index("by_company_website", ["companyId", "websiteId"]),
+
+  /**
+   * One collection run for one company.
+   *
+   * This is the unit a screen shows and the unit retention purges, which is
+   * why it exists at all: without it the only record of "what happened on
+   * Monday for Acme" would be a scan of every pull in a time window.
+   *
+   * It is opened by the collecting agent and then finished by plumbing. The
+   * agent writes the work list and stops; workers send it, the pingback route
+   * files the answers, and the hourly sweep closes the cycle. Nothing in a
+   * cycle needs the agent to still be running, because a cycle outlives the
+   * run that opened it by hours.
+   *
+   * `cursor` is how expansion survives being chunked. A Convex mutation is a
+   * bounded transaction, so a company with thousands of websites cannot be
+   * expanded in one — each page writes what it can, stores where it got to,
+   * and reschedules itself.
+   */
+  seoCollectionCycles: defineTable({
+    companyId: v.id("companies"),
+    /** The schedule row that fired, when a schedule caused this. */
+    scheduleId: v.optional(v.id("schedules")),
+    /** The agent run that opened it, when the agent opened it. */
+    agentRunId: v.optional(v.id("agentRuns")),
+    trigger: v.union(
+      v.literal("SCHEDULE"),
+      /** The hourly sweep, catching a website whose own override is faster. */
+      v.literal("OVERRIDE_SWEEP"),
+      v.literal("MANUAL"),
+    ),
+    /**
+     * `CAPPED_PLAN` and `CAPPED_SPEND` are deliberately two statuses. One is
+     * the customer's limit and they can act on it; the other is our own
+     * spending and only an operator can. A screen that merged them would tell
+     * a customer to buy more of something that was never the problem.
+     */
+    status: v.union(
+      v.literal("EXPANDING"),
+      v.literal("SENDING"),
+      v.literal("COLLECTING"),
+      v.literal("DONE"),
+      v.literal("CAPPED_PLAN"),
+      v.literal("CAPPED_SPEND"),
+      v.literal("FAILED"),
+    ),
+    /** The last company website expanded, so the next page resumes after it. */
+    cursor: v.optional(v.id("companyWebsites")),
+    /** How many sends this cycle has planned, which is what spaces `dueAt`. */
+    plannedCount: v.number(),
+    /** Lines served by a pull somebody else had already paid for. */
+    reusedCount: v.number(),
+    sentCount: v.number(),
+    readyCount: v.number(),
+    failedCount: v.number(),
+    /** USD, as DataForSEO reports it. Never converted on the way in. */
+    totalCostUsd: v.number(),
+    cappedReason: v.optional(v.string()),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_status", ["status"]),
+
+  /**
+   * One line of a cycle's work list: this company wanted this operation for
+   * this website, and here is the pull that answered it.
+   *
+   * The line exists separately from the pull because a pull can answer several
+   * companies at once. One host is stored once and fetched once, so when Acme
+   * is pulled on Monday and its rival's cycle comes round on Wednesday, the
+   * Wednesday cycle gets a line pointing at Monday's pull with `reused` true
+   * and nothing is bought. That is the whole economics of the shared website
+   * record made concrete.
+   *
+   * It also means **pulls are purged by age, never by cycle**: a pull may
+   * still be the newest answer for a company whose cycle is long gone.
+   */
+  seoCycleLines: defineTable({
+    cycleId: v.id("seoCollectionCycles"),
+    /** Denormalised so a company's history never loads its cycles first. */
+    companyId: v.id("companies"),
+    websiteId: v.id("websites"),
+    operationId: v.string(),
+    pullId: v.id("seoDataPulls"),
+    /** True when this line was served by a pull it did not pay for. */
+    reused: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_cycle", ["cycleId"])
+    .index("by_pull", ["pullId"])
+    /** "When did we last collect this host for this company", in one read. */
+    .index("by_company_website", ["companyId", "websiteId", "createdAt"]),
+
+  /**
+   * The numbers a screen plots, per website per day per operation.
+   *
+   * Small, queryable and permanent, which is exactly what the raw payload is
+   * not. Splitting them is what keeps years of history affordable: the raw
+   * SERP response is megabytes and lives in file storage until its TTL, while
+   * this is a handful of numbers and lives forever.
+   *
+   * Keyed on `websiteId` with no company anywhere. **A company's right to read
+   * a row here comes from its own join row, never from this table** — see the
+   * tenancy note on `websites`.
+   */
+  seoWebsiteMetrics: defineTable({
+    websiteId: v.id("websites"),
+    /** `YYYY-MM-DD`, so a chart can range over days without date maths. */
+    day: v.string(),
+    operationId: v.string(),
+    /** The pull this was parsed from. Re-parsing replaces by this key. */
+    pullId: v.id("seoDataPulls"),
+    /** Top-level counts and scores only. Never page text. */
+    metricsJson: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_website_day", ["websiteId", "day"])
+    .index("by_website_operation_day", ["websiteId", "operationId", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * Where one website ranked for one keyword on one day.
+   *
+   * Only written when per-keyword position tracking is switched on, because
+   * unlike everything else here it is one paid task per keyword per cycle. A
+   * site with ten thousand tracked keywords is ten thousand rows a cycle, and
+   * that is the number the plan allowance exists to bound.
+   *
+   * `position` absent means it did not rank in the page we were given, which
+   * is a different fact from position 100 and must not be stored as one.
+   */
+  seoKeywordPositions: defineTable({
+    websiteId: v.id("websites"),
+    keyword: v.string(),
+    day: v.string(),
+    position: v.optional(v.number()),
+    url: v.optional(v.string()),
+    searchVolume: v.optional(v.number()),
+    pullId: v.id("seoDataPulls"),
+    createdAt: v.number(),
+  })
+    .index("by_website_keyword_day", ["websiteId", "keyword", "day"])
+    .index("by_website_day", ["websiteId", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * What the collection screens read. Never the pull table.
+   *
+   * The same rule the governance and inventory screens follow: a dashboard
+   * that sums raw rows is fine until the day there are millions of them, and
+   * that day arrives without warning. `scopeKey` is `company:<id>` or
+   * `platform`, matching how `knowledgeImportQuotas` scopes itself.
+   */
+  seoDayRollups: defineTable({
+    scopeKey: v.string(),
+    day: v.string(),
+    pulls: v.number(),
+    reused: v.number(),
+    sent: v.number(),
+    ready: v.number(),
+    failed: v.number(),
+    costUsd: v.number(),
+    updatedAt: v.number(),
+  }).index("by_scope_day", ["scopeKey", "day"]),
+
+  /**
+   * Every pull Hakken has asked DataForSEO for, and what it cost us.
+   *
+   * Two jobs in one table, and they need each other:
+   *
+   *  1. **The task ledger.** Most of what we ask for is queued — we post a
+   *     task, DataForSEO answers later on a webhook, and without a row holding
+   *     our `tag` there is nothing to match that answer back to.
+   *  2. **The cost record.** DataForSEO returns the cost of a call in its own
+   *     reply, so the row that tracks the task is also the only place that
+   *     honestly knows what it cost.
+   *
+   * **This is our cost, not a customer's.** Hakken absorbs DataForSEO spend and
+   * no client ever sees it; `companyId` is here to answer "which client is
+   * expensive to serve", which is a margin question for a super admin, never a
+   * line on anyone's bill. Every screen over this table is super-admin-only for
+   * that reason.
+   *
+   * Cost is in **USD**, as DataForSEO reports it. Not converted on the way in:
+   * a stored number that was silently converted at an unrecorded rate cannot be
+   * checked against an invoice later.
+   */
+  seoDataPulls: defineTable({
+    /** The registry operation asked for — `dataForSeoRegistry.ts` owns the list. */
+    operationId: v.string(),
+    family: v.string(),
+    mode: v.union(v.literal("QUEUED"), v.literal("LIVE")),
+    /** The normalised host this was about, when the operation was about a site. */
+    target: v.optional(v.string()),
+    /** The website record it was about, when the target matched one we hold. */
+    websiteId: v.optional(v.id("websites")),
+    /**
+     * Whose cadence caused this pull. Internal margin reporting only — a shared
+     * website is pulled once for everyone watching it, so this names the reason
+     * the pull happened, not somebody to charge.
+     */
+    companyId: v.optional(v.id("companies")),
+    /** What was asked, as sent. Kept so a surprising result can be explained. */
+    taskArgsJson: v.string(),
+    /**
+     * Where this pull is in its life.
+     *
+     * `PENDING` and `CLAIMED` are the queue. A row is created `PENDING` with a
+     * `dueAt`, a worker claims it — patching to `CLAIMED` in the same
+     * transaction it reads it, so two workers can never hold the same row —
+     * and only then is it sent. Claim-before-send is not tidiness: DataForSEO
+     * charges at submission, so a row sent twice is paid for twice.
+     *
+     * This is the same shape the knowledge queue runs on
+     * (`claimNextPendingFileInternal` in `knowledge.ts`), deliberately. There
+     * is one queue pattern on this platform, not two.
+     */
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("CLAIMED"),
+      v.literal("SUBMITTED"),
+      v.literal("READY"),
+      v.literal("FAILED"),
+    ),
+    /** Our own matching key, echoed back by DataForSEO in the result. */
+    tag: v.string(),
+    /**
+     * What this pull *is*, so the same question is never bought twice:
+     * `operation : websiteId : paramsHash : cycleDate`. Built by
+     * `seoIdempotency.ts`, which is the only place allowed to build one.
+     *
+     * Because billing happens at submission, this key is the difference
+     * between a duplicate being untidy and a duplicate being expensive.
+     */
+    idempotencyKey: v.optional(v.string()),
+    /** The collection cycle that planned this pull, when a cycle did. */
+    cycleId: v.optional(v.id("seoCollectionCycles")),
+    /**
+     * The earliest a worker may send this.
+     *
+     * Set at enqueue as `cycleStart + (index x spacing)`, which is the whole
+     * of the rate limiting, the tenant fairness and the thundering-herd
+     * protection in this pipeline. A twenty-task tenant clears at once; a
+     * five-thousand-task tenant spreads itself over hours; a small tenant
+     * queued behind a large one is not stuck, because its rows come due
+     * sooner. No scheduler and no fairness algorithm needed.
+     */
+    dueAt: v.optional(v.number()),
+    /** The worker chain holding this row, and when it took it. */
+    claimedBy: v.optional(v.string()),
+    claimedAt: v.optional(v.number()),
+    /** Sends tried. At `SEO_MAX_ATTEMPTS` the row is FAILED rather than retried. */
+    attempts: v.optional(v.number()),
+    /** When DataForSEO's pingback told us this was ready. */
+    pingedAt: v.optional(v.number()),
+    /**
+     * The raw response in file storage.
+     *
+     * Raw SERP payloads kept in documents forever would dominate storage cost,
+     * and they are only needed to re-parse after a parser bug, so they live in
+     * files with a TTL. `resultJson` below is the older inline field, kept for
+     * live operations small enough to be worth reading directly.
+     */
+    rawFileId: v.optional(v.id("_storage")),
+    /** DataForSEO's task id, once they have given us one. */
+    taskId: v.optional(v.string()),
+    /** What DataForSEO charged, in USD, as reported by DataForSEO. */
+    costUsd: v.number(),
+    /** True when this went to the free sandbox and cost nothing. */
+    sandbox: v.boolean(),
+    resultJson: v.optional(v.string()),
+    error: v.optional(v.string()),
+    /** The agent run that asked, when an agent asked. */
+    agentRunId: v.optional(v.id("agentRuns")),
+    requestedBy: v.optional(v.id("users")),
+    /**
+     * When the row was created. Since the queue landed this is no longer the
+     * moment it was sent — that is `sentAt` — and the two can be hours apart
+     * for a row that waited its turn behind a large tenant.
+     */
+    submittedAt: v.number(),
+    /** When it was actually posted to DataForSEO. Absent while it waits. */
+    sentAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_tag", ["tag"])
+    .index("by_status_submitted", ["status", "submittedAt"])
+    /** The queue's own read: what is pending, in the order it came due. */
+    .index("by_status_due", ["status", "dueAt"])
+    /** The reuse ladder's read: have we already asked this exact question? */
+    .index("by_idempotency", ["idempotencyKey"])
+    /** The pingback's read: one task id to one row, or nothing at all. */
+    .index("by_task", ["taskId"])
+    .index("by_cycle", ["cycleId"])
+    .index("by_submitted", ["submittedAt"])
+    .index("by_operation_submitted", ["operationId", "submittedAt"])
+    .index("by_company_submitted", ["companyId", "submittedAt"])
+    .index("by_website_submitted", ["websiteId", "submittedAt"])
+    .index("by_run", ["agentRunId"]),
+
+  /**
+   * A competitor, tracked against one of a company's own websites.
+   *
+   * The parent is a `companyWebsites` row rather than a company, because a
+   * rival is only meaningful relative to the site it is being compared with:
+   * the shop's competitors are not the trade arm's. The same rival may be
+   * tracked against several of a company's websites, and against other
+   * companies' — it is one `websites` row throughout, pulled once.
+   *
+   * `companyId` is denormalised so a tenant-scoped list does not have to load
+   * the parent first. That matters more than it looks: when customers manage
+   * their own websites, every one of those queries filters on it.
+   */
+  trackedCompetitors: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    websiteId: v.id("websites"),
+    createdAt: v.number(),
+  })
+    .index("by_company_website", ["companyWebsiteId"])
+    .index("by_company", ["companyId"])
+    .index("by_website", ["websiteId"])
+    .index("by_parent_website", ["companyWebsiteId", "websiteId"]),
+
   systemSettings: defineTable({
     platformName: v.string(),
     currencySymbol: v.optional(v.string()),
@@ -2870,6 +3280,17 @@ export default defineSchema({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
+    /**
+     * The company this schedule runs for, when it runs for one.
+     *
+     * Added 2026-09-21 for the DataForSEO fetcher, which needs one schedule per
+     * client — "pull Ronins weekly, Acme monthly". Before this the dispatcher
+     * took a run's company from `createdBy`'s own company, which is empty for a
+     * super admin, so every super-admin schedule produced runs belonging to
+     * nobody. Absent still means exactly that, and the old behaviour is
+     * unchanged for schedules that do not set it.
+     */
+    companyId: v.optional(v.id("companies")),
     intervalStr: v.string(), // "daily", "weekly"
     isActive: v.boolean(),
     lastRunTs: v.optional(v.number()),
@@ -2879,6 +3300,7 @@ export default defineSchema({
   })
     .index("by_workflow", ["workflowId"])
     .index("by_agent", ["agentId"])
+    .index("by_company_agent", ["companyId", "agentId"])
     .index("by_createdAt", ["createdAt"])
     .index("by_active_next_run", ["isActive", "nextRunAt"])
     .index("by_active_workflow_last_run", ["isActive", "workflowId", "lastRunTs"])

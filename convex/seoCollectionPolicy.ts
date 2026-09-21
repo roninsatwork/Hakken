@@ -1,0 +1,103 @@
+/**
+ * Every number the collection pipeline runs on, and why it is that number.
+ *
+ * They live together because they are a single sizing decision pulled apart:
+ * the page size and the batch size and the spacing are all answers to "how
+ * much work can one transaction, one request and one tenant do". Spread
+ * through the code they would drift; here they can be read as one paragraph.
+ *
+ * None of them is a rate limiter in the usual sense. The pipeline has no
+ * scheduler and no fairness algorithm — `SEO_DUE_SPACING_MS` does that work by
+ * spacing rows out at the moment they are enqueued. See `seoCollection.ts`.
+ */
+
+/**
+ * Company websites expanded per mutation.
+ *
+ * A Convex mutation is a bounded transaction, so a company with thousands of
+ * websites cannot be expanded in one. Each website may fan out to its
+ * competitors and several operations, so a hundred sites is already several
+ * hundred writes — comfortable, and small enough that a retry is cheap.
+ */
+export const SEO_EXPANSION_PAGE = 100;
+
+/**
+ * Worker chains draining the queue at once.
+ *
+ * Four is sized for domain-level collection, where a cycle is thousands of
+ * tasks. Per-keyword position tracking puts a cycle in the hundreds of
+ * thousands and wants eight. The knowledge file queue runs three for the same
+ * kind of reason, and found that wider lost more to provider rate limits than
+ * it gained.
+ */
+export const SEO_WORKER_WIDTH = 4;
+
+/**
+ * Tasks in one `task_post` request.
+ *
+ * DataForSEO accepts a list of tasks per request, capped at 100 on the
+ * endpoints checked on 2026-09-21. This is what keeps a hundred-thousand-task
+ * cycle down to a thousand HTTP calls. Confirm the cap per endpoint before
+ * raising it; a request over the cap is refused whole, which would strand a
+ * batch.
+ */
+export const SEO_BATCH_SIZE = 100;
+
+/**
+ * How far apart consecutive sends in one cycle are placed.
+ *
+ * This single number is the rate limiting, the tenant fairness and the
+ * thundering-herd protection. A twenty-task tenant clears in five seconds; a
+ * five-thousand-task tenant spreads over twenty minutes; and a small tenant
+ * enqueued behind a large one is never stuck behind it, because its rows come
+ * due sooner than the tail of the large one.
+ */
+export const SEO_DUE_SPACING_MS = 250;
+
+/**
+ * When a claim is assumed dead.
+ *
+ * A worker claims a batch and then sends it; if the action dies in between,
+ * those rows would sit `CLAIMED` forever. Ten minutes is far longer than a
+ * send takes and far shorter than a cycle, so the sweep can return them
+ * without ever racing a live worker.
+ */
+export const SEO_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * When a submitted task is given up on.
+ *
+ * DataForSEO's queued results normally arrive in minutes. A day means the
+ * pingback was lost *and* the task never appeared in `tasks_ready`, which is
+ * not a wait any more. The row is marked failed; it is never re-posted,
+ * because it was already paid for.
+ */
+export const SEO_RESULT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
+/** Sends tried before a row is failed. The knowledge queue uses three. */
+export const SEO_MAX_ATTEMPTS = 3;
+
+/**
+ * How long a raw response is kept in file storage.
+ *
+ * Long enough to re-parse everything after finding a parser bug, and no
+ * longer. The pull row and its cost survive the file, because the cost record
+ * has to be checkable against an invoice long after the payload is useless.
+ */
+export const SEO_RAW_RETENTION_DAYS = 30;
+
+/** How long cycles and their lines are kept. One quarter of history. */
+export const SEO_CYCLE_RETENTION_DAYS = 90;
+
+/**
+ * The backoff a worker waits after DataForSEO pushes back, by attempt.
+ *
+ * A 429 is not a failure, it is "later" — the rows go back to `PENDING` with a
+ * later `dueAt` rather than counting against their attempts as an error would.
+ */
+export const SEO_BACKOFF_MS = [10_000, 60_000, 300_000] as const;
+
+export function seoBackoffMs(attempt: number): number {
+  const index = Math.min(Math.max(attempt, 0), SEO_BACKOFF_MS.length - 1);
+  return SEO_BACKOFF_MS[index];
+}

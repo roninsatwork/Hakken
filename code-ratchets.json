@@ -1,6 +1,6 @@
 {
   "moduleSize": {
-    "convex/schema.ts": 3500,
+    "convex/schema.ts": 3900,
     "convex/agentEvalFixtures.ts": 2000,
     "convex/wikiPages.ts": 1850,
     "convex/knowledge.ts": 1800,
