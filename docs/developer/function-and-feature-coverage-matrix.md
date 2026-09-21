@@ -306,7 +306,7 @@ every private TypeScript helper one-by-one.
 | `systemHealth.ts` | system health and analytics data health reports |
 | `platformAlerts.ts` | daily platform alert dispatch |
 | `apiKeys.ts` | `authenticatePublicRequest` |
-| `apify.ts` | Apify actor start/describe, Rightmove scrape, poll/sync/fetch dataset, dataset debug |
+| `apify.ts` | Apify actor start/describe, run start, poll/sync/fetch dataset, dataset debug |
 | `arcade.ts` | leaderboard listing, score count, score submission |
 | `auditLogs.ts` | audit logging, audit config, purge dispatch/execution, recent log reads |
 | `authEvents.ts` | `recordMagicLinkRequestAttempt` |
@@ -336,7 +336,6 @@ every private TypeScript helper one-by-one.
 | `orchestrator.ts` | `routeAgentIntent` |
 | `plans.ts` | plan status, plan list/pagination, plan CRUD, billing cycle resets |
 | `photoActionService.ts` | photo-action proposal instruction and structured proposal extraction |
-| `properties.ts` and `propertyAgents.ts` | property list/count/get/delete, latest/admin runs, Rightmove collection start |
 | `publicApi.ts` | public ping, run status, public agent trigger, public workflow trigger |
 | `purges.ts` | purge config, history, manual purge, recursive execution, dispatch, cancel |
 | `salesReports.ts` and actions | sales report context reads and generated report save/generation |
@@ -351,7 +350,7 @@ every private TypeScript helper one-by-one.
 | `users.ts` | current user, upload URL, user lists, user CRUD, profile update, logins, login/logout record, impersonation, super-admin assignment |
 | `webScrapeActions.ts` | `scrapeUrl` |
 | `webhookDeliveries.ts` and actions | delivery reads, queue/attempt recording, dispatch |
-| `webhooks.ts` | Apify webhook processing, run status update, run lookup/start, Rightmove data storage |
+| `webhooks.ts` | Apify webhook processing, run status update, run lookup/start, run completion |
 | `widgets.ts` | global/primary widget reads, public widget config, embed-pass gated widget thread creation, widget photo upload, receptionist opt-in persistence |
 | `workflowEngine.ts` | execution init/finalize/resume/reject/expire/fail/link, database operation, dispatcher scheduling |
 | `workflowExecutions.ts` | execution create/update, step upsert/read, execution read, pending-step claim |
@@ -407,9 +406,6 @@ gate, add or refresh an operator runbook and link it from `docs/operator/index.m
    behavior, or opportunity-report workflow changes.
 4. Agent observability and autonomy: refresh the agent operation guides when
    the active observability/autonomy/run-properly plans settle.
-5. Rightmove Agent execution: the Search page now queues the Rightmove Agent;
-   refresh property docs again when Apify run records link visibly back to agent
-   run detail or the active plan is retired.
 6. Tool servers: refresh when the active tool-server plan settles, when
    live-server proof changes the operator/support boundary, or when imported
    tools gain a different approval policy.

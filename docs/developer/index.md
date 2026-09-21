@@ -91,8 +91,6 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 **Required mirror methodology:** read Movement Mirror And Side-Ownership Contract (not included in this copy) before any work involving left/right landmarks, instructor or player display preparation, scoring correspondence, retargeting, head/spine direction, hands, face, root motion, or avatar proof. Instructor motion preserves anatomical side, the human player imitates with the opposite side, and the player avatar reverses the player so both rendered avatars perform the same anatomical movement.
 
-**Required Replay Studio context:** read the active [Movement Definitive Plan](../plans/active/movement-definitive-plan.md) before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, rendered fidelity thresholds, or the movement agent debugging workflow. Historical background lives in [Replay Studio Agent Repair Harness Plan](../plans/completed/replay-studio-agent-repair-harness-plan.md) and [Replay Lab Visual Acceptance Tightening Plan](../plans/completed/replay-lab-visual-acceptance-tightening-plan.md); use those for context only unless they are deliberately reopened. Replay Studio owns recorded-motion diagnosis, and Game Studio live-camera checks are final confirmation after Replay proof, not the primary debugging loop.
-
 - Movement Tracking (not included in this copy)
 - Movement Demo Client Recovery Plan (not included in this copy)
 - Movement Demo Game And Replay Parity Plan (not included in this copy)

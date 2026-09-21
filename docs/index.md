@@ -181,10 +181,6 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 
 Before changing movement-side behaviour, read **Movement Mirror And Side-Ownership Contract (not included in this copy)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
 
-#### Required Movement Plan
-
-Before changing movement capture, Replay Studio, or Game Studio behaviour, read **[Movement Definitive Plan](./plans/active/movement-definitive-plan.md)**. It defines the two goals (capture countdown with full-body walk-back gate; correct avatar/instructor motion in Replay and Game), the two-part acceptance (automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation), and the capture-screen rules that must never regress. Retired background on the repair-loop discipline lives in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans); treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
-
 - Movement Tracking (not included in this copy)
 - Movement Demo Client Recovery Plan (not included in this copy)
 - Movement Demo Game And Replay Parity Plan (not included in this copy)

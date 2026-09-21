@@ -321,10 +321,7 @@ company evals, agent evals, or the readiness gates that read eval evidence — u
 the AI Checks Plan. If work touches how an agent's activity is displayed — the
 Observability menu, the job detail, or raw logs — use the Agent Observability
 Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
-and eval content to the AI Checks Plan. If work touches the Rightmove property
-collection flow, especially `/app/properties/search`, Apify collection linkage,
-or whether the user frontend starts an agent or a scraper directly, use the
-Rightmove Agent Execution Plan. If work touches an agent filling in customer
+and eval content to the AI Checks Plan. If work touches an agent filling in customer
 details from the internet, use the Workspace Customer Research Agent Plan. If
 work touches new parent-company discovery outside imported groups, use the
 Market Discovery Agent Plan. If it touches the customer screens themselves, the

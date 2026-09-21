@@ -1,7 +1,9 @@
 # Build a new application from Hakken
 
-The default copy contains the framework **and Arcade**. Posture Studio, Properties,
-Sales Reports and Sales Data are optional. Hakken itself keeps every feature.
+A copy contains the framework and Arcade. The optional demo modules — Posture
+Studio, Properties, Sales Reports and Sales Data — were stripped from Hakken on
+2026-09-21, so there is nothing left to opt out of: every copy is the clean
+base.
 
 ## Prepare and preview
 
@@ -27,25 +29,15 @@ Choose a **new directory outside this repository**:
 npm run template:build -- --out ../my-new-app
 ```
 
-To include an optional area:
-
-```bash
-npm run template:build -- --keep base,properties --out ../property-app
-npm run template:build -- --keep base,salesData,salesReports --out ../sales-app
-```
-
 | Name | What it includes |
 | --- | --- |
 | `base` | Administration, authentication, tenants, agents, workflows, tasks, calls, reception, wiki and shared connectors |
 | `arcade` | Arcade routes, games, assets, score storage and game tooling; always retained |
-| `movement` | Posture Studio, capture/replay tooling, avatars and motion-tracking dependencies |
-| `properties` | Property search, listing storage and Rightmove-specific integration |
-| `salesReports` | Sales and board report application |
-| `salesData` | Sales imports, customer CRM, research and opportunity reports |
 
-Both `base` and `arcade` are always included, even if omitted from `--keep`.
-Unknown names are rejected. A stripped copy can be cut again, but cannot restore
-code that was removed; return to the full Hakken source to add a missing module.
+Both are always included. `--keep` still exists and still rejects unknown names,
+but with no optional modules registered in `template.verticals.json` there is
+nothing it can add or leave out. Should a future module be registered as
+optional, it is named there and becomes available to `--keep`.
 
 The output is staged and published locally only after packaging succeeds. An
 existing output directory is refused. The result starts a new Git repository on

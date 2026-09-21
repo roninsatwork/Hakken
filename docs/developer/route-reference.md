@@ -49,24 +49,10 @@ in the same documentation pass.
 | `/app/settings` | Tenant admin organization dashboard. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Organization And Company Workspaces Developer Guide](./organization-and-company-workspaces.md) |
 | `/app/settings/team` | Tenant team management. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/app/settings/auth-diagnostics` | Tenant-facing auth diagnostics. | [Operational Diagnostics And Retention](../end-user/operational-diagnostics-and-retention.md), [Auth Diagnostics](./auth-diagnostics.md) |
-| `/app/properties/information` | Property research explanation page. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
-| `/app/properties/search` | Rightmove/property collection search. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
-| `/app/properties/scraped-data` | Stored scraped property list. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
-| `/app/properties/scraped-data/[id]` | Stored property detail page. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
-| `/app/properties/logs` | Property extraction run log. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
-| `/app/reports/information` | Reports explanation page. | [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales And Board Reports Developer Guide](./sales-and-board-reports.md) |
-| `/app/reports` | Sales or board report workflow. | [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales And Board Reports Developer Guide](./sales-and-board-reports.md) |
 | `/app/governance` | Workspace governance overview. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
 | `/app/governance/register` | Workspace AI register. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
 | `/app/governance/policies` | Workspace active-policy view. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
 | `/app/governance/audit-trail` | Workspace audit trail. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
-| `/app/[workspace]/spreadsheet-import` | Workspace workbook upload and worksheet mapping. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/[workspace]/import-data` | Workspace imported sales-data table browser. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/[workspace]/customers` | Workspace customer/prospect list. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/[workspace]/customers/[account]` | Workspace customer/prospect profile. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/[workspace]/opportunity-report` | Workspace opportunity report. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/sales-data` | Legacy Sales Data redirect. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
-| `/app/sales-data/import` | Legacy Sales Data import redirect. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
 | `/app/arcade/ronins-run` | Ronin's Run arcade experience. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
 | `/app/agentic-testing` | Agentic testing sandbox. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
 
@@ -232,7 +218,6 @@ and Movement Definitive Plan (not included in this copy).
 
 | Route | Purpose | Owning docs |
 | --- | --- | --- |
-| `/demos/movements` | Posture Studio library. | [Temporary Posture Studio Demo](../end-user/temporary-posture-studio-demo.md), [Temporary Posture Studio Demo Developer Guide](./temporary-posture-studio-demo.md) |
 | `/demos/movements/[id]` | Movement detail. | Movement docs and active plan. |
 | `/demos/movements/[id]/play` | Movement game/play surface. | Movement docs and active plan. |
 | `/demos/movements/information` | Public-facing movement info page inside app shell. | Temporary Posture Studio Demo (not included in this copy) |
