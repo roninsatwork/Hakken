@@ -23,7 +23,7 @@ test.describe("Super admin browser journeys", () => {
     await skipWhenRedirectedToLogin(page, "AI tool journey requires the super-admin storage state.");
 
     await expect(page.getByRole("heading", { name: "Connectors" })).toBeVisible();
-    await expect(page.getByText("Rightmove Connector")).toBeVisible();
+    await expect(page.getByText("Research Connector")).toBeVisible();
     await expect(page.getByText(/Property search connector/i)).toBeVisible();
   });
 

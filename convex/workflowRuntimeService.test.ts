@@ -190,13 +190,13 @@ describe("workflow runtime service", () => {
     expect(
       buildDatabaseOperationInput(
         {
-          _dbConfig: { tableName: "properties", operation: "UPDATE", docId: "{{docId}}" },
+          _dbConfig: { tableName: "agents", operation: "UPDATE", docId: "{{docId}}" },
           _inputMapping: { $set: { owner: "{{owner}}" } },
         },
         { docId: "abc123", owner: "Ada" }
       )
     ).toEqual({
-      tableName: "properties",
+      tableName: "agents",
       operation: "UPDATE",
       docId: "abc123",
       data: { set: { owner: "Ada" } },
@@ -205,13 +205,13 @@ describe("workflow runtime service", () => {
     expect(
       buildDatabaseOperationInput(
         {
-          _dbConfig: { tableName: "properties", operation: "INSERT" },
+          _dbConfig: { tableName: "agents", operation: "INSERT" },
           _inputTemplate: '{"name":"{{name}}"}',
         },
         { name: "Grace" }
       )
     ).toEqual({
-      tableName: "properties",
+      tableName: "agents",
       operation: "INSERT",
       docId: undefined,
       data: { name: "Grace" },
@@ -220,7 +220,7 @@ describe("workflow runtime service", () => {
     expect(
       buildDatabaseOperationInput(
         {
-          _dbConfig: { tableName: "properties", operation: "INSERT" },
+          _dbConfig: { tableName: "agents", operation: "INSERT" },
           _inputTemplate: "not json",
         },
         {}
@@ -232,7 +232,7 @@ describe("workflow runtime service", () => {
     expect(() =>
       buildDatabaseOperationInput(
         {
-          _dbConfig: { tableName: "properties", operation: "SELECT" },
+          _dbConfig: { tableName: "agents", operation: "SELECT" },
         },
         {}
       )
@@ -242,25 +242,25 @@ describe("workflow runtime service", () => {
       buildDatabaseOperationInput(
         {
           _dbConfig: {
-            tableName: "properties",
+            tableName: "agents",
             operation: "SELECT",
             query: {
-              indexName: "by_rightmoveId",
-              equals: [{ field: "rightmoveId", value: "{{propertyId}}" }],
+              indexName: "by_externalId",
+              equals: [{ field: "externalId", value: "{{recordId}}" }],
               order: "desc",
               limit: "{{limit}}",
             },
           },
         },
-        { propertyId: "rm-123", limit: 5 }
+        { recordId: "ext-123", limit: 5 }
       )
     ).toEqual({
-      tableName: "properties",
+      tableName: "agents",
       operation: "SELECT",
       docId: undefined,
       query: {
-        indexName: "by_rightmoveId",
-        equals: [{ field: "rightmoveId", value: "rm-123" }],
+        indexName: "by_externalId",
+        equals: [{ field: "externalId", value: "ext-123" }],
         order: "desc",
         limit: 5,
       },
@@ -271,7 +271,7 @@ describe("workflow runtime service", () => {
       buildDatabaseOperationInput(
         {
           _dbConfig: {
-            tableName: "properties",
+            tableName: "agents",
             operation: "SELECT",
             query: { indexName: "by_company", equals: [], limit: 101 },
           },
@@ -303,10 +303,10 @@ describe("workflow runtime service", () => {
   });
 
   test("builds database and email node outputs", () => {
-    expect(JSON.parse(buildDatabaseNodeOutput({ operation: "SELECT", tableName: "properties", result: [{ id: 1 }] }))).toEqual({
+    expect(JSON.parse(buildDatabaseNodeOutput({ operation: "SELECT", tableName: "agents", result: [{ id: 1 }] }))).toEqual({
       _system: { db: true },
       operation: "SELECT",
-      tableName: "properties",
+      tableName: "agents",
       result: [{ id: 1 }],
     });
 

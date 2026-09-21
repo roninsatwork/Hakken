@@ -126,7 +126,7 @@ export const recordRunStart = internalMutation({
   },
 });
 
-export const storeRightmoveData = internalMutation({
+export const completeApifyRun = internalMutation({
   args: {
     runId: v.string(),
     status: v.string(),
@@ -139,7 +139,7 @@ export const storeRightmoveData = internalMutation({
 
     if (!run) throw appError("NOT_FOUND", "Run not found");
 
-    // Generic jobs finish without interpreting their results as property listings.
-    await ctx.db.patch(run._id, { status: "COMPLETED", completedAt: Date.now(), propertiesScraped: 0 });
+    // The platform records that the job finished; it never interprets results.
+    await ctx.db.patch(run._id, { status: "COMPLETED", completedAt: Date.now() });
   },
 });

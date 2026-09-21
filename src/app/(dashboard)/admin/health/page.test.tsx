@@ -45,7 +45,7 @@ const runs = {
     {
       runId: "run_1",
       agentId: "agent_1",
-      agentName: "Rightmove Agent",
+      agentName: "Research Agent",
       status: "SUCCESS",
       objective: "Skill setup: Document Extraction",
       startedAt: Date.UTC(2026, 6, 25, 20, 55),

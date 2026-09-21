@@ -173,9 +173,9 @@ describe("plain-language labels", () => {
       key: "interaction.usedTool",
       params: { tool: "property search" },
     });
-    expect(describeInteractionType("TOOL DISPATCH: rightmove.search")).toEqual({
+    expect(describeInteractionType("TOOL DISPATCH: research.search")).toEqual({
       key: "interaction.usedTool",
-      params: { tool: "rightmove search" },
+      params: { tool: "research search" },
     });
     expect(describeInteractionType("TOOL AWAITING APPROVAL: send_email")).toEqual({
       key: "interaction.waitingTool",
@@ -191,8 +191,8 @@ describe("plain-language labels", () => {
   });
 
   it("falls back to the handler when a tool is no longer in the catalogue", () => {
-    const names = new Map([["rightmove.search", "Property search"]]);
-    expect(describeToolName("rightmove.search", names)).toBe("Property search");
+    const names = new Map([["research.search", "Property search"]]);
+    expect(describeToolName("research.search", names)).toBe("Property search");
     expect(describeToolName("removed.connector", names)).toBe("removed.connector");
   });
 });

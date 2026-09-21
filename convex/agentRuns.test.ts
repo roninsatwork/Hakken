@@ -335,7 +335,7 @@ describe("Agent Runs", () => {
         companyId,
       });
       const agentId = await ctx.db.insert("agents", {
-        name: "Rightmove Agent",
+        name: "Research Agent",
         modelId: "model-test",
         thinkingMode: false,
         isActive: true,

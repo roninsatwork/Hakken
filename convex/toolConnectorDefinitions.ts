@@ -120,7 +120,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Find an Apify job",
         description:
-          "Looks up jobs on Apify. Give it something to search for — 'rightmove property listings' "
+          "Looks up jobs on Apify. Give it something to search for — 'public company records' "
           + "— to see what jobs exist, or give it a job id to see exactly what settings that job "
           + "needs. Use this before running a job rather than guessing its settings.",
         handlerMapping: "apify.actor.describe",

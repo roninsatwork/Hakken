@@ -255,8 +255,8 @@ describe("platform alert service", () => {
             label: "ERROR",
             occurredAt: Date.UTC(2026, 6, 29, 16, 39 + index),
             summary: THOUGHT_SIGNATURE_ERROR,
-            targetId: "agent_rightmove",
-            targetName: "Rightmove Agent",
+            targetId: "agent_research",
+            targetName: "Research Agent",
             targetType: "agent" as const,
           })),
         },
@@ -268,8 +268,8 @@ describe("platform alert service", () => {
               label: "apify",
               occurredAt: Date.UTC(2026, 6, 30, 7, 40),
               summary: APIFY_402_ERROR,
-              targetId: "agent_rightmove",
-              targetName: "Rightmove Agent",
+              targetId: "agent_research",
+              targetName: "Research Agent",
               targetType: "agent" as const,
             },
             {
@@ -277,8 +277,8 @@ describe("platform alert service", () => {
               label: "apify",
               occurredAt: Date.UTC(2026, 6, 29, 16, 35),
               summary: APIFY_SECRET_ERROR,
-              targetId: "agent_rightmove",
-              targetName: "Rightmove Agent",
+              targetId: "agent_research",
+              targetName: "Research Agent",
               targetType: "agent" as const,
             },
           ],
@@ -307,15 +307,15 @@ describe("platform alert service", () => {
 
   test("collapses four identical faults into one group", () => {
     const groups = groupAlertOccurrences([
-      { cause: "same", at: 3, targetName: "Rightmove Agent", targetId: "a1", targetType: "agent" },
-      { cause: "same", at: 1, targetName: "Rightmove Agent" },
-      { cause: "same", at: 5, targetName: "Rightmove Agent" },
+      { cause: "same", at: 3, targetName: "Research Agent", targetId: "a1", targetType: "agent" },
+      { cause: "same", at: 1, targetName: "Research Agent" },
+      { cause: "same", at: 5, targetName: "Research Agent" },
       { cause: "other", at: 2, targetName: "Other Agent" },
     ]);
 
     expect(groups).toHaveLength(2);
     expect(groups[0]).toMatchObject({ cause: "same", count: 3, firstAt: 1, lastAt: 5, targetId: "a1" });
-    expect(groups[0].targetNames).toEqual(["Rightmove Agent"]);
+    expect(groups[0].targetNames).toEqual(["Research Agent"]);
   });
 
   test("the rebuilt alert shows two cards, not six rows", () => {
@@ -360,8 +360,8 @@ describe("platform alert service", () => {
       baseUrl: "https://app.test",
     });
 
-    expect(email.html).toContain("https://app.test/admin/agents/agent_rightmove/logs");
-    expect(email.text).toContain("https://app.test/admin/agents/agent_rightmove/logs");
+    expect(email.html).toContain("https://app.test/admin/agents/agent_research/logs");
+    expect(email.text).toContain("https://app.test/admin/agents/agent_research/logs");
   });
 
   test("renders no links at all when the deployment has no base URL", () => {

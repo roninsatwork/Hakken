@@ -72,12 +72,6 @@ completed work.
   detail and waterfall, the rebuilt raw logs, and the `agentLogs` fields that
   link a log entry back to its run. Read it before touching
   `convex/agentLogs.ts` or either of the agent logs and runs screens.
-- [Rightmove Agent Execution Plan](./active/rightmove-agent-execution-plan.md) —
-  the plan to make the Rightmove Agent the single execution path for property
-  collection, whether started from admin or from the user-facing Properties
-  Search screen. Owns the shift from direct Apify starts to agent-owned runs and
-  the link between agent runs, Apify collections, Properties Logs, and Scraped
-  Data.
 - [Public Website Plan](./active/public-website-plan.md) — the active plan for
   the public pre-login website, including the home page, future platform,
   showcase, trust, and contact pages, animation direction, public copy rules,

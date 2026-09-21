@@ -46,7 +46,7 @@ describe("Apify webhook persistence", () => {
       startedBy: userId,
       companyId,
     });
-    await t.mutation(internal.webhooks.storeRightmoveData, {
+    await t.mutation(internal.webhooks.completeApifyRun, {
       runId: "run-other",
       status: "SUCCEEDED",
       items: [JSON.stringify({ id: "x1", address: "Not a property", price: 1 })],
@@ -54,7 +54,7 @@ describe("Apify webhook persistence", () => {
     const otherRun = await t.run(async (ctx) =>
       ctx.db.query("apifyRuns").withIndex("by_runId", (q) => q.eq("runId", "run-other")).unique()
     );
-    expect(otherRun).toMatchObject({ status: "COMPLETED", propertiesScraped: 0 });
+    expect(otherRun).toMatchObject({ status: "COMPLETED" });
 
 
     await t.mutation(internal.webhooks.updateRunStatus, { runId: "run-1", status: "RUNNING" });

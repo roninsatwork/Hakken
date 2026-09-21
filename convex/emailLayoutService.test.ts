@@ -5,7 +5,7 @@ function buildContent(overrides: Partial<EmailContent> = {}): EmailContent {
   return {
     kind: "System health",
     verdict: "Two things need you.",
-    lede: "The Rightmove Agent failed six times overnight.",
+    lede: "The Research Agent failed six times overnight.",
     stats: [
       { label: "Agent errors", value: "4", tone: "critical" },
       { label: "Failed tool calls", value: "2", tone: "warning" },
@@ -17,7 +17,7 @@ function buildContent(overrides: Partial<EmailContent> = {}): EmailContent {
         badge: "4 x same fault",
         severity: "critical",
         body: "A function call is missing its thought_signature.",
-        meta: "Rightmove Agent - last 16:41",
+        meta: "Research Agent - last 16:41",
         fix: "Open the run and check the provider configuration.",
       },
     ],
@@ -374,7 +374,7 @@ describe("renderEmail — branding", () => {
   test("falls back to a preheader when none is given", () => {
     const { html } = renderEmail(buildContent({ preheader: undefined }));
 
-    expect(html).toContain("The Rightmove Agent failed six times overnight.");
+    expect(html).toContain("The Research Agent failed six times overnight.");
   });
 });
 

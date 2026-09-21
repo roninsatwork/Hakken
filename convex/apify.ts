@@ -54,7 +54,7 @@ async function syncApifyRunStatus(runId: string) {
  * one generic tool rather than as a menu of hard-coded jobs. Which actor runs
  * is configuration, set by an admin when the tool is added; what it is fed is
  * the agent's decision. That split is the safety story — the same one the
- * "Call an API" tool uses — and it is what keeps a single Rightmove use case
+ * "Call an API" tool uses — and it is what keeps a single scraper use case
  * out of a platform meant to be the baseline for other products.
  */
 export const startApifyActorInternal = internalAction({
@@ -102,7 +102,7 @@ export const startApifyActorInternal = internalAction({
  * so the agent reads them itself and nothing job-specific has to live here.
  *
  * Search and describe are one tool on purpose. An agent asked to "collect from
- * Rightmove" has a name, not an id, and splitting them would make it guess an
+ * Research" has a name, not an id, and splitting them would make it guess an
  * id in order to look one up.
  */
 export const describeApifyActorInternal = internalAction({
@@ -260,7 +260,7 @@ export const fetchDatasetAndStore = internalAction({
     const items = await listDatasetItems(apifyToken, args.datasetId);
 
     // Call internal mutation to store items
-    await ctx.runMutation(internal.webhooks.storeRightmoveData, {
+    await ctx.runMutation(internal.webhooks.completeApifyRun, {
       runId: args.runId,
       status: args.status,
       items: items.map(item => JSON.stringify(item)),
@@ -299,7 +299,7 @@ async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
   if (!run.defaultDatasetId) throw appError("NOT_FOUND", "Apify run has no results to read.");
   const items = await listDatasetItems(token, run.defaultDatasetId);
 
-  await ctx.runMutation(internal.webhooks.storeRightmoveData, {
+  await ctx.runMutation(internal.webhooks.completeApifyRun, {
     runId,
     status: "SUCCEEDED",
     items: items.map((item) => JSON.stringify(item)),

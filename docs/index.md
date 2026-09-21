@@ -71,7 +71,6 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Agent Observability Plan](./plans/active/agent-observability-plan.md) — active observability plan for agent overview, job detail, raw logs, and linked run evidence.
 - [Agent Autonomy And Approvals Plan](./plans/active/agent-autonomy-and-approvals-plan.md) — active plan for autonomous tool execution, approval queues, and approval expiry behaviour.
 - [Pressing Run Should Actually Run The Agent](./plans/active/agents-run-properly-plan.md) — active plan/history for making manual and scheduled agent runs use the real tool-capable agent loop.
-- [Rightmove Agent Execution Plan](./plans/active/rightmove-agent-execution-plan.md) — active plan for making the Rightmove Agent the single execution path for property collection.
 - [Company AI Readiness Rebuild Plan](./plans/active/company-ai-readiness-rebuild-plan.md) — active plan for replacing the company AI readiness screen and its score/signal model.
 - [Company And Agent Model Defaults Plan](./plans/active/company-and-agent-model-defaults-plan.md) — active plan for aligning company and agent model-default controls with the platform model-defaults screen.
 - [Public Website Plan](./plans/active/public-website-plan.md) — active plan for the pre-login public website, including home, platform, showcase, trust, and contact work.

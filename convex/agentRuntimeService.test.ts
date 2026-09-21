@@ -219,7 +219,7 @@ describe("agentRuntimeService", () => {
       const turns = buildToolInteractionTurns([
         {
           name: "run_scraper_job",
-          args: { actorId: "rightmove" },
+          args: { actorId: "research" },
           responsePayload: { status: "success" },
           thoughtSignature: "signature-one",
         },
@@ -233,7 +233,7 @@ describe("agentRuntimeService", () => {
 
       expect(turns[0].parts).toEqual([
         {
-          functionCall: { name: "run_scraper_job", args: { actorId: "rightmove" } },
+          functionCall: { name: "run_scraper_job", args: { actorId: "research" } },
           thoughtSignature: "signature-one",
         },
         {

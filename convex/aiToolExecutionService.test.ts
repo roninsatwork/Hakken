@@ -460,16 +460,16 @@ describe("ai tool execution service", () => {
     await executeRegisteredTool({
       ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
       handlerMapping: "apify.actor.describe",
-      args: { search: "rightmove property listings" },
+      args: { search: "public company records" },
       companyId: "company_1" as never,
       userId: "user_1" as never,
     });
 
-    // Searching by name, because an agent asked to collect from Rightmove has
+    // Searching by name, because an agent asked to run a scraper job has
     // a name and not an id.
     expect(runAction).toHaveBeenCalledWith(
       expect.anything(),
-      { search: "rightmove property listings" }
+      { search: "public company records" }
     );
 
     runAction.mockClear();

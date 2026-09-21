@@ -957,7 +957,7 @@ export default defineSchema({
      * The run screen used to head itself with the whole objective, set in the
      * page-title style — for the research agent that is a paragraph of
      * instructions, three lines of large bold text where a name should be. One
-     * agent, Rightmove collection, had a short title because that screen
+     * agent, Research collection, had a short title because that screen
      * special-cased it; everything else was left wearing its orders. Anthony,
      * 2026-08-03: *"what is this and why is the font so large."*
      *
@@ -3118,7 +3118,6 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
-    propertiesScraped: v.optional(v.number()),
   }).index("by_runId", ["runId"])
     .index("by_company", ["companyId", "startedAt"]),
 

@@ -1,12 +1,9 @@
 /**
- * Apify jobs the platform itself understands.
+ * Apify job helpers that must run outside Node.
  *
  * Apify is exposed to agents as one generic tool: an admin configures which job
- * a tool runs, and the platform never learns what any of them do. This file is
- * the one deliberate exception — the Rightmove listings scraper, whose results
- * the Properties screen knows how to turn into property records.
- *
- * It lives on its own rather than beside the Apify actions because the webhook
+ * a tool runs, and the platform never learns what any of them do. This file
+ * lives on its own rather than beside the Apify actions because the webhook
  * that stores results needs it too, and that webhook does not run in Node.
  */
 

@@ -243,7 +243,7 @@ describe("finding something in a register that builds itself", () => {
 
   const entries = [
     make({ id: "a", name: "Comax - Prospect Search Agent", purpose: "Finds prospects", risk: "UNRATED" }),
-    make({ id: "b", name: "Rightmove Agent", ownerName: "", missing: ["Nobody is accountable for this."] }),
+    make({ id: "b", name: "Research Agent", ownerName: "", missing: ["Nobody is accountable for this."] }),
     make({ id: "c", name: "Main website bot", kind: "WIDGET", risk: "HIGH", model: "fast-mini-preview" }),
   ];
 
@@ -252,7 +252,7 @@ describe("finding something in a register that builds itself", () => {
   });
 
   test("searches the name", () => {
-    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "rightmove" });
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "research" });
 
     expect(found.map((entry) => entry.id)).toEqual(["b"]);
   });
@@ -270,7 +270,7 @@ describe("finding something in a register that builds itself", () => {
   });
 
   test("ignores case and stray spacing, because people type how they type", () => {
-    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "  RIGHTMOVE " })).toHaveLength(1);
+    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "  RESEARCH " })).toHaveLength(1);
   });
 
   test("filters by rating", () => {

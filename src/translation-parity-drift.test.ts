@@ -46,7 +46,6 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['admin.companies.modules.postureStudio.name', 'product name'],
     ['admin.overview.providers.names.google', 'a provider brand name'],
     ['dashboard.hosting.items.0.title', 'a provider brand name'],
-    ['admin.workflows.designer.drawer.dbIndexes.rightmoveId', 'a brand name plus an abbreviation'],
     ['admin.workflows.designer.drawer.standardTab', '"Standard" is written the same way in Italian'],
     ['admin.settings.appearance.fonts.inter', 'a typeface name'],
     ['admin.settings.appearance.fonts.jetbrains', 'a typeface name'],

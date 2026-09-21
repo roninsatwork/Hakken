@@ -60,7 +60,7 @@ function analytics(overrides: Record<string, unknown> = {}) {
     ],
     statusCounts: { QUEUED: 0, RUNNING: 1, PENDING_APPROVAL: 3, SUCCESS: 600, FAILED: 94, CANCELLED: 0 },
     toolStats: [
-      { handlerMapping: "rightmove.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
+      { handlerMapping: "research.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
     ],
     ...overrides,
   };
@@ -95,7 +95,7 @@ describe("AgentObservabilityPage", () => {
       const name = getFunctionName(queryFn);
       if (name === "agentRuns:getAnalyticsForAgent") return analyticsFixture as ReturnType<typeof useQuery>;
       if (name === "aiTools:getTools") {
-        return [{ handlerMapping: "rightmove.search", name: "Property search" }] as ReturnType<typeof useQuery>;
+        return [{ handlerMapping: "research.search", name: "Property search" }] as ReturnType<typeof useQuery>;
       }
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
@@ -156,7 +156,7 @@ describe("AgentObservabilityPage", () => {
     renderPage();
 
     expect(screen.getByText("Property search")).toBeInTheDocument();
-    expect(screen.queryByText("rightmove.search")).not.toBeInTheDocument();
+    expect(screen.queryByText("research.search")).not.toBeInTheDocument();
   });
 
   it("reads a job's status and trigger in ordinary words", () => {

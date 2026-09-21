@@ -128,7 +128,7 @@ describe("vertex provider service", () => {
         candidates: [{
           content: {
             parts: [{
-              functionCall: { name: "run_scraper_job", args: { actorId: "rightmove" } },
+              functionCall: { name: "run_scraper_job", args: { actorId: "research" } },
               thoughtSignature: "signature-one",
             }],
           },
@@ -155,7 +155,7 @@ describe("vertex provider service", () => {
     expect(response.functionCalls).toEqual([
       {
         name: "run_scraper_job",
-        args: { actorId: "rightmove" },
+        args: { actorId: "research" },
         thoughtSignature: "signature-one",
       },
       {

@@ -140,7 +140,7 @@ describe("Agent log outcomes", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const agentId = await t.run(async (ctx) =>
       await ctx.db.insert("agents", {
-        name: "Rightmove Agent",
+        name: "Research Agent",
         modelId: "test-model",
         thinkingMode: false,
         isActive: true,

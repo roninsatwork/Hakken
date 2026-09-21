@@ -125,7 +125,7 @@ function observabilityAnalyticsFixture(lookbackDays: number) {
     modelStats: [],
     versionStats: [],
     toolStats: [
-      { handlerMapping: "rightmove.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 1_450 },
+      { handlerMapping: "research.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 1_450 },
       { handlerMapping: "records.save", calls: 964, successes: 964, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 120 },
       { handlerMapping: "email.send", calls: 212, successes: 210, failures: 0, approvalsRequired: 3, denied: 0, cancelled: 0, notImplemented: 2, typicalMs: 640 },
       { handlerMapping: "postcode.lookup", calls: 148, successes: 148, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0, typicalMs: 85 },
@@ -1055,9 +1055,9 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       {
         _id: "tool_e2e",
         _creationTime: now,
-        name: "Rightmove Connector",
+        name: "Research Connector",
         description: "Property search connector",
-        handlerMapping: "rightmove.search",
+        handlerMapping: "research.search",
         requiredRole: "ADMIN",
         inputSchema: '{"type":"object","properties":{}}',
         sideEffectLevel: "READ",
@@ -1514,9 +1514,9 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
         {
           _id: "tool_e2e",
           _creationTime: now,
-          name: "Rightmove Connector",
+          name: "Research Connector",
           description: "Property search connector",
-          handlerMapping: "rightmove.search",
+          handlerMapping: "research.search",
           requiredRole: "ADMIN",
           inputSchema: '{"type":"object","properties":{}}',
           sideEffectLevel: "READ",
