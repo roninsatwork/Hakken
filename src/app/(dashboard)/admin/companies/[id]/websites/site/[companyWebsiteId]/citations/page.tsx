@@ -9,10 +9,12 @@ import { Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
+import { ResultsSwitcher } from "../ResultsSwitcher";
 
 /**
  * Where this website gets named inside AI answers.
@@ -34,14 +36,12 @@ import useDebounce from "@/src/hooks/useDebounce";
 export default function WebsiteCitationsPage() {
   const t = useTranslations("admin.websiteCitations");
   const params = useParams();
-  const companyId = params.id as string;
   const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(searchTerm, 400);
 
-  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
   const citations = useQuery(api.seoCitationReports.listCompanyWebsiteCitations, {
     companyWebsiteId,
     searchTerm: debouncedSearch,
@@ -49,28 +49,15 @@ export default function WebsiteCitationsPage() {
     pageSize: TABLE_PAGE_SIZE,
   });
 
-  const backHref = `/admin/companies/${companyId}/websites/site/${companyWebsiteId}`;
-
-  // Literal keys, one per engine, because the translation keys are typed and a
-  // template over the union is not one of them.
-  const engineLabel = (engine: string) => {
-    if (engine === "chatgpt") return t("engines.chatgpt");
-    if (engine === "claude") return t("engines.claude");
-    if (engine === "gemini") return t("engines.gemini");
-    if (engine === "perplexity") return t("engines.perplexity");
-    return engine;
-  };
-
-  if (website === null) {
-    return <p className="py-12 text-center text-[13px] text-muted">{t("notFound")}</p>;
-  }
+  // The engine names live in one component; this screen reads them from it.
+  const engineLabel = useEngineLabel();
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <DetailHeader
-        back={{ label: t("back"), href: backHref }}
-        icon={<Sparkles className="h-6 w-6 text-brand" />}
-        title={website?.displayHost ?? ""}
+    <div className="flex w-full flex-col gap-5">
+      <ResultsSwitcher active="answers" />
+      <PageHeader
+        icon={<Sparkles className="h-5 w-5 text-brand" />}
+        title={t("title")}
         description={t("subtitle")}
       />
 

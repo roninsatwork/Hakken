@@ -1415,36 +1415,21 @@
       "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for."
     },
     "companyWebsiteDetail": {
-      "back": "Back to Websites",
       "loading": "Loading website...",
       "notFound": "Website not found",
-      "subtitle": "How often this client pulls it, where from, and what it is producing for them.",
-      "trackedSubtitle": "A site this company watches: what it is compared with, and how it is collected.",
-      "collecting": "Collecting",
-      "notCollecting": "Not collecting",
-      "editSettings": "Change",
-      "settingsTitle": "Schedule for this website",
-      "settingsSubtitle": "By default this website follows its company's schedule. Give it its own only when it needs watching more or less closely than the rest.",
+      "settingsTitle": "How often, and from where",
+      "settingsSubtitle": "The two settings that differ between clients watching one site. By default it follows its company's schedule; give it its own only when it needs watching more or less closely than the rest.",
       "collectionLabel": "Collect data for this website",
       "errors": {
         "settingsFailed": "Could not save these settings. Try again."
       },
-      "noSchedule": "No schedule",
       "nextRun": "Next run {when}",
-      "sourceWebsite": "set on this website",
-      "sourceCompany": "inherited from {company}",
-      "sourceNone": "nothing scheduled",
       "overrideLabel": "Use its own schedule",
       "overrideDescription": "Off follows {company}, and moves whenever that changes.",
       "collectionDescription": "Off stops this website alone, leaving the rest of the company collecting.",
       "location": {
         "title": "Where you watch from",
-        "subtitle": "Search results differ by place. This is the location used when collecting rankings and AI citations for this website, for this client only.",
-        "save": "Save location",
-        "saved": "Saved",
-        "errors": {
-          "saveFailed": "Could not save this location. Try again."
-        }
+        "subtitle": "Search results differ by place. This is the location used when collecting rankings and AI citations for this website, for this client only."
       },
       "pairing": {
         "title": "Watched against",
@@ -1487,21 +1472,208 @@
       "summaryOwn": "{host} and its competitors are pulled {schedule}.",
       "summaryFollows": "{host} follows {company}: {schedule}.",
       "nothingScheduled": "Nothing is pulled for {host}.",
-      "askedLive": "Every engine is asked live, which is four times cheaper than queueing — so there is no method to choose.",
-      "tracked": {
-        "title": "Tracked on the website record",
-        "subtitle": "Searches, questions and rivals belong to the website, not to a client — one list, asked once, read by everyone watching it. Editing any of them changes what every client sees.",
-        "keywords": "Searches it is checked against",
-        "questions": "Questions put to the AI engines",
-        "competition": "Who it competes with"
+      "askedLive": "Every engine is asked live, which is four times cheaper than queueing — so there is no method to choose."
+    },
+    "siteView": {
+      "loading": "Loading website...",
+      "notFound": "That website is no longer held by this company.",
+      "back": "Back to Websites",
+      "priceUnknown": "cost known after the first paid pull",
+      "settings": "Settings",
+      "record": "Website record",
+      "notCollecting": "Not collecting",
+      "collectingNext": "{schedule} · next {when}",
+      "collectedWith": "Collected with {host}",
+      "watchedFrom": "Watched from {place}",
+      "tracking": "tracking {searches, plural, =0 {no searches} one {# search} other {# searches}}, {questions, plural, =0 {no questions} one {# question} other {# questions}} and {rivals, plural, =0 {no rivals} one {# rival} other {# rivals}}",
+      "perMonth": "{cost} a month",
+      "perMonthShort": "{cost}/mo",
+      "trackedPaired": "Watched against {host}, and collected with it — the same day, from the same place.",
+      "trackedAlone": "Watched on its own, from {place}.",
+      "trackingOwnedOnly": "A tracked site is compared on the lists of the site it is watched against.",
+      "charged": "Everything on these three lists is bought on every collection — {cost} a month as it stands, at what one pull costs; shared pulls cost less.",
+      "chargedUnknown": "Everything on these three lists is bought on every collection. The monthly total is known once each kind of pull has been paid for at least once.",
+      "tabs": {
+        "brief": "Brief",
+        "tracking": "Tracking",
+        "results": "Results",
+        "overview": "Overview",
+        "rankings": "Rankings"
+      },
+      "lists": {
+        "searches": "Searches",
+        "questions": "Questions",
+        "competitors": "Competitors"
+      },
+      "overview": {
+        "title": "How it is watched",
+        "subtitle": "Somebody else's site this company watches. It has no lists of its own here — it is compared on the searches and questions of the site it is watched against.",
+        "compare": "See how it compares on {host}",
+        "alone": "Not paired, so it is collected on its own settings. Pair it with one of this company's sites to compare the two."
+      },
+      "brief": {
+        "title": "How it is doing",
+        "lastCollected": "Last collected {when}. Every card opens the list it counts.",
+        "neverCollected": "Not collected yet. Every card opens the list it counts.",
+        "searches": "Searches",
+        "questions": "Questions",
+        "rivals": "Competitors",
+        "brands": "Brand names",
+        "searchesEmpty": "Nothing checked yet — add the first search you want them found for.",
+        "questionsEmpty": "Nothing asked yet — without a question the AI answers stay empty however long this runs.",
+        "rivalsEmpty": "None tracked yet",
+        "brandsFew": "One name only — a short word matches text about something else",
+        "brandsLine": "What an answer must say to count as this site",
+        "shared": "shared",
+        "costNote": "Prices are what DataForSEO has charged for each kind of pull, times how often this site is collected. A pull another client already paid for costs this one nothing.",
+        "parts": {
+          "slipping": "{count} slipping",
+          "pageOne": "{count} on page one",
+          "offPageOne": "{count} not on page one yet",
+          "neverRanked": "{count} never ranked",
+          "notFound": "{count} not found yet",
+          "tooNew": "{count} too new to say",
+          "notChecked": "{count} not checked yet",
+          "warned": "{count} warned against",
+          "earning": "{count, plural, one {# earning its keep} other {# earning their keep}}",
+          "thin": "{count} thin",
+          "neverLanded": "{count} never landed",
+          "notAsked": "{count} not asked yet",
+          "ahead": "{count} ahead of you",
+          "level": "{count} level with you",
+          "behind": "{count} behind you",
+          "goneQuiet": "{count} gone quiet",
+          "notCompared": "{count} not compared yet",
+          "suggested": "{count, plural, one {# named in the answers, not on your list} other {# named in the answers, not on your list}}"
+        }
       },
       "results": {
-        "title": "What came back, for this client",
-        "subtitle": "The pull is shared; what is read out of it is scoped to this client's place and holdings.",
-        "keywords": "Where it ranks",
-        "citations": "Where it is named in AI answers",
-        "fanOut": "What the engines searched"
-      }
+        "label": "Results",
+        "answers": "AI answers",
+        "fanOut": "What the engines searched",
+        "rankings": "Rankings"
+      },
+      "searches": {
+        "title": "Searches it is checked for",
+        "subtitle": "One Google results page per search, from {place}, every time this site is collected. The list is {host}'s, shared with every client watching it.",
+        "addLabel": "A search somebody types into Google",
+        "addPlaceholder": "branding agency leeds",
+        "add": "Track it",
+        "addHint": "One paid results page per search per collection — and it measures every rival on the page for free.",
+        "searchPlaceholder": "Search these searches...",
+        "noMatch": "No search matches that.",
+        "empty": "No searches yet. Add the first one above.",
+        "searchColumn": "Search",
+        "notCheckedYet": "not checked yet",
+        "checkedFor": "checked for {weeks, plural, =0 {under a week} one {# week} other {# weeks}}",
+        "positionColumn": "Position",
+        "notOnPage": "not on the page",
+        "up": "up",
+        "down": "down",
+        "intentColumn": "What they want",
+        "verdictColumn": "Verdict",
+        "verdicts": {
+          "NOT_CHECKED": "Not checked yet",
+          "TOO_NEW": "Too new to say",
+          "TOP_THREE": "Top 3 · earning its keep",
+          "PAGE_ONE": "Page one · earning its keep",
+          "SLIPPING": "Slipping — look at the page",
+          "RANKING": "Ranking, not yet page one",
+          "NOT_FOUND": "Not found yet",
+          "NEVER_RANKED": "Never ranked"
+        },
+        "paused": "Paused",
+        "costColumn": "A month",
+        "actionsColumn": "Actions",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove search",
+        "thresholds": "Slipping is down more than {slipping} places since the check before. Never ranked is {neverWeeks} weeks without appearing. Too new is under {newWeeks} weeks.",
+        "errors": {
+          "addFailed": "Could not add that search. Try again.",
+          "toggleFailed": "Could not change that search. Try again.",
+          "removeFailed": "Could not remove that search. Try again."
+        }
+      },
+      "questions": {
+        "title": "Questions put to the AI engines",
+        "subtitle": "Asked from {place} every time this site is collected. The list is {host}'s, shared with every client watching it.",
+        "addLabel": "A question somebody would actually ask an AI",
+        "addPlaceholder": "who is the best branding agency in Leeds",
+        "add": "Ask it",
+        "addHint": "{count, plural, =0 {Choose at least one engine.} one {One paid answer per collection.} other {# paid answers per collection — one per engine.}}",
+        "searchPlaceholder": "Search questions...",
+        "noMatch": "No question matches that.",
+        "empty": "No questions yet. Ask the first one above.",
+        "questionColumn": "Question",
+        "notAskedYet": "not asked yet",
+        "runningFor": "running {weeks, plural, =0 {under a week} one {# week} other {# weeks}}",
+        "namedColumn": "Named",
+        "namedOf": "{named} of {asked}",
+        "enginesColumn": "Asked of",
+        "verdictColumn": "Verdict",
+        "verdicts": {
+          "NOT_ASKED": "Not asked yet",
+          "TOO_NEW": "Too new to say",
+          "WARNED": "Warned against — read it",
+          "NEVER_LANDED": "Never landed",
+          "THIN": "Thin",
+          "EARNING": "Earning its keep"
+        },
+        "paused": "Paused",
+        "costColumn": "A month",
+        "actionsColumn": "Actions",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove question",
+        "thresholds": "Named counts every answer, including the ones that named nobody we know. Earning its keep is named in at least half. Never landed is {neverWeeks} weeks without being named once. Too new is under {newWeeks} weeks.",
+        "errors": {
+          "addFailed": "Could not add that question. Try again.",
+          "toggleFailed": "Could not change that question. Try again.",
+          "removeFailed": "Could not remove that question. Try again."
+        }
+      },
+      "competitors": {
+        "title": "Competitors this company watches",
+        "subtitle": "Each is collected on {host}'s day, from its place, and compared on {host}'s own searches — numbers pulled in different weeks are not a comparison.",
+        "addLabel": "A rival's website",
+        "addPlaceholder": "rival.co.uk",
+        "add": "Track it",
+        "addHint": "This company's own choice. Another client's rivals never reach this list.",
+        "empty": "No competitors tracked yet.",
+        "rivalColumn": "Competitor",
+        "lastSeen": "last seen {day}",
+        "notSeenYet": "not seen yet",
+        "beatsColumn": "Beats you on",
+        "beatsOf": "{beats} of {of} searches",
+        "answersColumn": "In AI answers",
+        "namedOf": "{named} of {of}",
+        "verdictColumn": "Verdict",
+        "verdicts": {
+          "TOO_NEW": "Too new to say",
+          "AHEAD": "Ahead of you",
+          "LEVEL": "Level with you",
+          "BEHIND": "Behind you",
+          "GONE_QUIET": "Gone quiet",
+          "NOT_CHECKED": "Not compared yet"
+        },
+        "costColumn": "A month",
+        "actionsColumn": "Actions",
+        "stop": "Stop tracking",
+        "thresholds": "Ahead means above this site on more of its searches than it is above them. Gone quiet is {quietWeeks} weeks without appearing on any page or in any answer. Too new is under {newWeeks} weeks.",
+        "namedTitle": "Named in your answers, not on your list",
+        "namedSubtitle": "Sites the AI engines keep putting forward when asked this site's questions. Free to know — the answers named them anyway — and it refills every collection.",
+        "namedEmpty": "Nobody the answers name is missing from your list.",
+        "siteColumn": "Website",
+        "timesColumn": "Named",
+        "namedTimes": "{times, plural, one {once} other {# times}} · last {day}",
+        "track": "Track it",
+        "errors": {
+          "addFailed": "Could not track that website. Try again.",
+          "stopFailed": "Could not stop tracking that website. Try again."
+        }
+      },
+      "priceUnknownShort": "not priced yet"
     },
     "companyDataCollection": {
       "title": "Collection schedule",
@@ -5254,9 +5426,8 @@
       "pullsColumn": "Pulls · 30d"
     },
     "websiteCitations": {
-      "back": "Back to the website",
-      "notFound": "That website is no longer held by this company.",
       "subtitle": "Where this website gets named inside AI answers, and who else was named.",
+      "title": "Where it is named in AI answers",
       "searchPlaceholder": "Search by question or by who was named...",
       "empty": "No answers collected yet. Add a question on the website, and the next collection will ask it.",
       "noMatch": "Nothing matches that search.",
@@ -5272,21 +5443,15 @@
       "more": "+{count} more",
       "citedAsSource": "Cited as a source",
       "namedInAnswer": "Named in the answer",
-      "engines": {
-        "chatgpt": "ChatGPT",
-        "perplexity": "Perplexity",
-        "gemini": "Gemini",
-        "claude": "Claude"
-      },
       "couldNotAsk": "Could not be asked",
       "recommendedAt": "Recommended, {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "warnedAgainst": "Warned against",
       "chipRecommended": "✓"
     },
     "websiteKeywords": {
-      "back": "Back to the website",
-      "notFound": "That website is no longer held by this company.",
       "subtitle": "The searches this website ranks for, best position first.",
+      "title": "Where it ranks",
+      "subtitlePlace": "The searches this website ranks for from {place}, best position first.",
       "searchPlaceholder": "Search these terms...",
       "empty": "Nothing collected yet. The next collection reads what this website ranks for.",
       "noMatch": "No search matches that.",
@@ -5304,9 +5469,8 @@
       }
     },
     "websiteFanOut": {
-      "back": "Back to the website",
-      "notFound": "That website is no longer held by this company.",
       "subtitle": "The searches the AI engines run when asked this website's questions.",
+      "title": "What the engines searched",
       "searchPlaceholder": "Search these searches...",
       "empty": "Nothing yet. The next collection records what the engines searched for.",
       "noMatch": "No search matches that.",
@@ -5321,6 +5485,13 @@
         "BRANDED": "Looking for a business",
         "IRRELEVANT": "Nothing to do with it",
         "OTHER": "Too vague to tell"
+      },
+      "buyingUntracked": "{count, plural, =0 {No untracked buying searches} one {1 buying search you don't track} other {# buying searches you don't track}}",
+      "trackColumn": "Track",
+      "track": "Track it",
+      "alreadyTracked": "already tracked",
+      "errors": {
+        "trackFailed": "Could not track that search. Try again."
       }
     }
   },

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation } from "./_generated/server";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { recomputeSearchStats } from "./websiteTrackingStats";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
@@ -36,38 +37,30 @@ const MAX_ROWS_PER_CHECK = 400;
 const MAX_TRACKERS = 300;
 
 /**
- * Rows for one site, one search and one day, across every place it is watched
- * from. Several places are normal; more than this means something upstream is
- * writing duplicates.
+ * Rows for one site, one search, one place and one day. It should only ever
+ * find one; the ceiling is the assertion that nothing upstream is writing
+ * duplicates.
  */
-const SAME_DAY_LIMIT = 25;
-
-/** Absent reads as the registry default: every row from before places were passed. */
-export function positionPlace(row: { locationCode?: number }): number {
-  return row.locationCode ?? DEFAULT_LOCATION_CODE;
-}
+const SAME_DAY_LIMIT = 5;
 
 /**
- * Remove an earlier row for the same site, search, day and place.
+ * Remove an earlier row for the same site, search, place and day.
  *
  * The same search measured twice on one day from one place is one fact, so
  * the later measurement replaces the earlier. From another place it is a
- * different fact and is left alone — which is why this filters by place
- * rather than clearing the day.
+ * different fact, and the index this reads never reaches it.
  */
 export async function replaceSameDayPosition(
   ctx: MutationCtx,
   key: { websiteId: Id<"websites">; keyword: string; day: string; locationCode?: number },
 ): Promise<void> {
-  const place = positionPlace(key);
+  const place = key.locationCode ?? DEFAULT_LOCATION_CODE;
   const sameDay = await ctx.db
     .query("seoKeywordPositions")
-    .withIndex("by_website_keyword_day", (q) =>
-      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("day", key.day))
+    .withIndex("by_website_keyword_place_day", (q) =>
+      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("locationCode", place).eq("day", key.day))
     .take(SAME_DAY_LIMIT);
-  for (const row of sameDay) {
-    if (positionPlace(row) === place) await ctx.db.delete(row._id);
-  }
+  for (const row of sameDay) await ctx.db.delete(row._id);
 }
 
 export const writeKeywordCheck = internalMutation({
@@ -132,6 +125,11 @@ export const writeKeywordCheck = internalMutation({
         locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
         pullId: args.pullId,
         createdAt: now,
+      });
+      await recomputeSearchStats(ctx, {
+        websiteId,
+        keyword: args.keyword,
+        locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
       });
     }
     return null;

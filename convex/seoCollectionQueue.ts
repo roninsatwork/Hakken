@@ -7,6 +7,7 @@ import {
   seoBackoffMs,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
+import { recordOperationCost } from "./websiteTrackingStats";
 import type { MutationCtx } from "./_generated/server";
 
 /**
@@ -241,6 +242,9 @@ export const settleSeoSend = internalMutation({
     });
 
     await countSettled(ctx, row, status, args.costUsd);
+    // What this operation really costs, for the per-row prices on the Tracking
+    // screen. The sandbox charges nothing and says nothing about the price.
+    if (!args.sandbox) await recordOperationCost(ctx, row.operationId, args.costUsd);
     return null;
   },
 });

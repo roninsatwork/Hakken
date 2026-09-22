@@ -28,6 +28,8 @@ export const listWebsiteFanOutQueries = superAdminQuery({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
     searchTerm: v.optional(v.string()),
+    /** Only buying searches this site does not track — the cheapest new keyword ideas, already paid for. */
+    buyingUntracked: v.optional(v.boolean()),
     page: v.number(),
     pageSize: v.number(),
   },
@@ -41,9 +43,13 @@ export const listWebsiteFanOutQueries = superAdminQuery({
       timesSeen: v.number(),
       lastSeenDay: v.string(),
       intent: v.union(v.string(), v.null()),
+      /** Already on this site's list of searches, so "track it" has nothing to do. */
+      tracked: v.boolean(),
     })),
     totalCount: v.number(),
     totalPages: v.number(),
+    /** How many buying searches nobody tracks, for the filter that shows them. */
+    buyingUntrackedCount: v.number(),
   }),
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
@@ -74,11 +80,17 @@ export const listWebsiteFanOutQueries = superAdminQuery({
       query: string;
     }>();
 
+    let read = 0;
     for (const prompt of prompts) {
+      // A ceiling on the whole read, not only per question: two hundred
+      // questions at five hundred rows each was a hundred thousand documents
+      // for one screen.
+      if (read >= MAX_ROWS_READ) break;
       const rows = await ctx.db
         .query("promptFanOutQueries")
         .withIndex("by_prompt", (q) => q.eq("prompt", prompt.prompt))
-        .take(MAX_ROWS_PER_PROMPT);
+        .take(Math.min(MAX_ROWS_PER_PROMPT, MAX_ROWS_READ - read));
+      read += rows.length;
 
       for (const row of rows) {
         const key = `${prompt.prompt}::${row.query}`;
@@ -106,15 +118,20 @@ export const listWebsiteFanOutQueries = superAdminQuery({
       .filter((row) => !term || includesSearchTerm(row.queryText, term) || includesSearchTerm(row.prompt, term))
       // The searches an engine keeps returning to are the ones worth a page,
       // so the most persistent come first.
-      .sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay));
+      .sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay))
+      .slice(0, MAX_ROWS_JUDGED);
 
-    const paged = paginateItems(matching, args.page, args.pageSize);
-
-    const withIntent = await Promise.all(paged.data.map(async (row) => {
-      const intent = await ctx.db
-        .query("seoKeywordIntents")
-        .withIndex("by_keyword", (q) => q.eq("keyword", row.query))
-        .unique();
+    // Intent and "already tracked" for every row, not just the page: the
+    // filter for untracked buying searches has to know both before it can cut
+    // a page. Bounded by the ceiling above; each is one point lookup.
+    const judged = await Promise.all(matching.map(async (row) => {
+      const [intent, tracked] = await Promise.all([
+        ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", row.query)).unique(),
+        ctx.db
+          .query("websiteKeywords")
+          .withIndex("by_website_keyword", (q) => q.eq("websiteId", companyWebsite.websiteId).eq("keyword", row.query))
+          .first(),
+      ]);
       return {
         _id: row._id,
         queryText: row.queryText,
@@ -123,10 +140,15 @@ export const listWebsiteFanOutQueries = superAdminQuery({
         timesSeen: row.timesSeen,
         lastSeenDay: row.lastSeenDay,
         intent: intent?.intent ?? null,
+        tracked: Boolean(tracked),
       };
     }));
 
-    return { ...paged, data: withIntent };
+    const isBuyingUntracked = (row: (typeof judged)[number]) => row.intent === "BUYING" && !row.tracked;
+    const shown = args.buyingUntracked ? judged.filter(isBuyingUntracked) : judged;
+    const paged = paginateItems(shown, args.page, args.pageSize);
+
+    return { ...paged, buyingUntrackedCount: judged.filter(isBuyingUntracked).length };
   },
 });
 
@@ -135,3 +157,9 @@ const MAX_PROMPTS = 200;
 
 /** Fan-out rows read per question, across every engine and place. */
 const MAX_ROWS_PER_PROMPT = 500;
+
+/** Fan-out rows read for one screen, across every question. */
+const MAX_ROWS_READ = 4_000;
+
+/** Merged searches judged for one screen: the most persistent, which is what a page shows. */
+const MAX_ROWS_JUDGED = 1_000;

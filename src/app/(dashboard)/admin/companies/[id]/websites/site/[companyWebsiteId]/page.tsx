@@ -1,146 +1,199 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Globe, MessageSquare, Search, Sparkles, Swords } from "lucide-react";
+import { ArrowRight, Compass, Link2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { formatDate } from "@/src/lib/dates";
 import { TrackedPairing } from "./TrackedPairing";
-import { WebsiteScheduleOverride } from "./WebsiteScheduleOverride";
-import { WatchLocation } from "./WatchLocation";
+import { formatMonthly, siteBase } from "./siteView";
 
 /**
- * One of a company's websites: what this client decides about it, and what it
- * is producing for them.
+ * The Brief: how this site is doing, at a glance, and where to go next.
  *
- * **Everything this page used to configure has moved to the website record.**
- * It held a competitor table and a question list, both of which were per-client
- * copies of things that are true of the host — the same rival named by three
- * clients was three rows, the same question three purchases. They live on the
- * website now, shared by every client attached to it.
+ * Four cards, one per thing this client pays to watch, each with its count,
+ * what it costs a month and how it is doing in words — "3 on page one, 1 never
+ * ranked" rather than a percentage, because the words say what to do. Every
+ * card opens the list it summarises. The moves drawn from each collection sit
+ * above them once stage 3 lands.
  *
- * What is left is what genuinely differs between two companies watching one
- * host: how often they pull it, and where from. Those are the two settings that
- * pass the test the others failed.
+ * **Day one is the same screen with nothing in it.** No setup wizard and no
+ * progress bar — Anthony, 2026-09-22: *"setting up keywords, prompts and
+ * competitors is not a one time job."* A site with nothing tracked says what
+ * the first search or question would do, in the card it would fill.
  *
- * It is also the density fix. This was a schedule, a place, two searchable
- * tables, an add form and three links down one scroll — Anthony, 2026-09-22:
- * *"too dense with information and as a user i have no idea what to do."*
+ * A tracked site has no lists of its own, so this route is its overview
+ * instead: what it is compared with, and how it is collected.
  */
-export default function CompanyWebsiteDetailPage() {
-  const t = useTranslations("admin.companyWebsiteDetail");
+export default function CompanySiteBriefPage() {
+  const t = useTranslations("admin.siteView");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
 
-  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
-
-  if (website === undefined) {
-    return <p className="text-[13px] text-secondary">{t("loading")}</p>;
-  }
-  if (website === null) {
-    return <p className="text-[13px] text-destructive">{t("notFound")}</p>;
-  }
-
-  const isTracked = website.relationship === "TRACKED";
-  // Paired, its day and place are its pair's, so it has none of its own to set.
-  const paired = website.pairedWith;
-  const websitesHref = `/admin/companies/${companyId}/websites`;
-  const siteHref = `${websitesHref}/site/${companyWebsiteId}`;
-  const recordHref = `/admin/websites/${website.websiteId}`;
-
-  const tracked = [
-    { href: `${recordHref}/keywords`, icon: Search, label: t("tracked.keywords") },
-    { href: `${recordHref}/questions`, icon: MessageSquare, label: t("tracked.questions") },
-    { href: `${recordHref}/competition`, icon: Swords, label: t("tracked.competition") },
-  ];
-
-  const results = [
-    { href: `${siteHref}/keywords`, icon: Search, label: t("results.keywords") },
-    { href: `${siteHref}/citations`, icon: Sparkles, label: t("results.citations") },
-    { href: `${siteHref}/fan-out`, icon: MessageSquare, label: t("results.fanOut") },
-  ];
-
-  const panel = (
-    title: string,
-    subtitle: string,
-    items: Array<{ href: string; icon: typeof Search; label: string }>,
-  ) => (
-    <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-card/40 p-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{title}</h2>
-        <p className="max-w-3xl text-[13px] text-secondary">{subtitle}</p>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-2.5 rounded-[10px] border border-border-dim px-3 py-2.5 text-[13px] text-foreground hover:border-brand/40"
-          >
-            <item.icon className="h-4 w-4 shrink-0 text-muted" />
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </div>
+  const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
+  const owned = header?.relationship === "OWNED";
+  const portfolio = useQuery(
+    api.websiteClientView.getSitePortfolio,
+    owned ? { companyWebsiteId } : "skip",
   );
 
-  return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <DetailHeader
-        back={{ label: t("back"), href: websitesHref }}
-        icon={<Globe className="h-6 w-6 text-brand" />}
-        title={website.displayHost}
-        description={isTracked ? t("trackedSubtitle") : t("subtitle")}
-      />
+  if (!header) return null;
+  const base = siteBase(companyId, companyWebsiteId);
+  const unknown = t("priceUnknown");
 
-      {isTracked ? (
+  if (!owned) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          icon={<Link2 className="h-5 w-5 text-brand" />}
+          title={t("overview.title")}
+          description={t("overview.subtitle")}
+        />
         <TrackedPairing
           companyId={companyId}
           companyWebsiteId={companyWebsiteId}
-          pairedWith={paired}
-          nextRunAt={website.effective.nextRunAt}
+          pairedWith={header.pairedWith ? { ...header.pairedWith, locationLabel: header.placeLabel } : null}
+          nextRunAt={header.schedule.nextRunAt}
         />
-      ) : null}
+        {header.pairedWith ? (
+          <Link
+            href={`${siteBase(companyId, header.pairedWith.companyWebsiteId)}/tracking?list=competitors`}
+            className="flex w-fit items-center gap-2 text-[13px] text-brand hover:underline"
+          >
+            {t("overview.compare", { host: header.pairedWith.displayHost })}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : (
+          <p className="text-[13px] text-secondary">{t("overview.alone")}</p>
+        )}
+      </div>
+    );
+  }
 
-      {paired ? null : (
-        <>
-          <WebsiteScheduleOverride
-            companyWebsiteId={companyWebsiteId}
-            host={website.displayHost}
-            companyName={website.companyName}
-            companyIntervalStr={website.companyIntervalStr}
-            stored={{
-              refreshIntervalStr: website.refreshIntervalStr,
-              collectionEnabled: website.collectionEnabled,
-            }}
-            effective={website.effective}
-          />
+  /*
+    Only what is true, in the order somebody would act on it. A line of zeros
+    — "0 on page one · 0 slipping · 0 never ranked" — says nothing and reads as
+    failure on a site that simply has not been collected yet.
+  */
+  const describe = (
+    tally: Record<string, number> | undefined,
+    parts: ReadonlyArray<readonly [string, readonly string[]]>,
+  ) => parts.flatMap(([key, verdicts]) => {
+    const total = verdicts.reduce((sum, verdict) => sum + (tally?.[verdict] ?? 0), 0);
+    return total > 0 ? [t(`brief.parts.${key}`, { count: total })] : [];
+  }).join(" · ");
 
-          <WatchLocation
-            companyWebsiteId={companyWebsiteId}
-            savedCode={website.locationCode}
-          />
-        </>
-      )}
+  const searchLine = header.counts.searches === 0
+    ? t("brief.searchesEmpty")
+    : describe(portfolio?.searches, [
+      ["slipping", ["SLIPPING"]],
+      ["pageOne", ["TOP_THREE", "PAGE_ONE"]],
+      ["offPageOne", ["RANKING"]],
+      ["neverRanked", ["NEVER_RANKED"]],
+      ["notFound", ["NOT_FOUND"]],
+      ["tooNew", ["TOO_NEW"]],
+      ["notChecked", ["NOT_CHECKED"]],
+    ]);
+  const questionLine = header.counts.questions === 0
+    ? t("brief.questionsEmpty")
+    : describe(portfolio?.questions, [
+      ["warned", ["WARNED"]],
+      ["earning", ["EARNING"]],
+      ["thin", ["THIN"]],
+      ["neverLanded", ["NEVER_LANDED"]],
+      ["tooNew", ["TOO_NEW"]],
+      ["notAsked", ["NOT_ASKED"]],
+    ]);
+  const suggested = portfolio?.untrackedNamed ?? 0;
+  const rivalLine = [
+    header.counts.rivals === 0
+      ? t("brief.rivalsEmpty")
+      : describe(portfolio?.rivals, [
+        ["ahead", ["AHEAD"]],
+        ["level", ["LEVEL"]],
+        ["behind", ["BEHIND"]],
+        ["goneQuiet", ["GONE_QUIET"]],
+        ["tooNew", ["TOO_NEW"]],
+        ["notCompared", ["NOT_CHECKED"]],
+      ]),
+    suggested > 0 ? t("brief.parts.suggested", { count: suggested }) : null,
+  ].filter(Boolean).join(" · ");
 
-      {/*
-        Said plainly rather than left to be discovered: editing any of these
-        changes what every client watching this host sees.
-      */}
-      {panel(t("tracked.title"), t("tracked.subtitle"), tracked)}
+  const cards = [
+    {
+      key: "searches",
+      href: `${base}/tracking?list=searches`,
+      label: t("brief.searches"),
+      value: header.counts.searches,
+      cost: header.monthly.searches,
+      line: searchLine,
+    },
+    {
+      key: "questions",
+      href: `${base}/tracking?list=questions`,
+      label: t("brief.questions"),
+      value: header.counts.questions,
+      cost: header.monthly.questions,
+      line: questionLine,
+    },
+    {
+      key: "rivals",
+      href: `${base}/tracking?list=competitors`,
+      label: t("brief.rivals"),
+      value: header.counts.rivals,
+      cost: header.monthly.rivals,
+      line: rivalLine,
+    },
+    {
+      key: "brands",
+      href: `/admin/websites/${header.websiteId}`,
+      label: t("brief.brands"),
+      value: header.counts.brandNames,
+      cost: undefined,
+      line: header.counts.brandNames <= 1 ? t("brief.brandsFew") : t("brief.brandsLine"),
+    },
+  ];
 
-      {/*
-        This client's own view of shared data. The pull is shared; what is read
-        out of it is scoped to the place and the holdings of whoever is looking,
-        which is why these are here and not on the record.
-      */}
-      {panel(t("results.title"), t("results.subtitle"), results)}
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        icon={<Compass className="h-5 w-5 text-brand" />}
+        title={t("brief.title")}
+        description={header.lastCollectedAt
+          ? t("brief.lastCollected", { when: formatDate(header.lastCollectedAt) })
+          : t("brief.neverCollected")}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => (
+          <Link
+            key={card.key}
+            href={card.href}
+            className="flex flex-col gap-2 rounded-[13px] border border-border-dim bg-card/40 p-4 transition-colors hover:border-brand/40"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted">{card.label}</h2>
+              {card.cost !== undefined ? (
+                <span className="font-mono text-[11px] text-muted">
+                  {card.cost === null ? t("priceUnknownShort") : t("perMonthShort", { cost: formatMonthly(card.cost, unknown) })}
+                </span>
+              ) : (
+                <span className="text-[11px] text-warning">{t("brief.shared")}</span>
+              )}
+            </div>
+            <span className="font-mono text-[22px] text-foreground">{card.value}</span>
+            <span className="text-[12px] leading-relaxed text-secondary">{card.line}</span>
+          </Link>
+        ))}
+      </div>
+
+      <p className="text-[12px] text-muted">{t("brief.costNote")}</p>
     </div>
   );
 }

@@ -24,6 +24,11 @@ import {
   markExistingHoldsOwned,
 } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
+import {
+  rebuildAnswerSummaries,
+  rebuildOperationCosts,
+  rebuildSearchSummaries,
+} from "./websiteTrackingStatsMigration";
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
@@ -132,6 +137,17 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * be read by place through an index rather than filtered after a read.
    */
   "2026-09-22-position-places": backfillPositionPlaces,
+
+  /**
+   * Fill the tracking summaries from results parsed before they existed:
+   * every stored AI answer is filed again as an answer, and every tracked
+   * search is summarised from its positions. Both rebuild rather than add, so
+   * a second run changes nothing.
+   */
+  "2026-09-22-answer-summaries": rebuildAnswerSummaries,
+  "2026-09-22-search-summaries": rebuildSearchSummaries,
+  /** The running cost per operation, rebuilt from every charge already on file. */
+  "2026-09-22-operation-costs": rebuildOperationCosts,
 
 
   /**

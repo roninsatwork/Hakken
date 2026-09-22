@@ -1415,36 +1415,21 @@
       "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato."
     },
     "companyWebsiteDetail": {
-      "back": "Torna ai siti web",
       "loading": "Caricamento sito web...",
       "notFound": "Sito web non trovato",
-      "subtitle": "Con che frequenza questo cliente lo raccoglie, da dove, e che cosa sta producendo per lui.",
-      "trackedSubtitle": "Un sito che questa azienda monitora: con cosa viene confrontato e come viene raccolto.",
-      "collecting": "In raccolta",
-      "notCollecting": "Nessuna raccolta",
-      "editSettings": "Modifica",
-      "settingsTitle": "Pianificazione per questo sito web",
-      "settingsSubtitle": "Per impostazione predefinita questo sito segue il programma della sua azienda. Dagliene uno proprio solo quando va seguito più o meno da vicino degli altri.",
+      "settingsTitle": "Con quale frequenza, e da dove",
+      "settingsSubtitle": "Le due impostazioni che cambiano tra i clienti che osservano lo stesso sito. Di norma segue la pianificazione dell'azienda; dagli una pianificazione propria solo quando va osservato più o meno da vicino degli altri.",
       "collectionLabel": "Raccogli dati per questo sito web",
       "errors": {
         "settingsFailed": "Impossibile salvare queste impostazioni. Riprova."
       },
-      "noSchedule": "Nessuna pianificazione",
       "nextRun": "Prossima esecuzione {when}",
-      "sourceWebsite": "impostato su questo sito web",
-      "sourceCompany": "ereditato da {company}",
-      "sourceNone": "nessuna pianificazione",
       "overrideLabel": "Usa una pianificazione propria",
       "overrideDescription": "Disattivato segue {company} e si muove quando quella cambia.",
       "collectionDescription": "Disattivato ferma solo questo sito web, lasciando il resto dell'azienda in raccolta.",
       "location": {
         "title": "Da dove osservi",
-        "subtitle": "I risultati di ricerca cambiano in base al luogo. Questa è la località usata per raccogliere posizionamenti e citazioni AI per questo sito, solo per questo cliente.",
-        "save": "Salva località",
-        "saved": "Salvato",
-        "errors": {
-          "saveFailed": "Non è stato possibile salvare questa località. Riprova."
-        }
+        "subtitle": "I risultati di ricerca cambiano in base al luogo. Questa è la località usata per raccogliere posizionamenti e citazioni AI per questo sito, solo per questo cliente."
       },
       "pairing": {
         "title": "Confrontato con",
@@ -1487,21 +1472,208 @@
       "summaryOwn": "{host} e i suoi concorrenti vengono raccolti {schedule}.",
       "summaryFollows": "{host} segue {company}: {schedule}.",
       "nothingScheduled": "Non viene raccolto nulla per {host}.",
-      "askedLive": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda: non c'è un metodo da scegliere.",
-      "tracked": {
-        "title": "Tracciato sulla scheda del sito",
-        "subtitle": "Ricerche, domande e rivali appartengono al sito, non a un cliente: una sola lista, chiesta una volta, letta da tutti quelli che lo osservano. Modificarne una cambia ciò che vede ogni cliente.",
-        "keywords": "Ricerche con cui viene verificato",
-        "questions": "Domande poste ai motori di IA",
-        "competition": "Con chi compete"
+      "askedLive": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda: non c'è un metodo da scegliere."
+    },
+    "siteView": {
+      "loading": "Caricamento sito web...",
+      "notFound": "Questo sito web non è più detenuto da questa azienda.",
+      "back": "Torna ai siti web",
+      "priceUnknown": "costo noto dopo il primo recupero a pagamento",
+      "settings": "Impostazioni",
+      "record": "Scheda del sito",
+      "notCollecting": "Nessuna raccolta",
+      "collectingNext": "{schedule} · prossima {when}",
+      "collectedWith": "Raccolto insieme a {host}",
+      "watchedFrom": "Osservato da {place}",
+      "tracking": "monitora {searches, plural, =0 {nessuna ricerca} one {# ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {# domanda} other {# domande}} e {rivals, plural, =0 {nessun concorrente} one {# concorrente} other {# concorrenti}}",
+      "perMonth": "{cost} al mese",
+      "perMonthShort": "{cost}/mese",
+      "trackedPaired": "Confrontato con {host} e raccolto insieme a lui — lo stesso giorno, dallo stesso luogo.",
+      "trackedAlone": "Osservato da solo, da {place}.",
+      "trackingOwnedOnly": "Un sito monitorato viene confrontato sulle liste del sito a cui è abbinato.",
+      "charged": "Tutto ciò che è in queste tre liste viene acquistato a ogni raccolta — {cost} al mese al momento, al prezzo di un recupero; i recuperi condivisi costano meno.",
+      "chargedUnknown": "Tutto ciò che è in queste tre liste viene acquistato a ogni raccolta. Il totale mensile è noto quando ogni tipo di recupero è stato pagato almeno una volta.",
+      "tabs": {
+        "brief": "Sintesi",
+        "tracking": "Monitoraggio",
+        "results": "Risultati",
+        "overview": "Panoramica",
+        "rankings": "Posizionamenti"
+      },
+      "lists": {
+        "searches": "Ricerche",
+        "questions": "Domande",
+        "competitors": "Concorrenti"
+      },
+      "overview": {
+        "title": "Come viene osservato",
+        "subtitle": "Il sito di qualcun altro che questa azienda tiene d'occhio. Qui non ha liste proprie — viene confrontato sulle ricerche e sulle domande del sito a cui è abbinato.",
+        "compare": "Vedi il confronto su {host}",
+        "alone": "Non abbinato, quindi viene raccolto con impostazioni proprie. Abbinalo a un sito dell'azienda per confrontare i due."
+      },
+      "brief": {
+        "title": "Come sta andando",
+        "lastCollected": "Ultima raccolta {when}. Ogni scheda apre la lista che conta.",
+        "neverCollected": "Non ancora raccolto. Ogni scheda apre la lista che conta.",
+        "searches": "Ricerche",
+        "questions": "Domande",
+        "rivals": "Concorrenti",
+        "brands": "Nomi del marchio",
+        "searchesEmpty": "Ancora niente di controllato — aggiungi la prima ricerca per cui vuoi che venga trovato.",
+        "questionsEmpty": "Ancora nessuna domanda — senza una domanda le risposte dell'IA restano vuote per sempre.",
+        "rivalsEmpty": "Ancora nessuno monitorato",
+        "brandsFew": "Un solo nome — una parola corta coincide con testi che parlano d'altro",
+        "brandsLine": "Cosa deve dire una risposta per contare come questo sito",
+        "shared": "condiviso",
+        "costNote": "I prezzi sono quanto DataForSEO ha addebitato per ogni tipo di recupero, per la frequenza con cui questo sito viene raccolto. Un recupero già pagato da un altro cliente a questo non costa nulla.",
+        "parts": {
+          "slipping": "{count} in calo",
+          "pageOne": "{count} in prima pagina",
+          "offPageOne": "{count} non ancora in prima pagina",
+          "neverRanked": "{count} mai posizionate",
+          "notFound": "{count} non ancora trovate",
+          "tooNew": "{count} troppo recenti per dirlo",
+          "notChecked": "{count} non ancora controllate",
+          "warned": "{count} sconsigliate",
+          "earning": "{count, plural, one {# rende} other {# rendono}}",
+          "thin": "{count} deboli",
+          "neverLanded": "{count} mai andate a segno",
+          "notAsked": "{count} non ancora poste",
+          "ahead": "{count} davanti a te",
+          "level": "{count} alla pari",
+          "behind": "{count} dietro di te",
+          "goneQuiet": "{count} spariti",
+          "notCompared": "{count} non ancora confrontati",
+          "suggested": "{count, plural, one {# citato nelle risposte, non nella tua lista} other {# citati nelle risposte, non nella tua lista}}"
+        }
       },
       "results": {
-        "title": "Che cosa è tornato, per questo cliente",
-        "subtitle": "La raccolta è condivisa; ciò che se ne legge è limitato al luogo e alle proprietà di questo cliente.",
-        "keywords": "Dove si posiziona",
-        "citations": "Dove viene nominato nelle risposte IA",
-        "fanOut": "Che cosa hanno cercato i motori"
-      }
+        "label": "Risultati",
+        "answers": "Risposte dell'IA",
+        "fanOut": "Cosa hanno cercato i motori",
+        "rankings": "Posizionamenti"
+      },
+      "searches": {
+        "title": "Ricerche controllate",
+        "subtitle": "Una pagina di risultati Google per ricerca, da {place}, a ogni raccolta di questo sito. La lista è di {host}, condivisa con ogni cliente che lo osserva.",
+        "addLabel": "Una ricerca che qualcuno scrive su Google",
+        "addPlaceholder": "agenzia di branding leeds",
+        "add": "Monitorala",
+        "addHint": "Una pagina di risultati a pagamento per ricerca per raccolta — e misura gratis ogni concorrente presente nella pagina.",
+        "searchPlaceholder": "Cerca tra queste ricerche...",
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "empty": "Ancora nessuna ricerca. Aggiungi la prima qui sopra.",
+        "searchColumn": "Ricerca",
+        "notCheckedYet": "non ancora controllata",
+        "checkedFor": "controllata da {weeks, plural, =0 {meno di una settimana} one {# settimana} other {# settimane}}",
+        "positionColumn": "Posizione",
+        "notOnPage": "non nella pagina",
+        "up": "su",
+        "down": "giù",
+        "intentColumn": "Cosa vogliono",
+        "verdictColumn": "Giudizio",
+        "verdicts": {
+          "NOT_CHECKED": "Non ancora controllata",
+          "TOO_NEW": "Troppo presto per dirlo",
+          "TOP_THREE": "Top 3 · rende",
+          "PAGE_ONE": "Prima pagina · rende",
+          "SLIPPING": "In calo — controlla la pagina",
+          "RANKING": "Posizionata, non ancora in prima pagina",
+          "NOT_FOUND": "Non ancora trovata",
+          "NEVER_RANKED": "Mai posizionata"
+        },
+        "paused": "In pausa",
+        "costColumn": "Al mese",
+        "actionsColumn": "Azioni",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "remove": "Rimuovi ricerca",
+        "thresholds": "In calo significa più di {slipping} posizioni in meno rispetto al controllo precedente. Mai posizionata significa {neverWeeks} settimane senza comparire. Troppo presto significa meno di {newWeeks} settimane.",
+        "errors": {
+          "addFailed": "Impossibile aggiungere la ricerca. Riprova.",
+          "toggleFailed": "Impossibile modificare la ricerca. Riprova.",
+          "removeFailed": "Impossibile rimuovere la ricerca. Riprova."
+        }
+      },
+      "questions": {
+        "title": "Domande poste ai motori di IA",
+        "subtitle": "Poste da {place} a ogni raccolta di questo sito. La lista è di {host}, condivisa con ogni cliente che lo osserva.",
+        "addLabel": "Una domanda che qualcuno farebbe davvero a un'IA",
+        "addPlaceholder": "qual è la migliore agenzia di branding a Leeds",
+        "add": "Chiedila",
+        "addHint": "{count, plural, =0 {Scegli almeno un motore.} one {Una risposta a pagamento per raccolta.} other {# risposte a pagamento per raccolta — una per motore.}}",
+        "searchPlaceholder": "Cerca domande...",
+        "noMatch": "Nessuna domanda corrisponde.",
+        "empty": "Ancora nessuna domanda. Fai la prima qui sopra.",
+        "questionColumn": "Domanda",
+        "notAskedYet": "non ancora posta",
+        "runningFor": "attiva da {weeks, plural, =0 {meno di una settimana} one {# settimana} other {# settimane}}",
+        "namedColumn": "Citato",
+        "namedOf": "{named} su {asked}",
+        "enginesColumn": "Posta a",
+        "verdictColumn": "Giudizio",
+        "verdicts": {
+          "NOT_ASKED": "Non ancora posta",
+          "TOO_NEW": "Troppo presto per dirlo",
+          "WARNED": "Sconsigliato — leggila",
+          "NEVER_LANDED": "Mai andata a segno",
+          "THIN": "Debole",
+          "EARNING": "Rende"
+        },
+        "paused": "In pausa",
+        "costColumn": "Al mese",
+        "actionsColumn": "Azioni",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "remove": "Rimuovi domanda",
+        "thresholds": "Citato conta ogni risposta, comprese quelle che non citavano nessuno di nostra conoscenza. Rende significa citato in almeno metà. Mai andata a segno significa {neverWeeks} settimane senza essere mai citato. Troppo presto significa meno di {newWeeks} settimane.",
+        "errors": {
+          "addFailed": "Impossibile aggiungere la domanda. Riprova.",
+          "toggleFailed": "Impossibile modificare la domanda. Riprova.",
+          "removeFailed": "Impossibile rimuovere la domanda. Riprova."
+        }
+      },
+      "competitors": {
+        "title": "Concorrenti che questa azienda osserva",
+        "subtitle": "Ognuno viene raccolto nel giorno di {host}, dal suo luogo, e confrontato sulle ricerche di {host} — numeri raccolti in settimane diverse non sono un confronto.",
+        "addLabel": "Il sito di un concorrente",
+        "addPlaceholder": "concorrente.it",
+        "add": "Monitoralo",
+        "addHint": "Una scelta di questa azienda. I concorrenti di un altro cliente non arrivano mai in questa lista.",
+        "empty": "Ancora nessun concorrente monitorato.",
+        "rivalColumn": "Concorrente",
+        "lastSeen": "visto l'ultima volta {day}",
+        "notSeenYet": "non ancora visto",
+        "beatsColumn": "Ti supera su",
+        "beatsOf": "{beats} ricerche su {of}",
+        "answersColumn": "Nelle risposte dell'IA",
+        "namedOf": "{named} su {of}",
+        "verdictColumn": "Giudizio",
+        "verdicts": {
+          "TOO_NEW": "Troppo presto per dirlo",
+          "AHEAD": "Davanti a te",
+          "LEVEL": "Alla pari",
+          "BEHIND": "Dietro di te",
+          "GONE_QUIET": "Sparito",
+          "NOT_CHECKED": "Non ancora confrontato"
+        },
+        "costColumn": "Al mese",
+        "actionsColumn": "Azioni",
+        "stop": "Smetti di monitorare",
+        "thresholds": "Davanti significa sopra questo sito su più ricerche di quante lui sia sopra. Sparito significa {quietWeeks} settimane senza comparire in nessuna pagina o risposta. Troppo presto significa meno di {newWeeks} settimane.",
+        "namedTitle": "Citati nelle tue risposte, non nella tua lista",
+        "namedSubtitle": "Siti che i motori di IA continuano a proporre quando ricevono le domande di questo sito. Saperlo è gratis — le risposte li citavano comunque — e si aggiorna a ogni raccolta.",
+        "namedEmpty": "Nessuno di quelli citati nelle risposte manca dalla tua lista.",
+        "siteColumn": "Sito web",
+        "timesColumn": "Citato",
+        "namedTimes": "{times, plural, one {una volta} other {# volte}} · ultima {day}",
+        "track": "Monitoralo",
+        "errors": {
+          "addFailed": "Impossibile monitorare il sito. Riprova.",
+          "stopFailed": "Impossibile smettere di monitorare il sito. Riprova."
+        }
+      },
+      "priceUnknownShort": "prezzo non ancora noto"
     },
     "companyDataCollection": {
       "title": "Programma di raccolta",
@@ -5254,9 +5426,8 @@
       "pullsColumn": "Richieste · 30gg"
     },
     "websiteCitations": {
-      "back": "Torna al sito",
-      "notFound": "Questo sito non è più seguito da questa azienda.",
       "subtitle": "Dove questo sito viene citato nelle risposte AI, e chi altro è stato citato.",
+      "title": "Dove viene citato nelle risposte dell'IA",
       "searchPlaceholder": "Cerca per domanda o per chi è stato citato...",
       "empty": "Nessuna risposta raccolta. Aggiungi una domanda al sito e la prossima raccolta la porrà.",
       "noMatch": "Nessun risultato per questa ricerca.",
@@ -5272,21 +5443,15 @@
       "more": "+{count} altri",
       "citedAsSource": "Citato come fonte",
       "namedInAnswer": "Citato nella risposta",
-      "engines": {
-        "chatgpt": "ChatGPT",
-        "perplexity": "Perplexity",
-        "gemini": "Gemini",
-        "claude": "Claude"
-      },
       "couldNotAsk": "Non è stato possibile chiedere",
       "recommendedAt": "Consigliata, {position}º posto",
       "warnedAgainst": "Sconsigliata",
       "chipRecommended": "✓"
     },
     "websiteKeywords": {
-      "back": "Torna al sito",
-      "notFound": "Questo sito non è più seguito da questa azienda.",
       "subtitle": "Le ricerche per cui questo sito si posiziona, dalla posizione migliore.",
+      "title": "Dove si posiziona",
+      "subtitlePlace": "Le ricerche per cui questo sito si posiziona da {place}, dalla posizione migliore.",
       "searchPlaceholder": "Cerca tra questi termini...",
       "empty": "Nulla di raccolto. La prossima raccolta leggerà per cosa si posiziona il sito.",
       "noMatch": "Nessuna ricerca corrisponde.",
@@ -5304,9 +5469,8 @@
       }
     },
     "websiteFanOut": {
-      "back": "Torna al sito web",
-      "notFound": "Questo sito web non è più gestito da questa azienda.",
       "subtitle": "Le ricerche che i motori AI eseguono quando ricevono le domande di questo sito.",
+      "title": "Cosa hanno cercato i motori",
       "searchPlaceholder": "Cerca fra queste ricerche...",
       "empty": "Ancora nulla. La prossima raccolta registrerà che cosa hanno cercato i motori.",
       "noMatch": "Nessuna ricerca corrisponde.",
@@ -5321,6 +5485,13 @@
         "BRANDED": "Cerca un'azienda",
         "IRRELEVANT": "Non c'entra nulla",
         "OTHER": "Troppo vaga per dirlo"
+      },
+      "buyingUntracked": "{count, plural, =0 {Nessuna ricerca d'acquisto non monitorata} one {1 ricerca d'acquisto che non monitori} other {# ricerche d'acquisto che non monitori}}",
+      "trackColumn": "Monitora",
+      "track": "Monitorala",
+      "alreadyTracked": "già monitorata",
+      "errors": {
+        "trackFailed": "Impossibile monitorare la ricerca. Riprova."
       }
     }
   },

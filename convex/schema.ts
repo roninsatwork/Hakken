@@ -204,7 +204,9 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_website", ["websiteId"])
-    .index("by_website_active", ["websiteId", "isActive"]),
+    .index("by_website_active", ["websiteId", "isActive"])
+    /** Every host asking one question, so one answer can be filed for them all. */
+    .index("by_prompt", ["prompt"]),
 
   /**
    * A search this host should be checked against.
@@ -254,6 +256,70 @@ export default defineSchema({
     .index("by_website", ["websiteId"])
     .index("by_website_rival", ["websiteId", "rivalWebsiteId"])
     .index("by_rival", ["rivalWebsiteId"]),
+
+  /**
+   * Where a host stands on one of its searches, from one place.
+   *
+   * Derived when a checked results page is filed, never on read: the Tracking
+   * screen's verdicts — slipping, never ranked, too new to say — need weeks of
+   * history, and reading weeks of positions per search per view is a cost that
+   * grows with every search added and every week that passes. One row per host,
+   * search and place is read instead. Recomputed from the position rows rather
+   * than incremented, so a re-parse converges on the same answer.
+   *
+   * Hangs off the host and names no watcher, like the lists it summarises. The
+   * place is a watcher's choice, but it is a fact about the search, not about
+   * who asked.
+   */
+  websiteSearchStats: defineTable({
+    websiteId: v.id("websites"),
+    keyword: v.string(),
+    locationCode: v.number(),
+    firstCheckedDay: v.string(),
+    lastCheckedDay: v.string(),
+    /** Absent when the last check did not find it on the page. */
+    lastPosition: v.optional(v.number()),
+    previousCheckedDay: v.optional(v.string()),
+    previousPosition: v.optional(v.number()),
+    bestPosition: v.optional(v.number()),
+    /** Sticky: once a search has ranked, "never ranked" is no longer true of it. */
+    everRanked: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_website_place", ["websiteId", "locationCode"])
+    .index("by_key", ["websiteId", "keyword", "locationCode"]),
+
+  /**
+   * How one of a host's questions is landing with one engine, from one place.
+   *
+   * The same reasoning as `websiteSearchStats`, for answers. `othersNamed` is
+   * the short list of who else the answers put forward, which is what the
+   * Competitors tab's "in AI answers" reads and what a rival nobody tracks is
+   * found from. Recomputed from `aiAnswers`, never incremented.
+   */
+  websiteQuestionStats: defineTable({
+    websiteId: v.id("websites"),
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    locationCode: v.number(),
+    asked: v.number(),
+    named: v.number(),
+    recommended: v.number(),
+    warnedAgainst: v.number(),
+    firstAskedDay: v.string(),
+    lastAskedDay: v.string(),
+    lastNamed: v.boolean(),
+    lastNamedDay: v.optional(v.string()),
+    othersNamed: v.array(v.object({
+      websiteId: v.id("websites"),
+      times: v.number(),
+      /** The last answer that named it, so a rival gone quiet can be told from one still named. */
+      lastDay: v.string(),
+    })),
+    updatedAt: v.number(),
+  })
+    .index("by_website_place", ["websiteId", "locationCode"])
+    .index("by_key", ["websiteId", "prompt", "engine", "locationCode"]),
 
   /**
    * One of a company's own websites.
@@ -498,6 +564,8 @@ export default defineSchema({
     .index("by_website_day", ["websiteId", "day"])
     /** One watcher's view: a site's rankings from one place, newest first. */
     .index("by_website_place_day", ["websiteId", "locationCode", "day"])
+    /** One search's history from one place, which is what its verdict reads. */
+    .index("by_website_keyword_place_day", ["websiteId", "keyword", "locationCode", "day"])
     .index("by_pull", ["pullId"]),
 
   /**
@@ -881,6 +949,46 @@ export default defineSchema({
   })
     .index("by_website_day", ["mentionedWebsiteId", "day"])
     .index("by_pull", ["pullId"]),
+
+  /**
+   * One answer an engine gave, and whom it named.
+   *
+   * `aiCitations` holds a row per *mention*, so an answer that named nobody we
+   * know leaves no trace there — and "named in 3 of 14 answers" needs the 11
+   * that named nobody. This is the answer itself: one row per pull, the sites
+   * it named in order, and how it treated them. Replaced by pull, like every
+   * parse, so a corrected matcher converges.
+   */
+  aiAnswers: defineTable({
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    locationCode: v.number(),
+    day: v.string(),
+    pullId: v.id("seoDataPulls"),
+    named: v.array(v.id("websites")),
+    recommended: v.array(v.id("websites")),
+    warnedAgainst: v.array(v.id("websites")),
+    createdAt: v.number(),
+  })
+    .index("by_question", ["prompt", "engine", "locationCode", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * What each DataForSEO operation has actually cost us, as a running mean.
+   *
+   * The registry knows only a cost *band*, and a price written into code goes
+   * stale the day DataForSEO changes theirs. So the per-row costs the Tracking
+   * screen prints come from what was charged: every paid send adds to this.
+   * An operation nobody has bought yet has no row, and the screen says the
+   * cost is unknown rather than guessing one.
+   */
+  seoOperationCosts: defineTable({
+    operationId: v.string(),
+    charged: v.number(),
+    totalUsd: v.number(),
+    lastUsd: v.number(),
+    updatedAt: v.number(),
+  }).index("by_operation", ["operationId"]),
 
 
   systemSettings: defineTable({

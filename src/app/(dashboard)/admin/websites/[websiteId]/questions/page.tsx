@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, MessageSquare, Plus, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -18,6 +18,7 @@ import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
+import { EngineChips, useEngineChoice, useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
 
 /**
  * What the AI engines are asked about this host.
@@ -37,13 +38,6 @@ export default function WebsiteQuestionsPage() {
   const websiteId = params.websiteId as Id<"websites">;
 
   const [draft, setDraft] = useState("");
-  /*
-    Absent means "all of them", which is also what the mutation does with an
-    empty list. Holding the *exclusions* rather than the selection is what lets
-    the engine list arrive from the server without this screen having to seed
-    itself from it in an effect.
-  */
-  const [dropped, setDropped] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
@@ -63,16 +57,9 @@ export default function WebsiteQuestionsPage() {
 
   const isLoading = questions === undefined;
 
-  const allEngines = useQuery(api.websiteCanonical.listEngines, {}) ?? [];
-  const engines = allEngines.filter((engine) => !dropped.includes(engine));
-
-  const toggleEngine = (engine: string) => {
-    setDropped((current) => (
-      current.includes(engine)
-        ? current.filter((entry) => entry !== engine)
-        : [...current, engine]
-    ));
-  };
+  const engineChoice = useEngineChoice();
+  const engines = engineChoice.chosen;
+  const engineLabel = useEngineLabel();
 
   const handleAdd = async () => {
     setError("");
@@ -100,14 +87,6 @@ export default function WebsiteQuestionsPage() {
       { key: questionId, suppressErrorToast: true, fallbackMessage: t("errors.removeFailed") },
     );
     if (!outcome.ok) setError(outcome.message);
-  };
-
-  const engineLabel = (engine: string) => {
-    if (engine === "chatgpt") return t("engines.chatgpt");
-    if (engine === "claude") return t("engines.claude");
-    if (engine === "gemini") return t("engines.gemini");
-    if (engine === "perplexity") return t("engines.perplexity");
-    return engine;
   };
 
   return (
@@ -139,32 +118,7 @@ export default function WebsiteQuestionsPage() {
           </Button>
         </div>
 
-        {/*
-          A tick on the chosen engines, not only a colour. Seen in the browser on
-          2026-09-22: a chip just switched off keeps its focus ring, and a focus
-          ring in the brand colour read exactly like "on" — so the one choice on
-          this screen that changes the bill could not be read back.
-        */}
-        <div className="flex flex-wrap items-center gap-2">
-          {allEngines.map((engine) => {
-            const chosen = engines.includes(engine);
-            return (
-              <Button
-                key={engine}
-                variant="outline"
-                role="checkbox"
-                aria-checked={chosen}
-                className={`rounded-full px-3 py-1 text-[12px] ${
-                  chosen ? "border-brand bg-brand/10 text-brand" : "border-dashed text-muted"
-                }`}
-                onClick={() => toggleEngine(engine)}
-              >
-                {chosen ? <Check className="mr-1 inline h-3 w-3" aria-hidden="true" /> : null}
-                {engineLabel(engine)}
-              </Button>
-            );
-          })}
-        </div>
+        <EngineChips all={engineChoice.all} chosen={engines} onToggle={engineChoice.toggle} />
 
         {/* What a cycle buys, and why nothing queues any more. */}
         <span className="text-[11px] text-muted">

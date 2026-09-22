@@ -9,10 +9,11 @@ import { Search } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { ResultsSwitcher } from "../ResultsSwitcher";
 
 /**
  * What this website ranks for.
@@ -29,14 +30,15 @@ import useDebounce from "@/src/hooks/useDebounce";
 export default function WebsiteKeywordsPage() {
   const t = useTranslations("admin.websiteKeywords");
   const params = useParams();
-  const companyId = params.id as string;
   const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(searchTerm, 400);
 
-  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
+  // Shared with the layout's own subscription; it says whether this is one of
+  // the company's own sites, which have two other results views beside this.
+  const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
   const keywords = useQuery(api.seoKeywordReports.listWebsiteKeywords, {
     companyWebsiteId,
     searchTerm: debouncedSearch,
@@ -52,20 +54,13 @@ export default function WebsiteKeywordsPage() {
     return t("intents.OTHER");
   };
 
-  if (website === null) {
-    return <p className="py-12 text-center text-[13px] text-muted">{t("notFound")}</p>;
-  }
-
   return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <DetailHeader
-        back={{
-          label: t("back"),
-          href: `/admin/companies/${companyId}/websites/site/${companyWebsiteId}`,
-        }}
-        icon={<Search className="h-6 w-6 text-brand" />}
-        title={website?.displayHost ?? ""}
-        description={t("subtitle")}
+    <div className="flex w-full flex-col gap-5">
+      {header?.relationship === "OWNED" ? <ResultsSwitcher active="rankings" /> : null}
+      <PageHeader
+        icon={<Search className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={header ? t("subtitlePlace", { place: header.placeLabel }) : t("subtitle")}
       />
 
       <DataTable

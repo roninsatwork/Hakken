@@ -1,120 +1,81 @@
-import React from "react";
-import type { ReactElement, ReactNode } from "react";
-import { render as renderBase, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
-import { getFunctionName } from "convex/server";
+import { useQuery } from "convex/react";
 
-import { ToastProvider } from "@/src/context/ToastContext";
-import CompanyWebsiteDetailPage from "./page";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
+import CompanySiteBriefPage from "./page";
+import { answerQueries, ownedHeader, trackedHeader } from "@/src/test/siteViewFixtures";
+
+vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
+vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
+vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock("next/navigation", async () =>
+  (await import("@/src/test/screenMocks")).nextNavigation({ id: "company_1", companyWebsiteId: "companyWebsite_1" }));
 
 /**
- * One of a company's websites: what this client decides, and where the rest is.
+ * The Brief: how the site is doing, and where to go next.
  *
- * What this holds is the **split**. The page used to manage competitors and
- * questions; both are facts about the host and moved to the website record on
- * 2026-09-22, so three clients watching one site stopped keeping three copies
- * of the same list. The assertions worth having are that the two settings which
- * genuinely differ per client are still here, that the shared lists are pointed
- * at the record rather than edited here, and that this client's own results are
- * pointed at the routes scoped to them.
+ * What it holds is that **every card opens the list it counts** and that a
+ * price nobody has paid yet says so. A tracked site gets its pairing instead,
+ * because it has no lists of its own to summarise.
  */
-
-const render = (ui: ReactElement) =>
-  renderBase(ui, {
-    wrapper: ({ children }: { children: ReactNode }) => <ToastProvider>{children}</ToastProvider>,
-  });
-
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "company_1", companyWebsiteId: "companyWebsite_1" }),
-  useRouter: () => ({ push: vi.fn() }),
-}));
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => {
-    const translate = (key: string, values?: Record<string, unknown>) =>
-      values ? `${key}:${Object.values(values).join(",")}` : key;
-    translate.rich = (key: string, values?: Record<string, unknown>) =>
-      `${key}:${String(values?.host ?? "")}`;
-    return translate;
-  },
-}));
-
-function convexPath(reference: unknown) {
-  try {
-    return getFunctionName(reference as never);
-  } catch {
-    const maybe = reference as { _path?: unknown };
-    return typeof maybe._path === "string" ? maybe._path : "";
-  }
-}
-
-const DAILY = JSON.stringify({
-  version: 2, kind: "recurring", cadence: "daily", timeLocal: "09:00", timezone: "UTC",
-});
-
-const website = {
-  _id: "companyWebsite_1",
-  companyId: "company_1",
-  websiteId: "website_9",
-  displayHost: "ourshop.com",
-  companyName: "Ronins Agency",
-  companyIntervalStr: DAILY,
-  companyScheduleActive: true,
-  locationCode: undefined,
-  effective: { active: true, intervalStr: DAILY, source: "COMPANY", nextRunAt: null },
-};
-
-describe("CompanyWebsiteDetailPage", () => {
-  function mockWebsite(row: unknown = website) {
-    vi.mocked(useQuery).mockImplementation(((reference: unknown) =>
-      convexPath(reference).includes("getCompanyWebsiteById") ? row : undefined
-    ) as never);
-  }
-
+describe("the Brief", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useMutation).mockImplementation(() => vi.fn() as never);
-    mockWebsite();
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": ownedHeader,
+      "websiteClientView:getSitePortfolio": {
+        searches: { TOP_THREE: 1, PAGE_ONE: 1, NEVER_RANKED: 1 },
+        questions: { THIN: 1 },
+        rivals: { AHEAD: 1 },
+        untrackedNamed: 2,
+      },
+    }));
   });
 
-  it("keeps the two settings that genuinely differ between clients", async () => {
-    render(<CompanyWebsiteDetailPage />);
+  it("opens each list from the card that counts it", async () => {
+    renderWithProviders(<CompanySiteBriefPage />);
 
-    expect(await screen.findByRole("heading", { name: "ourshop.com" })).toBeInTheDocument();
-    // How often this client pulls it, and where from. Everything else moved.
-    expect(screen.getByText("editSettings")).toBeInTheDocument();
-    // The place picker, which is per-client and stays: a London agency and a
-    // Leeds one watching one host want different answers.
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    const base = "/admin/companies/company_1/websites/site/companyWebsite_1";
+    expect((await screen.findByText("admin.siteView.brief.searches")).closest("a"))
+      .toHaveAttribute("href", `${base}/tracking?list=searches`);
+    expect(screen.getByText("admin.siteView.brief.questions").closest("a"))
+      .toHaveAttribute("href", `${base}/tracking?list=questions`);
+    expect(screen.getByText("admin.siteView.brief.rivals").closest("a"))
+      .toHaveAttribute("href", `${base}/tracking?list=competitors`);
+    // Brand names are the website's, shared, so the card opens the record.
+    expect(screen.getByText("admin.siteView.brief.brands").closest("a"))
+      .toHaveAttribute("href", "/admin/websites/website_9");
   });
 
-  it("points the shared lists at the website record, not at this client", async () => {
-    render(<CompanyWebsiteDetailPage />);
+  it("says a price is unknown rather than guessing one", async () => {
+    renderWithProviders(<CompanySiteBriefPage />);
 
-    // Editing any of these changes what every client watching the host sees,
-    // so they are edited in one place and linked to from here.
-    for (const label of ["tracked.keywords", "tracked.questions", "tracked.competition"]) {
-      expect((await screen.findByText(label)).closest("a"))
-        .toHaveAttribute("href", expect.stringContaining("/admin/websites/website_9/"));
-    }
+    // Questions have never been charged, so their card cannot price itself.
+    expect(await screen.findByText("admin.siteView.priceUnknownShort")).toBeInTheDocument();
   });
 
-  it("points results at the routes scoped to this client", async () => {
-    render(<CompanyWebsiteDetailPage />);
+  it("is the same screen on day one, saying what the first search would do", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": { ...ownedHeader, counts: { searches: 0, questions: 0, rivals: 0, brandNames: 1 } },
+      "websiteClientView:getSitePortfolio": { searches: {}, questions: {}, rivals: {}, untrackedNamed: 0 },
+    }));
+    renderWithProviders(<CompanySiteBriefPage />);
 
-    // The pull is shared; what is read out of it is this client's own, which is
-    // why these stay under the company and the lists above do not.
-    for (const label of ["results.keywords", "results.citations", "results.fanOut"]) {
-      expect((await screen.findByText(label)).closest("a"))
-        .toHaveAttribute("href", expect.stringContaining("/admin/companies/company_1/websites/site/companyWebsite_1/"));
-    }
+    expect(await screen.findByText("admin.siteView.brief.searchesEmpty")).toBeInTheDocument();
+    expect(screen.getByText("admin.siteView.brief.questionsEmpty")).toBeInTheDocument();
+    expect(screen.getByText("admin.siteView.brief.brandsFew")).toBeInTheDocument();
   });
 
-  it("says so plainly when the website does not exist", () => {
-    mockWebsite(null);
-    render(<CompanyWebsiteDetailPage />);
+  it("shows a tracked site its pairing, and where to compare it", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": trackedHeader,
+      "websiteAttachments:listCompanyOwnedWebsites": [],
+    }));
+    renderWithProviders(<CompanySiteBriefPage />);
 
-    expect(screen.getByText("notFound")).toBeInTheDocument();
+    expect(await screen.findByText("admin.siteView.overview.title")).toBeInTheDocument();
+    expect(screen.getByText("admin.siteView.overview.compare").closest("a"))
+      .toHaveAttribute("href", "/admin/companies/company_1/websites/site/companyWebsite_1/tracking?list=competitors");
+    expect(screen.queryByText("admin.siteView.brief.searches")).not.toBeInTheDocument();
   });
 });

@@ -1,18 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { RowActions } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
+import { ResultsSwitcher } from "../ResultsSwitcher";
 
 /**
  * What the AI engines search for when asked this website's questions.
@@ -31,20 +37,37 @@ import useDebounce from "@/src/hooks/useDebounce";
 export default function WebsiteFanOutPage() {
   const t = useTranslations("admin.websiteFanOut");
   const params = useParams();
-  const companyId = params.id as string;
   const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(searchTerm, 400);
 
-  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
+  const [buyingUntracked, setBuyingUntracked] = useState(false);
+  const [error, setError] = useState("");
+  // The header's query, shared with the layout that already holds it, for the
+  // website whose list "track it" adds to.
+  const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
   const queries = useQuery(api.seoFanOutReports.listWebsiteFanOutQueries, {
     companyWebsiteId,
     searchTerm: debouncedSearch,
+    buyingUntracked,
     page,
     pageSize: TABLE_PAGE_SIZE,
   });
+  const addKeyword = useMutation(api.websiteCanonical.addWebsiteKeyword);
+  const engineLabel = useEngineLabel();
+  const action = useAdminAction({ scope: "admin-site-fan-out" });
+
+  const track = async (keyword: string) => {
+    if (!header) return;
+    setError("");
+    const outcome = await action.run(
+      () => addKeyword({ websiteId: header.websiteId, keyword }),
+      { key: keyword, suppressErrorToast: true, fallbackMessage: t("errors.trackFailed") },
+    );
+    if (!outcome.ok) setError(outcome.message);
+  };
 
   const intentLabel = (intent: string) => {
     if (intent === "BUYING") return t("intents.BUYING");
@@ -54,21 +77,27 @@ export default function WebsiteFanOutPage() {
     return t("intents.OTHER");
   };
 
-  if (website === null) {
-    return <p className="py-12 text-center text-[13px] text-muted">{t("notFound")}</p>;
-  }
-
   return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <DetailHeader
-        back={{
-          label: t("back"),
-          href: `/admin/companies/${companyId}/websites/site/${companyWebsiteId}`,
-        }}
-        icon={<Sparkles className="h-6 w-6 text-brand" />}
-        title={website?.displayHost ?? ""}
+    <div className="flex w-full flex-col gap-5">
+      <ResultsSwitcher active="fanOut" />
+      <PageHeader
+        icon={<Sparkles className="h-5 w-5 text-brand" />}
+        title={t("title")}
         description={t("subtitle")}
+        action={
+          <Button
+            variant={buyingUntracked ? "accent" : "quiet"}
+            aria-pressed={buyingUntracked}
+            onClick={() => {
+              setBuyingUntracked((current) => !current);
+              setPage(1);
+            }}
+          >
+            {t("buyingUntracked", { count: queries?.buyingUntrackedCount ?? 0 })}
+          </Button>
+        }
       />
+      <SaveError>{error}</SaveError>
 
       <DataTable
         rows={queries === undefined ? undefined : queries.data}
@@ -125,7 +154,7 @@ export default function WebsiteFanOutPage() {
             key: "engines",
             header: t("enginesColumn"),
             cell: (row) => (
-              <span className="text-[12px] text-secondary">{row.engines.join(", ")}</span>
+              <span className="text-[12px] text-secondary">{row.engines.map(engineLabel).join(", ")}</span>
             ),
           },
           {
@@ -137,6 +166,32 @@ export default function WebsiteFanOutPage() {
                 <span className="font-mono text-[13px] text-foreground">{row.timesSeen}</span>
                 <span className="text-[11px] text-muted">{row.lastSeenDay}</span>
               </div>
+            ),
+          },
+          {
+            /*
+              "Track it" puts the search on this site's own list, so it is
+              checked from next collection on. Already-tracked says so rather
+              than offering a button that does nothing.
+            */
+            key: "track",
+            header: t("trackColumn"),
+            align: "right",
+            cell: (row) => (
+              row.tracked ? (
+                <span className="text-[11px] text-muted">{t("alreadyTracked")}</span>
+              ) : (
+                <RowActions>
+                  <Button
+                    variant="accent"
+                    className="px-2 py-1 text-[11px]"
+                    disabled={!header || action.isBusy(row.queryText)}
+                    onClick={() => void track(row.queryText)}
+                  >
+                    {t("track")}
+                  </Button>
+                </RowActions>
+              )
             ),
           },
         ]}

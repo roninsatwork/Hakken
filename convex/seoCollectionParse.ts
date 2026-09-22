@@ -12,6 +12,7 @@ import {
 } from "./dataForSeoParsers";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { replaceSameDayPosition } from "./seoKeywordChecks";
+import { recomputeSearchStats, recordAnswer } from "./websiteTrackingStats";
 
 import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
 import { resolveWebsiteIdsByHost } from "./websites";
@@ -298,6 +299,9 @@ const MAX_BULK_ROWS = 1_200;
  */
 const REPLACE_LIMIT = MAX_POSITION_ROWS + 100;
 
+/** A host's own searches read when filing its rankings: its whole list, at the list's ceiling. */
+const TRACKED_SEARCHES_READ = 1_000;
+
 export const getPullForParse = internalQuery({
   args: { pullId: v.id("seoDataPulls") },
   returns: v.union(v.null(), v.object({
@@ -378,6 +382,16 @@ export const writeSeoMetrics = internalMutation({
       .take(REPLACE_LIMIT);
     for (const row of priorPositions) await ctx.db.delete(row._id);
 
+    // The searches on this host's own record, so the ones a ranked-keywords
+    // pull happens to cover bring their summaries up to date too. Only those:
+    // a large site ranks for thousands of phrases nobody is tracking.
+    const tracked = new Set((await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+      .take(TRACKED_SEARCHES_READ))
+      .map((row) => row.keyword));
+    const place = args.locationCode ?? DEFAULT_LOCATION_CODE;
+
     for (const entry of args.positions) {
       // The same keyword measured twice on one day from one place is one fact,
       // so an earlier row is replaced rather than joined by a second. From
@@ -402,6 +416,9 @@ export const writeSeoMetrics = internalMutation({
         pullId: args.pullId,
         createdAt: now,
       });
+      if (tracked.has(entry.keyword)) {
+        await recomputeSearchStats(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place });
+      }
     }
     return null;
   },
@@ -585,6 +602,19 @@ export const writeAiCitations = internalMutation({
         createdAt: now,
       });
     }
+
+    // The answer as a whole — including when it named nobody we know, which a
+    // row per mention cannot record — and the summaries of every host asking
+    // this question. The named list is brands, not sources: a cited page is
+    // evidence, being named is the result.
+    await recordAnswer(ctx, {
+      pullId: args.pullId,
+      prompt: args.prompt,
+      engine: args.engine,
+      locationCode: locationCode ?? DEFAULT_LOCATION_CODE,
+      day: args.day,
+      brands: args.brands,
+    });
     return null;
   },
 });
