@@ -445,11 +445,61 @@ export function seoBulkOperationParams(
 export function seoSiteOperationParams(
   operation: SeoOperation,
   host: string,
+  place: SeoPlace = {},
 ): Record<string, string | number> {
   const params: Record<string, string | number> = {};
   for (const [name, param] of Object.entries(operation.params)) {
     if (param.kind === "host") {
       params[name] = host;
+      continue;
+    }
+    if (name === "location_code" && place.locationCode !== undefined) {
+      params[name] = place.locationCode;
+      continue;
+    }
+    if (param.default !== undefined) params[name] = param.default;
+  }
+  return params;
+}
+
+/**
+ * Where a watcher asks from.
+ *
+ * Passed wherever an operation takes a `location_code`, which is every
+ * ranking operation. It was stored on the company's hold and read by nothing
+ * for ranking pulls — the questions asked the AI engines from Leeds while the
+ * rankings for the same client came from the United Kingdom as a whole.
+ * Absent keeps the registry default, so a site nobody placed is asked exactly
+ * as it always was, and its old pulls are still the same question.
+ */
+export type SeoPlace = { locationCode?: number };
+
+/** The operation that checks where every site ranks for one search. */
+export const SEO_KEYWORD_CHECK_OPERATION = "serp_google_organic";
+
+/**
+ * What a keyword check is sent: the search, and the place it is made from.
+ *
+ * Built here with the other param builders so the defaults cannot drift: two
+ * cycles asking the same search from the same place must send byte-identical
+ * arguments, because that is what makes them one purchase.
+ */
+export function seoKeywordCheckParams(
+  keyword: string,
+  place: SeoPlace = {},
+): Record<string, string | number> {
+  const operation = findSeoOperation(SEO_KEYWORD_CHECK_OPERATION);
+  if (!operation) {
+    throw appError("NOT_CONFIGURED", `${SEO_KEYWORD_CHECK_OPERATION} is missing from the registry.`);
+  }
+  const params: Record<string, string | number> = {};
+  for (const [name, param] of Object.entries(operation.params)) {
+    if (param.kind === "keyword" && name === "keyword") {
+      params[name] = keyword;
+      continue;
+    }
+    if (name === "location_code" && place.locationCode !== undefined) {
+      params[name] = place.locationCode;
       continue;
     }
     if (param.default !== undefined) params[name] = param.default;

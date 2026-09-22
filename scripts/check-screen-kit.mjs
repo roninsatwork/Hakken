@@ -516,12 +516,14 @@ const TOGGLE_GLYPHS = /<Toggle(Left|Right)\b/;
  */
 const HAND_DRAWN_DIVIDER = /\blast:border-(?:b-)?0\b/;
 
-/** Every file the buttons rule reads, already relative to the repo root. */
-function listButtonFiles() {
+/** Every file the buttons rule reads, already relative to the root it was given. */
+function listButtonFiles(root = rootDir) {
   const files = [];
   for (const dir of BUTTON_SCAN_DIRS) {
-    for (const file of listFiles(path.join(rootDir, dir))) {
-      const relative = path.relative(rootDir, file);
+    const full = path.join(root, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const file of listFiles(full)) {
+      const relative = path.relative(root, file);
       if (BUTTON_EXEMPT.some((exempt) => relative === exempt || relative.startsWith(exempt))) {
         continue;
       }
@@ -668,12 +670,19 @@ function findInFile(relative, text) {
  * A file is frozen per rule, not outright. A screen frozen for its table can
  * still fail on a hand-written field, which is the point — otherwise one old
  * table would buy a screen a permanent exemption from the other rule.
+ *
+ * `root` is the tree whose screens are read — the repo, unless a test hands it
+ * a scratch copy. The tests' probes used to be written into the real
+ * `src/app`, so for the moment each one existed every other check walking the
+ * tree could see it: on 2026-09-22 the fence checker listed a probe, it was
+ * deleted, and the read failed. The kit's own component names still come from
+ * the real `src/ui`, because a probe is checked against the real kit.
  */
-export function findHandWrittenParts(frozen = loadFrozen()) {
+export function findHandWrittenParts(frozen = loadFrozen(), root = rootDir) {
   const offenders = [];
 
-  for (const file of listFiles(path.join(rootDir, SCAN_DIR))) {
-    const relative = path.relative(rootDir, file);
+  for (const file of listFiles(path.join(root, SCAN_DIR))) {
+    const relative = path.relative(root, file);
     const text = readIfPresent(file);
     if (text === null) continue;
 
@@ -685,8 +694,8 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
 
   // The buttons rule reads wider and counts rather than lists: a file may keep
   // the raw buttons it already had, and fails the moment it draws one more.
-  for (const relative of listButtonFiles()) {
-    const text = readIfPresent(path.join(rootDir, relative));
+  for (const relative of listButtonFiles(root)) {
+    const text = readIfPresent(path.join(root, relative));
     if (text === null) continue;
     const count = countRawButtons(text);
     if (count === 0) continue;
@@ -700,8 +709,8 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
   // Headings count the same way, over the screens directory alone: the kit's
   // own components draw the heading every screen is meant to use, so a heading
   // in src/ui is the part rather than a copy of it.
-  for (const file of listFiles(path.join(rootDir, SCAN_DIR))) {
-    const relative = path.relative(rootDir, file);
+  for (const file of listFiles(path.join(root, SCAN_DIR))) {
+    const relative = path.relative(root, file);
     const headingText = readIfPresent(file);
     if (headingText === null) continue;
     const count = countHandWrittenHeadings(headingText);
@@ -717,11 +726,11 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
 }
 
 /** Frozen entries that no longer hand-write anything, so the lists can shrink. */
-export function findStaleFreezes(frozen = loadFrozen()) {
+export function findStaleFreezes(frozen = loadFrozen(), root = rootDir) {
   const stale = [];
 
   for (const relative of frozen.buttons.keys()) {
-    const full = path.join(rootDir, relative);
+    const full = path.join(root, relative);
     if (!fs.existsSync(full)) {
       stale.push({ rule: "buttons", file: relative, reason: "no longer exists" });
       continue;
@@ -732,7 +741,7 @@ export function findStaleFreezes(frozen = loadFrozen()) {
   }
 
   for (const relative of frozen.headings.keys()) {
-    const full = path.join(rootDir, relative);
+    const full = path.join(root, relative);
     if (!fs.existsSync(full)) {
       stale.push({ rule: "headings", file: relative, reason: "no longer exists" });
       continue;
@@ -755,7 +764,7 @@ export function findStaleFreezes(frozen = loadFrozen()) {
     "headerRule",
   ]) {
     for (const relative of frozen[rule]) {
-      const full = path.join(rootDir, relative);
+      const full = path.join(root, relative);
       if (!fs.existsSync(full)) {
         stale.push({ rule, file: relative, reason: "no longer exists" });
         continue;

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { SELF_IMPROVEMENT_CONFIG_KEY } from "./selfImprovementConfig";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const paginationOpts = { numItems: 10, cursor: null };
 
@@ -261,7 +262,7 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
     const { agentId, runId } = await seedUnattendedFailure(t);
 
     await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const reflections = await t.run(async (ctx) =>
       await ctx.db
@@ -295,7 +296,7 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
 
     await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
     await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const reflections = await t.run(async (ctx) =>
       await ctx.db
@@ -322,7 +323,7 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
     );
 
     await t.mutation(internal.agentRunReflections.createForRunInternal, { runId: successRunId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
     expect(reflections).toHaveLength(0);
@@ -342,7 +343,7 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
     });
 
     await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
     expect(reflections).toHaveLength(0);

@@ -1,5 +1,5 @@
 import { runDecisions, type DecisionResult, type RunDecisionsDeps } from "./decisionActions";
-import { couldBeSameBusiness, findBrandMention, primaryBrandName } from "./websiteBrands";
+import { couldBeSameBusiness, primaryBrandName } from "./utils/websiteBrands";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -25,8 +25,6 @@ import type { Id } from "./_generated/dataModel";
  * nothing** rather than guessing: the rows still stand, unjudged.
  */
 
-/** Named brands judged per answer, matching what the writer will file. */
-const MAX_CITATION_ROWS = 200;
 
 
 /**

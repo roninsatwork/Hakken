@@ -165,7 +165,9 @@ export default function Header({ onOpenModal }: HeaderProps) {
           });
         });
     }
-  }, [user, recordLogin]);
+    // `tc` is listed so the effect never reads a stale translator. A re-run is
+    // harmless: the session flag above makes it a no-op after the first.
+  }, [user, recordLogin, tc]);
 
   const handleLogout = async () => {
     setIsProfileOpen(false);

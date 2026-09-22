@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { getRegisteredMigrationNames } from "./dataMigrations";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const SWARM_LOG_MIGRATION = "2026-07-25-swarm-logs-company-id";
 
@@ -25,7 +26,7 @@ const makeTest = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type TestConvex = ReturnType<typeof makeTest>;
 
 async function drainScheduler(t: TestConvex) {
-  await t.finishAllScheduledFunctions(vi.runAllTimers);
+  await finishScheduled(t);
 }
 
 async function seedSwarmLogs(

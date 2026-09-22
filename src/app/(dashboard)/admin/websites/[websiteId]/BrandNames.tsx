@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Plus, Star, X } from "lucide-react";
@@ -11,7 +11,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { MAX_BRAND_NAMES } from "@/convex/websiteBrands";
+import { MAX_BRAND_NAMES } from "@/convex/utils/websiteBrands";
 
 /**
  * The names this website goes by.
@@ -47,21 +47,24 @@ export function BrandNames({
   const [isSaved, setIsSaved] = useState(false);
 
   /*
-    Keyed on the content of the saved list rather than on the array itself.
+    Adopted during render, keyed on the content of the saved list.
 
-    The parent builds that array fresh on every render, so depending on it
-    directly re-ran this effect constantly and wiped the draft between
-    keystrokes — the field looked like it was refusing to accept typing at all.
-    A serialised key changes only when the saved names really change, which is
-    the one moment re-seeding is right.
+    Keyed on content rather than on the array: the parent builds that array
+    fresh on every render, so depending on it directly re-seeded constantly and
+    wiped the draft between keystrokes — the field looked like it was refusing
+    typing. A serialised key changes only when the saved names really change,
+    which is the one moment re-seeding is right. And during render rather than
+    in an effect, so the reader never sees a frame of the stale list first.
   */
   const savedKey = JSON.stringify(saved);
-  useEffect(() => {
+  const [adoptedKey, setAdoptedKey] = useState<string | null>(null);
+  if (adoptedKey !== savedKey) {
+    setAdoptedKey(savedKey);
     const names = JSON.parse(savedKey) as Draft[];
     setDraft(names.length > 0
       ? names.map((entry) => ({ ...entry }))
       : [{ name: "", isPrimary: true }]);
-  }, [savedKey]);
+  }
 
   const update = (index: number, name: string) => {
     setIsSaved(false);

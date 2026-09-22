@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { questionKey } from "./wikiFeedbackService";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The Examiner's drafting round (closing-the-loop plan, phase 4), with the
@@ -212,7 +213,7 @@ describe("the monthly rota", () => {
       const result = await t.action(internal.wikiExamGrowthActions.examGrowthSweep, {});
       expect(result).toEqual({ companies: 2 });
       // Drain the dispatched rounds: no history anywhere, so no model calls.
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
       expect(generateMock).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();

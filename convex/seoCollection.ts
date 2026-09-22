@@ -3,15 +3,18 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
+  SEO_KEYWORD_CHECK_OPERATION,
   findSeoOperation,
   seoAiCitationParams,
   seoBulkOperationParams,
   seoBulkOperations,
+  seoKeywordCheckParams,
   seoSiteOperationParams,
   seoSiteOperations,
+  type SeoOperation,
 } from "./dataForSeoRegistry";
 import { aiCitationOperationId } from "./seoAiEngines";
-import { findSeoLocation } from "./seoLocations";
+import { findSeoLocation } from "./utils/seoLocations";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
@@ -20,7 +23,9 @@ import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
   SEO_COMPETITORS_PER_WEBSITE,
+  SEO_KEYWORD_CHECKS_PER_WEBSITE,
   SEO_MAX_SENDS_PER_CYCLE,
+  SEO_PAGE_LINE_BUDGET,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -56,6 +61,8 @@ type ExpansionOutcome = {
   planned: number;
   reused: number;
   lastCursor: Id<"companyWebsites"> | null;
+  /** The last website's creation time, which is where the next page starts. */
+  lastCreatedAt: number | null;
   exhausted: boolean;
   cappedPlan: boolean;
 };
@@ -64,6 +71,12 @@ export const expandSeoCycle = internalMutation({
   args: {
     cycleId: v.id("seoCollectionCycles"),
     cursor: v.optional(v.id("companyWebsites")),
+    /**
+     * When the cursor's row was created, so the next page starts after it in
+     * the index even if that hold was removed in between. Absent, the cursor's
+     * own row is read for it.
+     */
+    cursorCreatedAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -75,7 +88,9 @@ export const expandSeoCycle = internalMutation({
       .withIndex("by_company_agent", (q) => q.eq("companyId", cycle.companyId))
       .first();
 
-    const outcome = await expandPage(ctx, cycle, schedule, args.cursor);
+    const after = args.cursorCreatedAt
+      ?? (args.cursor ? (await ctx.db.get(args.cursor))?._creationTime : undefined);
+    const outcome = await expandPage(ctx, cycle, schedule, args.cursor, after);
 
     const plannedCount = cycle.plannedCount + outcome.planned;
     const reusedCount = cycle.reusedCount + outcome.reused;
@@ -104,6 +119,7 @@ export const expandSeoCycle = internalMutation({
       await ctx.scheduler.runAfter(0, internal.seoCollection.expandSeoCycle, {
         cycleId: args.cycleId,
         cursor: outcome.lastCursor,
+        ...(outcome.lastCreatedAt !== null ? { cursorCreatedAt: outcome.lastCreatedAt } : {}),
       });
       return null;
     }
@@ -137,21 +153,34 @@ async function expandPage(
   cycle: Doc<"seoCollectionCycles">,
   schedule: Doc<"schedules"> | null,
   cursor: Id<"companyWebsites"> | undefined,
+  cursorCreatedAt: number | undefined,
 ): Promise<ExpansionOutcome> {
   const now = new Date(cycle.startedAt);
   const operations = seoSiteOperations();
 
-  const query = ctx.db
-    .query("companyWebsites")
-    .withIndex("by_company", (q) => q.eq("companyId", cycle.companyId));
+  /*
+    Read from where the last page stopped, in the index itself.
 
-  const page = await query.take(SEO_EXPANSION_PAGE + (cursor ? 1 : 0) + PAGE_SLACK);
-  const after = cursor ? sliceAfter(page, cursor) : page;
-  const websites = after.slice(0, SEO_EXPANSION_PAGE);
+    Every index ends in `_creationTime`, so "after the cursor" is a range, not
+    a filter. It read the company's first rows every time and sliced after the
+    cursor in memory, which only worked while the cursor was among them: past
+    the first page of a large company the cursor fell outside what was read,
+    the slice came back short, and every website after roughly the hundred and
+    second was never collected at all.
+  */
+  const page = await ctx.db
+    .query("companyWebsites")
+    .withIndex("by_company", (q) => cursorCreatedAt !== undefined
+      ? q.eq("companyId", cycle.companyId).gt("_creationTime", cursorCreatedAt)
+      : q.eq("companyId", cycle.companyId))
+    .take(SEO_EXPANSION_PAGE + PAGE_SLACK);
+  const websites = page.slice(0, SEO_EXPANSION_PAGE);
 
   let planned = 0;
   let reused = 0;
   let lastCursor: Id<"companyWebsites"> | null = cursor ?? null;
+  let lastCreatedAt: number | null = cursorCreatedAt ?? null;
+  let stoppedEarly = false;
   let sendIndex = cycle.plannedCount;
 
   // Every website this page touched, for the bulk operations below. Collected
@@ -160,7 +189,14 @@ async function expandPage(
   const batch: Array<{ websiteId: Id<"websites">; host: string }> = [];
 
   for (const companyWebsite of websites) {
+    // Stop between websites, never inside one, so a site's lines are always
+    // written by the same page.
+    if (planned + reused >= SEO_PAGE_LINE_BUDGET) {
+      stoppedEarly = true;
+      break;
+    }
     lastCursor = companyWebsite._id;
+    lastCreatedAt = companyWebsite._creationTime;
 
     /*
       A tracked site paired with one of the company's own is reached below, as
@@ -224,13 +260,31 @@ async function expandPage(
     reused += citations.reused;
     sendIndex += citations.planned;
 
+    // The searches on this website's record, checked from this watcher's
+    // place. One page per search per place, shared by everyone who tracks it,
+    // and it files a position for every known site on it — which is how a
+    // rival's ranking for the same search arrives without a pull of its own.
+    const checks = await planKeywordChecks(
+      ctx,
+      cycle,
+      companyWebsite,
+      sendIndex,
+      SEO_MAX_SENDS_PER_CYCLE - cycle.plannedCount - planned,
+    );
+    planned += checks.planned;
+    reused += checks.reused;
+    sendIndex += checks.planned;
+    if (checks.capped) {
+      return { planned, reused, lastCursor, lastCreatedAt, exhausted: false, cappedPlan: true };
+    }
+
     for (const websiteId of targets) {
       const target = await ctx.db.get(websiteId);
       if (target) batch.push({ websiteId, host: target.host });
 
       for (const operation of operations) {
         if (planned + cycle.plannedCount >= SEO_MAX_SENDS_PER_CYCLE) {
-          return { planned, reused, lastCursor, exhausted: false, cappedPlan: true };
+          return { planned, reused, lastCursor, lastCreatedAt, exhausted: false, cappedPlan: true };
         }
 
         const result = await planPull(ctx, {
@@ -257,7 +311,8 @@ async function expandPage(
     planned: planned + bulkPlanned.planned,
     reused: reused + bulkPlanned.reused,
     lastCursor,
-    exhausted: after.length <= SEO_EXPANSION_PAGE,
+    lastCreatedAt,
+    exhausted: !stoppedEarly && page.length <= SEO_EXPANSION_PAGE,
     cappedPlan: false,
   };
 }
@@ -356,46 +411,17 @@ async function planCitationPulls(
       if (!operation) continue;
 
       const params = seoAiCitationParams(engine, prompt.prompt, location);
-      const idempotencyKey = buildSeoIdempotencyKey({
-        operationId: operation.id,
+      const outcome = await planSharedPull(ctx, cycle, {
+        operation,
+        params,
         // A question has no website of its own — the same question from two
         // companies is one purchase. The params carry the text and the place.
-        websiteId: "prompt",
-        params,
-        cycleStartedAt: cycle.startedAt,
-      });
-
-      const existing = await reusableByKey(ctx, idempotencyKey);
-
-      const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
-        operationId: operation.id,
-        family: operation.family,
-        mode: operation.mode,
-        companyId: cycle.companyId,
-        taskArgsJson: JSON.stringify(params),
-        status: "PENDING",
-        tag: idempotencyKey,
-        idempotencyKey,
-        cycleId: cycle._id,
-        dueAt: cycle.startedAt + sendIndex * SEO_DUE_SPACING_MS,
-        attempts: 0,
-        costUsd: 0,
-        sandbox: false,
-        ...(cycle.agentRunId ? { agentRunId: cycle.agentRunId } : {}),
-        submittedAt: Date.now(),
-      });
-
-      await ctx.db.insert("seoCycleLines", {
-        cycleId: cycle._id,
-        companyId: cycle.companyId,
+        sentinel: "prompt",
         websiteId: companyWebsite.websiteId,
-        operationId: operation.id,
-        pullId,
-        reused: Boolean(existing),
-        createdAt: Date.now(),
+        sendIndex,
       });
 
-      if (existing) reused += 1;
+      if (outcome === "REUSED") reused += 1;
       else {
         planned += 1;
         sendIndex += 1;
@@ -404,6 +430,117 @@ async function planCitationPulls(
   }
 
   return { planned, reused };
+}
+
+/**
+ * Check where every site ranks for the searches on this website's record.
+ *
+ * The host's list, not the client's: a search added once to `ourshop.com` is
+ * checked for every company holding it, and asked once between them when they
+ * watch from the same place. It is keyed on the search and the place and on no
+ * website, so two hosts tracking the same phrase in the same town share the
+ * page too — and the parse files a position for every known site on it.
+ *
+ * Paused searches are not asked. `room` is what is left of the cycle's
+ * ceiling; running out of it stops here and says so, like every other planner.
+ */
+async function planKeywordChecks(
+  ctx: MutationCtx,
+  cycle: Doc<"seoCollectionCycles">,
+  companyWebsite: Doc<"companyWebsites">,
+  startIndex: number,
+  room: number,
+): Promise<{ planned: number; reused: number; capped: boolean }> {
+  const operation = findSeoOperation(SEO_KEYWORD_CHECK_OPERATION);
+  if (!operation) return { planned: 0, reused: 0, capped: false };
+
+  const searches = await ctx.db
+    .query("websiteKeywords")
+    .withIndex("by_website_active", (q) =>
+      q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
+    .take(SEO_KEYWORD_CHECKS_PER_WEBSITE);
+
+  let planned = 0;
+  let reused = 0;
+  let sendIndex = startIndex;
+
+  for (const search of searches) {
+    if (planned >= room) return { planned, reused, capped: true };
+
+    const outcome = await planSharedPull(ctx, cycle, {
+      operation,
+      params: seoKeywordCheckParams(search.keyword, { locationCode: companyWebsite.locationCode }),
+      sentinel: "keyword",
+      websiteId: companyWebsite.websiteId,
+      sendIndex,
+    });
+    if (outcome === "REUSED") reused += 1;
+    else {
+      planned += 1;
+      sendIndex += 1;
+    }
+  }
+
+  return { planned, reused, capped: false };
+}
+
+/**
+ * One pull that belongs to no single website, and the line that files it.
+ *
+ * A question and a search are both asked once for everyone: the key carries
+ * the text and the place and a sentinel instead of a website, so the same one
+ * from two companies — or two hosts — is one purchase. The line records it
+ * against the website whose cycle asked, so that site's history is complete.
+ */
+async function planSharedPull(
+  ctx: MutationCtx,
+  cycle: Doc<"seoCollectionCycles">,
+  args: {
+    operation: SeoOperation;
+    params: Record<string, unknown>;
+    sentinel: "prompt" | "keyword";
+    websiteId: Id<"websites">;
+    sendIndex: number;
+  },
+): Promise<"PLANNED" | "REUSED"> {
+  const idempotencyKey = buildSeoIdempotencyKey({
+    operationId: args.operation.id,
+    websiteId: args.sentinel,
+    params: args.params,
+    cycleStartedAt: cycle.startedAt,
+  });
+
+  const existing = await reusableByKey(ctx, idempotencyKey);
+
+  const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
+    operationId: args.operation.id,
+    family: args.operation.family,
+    mode: args.operation.mode,
+    companyId: cycle.companyId,
+    taskArgsJson: JSON.stringify(args.params),
+    status: "PENDING",
+    tag: idempotencyKey,
+    idempotencyKey,
+    cycleId: cycle._id,
+    dueAt: cycle.startedAt + args.sendIndex * SEO_DUE_SPACING_MS,
+    attempts: 0,
+    costUsd: 0,
+    sandbox: false,
+    ...(cycle.agentRunId ? { agentRunId: cycle.agentRunId } : {}),
+    submittedAt: Date.now(),
+  });
+
+  await ctx.db.insert("seoCycleLines", {
+    cycleId: cycle._id,
+    companyId: cycle.companyId,
+    websiteId: args.websiteId,
+    operationId: args.operation.id,
+    pullId,
+    reused: Boolean(existing),
+    createdAt: Date.now(),
+  });
+
+  return existing ? "REUSED" : "PLANNED";
 }
 
 /**
@@ -513,13 +650,6 @@ async function planBulkPulls(
  */
 const PAGE_SLACK = 1;
 
-function sliceAfter(
-  rows: Doc<"companyWebsites">[],
-  cursor: Id<"companyWebsites">,
-): Doc<"companyWebsites">[] {
-  const index = rows.findIndex((row) => row._id === cursor);
-  return index === -1 ? rows : rows.slice(index + 1);
-}
 
 /**
  * The reuse ladder, in the order money is saved.
@@ -553,7 +683,12 @@ async function planPull(
   const website = await ctx.db.get(args.websiteId);
   if (!website) return "SKIPPED";
 
-  const params = seoSiteOperationParams(operation, website.host);
+  // Asked from the watcher's place. For a rival that is the place of the site
+  // it is compared with, which is the hold being walked — the same place on
+  // the same day, or the two are not a comparison.
+  const params = seoSiteOperationParams(operation, website.host, {
+    locationCode: args.companyWebsite.locationCode,
+  });
   const idempotencyKey = buildSeoIdempotencyKey({
     operationId: operation.id,
     websiteId: args.websiteId,
@@ -561,7 +696,7 @@ async function planPull(
     cycleStartedAt: args.cycle.startedAt,
   });
 
-  const fresh = await findFreshPull(ctx, args);
+  const fresh = await findFreshPull(ctx, { ...args, taskArgsJson: JSON.stringify(params) });
   if (fresh) {
     await writeLine(ctx, args, fresh._id, true);
     return "REUSED";
@@ -615,9 +750,14 @@ async function findFreshPull(
     companyWebsite: Doc<"companyWebsites">;
     websiteId: Id<"websites">;
     operationId: string;
+    /** What would be sent. A fresh answer to a different question is no answer. */
+    taskArgsJson: string;
     now: Date;
   },
 ) {
+  // Matched on the arguments as well as the operation, because the place is
+  // in them: Leeds's rankings on Monday are not London's on Wednesday, however
+  // fresh they are.
   const recent = await ctx.db
     .query("seoDataPulls")
     .withIndex("by_website_submitted", (q) => q.eq("websiteId", args.websiteId))
@@ -626,6 +766,7 @@ async function findFreshPull(
       q.and(
         q.eq(q.field("status"), "READY"),
         q.eq(q.field("operationId"), args.operationId),
+        q.eq(q.field("taskArgsJson"), args.taskArgsJson),
       ))
     .first();
 

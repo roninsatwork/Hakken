@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const makeTest = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -161,7 +162,7 @@ describe("maintenance scripts", () => {
       expect(result.summary).toContain("2026-07-25-swarm-logs-company-id");
       expect(result.summary).toMatch(/background/i);
 
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       const logs = await t.run(async (ctx) => ctx.db.query("swarmLogs").collect());
       expect(logs.every((log) => log.companyId === companyId)).toBe(true);
@@ -175,7 +176,7 @@ describe("maintenance scripts", () => {
       await superAdminClient.mutation(api.maintenanceScripts.run, {
         scriptId: "data-migrations-apply",
       });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       const second = await superAdminClient.mutation(api.maintenanceScripts.run, {
         scriptId: "data-migrations-apply",
@@ -242,7 +243,7 @@ describe("maintenance scripts", () => {
       expect(result.summary).toMatch(/^Started \d+ migration/);
       expect(result.summary).toContain("2026-07-25-swarm-logs-company-id");
 
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       const record = await t.run(async (ctx) =>
         ctx.db

@@ -30,9 +30,10 @@ export const MIN_PROMPT_LENGTH = 8;
  * throughout, which is the condition that made lifting it safe.
  *
  * One thing this no longer is: a *per-client* allowance. Questions moved onto
- * the host, so `plans.seoPromptsPerWebsite` now bounds nothing — a plan field
- * nothing enforces. Removing it is its own change, and it is written down here
- * rather than left to be discovered.
+ * the host, and the plan field that set one — `plans.seoPromptsPerWebsite` —
+ * came off the schema and the plans screen on 2026-09-22, because a setting
+ * nothing enforces is a screen saying something untrue. No plan row held it:
+ * the field never reached `main`, and dev had no plans.
  */
 export const DEFAULT_PROMPTS_PER_WEBSITE = 1_000;
 

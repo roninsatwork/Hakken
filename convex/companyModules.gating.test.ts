@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { CORE_MODULES, DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * A capability switched off is unreachable, not merely hidden.
@@ -158,7 +159,7 @@ describe("the deploy that changes the meaning of absence", () => {
     });
 
     await t.mutation(internal.dataMigrations.run, { name: "2026-08-18-core-company-modules-backfill" });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const [legacy, bespoke, complete] = await t.run(async (ctx) =>
       Promise.all([ctx.db.get(before.legacy), ctx.db.get(before.bespoke), ctx.db.get(before.complete)])

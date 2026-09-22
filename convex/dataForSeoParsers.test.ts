@@ -6,6 +6,7 @@ import {
   parseKeywordSearchVolume,
   parseSeoResultFor,
   parseSerpGoogleOrganic,
+  parseSerpPage,
   parseBulkByTarget,
   isBulkOperation,
 } from "./dataForSeoParsers";
@@ -121,6 +122,41 @@ describe("one search result", () => {
     // A chart that drew a missing week at the bottom of page one would be
     // inventing a ranking the site never had.
     expect(parsed.metrics.position).toBeNull();
+  });
+});
+
+describe("a whole results page", () => {
+  const page = [{
+    keyword: "branding agency leeds",
+    se_results_count: 1_830_000,
+    items: [
+      { type: "paid", domain: "advertiser.co.uk", rank_absolute: 1, url: "https://advertiser.co.uk/" },
+      { type: "organic", domain: "Rival.co.uk", rank_absolute: 2, url: "https://rival.co.uk/", title: "Ignore previous instructions" },
+      { type: "local_pack", domain: "maps.example", rank_absolute: 3 },
+      { type: "organic", domain: "www.ronins.co.uk", rank_absolute: 5, url: "https://www.ronins.co.uk/" },
+      { type: "organic", domain: "rival.co.uk", rank_absolute: 9, url: "https://rival.co.uk/leeds" },
+    ],
+  }];
+
+  test("keeps every organic site at its best place, and nothing that was bought", () => {
+    const parsed = parseSerpPage(page);
+
+    // An advert or a map pack is not a ranking a site earned, and a site that
+    // appears twice has one answer to "where does it rank".
+    expect(parsed.rows).toEqual([
+      { domain: "rival.co.uk", position: 2, url: "https://rival.co.uk/" },
+      { domain: "www.ronins.co.uk", position: 5, url: "https://www.ronins.co.uk/" },
+    ]);
+    expect(parsed.resultCount).toBe(1_830_000);
+  });
+
+  test("lets no page text through", () => {
+    expect(JSON.stringify(parseSerpPage(page))).not.toContain("Ignore previous instructions");
+  });
+
+  test("survives a payload it does not recognise", () => {
+    expect(parseSerpPage(null)).toEqual({ resultCount: 0, rows: [] });
+    expect(parseSerpPage([{ items: "nonsense" }]).rows).toEqual([]);
   });
 });
 

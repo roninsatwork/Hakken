@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -756,7 +757,7 @@ describe("Deleting a website", () => {
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "shared.com")).first())!._id,
     );
     await admin.mutation(api.websites.deleteWebsite, { id: websiteId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // acme.com survives; shared.com and both holds on it are gone.
     const websites = await t.run(async (ctx) => await ctx.db.query("websites").collect());
@@ -776,7 +777,7 @@ describe("Deleting a website", () => {
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "ours.com")).first())!._id,
     );
     await admin.mutation(api.websites.deleteWebsite, { id: websiteId });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // The rival's own record survives, and so does this company's decision to
     // watch it — what goes is the hold on the deleted host, and the pairing
@@ -824,7 +825,7 @@ describe("Deleting a website", () => {
     await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
 
     await admin.mutation(api.websites.removeCompanyWebsite, { id: site });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     /*
       Only that one hold goes. The tracked site stays on the company's list —
@@ -848,7 +849,7 @@ describe("Deleting a website", () => {
     await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: survivorSite, url: "shared.com" });
 
     await admin.mutation(api.companies.deleteCompany, { id: doomed });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // Every hold the doomed company had, owned or tracked, goes with it.
     expect((await allCompanyWebsites(t)).map((row) => row.companyId)).toEqual([survivor, survivor]);

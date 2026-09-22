@@ -398,7 +398,7 @@ judgments below are asked about every row that needs one, and the batch sizes
 in the code are request shapes, not spending limits.
 
 Where Jev does not belong, so nobody reaches for it there: matching brand
-names in text is exact string work and stays in `websiteBrands.ts`; costs,
+names in text is exact string work and stays in `utils/websiteBrands.ts`; costs,
 schedules, queues and dedupe are rules; and nothing here writes a word a
 customer reads.
 
@@ -417,7 +417,7 @@ is TypeSafe's own citation-check pattern almost line for line. Fallback:
 answer text reaches the model as state and is still never stored.
 
 **2. Is this unknown name the rival we already track?** Built: `seo.same-business`,
-with the code-side pairing in `convex/websiteBrands.ts`. The citations page
+with the code-side pairing in `convex/utils/websiteBrands.ts`. The citations page
 shows "Acme Plumbing" and `acme-plumbing.co.uk` as two strangers. Code pairs
 each unmatched name with the tracked hosts it could plausibly be — shared
 words, shared domain stem — and one Score per pair with three levels, same,

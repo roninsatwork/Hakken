@@ -23,6 +23,7 @@ import {
   attachTrackedFromRivals,
   markExistingHoldsOwned,
 } from "./websiteAttachmentMigration";
+import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
@@ -124,6 +125,13 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    */
   "2026-09-22-attach-tracked-from-rivals": attachTrackedFromRivals,
   "2026-09-22-mark-existing-holds-owned": markExistingHoldsOwned,
+
+  /**
+   * Writes down that every ranking stored before places were passed was
+   * measured from the United Kingdom, the registry default — so positions can
+   * be read by place through an index rather than filtered after a read.
+   */
+  "2026-09-22-position-places": backfillPositionPlaces,
 
 
   /**

@@ -225,7 +225,11 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_website", ["websiteId"])
-    .index("by_website_keyword", ["websiteId", "keyword"]),
+    .index("by_website_keyword", ["websiteId", "keyword"])
+    /** What a cycle checks, without a paused search cutting a live one off. */
+    .index("by_website_active", ["websiteId", "isActive"])
+    /** Every host tracking a phrase, so one checked page can answer them all. */
+    .index("by_keyword", ["keyword"]),
 
   /**
    * An edge in the competition graph: this host competes with that one.
@@ -481,10 +485,19 @@ export default defineSchema({
     url: v.optional(v.string()),
     searchVolume: v.optional(v.number()),
     pullId: v.id("seoDataPulls"),
+    /**
+     * Where the search was made from, as DataForSEO's location code. Always
+     * written now; absent only on rows from before places were passed, which
+     * were all asked from the registry default, the United Kingdom, and which
+     * `2026-09-22-position-places` fills in.
+     */
+    locationCode: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_website_keyword_day", ["websiteId", "keyword", "day"])
     .index("by_website_day", ["websiteId", "day"])
+    /** One watcher's view: a site's rankings from one place, newest first. */
+    .index("by_website_place_day", ["websiteId", "locationCode", "day"])
     .index("by_pull", ["pullId"]),
 
   /**
@@ -1164,22 +1177,6 @@ export default defineSchema({
     name: v.string(),
     description: v.optional(v.string()),
     messageLimit: v.number(), // -1 indicates unlimited
-    /**
-     * How many AI questions each owned website on this plan may track.
-     *
-     * A plan allowance, beside `messageLimit`, because it is the same kind of
-     * thing: what a tier includes. It applies per owned website, so a client
-     * with four sites on a plan allowing ten gets forty questions in total.
-     *
-     * The meter matters more here than for most limits. Each question is a paid
-     * call **per engine** every time that website is collected, so ten
-     * questions across four engines is forty charges per site per collection.
-     *
-     * Absent means the platform default in `seoPrompts.ts`, so a plan written
-     * before this existed still behaves sensibly. Lowering it does not remove
-     * questions already added; it stops more being added.
-     */
-    seoPromptsPerWebsite: v.optional(v.number()),
     priceGBP: v.number(),
     /**
      * Capabilities this tier switches on for every company holding it.

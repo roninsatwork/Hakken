@@ -307,6 +307,125 @@ describe("expanding a cycle", () => {
   });
 });
 
+describe("checking the searches on a website's record", () => {
+  const LEEDS = 1006925;
+
+  async function trackSearch(t: Harness, websiteId: Id<"websites">, keyword: string, isActive = true) {
+    await t.run(async (ctx) =>
+      await ctx.db.insert("websiteKeywords", { websiteId, keyword, isActive, createdAt: Date.now() }));
+  }
+
+  const checks = async (t: Harness) =>
+    (await pulls(t)).filter((row) => row.operationId === "serp_google_organic");
+
+  test("checks each live search once, from the watcher's place, and skips a paused one", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const website = await seedWebsite(t, "ronins.co.uk");
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: company, websiteId: website, locationCode: LEEDS, locationLabel: "Leeds, England", createdAt: Date.now(),
+      }));
+    await trackSearch(t, website, "branding agency leeds");
+    await trackSearch(t, website, "rebrand consultancy");
+    await trackSearch(t, website, "old campaign phrase", false);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company) });
+
+    const planned = await checks(t);
+    expect(planned).toHaveLength(2);
+    // Keyed on the search and the place, not on any website: it answers for
+    // every known site on the page.
+    expect(planned.every((row) => row.websiteId === undefined)).toBe(true);
+    expect(planned.map((row) => JSON.parse(row.taskArgsJson ?? "{}").location_code)).toEqual([LEEDS, LEEDS]);
+  });
+
+  test("two companies checking one search from one place buy one page", async () => {
+    const t = harness();
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+    await seedSchedule(t, ronins, DAILY);
+    await seedSchedule(t, acme, DAILY);
+    const shared = await seedWebsite(t, "shared.co.uk");
+    await seedCompanyWebsite(t, ronins, shared);
+    await seedCompanyWebsite(t, acme, shared);
+    await trackSearch(t, shared, "branding agency leeds");
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, ronins) });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, acme) });
+
+    expect(await checks(t)).toHaveLength(1);
+    const checkLines = (await lines(t)).filter((row) => row.operationId === "serp_google_organic");
+    expect(checkLines.map((row) => row.reused).sort()).toEqual([false, true]);
+  });
+
+  test("two hosts tracking the same phrase in the same place share the page too", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const one = await seedWebsite(t, "one.co.uk");
+    const two = await seedWebsite(t, "two.co.uk");
+    await seedCompanyWebsite(t, company, one);
+    await seedCompanyWebsite(t, company, two);
+    await trackSearch(t, one, "branding agency leeds");
+    await trackSearch(t, two, "branding agency leeds");
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company) });
+
+    expect(await checks(t)).toHaveLength(1);
+  });
+
+  test("the same search from another place is another page", async () => {
+    const t = harness();
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+    await seedSchedule(t, ronins, DAILY);
+    await seedSchedule(t, acme, DAILY);
+    const shared = await seedWebsite(t, "shared.co.uk");
+    await seedCompanyWebsite(t, ronins, shared);
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: acme, websiteId: shared, locationCode: LEEDS, locationLabel: "Leeds, England", createdAt: Date.now(),
+      }));
+    await trackSearch(t, shared, "branding agency leeds");
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, ronins) });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, acme) });
+
+    expect(await checks(t)).toHaveLength(2);
+  });
+
+  test("a site's rankings are asked from its place, and another place's answer is not reused", async () => {
+    const t = harness();
+    const london = await seedCompany(t, "London Agency");
+    const leeds = await seedCompany(t, "Leeds Agency");
+    await seedSchedule(t, london, WEEKLY);
+    await seedSchedule(t, leeds, WEEKLY);
+    const shared = await seedWebsite(t, "shared.co.uk");
+    await seedCompanyWebsite(t, london, shared);
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: leeds, websiteId: shared, locationCode: LEEDS, locationLabel: "Leeds, England", createdAt: Date.now(),
+      }));
+
+    // London's rankings were bought an hour ago and are fresh for a weekly
+    // watcher — but they are London's.
+    const startedAt = Date.now();
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, london, startedAt) });
+    await t.run(async (ctx) => {
+      for (const row of await ctx.db.query("seoDataPulls").collect()) {
+        await ctx.db.patch(row._id, { status: "READY", completedAt: startedAt });
+      }
+    });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, leeds, startedAt + 3_600_000) });
+
+    const ranked = (await pulls(t)).filter((row) => row.operationId === "domain_ranked_keywords");
+    expect(ranked.map((row) => JSON.parse(row.taskArgsJson ?? "{}").location_code).sort())
+      .toEqual([2826, LEEDS].sort());
+  });
+});
+
 describe("the reuse ladder", () => {
   test("a fresh enough answer is reused and nothing is bought", async () => {
     const t = harness();
@@ -489,6 +608,39 @@ describe("chunking", () => {
       (await pulls(t)).map((row) => row.websiteId).filter((id) => id !== undefined),
     );
     expect(touched.size).toBe(2);
+  });
+});
+
+describe("a company too big for one page", () => {
+  test("every website is reached, page after page", async () => {
+    // Each page used to read the company's *first* rows and slice after the
+    // cursor in memory. Past the first page the cursor was no longer among the
+    // rows read, and every website after roughly the hundred and second was
+    // never collected.
+    const t = harness();
+    const company = await seedCompany(t, "Big Agency");
+    await seedSchedule(t, company, DAILY);
+    const total = 230;
+    await t.run(async (ctx) => {
+      for (let index = 0; index < total; index += 1) {
+        const websiteId = await ctx.db.insert("websites", {
+          host: `site-${index}.com`, displayHost: `site-${index}.com`, firstSeenAt: Date.now(),
+        });
+        await ctx.db.insert("companyWebsites", { companyId: company, websiteId, createdAt: Date.now() });
+      }
+    });
+    const cycleId = await openCycle(t, company);
+
+    let cursor: Id<"companyWebsites"> | undefined;
+    for (let pageNumber = 0; pageNumber < 10; pageNumber += 1) {
+      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId, ...(cursor ? { cursor } : {}) });
+      const row = await cycle(t, cycleId);
+      if (row?.status !== "EXPANDING") break;
+      cursor = row.cursor as Id<"companyWebsites">;
+    }
+
+    const reached = new Set((await lines(t)).map((row) => row.websiteId));
+    expect(reached.size).toBe(total);
   });
 });
 

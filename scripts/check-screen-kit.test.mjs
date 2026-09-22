@@ -1,8 +1,13 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
-import { findHandWrittenParts, findStaleFreezes, loadFrozen } from "./check-screen-kit.mjs";
+import {
+  findHandWrittenParts as scanScreens,
+  findStaleFreezes as staleFreezesUnder,
+  loadFrozen,
+} from "./check-screen-kit.mjs";
 
 /**
  * The guard is only worth having if it bites on the thing that actually
@@ -17,19 +22,37 @@ import { findHandWrittenParts, findStaleFreezes, loadFrozen } from "./check-scre
  * make every tick box look like a text field.
  */
 
-const probe = path.join(process.cwd(), "src", "app", "(dashboard)", "__screen_kit_probe__.tsx");
-const probeRelative = path.relative(process.cwd(), probe);
+/*
+  The probes live in a scratch tree shaped like the repo, never in the repo.
+
+  They were written into the real `src/app`, and for the moment each existed
+  every other check walking the tree could see it — on 2026-09-22 the fence
+  checker listed one, it was deleted, and its read failed a suite that had
+  nothing wrong with it. Every probe below is scanned from here instead.
+*/
+const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), "screen-kit-probe-"));
+const probe = path.join(scratchRoot, "src", "app", "(dashboard)", "__screen_kit_probe__.tsx");
+const probeRelative = path.relative(scratchRoot, probe);
+fs.mkdirSync(path.dirname(probe), { recursive: true });
 
 const write = (body) => fs.writeFileSync(probe, body);
+
+/** The checks as the probes need them: read from the scratch tree. */
+const findHandWrittenParts = (frozen = loadFrozen()) => scanScreens(frozen, scratchRoot);
+const findStaleFreezes = (frozen = loadFrozen()) => staleFreezesUnder(frozen, scratchRoot);
 
 afterEach(() => {
   if (fs.existsSync(probe)) fs.rmSync(probe);
 });
 
+afterAll(() => {
+  fs.rmSync(scratchRoot, { recursive: true, force: true });
+});
+
 describe("the screen kit guard", () => {
   it("passes on the codebase as it stands", () => {
-    expect(findHandWrittenParts()).toEqual([]);
-    expect(findStaleFreezes()).toEqual([]);
+    expect(scanScreens()).toEqual([]);
+    expect(staleFreezesUnder()).toEqual([]);
   });
 
   it("catches a new screen that draws a table by hand", () => {

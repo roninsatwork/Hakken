@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 describe("Plans Authorization", () => {
   test("company plan status is scoped to admins in the same company", async () => {
@@ -223,7 +224,7 @@ describe("Plans Authorization", () => {
     vi.useFakeTimers();
     try {
       await t.mutation(internal.plans.resetBillingCycle, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     } finally {
       vi.useRealTimers();
     }

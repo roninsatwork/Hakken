@@ -1,7 +1,6 @@
 import { billingBlocksPaidAccess, billingConfig } from "./billingPolicy";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
@@ -115,23 +114,6 @@ export const getActivePlans = tenantQuery({
   },
 });
 
-/**
- * The AI question allowance a plan may be given.
- *
- * Clamped rather than refused, because this arrives beside a price and a
- * message limit on a form somebody is filling in quickly, and a whole plan
- * rejected over a typed extra zero is worse than the zero being dropped.
- *
- * Zero is a real answer: a tier that does not include AI citation tracking.
- * That is why the floor is zero here and one in `seoPrompts.ts`, where the
- * question being asked is "how many may this website add".
- */
-function readPromptAllowance(raw: number | undefined): number | undefined {
-  if (raw === undefined) return undefined;
-  if (!Number.isFinite(raw)) return undefined;
-  return Math.min(Math.max(Math.floor(raw), 0), MAX_PROMPTS_PER_WEBSITE);
-}
-
 export const createPlan = superAdminMutation({
   args: {
     name: v.string(),
@@ -139,8 +121,6 @@ export const createPlan = superAdminMutation({
     messageLimit: v.number(),
     priceGBP: v.number(),
     grantedModules: v.optional(v.array(v.string())),
-    /** AI questions each owned website on this tier may track. */
-    seoPromptsPerWebsite: v.optional(v.number()),
     isActive: v.boolean(),
   },
   returns: v.id("plans"),
@@ -151,7 +131,6 @@ export const createPlan = superAdminMutation({
       messageLimit: args.messageLimit,
       priceGBP: args.priceGBP,
       grantedModules: args.grantedModules,
-      seoPromptsPerWebsite: readPromptAllowance(args.seoPromptsPerWebsite),
       isActive: args.isActive,
     }));
     const plan = await ctx.db.get(planId);
@@ -171,15 +150,11 @@ export const updatePlan = superAdminMutation({
     messageLimit: v.optional(v.number()),
     priceGBP: v.optional(v.number()),
     grantedModules: v.optional(v.array(v.string())),
-    seoPromptsPerWebsite: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    if (updates.seoPromptsPerWebsite !== undefined) {
-      updates.seoPromptsPerWebsite = readPromptAllowance(updates.seoPromptsPerWebsite);
-    }
     await ctx.db.patch(id, {
       ...updates,
       ...(updates.grantedModules === undefined

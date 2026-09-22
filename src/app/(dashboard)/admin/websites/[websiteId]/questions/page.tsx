@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { MessageSquare, Plus, Trash2 } from "lucide-react";
+import { Check, MessageSquare, Plus, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -139,21 +139,31 @@ export default function WebsiteQuestionsPage() {
           </Button>
         </div>
 
+        {/*
+          A tick on the chosen engines, not only a colour. Seen in the browser on
+          2026-09-22: a chip just switched off keeps its focus ring, and a focus
+          ring in the brand colour read exactly like "on" — so the one choice on
+          this screen that changes the bill could not be read back.
+        */}
         <div className="flex flex-wrap items-center gap-2">
-          {allEngines.map((engine) => (
-            <Button
-              key={engine}
-              variant="outline"
-              role="checkbox"
-              aria-checked={engines.includes(engine)}
-              className={`rounded-full px-3 py-1 text-[12px] ${
-                engines.includes(engine) ? "border-brand bg-brand/10 text-brand" : "text-muted"
-              }`}
-              onClick={() => toggleEngine(engine)}
-            >
-              {engineLabel(engine)}
-            </Button>
-          ))}
+          {allEngines.map((engine) => {
+            const chosen = engines.includes(engine);
+            return (
+              <Button
+                key={engine}
+                variant="outline"
+                role="checkbox"
+                aria-checked={chosen}
+                className={`rounded-full px-3 py-1 text-[12px] ${
+                  chosen ? "border-brand bg-brand/10 text-brand" : "border-dashed text-muted"
+                }`}
+                onClick={() => toggleEngine(engine)}
+              >
+                {chosen ? <Check className="mr-1 inline h-3 w-3" aria-hidden="true" /> : null}
+                {engineLabel(engine)}
+              </Button>
+            );
+          })}
         </div>
 
         {/* What a cycle buys, and why nothing queues any more. */}

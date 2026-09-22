@@ -9,6 +9,7 @@ import {
   AGENT_RUN_SEGMENT_BUDGET_MS,
   AGENT_RUN_STALL_MS,
 } from "./agentRunContinuationService";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * Behavioural tests for the agent runtime.
@@ -677,7 +678,7 @@ describe("agent runtime", () => {
       const { run } = await runSteps(t);
       expect(run?.status).toBe("FAILED");
 
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
       expect(reflections).toHaveLength(1);
@@ -1348,7 +1349,7 @@ describe("stalled run recovery", () => {
     const result = await t.mutation(internal.agentRunCheckpoints.recoverStalledRuns, {});
     expect(result.resumed).toBe(1);
 
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const { run } = await runSteps(t, runId);
     expect(run?.status).toBe("SUCCESS");
@@ -1497,7 +1498,7 @@ describe("action segment handover", () => {
     expect(midRun.run?.status).toBe("RUNNING");
     expect(await checkpoints(t)).toHaveLength(1);
 
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const messages = await assistantMessages(t);
     // One reply, not one per segment: the continuation writes into the row the
@@ -1601,7 +1602,7 @@ describe("human-in-the-loop approval", () => {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // The loop went back to the model with the tool result in hand.
     expect(generateMock).toHaveBeenCalledTimes(2);
@@ -1644,7 +1645,7 @@ describe("human-in-the-loop approval", () => {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const transcript = generateMock.mock.calls[1]?.[1] as {
       contents: Array<{ role?: string; parts?: Array<Record<string, unknown>> }>;
@@ -1674,7 +1675,7 @@ describe("human-in-the-loop approval", () => {
       decision: "REJECTED",
       decisionReason: "Customer data stays put.",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // The loop went back to the model, which is the whole point.
     expect(generateMock).toHaveBeenCalledTimes(2);
@@ -1713,7 +1714,7 @@ describe("human-in-the-loop approval", () => {
       decision: "REJECTED",
       decisionReason: "No.",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
     expect(approvals).toHaveLength(1);
@@ -1741,7 +1742,7 @@ describe("human-in-the-loop approval", () => {
       decision: "REJECTED",
       decisionReason: "Not that one.",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // A different question is a different question. Refusing one must not silently
     // refuse everything that tool could ever be asked.
@@ -1906,7 +1907,7 @@ describe("a batch of approvals", () => {
         approvalId: approval._id,
         decision: "APPROVED",
       });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     }
 
     expect(generateMock).toHaveBeenCalledTimes(2);
@@ -1938,7 +1939,7 @@ describe("a batch of approvals", () => {
         approvalId: approval._id,
         decision: "APPROVED",
       });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     }
 
     const functionTurn = lastTranscript().find((turn) => turn.role === "function");
@@ -1970,7 +1971,7 @@ describe("a batch of approvals", () => {
       approvalId: approvals[0]._id,
       decision: "APPROVED",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const contents = lastTranscript();
     const functionTurns = contents.filter((turn) => turn.role === "function");
@@ -2389,7 +2390,7 @@ describe("prompt caching across segments", () => {
     expect(parked?.stablePrefixTurns).toBeGreaterThan(0);
     expect(cacheProbe.created).toHaveLength(1);
 
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     // Still one: the continuation picked up the cache the first segment made.
     expect(cacheProbe.created).toHaveLength(1);
@@ -3424,7 +3425,7 @@ describe("a tool that changes something on a connected server", () => {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
     expect(toolCalls).toHaveLength(1);
@@ -3443,7 +3444,7 @@ describe("a tool that changes something on a connected server", () => {
       approvalId: approval!._id,
       decision: "REJECTED",
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
     expect(toolCalls[0].status).toBe("DENIED");

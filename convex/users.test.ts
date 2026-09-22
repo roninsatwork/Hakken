@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 describe("OWASP: Broken Access Control - Users", () => {
   test("Unauthenticated requests to read users are rejected", async () => {
@@ -1207,7 +1208,7 @@ describe("purgeOrphanedAuthIdentities", () => {
     vi.useFakeTimers();
     try {
       await t.mutation(internal.users.purgeOrphanedAuthIdentities, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     } finally {
       vi.useRealTimers();
     }

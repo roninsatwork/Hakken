@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
@@ -10,7 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { DEFAULT_LOCATION_CODE, SEO_LOCATIONS } from "@/convex/seoLocations";
+import { DEFAULT_LOCATION_CODE, SEO_LOCATIONS } from "@/convex/utils/seoLocations";
 
 /**
  * Where this company watches this website from.
@@ -36,13 +36,13 @@ export function WatchLocation({
   const setLocation = useMutation(api.websites.setCompanyWebsiteLocation);
   const action = useAdminAction({ scope: "admin-website-location" });
 
-  const [code, setCode] = useState<number>(savedCode ?? DEFAULT_LOCATION_CODE);
+  // Null means "untouched", so the saved place shows without an effect
+  // copying it into state after paint — which drew one frame of the old value
+  // every time it changed underneath.
+  const [choice, setChoice] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isSaved, setIsSaved] = useState(false);
-
-  useEffect(() => {
-    setCode(savedCode ?? DEFAULT_LOCATION_CODE);
-  }, [savedCode]);
+  const code = choice ?? savedCode ?? DEFAULT_LOCATION_CODE;
 
   const handleSave = async () => {
     setError("");
@@ -62,8 +62,12 @@ export function WatchLocation({
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
     );
 
-    if (outcome.ok) setIsSaved(true);
-    else setError(outcome.message);
+    if (outcome.ok) {
+      setChoice(null);
+      setIsSaved(true);
+    } else {
+      setError(outcome.message);
+    }
   };
 
   return (
@@ -80,7 +84,7 @@ export function WatchLocation({
         <Select
           value={code}
           onChange={(value) => {
-            setCode(Number(value));
+            setChoice(Number(value));
             setIsSaved(false);
           }}
           aria-label={t("title")}

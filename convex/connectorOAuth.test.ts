@@ -5,6 +5,7 @@ import path from "node:path";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { decryptConnectorToken, encryptConnectorToken } from "./connectorTokenCrypto";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The consent plumbing, end to end with the provider stubbed at the network
@@ -257,7 +258,7 @@ describe("the connector consent flow", () => {
     vi.useFakeTimers();
     await asAdmin.mutation(api.aiTools.disconnectConnectorOAuth, { connectorId });
     // Let the scheduled revoke action run.
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     vi.useRealTimers();
 
     // The refresh token — the whole grant — is what went to the revocation

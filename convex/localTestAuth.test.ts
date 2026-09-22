@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const originalEnabled = process.env.LOCAL_TEST_AUTH_ENABLED;
 const originalSecret = process.env.LOCAL_TEST_AUTH_SECRET;
@@ -116,7 +117,7 @@ describe("local test auth", () => {
       ])
     );
 
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     vi.useRealTimers();
 
     const after = await t.run(async (ctx) => ({

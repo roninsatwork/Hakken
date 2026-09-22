@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
 import { MAX_ALWAYS_MEMORIES } from "./utils/memoryApplication";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const paginationOpts = { numItems: 10, cursor: null };
 
@@ -851,7 +852,7 @@ describe("Outcome-weighted ranking (self-improvement, Phase 2)", () => {
       await t.mutation(internal.dataMigrations.run, {
         name: "2026-08-09-agent-memory-outcome-counters",
       });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     } finally {
       vi.useRealTimers();
     }

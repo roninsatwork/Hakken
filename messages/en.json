@@ -971,10 +971,7 @@
       },
       "grantsLabel": "What this plan switches on",
       "grantsHint": "Every company on this plan gets these, plus anything switched on for it directly.",
-      "stripePrice": "Stripe price",
-      "promptsLabel": "AI questions per website",
-      "promptsPlaceholder": "10",
-      "promptsHint": "Each question is asked of every AI engine, every time that website is collected. Zero switches the feature off for this tier."
+      "stripePrice": "Stripe price"
     },
     "companyDetails": {
       "title": "Dashboard",

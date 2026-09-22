@@ -3,6 +3,7 @@ import { expect, test, describe, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import { AUDIT_PURGE_ACTION } from "./auditLogService";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 describe("Log Purge safeguards and interactive cancellation", () => {
   test("Only SUPER_ADMIN can update pipeline config, and must enforce >= 30 days retention floor", async () => {
@@ -738,7 +739,7 @@ describe("Log Purge safeguards and interactive cancellation", () => {
     });
 
     try {
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     } finally {
       vi.useRealTimers();
     }

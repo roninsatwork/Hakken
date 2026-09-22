@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { WIKI_TENDING_LENGTH_THRESHOLD } from "./wikiTending";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The nightly gardener's action half (wiki plan, phase 4). The queries under
@@ -111,7 +112,7 @@ describe("the tending dispatcher's gates", () => {
       await standDown(t, "WIKI_TIDIER");
 
       const result = await t.action(internal.wikiTendingActions.tendDispatcher, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       expect(result).toEqual({ companies: 0 });
       expect(generateMock).not.toHaveBeenCalled();
@@ -133,7 +134,7 @@ describe("the tending dispatcher's gates", () => {
       generateMock.mockResolvedValue({ text: "Tidied.", inputTokens: 7, outputTokens: 3 });
 
       const result = await t.action(internal.wikiTendingActions.tendDispatcher, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       expect(result).toEqual({ companies: 1 });
       // Exactly one model call: the tidy company's round never reached one.
@@ -279,7 +280,7 @@ describe("the linking round's work", () => {
         .mockResolvedValueOnce({ text: '{"related": ["how-we-work"]}' });
 
       const result = await t.action(internal.wikiTendingActions.crossLinkSweep, { companyId });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       expect(result).toEqual({ linked: 2 });
       const pages = await t.run(async (ctx) => ctx.db.query("wikiPages").collect());

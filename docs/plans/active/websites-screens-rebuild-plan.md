@@ -1,8 +1,9 @@
 # The Websites Screens, Rebuilt
 
 Status: **Approved 2026-09-22. All four stages in.** Build order is
-1 → 4 → 2 → 3; the reason is below. **Stages 1 and 4 built and cut over.
-Stages 2 and 3 remain.** Roughly 65% of the plan.
+1 → 4 → 2 → 3; the reason is below. **Stages 1 and 4 built and cut over, and
+the gaps they left closed. Stages 2 and 3 remain**, then a performance pass
+over every new screen. Roughly 75% of the plan.
 Owner: Anthony
 
 ## Built so far — 2026-09-22
@@ -197,11 +198,11 @@ in.
 
 ### Verified in the browser — 2026-09-22
 
-The owned-and-tracked correction is covered by tests but **not** yet seen in a
-browser: the dev server that the session below used stopped, and what answers on
-port 3000 now is a stale production build that 404s the admin routes. A fresh
-dev server resolves them correctly, but on a new port, which is a new origin and
-so has no session. It needs `npm run dev` on 3000 again to check by hand.
+The owned-and-tracked screens were seen in Anthony's Chrome on the evening of
+2026-09-22, once a fresh dev server was on 3000: the list's *Held as* column,
+the add dialog's *They own it / They track it* choice with its pairing select,
+and a paired tracked site's page reading *"Collected with ronins.co.uk"* with
+its schedule and place controls gone.
 
 Driven through Anthony's own Chrome against his dev deployment, not an e2e
 fixture. **This caught a failure every other check missed:** every tab of the
@@ -236,6 +237,70 @@ over it, which have not kept up with what it collects.
 
 Screens drawn: <https://claude.ai/artifact/H8xuxfS1HCW5UyjEKtpzNv> — fifteen
 artboards, numbered in build order. The numbering below matches them.
+
+### The gaps, closed — 2026-09-22, evening
+
+The owned-and-tracked correction left six gaps and a handful of loose ends.
+All of them are closed; two bugs worse than any of the gaps turned up on the
+way.
+
+- **Which is which is on screen.** The company list has a *Held as* column —
+  owned with its rival count, or tracked and what against — and its collection
+  column says whose day a row runs on. The add dialog asks how the company
+  holds the site, and for a tracked one, which of its own sites it is watched
+  against, defaulting to the company's first.
+- **A paired site has no settings of its own.** Its page shows the pairing and
+  the next run instead of schedule and place controls nothing read, the server
+  refuses both, and pairing clears whatever it overrides — a stored value
+  nothing reads is a setting that lies the day it is unpaired.
+- **An unpaired tracked site is collected.** The cycle skipped every tracked
+  hold and reached them only as a pair's target, so one with no pair was chosen,
+  listed and never pulled.
+- **The searches on a host's record are checked.** One Google results page per
+  search per place, keyed on neither host nor company, so two clients — or two
+  hosts — tracking a phrase in one town buy it once. The parse files a position
+  for **every known site on the page**, which is how a rival's ranking arrives
+  without a pull of its own, and a row saying *checked, not found* for every
+  host tracking it that was not there. Those two facts are different and both
+  are needed: *never ranked* cannot be told from *never asked* otherwise.
+- **Rankings are asked from the watcher's place.** `locationCode` was stored on
+  the hold and passed to nothing but the AI engines. Site operations now carry
+  it, a fresh answer is only reused if it was asked from the same place, and
+  positions store where they were measured — read through an index on the place,
+  and backfilled on dev (15 rows) by `2026-09-22-position-places`.
+- **The agent can no longer spend on another company's say-so.**
+  `requireCompanyWebsite` walked the shared competition graph, so a rival any
+  company had asserted against a shared host was readable *and buyable* by the
+  agent of every company holding it. Entitlement is now what a company holds,
+  owned or tracked; the tenancy guard asserts the graph is not read there.
+
+The two bugs. **A large company was never fully collected**: each expansion page
+read the company's first rows and sliced after the cursor in memory, so past the
+first page the cursor fell outside what was read and every site after roughly
+the hundred and second was skipped. Pages now start from the cursor in the index
+itself, and also stop between websites once they have written two thousand
+lines, because the page size bounds websites and not what each fans out to. And
+**the rival count took a company's first hundred holds and filtered them
+afterwards**, so a company with many sites read as having no rivals on the rest;
+both it and the cycle's rival lookup read a pairing index now.
+
+Loose ends: the engine chips carry a tick, because a chip just switched off kept
+a brand-coloured focus ring and read exactly like "on". `plans.seoPromptsPerWebsite`
+is off the schema, the plans screen and the plan mutations — no migration,
+because no plan row ever held it: the field never reached `main` and dev has no
+plans. The two dev rows on `ronins.co.uk` are still there, deliberately, so the
+stage 2 screens have something real to show.
+
+And the house cleaned, because Anthony asked for it — *"nothing is sacred"*:
+lint is at **zero** across the repo, down from eleven. Two of those were client
+screens importing `convex/seoLocations.ts` and `convex/websiteBrands.ts`, which
+ship to the browser from anywhere but `convex/utils/`, so both modules moved
+there. And the suite's recurring *"did not complete after 10000 timer pumps"*
+failures are fixed rather than retried: `convex-test` waits on a scheduled
+function for a fixed number of event-loop turns, and the first run of a function
+in a worker loads its module from disk, which under a full parallel suite can
+take longer. `src/test/finishScheduled.ts` bounds the same wait by real time
+instead, and all fifty-two callers use it.
 
 ## What is wrong
 

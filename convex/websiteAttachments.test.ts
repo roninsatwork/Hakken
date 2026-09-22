@@ -145,7 +145,7 @@ describe("a pairing decides the day and the place", () => {
       id: trackedId, refreshIntervalStr: WEEKLY, collectionEnabled: true,
     })).rejects.toThrow(/collected with ronins\.co\.uk/);
     await expect(admin.mutation(api.websites.setCompanyWebsiteLocation, {
-      companyWebsiteId: trackedId, locationCode: 1006886, locationLabel: "Leeds, England, United Kingdom",
+      companyWebsiteId: trackedId, locationCode: 1006925, locationLabel: "Leeds, England",
     })).rejects.toThrow(/wherever ronins\.co\.uk is/);
   });
 

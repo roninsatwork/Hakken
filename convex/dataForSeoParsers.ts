@@ -342,6 +342,46 @@ export function parseDomainCompetitors(result: unknown): Array<{
 }
 
 /** The parser for an operation id, or null when nothing knows how to read it. */
+/**
+ * Every site on one Google results page, at its best position.
+ *
+ * The page is the purchase — one search, one place — and every site on it is
+ * measured by the same call, so nothing about it is tied to whoever asked.
+ * Only organic results are read: an advert or a map pack is not a position a
+ * site earned. A domain appearing twice keeps its better place, because "where
+ * does it rank" has one answer.
+ *
+ * Domains only, never titles or snippets — the same rule as the rest of this
+ * file. Which domain is which website is the caller's job, through the host
+ * rules that decide what counts as one site.
+ */
+export function parseSerpPage(result: unknown): {
+  resultCount: number;
+  rows: Array<{ domain: string; position: number; url?: string }>;
+} {
+  const item = firstItem(result);
+  if (!item) return { resultCount: 0, rows: [] };
+
+  const best = new Map<string, { domain: string; position: number; url?: string }>();
+  for (const row of asArray(item.items)) {
+    const record = asRecord(row);
+    if (!record || asString(record.type) !== "organic") continue;
+    const domain = asString(record.domain)?.toLowerCase();
+    const position = asNumber(record.rank_absolute);
+    if (!domain || position === undefined) continue;
+
+    const held = best.get(domain);
+    if (held && held.position <= position) continue;
+    const url = asString(record.url);
+    best.set(domain, { domain, position, ...(url ? { url } : {}) });
+  }
+
+  return {
+    resultCount: asNumber(item.se_results_count) ?? 0,
+    rows: [...best.values()].sort((left, right) => left.position - right.position),
+  };
+}
+
 export function parseSeoResultFor(
   operationId: string,
   result: unknown,

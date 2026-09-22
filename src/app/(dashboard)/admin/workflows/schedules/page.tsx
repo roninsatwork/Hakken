@@ -21,12 +21,6 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import {
-  formatUtcPreview,
-  getPrimaryScheduleTime,
-  hydrateScheduleDraft,
-  normalizeTimes,
-} from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 
 const loadScheduleDialogs = () => import("./ScheduleDialogs");

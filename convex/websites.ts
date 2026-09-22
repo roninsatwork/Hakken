@@ -8,7 +8,7 @@ import { appError } from "./utils/appError";
 import {
   BRAND_NAME_MESSAGES,
   readBrandNames,
-} from "./websiteBrands";
+} from "./utils/websiteBrands";
 import {
   WEBSITE_IDENTITY_MESSAGES,
   readWebsiteHost,

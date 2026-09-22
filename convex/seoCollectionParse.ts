@@ -3,22 +3,22 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
-import { findBrandMention } from "./websiteBrands";
+import { findBrandMention } from "./utils/websiteBrands";
 import {
-  isBulkOperation,
-  parseBulkByTarget,
   parseDomainCompetitors,
   parseLlmResponse,
   parseSeoResultFor,
+  parseSerpPage,
 } from "./dataForSeoParsers";
+import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
+import { replaceSameDayPosition } from "./seoKeywordChecks";
 
 import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
 import { resolveWebsiteIdsByHost } from "./websites";
-import type { ActionCtx } from "./_generated/server";
 import { readWebsiteHost } from "./websiteIdentity";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
-import { SEO_LOCATIONS } from "./seoLocations";
+import { DEFAULT_LOCATION_CODE, SEO_LOCATIONS } from "./utils/seoLocations";
 
 const LOCATION_BY_CITY = new Map(
   SEO_LOCATIONS.filter((location) => location.city).map((location) => [location.city!, location.code]),
@@ -185,6 +185,52 @@ export const parseSeoResult = internalAction({
       return null;
     }
 
+    // A search checked for everyone who tracks it. It has no website of its
+    // own, so it is filed against every known site on the page instead.
+    if (pull.operationId === SEO_KEYWORD_CHECK_OPERATION && !pull.websiteId) {
+      try {
+        const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+        const keyword = normaliseKeyword(typeof sent.keyword === "string" ? sent.keyword : "");
+        if (!keyword) return null;
+        const locationCode = typeof sent.location_code === "number" ? sent.location_code : undefined;
+
+        const page = parseSerpPage(JSON.parse(pull.resultJson));
+        const onPage = page.rows.flatMap((row) => {
+          const identity = readWebsiteHost(row.domain);
+          return identity.ok ? [{ ...row, host: identity.host }] : [];
+        });
+        const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+          hosts: [...new Set(onPage.map((row) => row.host))],
+        });
+        const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
+
+        await ctx.runMutation(internal.seoKeywordChecks.writeKeywordCheck, {
+          pullId: args.pullId,
+          keyword,
+          ...(locationCode !== undefined ? { locationCode } : {}),
+          day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+          found: onPage.flatMap((row) => {
+            const websiteId = byHost.get(row.host);
+            return websiteId
+              ? [{ websiteId, position: row.position, ...(row.url ? { url: row.url } : {}) }]
+              : [];
+          }),
+        });
+
+        await judgeNewKeywords(ctx, {
+          ...(pull.companyId ? { companyId: pull.companyId } : {}),
+          pullId: args.pullId,
+          keywords: [keyword],
+        });
+      } catch (error) {
+        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+          pullId: args.pullId,
+          error: getErrorMessage(error),
+        });
+      }
+      return null;
+    }
+
     if (!pull.websiteId) return null;
 
     try {
@@ -196,11 +242,13 @@ export const parseSeoResult = internalAction({
       if (!parsed) return null;
 
       const positions = (parsed.positions ?? []).slice(0, MAX_POSITION_ROWS);
+      const sentPlace = readSentLocationCode(pull.taskArgsJson ?? undefined);
       await ctx.runMutation(internal.seoCollectionParse.writeSeoMetrics, {
         pullId: args.pullId,
         websiteId: pull.websiteId as Id<"websites">,
         operationId: pull.operationId,
         day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+        ...(sentPlace !== undefined ? { locationCode: sentPlace } : {}),
         metricsJson: JSON.stringify(parsed.metrics),
         positions,
       });
@@ -250,13 +298,6 @@ const MAX_BULK_ROWS = 1_200;
  */
 const REPLACE_LIMIT = MAX_POSITION_ROWS + 100;
 
-/**
- * One keyword on one day is one fact, so this should only ever find one row.
- * The small ceiling is the assertion: if it is ever hit, something upstream
- * has been writing duplicates.
- */
-const SAME_DAY_LIMIT = 5;
-
 export const getPullForParse = internalQuery({
   args: { pullId: v.id("seoDataPulls") },
   returns: v.union(v.null(), v.object({
@@ -297,6 +338,8 @@ export const writeSeoMetrics = internalMutation({
     websiteId: v.id("websites"),
     operationId: v.string(),
     day: v.string(),
+    /** The place the positions were measured from, as it was sent. */
+    locationCode: v.optional(v.number()),
     metricsJson: v.string(),
     positions: v.array(v.object({
       keyword: v.string(),
@@ -336,14 +379,15 @@ export const writeSeoMetrics = internalMutation({
     for (const row of priorPositions) await ctx.db.delete(row._id);
 
     for (const entry of args.positions) {
-      // The same keyword measured twice on one day is one fact, so an earlier
-      // row for that day is replaced rather than joined by a second.
-      const sameDay = await ctx.db
-        .query("seoKeywordPositions")
-        .withIndex("by_website_keyword_day", (q) =>
-          q.eq("websiteId", args.websiteId).eq("keyword", entry.keyword).eq("day", args.day))
-        .take(SAME_DAY_LIMIT);
-      for (const row of sameDay) await ctx.db.delete(row._id);
+      // The same keyword measured twice on one day from one place is one fact,
+      // so an earlier row is replaced rather than joined by a second. From
+      // another place it is another fact, and stays.
+      await replaceSameDayPosition(ctx, {
+        websiteId: args.websiteId,
+        keyword: entry.keyword,
+        day: args.day,
+        ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
+      });
 
       await ctx.db.insert("seoKeywordPositions", {
         websiteId: args.websiteId,
@@ -352,6 +396,9 @@ export const writeSeoMetrics = internalMutation({
         ...(entry.position !== undefined ? { position: entry.position } : {}),
         ...(entry.url ? { url: entry.url } : {}),
         ...(entry.searchVolume !== undefined ? { searchVolume: entry.searchVolume } : {}),
+        // Always written, so a watcher's view can be read through the place
+        // index. Unset means the registry default was sent.
+        locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
         pullId: args.pullId,
         createdAt: now,
       });
@@ -541,6 +588,22 @@ export const writeAiCitations = internalMutation({
     return null;
   },
 });
+
+/**
+ * Which place a ranking was measured from, read back from what was sent.
+ *
+ * The ranking operations take DataForSEO's location code directly, unlike the
+ * AI engines below, which take a country and a city.
+ */
+function readSentLocationCode(taskArgsJson: string | undefined): number | undefined {
+  if (!taskArgsJson) return undefined;
+  try {
+    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
+    return typeof args.location_code === "number" ? args.location_code : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Which place the question was asked from, read back from what was sent. */
 function readLocationCode(taskArgsJson: string | undefined): number | undefined {

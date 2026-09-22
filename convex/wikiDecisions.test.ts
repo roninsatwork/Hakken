@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The wiki's Decisions (decisions-typesafe-plan.md, Phases E and F.2–F.4):
@@ -118,7 +119,7 @@ describe("the real-question Decision corrects the Unanswered list", () => {
     });
     await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, { companyId, question: "thanks", pageKeys: [] });
     await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, { companyId, question: "What are your delivery charges to Scotland?", pageKeys: [] });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     const rows = await t.run(async (ctx) => await ctx.db.query("wikiUnansweredQuestions").collect());
     expect(rows.map((row) => row.question)).toEqual(["What are your delivery charges to Scotland?"]);
     const runs = await t.run(async (ctx) => await ctx.db.query("decisionRuns").collect());
@@ -141,14 +142,14 @@ describe("the real-question Decision corrects the Unanswered list", () => {
     // "prices?" is too short for the rule, but a real question; the model is sure.
     stubTypesafeYesNo(0.96);
     await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, { companyId, question: "prices?", pageKeys: [] });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     let rows = await t.run(async (ctx) => await ctx.db.query("wikiUnansweredQuestions").collect());
     expect(rows.map((row) => [row.question, row.status])).toEqual([["prices?", "OPEN"]]);
 
     // Long enough for the rule, but not a question; the model is sure.
     stubTypesafeYesNo(0.03);
     await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, { companyId, question: "testing testing one two three hello there", pageKeys: [] });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     rows = await t.run(async (ctx) => await ctx.db.query("wikiUnansweredQuestions").collect());
     expect(rows.find((row) => row.question.startsWith("testing"))?.status).toBe("DISMISSED");
   });

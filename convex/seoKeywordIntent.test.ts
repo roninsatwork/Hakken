@@ -176,13 +176,18 @@ describe("what a website ranks for", () => {
       });
       // The same phrase on two days, plus a second phrase ranking better.
       await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "emergency plumber leeds", day: "2026-09-20", position: 9, pullId, createdAt: Date.now(),
+        websiteId, keyword: "emergency plumber leeds", day: "2026-09-20", position: 9, locationCode: 2826, pullId, createdAt: Date.now(),
       });
       await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "emergency plumber leeds", day: "2026-09-22", position: 4, pullId, createdAt: Date.now(),
+        websiteId, keyword: "emergency plumber leeds", day: "2026-09-22", position: 4, locationCode: 2826, pullId, createdAt: Date.now(),
       });
       await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "boiler repair", day: "2026-09-22", position: 2, pullId, createdAt: Date.now(),
+        websiteId, keyword: "boiler repair", day: "2026-09-22", position: 2, locationCode: 2826, pullId, createdAt: Date.now(),
+      });
+      // Checked for another client watching from Leeds. Filed on the same
+      // website, and not this watcher's to see.
+      await ctx.db.insert("seoKeywordPositions", {
+        websiteId, keyword: "plumber in leeds", day: "2026-09-22", position: 1, locationCode: 1006925, pullId, createdAt: Date.now(),
       });
       await ctx.db.insert("seoKeywordIntents", {
         keyword: "emergency plumber leeds", intent: "BUYING", judgedAt: Date.now(),

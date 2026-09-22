@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The binding is the switch. A company skill reaches the model only on the
@@ -170,7 +171,7 @@ describe("company skills apply where they are bound", () => {
     vi.useFakeTimers();
     const runOnce = async () => {
       await t.mutation(internal.dataMigrations.run, { name: "2026-08-13-company-skill-bindings-backfill", force: true });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
     };
 
     await runOnce();
@@ -195,7 +196,7 @@ describe("company skills apply where they are bound", () => {
 
     vi.useFakeTimers();
     await t.mutation(internal.dataMigrations.run, { name: "2026-08-13-company-skill-bindings-backfill", force: true });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const bindings = await t.run(async (ctx) => ctx.db.query("companySkillBindings").collect());
     const widget = bindings.find((binding) => binding.surfaceType === "WIDGET");
@@ -223,7 +224,7 @@ describe("company skills apply where they are bound", () => {
 
     vi.useFakeTimers();
     await t.mutation(internal.dataMigrations.run, { name: "2026-08-13-company-skill-bindings-backfill", force: true });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     expect(await t.run(async (ctx) => ctx.db.query("companySkillBindings").collect())).toEqual([]);
   });

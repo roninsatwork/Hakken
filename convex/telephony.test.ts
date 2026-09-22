@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { computeTwilioSignature } from "./telephonyService";
 import { encryptVoiceTicket } from "./utils/voiceTicketEncryption";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const { generateTextWithResolvedModelMock } = vi.hoisted(() => ({
     generateTextWithResolvedModelMock: vi.fn(),
@@ -554,7 +555,7 @@ describe("the hang-up-and-watch finale", () => {
         vi.useFakeTimers();
         try {
             await endCall(t, "CA-finale");
-            await t.finishAllScheduledFunctions(vi.runAllTimers);
+            await finishScheduled(t);
         } finally {
             vi.useRealTimers();
         }
@@ -583,7 +584,7 @@ describe("the hang-up-and-watch finale", () => {
         vi.useFakeTimers();
         try {
             await endCall(t, "CA-quiet", "no-answer");
-            await t.finishAllScheduledFunctions(vi.runAllTimers);
+            await finishScheduled(t);
         } finally {
             vi.useRealTimers();
         }
@@ -611,7 +612,7 @@ describe("the hang-up-and-watch finale", () => {
         vi.useFakeTimers();
         try {
             await endCall(t, "CA-degrade");
-            await t.finishAllScheduledFunctions(vi.runAllTimers);
+            await finishScheduled(t);
         } finally {
             vi.useRealTimers();
         }

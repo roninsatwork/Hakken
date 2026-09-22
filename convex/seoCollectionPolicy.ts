@@ -126,3 +126,27 @@ export const SEO_MAX_SENDS_PER_CYCLE = 25_000;
  * halfway through writing itself.
  */
 export const SEO_COMPETITORS_PER_WEBSITE = 100;
+
+/**
+ * Searches checked for one website in a cycle.
+ *
+ * Each is one paid Google results page per place — but one page serves every
+ * host and every company that tracks the same phrase from the same place, and
+ * files a position for every known site that appears on it. So this bounds
+ * what one website can add to a cycle, not what the platform pays per client.
+ * A host with more searches than this is a plan conversation.
+ */
+export const SEO_KEYWORD_CHECKS_PER_WEBSITE = 200;
+
+/**
+ * Lines one expansion mutation may write before it stops and carries on in
+ * the next.
+ *
+ * `SEO_EXPANSION_PAGE` bounds websites, not what each one fans out to: a
+ * hundred sites with two hundred searches and a dozen questions each is tens
+ * of thousands of writes, far past what one transaction may hold. So a page
+ * also stops once it has written this many lines, and the cursor carries on
+ * from the last website it finished — never mid-website, so a site's lines
+ * are always written together.
+ */
+export const SEO_PAGE_LINE_BUDGET = 2_000;

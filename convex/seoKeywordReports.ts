@@ -3,6 +3,8 @@ import { v } from "convex/values";
 import { superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
+import { pairedOwnedHold } from "./utils/websitePairing";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 
 /**
  * What one of a company's websites ranks for.
@@ -15,6 +17,12 @@ import { appError } from "./utils/appError";
  * The intent beside each search comes from `seo.keyword-intent`, judged once
  * per phrase and shared across every client in the same trade. Absent means
  * nobody has judged it yet, which the screen says rather than guessing.
+ *
+ * **Read from this watcher's place.** The same host ranks differently in Leeds
+ * and in London, and a check made for another client watching from elsewhere
+ * is filed on the same website — so without this, one client's list would mix
+ * in another's town. A paired tracked site reads from its pair's place, which
+ * is where it was checked.
  */
 export const listWebsiteKeywords = superAdminQuery({
   args: {
@@ -39,9 +47,16 @@ export const listWebsiteKeywords = superAdminQuery({
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
     if (!companyWebsite) throw appError("NOT_FOUND", "That website is no longer held by this company.");
 
+    const pair = await pairedOwnedHold(ctx, companyWebsite);
+    const place = (pair ?? companyWebsite).locationCode ?? DEFAULT_LOCATION_CODE;
+
+    // Through the place index, not filtered after the read: a take followed
+    // by a filter reads the newest rows from every place and keeps this one's,
+    // so a busier town's rows would push this watcher's out of the window.
     const rows = await ctx.db
       .query("seoKeywordPositions")
-      .withIndex("by_website_day", (q) => q.eq("websiteId", companyWebsite.websiteId))
+      .withIndex("by_website_place_day", (q) =>
+        q.eq("websiteId", companyWebsite.websiteId).eq("locationCode", place))
       .order("desc")
       .take(MAX_KEYWORDS);
 

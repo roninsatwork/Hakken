@@ -172,7 +172,6 @@ describe("SubscriptionPlansPage", () => {
 
     await waitFor(() => {
       expect(createPlan).toHaveBeenCalledWith({
-        seoPromptsPerWebsite: 10,
         name: "Starter",
         description: "Small teams",
         messageLimit: 250,

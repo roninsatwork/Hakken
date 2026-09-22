@@ -59,13 +59,20 @@ function listFiles(dir) {
   return found;
 }
 
-/** Every file outside the frozen list that names a z-index of its own. */
-export function findHardcodedLayers() {
+/**
+ * Every file outside the frozen list that names a z-index of its own.
+ *
+ * `root` is the tree read — the repo, unless a test hands it a scratch copy so
+ * its probe never appears in the real `src` for another check to trip over.
+ */
+export function findHardcodedLayers(root = rootDir) {
   const offenders = [];
 
   for (const dir of scanDirs) {
-    for (const file of listFiles(path.join(rootDir, dir))) {
-      const relative = path.relative(rootDir, file);
+    const full = path.join(root, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const file of listFiles(full)) {
+      const relative = path.relative(root, file);
       if (relative === LAYERS_MODULE) continue;
       if (FROZEN.has(relative)) continue;
 

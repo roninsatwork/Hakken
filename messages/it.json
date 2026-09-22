@@ -971,10 +971,7 @@
       },
       "grantsLabel": "Cosa attiva questo piano",
       "grantsHint": "Ogni azienda su questo piano le riceve, oltre a ciò che le è stato attivato direttamente.",
-      "stripePrice": "Prezzo Stripe",
-      "promptsLabel": "Domande AI per sito",
-      "promptsPlaceholder": "10",
-      "promptsHint": "Ogni domanda viene posta a tutti i motori AI, ogni volta che quel sito viene raccolto. Zero disattiva la funzione per questo piano."
+      "stripePrice": "Prezzo Stripe"
     },
     "companyDetails": {
       "title": "Telemetria Tenant",

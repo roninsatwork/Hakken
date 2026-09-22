@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The Distiller's action half (wiki-replaces-knowledge plan, stage one).
@@ -138,7 +139,7 @@ describe("the catch-up sweep's gates", () => {
       generateMock.mockResolvedValue({ text: NO_TOPICS });
 
       const result = await t.action(internal.wikiDistillActions.distilSweep, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       expect(result).toEqual({ companies: 1 });
       // The document is its own wiki note, substantially intact, even when
@@ -172,7 +173,7 @@ describe("the catch-up sweep's gates", () => {
       generateMock.mockResolvedValue({ text: NO_TOPICS });
 
       const result = await t.action(internal.wikiDistillActions.distilSweep, {});
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       expect(result).toEqual({ companies: 1 });
       const note = await wikiPageBySubject(t, globalDocId);
@@ -289,7 +290,7 @@ describe("the batch worker", () => {
       generateMock.mockRejectedValue(new Error("model unavailable"));
 
       await t.action(internal.wikiDistillActions.distilCompanyBatch, { companyId });
-      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      await finishScheduled(t);
 
       const runs = await staffRuns(t, "WIKI_DISTILLER");
       expect(runs).toHaveLength(1);

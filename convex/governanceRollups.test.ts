@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * The governance rollups, end to end: the backfill builds history, the cron's
@@ -164,7 +165,7 @@ async function seedActivity(t: TestConvex, seeded: Seeded) {
 
 async function backfillAndRebuild(t: TestConvex) {
   await t.mutation(internal.dataMigrations.run, { name: "2026-08-18-governance-day-rollups-backfill" });
-  await t.finishAllScheduledFunctions(vi.runAllTimers);
+  await finishScheduled(t);
   await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
 }
 
@@ -276,7 +277,7 @@ describe("the machinery is safe to re-run", () => {
       name: "2026-08-18-governance-day-rollups-backfill",
       force: true,
     });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     await t.mutation(internal.governanceRollups.rebuildGovernanceRollups, {});
 
     const after = await asUser(t, seeded.superId).query(api.governanceActivity.getGovernanceActivity, { days: 90 });
@@ -398,7 +399,7 @@ describe("a day bucket says so when the approvals behind it were cut short", () 
     await seedTwoWaitingRuns(t, seeded, 10001);
 
     await t.mutation(internal.dataMigrations.run, { name: "2026-08-18-governance-day-rollups-backfill" });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const buckets = await bucketsFor(t);
     expect(buckets).toHaveLength(1);

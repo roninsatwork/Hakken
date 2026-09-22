@@ -1,8 +1,9 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
-import { findHardcodedLayers, findStaleFreezes } from "./check-layering.mjs";
+import { findHardcodedLayers as scanLayers, findStaleFreezes } from "./check-layering.mjs";
 import { LAYER, LAYER_ORDER, layerValue } from "../src/ui/lib/layers.ts";
 
 /**
@@ -11,10 +12,25 @@ import { LAYER, LAYER_ORDER, layerValue } from "../src/ui/lib/layers.ts";
  * is the invariant whose absence put the account menu behind a filter bar.
  */
 
-const scratch = path.join(process.cwd(), "src", "ui", "__layering_probe__.tsx");
+/*
+  The probe is written into a scratch tree shaped like the repo, never into the
+  real `src/ui`, where every other check walking the tree could see it — and did:
+  it is why the screen-kit check learnt to read files that vanish, and why the
+  fence checker failed on 2026-09-22 when it had not.
+*/
+const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), "layering-probe-"));
+const scratch = path.join(scratchRoot, "src", "ui", "__layering_probe__.tsx");
+fs.mkdirSync(path.dirname(scratch), { recursive: true });
+
+/** The check as the probes need it: read from the scratch tree. */
+const findHardcodedLayers = () => scanLayers(scratchRoot);
 
 afterEach(() => {
   if (fs.existsSync(scratch)) fs.rmSync(scratch);
+});
+
+afterAll(() => {
+  fs.rmSync(scratchRoot, { recursive: true, force: true });
 });
 
 describe("the layering scale", () => {
@@ -45,7 +61,7 @@ describe("the layering scale", () => {
 
 describe("the layering guard", () => {
   it("passes on the codebase as it stands", () => {
-    expect(findHardcodedLayers()).toEqual([]);
+    expect(scanLayers()).toEqual([]);
     expect(findStaleFreezes()).toEqual([]);
   });
 
@@ -58,7 +74,7 @@ describe("the layering guard", () => {
     const offenders = findHardcodedLayers();
 
     expect(offenders.map((offender) => offender.file)).toContain(
-      path.relative(process.cwd(), scratch)
+      path.relative(scratchRoot, scratch)
     );
     expect(offenders.find((o) => o.file.includes("__layering_probe__"))?.classes).toEqual(["z-30"]);
   });

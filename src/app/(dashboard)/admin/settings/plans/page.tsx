@@ -51,7 +51,6 @@ export default function SubscriptionPlansPage() {
     name: "", 
     description: "", 
     messageLimit: 1000, 
-    seoPromptsPerWebsite: 10,
     priceGBP: 0,
     grantedModules: [] as string[],
     isActive: true 
@@ -75,7 +74,7 @@ export default function SubscriptionPlansPage() {
 
   const handleOpenAdd = () => {
     preparePlanDialogs();
-    setFormData({ name: "", description: "", messageLimit: 1000, seoPromptsPerWebsite: 10, priceGBP: 0, grantedModules: [], isActive: true });
+    setFormData({ name: "", description: "", messageLimit: 1000, priceGBP: 0, grantedModules: [], isActive: true });
     setEditingPlan(null);
     setSubmitError("");
     setIsAddModalOpen(true);
@@ -87,7 +86,6 @@ export default function SubscriptionPlansPage() {
         name: plan.name, 
         description: plan.description || "", 
         messageLimit: plan.messageLimit,
-        seoPromptsPerWebsite: plan.seoPromptsPerWebsite ?? 10,
         priceGBP: plan.priceGBP,
         grantedModules: plan.grantedModules ?? [],
         isActive: plan.isActive
@@ -107,7 +105,6 @@ export default function SubscriptionPlansPage() {
               name: formData.name,
               description: formData.description,
               messageLimit: Number(formData.messageLimit),
-              seoPromptsPerWebsite: Number(formData.seoPromptsPerWebsite),
               priceGBP: Number(formData.priceGBP),
               grantedModules: formData.grantedModules,
               isActive: formData.isActive
@@ -117,7 +114,6 @@ export default function SubscriptionPlansPage() {
               name: formData.name,
               description: formData.description,
               messageLimit: Number(formData.messageLimit),
-              seoPromptsPerWebsite: Number(formData.seoPromptsPerWebsite),
               priceGBP: Number(formData.priceGBP),
               grantedModules: formData.grantedModules,
               isActive: formData.isActive
