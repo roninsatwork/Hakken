@@ -9,6 +9,7 @@ import { Globe, MessageSquare, Search, Sparkles, Swords } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { TrackedPairing } from "./TrackedPairing";
 import { WebsiteScheduleOverride } from "./WebsiteScheduleOverride";
 import { WatchLocation } from "./WatchLocation";
 
@@ -45,6 +46,9 @@ export default function CompanyWebsiteDetailPage() {
     return <p className="text-[13px] text-destructive">{t("notFound")}</p>;
   }
 
+  const isTracked = website.relationship === "TRACKED";
+  // Paired, its day and place are its pair's, so it has none of its own to set.
+  const paired = website.pairedWith;
   const websitesHref = `/admin/companies/${companyId}/websites`;
   const siteHref = `${websitesHref}/site/${companyWebsiteId}`;
   const recordHref = `/admin/websites/${website.websiteId}`;
@@ -92,25 +96,38 @@ export default function CompanyWebsiteDetailPage() {
         back={{ label: t("back"), href: websitesHref }}
         icon={<Globe className="h-6 w-6 text-brand" />}
         title={website.displayHost}
-        description={t("subtitle")}
+        description={isTracked ? t("trackedSubtitle") : t("subtitle")}
       />
 
-      <WebsiteScheduleOverride
-        companyWebsiteId={companyWebsiteId}
-        host={website.displayHost}
-        companyName={website.companyName}
-        companyIntervalStr={website.companyIntervalStr}
-        stored={{
-          refreshIntervalStr: website.refreshIntervalStr,
-          collectionEnabled: website.collectionEnabled,
-        }}
-        effective={website.effective}
-      />
+      {isTracked ? (
+        <TrackedPairing
+          companyId={companyId}
+          companyWebsiteId={companyWebsiteId}
+          pairedWith={paired}
+          nextRunAt={website.effective.nextRunAt}
+        />
+      ) : null}
 
-      <WatchLocation
-        companyWebsiteId={companyWebsiteId}
-        savedCode={website.locationCode}
-      />
+      {paired ? null : (
+        <>
+          <WebsiteScheduleOverride
+            companyWebsiteId={companyWebsiteId}
+            host={website.displayHost}
+            companyName={website.companyName}
+            companyIntervalStr={website.companyIntervalStr}
+            stored={{
+              refreshIntervalStr: website.refreshIntervalStr,
+              collectionEnabled: website.collectionEnabled,
+            }}
+            effective={website.effective}
+          />
+
+          <WatchLocation
+            companyWebsiteId={companyWebsiteId}
+            savedCode={website.locationCode}
+          />
+        </>
+      )}
 
       {/*
         Said plainly rather than left to be discovered: editing any of these

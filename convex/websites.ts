@@ -21,6 +21,7 @@ import {
   type ResolvedWebsiteSchedule,
 } from "./seoScheduleService";
 import * as websiteShapes from "./utils/websiteShapes";
+import { pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -54,7 +55,7 @@ const COMPETITOR_COUNT_LIMIT = 100;
 // Reading a host
 // ---------------------------------------------------------------------------
 
-function requireHost(raw: string): WebsiteIdentity {
+export function requireHost(raw: string): WebsiteIdentity {
   const result = readWebsiteHost(raw);
   if (!result.ok) {
     throw appError("INVALID_INPUT", WEBSITE_IDENTITY_MESSAGES[result.problem]);
@@ -154,7 +155,7 @@ export const previewWebsiteHost = superAdminQuery({
  * is invisible on screen. It shows up only as a bill twice the size it should
  * be.
  */
-async function findOrCreateWebsite(
+export async function findOrCreateWebsite(
   ctx: MutationCtx,
   identity: WebsiteIdentity,
   now: number,
@@ -230,9 +231,8 @@ async function loadWatchers(
       // Absent reads as owned: every row written before the flag existed was a
       // company's own website.
       const isTracked = companyWebsite.relationship === "TRACKED";
-      const against = isTracked && companyWebsite.againstWebsiteId
-        ? await ctx.db.get(companyWebsite.againstWebsiteId)
-        : null;
+      const pair = await pairedOwnedHold(ctx, companyWebsite);
+      const against = pair ? await ctx.db.get(pair.websiteId) : null;
 
       return {
         key: companyWebsite._id,
@@ -241,13 +241,12 @@ async function loadWatchers(
         relationship: isTracked ? ("TRACKED" as const) : ("OWNED" as const),
         againstHost: against?.displayHost ?? null,
         /*
-          A tracked site follows the one it is watched against, so the two land
-          on the same day — numbers pulled in different weeks are not a
-          comparison. Its own row carries no override, so this resolves to the
-          company schedule, which is the same thing its parent resolves to
-          unless the parent has one of its own.
+          A paired tracked site is collected on its pair's day — numbers pulled
+          in different weeks are not a comparison — so its rate *is* the pair's,
+          and that is what resolves here. Unpaired, it follows its own settings
+          like any hold.
         */
-        resolved: resolveWebsiteSchedule(schedule, companyWebsite),
+        resolved: resolveWebsiteSchedule(schedule, pair ?? companyWebsite),
       };
     }),
   );
@@ -292,12 +291,15 @@ async function countCompetitors(
   companyId: Id<"companies">,
   againstWebsiteId: Id<"websites">,
 ) {
+  // By the pairing index rather than the company's holds filtered afterwards:
+  // a take before a filter counts the first hundred holds, not the first
+  // hundred rivals, and a company with many sites would read as having none.
   const rows = (await ctx.db
     .query("companyWebsites")
-    .withIndex("by_company", (q) => q.eq("companyId", companyId))
+    .withIndex("by_company_against", (q) =>
+      q.eq("companyId", companyId).eq("againstWebsiteId", againstWebsiteId))
     .take(COMPETITOR_COUNT_LIMIT + 1))
-    .filter((row) =>
-      row.relationship === "TRACKED" && row.againstWebsiteId === againstWebsiteId);
+    .filter((row) => row.relationship === "TRACKED");
 
   return {
     competitorCount: Math.min(rows.length, COMPETITOR_COUNT_LIMIT),
@@ -326,16 +328,23 @@ export const getCompanyWebsites = superAdminQuery({
     const rows = await Promise.all(
       page.page.map(async (companyWebsite) => {
         const website = await ctx.db.get(companyWebsite.websiteId);
-        const resolved = resolveWebsiteSchedule(schedule, companyWebsite);
-        const counts = await countCompetitors(ctx, args.companyId, companyWebsite.websiteId);
+        const pair = await pairedOwnedHold(ctx, companyWebsite);
+        const against = pair ? await ctx.db.get(pair.websiteId) : null;
+        // A paired tracked site runs when its pair does, so that is the date
+        // its row shows — and says why, rather than implying a schedule of its own.
+        const resolved = resolveWebsiteSchedule(schedule, pair ?? companyWebsite);
+        const counts = companyWebsite.relationship === "TRACKED"
+          ? { competitorCount: 0, competitorCountIsCapped: false }
+          : await countCompetitors(ctx, args.companyId, companyWebsite.websiteId);
 
         return {
           ...companyWebsite,
           host: website?.host ?? "",
           displayHost: website?.displayHost ?? "",
+          againstHost: against?.displayHost ?? null,
           ...counts,
           collecting: resolved.active,
-          scheduleSource: resolved.source,
+          scheduleSource: pair ? ("PAIR" as const) : resolved.source,
           nextRunAt: resolved.nextRunAt,
         };
       }),
@@ -353,25 +362,37 @@ export const getCompanyWebsiteById = superAdminQuery({
     const companyWebsite = await ctx.db.get(args.id);
     if (!companyWebsite) return null;
 
-    const [website, company, schedule] = await Promise.all([
+    const [website, company, schedule, pair] = await Promise.all([
       ctx.db.get(companyWebsite.websiteId),
       ctx.db.get(companyWebsite.companyId),
       companySchedule(ctx, companyWebsite.companyId),
+      pairedOwnedHold(ctx, companyWebsite),
     ]);
-    const resolved = resolveWebsiteSchedule(schedule, companyWebsite);
+    const pairSite = pair ? await ctx.db.get(pair.websiteId) : null;
+    // Paired, the pair's settings are the ones that run, so they are the
+    // effective ones — the screen says so instead of offering its own.
+    const resolved = resolveWebsiteSchedule(schedule, pair ?? companyWebsite);
 
     return {
       ...companyWebsite,
       host: website?.host ?? "",
       displayHost: website?.displayHost ?? "",
       companyName: company?.name ?? null,
+      pairedWith: pair && pairSite
+        ? {
+          companyWebsiteId: pair._id,
+          websiteId: pair.websiteId,
+          displayHost: pairSite.displayHost,
+          locationLabel: pair.locationLabel ?? null,
+        }
+        : null,
       /** The company's own schedule, so the screen can show what is inherited. */
       companyIntervalStr: schedule?.intervalStr ?? null,
       companyScheduleActive: schedule?.isActive ?? false,
       effective: {
         active: resolved.active,
         intervalStr: resolved.intervalStr,
-        source: resolved.source,
+        source: pair ? ("PAIR" as const) : resolved.source,
         nextRunAt: resolved.nextRunAt,
       },
     };
@@ -492,101 +513,6 @@ export const addCompanyWebsite = superAdminMutation({
   },
 });
 
-/**
- * Attach a website to a company as one it watches.
- *
- * **This is the company's own list, and it is the only thing that decides what
- * their collection buys.** For one commit on 2026-09-22 it wrote an edge into
- * the host's competition graph instead, and the cycle read that graph — so a
- * rivalry another company asserted spent this company's money. Who competes
- * with whom is a fact about a market and stays on the host; what I watch is
- * mine, and it lives on my attachment.
- *
- * `againstWebsiteId` is the site of theirs it is watched against, which is what
- * makes the two collect on the same day: numbers pulled in different weeks are
- * not a comparison.
- *
- * It also records the rivalry on the host, because that much *is* shared
- * knowledge and costs nothing to know — but nothing reads it to decide a
- * purchase.
- */
-export async function trackCompetitorCore(
-  ctx: MutationCtx,
-  args: {
-    companyWebsiteId: Id<"companyWebsites">;
-    url: string;
-    userId: Id<"users">;
-    via: "added" | "discovered";
-  },
-): Promise<Id<"companyWebsites">> {
-  const against = await ctx.db.get(args.companyWebsiteId);
-  if (!against) throw appError("NOT_FOUND", "That website is no longer held by this company.");
-
-  const identity = requireHost(args.url);
-  const now = Date.now();
-  const { websiteId } = await findOrCreateWebsite(ctx, identity, now);
-
-  if (websiteId === against.websiteId) {
-    throw appError("INVALID_INPUT", "A website cannot compete with itself.");
-  }
-
-  const existing = await ctx.db
-    .query("companyWebsites")
-    .withIndex("by_company_website", (q) =>
-      q.eq("companyId", against.companyId).eq("websiteId", websiteId))
-    .first();
-  if (existing) {
-    throw appError("INVALID_INPUT", "This company already holds that website.");
-  }
-
-  const attachmentId = await ctx.db.insert("companyWebsites", {
-    companyId: against.companyId,
-    websiteId,
-    relationship: "TRACKED",
-    againstWebsiteId: against.websiteId,
-    createdAt: now,
-  });
-
-  // Shared market knowledge, recorded once. Nothing spends money off it.
-  const edge = await ctx.db
-    .query("websiteRivals")
-    .withIndex("by_website_rival", (q) =>
-      q.eq("websiteId", against.websiteId).eq("rivalWebsiteId", websiteId))
-    .first();
-  if (!edge) {
-    await ctx.db.insert("websiteRivals", {
-      websiteId: against.websiteId,
-      rivalWebsiteId: websiteId,
-      source: args.via === "discovered" ? "DISCOVERED" : "ASSERTED",
-      createdAt: now,
-    });
-  }
-
-  await ctx.db.insert("auditLogs", {
-    actorId: args.userId,
-    actionType: "ADD_TRACKED_WEBSITE",
-    entityId: attachmentId,
-    entityType: "companyWebsites",
-    companyId: against.companyId,
-    metadata: JSON.stringify({ host: identity.host, via: args.via }),
-    timestamp: now,
-  });
-
-  return attachmentId;
-}
-
-/** Attach a rival of one of a company's own websites, from an add form. */
-export const addTrackedCompetitor = superAdminMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), url: v.string() },
-  returns: v.id("companyWebsites"),
-  handler: async (ctx, args) => await trackCompetitorCore(ctx, {
-    companyWebsiteId: args.companyWebsiteId,
-    url: args.url,
-    userId: ctx.userId,
-    via: "added",
-  }),
-});
-
 export const setCompanyWebsiteSchedule = superAdminMutation({
   args: {
     id: v.id("companyWebsites"),
@@ -597,6 +523,7 @@ export const setCompanyWebsiteSchedule = superAdminMutation({
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.id);
     if (!companyWebsite) throw appError("NOT_FOUND", "Website not found");
+    await refuseIfPaired(ctx, companyWebsite, "schedule");
 
     // Checked here and not only in the screen. This mutation took whatever the
     // old generic builder produced — including an hourly pull and a list of
@@ -797,6 +724,7 @@ export const setCompanyWebsiteLocation = superAdminMutation({
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
     if (!companyWebsite) throw appError("NOT_FOUND", "That website is no longer held by this company.");
+    await refuseIfPaired(ctx, companyWebsite, "place");
 
     const label = args.locationLabel?.trim();
     if (args.locationCode !== null && !label) {

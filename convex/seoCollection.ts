@@ -15,6 +15,7 @@ import { findSeoLocation } from "./seoLocations";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
+import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -140,7 +141,7 @@ async function expandPage(
   const now = new Date(cycle.startedAt);
   const operations = seoSiteOperations();
 
-  let query = ctx.db
+  const query = ctx.db
     .query("companyWebsites")
     .withIndex("by_company", (q) => q.eq("companyId", cycle.companyId));
 
@@ -162,12 +163,16 @@ async function expandPage(
     lastCursor = companyWebsite._id;
 
     /*
-      Only the company's own sites drive a cycle. A tracked one is reached
-      below, as a target of the site it is watched against — that is what makes
-      the two land on the same day, and walking it here as well would plan it
-      twice and read its parent's questions against it.
+      A tracked site paired with one of the company's own is reached below, as
+      a target of that site — which is what makes the two land on the same day
+      — so walking it here as well would plan it twice.
+
+      A tracked site with no pair is collected here, on its own settings, like
+      any hold. It was skipped outright for a while, which meant a company could
+      choose to watch a site and have it never collected at all, with nothing on
+      screen to say so.
     */
-    if (companyWebsite.relationship === "TRACKED") continue;
+    if (isTrackedHold(companyWebsite) && await pairedOwnedHold(ctx, companyWebsite)) continue;
 
     const resolved = resolveWebsiteSchedule(schedule, companyWebsite, now);
     if (!resolved.active) continue;
@@ -198,13 +203,14 @@ async function expandPage(
       plan question, not something one transaction should discover the hard way
       at the moment it runs out of room.
     */
-    const tracked = (await ctx.db
-      .query("companyWebsites")
-      .withIndex("by_company", (q) => q.eq("companyId", cycle.companyId))
-      .take(SEO_COMPETITORS_PER_WEBSITE))
-      .filter((row) =>
-        row.relationship === "TRACKED"
-        && row.againstWebsiteId === companyWebsite.websiteId);
+    const tracked = isTrackedHold(companyWebsite)
+      ? []
+      : (await ctx.db
+        .query("companyWebsites")
+        .withIndex("by_company_against", (q) =>
+          q.eq("companyId", cycle.companyId).eq("againstWebsiteId", companyWebsite.websiteId))
+        .take(SEO_COMPETITORS_PER_WEBSITE))
+        .filter(isTrackedHold);
 
     // A tracked site is collected at the rate of the one it is measured
     // against. Numbers from different weeks are not a comparison.

@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
-import { trackCompetitorCore } from "./websites";
+import { trackCompetitorCore } from "./websiteAttachments";
 
 /**
  * Websites discovery says compete with one of a company's own.
@@ -74,7 +74,7 @@ export const listDiscoveredCompetitors = superAdminQuery({
 /**
  * Accept a suggestion, which tracks it as a competitor for real.
  *
- * Goes through `addTrackedCompetitor` rather than writing the join row here,
+ * Goes through `trackCompetitorCore` rather than writing the join row here,
  * so a discovered host gets the same identity check, the same shared
  * `websites` record and the same audit entry as one typed in by hand.
  */

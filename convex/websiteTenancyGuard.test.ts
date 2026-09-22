@@ -7,8 +7,9 @@ import { describe, expect, test } from "vitest";
  *
  * A `websites` row is shared — one host is stored once for everyone tracking
  * it — so the record implicitly knows that a company and its rival both watch
- * the same site. Tenancy lives only on the join rows, `companyWebsites` and
- * `trackedCompetitors`, and the leak is not a missing check but a *direction*:
+ * the same site. Tenancy lives only on the join row, `companyWebsites`, which
+ * records both a company's own sites and the ones it tracks, and the leak is
+ * not a missing check but a *direction*:
  * a query that reads a website and then finds who holds it has already crossed
  * the line, and filtering afterwards is one careless edit from not filtering.
  *
@@ -74,10 +75,12 @@ describe("the shared website record stays behind its join rows", () => {
 
     expect(source).toContain("export async function requireCompanyWebsite");
     expect(source).toContain('.query("companyWebsites")');
-    // Entitlement for a rival runs company → its holds → the competition
-    // graph. It used to read a per-company `trackedCompetitors` row; the graph
-    // names no company, so the company's own holds are what grant a host.
-    expect(source).toContain('.query("websiteRivals")');
+    // Entitlement is what the company holds, owned or tracked, and nothing
+    // else. It walked the competition graph for a while, so a rival another
+    // company had asserted against a shared host was entitled too — and this
+    // door is what lets the agent ask for a pull, so that assertion could spend
+    // this company's money. The graph is for reading and suggesting.
+    expect(source).not.toContain('.query("websiteRivals")');
   });
 });
 

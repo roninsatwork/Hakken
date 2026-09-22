@@ -86,7 +86,7 @@ describe("One website, stored once", () => {
       companyId: acme,
       url: "acme.com",
     });
-    await admin.mutation(api.websites.addTrackedCompetitor, {
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: acmeSite,
       url: "https://www.shared.com",
     });
@@ -227,7 +227,7 @@ describe("A company's own websites", () => {
       url: "ours.com",
     });
     for (const url of ["a.com", "b.com", "c.com"]) {
-      await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url });
+      await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url });
     }
 
     const page = await admin.query(api.websites.getCompanyWebsites, {
@@ -273,7 +273,7 @@ describe("Competitors live inside a website", () => {
     const t = harness();
     const { admin, company, site } = await seedSite(t);
 
-    await admin.mutation(api.websites.addTrackedCompetitor, {
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: site,
       url: "https://www.rival.com/uk",
     });
@@ -290,9 +290,9 @@ describe("Competitors live inside a website", () => {
     const t = harness();
     const { admin, site } = await seedSite(t);
 
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
     await expect(
-      admin.mutation(api.websites.addTrackedCompetitor, {
+      admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
         companyWebsiteId: site,
         url: "https://www.rival.com",
       }),
@@ -306,7 +306,7 @@ describe("Competitors live inside a website", () => {
     const shop = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "shop.com" });
     const trade = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "trade.com" });
 
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: shop, url: "rival.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: shop, url: "rival.com" });
 
     /*
       Refused rather than filed twice. A company's list is a list of websites,
@@ -315,7 +315,7 @@ describe("Competitors live inside a website", () => {
       results against another of their sites is a reading question, and the pull
       is the same one either way.
     */
-    await expect(admin.mutation(api.websites.addTrackedCompetitor, {
+    await expect(admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: trade, url: "rival.com",
     })).rejects.toThrow("already holds that website");
 
@@ -328,7 +328,7 @@ describe("Competitors live inside a website", () => {
     const { admin, site } = await seedSite(t, "ours.com");
 
     await expect(
-      admin.mutation(api.websites.addTrackedCompetitor, {
+      admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
         companyWebsiteId: site,
         url: "https://www.ours.com/uk",
       }),
@@ -343,9 +343,9 @@ describe("Competitors live inside a website", () => {
     const trade = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "trade.com" });
 
     for (const url of ["rival.com", "other.co.uk"]) {
-      await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: shop, url });
+      await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: shop, url });
     }
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: trade, url: "elsewhere.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: trade, url: "elsewhere.com" });
 
     const shopWebsiteId = await t.run(async (ctx) => (await ctx.db.get(shop))!.websiteId);
 
@@ -368,10 +368,10 @@ describe("Competitors live inside a website", () => {
     const roninsSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "a.com" });
     const acmeSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "b.com" });
 
-    const roninsRival = await admin.mutation(api.websites.addTrackedCompetitor, {
+    const roninsRival = await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: roninsSite, url: "rival.com",
     });
-    await admin.mutation(api.websites.addTrackedCompetitor, {
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: acmeSite, url: "rival.com",
     });
 
@@ -473,7 +473,7 @@ describe("The soonest watcher sets the pace", () => {
     const own = await admin.mutation(api.websites.addCompanyWebsite, {
       companyId: watcher, url: "own.com",
     });
-    await admin.mutation(api.websites.addTrackedCompetitor, {
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: own, url: "shared.com",
     });
 
@@ -644,7 +644,7 @@ describe("The global list", () => {
 
     await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
     const acmeSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "acme.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
 
     const page = await admin.query(api.websites.getPaginatedWebsites, {
       paginationOpts: { numItems: 50, cursor: null },
@@ -667,7 +667,7 @@ describe("The global list", () => {
 
     await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
     const acmeSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "acme.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
 
     const websiteId = await t.run(async (ctx) =>
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "shared.com")).first())!._id,
@@ -750,7 +750,7 @@ describe("Deleting a website", () => {
 
     await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
     const acmeSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "acme.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
 
     const websiteId = await t.run(async (ctx) =>
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "shared.com")).first())!._id,
@@ -770,7 +770,7 @@ describe("Deleting a website", () => {
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
     const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
 
     const websiteId = await t.run(async (ctx) =>
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "ours.com")).first())!._id,
@@ -797,7 +797,7 @@ describe("Deleting a website", () => {
 
     await admin.mutation(api.websites.addCompanyWebsite, { companyId: ronins, url: "shared.com" });
     const acmeSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: acme, url: "acme.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: acmeSite, url: "shared.com" });
 
     const websiteId = await t.run(async (ctx) =>
       (await ctx.db.query("websites").filter((q) => q.eq(q.field("host"), "shared.com")).first())!._id,
@@ -821,7 +821,7 @@ describe("Deleting a website", () => {
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
     const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
 
     await admin.mutation(api.websites.removeCompanyWebsite, { id: site });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -843,9 +843,9 @@ describe("Deleting a website", () => {
     const survivor = await seedCompany(t, "Survivor");
 
     const doomedSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: doomed, url: "doomed.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: doomedSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: doomedSite, url: "shared.com" });
     const survivorSite = await admin.mutation(api.websites.addCompanyWebsite, { companyId: survivor, url: "survivor.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: survivorSite, url: "shared.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: survivorSite, url: "shared.com" });
 
     await admin.mutation(api.companies.deleteCompany, { id: doomed });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -866,7 +866,7 @@ describe("Who may do any of this", () => {
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
     const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
-    const rival = await admin.mutation(api.websites.addTrackedCompetitor, {
+    const rival = await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
       companyWebsiteId: site, url: "rival.com",
     });
     const websiteId = await t.run(async (ctx) => (await ctx.db.query("websites").first())!._id);
@@ -875,7 +875,7 @@ describe("Who may do any of this", () => {
 
     await expect(user.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "theirs.com" }))
       .rejects.toThrow("Unauthorized");
-    await expect(user.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "x.com" }))
+    await expect(user.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "x.com" }))
       .rejects.toThrow("Unauthorized");
     await expect(user.mutation(api.websites.removeCompanyWebsite, { id: rival }))
       .rejects.toThrow("Unauthorized");
@@ -909,7 +909,7 @@ describe("Sweeps do not run away", () => {
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
     const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
 
     await t.mutation(internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: company });
     await t.mutation(internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: company });

@@ -40,14 +40,21 @@ import type { QueryCtx } from "./_generated/server";
  * Resolve a host this company is entitled to, or refuse identically to a host
  * that does not exist.
  *
- * Both a company's own website and a competitor tracked under one count, and
- * both are found through rows that carry `companyId`. The lookup deliberately
- * never queries `websites` first: starting there and filtering afterwards is
- * the shape that leaks, because the filter is one edit away from being dropped.
+ * Entitled means **held**: one of the company's own sites, or one it has chosen
+ * to track. Both are `companyWebsites` rows carrying `companyId`, so one lookup
+ * answers both. The lookup deliberately never queries `websites` first and
+ * walks outward: starting there and filtering afterwards is the shape that
+ * leaks, because the filter is one edit away from being dropped.
+ *
+ * It also read the host's competition graph for a while, so a rival any company
+ * had asserted against a host this one held was entitled too. That is the
+ * conflation Anthony rejected on 2026-09-22 — *"If someone else adds ronins as
+ * competitor I don't care about that, that's up to them in their own
+ * company"* — and here it decided more than a list: this door is what lets the
+ * agent ask for a pull, so another company's assertion could spend this one's
+ * money. Who competes with whom stays on the graph, for reading and suggesting;
+ * what a company may buy is what it chose to hold.
  */
-/** Bounded: a company with more sites than this has a plan problem, not a query one. */
-const COMPANY_HOLD_LIMIT = 200;
-
 export async function requireCompanyWebsite(
   ctx: QueryCtx,
   companyId: Id<"companies">,
@@ -65,39 +72,16 @@ export async function requireCompanyWebsite(
 
   const denial = appError(
     "NOT_FOUND",
-    `This company does not hold ${identity.displayHost}. Add it as a website or as a competitor first.`,
+    `This company does not hold ${identity.displayHost}. Add it as a website, or track it, first.`,
   );
   if (!website) throw denial;
 
-  const owned = await ctx.db
+  const held = await ctx.db
     .query("companyWebsites")
     .withIndex("by_company_website", (q) =>
       q.eq("companyId", companyId).eq("websiteId", website._id))
     .first();
-  if (owned) return { websiteId: website._id, host: website.host };
-
-  /*
-    Or it is a rival of one of this company's own sites.
-
-    Read company → its holds → the competition graph, which is the direction
-    this file exists to keep. It used to read a `trackedCompetitors` row scoped
-    by company; rivalry is a fact about the market now and lives on the host, so
-    entitlement comes from *which hosts this company holds* rather than from a
-    per-client copy of the rival list.
-  */
-  const holds = await ctx.db
-    .query("companyWebsites")
-    .withIndex("by_company", (q) => q.eq("companyId", companyId))
-    .take(COMPANY_HOLD_LIMIT);
-
-  for (const hold of holds) {
-    const edge = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_website_rival", (q) =>
-        q.eq("websiteId", hold.websiteId).eq("rivalWebsiteId", website._id))
-      .first();
-    if (edge) return { websiteId: website._id, host: website.host };
-  }
+  if (held) return { websiteId: website._id, host: website.host };
 
   // Same words as "no such website", on purpose. A different message would
   // turn this into a way of asking which hosts the platform knows about.

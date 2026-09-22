@@ -164,6 +164,78 @@ describe("expanding a cycle", () => {
     expect(await pulls(t)).toHaveLength(SITE_OPERATIONS * 2 + BULK_OPERATIONS);
   });
 
+  test("collects a tracked site with no pair on its own", async () => {
+    // It was skipped outright for a while: tracked holds were only reached as
+    // targets of a pair, so a site watched with nothing to pair it to was
+    // chosen, shown on the list, and never collected.
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const watched = await seedWebsite(t, "rival.com");
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: company,
+        websiteId: watched,
+        relationship: "TRACKED",
+        createdAt: Date.now(),
+      }));
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    const perSite = (await pulls(t)).filter((row) => row.websiteId === watched);
+    expect(perSite).toHaveLength(SITE_OPERATIONS);
+  });
+
+  test("plans a paired tracked site once, as its pair's target, not twice", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const own = await seedWebsite(t, "ourshop.com");
+    const rival = await seedWebsite(t, "rival.com");
+    await seedCompanyWebsite(t, company, own);
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: company,
+        websiteId: rival,
+        relationship: "TRACKED",
+        againstWebsiteId: own,
+        createdAt: Date.now(),
+      }));
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    // One line per site operation and one per bulk call, as for any site on
+    // the page. Walked twice, it would carry each of those twice.
+    const rivalLines = (await lines(t)).filter((row) => row.websiteId === rival);
+    expect(rivalLines).toHaveLength(SITE_OPERATIONS + BULK_OPERATIONS);
+  });
+
+  test("a pairing to a site the company has let go collects the tracked site on its own", async () => {
+    // The pair was removed; the tracked hold is still something the company
+    // chose and pays for, so it falls back to its own settings rather than to
+    // nothing.
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const gone = await seedWebsite(t, "old-site.com");
+    const rival = await seedWebsite(t, "rival.com");
+    await t.run(async (ctx) =>
+      await ctx.db.insert("companyWebsites", {
+        companyId: company,
+        websiteId: rival,
+        relationship: "TRACKED",
+        againstWebsiteId: gone,
+        createdAt: Date.now(),
+      }));
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    expect((await pulls(t)).filter((row) => row.websiteId === rival)).toHaveLength(SITE_OPERATIONS);
+  });
+
   test("asks about every website on a page in one paid call", async () => {
     const t = harness();
     const company = await seedCompany(t, "Big Agency");

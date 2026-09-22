@@ -54,19 +54,18 @@ describe("reading a website's numbers", () => {
     expect(result.host).toBe("ourshop.com");
   });
 
-  test("a rival of one of its websites counts as held", async () => {
+  test("a site it tracks counts as held", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");
     const own = await seedWebsite(t, "ourshop.com");
     const rival = await seedWebsite(t, "rival.com");
     await hold(t, company, own);
-    // Entitlement runs company → its holds → the competition graph. The edge
-    // names no company, so holding ourshop.com is what grants rival.com.
     await t.run(async (ctx) =>
-      await ctx.db.insert("websiteRivals", {
-        websiteId: own,
-        rivalWebsiteId: rival,
-        source: "ASSERTED",
+      await ctx.db.insert("companyWebsites", {
+        companyId: company,
+        websiteId: rival,
+        relationship: "TRACKED",
+        againstWebsiteId: own,
         createdAt: Date.now(),
       }));
 
@@ -76,6 +75,30 @@ describe("reading a website's numbers", () => {
     });
 
     expect(result.host).toBe("rival.com");
+  });
+
+  test("a rival on the shared graph is not held until this company tracks it", async () => {
+    // Who competes with whom is market knowledge on the host, and another
+    // company may well have asserted it. That must not grant this company the
+    // rival: this door is what lets the agent ask for a pull, so an assertion
+    // made elsewhere would be spending this company's money.
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    const own = await seedWebsite(t, "ourshop.com");
+    const rival = await seedWebsite(t, "rival.com");
+    await hold(t, company, own);
+    await t.run(async (ctx) =>
+      await ctx.db.insert("websiteRivals", {
+        websiteId: own,
+        rivalWebsiteId: rival,
+        source: "ASSERTED",
+        createdAt: Date.now(),
+      }));
+
+    await expect(t.query(internal.seoTools.readSeoMetrics, {
+      companyId: company,
+      host: "rival.com",
+    })).rejects.toThrow(/does not hold/);
   });
 
   test("a host another company holds is refused", async () => {

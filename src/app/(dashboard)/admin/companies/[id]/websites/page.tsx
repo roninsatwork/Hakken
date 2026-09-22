@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useState, type FormEvent } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Globe, Plus, Trash2 } from "lucide-react";
@@ -25,12 +25,16 @@ const RemoveCompanyWebsiteDialog = lazy(() =>
   loadDialogs().then((module) => ({ default: module.RemoveCompanyWebsiteDialog })),
 );
 
+type Holding = "OWNED" | "TRACKED";
+
 /**
- * A company's own websites.
+ * Every website a company holds: the ones it owns, and the ones it watches.
  *
- * The top of the structure everything else hangs from: a customer adds their
- * website, and the competitors they want it measured against go inside that
- * record rather than beside it. Open a row to reach them.
+ * Anthony, 2026-09-22: *"in a company you set which you own and which you
+ * track."* Both kinds sit on one list because they are one choice — what this
+ * company pays to have collected — and a tracked row says which of the
+ * company's own sites it is watched against, since that decides the day it is
+ * pulled.
  *
  * Each row points at a `websites` record shared with every other company
  * holding or tracking the same host, which is why removing one says "remove
@@ -47,11 +51,16 @@ export default function CompanyWebsitesPage() {
   const companyId = params.id as Id<"companies">;
 
   const addWebsite = useMutation(api.websites.addCompanyWebsite);
+  const trackWebsite = useMutation(api.websiteAttachments.addTrackedWebsite);
   const removeWebsite = useMutation(api.websites.removeCompanyWebsite);
   const action = useAdminAction({ scope: "admin-company-websites" });
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [holding, setHolding] = useState<Holding>("OWNED");
+  // Null until chosen, so the first of the company's own sites is the default
+  // without an effect copying it into state when the list arrives.
+  const [againstChoice, setAgainstChoice] = useState<string | null>(null);
   const [removing, setRemoving] = useState<{ id: Id<"companyWebsites">; host: string } | null>(null);
   const [submitError, setSubmitError] = useState("");
   const [dialogsActivated, setDialogsActivated] = useState(false);
@@ -62,6 +71,13 @@ export default function CompanyWebsitesPage() {
     TABLE_PAGE_SIZE,
   );
 
+  // Only asked for once the dialog is open: it feeds one select box.
+  const ownedSites = useQuery(
+    api.websiteAttachments.listCompanyOwnedWebsites,
+    isAddOpen ? { companyId } : "skip",
+  );
+  const againstId = againstChoice ?? ownedSites?.[0]?.companyWebsiteId ?? "";
+
   const activateDialogs = () => {
     void loadDialogs();
     setDialogsActivated(true);
@@ -70,6 +86,8 @@ export default function CompanyWebsitesPage() {
   const handleOpenAdd = () => {
     activateDialogs();
     setUrl("");
+    setHolding("OWNED");
+    setAgainstChoice(null);
     setSubmitError("");
     setIsAddOpen(true);
   };
@@ -78,19 +96,33 @@ export default function CompanyWebsitesPage() {
     event.preventDefault();
     setSubmitError("");
 
-    const outcome = await action.run(() => addWebsite({ companyId, url }), {
-      suppressErrorToast: true,
-      fallbackMessage: t("errors.saveFailed"),
-    });
+    const outcome = await action.run(
+      () => holding === "TRACKED"
+        ? trackWebsite({
+          companyId,
+          url,
+          ...(againstId ? { againstCompanyWebsiteId: againstId as Id<"companyWebsites"> } : {}),
+        })
+        : addWebsite({ companyId, url }),
+      { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
+    );
 
     if (outcome.ok) {
       setIsAddOpen(false);
       // Straight into it: adding the site is half the job and the next thing
-      // anyone wants is its competitors.
+      // anyone wants is what it is producing.
       router.push(`/admin/companies/${companyId}/websites/site/${outcome.data}`);
     } else {
       setSubmitError(outcome.message);
     }
+  };
+
+  /** Whose schedule a row is collected on, said in the row. */
+  const sourceLine = (row: { scheduleSource: string; againstHost: string | null }) => {
+    if (row.scheduleSource === "PAIR") return t("sourcePair", { host: row.againstHost ?? "" });
+    if (row.scheduleSource === "WEBSITE") return t("sourceWebsite");
+    if (row.scheduleSource === "COMPANY") return t("sourceCompany");
+    return null;
   };
 
   const confirmRemove = async () => {
@@ -148,23 +180,36 @@ export default function CompanyWebsitesPage() {
             ),
           },
           {
-            key: "competitors",
-            header: t("competitorsColumn"),
+            key: "heldAs",
+            header: t("heldAsColumn"),
             cell: (row) => (
-              <div className="flex w-fit items-center gap-1.5 rounded-full border border-border-dim bg-foreground/5 px-2 py-0.5">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-foreground/80">
-                  {t("competitors", { count: row.competitorCount })}
-                  {row.competitorCountIsCapped ? "+" : ""}
-                </span>
-              </div>
+              row.relationship === "TRACKED" ? (
+                <div className="flex flex-col gap-1">
+                  <StatusPill tone="neutral">{t("tracked")}</StatusPill>
+                  <span className="text-[11px] text-muted">
+                    {row.againstHost ? t("against", { host: row.againstHost }) : t("onItsOwn")}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <StatusPill tone="info">{t("owned")}</StatusPill>
+                  <span className="text-[11px] text-muted">
+                    {t("competitors", { count: row.competitorCount })}
+                    {row.competitorCountIsCapped ? "+" : ""}
+                  </span>
+                </div>
+              )
             ),
           },
           {
-            key: "refresh",
-            header: t("refreshColumn"),
+            key: "collection",
+            header: t("collectionColumn"),
             cell: (row) => (
               row.collecting && row.nextRunAt ? (
-                <StatusPill tone="info">{formatDateTime(row.nextRunAt)}</StatusPill>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[12px] text-foreground">{formatDateTime(row.nextRunAt)}</span>
+                  <span className="text-[11px] text-muted">{sourceLine(row)}</span>
+                </div>
               ) : (
                 <StatusPill tone="neutral">{t("notCollecting")}</StatusPill>
               )
@@ -207,6 +252,11 @@ export default function CompanyWebsitesPage() {
             onClose={() => setIsAddOpen(false)}
             url={url}
             onUrlChange={setUrl}
+            holding={holding}
+            onHoldingChange={setHolding}
+            againstId={againstId}
+            onAgainstChange={setAgainstChoice}
+            ownedSites={ownedSites}
             onSubmit={handleAdd}
             isSubmitting={action.isBusy()}
             submitError={submitError}

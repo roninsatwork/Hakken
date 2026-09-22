@@ -12,11 +12,16 @@ import { rowShape } from "./rowShape";
  * so a column added to either table has to be let through deliberately.
  */
 
-/** Where a website's schedule came from. `NONE` means nothing is scheduled. */
+/**
+ * Where a website's schedule came from. `NONE` means nothing is scheduled;
+ * `PAIR` means a tracked site is collected on the day of the site it is
+ * watched against, and has no schedule of its own to show.
+ */
 const scheduleSource = v.union(
   v.literal("WEBSITE"),
   v.literal("COMPANY"),
   v.literal("NONE"),
+  v.literal("PAIR"),
 );
 
 /** One of a company's own websites, with its host and how many rivals it has. */
@@ -25,6 +30,8 @@ export const companyWebsiteRow = v.object({
   _id: v.id("companyWebsites"),
   host: v.string(),
   displayHost: v.string(),
+  /** For a paired tracked site, the company's own site it is watched against. */
+  againstHost: v.union(v.string(), v.null()),
   competitorCount: v.number(),
   competitorCountIsCapped: v.boolean(),
   /** Whether anything is pulled for this website, once inheritance is applied. */
@@ -49,6 +56,17 @@ export const companyWebsiteDetailShape = v.union(v.null(), v.object({
   host: v.string(),
   displayHost: v.string(),
   companyName: v.union(v.string(), v.null()),
+  /**
+   * For a tracked site, the company's own site it is collected with — whose
+   * day and place are this one's. Null for an owned site, and for a tracked
+   * one that is collected on its own.
+   */
+  pairedWith: v.union(v.null(), v.object({
+    companyWebsiteId: v.id("companyWebsites"),
+    websiteId: v.id("websites"),
+    displayHost: v.string(),
+    locationLabel: v.union(v.string(), v.null()),
+  })),
   /** The company's own schedule, so a screen can show what is being inherited. */
   companyIntervalStr: v.union(v.string(), v.null()),
   companyScheduleActive: v.boolean(),

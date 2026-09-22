@@ -337,7 +337,9 @@ export default defineSchema({
     .index("by_website", ["websiteId"])
     .index("by_company_website", ["companyId", "websiteId"])
     /** So a deleted host can find what was being compared with it. */
-    .index("by_against", ["againstWebsiteId"]),
+    .index("by_against", ["againstWebsiteId"])
+    /** A company's tracked sites paired with one of its own, for the cycle. */
+    .index("by_company_against", ["companyId", "againstWebsiteId"]),
 
   /**
    * One collection run for one company.

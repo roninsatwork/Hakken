@@ -27,7 +27,12 @@ import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useSchedule
 export type WebsiteEffectiveSchedule = {
   active: boolean;
   intervalStr: string | null;
-  source: "WEBSITE" | "COMPANY" | "NONE";
+  /**
+   * `PAIR` is a tracked site collected on its pair's day. This control is not
+   * drawn for one — it has no schedule of its own to change — but the type
+   * says it can arrive rather than pretending it cannot.
+   */
+  source: "WEBSITE" | "COMPANY" | "NONE" | "PAIR";
   nextRunAt: number | null;
 };
 
