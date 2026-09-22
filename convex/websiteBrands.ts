@@ -169,3 +169,66 @@ function isWordCharacter(character: string): boolean {
 function collapse(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
+
+
+/**
+ * Whether two web addresses are worth asking about at all.
+ *
+ * Candidate generation stays in code, as TypeSafe's own guidance has it: a
+ * cheap, rough first pass picks the pairs worth a closer look, and the model
+ * only judges those. Asking about every pair would be a paid question per
+ * tracked website per cited domain, for answers that are almost always "no".
+ *
+ * The test is a shared meaningful word between the two addresses' own names,
+ * or between one address and a name the other goes by. `acme-plumbing.co.uk`
+ * and `acmeplumbing.com` share "acmeplumbing" once punctuation is dropped;
+ * `acme-plumbing.co.uk` and `rival.com` share nothing.
+ */
+export function couldBeSameBusiness(
+  seenHost: string,
+  tracked: { host: string; brandNames: ReadonlyArray<BrandName> },
+): boolean {
+  const seen = addressWords(seenHost);
+  if (seen.size === 0) return false;
+
+  for (const word of addressWords(tracked.host)) if (seen.has(word)) return true;
+  for (const entry of tracked.brandNames) {
+    for (const word of nameWords(entry.name)) if (seen.has(word)) return true;
+  }
+  return false;
+}
+
+/**
+ * The words in an address, with the public suffix and the separators gone.
+ *
+ * `co`, `com` and the like are dropped because every British address shares
+ * them and a shared "co" is not a shared business. Short fragments go too: two
+ * addresses both containing "the" say nothing about each other.
+ */
+function addressWords(host: string): Set<string> {
+  const stem = host.toLowerCase().split(".")[0] ?? "";
+  const words = new Set<string>();
+  if (stem.length >= MIN_ADDRESS_WORD) words.add(stem.replace(/[^a-z0-9]/g, ""));
+  for (const part of stem.split(/[^a-z0-9]+/)) {
+    if (part.length >= MIN_ADDRESS_WORD && !COMMON_ADDRESS_WORDS.has(part)) words.add(part);
+  }
+  return words;
+}
+
+function nameWords(name: string): Set<string> {
+  const words = new Set<string>();
+  const squashed = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (squashed.length >= MIN_ADDRESS_WORD) words.add(squashed);
+  for (const part of name.toLowerCase().split(/[^a-z0-9]+/)) {
+    if (part.length >= MIN_ADDRESS_WORD && !COMMON_ADDRESS_WORDS.has(part)) words.add(part);
+  }
+  return words;
+}
+
+/** Shared by half the web, so sharing one means nothing. */
+const COMMON_ADDRESS_WORDS = new Set([
+  "www", "com", "net", "org", "the", "and", "ltd", "limited", "group", "uk",
+]);
+
+/** Below this a shared fragment is coincidence. */
+const MIN_ADDRESS_WORD = 4;

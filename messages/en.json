@@ -6907,6 +6907,16 @@
           "warned_against": "Warned against",
           "other": "Not this business"
         }
+      },
+      "seoSameBusiness": {
+        "name": "Is this the business we already track?",
+        "description": "Reads whether an address an AI answer cited belongs to a rival already being watched under a different domain, so one company stops showing up as two.",
+        "rule": "Without it, only an exact address match counts.",
+        "answers": {
+          "0": "Different businesses",
+          "1": "Possibly the same",
+          "2": "The same business"
+        }
       }
     }
   },

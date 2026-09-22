@@ -6,6 +6,7 @@ import {
   findBrandMention,
   primaryBrandName,
   readBrandNames,
+  couldBeSameBusiness,
 } from "./websiteBrands";
 
 /**
@@ -200,5 +201,36 @@ describe("a variant's kind", () => {
     // named first and being named last are different results.
     const found = findBrandMention("Acme first, then Ronins.", names("Ronins"));
     expect(found?.at).toBeGreaterThan(0);
+  });
+});
+
+describe("pairing addresses worth asking about", () => {
+  const tracked = (host: string, ...brandNames: string[]) => ({
+    host,
+    brandNames: brandNames.map((name, index) => ({ name, isPrimary: index === 0 })),
+  });
+
+  test("pairs two addresses of the same name", () => {
+    // The case this exists for: one business, two domains.
+    expect(couldBeSameBusiness("acme-plumbing.co.uk", tracked("acmeplumbing.com"))).toBe(true);
+  });
+
+  test("pairs an address with a name the other goes by", () => {
+    expect(couldBeSameBusiness("roninsagency.com", tracked("example.com", "Ronins Agency"))).toBe(true);
+  });
+
+  test("leaves unrelated addresses unasked", () => {
+    // Asking about every pair would be a paid question per tracked site per
+    // cited domain, for answers that are almost always no.
+    expect(couldBeSameBusiness("unknown-plumber.co.uk", tracked("rival.com", "Rival Plumbing"))).toBe(false);
+  });
+
+  test("does not pair on words half the web shares", () => {
+    // Two British companies both being "ltd" on a "co.uk" says nothing.
+    expect(couldBeSameBusiness("alpha-ltd.co.uk", tracked("beta-ltd.co.uk", "Beta Ltd"))).toBe(false);
+  });
+
+  test("does not pair on a fragment too short to mean anything", () => {
+    expect(couldBeSameBusiness("abc.com", tracked("abcdef.com"))).toBe(false);
   });
 });

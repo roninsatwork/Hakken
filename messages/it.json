@@ -6907,6 +6907,16 @@
           "warned_against": "Sconsigliata",
           "other": "Non è questa attività"
         }
+      },
+      "seoSameBusiness": {
+        "name": "È l'attività che seguiamo già?",
+        "description": "Interpreta se un indirizzo citato da una risposta AI appartiene a un concorrente già seguito con un altro dominio, così una stessa azienda smette di comparire due volte.",
+        "rule": "Senza, conta solo la corrispondenza esatta dell'indirizzo.",
+        "answers": {
+          "0": "Attività diverse",
+          "1": "Forse la stessa",
+          "2": "La stessa attività"
+        }
       }
     }
   },

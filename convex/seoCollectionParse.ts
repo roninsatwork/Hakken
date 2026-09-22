@@ -8,9 +8,10 @@ import {
   parseLlmResponse,
   parseSeoResultFor,
 } from "./dataForSeoParsers";
-import { resolveWebsiteIdsByHost } from "./websites";
+
 import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
-import { findBrandMention } from "./websiteBrands";
+import { couldBeSameBusiness, findBrandMention, primaryBrandName } from "./websiteBrands";
+import { resolveWebsiteIdsByHost } from "./websites";
 import { runDecisions, type DecisionResult, type RunDecisionsDeps } from "./decisionActions";
 import type { ActionCtx } from "./_generated/server";
 import { readWebsiteHost } from "./websiteIdentity";
@@ -75,6 +76,16 @@ export const parseSeoResult = internalAction({
         }
         hits.sort((left, right) => left.at - right.at);
 
+        const sources = parsed.sources.slice(0, MAX_SOURCES);
+        const sourceHosts = sources.map((source) => {
+          const host = readWebsiteHost(source.url);
+          return host.ok ? host.host : null;
+        });
+        const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+          hosts: sourceHosts.filter((host): host is string => host !== null),
+        });
+        const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
+
         const judged = await judgeStances(ctx, {
           ...(pull.companyId ? { companyId: pull.companyId } : {}),
           pullId: args.pullId,
@@ -83,13 +94,26 @@ export const parseSeoResult = internalAction({
           hits: hits.slice(0, MAX_CITATION_ROWS),
         });
 
+        const linked = await linkCitedAddresses(ctx, {
+          ...(pull.companyId ? { companyId: pull.companyId } : {}),
+          pullId: args.pullId,
+          branded,
+          sources: sources.map((source, index) => ({
+            url: source.url,
+            host: sourceHosts[index],
+            ...(sourceHosts[index] && byHost.get(sourceHosts[index]!)
+              ? { websiteId: byHost.get(sourceHosts[index]!)! }
+              : {}),
+          })),
+        });
+
         await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
           pullId: args.pullId,
           prompt,
           engine,
           day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
           brands: judged,
-          sources: parsed.sources.slice(0, MAX_SOURCES),
+          sources: linked,
         });
       } catch (error) {
         await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
@@ -302,7 +326,12 @@ export const writeAiCitations = internalMutation({
         v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"),
       )),
     })),
-    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    /** Already resolved, and already judged where an address needed judging. */
+    sources: v.array(v.object({
+      url: v.string(),
+      title: v.optional(v.string()),
+      websiteId: v.optional(v.id("websites")),
+    })),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -343,22 +372,18 @@ export const writeAiCitations = internalMutation({
       });
     }
 
-    // Then the sources the engine cited, by domain, matched to a website when
-    // we hold one. A domain we do not hold is still a rival worth seeing.
+    // Then the sources the engine cited, by domain. A domain we do not hold
+    // is still a rival worth seeing.
     const hosts = args.sources
       .map((source) => readWebsiteHost(source.url))
       .map((parsed) => (parsed.ok ? parsed.host : null));
-    const known = await resolveWebsiteIdsByHost(
-      ctx,
-      hosts.filter((host): host is string => host !== null),
-    );
 
     let sourcePosition = 0;
     for (const [index, source] of args.sources.entries()) {
       const host = hosts[index];
       if (!host) continue;
       sourcePosition += 1;
-      const websiteId = known.get(host);
+      const websiteId = source.websiteId;
       await ctx.db.insert("aiCitations", {
         prompt: args.prompt,
         engine: args.engine,
@@ -480,6 +505,86 @@ const STANCE_BY_CHOICE: Record<string, "RECOMMENDED" | "MENTIONED" | "WARNED_AGA
   mentioned: "MENTIONED",
   warned_against: "WARNED_AGAINST",
 };
+
+/**
+ * Link a cited address to a website already tracked under a different domain.
+ *
+ * A business often holds several addresses, so a rival cited as
+ * `acme-plumbing.co.uk` while we track `acmeplumbing.com` looks like a
+ * stranger on the screen. Code pairs only the addresses worth asking about —
+ * see `couldBeSameBusiness` — and the Decision judges those.
+ *
+ * Only "the same business" links. "Possibly" is left unlinked on purpose: the
+ * chip then still names the address, which a person can act on, where a wrong
+ * link quietly merges two rivals into one.
+ */
+export async function linkCitedAddresses(
+  ctx: ActionCtx,
+  args: {
+    companyId?: Id<"companies">;
+    pullId: Id<"seoDataPulls">;
+    branded: Array<{ websiteId: Id<"websites">; host: string; brandNames: Array<{ name: string; isPrimary: boolean; kind?: "NAME" | "MISSPELLING" }> }>;
+    sources: Array<{ url: string; host: string | null; websiteId?: Id<"websites"> }>;
+  },
+  deps: RunDecisionsDeps = {},
+): Promise<Array<{ url: string; title?: string; websiteId?: Id<"websites"> }>> {
+  const unresolved = args.sources
+    .map((source, index) => ({ ...source, index }))
+    .filter((source) => source.host !== null && !source.websiteId);
+
+  const pairs: Array<{ id: string; index: number; websiteId: Id<"websites">; seenHost: string; trackedHost: string; trackedName: string }> = [];
+  for (const source of unresolved) {
+    for (const website of args.branded) {
+      if (!couldBeSameBusiness(source.host!, website)) continue;
+      pairs.push({
+        id: `${pairs.length}`,
+        index: source.index,
+        websiteId: website.websiteId,
+        seenHost: source.host!,
+        trackedHost: website.host,
+        trackedName: primaryBrandName(website.brandNames) ?? website.host,
+      });
+      // One candidate per cited address. A second would need the model to
+      // choose between them, which is a different question from this one.
+      break;
+    }
+  }
+
+  const linkedByIndex = new Map<number, Id<"websites">>();
+  if (pairs.length > 0) {
+    try {
+      const results = await runDecisions(ctx, {
+        ...(args.companyId ? { companyId: args.companyId } : {}),
+        subject: { kind: "seo-address", id: args.pullId },
+        state: {
+          pairs: Object.fromEntries(pairs.map((pair) => [pair.id, {
+            seen: { address: pair.seenHost },
+            tracked: { address: pair.trackedHost, name: pair.trackedName },
+          }])),
+        },
+        requests: pairs.map((pair) => ({
+          key: "seo.same-business",
+          id: pair.id,
+          // Before this Decision existed only an exact address matched.
+          fallback: () => ({ kind: "score" as const, score: 0 }),
+        })),
+      }, deps);
+
+      for (const pair of pairs) {
+        const result = results[pair.id];
+        if (!result || result.source === "RULES" || result.answer.kind !== "score") continue;
+        if (Math.round(result.answer.score) === 2) linkedByIndex.set(pair.index, pair.websiteId);
+      }
+    } catch {
+      // Unasked means unlinked, which is what the screen showed before.
+    }
+  }
+
+  return args.sources.map((source, index) => {
+    const websiteId = source.websiteId ?? linkedByIndex.get(index);
+    return { url: source.url, ...(websiteId ? { websiteId } : {}) };
+  });
+}
 
 /** Cited sources kept per answer; an engine rarely cites more than a dozen. */
 const MAX_SOURCES = 40;

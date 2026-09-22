@@ -977,3 +977,14 @@ export const listBrandedWebsitesInternal = internalQuery({
     return rows.map((row) => ({ websiteId: row._id, host: row.host, brandNames: row.brandNames }));
   },
 });
+
+
+/** Host to website id, for an action that must resolve before it judges. */
+export const resolveWebsiteIdsByHostInternal = internalQuery({
+  args: { hosts: v.array(v.string()) },
+  returns: v.array(v.object({ host: v.string(), websiteId: v.id("websites") })),
+  handler: async (ctx, args) => {
+    const found = await resolveWebsiteIdsByHost(ctx, args.hosts);
+    return [...found.entries()].map(([host, websiteId]) => ({ host, websiteId }));
+  },
+});

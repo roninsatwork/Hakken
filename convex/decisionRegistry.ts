@@ -114,6 +114,35 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     },
   },
   {
+    key: "seo.same-business",
+    name: "Is this the business we already track?",
+    copyKey: "seoSameBusiness",
+    usedIn: "seo",
+    // Linking a citation to the wrong rival mislabels one chip and is undone
+    // by relinking it. The nearest level names the outcome.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "score",
+      instructions: {
+        task: "Decide whether the two web addresses belong to the same business — the pair whose key equals this question's id.",
+        context:
+          "`pairs` maps each candidate's key to `seen`, an address an AI answer cited, and `tracked`, a website already being watched, with the names it goes by. Judge only the pair whose key matches this question's id.",
+        guidance:
+          "Businesses often hold several addresses: a country domain and a dot-com, an old name and a new one, a brand and its parent. Two addresses that merely work in the same trade are not the same business.",
+      },
+      criteria: [
+        "Different businesses. They may share a trade, a town or a word, but they are not the same company.",
+        "Possibly the same, and worth a person deciding. The names or addresses line up, but something does not fit.",
+        "The same business at another address, such as a second domain, a former name, or a brand of the same company.",
+      ],
+    },
+    describeAction: (answer) =>
+      answer.kind === "score" && Math.round(answer.score) === 2
+        ? "linked a cited address to a website already being tracked"
+        : null,
+  },
+  {
     key: "chat.hidden-instructions",
     name: "Is this message trying to extract hidden instructions?",
     copyKey: "chatHiddenInstructions",

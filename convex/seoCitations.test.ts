@@ -5,7 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { parseLlmResponse } from "./dataForSeoParsers";
-import { judgeStances } from "./seoCollectionParse";
+import { judgeStances, linkCitedAddresses } from "./seoCollectionParse";
 import type { TypesafeAskResult } from "./typesafeProviderService";
 import type { ActionCtx } from "./_generated/server";
 
@@ -117,7 +117,7 @@ describe("recording who was named", () => {
         { websiteId: world.rival, text: "Rival Plumbing", variantKind: "NAME" },
         { websiteId: world.ours, text: "Ronins Agency", variantKind: "NAME", stance: "RECOMMENDED", stanceCertainty: "SURE" },
       ],
-      sources: parseLlmResponse(ANSWER).sources,
+      sources: [{ url: "https://www.rival.com/leeds", websiteId: world.rival }],
     });
 
     const rows = await t.run(async (ctx) =>
@@ -160,9 +160,15 @@ describe("recording who was named", () => {
     const world = await seedWorld(t);
     const pullId = await seedPull(t, world.ronins, world.ours, world.hold);
 
+    // The action resolves each address before the writer sees it, so a source
+    // arrives with its website id already decided or without one.
     await t.mutation(internal.seoCollectionParse.writeAiCitations, {
       pullId, prompt: "best plumber in Leeds", engine: "chatgpt", day: "2026-09-22",
-      brands: [], sources: parseLlmResponse(ANSWER).sources,
+      brands: [],
+      sources: [
+        { url: "https://www.rival.com/leeds", websiteId: world.rival },
+        { url: "https://unknown-plumber.co.uk/" },
+      ],
     });
 
     const sources = await t.run(async (ctx) =>
@@ -202,7 +208,7 @@ describe("recording who was named", () => {
         { websiteId: world.rival, text: "Rival Plumbing", variantKind: "NAME" as const },
         { websiteId: world.ours, text: "Ronins Agency", variantKind: "NAME" as const },
       ],
-      sources: parseLlmResponse(ANSWER).sources,
+      sources: [{ url: "https://www.rival.com/leeds" }, { url: "https://unknown-plumber.co.uk/" }],
     };
 
     await t.mutation(internal.seoCollectionParse.writeAiCitations, args);
@@ -240,7 +246,10 @@ describe("who gets to see it", () => {
         { websiteId: world.rival, text: "Rival Plumbing", variantKind: "NAME" },
         { websiteId: world.ours, text: "Ronins Agency", variantKind: "NAME" },
       ],
-      sources: parseLlmResponse(ANSWER).sources,
+      sources: [
+        { url: "https://www.rival.com/leeds", websiteId: world.rival },
+        { url: "https://unknown-plumber.co.uk/" },
+      ],
     });
 
     const listed = await admin.query(api.seoCitationReports.listCompanyWebsiteCitations, {
@@ -365,5 +374,87 @@ describe("judging how an answer treated a business", () => {
     // Decisions framework requires of every entry.
     expect(judged).toHaveLength(2);
     expect(judged.every((row) => row.stance === undefined)).toBe(true);
+  });
+});
+
+
+describe("linking a cited address to a rival already tracked", () => {
+  const branded = [{
+    websiteId: "w1" as Id<"websites">,
+    host: "acmeplumbing.com",
+    brandNames: [{ name: "Acme Plumbing", isPrimary: true, kind: "NAME" as const }],
+  }];
+
+  function stubCtx(modes: Record<string, string>) {
+    const runQuery = vi.fn(async (_ref: unknown, queryArgs: unknown) => {
+      const keys = (queryArgs as { decisionKeys?: string[] })?.decisionKeys;
+      if (keys) return Object.fromEntries(keys.map((key) => [key, modes[key] ?? "OFF"]));
+      return { modelId: "m1", providerKey: "typesafe", providerModelId: "jev-latest", source: "default" };
+    });
+    const runMutation = vi.fn(async () => ({ runIds: [], costGBP: 0 }));
+    return { runQuery, runMutation } as unknown as ActionCtx;
+  }
+
+  const scored = (scores: Record<string, number>): TypesafeAskResult => ({
+    model: "jev-latest",
+    answers: Object.fromEntries(Object.entries(scores).map(([id, score]) => [
+      id,
+      { type: "score", score, legend: {}, probabilities: {}, confidence: 0.95 },
+    ])) as TypesafeAskResult["answers"],
+    usage: { inputTokens: 80, outputTokens: 8 },
+  });
+
+  const sources = [
+    { url: "https://acme-plumbing.co.uk/leeds", host: "acme-plumbing.co.uk" },
+    { url: "https://unrelated-news.com/story", host: "unrelated-news.com" },
+  ];
+
+  test("links a second domain of a business already tracked", async () => {
+    const linked = await linkCitedAddresses(
+      stubCtx({ "seo.same-business": "ACT" }),
+      { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
+      { ask: async () => scored({ "0": 2 }) },
+    );
+
+    // One business, two addresses. Without this it shows as a stranger.
+    expect(linked[0].websiteId).toBe("w1");
+    expect(linked[1].websiteId).toBeUndefined();
+  });
+
+  test("leaves a maybe unlinked, so a person still sees the address", async () => {
+    const linked = await linkCitedAddresses(
+      stubCtx({ "seo.same-business": "ACT" }),
+      { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
+      { ask: async () => scored({ "0": 1 }) },
+    );
+
+    // A wrong link quietly merges two rivals into one; an unlinked address is
+    // still on the screen and still something a person can act on.
+    expect(linked[0].websiteId).toBeUndefined();
+  });
+
+  test("never asks about addresses that share nothing", async () => {
+    const ask = vi.fn(async () => scored({ "0": 0 }));
+    await linkCitedAddresses(
+      stubCtx({ "seo.same-business": "ACT" }),
+      { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
+      { ask: ask as never },
+    );
+
+    // Code does the cheap first pass, so the model is asked once, about the
+    // one pair worth asking about — not once per tracked site per address.
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  test("links nothing while the Decision is switched off", async () => {
+    const ask = vi.fn();
+    const linked = await linkCitedAddresses(
+      stubCtx({ "seo.same-business": "OFF" }),
+      { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
+      { ask: ask as never },
+    );
+
+    expect(ask).not.toHaveBeenCalled();
+    expect(linked.every((row) => row.websiteId === undefined)).toBe(true);
   });
 });
