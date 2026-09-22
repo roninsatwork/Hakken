@@ -85,8 +85,14 @@ export const listCompanyWebsiteCitations = superAdminQuery({
         row.kind === "BRAND" && row.mentionedWebsiteId === companyWebsite.websiteId);
 
       const others = [];
+      const seen = new Set<string>();
       for (const row of mentions) {
         if (row.mentionedWebsiteId === companyWebsite.websiteId) continue;
+        // One chip per name. An engine that cited four pages from one domain
+        // named one rival, not four; the per-page rows stay for the record.
+        const key = `${row.kind}:${row.mentionedText.toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
         // The text is what the engine wrote: the brand variant it used, or the
         // domain it cited. A brand match is the more specific fact and is not
         // replaced with the host it resolved to.

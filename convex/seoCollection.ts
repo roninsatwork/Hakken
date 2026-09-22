@@ -264,10 +264,13 @@ async function reusableByKey(
     error: undefined,
     dueAt: Date.now(),
     sentAt: undefined,
+    // The refusal's completion time would otherwise outlive the refusal and
+    // show as "when" on the screen for the retry.
+    completedAt: undefined,
     claimedBy: undefined,
     claimedAt: undefined,
   });
-  return { ...existing, status: "PENDING", error: undefined };
+  return { ...existing, status: "PENDING", error: undefined, completedAt: undefined };
 }
 
 /**

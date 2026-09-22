@@ -1,7 +1,7 @@
 # Brands, Places and AI Citations
 
-Status: **steps 1 to 4 built 2026-09-21. Step 5, the citations themselves, is
-designed and not built.** Owner: Anthony
+Status: **steps 1 to 5 built, 2026-09-21 and 2026-09-22.** Step 6, the
+close-out, remains. Owner: Anthony
 
 The collection pipeline works. It asks DataForSEO two questions about a host —
 what links to it, what it ranks for — and files the answers. This plan is about
@@ -122,6 +122,23 @@ Perplexity model is published with `task_post_supported: false`, so those two
 are asked live. Found the hard way on 2026-09-22: the sandbox refused queued
 requests to both with "this model does not support task_post mode", and the
 models pages confirmed it.
+
+**What the sandbox can and cannot prove, 2026-09-22.** ChatGPT queued and
+Perplexity live both answered and parsed end to end: the Perplexity answer
+produced thirty-two cited sources, filed as citations and shown on the screen.
+The sandbox refuses Claude queued under every model name tried, and refuses
+Gemini under both the queued and the live path, each with the same
+"task_post" message. Their docs say Claude queues and Gemini answers live, so
+these two can only be proven with live credentials. Until then the code for
+both is covered by tests and unexercised against the service.
+
+**Live may be cheaper than queued for the models we chose.** Queued is a flat
+penny a question. Live is six hundredths of a cent plus the engine's own token
+price, and for the cheap models in the engine table that is a fraction of a
+penny. The plan's "queued by default" was decided before those prices were
+read. It is a decision for the owner, not silently changed here: live also
+removes the pingback dependency, at the cost of a worker chain waiting up to two
+minutes per answer.
 
 **LLM Mentions.** No question needed. Give it a domain or a brand name, up to
 ten per call, and it returns how often that name comes up in AI answers, the AI
@@ -306,7 +323,8 @@ request body.
    immediately.
 4. **Prompts,** captured and stored, not yet asked.
 5. **The AI citation operations** in the registry, the matcher, the parse into
-   `aiCitations`, and the citations screen. **LLM Responses, not Mentions** —
+   `aiCitations`, and the citations screen. **Built and verified against the
+   sandbox 2026-09-22**, with two caveats recorded below. **LLM Responses, not Mentions** —
    see the pricing and coverage section: Mentions cannot see ChatGPT outside the
    United States, and Responses is the only route to four engines for a UK
    audience. Queued rather than live, because a collection nobody is waiting on

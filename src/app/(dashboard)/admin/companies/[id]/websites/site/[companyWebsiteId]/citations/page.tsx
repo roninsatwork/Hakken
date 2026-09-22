@@ -122,7 +122,12 @@ export default function WebsiteCitationsPage() {
             key: "us",
             header: t("usColumn"),
             cell: (row) => (
-              row.status !== "READY" ? (
+              row.status === "FAILED" ? (
+                // Not "waiting": nothing is coming. The reason sits on the
+                // collection screen; here the client only needs to know the
+                // engine could not be asked this time.
+                <StatusPill tone="danger">{t("couldNotAsk")}</StatusPill>
+              ) : row.status !== "READY" ? (
                 <StatusPill tone="neutral">{t("waiting")}</StatusPill>
               ) : row.ourPosition === null ? (
                 <StatusPill tone="neutral">{t("notNamed")}</StatusPill>
