@@ -226,6 +226,7 @@ import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAiEngines from "../seoAiEngines.js";
+import type * as seoCitationReports from "../seoCitationReports.js";
 import type * as seoCollection from "../seoCollection.js";
 import type * as seoCollectionActions from "../seoCollectionActions.js";
 import type * as seoCollectionParse from "../seoCollectionParse.js";
@@ -606,6 +607,7 @@ declare const fullApi: ApiFromModules<{
   seedWorkflows: typeof seedWorkflows;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAiEngines: typeof seoAiEngines;
+  seoCitationReports: typeof seoCitationReports;
   seoCollection: typeof seoCollection;
   seoCollectionActions: typeof seoCollectionActions;
   seoCollectionParse: typeof seoCollectionParse;

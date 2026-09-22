@@ -1487,7 +1487,8 @@
           "toggleFailed": "Could not change that question. Try again.",
           "removeFailed": "Could not remove that question. Try again."
         },
-        "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for."
+        "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for.",
+        "seeCitations": "See what the engines answered"
       }
     },
     "companyDataCollection": {
@@ -5083,7 +5084,11 @@
         "keyword_search_volume": "How often terms are searched",
         "bulk_backlinks": "Link counts, many sites at once",
         "bulk_referring_domains": "Linking sites, many at once",
-        "bulk_ranks": "Strength scores, many sites at once"
+        "bulk_ranks": "Strength scores, many sites at once",
+        "ai_citation_chatgpt": "Asked ChatGPT",
+        "ai_citation_claude": "Asked Claude",
+        "ai_citation_gemini": "Asked Gemini",
+        "ai_citation_perplexity": "Asked Perplexity"
       },
       "queueCounts": "{pending} waiting · {claimed} being sent · {submitted} awaiting an answer",
       "attempts": "{count} attempt(s) so far",
@@ -5118,6 +5123,32 @@
       "paidColumn": "Paid · 30d",
       "savingColumn": "Saved by sharing · 30d",
       "pullsColumn": "Pulls · 30d"
+    },
+    "websiteCitations": {
+      "back": "Back to the website",
+      "notFound": "That website is no longer held by this company.",
+      "subtitle": "Where this website gets named inside AI answers, and who else was named.",
+      "searchPlaceholder": "Search by question or by who was named...",
+      "empty": "No answers collected yet. Add a question on the website, and the next collection will ask it.",
+      "noMatch": "Nothing matches that search.",
+      "promptColumn": "Question",
+      "engineColumn": "Engine",
+      "usColumn": "This website",
+      "othersColumn": "Who else was named",
+      "waiting": "Waiting for the answer",
+      "notNamed": "Not named",
+      "namedAt": "Named {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "misspelled": "Under a misspelling of the name",
+      "nobodyElse": "Nobody else",
+      "more": "+{count} more",
+      "citedAsSource": "Cited as a source",
+      "namedInAnswer": "Named in the answer",
+      "engines": {
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "gemini": "Gemini",
+        "claude": "Claude"
+      }
     }
   },
   "ai": {

@@ -15,7 +15,13 @@ export const MAX_BRAND_NAMES = 5;
 /** The shortest name worth storing. Two characters match almost any prose. */
 export const MIN_BRAND_NAME_LENGTH = 3;
 
-export type BrandName = { name: string; isPrimary: boolean };
+export type BrandVariantKind = "NAME" | "MISSPELLING";
+
+/**
+ * `kind` is optional on the way in and absent reads as a correct name, so
+ * everything saved before it existed keeps meaning what it meant.
+ */
+export type BrandName = { name: string; isPrimary: boolean; kind?: BrandVariantKind };
 
 export type BrandNamesProblem =
   | "EMPTY"
@@ -29,7 +35,7 @@ export const BRAND_NAME_MESSAGES: Record<BrandNamesProblem, string> = {
   TOO_MANY: `A website can have at most ${MAX_BRAND_NAMES} names.`,
   TOO_SHORT: `Each name needs at least ${MIN_BRAND_NAME_LENGTH} characters.`,
   DUPLICATE: "That name is already on the list.",
-  NO_PRIMARY: "Mark one name as the main one.",
+  NO_PRIMARY: "Add at least one correctly spelled name; a misspelling cannot be the main one.",
 };
 
 /**
@@ -42,12 +48,16 @@ export const BRAND_NAME_MESSAGES: Record<BrandNamesProblem, string> = {
  * "Ronins Group" and "ronins  group" are the same name rather than two.
  */
 export function readBrandNames(
-  input: ReadonlyArray<{ name: string; isPrimary?: boolean }>,
+  input: ReadonlyArray<{ name: string; isPrimary?: boolean; kind?: BrandVariantKind }>,
 ):
   | { ok: true; names: BrandName[] }
   | { ok: false; problem: BrandNamesProblem } {
   const trimmed = input
-    .map((entry) => ({ name: collapse(entry.name), isPrimary: entry.isPrimary === true }))
+    .map((entry) => ({
+      name: collapse(entry.name),
+      isPrimary: entry.isPrimary === true,
+      kind: entry.kind === "MISSPELLING" ? "MISSPELLING" as const : "NAME" as const,
+    }))
     .filter((entry) => entry.name.length > 0);
 
   if (trimmed.length === 0) return { ok: false, problem: "EMPTY" };
@@ -61,14 +71,22 @@ export function readBrandNames(
     seen.add(key);
   }
 
-  // Exactly one primary. A list that names none gets the first, because a
-  // screen has to print something and refusing here would be pedantry.
-  const primaryIndex = trimmed.findIndex((entry) => entry.isPrimary);
-  const chosen = primaryIndex === -1 ? 0 : primaryIndex;
+  // Exactly one primary, and never a misspelling: the primary is what screens
+  // print, and printing a client's name wrong on their own dashboard is worse
+  // than picking a different one. A list that names none gets the first
+  // correct name, because a screen has to print something.
+  const asked = trimmed.findIndex((entry) => entry.isPrimary && entry.kind === "NAME");
+  const firstCorrect = trimmed.findIndex((entry) => entry.kind === "NAME");
+  if (firstCorrect === -1) return { ok: false, problem: "NO_PRIMARY" };
+  const chosen = asked === -1 ? firstCorrect : asked;
 
   return {
     ok: true,
-    names: trimmed.map((entry, index) => ({ name: entry.name, isPrimary: index === chosen })),
+    names: trimmed.map((entry, index) => ({
+      name: entry.name,
+      isPrimary: index === chosen,
+      kind: entry.kind,
+    })),
   };
 }
 
@@ -100,18 +118,23 @@ export function primaryBrandName(names: ReadonlyArray<BrandName> | undefined): s
 export function findBrandMention(
   text: string,
   names: ReadonlyArray<BrandName>,
-): { matched: string } | null {
+): { matched: string; kind: BrandVariantKind; at: number } | null {
   const haystack = collapse(text).toLowerCase();
   if (haystack.length === 0) return null;
 
-  let best: string | null = null;
+  let best: BrandName | null = null;
+  let bestAt = -1;
   for (const entry of names) {
     const needle = entry.name.toLowerCase();
-    if (!containsWholeWord(haystack, needle)) continue;
-    if (best === null || entry.name.length > best.length) best = entry.name;
+    const at = indexOfWholeWord(haystack, needle);
+    if (at === -1) continue;
+    if (best === null || entry.name.length > best.name.length) {
+      best = entry;
+      bestAt = at;
+    }
   }
 
-  return best === null ? null : { matched: best };
+  return best === null ? null : { matched: best.name, kind: best.kind ?? "NAME", at: bestAt };
 }
 
 /**
@@ -121,19 +144,19 @@ export function findBrandMention(
  * means escaping it, and an escaping mistake in a matcher that runs over every
  * engine response is a silent wrong answer rather than a crash.
  */
-function containsWholeWord(haystack: string, needle: string): boolean {
-  if (needle.length === 0) return false;
+function indexOfWholeWord(haystack: string, needle: string): number {
+  if (needle.length === 0) return -1;
 
   let from = 0;
   for (;;) {
     const at = haystack.indexOf(needle, from);
-    if (at === -1) return false;
+    if (at === -1) return -1;
 
     const before = at === 0 ? " " : haystack[at - 1];
     const afterIndex = at + needle.length;
     const after = afterIndex >= haystack.length ? " " : haystack[afterIndex];
 
-    if (!isWordCharacter(before) && !isWordCharacter(after)) return true;
+    if (!isWordCharacter(before) && !isWordCharacter(after)) return at;
     from = at + 1;
   }
 }

@@ -1487,7 +1487,8 @@
           "toggleFailed": "Non è stato possibile modificare la domanda. Riprova.",
           "removeFailed": "Non è stato possibile rimuovere la domanda. Riprova."
         },
-        "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate."
+        "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate.",
+        "seeCitations": "Vedi cosa hanno risposto i motori"
       }
     },
     "companyDataCollection": {
@@ -5083,7 +5084,11 @@
         "keyword_search_volume": "Frequenza di ricerca dei termini",
         "bulk_backlinks": "Conteggio link, più siti insieme",
         "bulk_referring_domains": "Siti che linkano, più insieme",
-        "bulk_ranks": "Punteggi di forza, più siti insieme"
+        "bulk_ranks": "Punteggi di forza, più siti insieme",
+        "ai_citation_chatgpt": "Chiesto a ChatGPT",
+        "ai_citation_claude": "Chiesto a Claude",
+        "ai_citation_gemini": "Chiesto a Gemini",
+        "ai_citation_perplexity": "Chiesto a Perplexity"
       },
       "queueCounts": "{pending} in attesa · {claimed} in invio · {submitted} in attesa di risposta",
       "attempts": "{count} tentativo/i finora",
@@ -5118,6 +5123,32 @@
       "paidColumn": "Pagato · 30gg",
       "savingColumn": "Risparmiato · 30gg",
       "pullsColumn": "Richieste · 30gg"
+    },
+    "websiteCitations": {
+      "back": "Torna al sito",
+      "notFound": "Questo sito non è più seguito da questa azienda.",
+      "subtitle": "Dove questo sito viene citato nelle risposte AI, e chi altro è stato citato.",
+      "searchPlaceholder": "Cerca per domanda o per chi è stato citato...",
+      "empty": "Nessuna risposta raccolta. Aggiungi una domanda al sito e la prossima raccolta la porrà.",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "promptColumn": "Domanda",
+      "engineColumn": "Motore",
+      "usColumn": "Questo sito",
+      "othersColumn": "Chi altro è stato citato",
+      "waiting": "In attesa della risposta",
+      "notNamed": "Non citato",
+      "namedAt": "Citato al {position}º posto",
+      "misspelled": "Con il nome scritto male",
+      "nobodyElse": "Nessun altro",
+      "more": "+{count} altri",
+      "citedAsSource": "Citato come fonte",
+      "namedInAnswer": "Citato nella risposta",
+      "engines": {
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "gemini": "Gemini",
+        "claude": "Claude"
+      }
     }
   },
   "ai": {

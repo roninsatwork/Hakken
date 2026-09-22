@@ -240,6 +240,53 @@ export function isBulkOperation(operationId: string): boolean {
   return operationId.startsWith("bulk_");
 }
 
+/**
+ * An AI engine's answer, reduced to the two things we read from it.
+ *
+ * The text is kept only long enough to run the brand matcher over it, and the
+ * sources are the URLs the engine cited. Neither the text nor any passage of
+ * it is stored: an answer is prose from a model that read the open web, and the
+ * way to keep it out of any agent's prompt is not to keep it.
+ *
+ * Shape, from DataForSEO's docs on 2026-09-22:
+ * `result[0].items[]` of type "message", each with `sections[]` holding `text`
+ * and, when web search was on, `annotations[]` holding `url` and `title`.
+ */
+export function parseLlmResponse(result: unknown): {
+  answer: string;
+  sources: Array<{ url: string; title?: string }>;
+} {
+  const item = firstItem(result);
+  const messages = asArray(item?.items);
+  const parts: string[] = [];
+  const sources: Array<{ url: string; title?: string }> = [];
+  const seen = new Set<string>();
+
+  for (const message of messages) {
+    const record = asRecord(message);
+    if (!record) continue;
+    // Reasoning items carry the model's working, not its answer.
+    if (asString(record.type) === "reasoning") continue;
+
+    for (const section of asArray(record.sections)) {
+      const part = asRecord(section);
+      if (!part) continue;
+      const text = asString(part.text);
+      if (text) parts.push(text);
+
+      for (const annotation of asArray(part.annotations)) {
+        const note = asRecord(annotation);
+        const url = asString(note?.url);
+        if (!url || seen.has(url)) continue;
+        seen.add(url);
+        sources.push({ url, ...(asString(note?.title) ? { title: asString(note?.title) } : {}) });
+      }
+    }
+  }
+
+  return { answer: parts.join("\n"), sources };
+}
+
 /** The parser for an operation id, or null when nothing knows how to read it. */
 export function parseSeoResultFor(
   operationId: string,

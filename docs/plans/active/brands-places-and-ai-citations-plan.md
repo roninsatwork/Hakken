@@ -112,10 +112,16 @@ They sell it two ways, and the difference decides the product.
 
 **LLM Responses.** We supply a question, they put it to the engine, we get the
 answer back. Four platforms: ChatGPT, Claude, Gemini and Perplexity. Location
-targeting. Queued costs about a penny a question per engine and takes up to 72
-hours; live costs less to DataForSEO but passes through the engine's own token
-price and answers within 120 seconds. Ten questions across four engines is
-roughly 40p per website per collection.
+targeting on ChatGPT and Claude only. Queued costs about a penny a question per
+engine and takes up to 72 hours; live costs less to DataForSEO but passes
+through the engine's own token price and answers within 120 seconds. Ten
+questions across four engines is roughly 40p per website per collection.
+
+**Only ChatGPT and Claude can be queued.** Every Gemini model and every
+Perplexity model is published with `task_post_supported: false`, so those two
+are asked live. Found the hard way on 2026-09-22: the sandbox refused queued
+requests to both with "this model does not support task_post mode", and the
+models pages confirmed it.
 
 **LLM Mentions.** No question needed. Give it a domain or a brand name, up to
 ten per call, and it returns how often that name comes up in AI answers, the AI

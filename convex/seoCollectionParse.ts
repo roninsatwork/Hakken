@@ -2,10 +2,23 @@ import { v } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { isBulkOperation, parseBulkByTarget, parseSeoResultFor } from "./dataForSeoParsers";
-import { resolveWebsiteIdsByHost } from "./websites";
+import {
+  isBulkOperation,
+  parseBulkByTarget,
+  parseLlmResponse,
+  parseSeoResultFor,
+} from "./dataForSeoParsers";
+import { listBrandedWebsites, resolveWebsiteIdsByHost } from "./websites";
+import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
+import { findBrandMention } from "./websiteBrands";
+import { readWebsiteHost } from "./websiteIdentity";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
+import { SEO_LOCATIONS } from "./seoLocations";
+
+const LOCATION_BY_CITY = new Map(
+  SEO_LOCATIONS.filter((location) => location.city).map((location) => [location.city!, location.code]),
+);
 
 /**
  * Reading a raw payload into the numbers that are kept forever.
@@ -29,6 +42,32 @@ export const parseSeoResult = internalAction({
       pullId: args.pullId,
     });
     if (!pull?.resultJson) return null;
+
+    // An AI answer is read for who it names, then dropped. Nothing of its
+    // prose is stored.
+    const engine = engineForOperationId(pull.operationId);
+    if (engine) {
+      try {
+        const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
+        // `sent`, not `args`: the action's own `args` is what carries the pull
+        // id, and shadowing it here once sent an undefined id to the writer.
+        const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+        await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
+          pullId: args.pullId,
+          prompt: typeof sent.user_prompt === "string" ? sent.user_prompt : "",
+          engine,
+          day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+          answer: parsed.answer,
+          sources: parsed.sources.slice(0, MAX_SOURCES),
+        });
+      } catch (error) {
+        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+          pullId: args.pullId,
+          error: getErrorMessage(error),
+        });
+      }
+      return null;
+    }
 
     // A bulk pull is about many websites and carries no single `websiteId`, so
     // it is filed target by target rather than against the row's own site.
@@ -126,6 +165,7 @@ export const getPullForParse = internalQuery({
     websiteId: v.union(v.id("websites"), v.null()),
     target: v.union(v.string(), v.null()),
     resultJson: v.union(v.string(), v.null()),
+    taskArgsJson: v.union(v.string(), v.null()),
     completedAt: v.union(v.number(), v.null()),
   })),
   handler: async (ctx, args) => {
@@ -136,6 +176,7 @@ export const getPullForParse = internalQuery({
       websiteId: row.websiteId ?? null,
       target: row.target ?? null,
       resultJson: row.resultJson ?? null,
+      taskArgsJson: row.taskArgsJson ?? null,
       completedAt: row.completedAt ?? null,
     };
   },
@@ -174,6 +215,8 @@ export const writeSeoMetrics = internalMutation({
       .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
       .take(REPLACE_LIMIT);
     for (const row of existing) await ctx.db.delete(row._id);
+
+    await ctx.db.patch(args.pullId, { error: undefined });
 
     await ctx.db.insert("seoWebsiteMetrics", {
       websiteId: args.websiteId,
@@ -216,6 +259,134 @@ export const writeSeoMetrics = internalMutation({
 });
 
 /**
+ * Record who an AI answer named.
+ *
+ * **A row per mention, never per tracked site.** Every website with brand
+ * names is matched against the answer — the client who asked, their rivals,
+ * and everyone else we hold — because the answer names whoever it names and
+ * one purchase should serve every watcher. Names we cannot match to a website
+ * are still kept, as the cited domain, so a rival added later already has a
+ * history waiting.
+ *
+ * The answer text arrives here, is read once, and is not stored. Only the
+ * matched variant or the cited domain is written, so nothing an engine wrote
+ * can ever reach an agent's prompt from this table.
+ *
+ * Replaces by pull, like every other parse, so a corrected matcher can be run
+ * over stored payloads without anyone auditing the result afterwards.
+ */
+export const writeAiCitations = internalMutation({
+  args: {
+    pullId: v.id("seoDataPulls"),
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    day: v.string(),
+    answer: v.string(),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const pull = await ctx.db.get(args.pullId);
+    const locationCode = readLocationCode(pull?.taskArgsJson);
+
+    const existing = await ctx.db
+      .query("aiCitations")
+      .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
+      .take(MAX_CITATION_ROWS + 100);
+    for (const row of existing) await ctx.db.delete(row._id);
+
+    // Brands first, in order of appearance: being named first and being named
+    // last are different results, and the position is the screen's headline.
+    const branded = await listBrandedWebsites(ctx, MAX_BRANDED_WEBSITES);
+    const found: Array<{ websiteId: Id<"websites">; text: string; kind: "NAME" | "MISSPELLING"; at: number }> = [];
+    for (const website of branded) {
+      const hit = findBrandMention(args.answer, website.brandNames);
+      if (hit) found.push({ websiteId: website._id, text: hit.matched, kind: hit.kind, at: hit.at });
+    }
+    found.sort((left, right) => left.at - right.at);
+
+    // A parse that now succeeds clears what an earlier attempt left behind,
+    // or the row would carry "Parse failed" forever after the fix that fixed it.
+    await ctx.db.patch(args.pullId, { error: undefined });
+
+    let position = 0;
+    for (const hit of found.slice(0, MAX_CITATION_ROWS)) {
+      position += 1;
+      await ctx.db.insert("aiCitations", {
+        prompt: args.prompt,
+        engine: args.engine,
+        ...(locationCode !== undefined ? { locationCode } : {}),
+        day: args.day,
+        pullId: args.pullId,
+        kind: "BRAND",
+        mentionedWebsiteId: hit.websiteId,
+        mentionedText: hit.text,
+        variantKind: hit.kind,
+        position,
+        createdAt: now,
+      });
+    }
+
+    // Then the sources the engine cited, by domain, matched to a website when
+    // we hold one. A domain we do not hold is still a rival worth seeing.
+    const hosts = args.sources
+      .map((source) => readWebsiteHost(source.url))
+      .map((parsed) => (parsed.ok ? parsed.host : null));
+    const known = await resolveWebsiteIdsByHost(
+      ctx,
+      hosts.filter((host): host is string => host !== null),
+    );
+
+    let sourcePosition = 0;
+    for (const [index, source] of args.sources.entries()) {
+      const host = hosts[index];
+      if (!host) continue;
+      sourcePosition += 1;
+      const websiteId = known.get(host);
+      await ctx.db.insert("aiCitations", {
+        prompt: args.prompt,
+        engine: args.engine,
+        ...(locationCode !== undefined ? { locationCode } : {}),
+        day: args.day,
+        pullId: args.pullId,
+        kind: "SOURCE",
+        ...(websiteId ? { mentionedWebsiteId: websiteId } : {}),
+        mentionedText: host,
+        url: source.url,
+        position: sourcePosition,
+        createdAt: now,
+      });
+    }
+    return null;
+  },
+});
+
+/** Which place the question was asked from, read back from what was sent. */
+function readLocationCode(taskArgsJson: string | undefined): number | undefined {
+  if (!taskArgsJson) return undefined;
+  try {
+    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
+    // The engines take a country and city, not a code; the code is what the
+    // company website stored, and it is recovered from the city when present.
+    const city = typeof args.web_search_city === "string" ? args.web_search_city : undefined;
+    if (!city) return undefined;
+    return LOCATION_BY_CITY.get(city);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Cited sources kept per answer; an engine rarely cites more than a dozen. */
+const MAX_SOURCES = 40;
+
+/** Named brands kept per answer. */
+const MAX_CITATION_ROWS = 200;
+
+/** A ceiling on the platform's branded estate, not on this feature. */
+const MAX_BRANDED_WEBSITES = 2_000;
+
+/**
  * File one bulk response against every website it covered.
  *
  * Matched on the host, because a bulk row names its target and nothing else. A
@@ -242,6 +413,7 @@ export const writeBulkMetrics = internalMutation({
       .take(MAX_BULK_ROWS + 100);
     for (const row of existing) await ctx.db.delete(row._id);
 
+    await ctx.db.patch(args.pullId, { error: undefined });
     const byHost = await resolveWebsiteIdsByHost(ctx, args.rows.map((row) => row.host));
 
     for (const row of args.rows) {

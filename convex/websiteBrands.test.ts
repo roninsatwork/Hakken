@@ -110,7 +110,7 @@ describe("finding a mention", () => {
 
   test("finds a name in ordinary prose", () => {
     expect(findBrandMention("I would try Ronins Group for that.", ronins))
-      .toEqual({ matched: "Ronins Group" });
+      .toMatchObject({ matched: "Ronins Group" });
   });
 
   test("answers once for the site, however many names matched", () => {
@@ -133,14 +133,14 @@ describe("finding a mention", () => {
 
   test("still matches a name against punctuation and line breaks", () => {
     expect(findBrandMention("Try these: Ronins, or someone else.", ronins))
-      .toEqual({ matched: "Ronins" });
+      .toMatchObject({ matched: "Ronins" });
     expect(findBrandMention("Top pick\nRonins Agency\nRunner up", ronins))
-      .toEqual({ matched: "Ronins Agency" });
+      .toMatchObject({ matched: "Ronins Agency" });
   });
 
   test("does not care about case", () => {
     expect(findBrandMention("ronins group did the work", ronins))
-      .toEqual({ matched: "Ronins Group" });
+      .toMatchObject({ matched: "Ronins Group" });
   });
 
   test("says nothing when nothing matched", () => {
@@ -153,7 +153,52 @@ describe("finding a mention", () => {
     // Brand names are user text. Turning one into a pattern means escaping it,
     // and an escaping mistake here is a silent wrong answer rather than a crash.
     expect(findBrandMention("We used C++ Solutions.", names("C++ Solutions")))
-      .toEqual({ matched: "C++ Solutions" });
+      .toMatchObject({ matched: "C++ Solutions" });
     expect(findBrandMention("Nothing here.", names("(a|b)"))).toBeNull();
+  });
+});
+
+describe("a variant's kind", () => {
+  test("absent reads as a correct name, so nothing saved before this moves", () => {
+    const result = readBrandNames([{ name: "Ronins" }]);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.names[0].kind).toBe("NAME");
+  });
+
+  test("a misspelling is kept, and reported as one when it matches", () => {
+    const result = readBrandNames([
+      { name: "Ronins Group" },
+      { name: "Ronnins Group", kind: "MISSPELLING" },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // A citation under the wrong name is a different fact from one under the
+    // right name, and it is the one a client can do something about.
+    const found = findBrandMention("I'd try Ronnins Group.", result.names);
+    expect(found).toMatchObject({ matched: "Ronnins Group", kind: "MISSPELLING" });
+  });
+
+  test("a misspelling is never made the primary", () => {
+    // The primary is what screens print, and printing a client's name wrong on
+    // their own dashboard is worse than picking a different one.
+    const result = readBrandNames([
+      { name: "Ronnins", kind: "MISSPELLING", isPrimary: true },
+      { name: "Ronins" },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.names.find((entry) => entry.isPrimary)?.name).toBe("Ronins");
+  });
+
+  test("a list of only misspellings has nothing to print, and says so", () => {
+    expect(readBrandNames([{ name: "Ronnins", kind: "MISSPELLING" }]))
+      .toEqual({ ok: false, problem: "NO_PRIMARY" });
+  });
+
+  test("reports where in the text the name was found", () => {
+    // Order of first appearance is the position on the citations screen: being
+    // named first and being named last are different results.
+    const found = findBrandMention("Acme first, then Ronins.", names("Ronins"));
+    expect(found?.at).toBeGreaterThan(0);
   });
 });

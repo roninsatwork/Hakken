@@ -4,11 +4,15 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   findSeoOperation,
+  seoAiCitationParams,
   seoBulkOperationParams,
   seoBulkOperations,
   seoSiteOperationParams,
   seoSiteOperations,
 } from "./dataForSeoRegistry";
+import { aiCitationOperationId } from "./seoAiEngines";
+import { findSeoLocation } from "./seoLocations";
+import { MAX_PROMPTS_PER_WEBSITE } from "./seoPrompts";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
 import {
@@ -183,6 +187,14 @@ async function expandPage(
     // against. Numbers from different weeks are not a comparison.
     const targets = [companyWebsite.websiteId, ...competitors.map((row) => row.websiteId)];
 
+    // The questions this website asks the AI engines. Planned once per
+    // website, not per target: a competitor is named *in* the answer, it is
+    // not asked its own question.
+    const citations = await planCitationPulls(ctx, cycle, companyWebsite, sendIndex);
+    planned += citations.planned;
+    reused += citations.reused;
+    sendIndex += citations.planned;
+
     for (const websiteId of targets) {
       const target = await ctx.db.get(websiteId);
       if (target) batch.push({ websiteId, host: target.host });
@@ -219,6 +231,134 @@ async function expandPage(
     exhausted: after.length <= SEO_EXPANSION_PAGE,
     cappedPlan: false,
   };
+}
+
+
+/**
+ * A pull with this key that can still be used, re-opening one that was refused.
+ *
+ * Reuse must never hand back a failure as if it were an answer: a cycle that
+ * found yesterday-style FAILED rows by key and pointed its lines at them would
+ * be blocked from retrying for the rest of the day. So a failed pull is
+ * re-opened in place — status back to pending, attempts and error cleared —
+ * **but only when it never received a task id.** A refused request was never
+ * charged and asking again is free; a submitted task was paid for, and
+ * re-posting it is buying the same data twice, so that one is left alone and
+ * the sweep fetches its result instead.
+ */
+async function reusableByKey(
+  ctx: MutationCtx,
+  idempotencyKey: string,
+): Promise<Doc<"seoDataPulls"> | null> {
+  const existing = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
+    .first();
+  if (!existing) return null;
+  if (existing.status !== "FAILED") return existing;
+  if (existing.taskId) return existing;
+
+  await ctx.db.patch(existing._id, {
+    status: "PENDING",
+    attempts: 0,
+    error: undefined,
+    dueAt: Date.now(),
+    sentAt: undefined,
+    claimedBy: undefined,
+    claimedAt: undefined,
+  });
+  return { ...existing, status: "PENDING", error: undefined };
+}
+
+/**
+ * One paid call per question per engine, for one website.
+ *
+ * The fourth cost shape, and the one the plan allowance meters. What makes it
+ * affordable is the same trick as one row per host: the key is the question,
+ * the engine and the place, so two companies asking the same thing in the same
+ * place today buy one answer between them, and each reads its own citations
+ * out of it through its own cycle line.
+ *
+ * Reuse here is by exact key only, never by freshness. A ranking is a fact
+ * about a site that changes slowly; an AI answer is a fact about a day, and
+ * yesterday's answer to "who is the best plumber" is not today's.
+ */
+async function planCitationPulls(
+  ctx: MutationCtx,
+  cycle: Doc<"seoCollectionCycles">,
+  companyWebsite: Doc<"companyWebsites">,
+  startIndex: number,
+): Promise<{ planned: number; reused: number }> {
+  const prompts = await ctx.db
+    .query("trackedPrompts")
+    .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsite._id))
+    .filter((q) => q.eq(q.field("isActive"), true))
+    .take(MAX_PROMPTS_PER_WEBSITE);
+  if (prompts.length === 0) return { planned: 0, reused: 0 };
+
+  const place = companyWebsite.locationCode !== undefined
+    ? findSeoLocation(companyWebsite.locationCode)
+    : null;
+  const location = place ? { countryIso: place.countryIso, city: place.city } : null;
+
+  let planned = 0;
+  let reused = 0;
+  let sendIndex = startIndex;
+
+  for (const prompt of prompts) {
+    for (const engine of prompt.engines) {
+      const operation = findSeoOperation(aiCitationOperationId(engine));
+      if (!operation) continue;
+
+      const params = seoAiCitationParams(engine, prompt.prompt, location);
+      const idempotencyKey = buildSeoIdempotencyKey({
+        operationId: operation.id,
+        // A question has no website of its own — the same question from two
+        // companies is one purchase. The params carry the text and the place.
+        websiteId: "prompt",
+        params,
+        cycleStartedAt: cycle.startedAt,
+      });
+
+      const existing = await reusableByKey(ctx, idempotencyKey);
+
+      const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
+        operationId: operation.id,
+        family: operation.family,
+        mode: operation.mode,
+        companyId: cycle.companyId,
+        taskArgsJson: JSON.stringify(params),
+        status: "PENDING",
+        tag: idempotencyKey,
+        idempotencyKey,
+        cycleId: cycle._id,
+        dueAt: cycle.startedAt + sendIndex * SEO_DUE_SPACING_MS,
+        attempts: 0,
+        costUsd: 0,
+        sandbox: false,
+        ...(cycle.agentRunId ? { agentRunId: cycle.agentRunId } : {}),
+        submittedAt: Date.now(),
+      });
+
+      await ctx.db.insert("seoCycleLines", {
+        cycleId: cycle._id,
+        companyId: cycle.companyId,
+        websiteId: companyWebsite.websiteId,
+        operationId: operation.id,
+        pullId,
+        reused: Boolean(existing),
+        createdAt: Date.now(),
+      });
+
+      if (existing) reused += 1;
+      else {
+        planned += 1;
+        sendIndex += 1;
+      }
+    }
+  }
+
+  return { planned, reused };
 }
 
 /**
@@ -278,10 +418,7 @@ async function planBulkPulls(
       cycleStartedAt: cycle.startedAt,
     });
 
-    const existing = await ctx.db
-      .query("seoDataPulls")
-      .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
-      .first();
+    const existing = await reusableByKey(ctx, idempotencyKey);
 
     const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
       operationId: operation.id,

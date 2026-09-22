@@ -3,6 +3,7 @@
 import { lazy, Suspense, useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Globe, Plus, Swords, Trash2 } from "lucide-react";
 
@@ -294,12 +295,24 @@ export default function CompanyWebsiteDetailPage() {
         </Suspense>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
-          <MessageSquare className="h-3.5 w-3.5" />
-          {tPrompts("title")}
-        </h2>
-        <p className="max-w-3xl text-[13px] text-secondary">{tPrompts("subtitle")}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <MessageSquare className="h-3.5 w-3.5" />
+            {tPrompts("title")}
+          </h2>
+          <p className="max-w-3xl text-[13px] text-secondary">{tPrompts("subtitle")}</p>
+        </div>
+        {/*
+          Results live on their own page. This is settings; the answers are
+          what the settings produce, and they grow without bound.
+        */}
+        <Link
+          href={`/admin/companies/${companyId}/websites/site/${companyWebsiteId}/citations`}
+          className="text-[13px] text-brand hover:underline"
+        >
+          {tPrompts("seeCitations")}
+        </Link>
       </div>
 
       <div className="flex flex-col gap-2 rounded-[12px] border border-border-dim bg-card/40 p-4">

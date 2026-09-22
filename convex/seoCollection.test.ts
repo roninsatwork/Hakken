@@ -408,3 +408,146 @@ describe("chunking", () => {
     expect(touched.size).toBe(2);
   });
 });
+
+describe("asking the AI engines", () => {
+  async function seedPrompt(t: Harness, companyWebsiteId: Id<"companyWebsites">, engines: Array<"chatgpt" | "gemini">) {
+    await t.run(async (ctx) => {
+      const hold = await ctx.db.get(companyWebsiteId);
+      await ctx.db.insert("trackedPrompts", {
+        companyWebsiteId, companyId: hold!.companyId, websiteId: hold!.websiteId,
+        prompt: "best plumber in Leeds", engines, isActive: true, createdAt: Date.now(),
+      });
+    });
+  }
+
+  test("plans one pull per question per engine, once per website", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const own = await seedWebsite(t, "ourshop.com");
+    const rival = await seedWebsite(t, "rival.com");
+    const hold = await seedCompanyWebsite(t, company, own);
+    await t.run(async (ctx) =>
+      await ctx.db.insert("trackedCompetitors", {
+        companyWebsiteId: hold, companyId: company, websiteId: rival, createdAt: Date.now(),
+      }));
+    await seedPrompt(t, hold, ["chatgpt", "gemini"]);
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    // Two engines, two pulls. Not four: the competitor is named *in* the
+    // answer, it is not asked its own question.
+    const citation = (await pulls(t)).filter((row) => row.operationId.startsWith("ai_citation_"));
+    expect(citation.map((row) => row.operationId).sort())
+      .toEqual(["ai_citation_chatgpt", "ai_citation_gemini"]);
+  });
+
+  test("two companies asking the same question in the same place buy one answer", async () => {
+    const t = harness();
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+    await seedSchedule(t, ronins, DAILY);
+    await seedSchedule(t, acme, DAILY);
+    const first = await seedCompanyWebsite(t, ronins, await seedWebsite(t, "a.com"));
+    const second = await seedCompanyWebsite(t, acme, await seedWebsite(t, "b.com"));
+    await seedPrompt(t, first, ["chatgpt"]);
+    await seedPrompt(t, second, ["chatgpt"]);
+
+    const startedAt = Date.now();
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, ronins, startedAt) });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, acme, startedAt) });
+
+    // The key is the question, the engine and the place — not the website.
+    // Same trick as one row per host: one purchase, every watcher served.
+    const citation = (await pulls(t)).filter((row) => row.operationId === "ai_citation_chatgpt");
+    expect(citation).toHaveLength(1);
+    const citationLines = (await lines(t)).filter((line) => line.operationId === "ai_citation_chatgpt");
+    expect(citationLines).toHaveLength(2);
+    expect(citationLines.filter((line) => line.reused)).toHaveLength(1);
+  });
+
+  test("a paused question is not asked", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
+    await t.run(async (ctx) => {
+      const row = await ctx.db.get(hold);
+      await ctx.db.insert("trackedPrompts", {
+        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+        prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: false, createdAt: Date.now(),
+      });
+    });
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company) });
+
+    expect((await pulls(t)).filter((row) => row.operationId.startsWith("ai_citation_"))).toHaveLength(0);
+  });
+});
+
+describe("a refused pull", () => {
+  test("is asked again, because a refusal was never charged", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
+    await t.run(async (ctx) => {
+      const row = await ctx.db.get(hold);
+      await ctx.db.insert("trackedPrompts", {
+        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+        prompt: "best plumber in Leeds", engines: ["gemini"], isActive: true, createdAt: Date.now(),
+      });
+    });
+    const startedAt = Date.now();
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company, startedAt) });
+    // DataForSEO refuses it outright: no task id, nothing charged.
+    await t.run(async (ctx) => {
+      const pull = (await ctx.db.query("seoDataPulls").collect())
+        .find((row) => row.operationId === "ai_citation_gemini")!;
+      await ctx.db.patch(pull._id, { status: "FAILED", error: "Invalid Field", completedAt: Date.now() });
+    });
+
+    // The website is fresh for the second cycle, so it is due again today.
+    await t.run(async (ctx) => {
+      for (const line of await ctx.db.query("seoCycleLines").collect()) await ctx.db.delete(line._id);
+    });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company, startedAt) });
+
+    // One row still — re-opened, not duplicated — and it is pending again.
+    const gemini = (await pulls(t)).filter((row) => row.operationId === "ai_citation_gemini");
+    expect(gemini).toHaveLength(1);
+    expect(gemini[0].status).toBe("PENDING");
+    expect(gemini[0].error).toBeUndefined();
+  });
+
+  test("is left alone once it has a task id, because that one was paid for", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
+    await t.run(async (ctx) => {
+      const row = await ctx.db.get(hold);
+      await ctx.db.insert("trackedPrompts", {
+        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+        prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+      });
+    });
+    const startedAt = Date.now();
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company, startedAt) });
+    await t.run(async (ctx) => {
+      const pull = (await ctx.db.query("seoDataPulls").collect())
+        .find((row) => row.operationId === "ai_citation_chatgpt")!;
+      await ctx.db.patch(pull._id, { status: "FAILED", taskId: "task-1", error: "never returned", completedAt: Date.now() });
+      for (const line of await ctx.db.query("seoCycleLines").collect()) await ctx.db.delete(line._id);
+    });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company, startedAt) });
+
+    // Re-posting a task we hold an id for is buying the same data twice.
+    const chatgpt = (await pulls(t)).filter((row) => row.operationId === "ai_citation_chatgpt");
+    expect(chatgpt).toHaveLength(1);
+    expect(chatgpt[0].status).toBe("FAILED");
+  });
+});

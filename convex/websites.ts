@@ -925,3 +925,28 @@ export async function resolveWebsiteIdsByHost(
 
   return found;
 }
+
+
+/**
+ * Every website that has brand names, for matching an AI answer against.
+ *
+ * This is the read that makes one purchase serve every watcher: an answer
+ * names whoever it names, and we look for every name we know. Here rather than
+ * in the parse path for the same reason as `resolveWebsiteIdsByHost` — the
+ * tenancy guard allows exactly two files to read this table, and it walks
+ * nowhere towards a watcher.
+ *
+ * Bounded, and by a number that is a ceiling on the platform's tracked estate
+ * rather than on this feature. When the estate outgrows it, the answer is an
+ * index on "has brand names", not a bigger number.
+ */
+export async function listBrandedWebsites(
+  ctx: QueryCtx | MutationCtx,
+  limit: number,
+): Promise<Array<{ _id: Id<"websites">; host: string; brandNames: NonNullable<Doc<"websites">["brandNames"]> }>> {
+  const rows = await ctx.db.query("websites").take(limit);
+  return rows
+    .filter((row): row is Doc<"websites"> & { brandNames: NonNullable<Doc<"websites">["brandNames"]> } =>
+      Array.isArray(row.brandNames) && row.brandNames.length > 0)
+    .map((row) => ({ _id: row._id, host: row.host, brandNames: row.brandNames }));
+}

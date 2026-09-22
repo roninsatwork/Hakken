@@ -133,6 +133,13 @@ export default defineSchema({
       name: v.string(),
       /** Exactly one is primary — a screen needs a name to print. */
       isPrimary: v.boolean(),
+      /**
+       * What this variant is. A citation under a misspelling is a different
+       * fact from one under the right name: "mentioned 40 times, 6 of them
+       * under the wrong name" is something a client can act on. Absent reads
+       * as a correct name, so entries saved before this existed need no move.
+       */
+      kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
     }))),
     firstSeenAt: v.number(),
   })
@@ -558,6 +565,61 @@ export default defineSchema({
     .index("by_company", ["companyId"])
     .index("by_website", ["websiteId"])
     .index("by_active", ["isActive"]),
+
+  /**
+   * One name, in one AI answer, to one question, on one day.
+   *
+   * **A row per mention, never per tracked site.** The answer names whoever it
+   * names, and every one of them is recorded: the client, their known rivals,
+   * and anyone nobody was tracking. That last kind is why the feature sells —
+   * it tells a client who is beating them in AI answers, including rivals they
+   * never thought to list — and it is why the row is keyed on the prompt and
+   * the pull rather than on a website.
+   *
+   * `mentionedWebsiteId` is set only when the name matched a host we hold,
+   * through that host's brand names. A name we could not match is still
+   * recorded as text, so if that rival is later added as a website the history
+   * is already sitting there.
+   *
+   * No free prose. `mentionedText` is the matched brand variant or a cited
+   * domain, never a passage of the answer. An AI engine's answer is text from a
+   * model that read the open web, and the way to keep it out of any agent's
+   * prompt is not to store it.
+   */
+  aiCitations: defineTable({
+    /**
+     * The question as sent. Keyed on the text and the purchase rather than on
+     * one company's `trackedPrompts` row, because the purchase is shared: two
+     * companies asking the same question in the same place buy one answer, and
+     * each reads its own citations out of it through its own cycle lines.
+     */
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    locationCode: v.optional(v.number()),
+    /** `YYYY-MM-DD`, so a chart can range over days without date maths. */
+    day: v.string(),
+    /** The purchase this was read from. Re-parsing replaces by this key. */
+    pullId: v.id("seoDataPulls"),
+    /** How the name got into the answer. */
+    kind: v.union(
+      /** A brand name found in the answer's own words. */
+      v.literal("BRAND"),
+      /** A source the engine cited, by domain. */
+      v.literal("SOURCE"),
+    ),
+    mentionedWebsiteId: v.optional(v.id("websites")),
+    /** The brand variant that matched, or the cited domain. Never prose. */
+    mentionedText: v.string(),
+    /** For a BRAND match: whether the variant was a known misspelling. */
+    variantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
+    /** For a SOURCE: the full URL the engine cited. */
+    url: v.optional(v.string()),
+    /** Order of first appearance within the answer, from 1. */
+    position: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_website_day", ["mentionedWebsiteId", "day"])
+    .index("by_pull", ["pullId"]),
 
   /**
    * A competitor, tracked against one of a company's own websites.

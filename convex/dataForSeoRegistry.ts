@@ -1,4 +1,10 @@
 import { readWebsiteHost } from "./websiteIdentity";
+import {
+  AI_ENGINES,
+  AI_ENGINE_CALLS,
+  aiCitationOperationId,
+  type AiEngine,
+} from "./seoAiEngines";
 import { appError } from "./utils/appError";
 
 /**
@@ -37,7 +43,7 @@ import { appError } from "./utils/appError";
  */
 export type SeoOperationMode = "QUEUED" | "LIVE";
 
-export type SeoParamKind = "host" | "hosts" | "keyword" | "keywords" | "number";
+export type SeoParamKind = "host" | "hosts" | "keyword" | "keywords" | "number" | "text";
 
 export type SeoOperationParam = {
   kind: SeoParamKind;
@@ -88,6 +94,15 @@ export type SeoOperation = {
    * between families and guessing it is a charged request that returns nothing.
    */
   bulk?: { targetsParam: string; maxTargets: number };
+  /**
+   * Set when this operation asks one AI engine one question.
+   *
+   * The fourth cost shape. Not per site and not per keyword but per *prompt*,
+   * and what makes it affordable is that the answer names whoever it names:
+   * one purchase serves every tracked site that appears in it, the same trick
+   * as one row per host. See `seoAiEngines.ts` for how each engine is asked.
+   */
+  aiEngine?: AiEngine;
 };
 
 /**
@@ -95,7 +110,41 @@ export type SeoOperation = {
  * 2026-09-21 rather than remembered; a wrong path is a charged request that
  * returns nothing useful.
  */
+/**
+ * One operation per AI engine, built from the engine table.
+ *
+ * Built rather than written out four times, because the four differ in exactly
+ * the ways the table records — queued or live, location or not — and a fifth
+ * engine should be one row there, not a fifth hand-copied block here.
+ *
+ * `user_prompt` is what every engine's endpoint calls the question. The
+ * prompt is `text`, not `keyword`: it is a sentence somebody would type, and
+ * the keyword coercion would mangle it.
+ */
+const AI_CITATION_OPERATIONS: readonly SeoOperation[] = AI_ENGINES.map((engine) => {
+  const call = AI_ENGINE_CALLS[engine];
+  const base = `/v3/ai_optimization/${call.platform}/llm_responses`;
+  return {
+    id: aiCitationOperationId(engine),
+    question: `What does ${engine} answer when asked this, and who does it name?`,
+    family: "AI Optimization",
+    mode: call.mode,
+    path: call.mode === "QUEUED" ? `${base}/task_post` : `${base}/live`,
+    ...(call.mode === "QUEUED" ? { resultPath: `${base}/task_get/$id` } : {}),
+    costBand: "low" as const,
+    aiEngine: engine,
+    params: {
+      user_prompt: {
+        kind: "text",
+        required: true,
+        description: "The question, as a person would ask it.",
+      },
+    },
+  };
+});
+
 export const SEO_OPERATIONS: readonly SeoOperation[] = [
+  ...AI_CITATION_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",
@@ -283,10 +332,44 @@ export function seoBulkOperations(): readonly SeoOperation[] {
  */
 export function seoSiteOperations(): readonly SeoOperation[] {
   return SEO_OPERATIONS.filter((operation) => {
-    if (operation.bulk) return false;
+    if (operation.bulk || operation.aiEngine) return false;
     const required = Object.entries(operation.params).filter(([, param]) => param.required);
     return required.length === 1 && required[0][1].kind === "host";
   });
+}
+
+/**
+ * What an AI citation pull is sent.
+ *
+ * The model name comes from the engine table, never from a caller — it is the
+ * cheapest on DataForSEO's list that supports web search, and web search is
+ * switched on wherever the switch exists, because an answer with no sources is
+ * an answer with nothing to cite. Location is passed only to engines that take
+ * one; an engine with no location parameters refuses the whole request
+ * otherwise.
+ */
+export function seoAiCitationParams(
+  engine: AiEngine,
+  prompt: string,
+  location: { countryIso: string; city?: string } | null,
+): Record<string, unknown> {
+  const call = AI_ENGINE_CALLS[engine];
+  return {
+    user_prompt: prompt,
+    model_name: call.modelName,
+    ...(call.hasWebSearchSwitch ? { web_search: true } : {}),
+    ...(call.takesLocation && location
+      ? {
+        web_search_country_iso_code: location.countryIso,
+        ...(location.city ? { web_search_city: location.city } : {}),
+      }
+      : {}),
+  };
+}
+
+/** The operations that ask an AI engine a question. One per engine. */
+export function seoAiCitationOperations(): readonly SeoOperation[] {
+  return SEO_OPERATIONS.filter((operation) => operation.aiEngine !== undefined);
 }
 
 /**
@@ -463,6 +546,14 @@ function coerceParam(param: SeoOperationParam, raw: unknown): Coerced {
         return { ok: false, message: `"${String(raw)}" is not a website address.` };
       }
       return { ok: true, value: parsed.host };
+    }
+    case "text": {
+      // A sentence, kept as typed. Trimmed and bounded because it is sent
+      // verbatim to an engine that charges by the token.
+      const text = String(raw).trim().replace(/\s+/g, " ");
+      if (text.length === 0) return { ok: false, message: "Write the question out." };
+      if (text.length > 500) return { ok: false, message: "A question can be at most 500 characters." };
+      return { ok: true, value: text };
     }
     case "hosts": {
       // A list of websites for one bulk call. Each is normalised the same way a

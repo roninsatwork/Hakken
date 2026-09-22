@@ -117,7 +117,11 @@ export const listSeoPulls = superAdminQuery({
       }
       return {
         _id: pull._id,
-        host: pull.websiteId ? hosts.get(pull.websiteId) ?? "" : pull.target ?? "",
+        // A citation pull is about a question rather than a host, and the
+        // question is the thing to show. Everything else shows its host.
+        host: pull.websiteId
+          ? hosts.get(pull.websiteId) ?? ""
+          : readPromptText(pull.taskArgsJson) ?? pull.target ?? "",
         // Whose cadence caused this, not somebody to charge. A shared host is
         // pulled once for everyone watching it.
         companyName: pull.companyId ? names.get(pull.companyId) ?? "" : "",
@@ -131,7 +135,9 @@ export const listSeoPulls = superAdminQuery({
         status: pull.status,
         costUsd: pull.costUsd,
         sandbox: pull.sandbox,
-        error: pull.error ?? null,
+        // A screen's error is a sentence, not a dump. A validation failure
+        // once carried an entire AI answer into this column.
+        error: pull.error ? pull.error.slice(0, MAX_ERROR_CHARS) : null,
         attempts: pull.attempts ?? 0,
         // One column, three meanings, each true of the stage it belongs to:
         // when a waiting row goes out, and when a settled one finished.
@@ -298,6 +304,19 @@ const MAX_LINES = 200;
  * From the stored arguments rather than from a column, because the arguments
  * are the record of what was asked and cannot drift from it.
  */
+/** The question a citation pull asked, or null for anything else. */
+function readPromptText(taskArgsJson: string): string | null {
+  try {
+    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
+    return typeof args.user_prompt === "string" ? args.user_prompt : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Enough to say what went wrong; never enough to carry a payload. */
+const MAX_ERROR_CHARS = 160;
+
 function countTargets(taskArgsJson: string): number {
   try {
     const args = JSON.parse(taskArgsJson) as Record<string, unknown>;

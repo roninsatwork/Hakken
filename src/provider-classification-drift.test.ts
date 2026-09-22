@@ -50,6 +50,15 @@ describe('Provider Classification Drift', () => {
       // in. Naming them here is the point; naming them anywhere else is the
       // scattering this guard exists to catch.
       'convex/seoAiEngines.ts',
+      // The tests of that table and of the code that reads it. The behaviour
+      // under test is engine-specific — which engines queue, which take a
+      // location — so the engines are named, as the provider adapter's own
+      // tests already name theirs.
+      'convex/dataForSeoRegistry.test.ts',
+      'convex/seoCollection.test.ts',
+      'convex/seoCitations.test.ts',
+      // The screen whose subject is the engines' answers.
+      'src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/citations/page.tsx',
       'src/provider-classification-drift.test.ts',
     ]);
 
@@ -226,6 +235,10 @@ describe('Provider Classification Drift', () => {
 
   test('provider model ID literals remain classified', () => {
     const allowedProviderModelLiteralFiles = new Set([
+      // DataForSEO parameter values, not runtime model choices: the names an
+      // AI engine is asked under when we buy an answer from it. They live in
+      // the one file whose subject is those engines.
+      'convex/seoAiEngines.ts',
       'convex/aiModelService.ts',
       'convex/aiModelService.test.ts',
       'convex/aiModels.test.ts',

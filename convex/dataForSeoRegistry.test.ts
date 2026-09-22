@@ -12,6 +12,8 @@ import {
   seoSiteOperationParams,
   seoBulkOperations,
   seoBulkOperationParams,
+  seoAiCitationOperations,
+  seoAiCitationParams,
 } from "./dataForSeoRegistry";
 
 /**
@@ -88,6 +90,8 @@ describe("the registry holds well-formed entries", () => {
 
   test("the families it covers are the ones it claims", () => {
     expect(seoOperationFamilies()).toEqual([
+      // The AI engines, asked a question each. See seoAiEngines.ts.
+      "AI Optimization",
       "Backlinks",
       "DataForSEO Labs",
       "Keywords Data",
@@ -329,5 +333,63 @@ describe("seoBulkOperationParams", () => {
   test("refuses to treat a per-site operation as bulk", () => {
     const perSite = seoSiteOperations()[0];
     expect(() => seoBulkOperationParams(perSite, ["a.com"])).toThrow(/not a bulk operation/);
+  });
+});
+
+
+describe("asking an AI engine", () => {
+  test("there is one operation per engine, and none of them is a site operation", () => {
+    const citation = seoAiCitationOperations().map((operation) => operation.id);
+    const perSite = seoSiteOperations().map((operation) => operation.id);
+
+    // Four engines, four operations. A prompt is not a host, so a cycle must
+    // never run these once per website by mistake — that would be a paid call
+    // per website per engine for a question that belongs to one website.
+    expect(citation).toHaveLength(4);
+    for (const id of citation) expect(perSite).not.toContain(id);
+  });
+
+  test("two engines queue and two answer live, as their models pages say", () => {
+    // Perplexity and Gemini publish no queueable model. Sending either a
+    // task_post is a charged request refused with "this model does not
+    // support task_post mode" — which is exactly what the sandbox said on
+    // 2026-09-22 before this was corrected.
+    const byId = new Map(seoAiCitationOperations().map((operation) => [operation.id, operation]));
+    for (const engine of ["perplexity", "gemini"]) {
+      expect(byId.get(`ai_citation_${engine}`)?.mode).toBe("LIVE");
+      expect(byId.get(`ai_citation_${engine}`)?.path).toMatch(/\/live$/);
+    }
+    for (const engine of ["chatgpt", "claude"]) {
+      expect(byId.get(`ai_citation_${engine}`)?.mode).toBe("QUEUED");
+      expect(byId.get(`ai_citation_${engine}`)?.resultPath).toMatch(/task_get\/\$id$/);
+    }
+  });
+
+  test("web search is on wherever the switch exists", () => {
+    // An answer with no sources is an answer with nothing to cite.
+    expect(seoAiCitationParams("chatgpt", "best plumber in Leeds", null).web_search).toBe(true);
+    expect(seoAiCitationParams("perplexity", "best plumber in Leeds", null))
+      .not.toHaveProperty("web_search");
+  });
+
+  test("location reaches the engines that take one and is withheld from the rest", () => {
+    const leeds = { countryIso: "GB", city: "Leeds" };
+
+    // Gemini's endpoint has no location parameters and would refuse the whole
+    // request, so the client's place is quietly not sent rather than sent and
+    // failed.
+    expect(seoAiCitationParams("chatgpt", "q here", leeds)).toMatchObject({
+      web_search_country_iso_code: "GB",
+      web_search_city: "Leeds",
+    });
+    expect(seoAiCitationParams("gemini", "q here", leeds))
+      .not.toHaveProperty("web_search_country_iso_code");
+  });
+
+  test("the model is the table's, never a caller's", () => {
+    // A caller choosing a model is a caller choosing a price.
+    const params = seoAiCitationParams("claude", "q here", null);
+    expect(typeof params.model_name).toBe("string");
+    expect(params.user_prompt).toBe("q here");
   });
 });
