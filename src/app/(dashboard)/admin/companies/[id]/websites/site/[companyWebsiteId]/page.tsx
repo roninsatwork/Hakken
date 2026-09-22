@@ -365,6 +365,12 @@ export default function CompanyWebsiteDetailPage() {
           >
             {tPrompts("seeCitations")}
           </Link>
+          <Link
+            href={`/admin/companies/${companyId}/websites/site/${companyWebsiteId}/fan-out`}
+            className="text-[13px] text-brand hover:underline"
+          >
+            {tPrompts("seeFanOut")}
+          </Link>
         </div>
       </div>
 

@@ -303,7 +303,9 @@ export async function judgeNewKeywords(
   args: {
     companyId?: Id<"companies">;
     pullId: Id<"seoDataPulls">;
-    host: string;
+    /** The site these searches came from, when they came from one. A fan-out
+     * belongs to a question rather than to a website, so it passes none. */
+    host?: string;
     keywords: string[];
   },
   deps: RunDecisionsDeps = {},
@@ -329,7 +331,7 @@ export async function judgeNewKeywords(
         ...(args.companyId ? { companyId: args.companyId } : {}),
         subject: { kind: "seo-keywords", id: args.pullId },
         state: {
-          business: { address: args.host },
+          ...(args.host ? { business: { address: args.host } } : {}),
           searches: Object.fromEntries(batch.map((keyword, index) => [`${index}`, { text: keyword }])),
         },
         requests: batch.map((_keyword, index) => ({

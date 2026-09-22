@@ -241,20 +241,27 @@ export function isBulkOperation(operationId: string): boolean {
 }
 
 /**
- * An AI engine's answer, reduced to the two things we read from it.
+ * An AI engine's answer, reduced to the three things we read from it.
  *
  * The text is kept only long enough to run the brand matcher over it, and the
  * sources are the URLs the engine cited. Neither the text nor any passage of
  * it is stored: an answer is prose from a model that read the open web, and the
  * way to keep it out of any agent's prompt is not to keep it.
  *
+ * The third is the fan-out: the related searches the engine derived from the
+ * question before answering it. Those are searches, not prose, and they are
+ * the questions the engine actually went looking for answers to — which is the
+ * surface a site has to be visible on, rather than the one question we asked.
+ *
  * Shape, from DataForSEO's docs on 2026-09-22:
  * `result[0].items[]` of type "message", each with `sections[]` holding `text`
- * and, when web search was on, `annotations[]` holding `url` and `title`.
+ * and, when web search was on, `annotations[]` holding `url` and `title`;
+ * `result[0].fan_out_queries[]` holding plain strings.
  */
 export function parseLlmResponse(result: unknown): {
   answer: string;
   sources: Array<{ url: string; title?: string }>;
+  fanOutQueries: string[];
 } {
   const item = firstItem(result);
   const messages = asArray(item?.items);
@@ -284,7 +291,20 @@ export function parseLlmResponse(result: unknown): {
     }
   }
 
-  return { answer: parts.join("\n"), sources };
+  // Not every engine runs a fan-out, and one that does not simply omits the
+  // field. An absent fan-out is nothing to record, never an error.
+  const fanOutQueries: string[] = [];
+  const seenQuery = new Set<string>();
+  for (const entry of asArray(item?.fan_out_queries)) {
+    const query = asString(entry);
+    if (!query) continue;
+    const key = query.trim().toLowerCase();
+    if (!key || seenQuery.has(key)) continue;
+    seenQuery.add(key);
+    fanOutQueries.push(query.trim());
+  }
+
+  return { answer: parts.join("\n"), sources, fanOutQueries };
 }
 
 /**

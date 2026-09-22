@@ -340,6 +340,38 @@ request body.
 
 Steps 1 and 2 are independent of everything else and could ship on their own.
 
+## Fan-out searches (built 2026-09-22)
+
+An AI engine does not answer the question it is given. It expands it into
+related searches, reads what those return, and writes from that. DataForSEO
+returns that expansion as `fan_out_queries` on the same response the citations
+are read from, and the parser was discarding it with the rest of the payload.
+
+It is the most valuable field on that response and it costs nothing, because
+the answer carrying it has already been bought. A tracked prompt tells a client
+whether they were named once; the fan-out tells them the questions the engine
+actually went looking for answers to, which is the surface they have to be
+visible on.
+
+Rows live in `promptFanOutQueries`, keyed on the question, the engine, the
+place and the search, exactly as `aiCitations` is keyed on the question rather
+than on a website, and for the same reason: the purchase is shared. The place
+is held as the country and city actually sent, because that is what these
+endpoints take. One row per search rather than one per collection, counting
+appearances, because what matters is which searches keep coming back;
+`lastPullId` is what stops a re-parse counting the same answer twice.
+
+A fan-out search is a search, so it goes through `seo.keyword-intent` — the
+same judgment and the same shared store the rankings screen reads, so a phrase
+met on both is judged once and paid for once. The screen is
+`.../site/[companyWebsiteId]/fan-out`, most persistent first.
+
+**Not covered.** Google AI Mode returns references and citations but no
+sub-queries, so this is a signal from the engines asked through LLM Responses
+only, and which of the four populate the field is unproven against the live
+service. Raw payloads are swept after thirty days, so fan-outs from collections
+older than that are gone; anything newer could be back-filled by re-parsing.
+
 ## Judgments, through the Decisions framework
 
 Status: **all four built 2026-09-22**, each switched off, each with the code

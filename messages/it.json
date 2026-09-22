@@ -1489,7 +1489,8 @@
         },
         "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate.",
         "seeCitations": "Vedi cosa hanno risposto i motori",
-        "seeKeywords": "Vedi per cosa si posiziona"
+        "seeKeywords": "Vedi per cosa si posiziona",
+        "seeFanOut": "Guarda che cosa hanno cercato i motori"
       },
       "discovered": {
         "title": "Siti in gara sulle stesse ricerche",
@@ -5197,6 +5198,26 @@
         "BRANDED": "Cerca questa attività",
         "IRRELEVANT": "Non c'entra",
         "OTHER": "Troppo vaga"
+      }
+    },
+    "websiteFanOut": {
+      "back": "Torna al sito web",
+      "notFound": "Questo sito web non è più gestito da questa azienda.",
+      "subtitle": "Le ricerche che i motori AI eseguono quando ricevono le domande di questo sito.",
+      "searchPlaceholder": "Cerca fra queste ricerche...",
+      "empty": "Ancora nulla. La prossima raccolta registrerà che cosa hanno cercato i motori.",
+      "noMatch": "Nessuna ricerca corrisponde.",
+      "queryColumn": "Che cosa ha cercato il motore",
+      "intentColumn": "Che cosa vogliono",
+      "enginesColumn": "Motori",
+      "timesColumn": "Volte viste",
+      "unjudged": "Non valutata",
+      "intents": {
+        "BUYING": "Pronto all'acquisto",
+        "RESEARCHING": "Sta facendo ricerche",
+        "BRANDED": "Cerca un'azienda",
+        "IRRELEVANT": "Non c'entra nulla",
+        "OTHER": "Troppo vaga per dirlo"
       }
     }
   },

@@ -640,6 +640,54 @@ export default defineSchema({
     .index("by_active", ["isActive"]),
 
   /**
+   * A search an AI engine derived from one of our questions before answering.
+   *
+   * An engine does not answer the question it was asked. It expands it into
+   * related searches, reads what those return, and writes from that. Those
+   * searches are the surface a site actually has to be visible on, and they
+   * arrive in every answer we already buy — `fan_out_queries` on the response,
+   * which the parser used to throw away with the rest of the payload.
+   *
+   * **Keyed on the question, not on a website**, exactly like `aiCitations`
+   * and for the same reason: the purchase is shared, so two companies asking
+   * the same thing in the same place buy one answer and read their own view
+   * out of it. The place is part of the key because the fan-out for "best
+   * plumber" in Leeds is not the fan-out in London, and merging them would put
+   * a search on a screen that never happened for that client. It is held as
+   * the country and city actually sent rather than as a location code, because
+   * that is what these endpoints take. `aiCitations` recovers a code from the
+   * city instead, which is fine for a row that is only labelled by it but would
+   * be wrong in a key: a question asked for a country with no city recovers no
+   * code at all, and two countries would then share one row.
+   *
+   * One row per search rather than one per collection: what matters is which
+   * searches keep coming back, so the row counts appearances and holds the
+   * first and last day it was seen. `lastPullId` is what stops a re-parse
+   * counting the same answer twice.
+   */
+  promptFanOutQueries: defineTable({
+    /** The question as sent, matching how `aiCitations` keys its rows. */
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    /** `GB`, or `GB/Leeds`. Absent when the engine takes no place. */
+    place: v.optional(v.string()),
+    /** Lowercased and space-collapsed, the shape `seoKeywordIntents` holds. */
+    query: v.string(),
+    /** As the engine wrote it, for the screen to show. */
+    queryText: v.string(),
+    /** How many collections this search has come back in. */
+    timesSeen: v.number(),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+    /** `YYYY-MM-DD` of the most recent answer that produced it. */
+    lastSeenDay: v.string(),
+    /** The last purchase counted, so re-parsing one answer counts once. */
+    lastPullId: v.id("seoDataPulls"),
+  })
+    .index("by_prompt", ["prompt"])
+    .index("by_prompt_engine_place_query", ["prompt", "engine", "place", "query"]),
+
+  /**
    * One name, in one AI answer, to one question, on one day.
    *
    * **A row per mention, never per tracked site.** The answer names whoever it

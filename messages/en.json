@@ -1489,7 +1489,8 @@
         },
         "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for.",
         "seeCitations": "See what the engines answered",
-        "seeKeywords": "See what it ranks for"
+        "seeKeywords": "See what it ranks for",
+        "seeFanOut": "See what the engines searched for"
       },
       "discovered": {
         "title": "Websites competing for the same searches",
@@ -5195,6 +5196,26 @@
         "BUYING": "Ready to buy",
         "RESEARCHING": "Researching",
         "BRANDED": "Looking for this business",
+        "IRRELEVANT": "Nothing to do with it",
+        "OTHER": "Too vague to tell"
+      }
+    },
+    "websiteFanOut": {
+      "back": "Back to the website",
+      "notFound": "That website is no longer held by this company.",
+      "subtitle": "The searches the AI engines run when asked this website's questions.",
+      "searchPlaceholder": "Search these searches...",
+      "empty": "Nothing yet. The next collection records what the engines searched for.",
+      "noMatch": "No search matches that.",
+      "queryColumn": "What the engine searched",
+      "intentColumn": "What they want",
+      "enginesColumn": "Engines",
+      "timesColumn": "Times seen",
+      "unjudged": "Not judged",
+      "intents": {
+        "BUYING": "Ready to buy",
+        "RESEARCHING": "Researching",
+        "BRANDED": "Looking for a business",
         "IRRELEVANT": "Nothing to do with it",
         "OTHER": "Too vague to tell"
       }

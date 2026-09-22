@@ -76,8 +76,9 @@ describe("reading an answer", () => {
   });
 
   test("survives a shape it does not recognise", () => {
-    expect(parseLlmResponse(null)).toEqual({ answer: "", sources: [] });
-    expect(parseLlmResponse([{ items: [{ type: "message" }] }])).toEqual({ answer: "", sources: [] });
+    const nothing = { answer: "", sources: [], fanOutQueries: [] };
+    expect(parseLlmResponse(null)).toEqual(nothing);
+    expect(parseLlmResponse([{ items: [{ type: "message" }] }])).toEqual(nothing);
   });
 });
 

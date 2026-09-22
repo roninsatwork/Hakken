@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses } from "./seoJudgments";
+import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
 import { findBrandMention } from "./websiteBrands";
 import {
   isBulkOperation,
@@ -108,14 +108,47 @@ export const parseSeoResult = internalAction({
           })),
         });
 
+        const day = new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10);
+
         await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
           pullId: args.pullId,
           prompt,
           engine,
-          day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+          day,
           brands: judged,
           sources: linked,
         });
+
+        // The engine's own expansion of the question. These arrive in every
+        // answer we already buy, and they are searches rather than prose, so
+        // they are kept and then judged like any other search.
+        if (parsed.fanOutQueries.length > 0) {
+          // The place as sent, which for these endpoints is a country and an
+          // optional city rather than a location code.
+          const country = typeof sent.web_search_country_iso_code === "string"
+            ? sent.web_search_country_iso_code
+            : undefined;
+          const city = typeof sent.web_search_city === "string" ? sent.web_search_city : undefined;
+          const place = country ? (city ? `${country}/${city}` : country) : undefined;
+
+          await ctx.runMutation(internal.seoCollectionParse.writeFanOutQueries, {
+            pullId: args.pullId,
+            prompt,
+            engine,
+            ...(place !== undefined ? { place } : {}),
+            day,
+            queries: parsed.fanOutQueries,
+          });
+
+          // A fan-out search is a search: judged once per phrase and shared
+          // with every other client who meets it, which is why adding this
+          // costs almost nothing beyond the first time a phrase appears.
+          await judgeNewKeywords(ctx, {
+            ...(pull.companyId ? { companyId: pull.companyId } : {}),
+            pullId: args.pullId,
+            keywords: parsed.fanOutQueries,
+          });
+        }
       } catch (error) {
         await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
           pullId: args.pullId,
@@ -344,6 +377,77 @@ export const writeSeoMetrics = internalMutation({
  * Replaces by pull, like every other parse, so a corrected matcher can be run
  * over stored payloads without anyone auditing the result afterwards.
  */
+/**
+ * Keep the searches an engine derived from one of our questions.
+ *
+ * One row per search per question per engine per place, counted rather than
+ * logged: what a reader wants is which searches keep coming back, not a diary
+ * of every collection. `lastPullId` makes a re-parse idempotent — running a
+ * corrected parser over a month of stored answers must not multiply the counts
+ * by the number of times it was run.
+ *
+ * The text is a search phrase the engine wrote, not a passage of its answer,
+ * so unlike the answer itself it is safe to keep and is the whole point of
+ * keeping it.
+ */
+export const writeFanOutQueries = internalMutation({
+  args: {
+    pullId: v.id("seoDataPulls"),
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    place: v.optional(v.string()),
+    day: v.string(),
+    queries: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    for (const queryText of args.queries.slice(0, MAX_FAN_OUT_QUERIES)) {
+      const query = normaliseKeyword(queryText);
+      if (!query) continue;
+
+      const existing = await ctx.db
+        .query("promptFanOutQueries")
+        .withIndex("by_prompt_engine_place_query", (q) =>
+          q
+            .eq("prompt", args.prompt)
+            .eq("engine", args.engine)
+            .eq("place", args.place)
+            .eq("query", query),
+        )
+        .unique();
+
+      if (!existing) {
+        await ctx.db.insert("promptFanOutQueries", {
+          prompt: args.prompt,
+          engine: args.engine,
+          ...(args.place !== undefined ? { place: args.place } : {}),
+          query,
+          queryText,
+          timesSeen: 1,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          lastSeenDay: args.day,
+          lastPullId: args.pullId,
+        });
+        continue;
+      }
+
+      // The same answer read twice is still one appearance.
+      if (existing.lastPullId === args.pullId) continue;
+
+      await ctx.db.patch(existing._id, {
+        queryText,
+        timesSeen: existing.timesSeen + 1,
+        lastSeenAt: now,
+        lastSeenDay: args.day,
+        lastPullId: args.pullId,
+      });
+    }
+    return null;
+  },
+});
+
 export const writeAiCitations = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
@@ -463,6 +567,14 @@ const MAX_CITATION_ROWS = 200;
 
 /** A ceiling on the platform's branded estate, not on this feature. */
 const MAX_BRANDED_WEBSITES = 2_000;
+
+/**
+ * Fan-out searches kept per answer.
+ *
+ * An engine publishes a handful; this is a guard against a payload that is not
+ * what the docs describe, not a judgment about how many are worth having.
+ */
+const MAX_FAN_OUT_QUERIES = 50;
 
 /**
  * File one bulk response against every website it covered.
