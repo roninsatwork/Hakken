@@ -196,6 +196,18 @@ Files: `seoCollection.ts` writes the work list, `seoCollectionQueue.ts` holds th
 
 **The hourly sweep is the watchdog, not the driver.** `seo-collection-sweep` runs through `jobLedger` like every other job. It reclaims claims older than `SEO_CLAIM_TIMEOUT_MS`, chases submitted tasks whose pingback never arrived, fails those past `SEO_RESULT_TIMEOUT_MS`, closes settled cycles, opens `OVERRIDE_SWEEP` cycles for websites on their own faster schedule, restarts the drain if anything is due, and clears expired payloads and cycles. Hourly and not minutely: it exists to catch failure. Starting a second set of worker chains beside a live one is harmless, because claiming is atomic, which is why liveness is never tracked.
 
+## AI Citations Runtime
+
+The fourth cost shape, after per site, bulk and per keyword: **per question**. A `trackedPrompts` row is a question one company asks about one of its websites. Expansion plans one pull per active question per engine for every due website, through the same queue as everything else. `seoAiEngines.ts` is the table of how each engine is asked — two of the four queue a task and two only answer live, and only two take a location — and `dataForSeoRegistry.ts` builds the four operations from it rather than writing them out four times. The table names the engines; this page deliberately does not, so there is one place to correct when a provider changes.
+
+**What is bought is the question, not the brand.** The idempotency key is the question, the engine and the place, so two companies asking the same thing in the same place on the same day buy one answer and each reads its own citations out of it through its own cycle line. Reuse is by exact key only: an AI answer is a fact about a day, not about a site, so there is no freshness ladder here.
+
+**Nothing of the answer is stored.** `parseLlmResponse` reduces it to the answer text and the cited URLs; `writeAiCitations` runs `findBrandMention` over every website that has brand names — the client, its rivals, and everyone else held — writes one `aiCitations` row per mention with the matched variant or the cited domain, and drops the text. An engine's answer is prose from a model that read the open web, and the way to keep it out of any agent's prompt is not to keep it. The matcher answers once per site however many of its names matched, whole-word, and never turns a name into a pattern.
+
+A pull DataForSEO refused outright is re-opened by `reusableByKey` on the next cycle rather than reused as if it had answered, but only when no task id was ever issued: a refusal was never charged, a submitted task was, and re-posting a paid task is buying the same data twice.
+
+Read through `seoCitationReports.ts`, which starts from a company's hold on a website and walks to the pulls its own lines point at, never from the shared citation table outward. That direction is what keeps one client's rivals off another client's screen.
+
 ## Webhook Runtime Boundaries
 
 Webhook runtime is intentionally narrow:

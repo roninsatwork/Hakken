@@ -1,7 +1,8 @@
 # Brands, Places and AI Citations
 
-Status: **steps 1 to 5 built, 2026-09-21 and 2026-09-22.** Step 6, the
-close-out, remains. Owner: Anthony
+Status: **Built 2026-09-21 and 2026-09-22.** Two caveats in "What DataForSEO
+actually sells here", and one open decision on live versus queued.
+Owner: Anthony
 
 The collection pipeline works. It asks DataForSEO two questions about a host —
 what links to it, what it ranks for — and files the answers. This plan is about
@@ -330,7 +331,9 @@ request body.
    audience. Queued rather than live, because a collection nobody is waiting on
    does not need an answer inside two minutes and queued has no engine token
    cost passed through.
-6. **Docs and plan close-out.**
+6. **Docs and plan close-out.** **Done 2026-09-22.** The runtime section is in
+   `docs/developer/workflow-runtime-internals.md`, the screens and allowance in
+   `docs/developer/workflow-automation.md`.
 
 Steps 1 and 2 are independent of everything else and could ship on their own.
 

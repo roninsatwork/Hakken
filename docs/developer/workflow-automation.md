@@ -139,6 +139,16 @@ What the woken agent does is open a cycle and stop. It sends nothing; see the SE
 
 Two screens are called Data Collection and they are not the same screen. `/admin/companies/[id]/websites/data` is the company's cadence setting. `/admin/websites/collection` is the platform's queue, its history and its cost, and it is global because the queue is one shared pipeline and every figure on it is the operator's own spend. Keep costs, queues and runs off the company screen: that workspace becomes customer-facing.
 
+## AI Citations
+
+The questions a company puts to the AI engines live on that company's view of a website, beside its competitors: `/admin/companies/[id]/websites/site/[companyWebsiteId]` holds them, and "See what the engines answered" opens `.../citations`, one row per answer with the question, the engine, whether the site was named and where, and everyone else who was. That last column names rivals nobody thought to list, and it costs nothing extra because the answer named them anyway. Chips for a name nobody holds are marked apart from those somebody is already tracking.
+
+Brand names sit on the global website record at `/admin/websites/[websiteId]`, up to five with one primary and each tagged as a correct name or a known misspelling, super-admin only because the list is shared by everyone tracking the host. Location sits on the company's view, because there two companies genuinely differ.
+
+The allowance is on the plan, beside the message limit: how many questions each owned website on that tier may track. Absent means the platform default; zero means the tier does not include it. A website holding more than its plan now allows, after a downgrade, is shown as such rather than trimmed, and cannot add more.
+
+The questions are written by admins and, later, clients. Nothing generates them.
+
 ## Verification
 
 Relevant tests include:
