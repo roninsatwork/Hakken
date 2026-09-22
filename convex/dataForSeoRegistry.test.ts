@@ -349,19 +349,14 @@ describe("asking an AI engine", () => {
     for (const id of citation) expect(perSite).not.toContain(id);
   });
 
-  test("two engines queue and two answer live, as their models pages say", () => {
-    // Perplexity and Gemini publish no queueable model. Sending either a
-    // task_post is a charged request refused with "this model does not
-    // support task_post mode" — which is exactly what the sandbox said on
-    // 2026-09-22 before this was corrected.
-    const byId = new Map(seoAiCitationOperations().map((operation) => [operation.id, operation]));
-    for (const engine of ["perplexity", "gemini"]) {
-      expect(byId.get(`ai_citation_${engine}`)?.mode).toBe("LIVE");
-      expect(byId.get(`ai_citation_${engine}`)?.path).toMatch(/\/live$/);
-    }
-    for (const engine of ["chatgpt", "claude"]) {
-      expect(byId.get(`ai_citation_${engine}`)?.mode).toBe("QUEUED");
-      expect(byId.get(`ai_citation_${engine}`)?.resultPath).toMatch(/task_get\/\$id$/);
+  test("every engine is asked live, because live is cheaper", () => {
+    // Queued is a flat penny a question; live is a fraction of that for the
+    // cheap models chosen. Decided 2026-09-22 once the price list was read.
+    // Two of the four could never queue anyway.
+    for (const operation of seoAiCitationOperations()) {
+      expect(operation.mode).toBe("LIVE");
+      expect(operation.path).toMatch(/\/live$/);
+      expect(operation.resultPath).toBeUndefined();
     }
   });
 

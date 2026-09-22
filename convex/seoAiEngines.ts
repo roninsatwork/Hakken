@@ -38,13 +38,20 @@ export const DEFAULT_AI_ENGINES: readonly AiEngine[] = AI_ENGINES;
 /**
  * How each engine is actually asked, read from DataForSEO's docs on 2026-09-22.
  *
- * Not one shape. ChatGPT and Claude queue a task and answer later; Gemini and
- * Perplexity only answer live, so their operations are live and the result
- * arrives in the same reply. Gemini's models page lists every model with
- * `task_post_supported: false`, confirmed 2026-09-22 after the sandbox refused
- * a queued request. Two engines take a country and a city for their web
- * search; Gemini takes no location at all, so a client's chosen place reaches
- * ChatGPT and Claude and is silently not sent to Gemini rather than refused.
+ * **Every engine is asked live, and the reason is cost.** Queued is a flat
+ * penny a question. Live is six hundredths of a cent plus the engine's own
+ * token price, and for the cheap models named below that comes to about a
+ * quarter of a penny — four times cheaper. The plan assumed the opposite until
+ * the price list was read on 2026-09-22; Anthony, the same day: "cost is a
+ * driver here for us." Live also removes the pingback from this path. The
+ * price is a worker waiting up to two minutes per answer, which at these
+ * volumes is nothing.
+ *
+ * Gemini and Perplexity could never queue anyway: every model on their pages
+ * is published with `task_post_supported: false`. Two engines take a country
+ * and a city for their web search; Gemini takes no location at all, so a
+ * client's chosen place reaches ChatGPT and Claude and is silently not sent to
+ * Gemini rather than refused.
  *
  * The model names are DataForSEO parameter values, not our runtime model
  * choices, and each is the cheapest one on their list that supports web search
@@ -66,14 +73,14 @@ export const AI_ENGINE_CALLS: Record<AiEngine, {
 }> = {
   chatgpt: {
     platform: "chat_gpt",
-    mode: "QUEUED",
+    mode: "LIVE",
     modelName: "gpt-4o-mini",
     takesLocation: true,
     hasWebSearchSwitch: true,
   },
   claude: {
     platform: "claude",
-    mode: "QUEUED",
+    mode: "LIVE",
     // The dated name rather than the `-latest` alias. Their docs mark both as
     // queueable, but the sandbox refused the alias with "this model does not
     // support task_post mode" on 2026-09-22, and a dated name is what they

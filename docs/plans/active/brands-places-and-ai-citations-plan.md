@@ -1,7 +1,7 @@
 # Brands, Places and AI Citations
 
-Status: **Built 2026-09-21 and 2026-09-22.** Two caveats in "What DataForSEO
-actually sells here", and one open decision on live versus queued.
+Status: **Built 2026-09-21 and 2026-09-22.** One caveat in "What DataForSEO
+actually sells here": Claude and Gemini are unproven against the sandbox.
 Owner: Anthony
 
 The collection pipeline works. It asks DataForSEO two questions about a host —
@@ -133,13 +133,13 @@ Gemini under both the queued and the live path, each with the same
 these two can only be proven with live credentials. Until then the code for
 both is covered by tests and unexercised against the service.
 
-**Live may be cheaper than queued for the models we chose.** Queued is a flat
-penny a question. Live is six hundredths of a cent plus the engine's own token
-price, and for the cheap models in the engine table that is a fraction of a
-penny. The plan's "queued by default" was decided before those prices were
-read. It is a decision for the owner, not silently changed here: live also
-removes the pingback dependency, at the cost of a worker chain waiting up to two
-minutes per answer.
+**Every engine is asked live. Decided 2026-09-22 by Anthony: "cost is a driver
+here for us."** Queued is a flat penny a question. Live is six hundredths of a
+cent plus the engine's own token price, and for the cheap models in the engine
+table that is about a quarter of a penny — four times cheaper. The plan's
+"queued by default" was written before those prices were read. Live also
+removes the pingback from this path, at the cost of a worker waiting up to two
+minutes per answer, which at these volumes is nothing.
 
 **LLM Mentions.** No question needed. Give it a domain or a brand name, up to
 ten per call, and it returns how often that name comes up in AI answers, the AI
