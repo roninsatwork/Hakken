@@ -30,7 +30,11 @@ completed work.
   two companies would not disagree about them, location sits on the join row
   because they would, and the thing we buy is the prompt rather than the brand —
   so one purchase answers every watcher, exactly as one row per host already
-  does. **Designed 2026-09-21, not built.**
+  does. **Built 2026-09-21 and 2026-09-22.** Four judgments for Jev, through the
+  existing Decisions framework, are designed and not built. All four are to be
+  built, because Jev is far cheaper than a text model and is the default
+  wherever a judgment is needed; the first, whether a brand was recommended or
+  merely mentioned, goes first.
 
 - [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
 - [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.

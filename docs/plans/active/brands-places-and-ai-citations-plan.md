@@ -337,6 +337,77 @@ request body.
 
 Steps 1 and 2 are independent of everything else and could ship on their own.
 
+## Judgments, through the Decisions framework
+
+Read [Decisions](./decisions-typesafe-plan.md) first. Jev is already a provider
+here, behind a framework that declares each judgment in code
+(`convex/decisionRegistry.ts`), asks it with a state object and a fixed answer
+set (`runDecisions`), lets an admin switch it on or off, traces it on the
+observability screens, and answers it with any model rather than only TypeSafe.
+Twelve Decisions exist and ship switched off. So none of this is an
+integration: it is entries in a registry that already handles budgets,
+fallbacks, audit and screens.
+
+Two rules from that plan bind everything below. **A Decision ships switched off
+and must work with a code fallback**, so every entry here names the default
+that keeps its screen honest with no model at all. And **a per-company Decision
+budget is recorded there as unbuilt**; the per-keyword and per-competitor
+judgments below are the first with real volume, so it stops being a follow-up
+the day either is switched on.
+
+Where Jev does not belong, so nobody reaches for it there: matching brand
+names in text is exact string work and stays in `websiteBrands.ts`; costs,
+schedules, queues and dedupe are rules; and nothing here writes a word a
+customer reads.
+
+Discussed 2026-09-22. In the order worth building.
+
+**1. Was the brand recommended, or merely mentioned?** The highest-value
+change on this list, because it changes what the citations screen *means*.
+Today "named second" means the brand string appeared; an answer saying "avoid
+Ronins Agency" counts as a citation. One Choice over the answer text and the
+matched name — recommended, mentioned neutrally, warned against — asked once
+per brand found, several brands riding one request over the same answer. This
+is TypeSafe's own citation-check pattern almost line for line. Fallback:
+"mentioned", which is what the screen says today. Below "sure", the pill reads
+"mentioned" and the answer's stance is left unclaimed rather than guessed. The
+answer text reaches the model as state and is still never stored.
+
+**2. Is this unknown name the rival we already track?** The citations page
+shows "Acme Plumbing" and `acme-plumbing.co.uk` as two strangers. Code pairs
+each unmatched name with the tracked hosts it could plausibly be — shared
+words, shared domain stem — and one Score per pair with three levels, same,
+possibly the same, different, decides. Nearest level names the outcome; only
+"possibly" goes to a person. TypeSafe's entity-alignment cookbook, level for
+level. Fallback: different, which is what the screen shows today. A confirmed
+match is recorded as a brand name on the rival's shared record, so it serves
+everyone.
+
+**3. Which discovered competitors are real rivals?** DataForSEO's competitor
+discovery returns dozens of domains that share keywords, many of them
+directories, marketplaces and publishers. One Choice per candidate — direct
+competitor, marketplace or directory, publisher, unrelated — before a client
+sees the list. Fallback: shown unfiltered, labelled as unjudged. This is the
+first Decision with volume, and it is where the per-company budget is needed.
+
+**4. Which ranked keywords are worth tracking?** Thousands come back per site
+and each tracked one is a paid task per collection. One Choice per keyword —
+buying intent, researching, branded, irrelevant — picks the few hundred worth
+position-tracking, which also protects the plan meters. Fallback: none tracked
+until a person chooses. Volume again; budget again.
+
+Each is a Decision entry with `usedIn: "seo"`, a new value on that union, and
+copy under `decisions.catalogue`. Cost is per token at roughly 150 milliseconds
+a call; judging one answer for four brands is one request.
+
+**The principle, from Anthony, 2026-09-22: use Jev wherever it makes sense
+and as much as possible, because it is far cheaper than a text model.** So all
+four are to be built, not just the first — the first goes first because it
+changes what a screen means and teaches the framework's behaviour on our data,
+and the two with volume land together with the per-company budget. Where a
+judgment would otherwise reach for a text model, a Decision is the default
+answer and a text model needs a reason.
+
 ## Open questions
 
 Recorded as open rather than quietly decided. Each changes code. Two of the four
