@@ -29,15 +29,25 @@ export const MIN_PROMPT_LENGTH = 8;
 /**
  * How many questions one website may track, by default.
  *
- * Ten, because each question is a paid call *per engine* per collection: ten
- * questions across four engines is forty charges every time that website is
- * collected. This is the meter that decides what AI citation tracking costs.
+ * **Deliberately not a restriction at the moment.** Each question is a paid
+ * call per engine per collection, so this is the meter that decides what AI
+ * citation tracking costs — and the number it should be set to is unknown
+ * until real invoices arrive. Anthony, 2026-09-22: "For pricing let's leave it
+ * for now and see what real costs start to come through and we can revisit. As
+ * long as all transactions are stored and logged and visible... I want the
+ * platform unrestricted until we have this review."
+ *
+ * So the mechanism stays and the number is set high enough not to bite. It was
+ * ten, which is the figure to come back to when the plan meters are decided:
+ * ten questions across four engines is forty charges every time a website is
+ * collected. Spend is on the ledger, the pulls list and the cost screens
+ * throughout, which is the condition that made lifting it safe.
  *
  * Settable by a super admin rather than frozen, following the pattern approval
  * expiry and purge retention already use — a `systemConfig` row, a validated
  * setter with a hard floor and ceiling, and a section on the settings screen.
  */
-export const DEFAULT_PROMPTS_PER_WEBSITE = 10;
+export const DEFAULT_PROMPTS_PER_WEBSITE = 1_000;
 
 /** Below this the feature does nothing, so it is not a setting, it is "off". */
 export const MIN_PROMPTS_PER_WEBSITE = 1;
@@ -45,11 +55,13 @@ export const MIN_PROMPTS_PER_WEBSITE = 1;
 /**
  * The most a super admin may set it to.
  *
- * A hard ceiling on the setting itself, not just on the form. At four engines
- * this is already two hundred charges per website per collection, and a typed
- * extra zero should be refused rather than billed.
+ * A hard ceiling on the setting itself, not just on the form. It was fifty,
+ * for the good reason that a typed extra zero should be refused rather than
+ * billed; it is raised with the default above while the platform is
+ * deliberately unrestricted, and it is also what bounds how many questions one
+ * collection reads per website, so the two must move together.
  */
-export const MAX_PROMPTS_PER_WEBSITE = 50;
+export const MAX_PROMPTS_PER_WEBSITE = 1_000;
 
 /**
  * The allowance in force for one company, which comes from its plan.

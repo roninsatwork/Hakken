@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   describeSeoOperation,
@@ -110,7 +110,27 @@ export const startSeoCollection = internalMutation({
     cycleId: v.union(v.id("seoCollectionCycles"), v.null()),
     message: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => await openSeoCycle(ctx, args),
+});
+
+/**
+ * Open a cycle, whoever asked for it.
+ *
+ * Extracted so the agent's tool and the operator's button are the same code
+ * rather than two copies that drift. The one-open-cycle rule is the reason
+ * this must not be duplicated: a second copy that forgot it would plan the
+ * same work twice, and the only thing between that and a doubled bill would be
+ * the idempotency key, which is a safety net rather than a plan.
+ */
+export async function openSeoCycle(
+  ctx: MutationCtx,
+  args: {
+    companyId: Id<"companies">;
+    agentRunId?: Id<"agentRuns">;
+    trigger: "SCHEDULE" | "MANUAL";
+  },
+): Promise<{ ok: boolean; cycleId: Id<"seoCollectionCycles"> | null; message: string }> {
+  {
     const schedule = await ctx.db
       .query("schedules")
       .withIndex("by_company_agent", (q) => q.eq("companyId", args.companyId))
@@ -155,8 +175,8 @@ export const startSeoCollection = internalMutation({
       cycleId,
       message: "Collection started. The work list is being written and will send itself.",
     };
-  },
-});
+  }
+}
 
 const TERMINAL = ["DONE", "FAILED", "CAPPED_PLAN", "CAPPED_SPEND"];
 

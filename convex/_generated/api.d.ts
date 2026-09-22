@@ -233,6 +233,7 @@ import type * as seoCollectionParse from "../seoCollectionParse.js";
 import type * as seoCollectionPolicy from "../seoCollectionPolicy.js";
 import type * as seoCollectionQueue from "../seoCollectionQueue.js";
 import type * as seoCollectionReports from "../seoCollectionReports.js";
+import type * as seoCollectionStart from "../seoCollectionStart.js";
 import type * as seoCollectionSweep from "../seoCollectionSweep.js";
 import type * as seoDiscoveredCompetitors from "../seoDiscoveredCompetitors.js";
 import type * as seoFanOutReports from "../seoFanOutReports.js";
@@ -619,6 +620,7 @@ declare const fullApi: ApiFromModules<{
   seoCollectionPolicy: typeof seoCollectionPolicy;
   seoCollectionQueue: typeof seoCollectionQueue;
   seoCollectionReports: typeof seoCollectionReports;
+  seoCollectionStart: typeof seoCollectionStart;
   seoCollectionSweep: typeof seoCollectionSweep;
   seoDiscoveredCompetitors: typeof seoDiscoveredCompetitors;
   seoFanOutReports: typeof seoFanOutReports;

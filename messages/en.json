@@ -5133,7 +5133,19 @@
         "search": "Filter states...",
         "noMatches": "No state matches that."
       },
-      "manySites": "{count, plural, one {# website} other {# websites}} in one call"
+      "manySites": "{count, plural, one {# website} other {# websites}} in one call",
+      "collectNow": {
+        "button": "Collect now",
+        "title": "Start a collection",
+        "companyLabel": "Company",
+        "companyPlaceholder": "Choose a company",
+        "confirm": "Start collecting",
+        "starting": "Starting...",
+        "warning": "This buys data. A cycle plans one paid request per website per operation the moment it opens.",
+        "alreadyRunning": "A collection for that company is already under way.",
+        "failed": "The collection could not be started.",
+        "started": "Collection started."
+      }
     },
     "seoCosts": {
       "title": "Cost to serve",

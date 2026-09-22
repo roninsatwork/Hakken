@@ -5133,7 +5133,19 @@
         "search": "Filtra stati...",
         "noMatches": "Nessuno stato corrisponde."
       },
-      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata"
+      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata",
+      "collectNow": {
+        "button": "Raccogli ora",
+        "title": "Avvia una raccolta",
+        "companyLabel": "Azienda",
+        "companyPlaceholder": "Scegli un'azienda",
+        "confirm": "Avvia la raccolta",
+        "starting": "Avvio in corso...",
+        "warning": "Questo acquista dati. Un ciclo pianifica una richiesta a pagamento per ogni sito e per ogni operazione nel momento in cui si apre.",
+        "alreadyRunning": "Una raccolta per quell'azienda è già in corso.",
+        "failed": "Non è stato possibile avviare la raccolta.",
+        "started": "Raccolta avviata."
+      }
     },
     "seoCosts": {
       "title": "Costo del servizio",
