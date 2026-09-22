@@ -343,8 +343,7 @@ Steps 1 and 2 are independent of everything else and could ship on their own.
 ## Judgments, through the Decisions framework
 
 Status: **all four built 2026-09-22**, each switched off, each with the code
-fallback named below. What is still owed is the per-company budget; see the end
-of this section.
+fallback named below. Nothing is owed on them.
 
 Read [Decisions](./decisions-typesafe-plan.md) first. Jev is already a provider
 here, behind a framework that declares each judgment in code
@@ -355,12 +354,16 @@ Twelve Decisions exist and ship switched off. So none of this is an
 integration: it is entries in a registry that already handles budgets,
 fallbacks, audit and screens.
 
-Two rules from that plan bind everything below. **A Decision ships switched off
+One rule from that plan binds everything below. **A Decision ships switched off
 and must work with a code fallback**, so every entry here names the default
-that keeps its screen honest with no model at all. And **a per-company Decision
-budget is recorded there as unbuilt**; the per-keyword and per-competitor
-judgments below are the first with real volume, so it stops being a follow-up
-the day either is switched on.
+that keeps its screen honest with no model at all.
+
+Volume is not a reason to hesitate. A Decision costs a fraction of a penny, no
+company is on a Decision budget, and spend lands on the ledger and the cost
+screens like every other model call. Anthony, 2026-09-22: "Decisions are super
+cheap and no company has a budget, it's virtually free to use." So the
+judgments below are asked about every row that needs one, and the batch sizes
+in the code are request shapes, not spending limits.
 
 Where Jev does not belong, so nobody reaches for it there: matching brand
 names in text is exact string work and stays in `websiteBrands.ts`; costs,
@@ -398,8 +401,7 @@ DataForSEO's competitor
 discovery returns dozens of domains that share keywords, many of them
 directories, marketplaces and publishers. One Choice per candidate — direct
 competitor, marketplace or directory, publisher, unrelated — before a client
-sees the list. Fallback: shown unfiltered, labelled as unjudged. This is the
-first Decision with volume, and it is where the per-company budget is needed.
+sees the list. Fallback: shown unfiltered, labelled as unjudged.
 
 **4. Which ranked keywords are worth tracking?** Built: `seo.keyword-intent`,
 stored in `seoKeywordIntents` and shown on the site's keywords screen.
@@ -407,7 +409,7 @@ Thousands come back per site
 and each tracked one is a paid task per collection. One Choice per keyword —
 buying intent, researching, branded, irrelevant — picks the few hundred worth
 position-tracking, which also protects the plan meters. Fallback: none tracked
-until a person chooses. Volume again; budget again.
+until a person chooses.
 
 Each is a Decision entry with `usedIn: "seo"`, a new value on that union, and
 copy under `decisions.catalogue`. Cost is per token at roughly 150 milliseconds
@@ -420,15 +422,12 @@ screen means and taught the framework's behaviour on our data, and the two with
 volume came last. Where a judgment would otherwise reach for a text model, a
 Decision is the default answer and a text model needs a reason.
 
-**What the volume ones do until the budget exists.** Keyword intent is judged
-once per distinct phrase and kept forever, so two clients in the same trade
-share every answer and a site's second collection asks nothing; a single run
-judges at most fifty new phrases, and the backlog drains over the collections
-that follow. Competitor judging is bounded by how many domains discovery
-returns. Both caps are interim. The per-company Decision budget in the
-[Decisions](./decisions-typesafe-plan.md) plan is what replaces them, and it
-stops being a follow-up the day either judgment is switched on for a client
-paying by volume.
+**What the two high-volume ones actually cost.** Keyword intent is judged once
+per distinct phrase and kept forever, so two clients in the same trade share
+every answer and a site's second collection asks nothing new. A first
+collection judges everything it found, in calls of fifty, and stops early if a
+whole call comes back from the rules. Competitor judging is bounded by how many
+domains discovery returns. Neither is capped for money.
 
 ## Open questions
 

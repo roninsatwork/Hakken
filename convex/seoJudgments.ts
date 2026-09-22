@@ -287,11 +287,16 @@ const COMPETITOR_KIND_BY_CHOICE: Record<string, "COMPETITOR" | "DIRECTORY" | "PU
  * same trade share every answer between them, because the store is keyed on
  * the search alone.
  *
- * Bounded per run as well, because a first collection of a large site would
- * otherwise be one very large bill on one day. The rest are picked up by the
- * collections that follow; nothing is lost, it arrives over a few days. That
- * cap is the interim measure until the per-company Decision budget the
- * Decisions plan records as unbuilt.
+ * Everything unjudged in a collection is judged in that collection. There is
+ * no cap on how many, because a Decision costs a fraction of a penny and no
+ * company is on a Decision budget (Anthony, 2026-09-22: "Decisions are super
+ * cheap and no company has a budget, it's virtually free to use"). The two
+ * numbers below are request shapes, not spending limits: how many phrases one
+ * query looks up, and how many questions ride in one call.
+ *
+ * The run stops early when a whole batch comes back from the rules, because
+ * that means the Decision is switched off or the provider is down, and every
+ * batch after it would say the same. Whatever was judged before that is kept.
  */
 export async function judgeNewKeywords(
   ctx: ActionCtx,
@@ -306,48 +311,59 @@ export async function judgeNewKeywords(
   const distinct = [...new Set(args.keywords.map(normaliseKeyword).filter((word) => word.length > 0))];
   if (distinct.length === 0) return;
 
-  const unjudged = await ctx.runQuery(internal.seoCollectionParse.findUnjudgedKeywords, {
-    keywords: distinct.slice(0, MAX_KEYWORD_LOOKUP),
-  });
-  const batch = unjudged.slice(0, MAX_KEYWORDS_JUDGED_PER_RUN);
-  if (batch.length === 0) return;
-
-  let results: Record<string, DecisionResult> = {};
-  try {
-    results = await runDecisions(ctx, {
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      subject: { kind: "seo-keywords", id: args.pullId },
-      state: {
-        business: { address: args.host },
-        searches: Object.fromEntries(batch.map((keyword, index) => [`${index}`, { text: keyword }])),
-      },
-      requests: batch.map((_keyword, index) => ({
-        key: "seo.keyword-intent",
-        id: `${index}`,
-        // Before this Decision existed every search looked alike, so the rule
-        // it replaces is "no opinion".
-        fallback: () => ({ kind: "pick-one" as const, choice: "other" }),
-      })),
-    }, deps);
-  } catch {
-    // Unjudged searches are simply judged next time. Nothing is lost and
-    // nothing is guessed.
-    return;
-  }
-
-  const judged = [];
-  for (const [index, keyword] of batch.entries()) {
-    const result = results[`${index}`];
-    if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") continue;
-    judged.push({
-      keyword,
-      intent: KEYWORD_INTENT_BY_CHOICE[result.answer.choice] ?? "OTHER",
-      ...(result.certainty ? { certainty: result.certainty } : {}),
+  const unjudged: string[] = [];
+  for (let start = 0; start < distinct.length; start += KEYWORDS_PER_LOOKUP) {
+    const found = await ctx.runQuery(internal.seoCollectionParse.findUnjudgedKeywords, {
+      keywords: distinct.slice(start, start + KEYWORDS_PER_LOOKUP),
     });
+    unjudged.push(...found);
   }
+  if (unjudged.length === 0) return;
 
-  if (judged.length > 0) {
-    await ctx.runMutation(internal.seoCollectionParse.writeKeywordIntents, { judged });
+  for (let start = 0; start < unjudged.length; start += KEYWORDS_PER_REQUEST) {
+    const batch = unjudged.slice(start, start + KEYWORDS_PER_REQUEST);
+
+    let results: Record<string, DecisionResult> = {};
+    try {
+      results = await runDecisions(ctx, {
+        ...(args.companyId ? { companyId: args.companyId } : {}),
+        subject: { kind: "seo-keywords", id: args.pullId },
+        state: {
+          business: { address: args.host },
+          searches: Object.fromEntries(batch.map((keyword, index) => [`${index}`, { text: keyword }])),
+        },
+        requests: batch.map((_keyword, index) => ({
+          key: "seo.keyword-intent",
+          id: `${index}`,
+          // Before this Decision existed every search looked alike, so the rule
+          // it replaces is "no opinion".
+          fallback: () => ({ kind: "pick-one" as const, choice: "other" }),
+        })),
+      }, deps);
+    } catch {
+      // Unjudged searches are simply judged next time. Nothing is lost and
+      // nothing is guessed.
+      return;
+    }
+
+    const judged = [];
+    for (const [index, keyword] of batch.entries()) {
+      const result = results[`${index}`];
+      if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") continue;
+      judged.push({
+        keyword,
+        intent: KEYWORD_INTENT_BY_CHOICE[result.answer.choice] ?? "OTHER",
+        ...(result.certainty ? { certainty: result.certainty } : {}),
+      });
+    }
+
+    if (judged.length > 0) {
+      await ctx.runMutation(internal.seoCollectionParse.writeKeywordIntents, { judged });
+    }
+
+    // Nothing in this batch reached a model: the Decision is off, or the
+    // provider is down. Asking the next batch would only repeat the failure.
+    if (judged.length === 0) return;
   }
 }
 
@@ -364,14 +380,14 @@ export function normaliseKeyword(keyword: string): string {
   return keyword.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** Searches looked up per run; beyond this the rest wait for the next one. */
-const MAX_KEYWORD_LOOKUP = 500;
+/** Searches looked up in one query, so no single read grows without limit. */
+const KEYWORDS_PER_LOOKUP = 500;
 
 /**
- * Searches judged per run.
+ * Searches asked in one request.
  *
- * A first collection of a large site would otherwise be one very large bill on
- * a single day. The remainder arrive over the following collections, and since
- * an answer is kept forever the backlog drains and never returns.
+ * A request shape, not a spending limit: all of a run's new searches are
+ * judged, in calls of this size, so no single call carries hundreds of
+ * questions against one twenty-second timeout.
  */
-const MAX_KEYWORDS_JUDGED_PER_RUN = 50;
+const KEYWORDS_PER_REQUEST = 50;

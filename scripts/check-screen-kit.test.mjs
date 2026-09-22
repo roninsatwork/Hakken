@@ -125,6 +125,7 @@ describe("the screen kit guard", () => {
         "    <DataTable\n" +
         '      columns={[{ key: "name", header: "Name", cell: () => <Field label="Name" value="" onChange={() => {}} /> }]}\n' +
         "      rows={[]}\n" +
+        '      footer={{ mode: "paged", page: 1, totalPages: 1, totalCount: 0, pageSize: 25, isLoading: false, onPageChange: () => {} }}\n' +
         "    />\n" +
         "  </div>\n" +
         ");\n"

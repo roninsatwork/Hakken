@@ -103,24 +103,47 @@ describe("judging what people mean", () => {
     expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(0);
   });
 
-  test("caps how many one run judges, so a first collection is not one huge bill", async () => {
+  test("judges every new search in one run, in calls of fifty", async () => {
     const t = harness();
     const many = Array.from({ length: 80 }, (_, index) => `search number ${index}`);
-    let askedCount = 0;
+    const askedSizes: number[] = [];
     await judgeNewKeywords(
       stubCtx({ "seo.keyword-intent": "ACT" }, t),
       { pullId: "p1" as Id<"seoDataPulls">, host: "ourshop.com", keywords: many },
       {
         ask: async ({ questions }) => {
-          askedCount = Object.keys(questions).length;
+          askedSizes.push(Object.keys(questions).length);
           return chose(Object.fromEntries(Object.keys(questions).map((id) => [id, "buying"])));
         },
       },
     );
 
-    // The rest arrive over the following collections; nothing is lost, and
-    // since an answer is kept forever the backlog drains and never returns.
-    expect(askedCount).toBe(50);
+    // Nothing is left for tomorrow: a Decision costs a fraction of a penny and
+    // no company is on a budget. The batching is only so that one call never
+    // carries eighty questions against one timeout.
+    expect(askedSizes).toEqual([50, 30]);
+    expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(80);
+  });
+
+  test("stops asking once a whole batch comes back from the rules", async () => {
+    const t = harness();
+    const many = Array.from({ length: 200 }, (_, index) => `search number ${index}`);
+    let calls = 0;
+    await judgeNewKeywords(
+      stubCtx({ "seo.keyword-intent": "ACT" }, t),
+      { pullId: "p1" as Id<"seoDataPulls">, host: "ourshop.com", keywords: many },
+      {
+        ask: async () => {
+          calls += 1;
+          throw new Error("provider down");
+        },
+      },
+    );
+
+    // A provider that failed on the first fifty would fail on the next
+    // hundred and fifty too, so the run gives up rather than repeating it.
+    expect(calls).toBe(1);
+    expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(0);
   });
 
   test("keeps nothing when the model could not be asked", async () => {

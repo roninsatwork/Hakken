@@ -575,14 +575,20 @@ here is only what they change about this plan.
 - `seo.keyword-intent` — what a searcher wants from a phrase. Fallback: none
   tracked until a person chooses.
 
-**The per-company budget recorded above as a follow-up now has a date.** The
-last two are the first Decisions asked per row of collected data rather than
-per human action, so their cost scales with a site's size instead of a
-person's day. Until the budget exists they are held down in code: a keyword
-phrase is judged once and the answer kept forever, so answers are shared
-between every client in the same trade, and one run judges at most fifty new
-phrases. Those are interim caps, and the budget replaces them before either
-judgment is switched on for a client paying by volume.
+**The per-company budget recorded above as a follow-up is not being built.**
+Anthony's ruling, 2026-09-22: "Decisions are super cheap and no company has a
+budget, it's virtually free to use." The last two judgments are the first
+Decisions asked per row of collected data rather than per human action, and at
+a fraction of a penny a question that is still not worth metering. Spend lands
+on the ledger and the cost screens as it always did, so it stays visible; it is
+simply not gated.
+
+What the code holds down is request shape, not spend. A keyword phrase is
+judged once and the answer kept forever, so answers are shared between every
+client in the same trade; a run judges all of its new phrases, in calls of
+fifty, so no single call carries hundreds of questions against one
+twenty-second timeout; and a run stops early when a whole call comes back from
+the rules, because that means the Decision is off or the provider is down.
 
 ## Proof, per phase
 
