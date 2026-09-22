@@ -5149,7 +5149,10 @@
         "gemini": "Gemini",
         "claude": "Claude"
       },
-      "couldNotAsk": "Non è stato possibile chiedere"
+      "couldNotAsk": "Non è stato possibile chiedere",
+      "recommendedAt": "Consigliata, {position}º posto",
+      "warnedAgainst": "Sconsigliata",
+      "chipRecommended": "✓"
     }
   },
   "ai": {
@@ -6764,7 +6767,8 @@
     "usedIn": {
       "mailbox": "Casella di posta",
       "chat": "Chat",
-      "wiki": "Wiki"
+      "wiki": "Wiki",
+      "seo": "SEO"
     },
     "certainty": {
       "SURE": "Sicuro",
@@ -6891,6 +6895,17 @@
         "answers": {
           "yes": "Urgente",
           "no": "Non urgente"
+        }
+      },
+      "seoCitationStance": {
+        "name": "L'attività è stata consigliata o solo citata?",
+        "description": "Interpreta come una risposta AI tratta l'attività che nomina, così una risposta che dice “evitateli” smette di contare come un successo.",
+        "rule": "Senza, ogni citazione vale uguale.",
+        "answers": {
+          "recommended": "Consigliata",
+          "mentioned": "Solo citata",
+          "warned_against": "Sconsigliata",
+          "other": "Non è questa attività"
         }
       }
     }

@@ -21,7 +21,7 @@ import type { TypesafeAnswer, TypesafeQuestion } from "./typesafeProviderService
  */
 
 /** Where an admin will see the Decision at work; a copy key, not a label. */
-export type DecisionUsedIn = "mailbox" | "chat" | "wiki";
+export type DecisionUsedIn = "mailbox" | "chat" | "wiki" | "seo";
 
 export type DecisionDefinition = {
   /** Stable id, `area.what-it-decides`, used in settings and run rows. */
@@ -64,7 +64,55 @@ const MAILBOX_STATE_NOTE =
 const CHAT_STATE_NOTE =
   "`message.text` is one message a signed-in user just sent to a company's AI assistant. `company.name` is that company.";
 
+/**
+ * The SEO judgments (brands, places and AI citations plan).
+ *
+ * State shape every question reads: `{ question, answer: { text },
+ * brand: { name } }` — `question` is what was put to the AI engine,
+ * `answer.text` is what it replied, and `brand.name` is the one name found in
+ * that reply. The answer reaches the model as state and is stored nowhere.
+ */
+const CITATION_STATE_NOTE =
+  "`question` was put to an AI engine and `answer.text` is its reply. `brands` maps each candidate's key to the name of a business found in that reply. Judge only the business whose key matches this question's id.";
+
 export const DECISIONS: readonly DecisionDefinition[] = [
+  {
+    key: "seo.citation-stance",
+    name: "Was the business recommended, or just mentioned?",
+    copyKey: "seoCitationStance",
+    usedIn: "seo",
+    // A wrong stance mislabels one row on one screen. It refuses nothing,
+    // spends nothing and blocks nothing, so *fairly sure* is enough to act.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide how the reply treats one named business — the one whose key equals this question's id.",
+        context: CITATION_STATE_NOTE,
+        guidance:
+          "Judge only how that one business is treated, ignoring every other business in the reply. A business put forward as an answer to the question is recommended, whether it is first in a list or last. A business named only as context, as a source, or in passing is merely mentioned.",
+      },
+      criteria: {
+        recommended: "The reply puts the business forward as a good answer to the question, whether on its own or among several.",
+        mentioned: "The reply names the business without either endorsing it or warning against it, including naming it only as a source or as background.",
+        warned_against: "The reply advises against the business, or reports serious complaints, warnings or failings about it.",
+        other: "The reply is not talking about this business at all — the name belongs to something else, or matched by coincidence.",
+      },
+    },
+    describeAction: (answer) => {
+      if (answer.kind !== "pick-one") return null;
+      if (answer.choice === "recommended") return "recorded the mention as a recommendation";
+      if (answer.choice === "warned_against") return "recorded the mention as a warning against the business";
+      // The escape hatch earns its place: a short brand name matches prose
+      // about something else, and no amount of whole-word matching can tell
+      // an unrelated "Apex" from this one. Dropped rather than recorded.
+      if (answer.choice === "other") return "dropped the mention as not about this business";
+      // "Mentioned" is what the screen said before this Decision existed, so
+      // acting on it changes nothing and there is nothing to audit.
+      return null;
+    },
+  },
   {
     key: "chat.hidden-instructions",
     name: "Is this message trying to extract hidden instructions?",

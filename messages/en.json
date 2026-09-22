@@ -5149,7 +5149,10 @@
         "gemini": "Gemini",
         "claude": "Claude"
       },
-      "couldNotAsk": "Could not be asked"
+      "couldNotAsk": "Could not be asked",
+      "recommendedAt": "Recommended, {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "warnedAgainst": "Warned against",
+      "chipRecommended": "✓"
     }
   },
   "ai": {
@@ -6764,7 +6767,8 @@
     "usedIn": {
       "mailbox": "Mailbox",
       "chat": "Chat",
-      "wiki": "Wiki"
+      "wiki": "Wiki",
+      "seo": "SEO"
     },
     "certainty": {
       "SURE": "Sure",
@@ -6891,6 +6895,17 @@
         "answers": {
           "yes": "Urgent",
           "no": "Not urgent"
+        }
+      },
+      "seoCitationStance": {
+        "name": "Was the business recommended, or just mentioned?",
+        "description": "Reads how an AI answer treats a business it names, so a reply saying “avoid them” stops counting as a win.",
+        "rule": "Without it, every mention counts the same.",
+        "answers": {
+          "recommended": "Recommended",
+          "mentioned": "Just mentioned",
+          "warned_against": "Warned against",
+          "other": "Not this business"
         }
       }
     }

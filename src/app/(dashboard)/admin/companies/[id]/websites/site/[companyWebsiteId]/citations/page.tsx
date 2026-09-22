@@ -133,8 +133,17 @@ export default function WebsiteCitationsPage() {
                 <StatusPill tone="neutral">{t("notNamed")}</StatusPill>
               ) : (
                 <div className="flex flex-col gap-1">
-                  <StatusPill tone="success">
-                    {t("namedAt", { position: row.ourPosition })}
+                  {/*
+                    Being named is not the same as being recommended. An answer
+                    that warns against a business still names it, and without
+                    the stance that reads as a win.
+                  */}
+                  <StatusPill tone={row.ourStance === "WARNED_AGAINST" ? "danger" : "success"}>
+                    {row.ourStance === "RECOMMENDED"
+                      ? t("recommendedAt", { position: row.ourPosition })
+                      : row.ourStance === "WARNED_AGAINST"
+                        ? t("warnedAgainst")
+                        : t("namedAt", { position: row.ourPosition })}
                   </StatusPill>
                   {/*
                     A citation under the wrong name is a different fact from
@@ -167,6 +176,7 @@ export default function WebsiteCitationsPage() {
                     title={other.kind === "SOURCE" ? t("citedAsSource") : t("namedInAnswer")}
                   >
                     {other.text}
+                    {other.stance === "RECOMMENDED" ? ` ${t("chipRecommended")}` : ""}
                   </span>
                 ))}
                 {row.others.length > 8 ? (

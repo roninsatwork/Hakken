@@ -612,6 +612,25 @@ export default defineSchema({
     mentionedText: v.string(),
     /** For a BRAND match: whether the variant was a known misspelling. */
     variantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
+    /**
+     * How the answer treated the business, when the stance Decision judged it.
+     *
+     * Absent means nobody judged it — the Decision is switched off, or it was
+     * not sure enough to say — and the screen reads it as a plain mention,
+     * which is what it said before this existed. An answer saying "avoid
+     * them" is a citation either way; without this it looked like a win.
+     */
+    stance: v.optional(v.union(
+      v.literal("RECOMMENDED"),
+      v.literal("MENTIONED"),
+      v.literal("WARNED_AGAINST"),
+    )),
+    /** The band behind the stance, so a screen can say how sure it was. */
+    stanceCertainty: v.optional(v.union(
+      v.literal("SURE"),
+      v.literal("FAIRLY_SURE"),
+      v.literal("NOT_SURE"),
+    )),
     /** For a SOURCE: the full URL the engine cited. */
     url: v.optional(v.string()),
     /** Order of first appearance within the answer, from 1. */

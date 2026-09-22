@@ -8,9 +8,11 @@ import {
   parseLlmResponse,
   parseSeoResultFor,
 } from "./dataForSeoParsers";
-import { listBrandedWebsites, resolveWebsiteIdsByHost } from "./websites";
+import { resolveWebsiteIdsByHost } from "./websites";
 import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
 import { findBrandMention } from "./websiteBrands";
+import { runDecisions, type DecisionResult, type RunDecisionsDeps } from "./decisionActions";
+import type { ActionCtx } from "./_generated/server";
 import { readWebsiteHost } from "./websiteIdentity";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
@@ -43,48 +45,52 @@ export const parseSeoResult = internalAction({
     });
     if (!pull?.resultJson) return null;
 
-    // An AI answer is read for who it names, then dropped. Nothing of its
-    // prose is stored.
+    // An AI answer is read for who it names, then dropped. The matching and
+    // the stance judgment both happen here, in the action, so the answer text
+    // never reaches a mutation at all.
     const engine = engineForOperationId(pull.operationId);
     if (engine) {
       try {
         const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
-        // `sent`, not `args`: the action's own `args` is what carries the pull
-        // id, and shadowing it here once sent an undefined id to the writer.
         const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+        const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : "";
+
+        const branded = await ctx.runQuery(internal.websites.listBrandedWebsitesInternal, {
+          limit: MAX_BRANDED_WEBSITES,
+        });
+
+        // Every brand we hold, not just the one who asked: the answer names
+        // whoever it names and one purchase should serve every watcher.
+        const hits = [];
+        for (const website of branded) {
+          const found = findBrandMention(parsed.answer, website.brandNames);
+          if (found) {
+            hits.push({
+              websiteId: website.websiteId,
+              text: found.matched,
+              variantKind: found.kind,
+              at: found.at,
+            });
+          }
+        }
+        hits.sort((left, right) => left.at - right.at);
+
+        const judged = await judgeStances(ctx, {
+          ...(pull.companyId ? { companyId: pull.companyId } : {}),
+          pullId: args.pullId,
+          prompt,
+          answer: parsed.answer,
+          hits: hits.slice(0, MAX_CITATION_ROWS),
+        });
+
         await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
           pullId: args.pullId,
-          prompt: typeof sent.user_prompt === "string" ? sent.user_prompt : "",
+          prompt,
           engine,
           day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
-          answer: parsed.answer,
+          brands: judged,
           sources: parsed.sources.slice(0, MAX_SOURCES),
         });
-      } catch (error) {
-        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
-          pullId: args.pullId,
-          error: getErrorMessage(error),
-        });
-      }
-      return null;
-    }
-
-    // A bulk pull is about many websites and carries no single `websiteId`, so
-    // it is filed target by target rather than against the row's own site.
-    if (isBulkOperation(pull.operationId)) {
-      try {
-        const rows = parseBulkByTarget(pull.operationId, JSON.parse(pull.resultJson));
-        if (rows.length > 0) {
-          await ctx.runMutation(internal.seoCollectionParse.writeBulkMetrics, {
-            pullId: args.pullId,
-            operationId: pull.operationId,
-            day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
-            rows: rows.slice(0, MAX_BULK_ROWS).map((row) => ({
-              host: row.target,
-              metricsJson: JSON.stringify(row.metrics),
-            })),
-          });
-        }
       } catch (error) {
         await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
           pullId: args.pullId,
@@ -167,6 +173,8 @@ export const getPullForParse = internalQuery({
     resultJson: v.union(v.string(), v.null()),
     taskArgsJson: v.union(v.string(), v.null()),
     completedAt: v.union(v.number(), v.null()),
+    /** Whose cadence caused this, so a Decision is asked in their name. */
+    companyId: v.union(v.id("companies"), v.null()),
   })),
   handler: async (ctx, args) => {
     const row = await ctx.db.get(args.pullId);
@@ -178,6 +186,7 @@ export const getPullForParse = internalQuery({
       resultJson: row.resultJson ?? null,
       taskArgsJson: row.taskArgsJson ?? null,
       completedAt: row.completedAt ?? null,
+      companyId: row.companyId ?? null,
     };
   },
 });
@@ -281,7 +290,18 @@ export const writeAiCitations = internalMutation({
     prompt: v.string(),
     engine: aiEngineValidator,
     day: v.string(),
-    answer: v.string(),
+    /** Already matched and already judged; see `judgeStances` in this file. */
+    brands: v.array(v.object({
+      websiteId: v.id("websites"),
+      text: v.string(),
+      variantKind: v.union(v.literal("NAME"), v.literal("MISSPELLING")),
+      stance: v.optional(v.union(
+        v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
+      )),
+      stanceCertainty: v.optional(v.union(
+        v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"),
+      )),
+    })),
     sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
   },
   returns: v.null(),
@@ -296,22 +316,15 @@ export const writeAiCitations = internalMutation({
       .take(MAX_CITATION_ROWS + 100);
     for (const row of existing) await ctx.db.delete(row._id);
 
-    // Brands first, in order of appearance: being named first and being named
-    // last are different results, and the position is the screen's headline.
-    const branded = await listBrandedWebsites(ctx, MAX_BRANDED_WEBSITES);
-    const found: Array<{ websiteId: Id<"websites">; text: string; kind: "NAME" | "MISSPELLING"; at: number }> = [];
-    for (const website of branded) {
-      const hit = findBrandMention(args.answer, website.brandNames);
-      if (hit) found.push({ websiteId: website._id, text: hit.matched, kind: hit.kind, at: hit.at });
-    }
-    found.sort((left, right) => left.at - right.at);
-
     // A parse that now succeeds clears what an earlier attempt left behind,
     // or the row would carry "Parse failed" forever after the fix that fixed it.
     await ctx.db.patch(args.pullId, { error: undefined });
 
+    // Brands in order of appearance: being named first and being named last
+    // are different results, and the position is the screen's headline. They
+    // arrive already matched and already judged, from the action.
     let position = 0;
-    for (const hit of found.slice(0, MAX_CITATION_ROWS)) {
+    for (const hit of args.brands) {
       position += 1;
       await ctx.db.insert("aiCitations", {
         prompt: args.prompt,
@@ -322,7 +335,9 @@ export const writeAiCitations = internalMutation({
         kind: "BRAND",
         mentionedWebsiteId: hit.websiteId,
         mentionedText: hit.text,
-        variantKind: hit.kind,
+        variantKind: hit.variantKind,
+        ...(hit.stance ? { stance: hit.stance } : {}),
+        ...(hit.stanceCertainty ? { stanceCertainty: hit.stanceCertainty } : {}),
         position,
         createdAt: now,
       });
@@ -376,6 +391,95 @@ function readLocationCode(taskArgsJson: string | undefined): number | undefined 
     return undefined;
   }
 }
+
+/**
+ * Ask the stance Decision about every brand found in one answer.
+ *
+ * One request, not one per brand: the questions are independent judgments over
+ * the same state, so they ride together and cost a single call. Each carries
+ * its own id because the same Decision is asked several times.
+ *
+ * Switched off, or not sure enough, or the model unavailable — all three leave
+ * the stance absent, and the screen then reads the row as a plain mention,
+ * which is exactly what it said before this Decision existed. That is the
+ * fallback the Decisions framework requires of every entry.
+ */
+export async function judgeStances(
+  ctx: ActionCtx,
+  args: {
+    companyId?: Id<"companies">;
+    pullId: Id<"seoDataPulls">;
+    prompt: string;
+    answer: string;
+    hits: Array<{ websiteId: Id<"websites">; text: string; variantKind: "NAME" | "MISSPELLING"; at: number }>;
+  },
+  /** A test hands in its own asker; production asks whatever the job resolves to. */
+  deps: RunDecisionsDeps = {},
+): Promise<Array<{
+  websiteId: Id<"websites">;
+  text: string;
+  variantKind: "NAME" | "MISSPELLING";
+  stance?: "RECOMMENDED" | "MENTIONED" | "WARNED_AGAINST";
+  stanceCertainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE";
+}>> {
+  if (args.hits.length === 0) return [];
+
+  let results: Record<string, DecisionResult> = {};
+  try {
+    results = await runDecisions(ctx, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      subject: { kind: "seo-citation", id: args.pullId },
+      // One state for all the questions, with a map keyed by the id each
+      // question carries — the platform's pattern for asking one Decision
+      // about several things. Requests in a call cannot hold their own state.
+      state: {
+        question: args.prompt,
+        answer: { text: args.answer },
+        brands: Object.fromEntries(args.hits.map((hit, index) => [`${index}`, { name: hit.text }])),
+      },
+      requests: args.hits.map((_hit, index) => ({
+        key: "seo.citation-stance",
+        id: `${index}`,
+        fallback: () => ({ kind: "pick-one" as const, choice: "mentioned" }),
+      })),
+    }, deps);
+  } catch {
+    // A Decision that cannot be asked leaves the stance unclaimed rather than
+    // guessed. The row still stands as a mention.
+    return args.hits.map((hit) => ({
+      websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind,
+    }));
+  }
+
+  const judged = [];
+  for (const [index, hit] of args.hits.entries()) {
+    const result = results[`${index}`];
+    const base = { websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind };
+
+    // The rules answered, so nothing was judged and nothing is claimed.
+    if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") {
+      judged.push(base);
+      continue;
+    }
+    // Not this business at all. A short brand name matching unrelated prose is
+    // the false positive no amount of whole-word matching can catch, and this
+    // is the only thing that can drop it.
+    if (result.answer.choice === "other") continue;
+
+    judged.push({
+      ...base,
+      stance: STANCE_BY_CHOICE[result.answer.choice] ?? "MENTIONED",
+      ...(result.certainty ? { stanceCertainty: result.certainty } : {}),
+    });
+  }
+  return judged;
+}
+
+const STANCE_BY_CHOICE: Record<string, "RECOMMENDED" | "MENTIONED" | "WARNED_AGAINST"> = {
+  recommended: "RECOMMENDED",
+  mentioned: "MENTIONED",
+  warned_against: "WARNED_AGAINST",
+};
 
 /** Cited sources kept per answer; an engine rarely cites more than a dozen. */
 const MAX_SOURCES = 40;

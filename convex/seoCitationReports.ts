@@ -26,6 +26,9 @@ const namedShape = v.object({
   /** Set for a brand match; absent for a cited source. */
   variantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
   kind: v.union(v.literal("BRAND"), v.literal("SOURCE")),
+  stance: v.optional(v.union(
+    v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
+  )),
 });
 
 export const listCompanyWebsiteCitations = superAdminQuery({
@@ -44,6 +47,10 @@ export const listCompanyWebsiteCitations = superAdminQuery({
       /** Where this website was named, from 1, or null when it was not. */
       ourPosition: v.union(v.number(), v.null()),
       ourVariantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
+      /** How the answer treated this website, when it was judged. */
+      ourStance: v.optional(v.union(
+        v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
+      )),
       /** Everyone else the answer named or cited, in order. */
       others: v.array(namedShape),
       status: v.string(),
@@ -98,6 +105,7 @@ export const listCompanyWebsiteCitations = superAdminQuery({
         // replaced with the host it resolved to.
         others.push({
           text: row.mentionedText,
+          ...(row.stance ? { stance: row.stance } : {}),
           websiteId: row.mentionedWebsiteId ?? null,
           ...(row.variantKind ? { variantKind: row.variantKind } : {}),
           kind: row.kind,
@@ -113,6 +121,7 @@ export const listCompanyWebsiteCitations = superAdminQuery({
           .toISOString().slice(0, 10),
         ourPosition: ours?.position ?? null,
         ...(ours?.variantKind ? { ourVariantKind: ours.variantKind } : {}),
+        ...(ours?.stance ? { ourStance: ours.stance } : {}),
         others,
         status: pull.status,
       });

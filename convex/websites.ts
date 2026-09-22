@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -950,3 +950,30 @@ export async function listBrandedWebsites(
       Array.isArray(row.brandNames) && row.brandNames.length > 0)
     .map((row) => ({ _id: row._id, host: row.host, brandNames: row.brandNames }));
 }
+
+
+/**
+ * Branded websites, for an action that has to match an AI answer against them.
+ *
+ * A thin wrapper over `listBrandedWebsites` because the matching now happens in
+ * an action — it has to, so the stance Decision can be asked about each hit
+ * before anything is written. The answer text therefore never reaches a
+ * mutation at all, which is a stronger version of the rule that none of it is
+ * stored.
+ */
+export const listBrandedWebsitesInternal = internalQuery({
+  args: { limit: v.number() },
+  returns: v.array(v.object({
+    websiteId: v.id("websites"),
+    host: v.string(),
+    brandNames: v.array(v.object({
+      name: v.string(),
+      isPrimary: v.boolean(),
+      kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
+    })),
+  })),
+  handler: async (ctx, args) => {
+    const rows = await listBrandedWebsites(ctx, args.limit);
+    return rows.map((row) => ({ websiteId: row._id, host: row.host, brandNames: row.brandNames }));
+  },
+});
