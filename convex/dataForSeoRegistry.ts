@@ -284,6 +284,39 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     },
   },
   {
+    id: "domain_competitors",
+    question: "Which websites compete with this one for the same searches?",
+    family: "DataForSEO Labs",
+    mode: "LIVE",
+    path: "/v3/dataforseo_labs/google/competitors_domain/live",
+    costBand: "medium",
+    params: {
+      target: {
+        kind: "host",
+        required: true,
+        description: "The website to find competitors for, as a domain.",
+      },
+      limit: {
+        kind: "number",
+        required: false,
+        description: "How many competitors to return. Leave unset for 50.",
+        default: 50,
+      },
+      location_code: {
+        kind: "number",
+        required: false,
+        description: "Which country's results to read. Leave unset for the United Kingdom.",
+        default: 2826,
+      },
+      language_code: {
+        kind: "keyword",
+        required: false,
+        description: "Which language's results to read. Leave unset for English.",
+        default: "en",
+      },
+    },
+  },
+  {
     id: "backlinks_summary",
     question: "How many sites link to this one, and how strong are they?",
     family: "Backlinks",

@@ -1489,6 +1489,30 @@
         },
         "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for.",
         "seeCitations": "See what the engines answered"
+      },
+      "discovered": {
+        "title": "Websites competing for the same searches",
+        "subtitle": "Found by looking at who ranks for the searches this website ranks for. Nothing is tracked until you say so, and a directory or publisher is kept on the list rather than hidden — being outranked by one is still worth knowing.",
+        "searchPlaceholder": "Search suggestions...",
+        "empty": "Nothing found yet. The next collection looks for competitors.",
+        "noMatch": "No suggestion matches that search.",
+        "websiteColumn": "Website",
+        "kindColumn": "What it is",
+        "overlapColumn": "Searches in common",
+        "actionsColumn": "Actions",
+        "unjudged": "Not judged",
+        "track": "Track it",
+        "dismiss": "Dismiss",
+        "kinds": {
+          "COMPETITOR": "A competitor",
+          "DIRECTORY": "Directory",
+          "PUBLISHER": "Publisher",
+          "SUPPLIER": "Supplier",
+          "OTHER": "Cannot tell"
+        },
+        "errors": {
+          "decideFailed": "Could not save that. Try again."
+        }
       }
     },
     "companyDataCollection": {
@@ -6916,6 +6940,18 @@
           "0": "Different businesses",
           "1": "Possibly the same",
           "2": "The same business"
+        }
+      },
+      "seoRealCompetitor": {
+        "name": "Is this discovered website a real competitor?",
+        "description": "Sorts the websites that rank for the same searches into rivals, directories, publishers and suppliers, so a client is shown competitors rather than a list of everything that outranks them.",
+        "rule": "Without it, every discovered website is offered as a competitor.",
+        "answers": {
+          "competitor": "A competitor",
+          "directory": "A directory or marketplace",
+          "publisher": "A publisher",
+          "supplier": "A supplier or trade body",
+          "other": "Cannot tell"
         }
       }
     }

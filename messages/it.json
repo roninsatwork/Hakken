@@ -1489,6 +1489,30 @@
         },
         "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate.",
         "seeCitations": "Vedi cosa hanno risposto i motori"
+      },
+      "discovered": {
+        "title": "Siti in gara sulle stesse ricerche",
+        "subtitle": "Trovati guardando chi si posiziona sulle ricerche di questo sito. Nulla viene seguito finché non lo decidi tu, e directory ed editori restano in elenco invece di sparire: essere superati da uno è comunque utile saperlo.",
+        "searchPlaceholder": "Cerca tra i suggerimenti...",
+        "empty": "Nessun risultato. La prossima raccolta cercherà i concorrenti.",
+        "noMatch": "Nessun suggerimento corrisponde alla ricerca.",
+        "websiteColumn": "Sito",
+        "kindColumn": "Che cos'è",
+        "overlapColumn": "Ricerche in comune",
+        "actionsColumn": "Azioni",
+        "unjudged": "Non valutato",
+        "track": "Segui",
+        "dismiss": "Ignora",
+        "kinds": {
+          "COMPETITOR": "Un concorrente",
+          "DIRECTORY": "Directory",
+          "PUBLISHER": "Editore",
+          "SUPPLIER": "Fornitore",
+          "OTHER": "Non determinabile"
+        },
+        "errors": {
+          "decideFailed": "Non è stato possibile salvare. Riprova."
+        }
       }
     },
     "companyDataCollection": {
@@ -6916,6 +6940,18 @@
           "0": "Attività diverse",
           "1": "Forse la stessa",
           "2": "La stessa attività"
+        }
+      },
+      "seoRealCompetitor": {
+        "name": "Il sito trovato è un vero concorrente?",
+        "description": "Divide i siti che si posizionano sulle stesse ricerche in concorrenti, directory, editori e fornitori, così al cliente si mostrano i concorrenti e non tutto ciò che lo supera.",
+        "rule": "Senza, ogni sito trovato viene proposto come concorrente.",
+        "answers": {
+          "competitor": "Un concorrente",
+          "directory": "Una directory o un marketplace",
+          "publisher": "Un editore",
+          "supplier": "Un fornitore o un'associazione",
+          "other": "Non determinabile"
         }
       }
     }

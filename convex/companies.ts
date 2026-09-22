@@ -320,7 +320,7 @@ export const deleteCompany = superAdminMutation({
     // The company's websites and the competitors tracked against them go with
     // it; the `websites` rows do not. A host this company held may still be
     // watched by others, and even if not, its data was paid for.
-    await ctx.scheduler.runAfter(0, internal.websites.purgeCompanyWebsitesInternal, { companyId: args.id });
+    await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: args.id });
 
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);

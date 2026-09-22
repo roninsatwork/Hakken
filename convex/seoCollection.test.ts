@@ -39,8 +39,15 @@ const WEEKLY = JSON.stringify({
   timezone: "UTC",
 });
 
-/** The whole-site operations a cycle runs once per website. */
-const SITE_OPERATIONS = 2;
+/**
+ * The whole-site operations a cycle runs once per website.
+ *
+ * Three since competitor discovery joined them: it needs only a host, so
+ * `seoSiteOperations()` picks it up without a second edit anywhere. That is
+ * the point of deriving the set rather than listing it, and it is why this
+ * number is a constant here rather than a literal in eight assertions.
+ */
+const SITE_OPERATIONS = 3;
 
 /**
  * The operations that ask about every website on a page in one paid call.

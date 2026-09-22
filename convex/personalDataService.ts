@@ -98,6 +98,15 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     reason: "The record of who ran a maintenance script against live data.",
   },
   {
+    table: "discoveredCompetitors",
+    fields: ["decidedBy"],
+    treatment: "DISSOCIATE",
+    reason:
+      "The decision stands — an accepted competitor stays tracked and a "
+      + "dismissed one stays dismissed, because both are facts about the "
+      + "company's estate. Only the link to the person who decided is cleared.",
+  },
+  {
     table: "trackedPrompts",
     fields: ["createdBy"],
     treatment: "DISSOCIATE",

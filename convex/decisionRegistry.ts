@@ -114,6 +114,40 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     },
   },
   {
+    key: "seo.real-competitor",
+    name: "Is this discovered website a real competitor?",
+    copyKey: "seoRealCompetitor",
+    usedIn: "seo",
+    // A wrong answer puts a directory on a suggestion list, or leaves a real
+    // rival off it. Nobody is charged and nothing is tracked without a person.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide what kind of website this is, relative to the business we are watching — the candidate whose key equals this question's id.",
+        context:
+          "`ours` is the website being watched. `candidates` maps each key to a website that ranks for many of the same searches. Judge only the candidate whose key matches this question's id. Ranking for the same searches is why it is here; it is not evidence that it is a competitor.",
+        guidance:
+          "A competitor sells what our business sells, to the people our business sells to. A site that merely writes about the trade, lists businesses in it, or sells everything, is not a competitor however well it ranks.",
+      },
+      criteria: {
+        competitor: "A business selling much what ours sells, to much the same customers.",
+        directory: "A listing site, comparison site or marketplace that carries many businesses rather than being one.",
+        publisher: "A news site, magazine, blog or encyclopaedia that writes about the trade rather than trading in it.",
+        supplier: "A manufacturer, wholesaler or trade body serving businesses like ours rather than competing with us.",
+        other: "None of these fits, or there is not enough here to tell.",
+      },
+    },
+    describeAction: (answer) => {
+      if (answer.kind !== "pick-one") return null;
+      if (answer.choice === "competitor") return "suggested a website as a competitor worth tracking";
+      // Everything else is kept and labelled rather than hidden: a directory
+      // outranking you is worth knowing, it is just not a rival.
+      return null;
+    },
+  },
+  {
     key: "seo.same-business",
     name: "Is this the business we already track?",
     copyKey: "seoSameBusiness",

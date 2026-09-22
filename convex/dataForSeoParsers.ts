@@ -287,6 +287,40 @@ export function parseLlmResponse(result: unknown): {
   return { answer: parts.join("\n"), sources };
 }
 
+/**
+ * Websites competing for the same searches.
+ *
+ * `intersections` is the number of searches both sites rank for, which is the
+ * one figure that says how much of a rival this really is. The target itself
+ * comes back in its own list and is dropped by the caller, which knows what it
+ * asked about.
+ */
+export function parseDomainCompetitors(result: unknown): Array<{
+  host: string;
+  intersections: number;
+  averagePosition: number | null;
+  estimatedTraffic: number | null;
+}> {
+  const item = firstItem(result);
+  const rows = asArray(item?.items);
+  const found: Array<{ host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null }> = [];
+
+  for (const row of rows) {
+    const record = asRecord(row);
+    const host = asString(record?.domain);
+    if (!record || !host) continue;
+    const metrics = asRecord(asRecord(record.metrics)?.organic);
+    found.push({
+      host,
+      intersections: asNumber(record.intersections) ?? 0,
+      averagePosition: asNumber(record.avg_position) ?? null,
+      estimatedTraffic: asNumber(metrics?.etv) ?? null,
+    });
+  }
+
+  return found;
+}
+
 /** The parser for an operation id, or null when nothing knows how to read it. */
 export function parseSeoResultFor(
   operationId: string,
@@ -294,6 +328,17 @@ export function parseSeoResultFor(
   target?: string,
 ): ParsedSeoResult | null {
   if (operationId === "backlinks_summary") return parseBacklinksSummary(result);
+  if (operationId === "domain_competitors") {
+    // Read for the competitor rows, not for a metrics row; the caller files
+    // them. The summary here is what a chart would plot.
+    const found = parseDomainCompetitors(result);
+    return {
+      metrics: {
+        competitorsFound: found.length,
+        closestOverlap: found[0]?.intersections ?? 0,
+      },
+    };
+  }
   if (operationId === "domain_ranked_keywords") return parseDomainRankedKeywords(result);
   if (operationId === "serp_google_organic") return parseSerpGoogleOrganic(result, target);
   if (operationId === "keyword_search_volume") return parseKeywordSearchVolume(result);

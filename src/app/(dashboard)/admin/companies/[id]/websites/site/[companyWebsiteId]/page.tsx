@@ -22,7 +22,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Sparkles } from "lucide-react";
 
 const loadDialogs = () => import("./CompetitorDialogs");
 const AddCompetitorDialog = lazy(() =>
@@ -44,7 +44,20 @@ const RemoveCompetitorDialog = lazy(() =>
  * Every competitor is a shared `websites` record, so stopping tracking here
  * removes this company's interest and nothing else.
  */
+/** The kinds the judgment can return; literal keys because they are typed. */
+function useSuggestionKindLabel() {
+  const t = useTranslations("admin.companyWebsiteDetail.discovered.kinds");
+  return (kind: string) => {
+    if (kind === "COMPETITOR") return t("COMPETITOR");
+    if (kind === "DIRECTORY") return t("DIRECTORY");
+    if (kind === "PUBLISHER") return t("PUBLISHER");
+    if (kind === "SUPPLIER") return t("SUPPLIER");
+    return t("OTHER");
+  };
+}
+
 export default function CompanyWebsiteDetailPage() {
+  const suggestionKindLabel = useSuggestionKindLabel();
   const t = useTranslations("admin.companyWebsiteDetail");
   const params = useParams();
   const companyId = params.id as Id<"companies">;
@@ -70,6 +83,38 @@ export default function CompanyWebsiteDetailPage() {
     table into a fragment hides that ordering from the check — which is how
     nine sub-tables ended up frozen into an allowlist.
   */
+  const [suggestionSearch, setSuggestionSearch] = useState("");
+  const [suggestionPage, setSuggestionPage] = useState(1);
+  const debouncedSuggestionSearch = useDebounce(suggestionSearch, 400);
+  const acceptSuggestion = useMutation(api.seoDiscoveredCompetitors.acceptDiscoveredCompetitor);
+  const dismissSuggestion = useMutation(api.seoDiscoveredCompetitors.dismissDiscoveredCompetitor);
+  const tSuggestions = useTranslations("admin.companyWebsiteDetail.discovered");
+
+  const suggestions = useQuery(api.seoDiscoveredCompetitors.listDiscoveredCompetitors, {
+    companyWebsiteId,
+    searchTerm: debouncedSuggestionSearch,
+    page: suggestionPage,
+    pageSize: TABLE_PAGE_SIZE,
+  });
+
+  const decideSuggestion = async (
+    suggestionId: Id<"discoveredCompetitors">,
+    accept: boolean,
+  ) => {
+    setSubmitError("");
+    const outcome = await action.run(
+      () => (accept
+        ? acceptSuggestion({ suggestionId })
+        : dismissSuggestion({ suggestionId })),
+      {
+        key: suggestionId,
+        suppressErrorToast: true,
+        fallbackMessage: tSuggestions("errors.decideFailed"),
+      },
+    );
+    if (!outcome.ok) setSubmitError(outcome.message);
+  };
+
   const [promptDraft, setPromptDraft] = useState("");
   const [promptError, setPromptError] = useState("");
   const [promptSearch, setPromptSearch] = useState("");
@@ -430,6 +475,105 @@ export default function CompanyWebsiteDetailPage() {
                   onClick={() => void handlePromptRemove(row._id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      {/*
+        Suggestions, not competitors: nothing is tracked until somebody
+        accepts one. Nothing is hidden by its label either — a directory
+        beating you for your own trade is worth knowing, it is just not a
+        rival — so the kind is shown rather than used to filter.
+      */}
+      <div className="flex flex-col gap-2">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          <Sparkles className="h-3.5 w-3.5" />
+          {tSuggestions("title")}
+        </h2>
+        <p className="max-w-3xl text-[13px] text-secondary">{tSuggestions("subtitle")}</p>
+      </div>
+
+      <DataTable
+        rows={suggestions === undefined ? undefined : suggestions.data}
+        rowKey={(row) => row._id}
+        minWidthClassName="min-w-[720px]"
+        search={{
+          value: suggestionSearch,
+          onChange: (value) => {
+            setSuggestionSearch(value);
+            setSuggestionPage(1);
+          },
+          placeholder: tSuggestions("searchPlaceholder"),
+        }}
+        empty={{
+          icon: <Sparkles className="h-8 w-8 text-muted/30" />,
+          label: suggestionSearch ? tSuggestions("noMatch") : tSuggestions("empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page: suggestionPage,
+          totalPages: suggestions?.totalPages ?? 1,
+          totalCount: suggestions?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: suggestions === undefined,
+          onPageChange: setSuggestionPage,
+          labels: { empty: suggestionSearch ? tSuggestions("noMatch") : tSuggestions("empty") },
+        }}
+        columns={[
+          {
+            key: "suggestedHost",
+            header: tSuggestions("websiteColumn"),
+            cell: (row) => (
+              <span className="text-[13px] font-medium text-foreground">{row.host}</span>
+            ),
+          },
+          {
+            key: "suggestedKind",
+            header: tSuggestions("kindColumn"),
+            cell: (row) => (
+              row.kind === null ? (
+                <span className="text-[12px] text-muted">{tSuggestions("unjudged")}</span>
+              ) : (
+                <StatusPill tone={row.kind === "COMPETITOR" ? "success" : "neutral"}>
+                  {suggestionKindLabel(row.kind)}
+                </StatusPill>
+              )
+            ),
+          },
+          {
+            key: "overlap",
+            header: tSuggestions("overlapColumn"),
+            align: "right",
+            cell: (row) => (
+              // The one figure that says how much of a rival this really is.
+              <span className="font-mono text-[12px] text-secondary">{row.intersections}</span>
+            ),
+          },
+          {
+            key: "suggestedActions",
+            header: "",
+            hiddenHeader: tSuggestions("actionsColumn"),
+            align: "right",
+            cell: (row) => (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="quiet"
+                  className="px-2 py-1 text-[11px]"
+                  disabled={action.isBusy(row._id)}
+                  onClick={() => void decideSuggestion(row._id, true)}
+                >
+                  {tSuggestions("track")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="px-2 py-1 text-[11px] text-muted hover:text-foreground"
+                  disabled={action.isBusy(row._id)}
+                  onClick={() => void decideSuggestion(row._id, false)}
+                >
+                  {tSuggestions("dismiss")}
                 </Button>
               </div>
             ),

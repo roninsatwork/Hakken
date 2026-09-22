@@ -535,6 +535,48 @@ export default defineSchema({
     .index("by_run", ["agentRunId"]),
 
   /**
+   * A website DataForSEO says competes with one of a company's own.
+   *
+   * A suggestion, not a competitor: nothing is tracked until a person accepts
+   * it. Discovery returns dozens of domains that rank for the same searches,
+   * and many are directories, publishers and suppliers rather than rivals,
+   * which is what the `seo.real-competitor` judgment sorts out.
+   *
+   * Per company website rather than per website, because "who competes with
+   * you" is an answer about one company's site and the same host may be a
+   * rival to one client and irrelevant to another.
+   */
+  discoveredCompetitors: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    /** The host as discovered; a `websites` row only exists once accepted. */
+    host: v.string(),
+    /** Searches both sites rank for. The one figure that says how close. */
+    intersections: v.number(),
+    averagePosition: v.optional(v.number()),
+    estimatedTraffic: v.optional(v.number()),
+    /** What the judgment made of it, absent when nothing judged it. */
+    kind: v.optional(v.union(
+      v.literal("COMPETITOR"),
+      v.literal("DIRECTORY"),
+      v.literal("PUBLISHER"),
+      v.literal("SUPPLIER"),
+      v.literal("OTHER"),
+    )),
+    kindCertainty: v.optional(v.union(
+      v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"),
+    )),
+    /** Set once a person has accepted or dismissed it, so it stops being asked. */
+    decidedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.id("users")),
+    dismissed: v.optional(v.boolean()),
+    discoveredAt: v.number(),
+  })
+    .index("by_company_website", ["companyWebsiteId"])
+    .index("by_company", ["companyId"])
+    .index("by_company_website_host", ["companyWebsiteId", "host"]),
+
+  /**
    * The questions we put to the AI engines for one website.
    *
    * A prompt belongs to a site rather than to a company: "best plumber in

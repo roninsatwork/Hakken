@@ -795,8 +795,8 @@ describe("Sweeps do not run away", () => {
     const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
     await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
 
-    await t.mutation(internal.websites.purgeCompanyWebsitesInternal, { companyId: company });
-    await t.mutation(internal.websites.purgeCompanyWebsitesInternal, { companyId: company });
+    await t.mutation(internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: company });
+    await t.mutation(internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: company });
 
     expect(await allCompanyWebsites(t)).toHaveLength(0);
     expect(await allCompetitors(t)).toHaveLength(0);

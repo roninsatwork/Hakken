@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import {
   isBulkOperation,
   parseBulkByTarget,
+  parseDomainCompetitors,
   parseLlmResponse,
   parseSeoResultFor,
 } from "./dataForSeoParsers";
@@ -114,6 +115,33 @@ export const parseSeoResult = internalAction({
           day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
           brands: judged,
           sources: linked,
+        });
+      } catch (error) {
+        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+          pullId: args.pullId,
+          error: getErrorMessage(error),
+        });
+      }
+      return null;
+    }
+
+    // Discovery is about one website and returns many others, so it is filed
+    // as suggestions against the company's hold rather than as metrics.
+    if (pull.operationId === "domain_competitors" && pull.websiteId) {
+      try {
+        const found = parseDomainCompetitors(JSON.parse(pull.resultJson))
+          .filter((row) => row.host !== pull.target)
+          .slice(0, MAX_DISCOVERED);
+        const judged = await judgeCompetitors(ctx, {
+          ...(pull.companyId ? { companyId: pull.companyId } : {}),
+          pullId: args.pullId,
+          ourHost: pull.target ?? "",
+          found,
+        });
+        await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+          pullId: args.pullId,
+          websiteId: pull.websiteId as Id<"websites">,
+          found: judged,
         });
       } catch (error) {
         await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
@@ -586,6 +614,89 @@ export async function linkCitedAddresses(
   });
 }
 
+/**
+ * Sort discovered websites into rivals and everything else.
+ *
+ * Discovery returns dozens of domains that rank for the same searches, and
+ * ranking together is not evidence of competing: directories, publishers and
+ * suppliers all outrank a small business for its own trade. Without this the
+ * client is handed a list of everything that beats them.
+ *
+ * One request for the batch, keyed by id with a state map, like the others.
+ * Nothing is hidden by the verdict — a directory outranking you is worth
+ * knowing — so this labels rather than filters.
+ */
+export async function judgeCompetitors(
+  ctx: ActionCtx,
+  args: {
+    companyId?: Id<"companies">;
+    pullId: Id<"seoDataPulls">;
+    ourHost: string;
+    found: Array<{ host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null }>;
+  },
+  deps: RunDecisionsDeps = {},
+): Promise<Array<{
+  host: string;
+  intersections: number;
+  averagePosition?: number;
+  estimatedTraffic?: number;
+  kind?: "COMPETITOR" | "DIRECTORY" | "PUBLISHER" | "SUPPLIER" | "OTHER";
+  kindCertainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE";
+}>> {
+  const base = args.found.map((row) => ({
+    host: row.host,
+    intersections: row.intersections,
+    ...(row.averagePosition !== null ? { averagePosition: row.averagePosition } : {}),
+    ...(row.estimatedTraffic !== null ? { estimatedTraffic: row.estimatedTraffic } : {}),
+  }));
+  if (base.length === 0) return base;
+
+  let results: Record<string, DecisionResult> = {};
+  try {
+    results = await runDecisions(ctx, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      subject: { kind: "seo-competitors", id: args.pullId },
+      state: {
+        ours: { address: args.ourHost },
+        candidates: Object.fromEntries(args.found.map((row, index) => [`${index}`, {
+          address: row.host,
+          searchesInCommon: row.intersections,
+        }])),
+      },
+      requests: args.found.map((_row, index) => ({
+        key: "seo.real-competitor",
+        id: `${index}`,
+        // Before this Decision existed every discovered site was offered as
+        // a competitor, so that is the rule it replaces.
+        fallback: () => ({ kind: "pick-one" as const, choice: "competitor" }),
+      })),
+    }, deps);
+  } catch {
+    return base;
+  }
+
+  return base.map((row, index) => {
+    const result = results[`${index}`];
+    if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") return row;
+    return {
+      ...row,
+      kind: COMPETITOR_KIND_BY_CHOICE[result.answer.choice] ?? "OTHER",
+      ...(result.certainty ? { kindCertainty: result.certainty } : {}),
+    };
+  });
+}
+
+const COMPETITOR_KIND_BY_CHOICE: Record<string, "COMPETITOR" | "DIRECTORY" | "PUBLISHER" | "SUPPLIER" | "OTHER"> = {
+  competitor: "COMPETITOR",
+  directory: "DIRECTORY",
+  publisher: "PUBLISHER",
+  supplier: "SUPPLIER",
+  other: "OTHER",
+};
+
+/** Discovered websites kept per pull. Beyond this the tail is noise. */
+const MAX_DISCOVERED = 50;
+
 /** Cited sources kept per answer; an engine rarely cites more than a dozen. */
 const MAX_SOURCES = 40;
 
@@ -642,6 +753,81 @@ export const writeBulkMetrics = internalMutation({
     return null;
   },
 });
+
+/**
+ * File this run's discovered competitors against every company holding the
+ * website they were discovered for.
+ *
+ * A suggestion a person already accepted or dismissed is left exactly as it
+ * is: re-running discovery must not resurrect a rejected suggestion, nor
+ * unpick an accepted one.
+ */
+export const writeDiscoveredCompetitors = internalMutation({
+  args: {
+    pullId: v.id("seoDataPulls"),
+    websiteId: v.id("websites"),
+    found: v.array(v.object({
+      host: v.string(),
+      intersections: v.number(),
+      averagePosition: v.optional(v.number()),
+      estimatedTraffic: v.optional(v.number()),
+      kind: v.optional(v.union(
+        v.literal("COMPETITOR"), v.literal("DIRECTORY"), v.literal("PUBLISHER"),
+        v.literal("SUPPLIER"), v.literal("OTHER"),
+      )),
+      kindCertainty: v.optional(v.union(
+        v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"),
+      )),
+    })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    await ctx.db.patch(args.pullId, { error: undefined });
+
+    // One pull, many holders: the website is shared, so everyone watching it
+    // gets the suggestions from the one purchase.
+    const holds = await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+      .take(MAX_HOLDERS);
+
+    for (const hold of holds) {
+      for (const row of args.found) {
+        const existing = await ctx.db
+          .query("discoveredCompetitors")
+          .withIndex("by_company_website_host", (q) =>
+            q.eq("companyWebsiteId", hold._id).eq("host", row.host))
+          .unique();
+
+        if (existing?.decidedAt) continue;
+
+        const fields = {
+          intersections: row.intersections,
+          ...(row.averagePosition !== undefined ? { averagePosition: row.averagePosition } : {}),
+          ...(row.estimatedTraffic !== undefined ? { estimatedTraffic: row.estimatedTraffic } : {}),
+          ...(row.kind ? { kind: row.kind } : {}),
+          ...(row.kindCertainty ? { kindCertainty: row.kindCertainty } : {}),
+        };
+
+        if (existing) await ctx.db.patch(existing._id, fields);
+        else {
+          await ctx.db.insert("discoveredCompetitors", {
+            companyWebsiteId: hold._id,
+            companyId: hold.companyId,
+            host: row.host,
+            discoveredAt: now,
+            ...fields,
+          });
+        }
+      }
+    }
+    return null;
+  },
+});
+
+/** Companies one discovery run files suggestions for. */
+const MAX_HOLDERS = 200;
 
 /**
  * A parse that threw.
