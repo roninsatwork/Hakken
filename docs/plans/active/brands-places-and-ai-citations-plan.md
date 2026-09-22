@@ -1,7 +1,8 @@
 # Brands, Places and AI Citations
 
-Status: **Built 2026-09-21 and 2026-09-22.** One caveat in "What DataForSEO
-actually sells here": Claude and Gemini are unproven against the sandbox.
+Status: **Built 2026-09-21 and 2026-09-22,** including all four judgments.
+One caveat in "What DataForSEO actually sells here": Claude and Gemini are
+unproven against the sandbox.
 Owner: Anthony
 
 The collection pipeline works. It asks DataForSEO two questions about a host —
@@ -328,9 +329,11 @@ request body.
    sandbox 2026-09-22**, with two caveats recorded below. **LLM Responses, not Mentions** —
    see the pricing and coverage section: Mentions cannot see ChatGPT outside the
    United States, and Responses is the only route to four engines for a UK
-   audience. Queued rather than live, because a collection nobody is waiting on
-   does not need an answer inside two minutes and queued has no engine token
-   cost passed through.
+   audience. **Live rather than queued, reversing the call made when this was
+   written.** Queued looked cheaper because it passes no engine token cost
+   through; the price list, read 2026-09-22, says a live ask on these engines
+   costs about a quarter of a queued one. The price is a worker waiting up to
+   two minutes, which at these volumes is nothing.
 6. **Docs and plan close-out.** **Done 2026-09-22.** The runtime section is in
    `docs/developer/workflow-runtime-internals.md`, the screens and allowance in
    `docs/developer/workflow-automation.md`.
@@ -338,6 +341,10 @@ request body.
 Steps 1 and 2 are independent of everything else and could ship on their own.
 
 ## Judgments, through the Decisions framework
+
+Status: **all four built 2026-09-22**, each switched off, each with the code
+fallback named below. What is still owed is the per-company budget; see the end
+of this section.
 
 Read [Decisions](./decisions-typesafe-plan.md) first. Jev is already a provider
 here, behind a framework that declares each judgment in code
@@ -362,7 +369,8 @@ customer reads.
 
 Discussed 2026-09-22. In the order worth building.
 
-**1. Was the brand recommended, or merely mentioned?** The highest-value
+**1. Was the brand recommended, or merely mentioned?** Built: `seo.citation-stance`,
+judged in `convex/seoJudgments.ts`, stored as `stance` on `aiCitations`. The highest-value
 change on this list, because it changes what the citations screen *means*.
 Today "named second" means the brand string appeared; an answer saying "avoid
 Ronins Agency" counts as a citation. One Choice over the answer text and the
@@ -373,7 +381,8 @@ is TypeSafe's own citation-check pattern almost line for line. Fallback:
 "mentioned" and the answer's stance is left unclaimed rather than guessed. The
 answer text reaches the model as state and is still never stored.
 
-**2. Is this unknown name the rival we already track?** The citations page
+**2. Is this unknown name the rival we already track?** Built: `seo.same-business`,
+with the code-side pairing in `convex/websiteBrands.ts`. The citations page
 shows "Acme Plumbing" and `acme-plumbing.co.uk` as two strangers. Code pairs
 each unmatched name with the tracked hosts it could plausibly be — shared
 words, shared domain stem — and one Score per pair with three levels, same,
@@ -383,14 +392,18 @@ level. Fallback: different, which is what the screen shows today. A confirmed
 match is recorded as a brand name on the rival's shared record, so it serves
 everyone.
 
-**3. Which discovered competitors are real rivals?** DataForSEO's competitor
+**3. Which discovered competitors are real rivals?** Built: `seo.real-competitor`,
+over `discoveredCompetitors`, with accept and dismiss on the screen.
+DataForSEO's competitor
 discovery returns dozens of domains that share keywords, many of them
 directories, marketplaces and publishers. One Choice per candidate — direct
 competitor, marketplace or directory, publisher, unrelated — before a client
 sees the list. Fallback: shown unfiltered, labelled as unjudged. This is the
 first Decision with volume, and it is where the per-company budget is needed.
 
-**4. Which ranked keywords are worth tracking?** Thousands come back per site
+**4. Which ranked keywords are worth tracking?** Built: `seo.keyword-intent`,
+stored in `seoKeywordIntents` and shown on the site's keywords screen.
+Thousands come back per site
 and each tracked one is a paid task per collection. One Choice per keyword —
 buying intent, researching, branded, irrelevant — picks the few hundred worth
 position-tracking, which also protects the plan meters. Fallback: none tracked
@@ -402,11 +415,20 @@ a call; judging one answer for four brands is one request.
 
 **The principle, from Anthony, 2026-09-22: use Jev wherever it makes sense
 and as much as possible, because it is far cheaper than a text model.** So all
-four are to be built, not just the first — the first goes first because it
-changes what a screen means and teaches the framework's behaviour on our data,
-and the two with volume land together with the per-company budget. Where a
-judgment would otherwise reach for a text model, a Decision is the default
-answer and a text model needs a reason.
+four were built, not just the first, in that order: the first changed what a
+screen means and taught the framework's behaviour on our data, and the two with
+volume came last. Where a judgment would otherwise reach for a text model, a
+Decision is the default answer and a text model needs a reason.
+
+**What the volume ones do until the budget exists.** Keyword intent is judged
+once per distinct phrase and kept forever, so two clients in the same trade
+share every answer and a site's second collection asks nothing; a single run
+judges at most fifty new phrases, and the backlog drains over the collections
+that follow. Competitor judging is bounded by how many domains discovery
+returns. Both caps are interim. The per-company Decision budget in the
+[Decisions](./decisions-typesafe-plan.md) plan is what replaces them, and it
+stops being a follow-up the day either judgment is switched on for a client
+paying by volume.
 
 ## Open questions
 

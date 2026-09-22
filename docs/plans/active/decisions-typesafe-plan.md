@@ -560,6 +560,30 @@ before an automatic write, the intent router's threshold.
 
 ---
 
+## Phase G — The SEO judgments (built 2026-09-22)
+
+Four more Decisions, taking the registry from twelve to sixteen. They are
+designed in [Brands, Places and AI Citations](./brands-places-and-ai-citations-plan.md);
+here is only what they change about this plan.
+
+- `seo.citation-stance` — was a brand recommended, mentioned or warned against
+  in an AI engine's answer. Fallback: mentioned.
+- `seo.same-business` — is an unmatched name in an answer the rival already
+  tracked under a different address. Fallback: different.
+- `seo.real-competitor` — is a discovered domain a rival, a directory, a
+  publisher or unrelated. Fallback: shown unfiltered, labelled unjudged.
+- `seo.keyword-intent` — what a searcher wants from a phrase. Fallback: none
+  tracked until a person chooses.
+
+**The per-company budget recorded above as a follow-up now has a date.** The
+last two are the first Decisions asked per row of collected data rather than
+per human action, so their cost scales with a site's size instead of a
+person's day. Until the budget exists they are held down in code: a keyword
+phrase is judged once and the answer kept forever, so answers are shared
+between every client in the same trade, and one run judges at most fifty new
+phrases. Those are interim caps, and the budget replaces them before either
+judgment is switched on for a client paying by volume.
+
 ## Proof, per phase
 
 - Unit tests on the service and each Decision's routing; the existing tests
