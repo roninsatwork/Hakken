@@ -745,15 +745,33 @@ Ask the owner before deciding. Keep it to one line each.
 
 1. **Keyword allowance per plan.** Position tracking is one task per keyword per
    cycle. How many keywords may a plan track per site, and is the default on or
-   off? This sizes `SEO_WORKER_WIDTH` and the storage policy.
+   off? This sizes `SEO_WORKER_WIDTH` and the storage policy. **Deferred
+   2026-09-22 by Anthony:** "let's leave it for now and see what real costs
+   start to come through and we can revisit... I want the platform unrestricted
+   until we have this review." The prompt allowance was raised out of the way
+   the same day on that basis. The condition he attached is that every
+   transaction is stored, logged and visible, which it is.
 2. **Faster overrides.** A website set to daily under a weekly company is only
    reached by the hourly sweep in this design. Is that acceptable, or should an
    override be limited to "slower or off"?
-3. **Currency at the cap.** The agent cap is GBP and DataForSEO costs are USD.
-   Compare using an existing platform rate if one exists (look first), else a
-   super-admin backend setting for the rate. Which?
-4. **Manual "collect now".** A button on the Data Collection screen that opens a
-   `MANUAL` cycle would help testing and support. In this slice or later?
+3. ~~**Currency at the cap.**~~ **Not a question. Checked 2026-09-22: the
+   platform is in dollars throughout and nothing converts.** Model catalogue
+   rows carry `currency: "USD"` from provider sync, DataForSEO costs are stored
+   as `costUsd` exactly as reported, and the cap comparison is dollars against
+   dollars. The code once multiplied by a hardcoded 0.78 and printed a "£";
+   that was removed, and `analyticsService.ts` records why. What survives is
+   stale naming — `calculateModelCostGBP`, `costGBP`, `maxCostGBP` and some
+   590 other references — holding dollar values. Anthony, the same day: "This
+   whole platform is in dollars... it should be in dollars." A rename is
+   wanted; twelve of those names are persisted schema fields, so it needs a
+   migration and is its own task.
+4. ~~**Manual "collect now".**~~ **Built 2026-09-22.** On the platform's
+   collection screen rather than a company's, because pressing it spends
+   Hakken's money and the company workspace becomes customer-facing. It opens a
+   `MANUAL` cycle through the same function the agent uses, so the
+   one-open-cycle rule holds. Note that a manual cycle has no agent run behind
+   it and the spend cap hangs off the agent, so nothing caps a run started this
+   way.
 
 ## Not in this plan
 
