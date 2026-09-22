@@ -1,6 +1,6 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import CompanySiteBriefPage from "./page";
@@ -29,6 +29,7 @@ describe("the Brief", () => {
         rivals: { AHEAD: 1 },
         untrackedNamed: 2,
       },
+      "websiteMoves:listSiteMoves": { moves: [], openCount: 0 },
     }));
   });
 
@@ -77,5 +78,30 @@ describe("the Brief", () => {
     expect(screen.getByText("admin.siteView.overview.compare").closest("a"))
       .toHaveAttribute("href", "/admin/companies/company_1/websites/site/companyWebsite_1/tracking?list=competitors");
     expect(screen.queryByText("admin.siteView.brief.searches")).not.toBeInTheDocument();
+  });
+
+  it("puts the moves first, each with the action that answers it", async () => {
+    const actOnMove = vi.fn(async () => null);
+    vi.mocked(useMutation).mockImplementation(() => actOnMove as never);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": ownedHeader,
+      "websiteClientView:getSitePortfolio": { searches: {}, questions: {}, rivals: {}, untrackedNamed: 1 },
+      "websiteMoves:listSiteMoves": {
+        openCount: 2,
+        moves: [
+          { _id: "move_1", kind: "RIVAL", raisedAt: 1, evidence: { websiteId: "website_2", host: "northgate.co.uk", times: 4, lastDay: "2026-09-21" } },
+          { _id: "move_2", kind: "DEAD_QUESTION", raisedAt: 1, evidence: { questionId: "q_1", prompt: "who is best", asked: 8, weeks: 9 } },
+        ],
+      },
+    }));
+    renderWithProviders(<CompanySiteBriefPage />);
+
+    expect(await screen.findByText("admin.siteView.moves.rival.title")).toBeInTheDocument();
+    // Rewriting a dead question is done on the Tracking tab; retiring it is one click here.
+    expect(screen.getByText("admin.siteView.moves.dead.rewrite").closest("a"))
+      .toHaveAttribute("href", "/admin/companies/company_1/websites/site/companyWebsite_1/tracking?list=questions");
+
+    fireEvent.click(screen.getByRole("button", { name: "admin.siteView.moves.rival.take" }));
+    expect(actOnMove).toHaveBeenCalledWith({ moveId: "move_1", action: "TAKE" });
   });
 });

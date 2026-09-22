@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { purgeHoldMoves } from "./websiteMoves";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -29,7 +30,10 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
 
-    for (const owner of owners) await ctx.db.delete(owner._id);
+    for (const owner of owners) {
+      await purgeHoldMoves(ctx, owner._id);
+      await ctx.db.delete(owner._id);
+    }
 
     /*
       Anything watched *against* the deleted host loses its pairing, not its
@@ -129,7 +133,10 @@ export const purgeCompanyWebsitesInternal = internalMutation({
       .query("companyWebsites")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
       .take(ENTRY_PURGE_BATCH);
-    for (const row of owned) await ctx.db.delete(row._id);
+    for (const row of owned) {
+      await purgeHoldMoves(ctx, row._id);
+      await ctx.db.delete(row._id);
+    }
 
     if (owned.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsitesInternal, {

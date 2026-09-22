@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 
 import { internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import {
   SEO_BATCH_SIZE,
   SEO_MAX_ATTEMPTS,
+  SEO_MOVES_DELAY_MS,
   seoBackoffMs,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -393,6 +395,8 @@ async function closeCycleIfSettled(ctx: MutationCtx, cycleId: Id<"seoCollectionC
   }
 
   await ctx.db.patch(cycleId, { status: "DONE", finishedAt: Date.now() });
+  // Its moves are drawn a few minutes on, once the last answers are parsed.
+  await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, { cycleId });
 }
 
 /** A row still queued or claimed has not gone out yet; one submitted has. */

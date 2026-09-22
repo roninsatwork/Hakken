@@ -106,6 +106,15 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
       + "dismissed one stays dismissed, because both are facts about the "
       + "company's estate. Only the link to the person who decided is cleared.",
   },
+  {
+    table: "websiteMoves",
+    fields: ["decidedBy"],
+    treatment: "DISSOCIATE",
+    reason:
+      "The decision stands — a move taken stays done and a dismissed one stays "
+      + "dismissed, or the same suggestion would return to the company's Brief "
+      + "every cycle. Only the link to the person who decided is cleared.",
+  },
   /*
     `trackedPrompts` was listed here until 2026-09-22 and is gone. Questions
     moved onto the website, and nothing stored on a host may name who is

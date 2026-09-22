@@ -1,9 +1,9 @@
 # The Websites Screens, Rebuilt
 
-Status: **Approved 2026-09-22. All four stages in.** Build order is
-1 → 4 → 2 → 3; the reason is below. **Stages 1 and 4 built and cut over, and
-the gaps they left closed. Stages 2 and 3 remain**, then a performance pass
-over every new screen. Roughly 75% of the plan.
+Status: **Approved 2026-09-22. All four stages built.** Build order was
+1 → 4 → 2 → 3; the reason is below. What remains is the performance pass over
+every new screen that Anthony asked for, and seeing stage 3's moves against a
+real collection. Roughly 90% of the plan.
 Owner: Anthony
 
 ## Built so far — 2026-09-22
@@ -301,6 +301,66 @@ function for a fixed number of event-loop turns, and the first run of a function
 in a worker loads its module from disk, which under a full parallel suite can
 take longer. `src/test/finishScheduled.ts` bounds the same wait by real time
 instead, and all fifty-two callers use it.
+
+### Stage 2, built — 2026-09-22, evening
+
+The site route is a record with tabs: **Brief · Tracking · Results**, under a
+`DetailHeader` that says what is happening — how often it is collected, from
+where, what it tracks and what that costs a month. A tracked site gets an
+overview of its pairing and its rankings instead, because it has no lists of
+its own. The schedule and the place moved into one settings sheet opened from
+the header, loaded only when opened.
+
+- **Brief** — a card per list with its count, monthly cost and a line of what
+  is true ("1 slipping · 3 on page one"), never a line of zeros. Each card
+  opens its list.
+- **Tracking** — searches, questions and competitors behind one switch with
+  their counts and costs side by side. Every row carries a verdict and a price,
+  and the thresholds behind the verdicts are printed under each table, from
+  `convex/utils/trackingVerdicts.ts`, where each is one named constant.
+- **Results** — AI answers, what the engines searched, rankings, behind a
+  switch on the page rather than a dropdown tab, which took two clicks to reach
+  anything. Fan-out rows can be tracked in one click, and a filter shows the
+  buying searches nobody tracks.
+
+**Judged on the server, from summaries kept as results land.** A verdict needs
+weeks of history, and reading that per row per view grows with every search
+and every week. So `websiteSearchStats` (host × search × place) and
+`websiteQuestionStats` (host × question × engine × place) are rebuilt as each
+result is filed, and a Tracking row is one point lookup. `aiAnswers` keeps one
+row per answer, because `aiCitations` keeps one per *mention* and an answer
+that named nobody left no trace — so "named 3 of 14" had no 14. All three are
+recomputed from their rows rather than incremented, so re-parsing converges.
+
+**Prices are what was charged.** The registry knows only a cost band, and a
+price in code goes stale, so `seoOperationCosts` keeps a running mean of what
+DataForSEO charged per operation. An operation nobody has paid for says "not
+priced yet" rather than a guess — which is everything on dev today, because all
+24 pulls there ran in the sandbox.
+
+Found on the way: discovery's suggestions had no screen since the site page was
+slimmed, and are on the Competitors list again; the engine chips and names
+moved to one shared component, so the provider allowlist shrank by one
+instead of growing; the fan-out read was capped at 4,000 rows, from a possible
+100,000.
+
+### Stage 3, built — 2026-09-22, evening
+
+`websiteMoves` holds each site's worklist: **rival** (named twice or more in
+the answers, not held), **name** (a near-miss spelling an engine used),
+**slipping search**, **dead question** (never landed), **untracked search** (a
+buying fan-out search nobody tracks). Derived five minutes after a cycle closes,
+wherever it closes, so the last answers are parsed first; one transaction per
+site. Taking a move does the thing it offered on the server — tracks the rival,
+adds the spelling, pauses the question, adds the search. **Dismissed is kept
+per kind and subject and never raised again**, the plan's named risk; done is
+done, except a slip after it was handled, which is a new event. A move the
+results stop supporting is removed on its own. The Brief shows them first; the
+company list has a *Moves waiting* column. `websiteMoves.decidedBy` is on the
+personal-data register as dissociate, like `discoveredCompetitors.decidedBy`.
+
+The schema's size ratchet went 4,350 → 4,500 for the seven tables stages 2 and
+3 added, raised deliberately.
 
 ## What is wrong
 

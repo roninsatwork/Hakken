@@ -1412,7 +1412,8 @@
         "saveFailed": "Could not add this website. Try again.",
         "removeFailed": "Could not remove this website. Try again."
       },
-      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for."
+      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
+      "movesColumn": "Moves waiting"
     },
     "companyWebsiteDetail": {
       "loading": "Loading website...",
@@ -1673,7 +1674,55 @@
           "stopFailed": "Could not stop tracking that website. Try again."
         }
       },
-      "priceUnknownShort": "not priced yet"
+      "priceUnknownShort": "not priced yet",
+      "moves": {
+        "title": "Moves worth making",
+        "subtitle": "Drawn from what came back. Taken or dismissed, they clear — and the next collection brings new ones.",
+        "empty": "Nothing to act on from what has come back so far.",
+        "more": "{count, plural, one {# more waiting} other {# more waiting}}",
+        "kinds": {
+          "RIVAL": "Rival",
+          "NAME": "Name",
+          "SLIPPING_SEARCH": "Slipping",
+          "DEAD_QUESTION": "Dead weight",
+          "UNTRACKED_SEARCH": "Gap"
+        },
+        "rival": {
+          "title": "{host} was named in {times} of the answers to this site's questions",
+          "detail": "Last named {day}. Nobody on your list — track it to see where it beats you.",
+          "take": "Track it",
+          "dismiss": "Not a rival"
+        },
+        "name": {
+          "title": "An engine called this business “{text}” {times, plural, one {once} other {# times}} — that matches none of its names",
+          "detail": "Those answers scored as near misses. Adding the spelling counts them properly from the next collection.",
+          "take": "Add the name",
+          "dismiss": "Not us"
+        },
+        "slipping": {
+          "title": "“{keyword}” fell from {from} to {to}",
+          "titleGone": "“{keyword}” fell off the page — it was {from}",
+          "detail": "Checked {day}. Look at the page that used to rank before the next collection.",
+          "look": "See the rankings",
+          "take": "Handled"
+        },
+        "dead": {
+          "title": "“{prompt}” has run {weeks} weeks and never landed",
+          "detail": "{asked} paid answers without being named once. The wording is off, or this is not a market it wins in.",
+          "rewrite": "Rewrite it",
+          "take": "Retire it",
+          "dismiss": "Keep asking"
+        },
+        "gap": {
+          "title": "The engines searched “{query}” {times, plural, one {once} other {# times}} — nobody tracks it",
+          "detail": "A buying search, reached from “{prompt}”. Already paid for; tracking it checks where this site ranks for it.",
+          "take": "Track it",
+          "dismiss": "Dismiss"
+        },
+        "errors": {
+          "failed": "Could not do that. Try again."
+        }
+      }
     },
     "companyDataCollection": {
       "title": "Collection schedule",

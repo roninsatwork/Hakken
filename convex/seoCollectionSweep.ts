@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import {
   SEO_CLAIM_TIMEOUT_MS,
   SEO_CYCLE_RETENTION_DAYS,
+  SEO_MOVES_DELAY_MS,
   SEO_RAW_RETENTION_DAYS,
   SEO_RESULT_TIMEOUT_MS,
 } from "./seoCollectionPolicy";
@@ -142,6 +143,9 @@ async function closeSettledCycles(ctx: MutationCtx, now: number) {
     }
 
     await ctx.db.patch(cycle._id, { status: "DONE", finishedAt: now });
+    await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, {
+      cycleId: cycle._id,
+    });
   }
 }
 

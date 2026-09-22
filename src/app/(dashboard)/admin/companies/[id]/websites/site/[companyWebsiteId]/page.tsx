@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate } from "@/src/lib/dates";
+import { SiteMoves } from "./SiteMoves";
 import { TrackedPairing } from "./TrackedPairing";
 import { formatMonthly, siteBase } from "./siteView";
 
@@ -19,8 +20,8 @@ import { formatMonthly, siteBase } from "./siteView";
  * Four cards, one per thing this client pays to watch, each with its count,
  * what it costs a month and how it is doing in words — "3 on page one, 1 never
  * ranked" rather than a percentage, because the words say what to do. Every
- * card opens the list it summarises. The moves drawn from each collection sit
- * above them once stage 3 lands.
+ * card opens the list it summarises. Above them sit the moves each collection
+ * draws — what to do next, in the order to do it.
  *
  * **Day one is the same screen with nothing in it.** No setup wizard and no
  * progress bar — Anthony, 2026-09-22: *"setting up keywords, prompts and
@@ -169,6 +170,8 @@ export default function CompanySiteBriefPage() {
           ? t("brief.lastCollected", { when: formatDate(header.lastCollectedAt) })
           : t("brief.neverCollected")}
       />
+
+      <SiteMoves companyId={companyId} companyWebsiteId={companyWebsiteId} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (

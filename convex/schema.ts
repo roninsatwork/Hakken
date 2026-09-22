@@ -322,6 +322,41 @@ export default defineSchema({
     .index("by_key", ["websiteId", "prompt", "engine", "locationCode"]),
 
   /**
+   * The next things worth doing for one of a company's sites, drawn from what
+   * its collections brought back: a rival the answers keep naming, a spelling
+   * that matched nothing, a search slipping, a question that never lands, a
+   * buying search nobody tracks.
+   *
+   * The company's own work list, so on its hold rather than the host. Derived
+   * when a cycle closes, never on read. `subject` is the stable key within a
+   * kind — a dismissed move is never raised again for the same subject, or the
+   * Brief would be noise within a month. Dismissed is not done: done means the
+   * move was taken, and a slip after it is a new event.
+   */
+  websiteMoves: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    kind: v.union(
+      v.literal("RIVAL"),
+      v.literal("NAME"),
+      v.literal("SLIPPING_SEARCH"),
+      v.literal("DEAD_QUESTION"),
+      v.literal("UNTRACKED_SEARCH"),
+    ),
+    subject: v.string(),
+    evidenceJson: v.string(),
+    state: v.union(v.literal("OPEN"), v.literal("DONE"), v.literal("DISMISSED")),
+    cycleId: v.optional(v.id("seoCollectionCycles")),
+    raisedAt: v.number(),
+    updatedAt: v.number(),
+    decidedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.id("users")),
+  })
+    .index("by_company_website_state", ["companyWebsiteId", "state"])
+    .index("by_key", ["companyWebsiteId", "kind", "subject"])
+    .index("by_company_state", ["companyId", "state"]),
+
+  /**
    * One of a company's own websites.
    *
    * The company's side of a shared record: the `websites` row is the same one

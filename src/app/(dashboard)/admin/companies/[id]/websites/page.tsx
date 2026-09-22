@@ -202,6 +202,21 @@ export default function CompanyWebsitesPage() {
             ),
           },
           {
+            // What the site's Brief has waiting. Only an owned site has moves: a
+            // tracked one is compared on its pair's lists.
+            key: "moves",
+            header: t("movesColumn"),
+            cell: (row) => (
+              row.movesWaiting > 0 ? (
+                <span className="font-mono text-[13px] text-brand">
+                  {row.movesWaiting > 20 ? "20+" : row.movesWaiting}
+                </span>
+              ) : (
+                <span className="text-[12px] text-muted">–</span>
+              )
+            ),
+          },
+          {
             key: "collection",
             header: t("collectionColumn"),
             cell: (row) => (

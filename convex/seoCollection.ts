@@ -25,6 +25,7 @@ import {
   SEO_COMPETITORS_PER_WEBSITE,
   SEO_KEYWORD_CHECKS_PER_WEBSITE,
   SEO_MAX_SENDS_PER_CYCLE,
+  SEO_MOVES_DELAY_MS,
   SEO_PAGE_LINE_BUDGET,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -131,6 +132,13 @@ export const expandSeoCycle = internalMutation({
       cursor: outcome.lastCursor ?? cycle.cursor,
       finishedAt: plannedCount > 0 ? undefined : Date.now(),
     });
+    // A cycle served entirely by reuse closes here, and still has moves to
+    // draw from what it was served.
+    if (plannedCount === 0) {
+      await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, {
+        cycleId: args.cycleId,
+      });
+    }
     await startSending(ctx, args.cycleId, plannedCount);
     return null;
   },

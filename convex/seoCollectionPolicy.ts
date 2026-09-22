@@ -150,3 +150,13 @@ export const SEO_KEYWORD_CHECKS_PER_WEBSITE = 200;
  * are always written together.
  */
 export const SEO_PAGE_LINE_BUDGET = 2_000;
+
+/**
+ * How long after a cycle closes its moves are drawn.
+ *
+ * A cycle closes when its last pull settles, but each answer is parsed after
+ * that, in its own action. Drawing the moves the same instant would draw them
+ * from the cycle before. Five minutes is long past a parse and short enough
+ * that the Brief is current by the time anyone opens it.
+ */
+export const SEO_MOVES_DELAY_MS = 5 * 60 * 1000;

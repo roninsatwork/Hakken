@@ -34,6 +34,8 @@ export const companyWebsiteRow = v.object({
   againstHost: v.union(v.string(), v.null()),
   competitorCount: v.number(),
   competitorCountIsCapped: v.boolean(),
+  /** Open moves on its Brief, counted to twenty-one so "20+" can be said. */
+  movesWaiting: v.number(),
   /** Whether anything is pulled for this website, once inheritance is applied. */
   collecting: v.boolean(),
   scheduleSource,

@@ -1412,7 +1412,8 @@
         "saveFailed": "Impossibile aggiungere questo sito web. Riprova.",
         "removeFailed": "Impossibile rimuovere questo sito web. Riprova."
       },
-      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato."
+      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato.",
+      "movesColumn": "Mosse in attesa"
     },
     "companyWebsiteDetail": {
       "loading": "Caricamento sito web...",
@@ -1673,7 +1674,55 @@
           "stopFailed": "Impossibile smettere di monitorare il sito. Riprova."
         }
       },
-      "priceUnknownShort": "prezzo non ancora noto"
+      "priceUnknownShort": "prezzo non ancora noto",
+      "moves": {
+        "title": "Mosse da fare",
+        "subtitle": "Tratte da ciò che è tornato. Fatte o scartate, spariscono — e la raccolta successiva ne porta di nuove.",
+        "empty": "Niente su cui agire da ciò che è tornato finora.",
+        "more": "{count, plural, one {ancora # in attesa} other {ancora # in attesa}}",
+        "kinds": {
+          "RIVAL": "Concorrente",
+          "NAME": "Nome",
+          "SLIPPING_SEARCH": "In calo",
+          "DEAD_QUESTION": "Peso morto",
+          "UNTRACKED_SEARCH": "Lacuna"
+        },
+        "rival": {
+          "title": "{host} è stato citato in {times} risposte alle domande di questo sito",
+          "detail": "Ultima citazione {day}. Non è nella tua lista — monitoralo per vedere dove ti supera.",
+          "take": "Monitoralo",
+          "dismiss": "Non è un concorrente"
+        },
+        "name": {
+          "title": "Un motore ha chiamato questa attività «{text}» {times, plural, one {una volta} other {# volte}} — non corrisponde a nessuno dei suoi nomi",
+          "detail": "Quelle risposte sono state contate come quasi-centri. Aggiungere la grafia le conta correttamente dalla prossima raccolta.",
+          "take": "Aggiungi il nome",
+          "dismiss": "Non siamo noi"
+        },
+        "slipping": {
+          "title": "«{keyword}» è scesa da {from} a {to}",
+          "titleGone": "«{keyword}» è uscita dalla pagina — era {from}",
+          "detail": "Controllata {day}. Guarda la pagina che si posizionava prima della prossima raccolta.",
+          "look": "Vedi i posizionamenti",
+          "take": "Gestita"
+        },
+        "dead": {
+          "title": "«{prompt}» è attiva da {weeks} settimane e non è mai andata a segno",
+          "detail": "{asked} risposte a pagamento senza mai essere citato. La formulazione non va, o questo non è un mercato in cui vince.",
+          "rewrite": "Riscrivila",
+          "take": "Ritirala",
+          "dismiss": "Continua a chiederla"
+        },
+        "gap": {
+          "title": "I motori hanno cercato «{query}» {times, plural, one {una volta} other {# volte}} — nessuno la monitora",
+          "detail": "Una ricerca d'acquisto, partita da «{prompt}». Già pagata; monitorarla controlla dove si posiziona questo sito.",
+          "take": "Monitorala",
+          "dismiss": "Scarta"
+        },
+        "errors": {
+          "failed": "Impossibile farlo. Riprova."
+        }
+      }
     },
     "companyDataCollection": {
       "title": "Programma di raccolta",

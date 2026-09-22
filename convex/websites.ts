@@ -22,6 +22,7 @@ import {
 } from "./seoScheduleService";
 import * as websiteShapes from "./utils/websiteShapes";
 import { pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
+import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -336,6 +337,9 @@ export const getCompanyWebsites = superAdminQuery({
         const counts = companyWebsite.relationship === "TRACKED"
           ? { competitorCount: 0, competitorCountIsCapped: false }
           : await countCompetitors(ctx, args.companyId, companyWebsite.websiteId);
+        const movesWaiting = companyWebsite.relationship === "TRACKED"
+          ? 0
+          : await countOpenMoves(ctx, companyWebsite._id);
 
         return {
           ...companyWebsite,
@@ -343,6 +347,7 @@ export const getCompanyWebsites = superAdminQuery({
           displayHost: website?.displayHost ?? "",
           againstHost: against?.displayHost ?? null,
           ...counts,
+          movesWaiting,
           collecting: resolved.active,
           scheduleSource: pair ? ("PAIR" as const) : resolved.source,
           nextRunAt: resolved.nextRunAt,
@@ -570,6 +575,7 @@ export const removeCompanyWebsite = superAdminMutation({
     if (!companyWebsite) throw appError("NOT_FOUND", "Website not found");
 
     const website = await ctx.db.get(companyWebsite.websiteId);
+    await purgeHoldMoves(ctx, args.id);
     await ctx.db.delete(args.id);
 
     await ctx.db.insert("auditLogs", {
