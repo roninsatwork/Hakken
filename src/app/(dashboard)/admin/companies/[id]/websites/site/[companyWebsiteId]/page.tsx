@@ -352,12 +352,20 @@ export default function CompanyWebsiteDetailPage() {
           Results live on their own page. This is settings; the answers are
           what the settings produce, and they grow without bound.
         */}
-        <Link
-          href={`/admin/companies/${companyId}/websites/site/${companyWebsiteId}/citations`}
-          className="text-[13px] text-brand hover:underline"
-        >
-          {tPrompts("seeCitations")}
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/admin/companies/${companyId}/websites/site/${companyWebsiteId}/keywords`}
+            className="text-[13px] text-brand hover:underline"
+          >
+            {tPrompts("seeKeywords")}
+          </Link>
+          <Link
+            href={`/admin/companies/${companyId}/websites/site/${companyWebsiteId}/citations`}
+            className="text-[13px] text-brand hover:underline"
+          >
+            {tPrompts("seeCitations")}
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 rounded-[12px] border border-border-dim bg-card/40 p-4">

@@ -5,7 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { parseLlmResponse } from "./dataForSeoParsers";
-import { judgeStances, linkCitedAddresses } from "./seoCollectionParse";
+import { judgeStances, linkCitedAddresses } from "./seoJudgments";
 import type { TypesafeAskResult } from "./typesafeProviderService";
 import type { ActionCtx } from "./_generated/server";
 

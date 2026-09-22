@@ -535,6 +535,37 @@ export default defineSchema({
     .index("by_run", ["agentRunId"]),
 
   /**
+   * What somebody means when they type one search.
+   *
+   * **Judged once per distinct search and reused forever**, because a phrase's
+   * meaning does not change week to week while the rankings under it do. A site
+   * with a thousand ranked searches is a thousand questions on the first
+   * collection and none on the next, which is what makes the judgment
+   * affordable at all.
+   *
+   * Keyed on the search alone, not on the website, so two clients in the same
+   * trade share every answer between them — the same economics as one row per
+   * host. `business` is passed as context when judging but is deliberately not
+   * part of the key: "emergency plumber leeds" means the same thing whoever
+   * ranks for it.
+   */
+  seoKeywordIntents: defineTable({
+    /** Lowercased and space-collapsed, so one phrase is one row. */
+    keyword: v.string(),
+    intent: v.union(
+      v.literal("BUYING"),
+      v.literal("RESEARCHING"),
+      v.literal("BRANDED"),
+      v.literal("IRRELEVANT"),
+      v.literal("OTHER"),
+    ),
+    certainty: v.optional(v.union(
+      v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"),
+    )),
+    judgedAt: v.number(),
+  }).index("by_keyword", ["keyword"]),
+
+  /**
    * A website DataForSEO says competes with one of a company's own.
    *
    * A suggestion, not a competitor: nothing is tracked until a person accepts

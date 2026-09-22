@@ -1,0 +1,149 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "convex/react";
+import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Search } from "lucide-react";
+
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import useDebounce from "@/src/hooks/useDebounce";
+
+/**
+ * What this website ranks for.
+ *
+ * The pipeline has collected this since it shipped and it has never been on a
+ * screen. Best position first, because what a site ranks well for is what
+ * somebody opens this page to see.
+ *
+ * The intent beside each search is judged once per phrase and shared by every
+ * client in the same trade, so the answer is bought once however many people
+ * rank for it. Unjudged says so rather than guessing, which is what it shows
+ * while the Decision is switched off.
+ */
+export default function WebsiteKeywordsPage() {
+  const t = useTranslations("admin.websiteKeywords");
+  const params = useParams();
+  const companyId = params.id as string;
+  const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 400);
+
+  const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
+  const keywords = useQuery(api.seoKeywordReports.listWebsiteKeywords, {
+    companyWebsiteId,
+    searchTerm: debouncedSearch,
+    page,
+    pageSize: TABLE_PAGE_SIZE,
+  });
+
+  const intentLabel = (intent: string) => {
+    if (intent === "BUYING") return t("intents.BUYING");
+    if (intent === "RESEARCHING") return t("intents.RESEARCHING");
+    if (intent === "BRANDED") return t("intents.BRANDED");
+    if (intent === "IRRELEVANT") return t("intents.IRRELEVANT");
+    return t("intents.OTHER");
+  };
+
+  if (website === null) {
+    return <p className="py-12 text-center text-[13px] text-muted">{t("notFound")}</p>;
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-6 pb-12">
+      <DetailHeader
+        back={{
+          label: t("back"),
+          href: `/admin/companies/${companyId}/websites/site/${companyWebsiteId}`,
+        }}
+        icon={<Search className="h-6 w-6 text-brand" />}
+        title={website?.displayHost ?? ""}
+        description={t("subtitle")}
+      />
+
+      <DataTable
+        rows={keywords === undefined ? undefined : keywords.data}
+        rowKey={(row) => row._id}
+        minWidthClassName="min-w-[760px]"
+        search={{
+          value: searchTerm,
+          onChange: (value) => {
+            setSearchTerm(value);
+            setPage(1);
+          },
+          placeholder: t("searchPlaceholder"),
+        }}
+        empty={{
+          icon: <Search className="h-8 w-8 text-muted/30" />,
+          label: searchTerm ? t("noMatch") : t("empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages: keywords?.totalPages ?? 1,
+          totalCount: keywords?.totalCount ?? 0,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: keywords === undefined,
+          onPageChange: setPage,
+          labels: { empty: searchTerm ? t("noMatch") : t("empty") },
+        }}
+        columns={[
+          {
+            key: "keyword",
+            header: t("keywordColumn"),
+            cell: (row) => (
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[13px] text-foreground">{row.keyword}</span>
+                <span className="text-[11px] text-muted">{row.day}</span>
+              </div>
+            ),
+          },
+          {
+            key: "intent",
+            header: t("intentColumn"),
+            cell: (row) => (
+              row.intent === null ? (
+                <span className="text-[12px] text-muted">{t("unjudged")}</span>
+              ) : (
+                <StatusPill tone={row.intent === "BUYING" ? "success" : "neutral"}>
+                  {intentLabel(row.intent)}
+                </StatusPill>
+              )
+            ),
+          },
+          {
+            key: "position",
+            header: t("positionColumn"),
+            align: "right",
+            cell: (row) => (
+              <span className="font-mono text-[13px] text-foreground">
+                {/*
+                  Not ranking is a different fact from ranking last, so it is
+                  shown as nothing rather than as a large number.
+                */}
+                {row.position === null ? "—" : row.position}
+              </span>
+            ),
+          },
+          {
+            key: "volume",
+            header: t("volumeColumn"),
+            align: "right",
+            cell: (row) => (
+              <span className="font-mono text-[12px] text-secondary">
+                {row.searchVolume === null ? "—" : row.searchVolume.toLocaleString()}
+              </span>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}

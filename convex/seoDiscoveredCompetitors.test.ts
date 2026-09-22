@@ -6,7 +6,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import type { TypesafeAskResult } from "./typesafeProviderService";
-import { judgeCompetitors } from "./seoCollectionParse";
+import { judgeCompetitors } from "./seoJudgments";
 import { parseDomainCompetitors } from "./dataForSeoParsers";
 
 /**

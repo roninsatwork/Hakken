@@ -114,6 +114,40 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     },
   },
   {
+    key: "seo.keyword-intent",
+    name: "What is someone searching for when they type this?",
+    copyKey: "seoKeywordIntent",
+    usedIn: "seo",
+    // It decides what a screen offers first, and what a person would choose to
+    // pay to track. Nothing is tracked and nothing is charged on the answer.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide what the person typing this search is trying to do — the search whose key equals this question's id.",
+        context:
+          "`business` describes the website that ranks for these searches. `searches` maps each key to one search someone typed. Judge only the search whose key matches this question's id.",
+        guidance:
+          "Judge the searcher's purpose, not the words. Someone ready to buy, book or hire is buying, whether or not the word 'buy' appears. Someone learning about the subject is researching. A search for the business's own name, or a name only it uses, is branded.",
+      },
+      criteria: {
+        buying: "The searcher is ready to buy, book, hire or get a quote.",
+        researching: "The searcher is learning, comparing or working out what they need.",
+        branded: "The searcher is looking for this business by name, or for one of its own products by name.",
+        irrelevant: "The search has nothing to do with what this business does, however the site came to rank for it.",
+        other: "None of these fits, or the search is too vague to tell.",
+      },
+    },
+    describeAction: (answer) => {
+      if (answer.kind !== "pick-one") return null;
+      // Nothing is tracked or paid for on this answer; it orders a list and
+      // tells a person what would be worth paying to follow.
+      if (answer.choice === "irrelevant") return "marked a search as nothing to do with the business";
+      return null;
+    },
+  },
+  {
     key: "seo.real-competitor",
     name: "Is this discovered website a real competitor?",
     copyKey: "seoRealCompetitor",

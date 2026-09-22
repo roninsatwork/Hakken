@@ -1488,7 +1488,8 @@
           "removeFailed": "Could not remove that question. Try again."
         },
         "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for.",
-        "seeCitations": "See what the engines answered"
+        "seeCitations": "See what the engines answered",
+        "seeKeywords": "See what it ranks for"
       },
       "discovered": {
         "title": "Websites competing for the same searches",
@@ -5177,6 +5178,26 @@
       "recommendedAt": "Recommended, {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "warnedAgainst": "Warned against",
       "chipRecommended": "✓"
+    },
+    "websiteKeywords": {
+      "back": "Back to the website",
+      "notFound": "That website is no longer held by this company.",
+      "subtitle": "The searches this website ranks for, best position first.",
+      "searchPlaceholder": "Search these terms...",
+      "empty": "Nothing collected yet. The next collection reads what this website ranks for.",
+      "noMatch": "No search matches that.",
+      "keywordColumn": "Search",
+      "intentColumn": "What they want",
+      "positionColumn": "Position",
+      "volumeColumn": "Searches a month",
+      "unjudged": "Not judged",
+      "intents": {
+        "BUYING": "Ready to buy",
+        "RESEARCHING": "Researching",
+        "BRANDED": "Looking for this business",
+        "IRRELEVANT": "Nothing to do with it",
+        "OTHER": "Too vague to tell"
+      }
     }
   },
   "ai": {
@@ -6952,6 +6973,18 @@
           "publisher": "A publisher",
           "supplier": "A supplier or trade body",
           "other": "Cannot tell"
+        }
+      },
+      "seoKeywordIntent": {
+        "name": "What is someone searching for when they type this?",
+        "description": "Reads the purpose behind a search, so the searches worth paying to track can be told from the thousands a site happens to rank for.",
+        "rule": "Without it, every search a site ranks for looks equally worth tracking.",
+        "answers": {
+          "buying": "Ready to buy",
+          "researching": "Researching",
+          "branded": "Looking for this business",
+          "irrelevant": "Nothing to do with the business",
+          "other": "Too vague to tell"
         }
       }
     }

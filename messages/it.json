@@ -1488,7 +1488,8 @@
           "removeFailed": "Non è stato possibile rimuovere la domanda. Riprova."
         },
         "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate.",
-        "seeCitations": "Vedi cosa hanno risposto i motori"
+        "seeCitations": "Vedi cosa hanno risposto i motori",
+        "seeKeywords": "Vedi per cosa si posiziona"
       },
       "discovered": {
         "title": "Siti in gara sulle stesse ricerche",
@@ -5177,6 +5178,26 @@
       "recommendedAt": "Consigliata, {position}º posto",
       "warnedAgainst": "Sconsigliata",
       "chipRecommended": "✓"
+    },
+    "websiteKeywords": {
+      "back": "Torna al sito",
+      "notFound": "Questo sito non è più seguito da questa azienda.",
+      "subtitle": "Le ricerche per cui questo sito si posiziona, dalla posizione migliore.",
+      "searchPlaceholder": "Cerca tra questi termini...",
+      "empty": "Nulla di raccolto. La prossima raccolta leggerà per cosa si posiziona il sito.",
+      "noMatch": "Nessuna ricerca corrisponde.",
+      "keywordColumn": "Ricerca",
+      "intentColumn": "Che cosa vogliono",
+      "positionColumn": "Posizione",
+      "volumeColumn": "Ricerche al mese",
+      "unjudged": "Non valutata",
+      "intents": {
+        "BUYING": "Pronto ad acquistare",
+        "RESEARCHING": "Sta informandosi",
+        "BRANDED": "Cerca questa attività",
+        "IRRELEVANT": "Non c'entra",
+        "OTHER": "Troppo vaga"
+      }
     }
   },
   "ai": {
@@ -6952,6 +6973,18 @@
           "publisher": "Un editore",
           "supplier": "Un fornitore o un'associazione",
           "other": "Non determinabile"
+        }
+      },
+      "seoKeywordIntent": {
+        "name": "Che cosa cerca chi digita questa frase?",
+        "description": "Interpreta l'intenzione dietro una ricerca, così si distinguono le ricerche che vale la pena seguire dalle migliaia per cui un sito si posiziona per caso.",
+        "rule": "Senza, ogni ricerca sembra ugualmente utile da seguire.",
+        "answers": {
+          "buying": "Pronto ad acquistare",
+          "researching": "Sta informandosi",
+          "branded": "Cerca questa attività",
+          "irrelevant": "Non c'entra con l'attività",
+          "other": "Troppo vaga"
         }
       }
     }
