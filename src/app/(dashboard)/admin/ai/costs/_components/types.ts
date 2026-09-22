@@ -61,7 +61,7 @@ export type AnalyticsAggregates = {
   aggregationType: string;
   avgCostPerMessage?: number;
   costPerActiveUser?: number;
-  totalCostGBP?: number;
+  totalCostUsd?: number;
   totalInputTokens?: number;
   totalOutputTokens?: number;
   totalTokens?: number;

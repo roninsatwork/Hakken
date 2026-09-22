@@ -73,7 +73,7 @@ function buildReport(operations: OperationalHealthReport): SystemHealthReport {
     checkedAt: Date.UTC(2026, 6, 31, 0, 25),
     checkedDate: "2026-07-31",
     daysBack: 7,
-    highCostAgentThresholdGBP: 5,
+    highCostAgentThresholdUsd: 5,
     operations,
     overdueScheduleThresholdMinutes: 30,
     pendingApprovalThresholdMinutes: 60,

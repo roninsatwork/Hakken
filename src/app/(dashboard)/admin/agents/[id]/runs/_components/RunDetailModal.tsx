@@ -246,7 +246,7 @@ export function RunDetailModal({
                   <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                     {[
                       { label: t("deltas.latency"), value: formatSignedDurationDelta(runDetail.replayContext.comparison.latencyDeltaMs) ?? tLabels("notAvailable") },
-                      { label: t("deltas.cost"), value: formatSignedCurrencyDelta(runDetail.replayContext.comparison.costDeltaGBP) ?? tLabels("notAvailable") },
+                      { label: t("deltas.cost"), value: formatSignedCurrencyDelta(runDetail.replayContext.comparison.costDeltaUsd) ?? tLabels("notAvailable") },
                       { label: t("deltas.tokens"), value: formatSignedNumberDelta(runDetail.replayContext.comparison.tokenDelta) ?? tLabels("notAvailable") },
                       { label: t("deltas.steps"), value: formatSignedNumberDelta(runDetail.replayContext.comparison.stepCountDelta) ?? tLabels("notAvailable") },
                       {
@@ -419,7 +419,7 @@ export function RunDetailModal({
                     {step.inputTokens !== undefined && step.outputTokens !== undefined && (
                       <span>{t("tokens", { count: (step.inputTokens + step.outputTokens).toLocaleString("en-GB") })}</span>
                     )}
-                    {step.costGBP !== undefined && <span>{t("costLabel", { amount: formatMoney(step.costGBP) })}</span>}
+                    {step.costUsd !== undefined && <span>{t("costLabel", { amount: formatMoney(step.costUsd) })}</span>}
                   </div>
                   {(step.linkedToolCalls.length > 0 || step.linkedApprovals.length > 0) && (
                     <div className="flex flex-wrap gap-2">

@@ -31,13 +31,13 @@ type AgentCheckDetailContentProps = {
  * What the run cost. Zero and "not priced" are different facts, so an unpriced run
  * says nothing rather than claiming it was free.
  */
-function formatRunCost(costGBP: number | undefined) {
-  if (typeof costGBP !== "number" || !Number.isFinite(costGBP) || costGBP <= 0) return null;
+function formatRunCost(costUsd: number | undefined) {
+  if (typeof costUsd !== "number" || !Number.isFinite(costUsd) || costUsd <= 0) return null;
   // Dollars: the stored figure is the provider's own price and nothing converts
   // it. Sub-cent runs are the norm here, so cents read better than a string of
   // zeros after a currency sign.
-  const cents = costGBP * 100;
-  return cents < 1 ? `${cents.toFixed(2)}¢` : `$${costGBP.toFixed(2)}`;
+  const cents = costUsd * 100;
+  return cents < 1 ? `${cents.toFixed(2)}¢` : `$${costUsd.toFixed(2)}`;
 }
 
 export default function AgentCheckDetailContent({
@@ -95,7 +95,7 @@ export default function AgentCheckDetailContent({
               {latest.modelId ? t("detail.answeredBy", { model: latest.modelId }) : t("detail.modelNotRecorded")}
               {typeof latest.inputTokens === "number" ? ` ${t("detail.tokensInOut", { input: latest.inputTokens, output: latest.outputTokens ?? 0 })}` : ""}
               {detail.check.sampleCount > 1 ? ` ${t("detail.askedUpTo", { count: detail.check.sampleCount })}` : ""}
-              {formatRunCost(latest.costGBP) ? ` ${t("detail.cost", { cost: formatRunCost(latest.costGBP) ?? "" })}` : ""}
+              {formatRunCost(latest.costUsd) ? ` ${t("detail.cost", { cost: formatRunCost(latest.costUsd) ?? "" })}` : ""}
             </p>
           </>
         )}

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, usePaginatedQuery } from "convex/react";
-import { formatCurrencyGBP } from "@/src/lib/currency";
+import { formatCurrencyUsd } from "@/src/lib/currency";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
@@ -84,7 +84,7 @@ function DecisionsPanel({ agentId, lookbackDays }: { agentId: Id<"agents">; look
       <h3 className="text-[14px] font-semibold text-foreground tracking-tight">{t("title")}</h3>
       <p className="text-[12.5px] text-foreground">{t("line", { ran: summary.ran })}</p>
       <p className="text-[12px] text-secondary">
-        {t("detail", { acted: summary.acted, handed: summary.handed, onRules: summary.onRules, cost: formatCurrencyGBP(summary.costGBP) })}
+        {t("detail", { acted: summary.acted, handed: summary.handed, onRules: summary.onRules, cost: formatCurrencyUsd(summary.costUsd) })}
       </p>
       {summary.isPartial && <p className="text-[11px] text-muted">{t("partial", { runs: 50 })}</p>}
     </section>
@@ -275,8 +275,8 @@ function Vitals({ analytics }: { analytics: Analytics }) {
       />
       <Vital
         label={t("costsPerJob")}
-        value={formatMoney(current.costPerRunGBP)}
-        footnote={t("overPeriod", { amount: formatMoney(current.costGBP) })}
+        value={formatMoney(current.costPerRunUsd)}
+        footnote={t("overPeriod", { amount: formatMoney(current.costUsd) })}
       />
       <Vital
         label={t("waiting")}
@@ -736,7 +736,7 @@ function LatestJobs({
                     ? t("underASecond")
                     : formatDuration(run.completedAt - run.startedAt)
                   : "—"}
-                {run.costGBP !== undefined ? ` · ${formatMoney(run.costGBP)}` : ""}
+                {run.costUsd !== undefined ? ` · ${formatMoney(run.costUsd)}` : ""}
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors shrink-0" />
             </button>

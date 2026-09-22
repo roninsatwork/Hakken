@@ -42,7 +42,7 @@ const decisionRowShape = v.object({
   effectiveMode: modeValidator,
   ranThisWeek: v.number(),
   handedThisWeek: v.number(),
-  costThisWeekGBP: v.number(),
+  costThisWeekUsd: v.number(),
   isCapped: v.boolean(),
 });
 
@@ -117,7 +117,7 @@ async function overview(ctx: QueryCtx, companyId?: Id<"companies">) {
       }),
       ranThisWeek: counted.length,
       handedThisWeek: counted.filter((run) => run.outcome === "HANDED_TO_PERSON").length,
-      costThisWeekGBP: counted.reduce((sum, run) => sum + run.costGBP, 0),
+      costThisWeekUsd: counted.reduce((sum, run) => sum + run.costUsd, 0),
       isCapped,
     });
   }
@@ -264,7 +264,7 @@ const runRowShape = v.object({
   source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
   fallbackReason: v.optional(v.union(v.literal("MODE_OFF"), v.literal("NO_MODEL"), v.literal("PROVIDER_FAILED"))),
   action: v.optional(v.string()),
-  costGBP: v.number(),
+  costUsd: v.number(),
 });
 
 const detailShape = v.object({
@@ -282,7 +282,7 @@ const detailShape = v.object({
   runs: v.array(runRowShape),
   ranThisWeek: v.number(),
   handedThisWeek: v.number(),
-  costThisWeekGBP: v.number(),
+  costThisWeekUsd: v.number(),
   isCapped: v.boolean(),
   provider: providerStateShape,
 });
@@ -351,11 +351,11 @@ async function detail(ctx: QueryCtx, decisionKey: string, companyId?: Id<"compan
       source: run.source,
       ...(run.fallbackReason ? { fallbackReason: run.fallbackReason } : {}),
       ...(run.action ? { action: run.action } : {}),
-      costGBP: run.costGBP,
+      costUsd: run.costUsd,
     })),
     ranThisWeek: counted.length,
     handedThisWeek: counted.filter((run) => run.outcome === "HANDED_TO_PERSON").length,
-    costThisWeekGBP: counted.reduce((sum, run) => sum + run.costGBP, 0),
+    costThisWeekUsd: counted.reduce((sum, run) => sum + run.costUsd, 0),
     isCapped,
     provider: await providerState(ctx, companyId),
   };
@@ -405,7 +405,7 @@ export const listForRun = adminQuery({
       source: run.source,
       ...(run.fallbackReason ? { fallbackReason: run.fallbackReason } : {}),
       ...(run.action ? { action: run.action } : {}),
-      costGBP: run.costGBP,
+      costUsd: run.costUsd,
       decisionKey: run.decisionKey,
       copyKey: getDecision(run.decisionKey)?.copyKey ?? run.decisionKey,
     }));
@@ -426,7 +426,7 @@ export const summaryForAgent = adminQuery({
     acted: v.number(),
     handed: v.number(),
     onRules: v.number(),
-    costGBP: v.number(),
+    costUsd: v.number(),
     isPartial: v.boolean(),
   }),
   handler: async (ctx, args) => {
@@ -446,7 +446,7 @@ export const summaryForAgent = adminQuery({
     let acted = 0;
     let handed = 0;
     let onRules = 0;
-    let costGBP = 0;
+    let costUsd = 0;
     for (const run of agentRuns) {
       const rows = await ctx.db
         .query("decisionRuns")
@@ -457,9 +457,9 @@ export const summaryForAgent = adminQuery({
         if (row.outcome === "ACTED") acted += 1;
         if (row.outcome === "HANDED_TO_PERSON") handed += 1;
         if (row.source === "RULES") onRules += 1;
-        costGBP += row.costGBP;
+        costUsd += row.costUsd;
       }
     }
-    return { ran, acted, handed, onRules, costGBP, isPartial: agentRuns.length >= AGENT_RUNS_FOR_SUMMARY };
+    return { ran, acted, handed, onRules, costUsd, isPartial: agentRuns.length >= AGENT_RUNS_FOR_SUMMARY };
   },
 });

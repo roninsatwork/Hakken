@@ -144,7 +144,7 @@ type Group = {
     status: string;
     startedAt: number;
     completedAt?: number;
-    costGBP?: number;
+    costUsd?: number;
     triggerType: string;
   } | null;
   entries: Array<{
@@ -207,7 +207,7 @@ function JobGroup({
             {job ? `${label(describeTrigger(job.triggerType))} · ` : ""}
             {label(formatRelativeTime(group.startedAt, now))} · {t("entries", { formatted: formatCount(group.entries.length), count: group.entries.length })}
             {durationMs !== undefined ? ` · ${formatDuration(durationMs)}` : ""}
-            {job?.costGBP !== undefined ? ` · ${formatMoney(job.costGBP)}` : ""}
+            {job?.costUsd !== undefined ? ` · ${formatMoney(job.costUsd)}` : ""}
           </p>
         </div>
         {group.runId &&

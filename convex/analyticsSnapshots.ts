@@ -386,7 +386,7 @@ export const generateDailySnapshots = internalAction({
           {
             date: dateString,
             type: "global" as const,
-            metrics: { totalMessages: 0, totalInputTokens: 0, totalOutputTokens: 0, costGBP: 0, activeUsersCount: 0 },
+            metrics: { totalMessages: 0, totalInputTokens: 0, totalOutputTokens: 0, costUsd: 0, activeUsersCount: 0 },
             uniqueUserIds: [],
           },
         ],

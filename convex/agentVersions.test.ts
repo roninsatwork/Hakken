@@ -120,7 +120,7 @@ describe("Agent Versions", () => {
       runs: 1,
       fixtures: 1,
       successRate: 1,
-      costGBP: 0,
+      costUsd: 0,
     });
     expect(detail?.version.snapshotJson).toContain("Include next action");
 

@@ -1295,7 +1295,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       maxSteps: 12,
       // Above the ceiling, so the stored record must say what will actually run
       // rather than a number the runtime silently overrides.
-      maxCostGBP: 500,
+      maxCostUsd: 500,
       // A cleared box arrives as zero and means "follow the platform default",
       // which is an absent field rather than a stored zero.
       maxToolCalls: 0,
@@ -1310,7 +1310,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       autonomousToolExecution: true,
       approvalExpiryHours: 48,
       maxSteps: 12,
-      maxCostGBP: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+      maxCostUsd: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd,
       isActive: false,
     });
     expect(agent?.maxToolCalls).toBeUndefined();
@@ -1760,7 +1760,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     // budget, which is what every agent did before these became settable.
     const before = await readAgent();
     expect(before?.autonomousToolExecution).toBeUndefined();
-    expect(before?.maxCostGBP).toBeUndefined();
+    expect(before?.maxCostUsd).toBeUndefined();
 
     await client.mutation(api.agents.updateAgent, {
       id: agentId,
@@ -1768,7 +1768,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       maxSteps: 12,
       maxToolCalls: 6,
       maxRuntimeMs: 6 * 60 * 1000,
-      maxCostGBP: 0.5,
+      maxCostUsd: 0.5,
     });
 
     expect(await readAgent()).toMatchObject({
@@ -1777,7 +1777,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       maxToolCalls: 6,
       maxRuntimeMs: 6 * 60 * 1000,
       // Not floored to zero. A budget of £0 is one no run can start under.
-      maxCostGBP: 0.5,
+      maxCostUsd: 0.5,
     });
 
     // Above the ceiling is stored clamped, so the record cannot claim a budget the
@@ -1785,11 +1785,11 @@ describe("OWASP: Broken Access Control - Agents", () => {
     await client.mutation(api.agents.updateAgent, {
       id: agentId,
       maxSteps: 5_000,
-      maxCostGBP: 9_999,
+      maxCostUsd: 9_999,
     });
     expect(await readAgent()).toMatchObject({
       maxSteps: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps,
-      maxCostGBP: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+      maxCostUsd: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd,
     });
 
     // Zero is how a cleared box arrives, and it has to restore the default rather
@@ -1797,11 +1797,11 @@ describe("OWASP: Broken Access Control - Agents", () => {
     await client.mutation(api.agents.updateAgent, {
       id: agentId,
       maxSteps: 0,
-      maxCostGBP: 0,
+      maxCostUsd: 0,
     });
     const cleared = await readAgent();
     expect(cleared?.maxSteps).toBeUndefined();
-    expect(cleared?.maxCostGBP).toBeUndefined();
+    expect(cleared?.maxCostUsd).toBeUndefined();
     // Untouched fields survive a save that did not mention them.
     expect(cleared?.maxToolCalls).toBe(6);
     expect(cleared?.autonomousToolExecution).toBe(true);

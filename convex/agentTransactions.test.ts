@@ -48,7 +48,7 @@ describe("Agent Transactions", () => {
         inputTokens: 100,
         outputTokens: 20,
         modelUsed: "model-test",
-        costGBP: 0.05,
+        costUsd: 0.05,
         status: "SUCCESS",
         createdAt: 100,
       });
@@ -60,7 +60,7 @@ describe("Agent Transactions", () => {
         inputTokens: 300,
         outputTokens: 40,
         modelUsed: "model-test",
-        costGBP: 0.15,
+        costUsd: 0.15,
         status: "FAILED",
         createdAt: 200,
       });
@@ -129,7 +129,7 @@ describe("Agent Transactions", () => {
       providerModelId: "model-test",
       inputTokens: 12,
       outputTokens: 34,
-      costGBP: 0.01,
+      costUsd: 0.01,
       status: "SUCCESS",
     });
 
@@ -189,6 +189,6 @@ describe("Agent Transactions", () => {
     );
     expect(seededTransactions).toHaveLength(15);
     expect(seededTransactions.every((transaction) => transaction.userId === superAdminId)).toBe(true);
-    expect(seededTransactions.every((transaction) => transaction.costGBP >= 0)).toBe(true);
+    expect(seededTransactions.every((transaction) => (transaction.costUsd ?? 0) >= 0)).toBe(true);
   });
 });

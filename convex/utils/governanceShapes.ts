@@ -220,7 +220,7 @@ export const platformOverviewShape = v.object({
   }),
   money: v.object({
     projectedMrrGBP: v.number(),
-    aiSpendGBP: v.number(),
+    aiSpendUsd: v.number(),
     spendAsPercentOfRevenue: v.union(v.number(), v.null()),
   }),
   seats: v.object({ total: v.number(), active: v.number(), utilisation: v.number() }),
@@ -230,7 +230,7 @@ export const platformOverviewShape = v.object({
     day: v.string(),
     questions: v.number(),
     aiCalls: v.number(),
-    spendGBP: v.number(),
+    spendUsd: v.number(),
   })),
   signInBands: v.array(v.object({
     day: v.string(),
@@ -268,8 +268,8 @@ export const marketDiscoveryJobShape = v.union(v.null(), v.object({
   locationsDuplicate: v.number(),
   locationsNeedsCheck: v.number(),
   currentLabel: v.union(v.string(), v.null()),
-  spentGBP: v.number(),
-  maxCostGBP: v.optional(v.number()),
+  spentUsd: v.number(),
+  maxCostUsd: v.optional(v.number()),
   startedAt: v.number(),
   finishedAt: v.union(v.number(), v.null()),
   endedReason: v.union(v.string(), v.null()),

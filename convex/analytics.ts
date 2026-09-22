@@ -12,7 +12,7 @@ import {
     getAggregationType,
     resolveDateRange,
     resolveTimestampRange,
-  mergeSnapshotModelMetrics } from "./analyticsService";
+  mergeSnapshotModelMetrics  } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
 import * as analyticsShapes from "./utils/analyticsShapes";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
@@ -85,7 +85,7 @@ export const getGlobalAICosts = superAdminQuery({
       new Date(startDate),
       new Date(endDate),
       aggregationType,
-      () => ({ costGBP: 0 }),
+      () => ({ costUsd: 0 }),
       { includeWeekYear: true }
     );
 
@@ -109,8 +109,8 @@ export const getGlobalAICosts = superAdminQuery({
        // Time-Based Timeline Grouping
        const dateString = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType, { includeWeekYear: true });
 
-       if (!timelineMap[dateString]) timelineMap[dateString] = { costGBP: 0 };
-       timelineMap[dateString].costGBP += msgCost;
+       if (!timelineMap[dateString]) timelineMap[dateString] = { costUsd: 0 };
+       timelineMap[dateString].costUsd += msgCost;
     });
 
     const avgCostPerUser = periodUniqueUsers.size > 0 ? (periodCostUSD / periodUniqueUsers.size) : 0;
@@ -119,7 +119,7 @@ export const getGlobalAICosts = superAdminQuery({
     // Convert map to array
     const timeline = Object.keys(timelineMap).map(date => ({
        date,
-       costGBP: Number(timelineMap[date].costGBP.toFixed(6))
+       costUsd: Number(timelineMap[date].costUsd.toFixed(6))
     }));
 
     return {
@@ -158,7 +158,7 @@ export const getPlatformOverview = superAdminQuery({
     let total30DCostUSD = 0;
     const activeWeeklyUsers = new Set<string>();
     const periodUniqueThreads = new Set<string>();
-    const userLeaderboardMap = new Map<string, { userId: string; name: string; email: string; image: string; costGBP: number; messageCount: number }>();
+    const userLeaderboardMap = new Map<string, { userId: string; name: string; email: string; image: string; costUsd: number; messageCount: number }>();
     const userCache = new Map<Id<"users">, Doc<"users"> | null>();
     const loadUser = async (userId: Id<"users">) => {
       if (!userCache.has(userId)) userCache.set(userId, await ctx.db.get(userId));
@@ -185,20 +185,20 @@ export const getPlatformOverview = superAdminQuery({
             name: u?.name || "Unknown",
             email: u?.email || "",
             image: u?.image || "https://api.dicebear.com/7.x/notionists/svg",
-            costGBP: 0,
+            costUsd: 0,
             messageCount: 0
           };
           userLeaderboardMap.set(msg.userId, leader);
         }
-        leader.costGBP += msgCost;
+        leader.costUsd += msgCost;
         leader.messageCount += 1;
       }
     }
 
-    const costPerActiveUserGBP = userLeaderboardMap.size > 0 ? (total30DCostUSD / userLeaderboardMap.size) : 0;
+    const costPerActiveUserUsd = userLeaderboardMap.size > 0 ? (total30DCostUSD / userLeaderboardMap.size) : 0;
     const avgInteractionDepth = periodUniqueThreads.size > 0 ? (recentMessages.length / periodUniqueThreads.size) : 1.0;
 
-    const topUsers = Array.from(userLeaderboardMap.values()).sort((a,b) => b.costGBP - a.costGBP);
+    const topUsers = Array.from(userLeaderboardMap.values()).sort((a,b) => b.costUsd - a.costUsd);
 
     return {
        coverage: coverage.result(),
@@ -207,7 +207,7 @@ export const getPlatformOverview = superAdminQuery({
        totalThreads: periodUniqueThreads.size,
        avgInteractionDepth: Number(avgInteractionDepth.toFixed(1)),
        total30DCostUSD: Number(total30DCostUSD.toFixed(5)),
-       costPerActiveUserGBP: Number(costPerActiveUserGBP.toFixed(5)),
+       costPerActiveUserUsd: Number(costPerActiveUserUsd.toFixed(5)),
        topUsers
     };
   }
@@ -236,13 +236,13 @@ export const getUserCostOverview = adminQuery({
       .filter((q) => q.lt(q.field("date"), todayDate))
       .take(ANALYTICS_SCAN + 1));
 
-    let totalCostGBP = 0;
+    let totalCostUsd = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
 
     snapshots.forEach((snapshot) => {
-      totalCostGBP += snapshot.metrics.costGBP;
+      totalCostUsd += snapshot.metrics.costUsd;
       totalInputTokens += snapshot.metrics.totalInputTokens;
       totalOutputTokens += snapshot.metrics.totalOutputTokens;
       totalTokens += snapshot.metrics.totalInputTokens + snapshot.metrics.totalOutputTokens;
@@ -257,9 +257,9 @@ export const getUserCostOverview = adminQuery({
       const inputs = message.inputTokens || 0;
       const outputs = message.outputTokens || 0;
       const model = message.modelUsed || defaultModelId;
-      const msgCostGBP = computeCostFromMap(model, inputs, outputs, modelMap);
+      const msgCostUsd = computeCostFromMap(model, inputs, outputs, modelMap);
 
-      totalCostGBP += msgCostGBP;
+      totalCostUsd += msgCostUsd;
       totalInputTokens += inputs;
       totalOutputTokens += outputs;
       totalTokens += inputs + outputs;
@@ -267,7 +267,7 @@ export const getUserCostOverview = adminQuery({
 
     return {
       coverage: coverage.result(),
-      totalCostGBP: Number(totalCostGBP.toFixed(6)),
+      totalCostUsd: Number(totalCostUsd.toFixed(6)),
       totalTokens,
       totalInputTokens,
       totalOutputTokens,
@@ -326,7 +326,7 @@ export const getUserCostThreads = adminQuery({
           createdAt: thread.createdAt,
           messageCount,
           threadTokens,
-          costGBP: threadCostUSD
+          costUsd: threadCostUSD
         };
       })
     );
@@ -364,7 +364,7 @@ export const getCompanyMetrics = adminQuery({
     let totalTokens = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
-    let totalCostGBP = 0;
+    let totalCostUsd = 0;
     const timelineMap = createTimelineMap(
       startDate,
       endDate,
@@ -476,12 +476,12 @@ export const getCompanyMetrics = adminQuery({
         totalTokens += (s.metrics.totalInputTokens + s.metrics.totalOutputTokens);
         totalInputTokens += s.metrics.totalInputTokens;
         totalOutputTokens += s.metrics.totalOutputTokens;
-        totalCostGBP += s.metrics.costGBP;
+        totalCostUsd += s.metrics.costUsd;
         
         const dateGroup = formatAnalyticsDateGroup(new Date(s.date), aggregationType);
 
         if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
-        timelineMap[dateGroup].cost += s.metrics.costGBP;
+        timelineMap[dateGroup].cost += s.metrics.costUsd;
         timelineMap[dateGroup].messages += s.metrics.totalMessages;
         timelineMap[dateGroup].internalMessages += s.metrics.totalMessages; 
         timelineMap[dateGroup].inputTokens += s.metrics.totalInputTokens;
@@ -538,7 +538,7 @@ export const getCompanyMetrics = adminQuery({
        totalTokens += (inputs + outputs);
        totalInputTokens += inputs;
        totalOutputTokens += outputs;
-       totalCostGBP += msgCost;
+       totalCostUsd += msgCost;
 
        const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
@@ -633,8 +633,8 @@ export const getCompanyMetrics = adminQuery({
        .sort((a,b) => b.interactions - a.interactions)
        .slice(0, 10);
 
-    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
-    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
+    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostUsd / activePeriodUsers.size) : 0;
+    const avgCostPerMessage = totalMessages > 0 ? (totalCostUsd / totalMessages) : 0;
 
     return {
        coverage: coverage.result(),
@@ -645,7 +645,7 @@ export const getCompanyMetrics = adminQuery({
           totalTokens,
           totalInputTokens,
           totalOutputTokens,
-          totalCostGBP: Number(totalCostGBP.toFixed(4)),
+          totalCostUsd: Number(totalCostUsd.toFixed(4)),
           costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
           avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
           aggregationType,
@@ -717,7 +717,7 @@ export const getGlobalAnalytics = superAdminQuery({
     let totalTokens = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
-    let totalCostGBP = 0;
+    let totalCostUsd = 0;
     const timelineMap = createTimelineMap(
       startDate,
       endDate,
@@ -822,12 +822,12 @@ export const getGlobalAnalytics = superAdminQuery({
         totalTokens += (s.metrics.totalInputTokens + s.metrics.totalOutputTokens);
         totalInputTokens += s.metrics.totalInputTokens;
         totalOutputTokens += s.metrics.totalOutputTokens;
-        totalCostGBP += s.metrics.costGBP;
+        totalCostUsd += s.metrics.costUsd;
         
         const dateGroup = formatAnalyticsDateGroup(new Date(s.date), aggregationType);
 
         if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
-        timelineMap[dateGroup].cost += s.metrics.costGBP;
+        timelineMap[dateGroup].cost += s.metrics.costUsd;
         timelineMap[dateGroup].messages += s.metrics.totalMessages;
         timelineMap[dateGroup].inputTokens += s.metrics.totalInputTokens;
         timelineMap[dateGroup].outputTokens += s.metrics.totalOutputTokens;
@@ -883,7 +883,7 @@ export const getGlobalAnalytics = superAdminQuery({
             if (!companyLeaderboard[s.companyId]) {
                 companyLeaderboard[s.companyId] = { id: s.companyId, name: "Unknown Company", logo: "", cost: 0, messages: 0 };
             }
-            companyLeaderboard[s.companyId].cost += s.metrics.costGBP;
+            companyLeaderboard[s.companyId].cost += s.metrics.costUsd;
             companyLeaderboard[s.companyId].messages += s.metrics.totalMessages;
         }
     });
@@ -901,7 +901,7 @@ export const getGlobalAnalytics = superAdminQuery({
        totalTokens += (inputs + outputs);
        totalInputTokens += inputs;
        totalOutputTokens += outputs;
-       totalCostGBP += msgCost;
+       totalCostUsd += msgCost;
 
        const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
@@ -1020,8 +1020,8 @@ export const getGlobalAnalytics = superAdminQuery({
        .sort((a,b) => b.cost - a.cost)
        .slice(0, 10);
 
-    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
-    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
+    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostUsd / activePeriodUsers.size) : 0;
+    const avgCostPerMessage = totalMessages > 0 ? (totalCostUsd / totalMessages) : 0;
     const modelBreakdown = Object.values(modelDistribution).sort((a,b) => b.cost - a.cost);
     const providerBreakdown = Object.values(providerDistribution).sort((a,b) => b.cost - a.cost);
 
@@ -1035,7 +1035,7 @@ export const getGlobalAnalytics = superAdminQuery({
           totalTokens,
           totalInputTokens,
           totalOutputTokens,
-          totalCostGBP: Number(totalCostGBP.toFixed(4)),
+          totalCostUsd: Number(totalCostUsd.toFixed(4)),
           costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
           avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
           aggregationType

@@ -51,7 +51,7 @@ export type RunObservatory = {
     runs: number;
     failedRuns: number;
     activeRuns: number;
-    costGBP: number;
+    costUsd: number;
     successRate: number;
     averageLatencyMs: number;
   };
@@ -63,7 +63,7 @@ export type RunObservatory = {
     objective: string;
     startedAt: number;
     latencyMs?: number;
-    costGBP?: number;
+    costUsd?: number;
     error?: string;
   }>;
 };
@@ -255,7 +255,7 @@ export function RunObservatoryResults({
         <p className="mt-1 text-[13px] leading-relaxed text-secondary">
           {!totals || totals.runs === 0
             ? t("noRuns")
-            : t("runsSummary", { runs: totals.runs, failed: totals.failedRuns, spend: formatSpend(totals.costGBP), duration: formatDuration(totals.averageLatencyMs) })}
+            : t("runsSummary", { runs: totals.runs, failed: totals.failedRuns, spend: formatSpend(totals.costUsd), duration: formatDuration(totals.averageLatencyMs) })}
         </p>
       </div>
 
@@ -309,7 +309,7 @@ export function RunObservatoryResults({
           {
             key: "cost",
             header: t("columnCost"),
-            cell: (run) => <span className="text-[13px] text-secondary">{formatSpend(run.costGBP ?? 0)}</span>,
+            cell: (run) => <span className="text-[13px] text-secondary">{formatSpend(run.costUsd ?? 0)}</span>,
           },
           {
             key: "when",

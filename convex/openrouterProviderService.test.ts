@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import {
   convertOpenRouterRateToPerMillion,
   createOpenRouterProviderAdapter,
@@ -180,7 +180,7 @@ describe("openrouter pricing", () => {
     // below-200k one and a literal million-token call is charged at the
     // large-context rate.
     const SLICE = 100_000;
-    const charge = calculateModelCostGBP({
+    const charge = calculateModelCostUsd({
       inputTokens: SLICE,
       outputTokens: SLICE,
       rates: {

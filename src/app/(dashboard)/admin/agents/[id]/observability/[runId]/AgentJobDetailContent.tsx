@@ -208,7 +208,7 @@ export function AgentJobDetailContent({
           <p className="text-[13px] text-secondary mt-1.5">
             {label(describeTrigger(run.triggerType))} {label(formatRelativeTime(run.startedAt, now))}
             {durationMs === undefined ? ` ${t("stillRunning")}` : ` ${t("took", { duration: formatDuration(durationMs) })}`}
-            {run.costGBP !== undefined ? ` ${t("cost", { amount: formatMoney(run.costGBP) })}` : ""}
+            {run.costUsd !== undefined ? ` ${t("cost", { amount: formatMoney(run.costUsd) })}` : ""}
             {run.status === "FAILED"
               ? run.continuedByRunId
                 ? ` ${t("handedOver")}`

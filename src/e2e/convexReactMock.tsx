@@ -34,12 +34,12 @@ function observabilityAnalyticsFixture(lookbackDays: number) {
     total: day.total,
     succeeded: day.total - day.failed,
     failed: day.failed,
-    costGBP: day.total * 0.014,
+    costUsd: day.total * 0.014,
   }));
 
   const runs = dailySeries.reduce((sum, day) => sum + day.total, 0);
   const failed = dailySeries.reduce((sum, day) => sum + day.failed, 0);
-  const costGBP = dailySeries.reduce((sum, day) => sum + day.costGBP, 0);
+  const costUsd = dailySeries.reduce((sum, day) => sum + day.costUsd, 0);
 
   return {
     sampledRuns: runs,
@@ -54,7 +54,7 @@ function observabilityAnalyticsFixture(lookbackDays: number) {
       toolCalls: 2504,
       approvals: 3,
       feedback: 0,
-      costGBP,
+      costUsd,
       inputTokens: 1_482_000,
       outputTokens: 214_000,
       successRate: (runs - failed) / runs,
@@ -69,17 +69,17 @@ function observabilityAnalyticsFixture(lookbackDays: number) {
         runs,
         succeeded: runs - failed,
         failed,
-        costGBP,
+        costUsd,
         successRate: (runs - failed) / runs,
-        costPerRunGBP: costGBP / runs,
+        costPerRunUsd: costUsd / runs,
       },
       previous: {
         runs: 619,
         succeeded: 604,
         failed: 15,
-        costGBP: 8.19,
+        costUsd: 8.19,
         successRate: 604 / 619,
-        costPerRunGBP: 8.19 / 619,
+        costPerRunUsd: 8.19 / 619,
       },
     },
     versionChangeDays: [todayStart - 2 * DAY_MS],
@@ -163,7 +163,7 @@ function observabilityRunFixtures() {
       error: "The property search timed out",
       startedAt: now - 40 * 60 * 1000,
       completedAt: now - 40 * 60 * 1000 + 31_400,
-      costGBP: 0.021,
+      costUsd: 0.021,
       updatedAt: now,
     },
     {
@@ -187,7 +187,7 @@ function observabilityRunFixtures() {
       status: "SUCCESS",
       startedAt: now - 3 * 60 * 60 * 1000,
       completedAt: now - 3 * 60 * 60 * 1000 + 4_100,
-      costGBP: 0.013,
+      costUsd: 0.013,
       finalOutput: "Filed 14 listings",
       updatedAt: now,
     },
@@ -201,7 +201,7 @@ function observabilityRunFixtures() {
       status: "SUCCESS",
       startedAt: now - 5 * 60 * 60 * 1000,
       completedAt: now - 5 * 60 * 60 * 1000 + 8_900,
-      costGBP: 0.028,
+      costUsd: 0.028,
       finalOutput: "Updated 62 records",
       updatedAt: now,
     },
@@ -241,7 +241,7 @@ function observabilityRunDetailFixture() {
       error: "The property search timed out",
       startedAt: start,
       completedAt: at(31_400),
-      costGBP: 0.021,
+      costUsd: 0.021,
       updatedAt: at(31_400),
     },
     steps: [
@@ -319,7 +319,7 @@ function observabilityLogGroupsFixture() {
           status: "FAILED",
           startedAt: now - 40 * 60 * 1000,
           completedAt: now - 40 * 60 * 1000 + 31_400,
-          costGBP: 0.021,
+          costUsd: 0.021,
           triggerType: "SCHEDULE",
         },
         entries,
@@ -333,7 +333,7 @@ function observabilityLogGroupsFixture() {
           status: "SUCCESS",
           startedAt: now - 3 * 60 * 60 * 1000,
           completedAt: now - 3 * 60 * 60 * 1000 + 4_100,
-          costGBP: 0.013,
+          costUsd: 0.013,
           triggerType: "SCHEDULE",
         },
         entries: [
@@ -496,7 +496,7 @@ const companyMetricsFixture = {
     mau: 4,
     mrr: 2400,
     knowledgeDocuments: 3,
-    totalCostGBP: 12.34567,
+    totalCostUsd: 12.34567,
     totalInputTokens: 12_000,
     totalMessages: 42,
     totalOutputTokens: 9_000,
@@ -523,7 +523,7 @@ const globalAnalyticsFixture = {
     aggregationType: "day",
     activeUsers: 4,
     mau: 4,
-    totalCostGBP: 12.34567,
+    totalCostUsd: 12.34567,
     totalInputTokens: 12_000,
     totalMessages: 42,
     totalOutputTokens: 9_000,
@@ -1009,7 +1009,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     const daily = Array.from({ length: 30 }, (_, index) => {
       const offset = 29 - index;
       const questions = offset < 12 ? Math.max(0, 9 - offset) : 0;
-      return { day: day(offset), questions, aiCalls: questions * 2 + (offset % 4 === 0 ? 3 : 0), spendGBP: questions * 0.03 };
+      return { day: day(offset), questions, aiCalls: questions * 2 + (offset % 4 === 0 ? 3 : 0), spendUsd: questions * 0.03 };
     });
     const signInBands = Array.from({ length: 30 }, (_, index) => {
       const offset = 29 - index;
@@ -1032,7 +1032,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       // that no read here could truncate.
       coverage: { complete: true, incomplete: [] },
       clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
-      money: { projectedMrrGBP: 400, aiSpendGBP: 12.54, spendAsPercentOfRevenue: 3.1 },
+      money: { projectedMrrGBP: 400, aiSpendUsd: 12.54, spendAsPercentOfRevenue: 3.1 },
       seats: { total: 12, active: 4, utilisation: 33 },
       todo: { pendingInvitations: 2, companiesWithNoPlan: 1 },
       planDistribution: [

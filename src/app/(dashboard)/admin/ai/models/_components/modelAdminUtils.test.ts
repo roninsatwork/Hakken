@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { calculateModelCostGBP } from "@/convex/aiCostService";
+import { calculateModelCostUsd } from "@/convex/aiCostService";
 import { formatTokenCost } from "./modelAdminUtils";
 
 /**
@@ -9,7 +9,7 @@ import { formatTokenCost } from "./modelAdminUtils";
  *
  * `formatTokenCost` used to multiply the stored rate by a million, so a model
  * priced at 0.075 per million tokens was advertised to admins as £75,000.00 —
- * while `calculateModelCostGBP` quietly charged 0.075. Nothing caught it because
+ * while `calculateModelCostUsd` quietly charged 0.075. Nothing caught it because
  * the two lived in different halves of the repo and neither was tested against
  * the other.
  */
@@ -30,13 +30,13 @@ describe("formatTokenCost", () => {
     const SLICE = 100_000;
     const SLICES_PER_MILLION = 1_000_000 / SLICE;
 
-    const inputChargePerMillion = calculateModelCostGBP({
+    const inputChargePerMillion = calculateModelCostUsd({
       inputTokens: SLICE,
       outputTokens: 0,
       rates,
     }) * SLICES_PER_MILLION;
 
-    const outputChargePerMillion = calculateModelCostGBP({
+    const outputChargePerMillion = calculateModelCostUsd({
       inputTokens: 0,
       outputTokens: SLICE,
       rates,

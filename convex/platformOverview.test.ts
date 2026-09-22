@@ -162,15 +162,15 @@ describe("platform overview", () => {
       await ctx.db.insert("agentRuns", {
         agentId, triggerType: "SCHEDULE", objective: "Fill in the group",
         status: "SUCCESS", companyId: paying, userId: active,
-        costGBP: 1.25, startedAt: now - 1000, updatedAt: now,
+        costUsd: 1.25, startedAt: now - 1000, updatedAt: now,
       });
     });
 
     const client = t.withIdentity({ subject: superAdmin });
     const overview = await client.query(api.platformOverview.getPlatformOverview, {});
 
-    expect(overview.money.aiSpendGBP).toBe(1.25);
-    expect(overview.daily.at(-1)!.spendGBP).toBeCloseTo(1.25);
+    expect(overview.money.aiSpendUsd).toBe(1.25);
+    expect(overview.daily.at(-1)!.spendUsd).toBeCloseTo(1.25);
   });
 
   /**
@@ -193,14 +193,14 @@ describe("platform overview", () => {
       await ctx.db.insert("agentRuns", {
         agentId, threadId, triggerType: "CHAT", objective: "Answer them",
         status: "SUCCESS", companyId: paying, userId: active,
-        costGBP: 1.25, startedAt: now - 1000, updatedAt: now,
+        costUsd: 1.25, startedAt: now - 1000, updatedAt: now,
       });
     });
 
     const client = t.withIdentity({ subject: superAdmin });
     const overview = await client.query(api.platformOverview.getPlatformOverview, {});
 
-    expect(overview.money.aiSpendGBP).toBe(0);
+    expect(overview.money.aiSpendUsd).toBe(0);
   });
 
   test("bands sign-ins per day against the whole seat count", async () => {

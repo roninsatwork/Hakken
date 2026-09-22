@@ -34,7 +34,7 @@ function stubCtx(args: {
   });
   const runMutation = vi.fn(async (_ref: unknown, mutationArgs: unknown) => {
     recorded.push(mutationArgs);
-    return { runIds: [], costGBP: 0 };
+    return { runIds: [], costUsd: 0 };
   });
   return { ctx: { runQuery, runMutation } as unknown as ActionCtx, recorded, runQuery, runMutation };
 }

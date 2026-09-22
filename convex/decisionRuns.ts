@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import { buildDecisionActedAuditMetadata } from "./auditLogService";
 import { getDecision, listDecisions } from "./decisionRegistry";
 import { certaintyWords, resolveDecisionMode, type DecisionMode } from "./decisionService";
@@ -142,7 +142,7 @@ const runInsertValidator = v.object({
  * per-Decision figure on the screen still adds up to the ledger. A request
  * the rule answered has no usage and writes no cost row.
  *
- * Cost goes through `calculateModelCostGBP` like every other call. The two
+ * Cost goes through `calculateModelCostUsd` like every other call. The two
  * hand-rolled copies elsewhere are recorded debt in the plan; this is not a
  * third.
  */
@@ -165,16 +165,16 @@ export const recordRunsInternal = internalMutation({
     ),
     runs: v.array(runInsertValidator),
   },
-  handler: async (ctx, args): Promise<{ runIds: Id<"decisionRuns">[]; costGBP: number }> => {
+  handler: async (ctx, args): Promise<{ runIds: Id<"decisionRuns">[]; costUsd: number }> => {
     const now = Date.now();
-    let costGBP = 0;
+    let costUsd = 0;
 
     if (args.usage && args.runs.length > 0) {
       const rates = await ctx.db
         .query("aiModels")
         .withIndex("by_model_id", (q) => q.eq("modelId", args.usage!.modelId))
         .first();
-      costGBP = calculateModelCostGBP({
+      costUsd = calculateModelCostUsd({
         inputTokens: args.usage.inputTokens,
         outputTokens: args.usage.outputTokens,
         rates: rates ?? null,
@@ -189,13 +189,13 @@ export const recordRunsInternal = internalMutation({
         providerModelId: args.usage.providerModelId,
         inputTokens: args.usage.inputTokens,
         outputTokens: args.usage.outputTokens,
-        costGBP,
+        costUsd,
         status: "SUCCESS",
         createdAt: now,
       });
     }
 
-    const share = args.runs.length > 0 ? costGBP / args.runs.length : 0;
+    const share = args.runs.length > 0 ? costUsd / args.runs.length : 0;
     const links = {
       ...(args.companyId ? { companyId: args.companyId } : {}),
       ...(args.agentRunId ? { agentRunId: args.agentRunId } : {}),
@@ -211,7 +211,7 @@ export const recordRunsInternal = internalMutation({
           ...links,
           subjectKind: args.subjectKind,
           subjectId: args.subjectId,
-          costGBP: run.source === "RULES" ? 0 : share,
+          costUsd: run.source === "RULES" ? 0 : share,
           createdAt: now,
         }),
       );
@@ -234,7 +234,7 @@ export const recordRunsInternal = internalMutation({
       }
     }
 
-    return { runIds, costGBP };
+    return { runIds, costUsd };
   },
 });
 

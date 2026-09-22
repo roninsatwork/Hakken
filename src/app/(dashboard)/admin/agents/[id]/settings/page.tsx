@@ -59,7 +59,7 @@ type AgentSettingsFormData = {
   maxToolCalls: string;
   maxInputTokens: string;
   maxRuntimeMinutes: string;
-  maxCostGBP: string;
+  maxCostUsd: string;
   storageId?: Id<"_storage">;
 };
 
@@ -81,7 +81,7 @@ const emptyFormData: AgentSettingsFormData = {
   maxToolCalls: "",
   maxInputTokens: "",
   maxRuntimeMinutes: "",
-  maxCostGBP: "",
+  maxCostUsd: "",
 };
 
 const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
@@ -202,7 +202,7 @@ export default function AgentOverviewPage() {
       maxToolCalls: agent.maxToolCalls ? String(agent.maxToolCalls) : "",
       maxInputTokens: agent.maxInputTokens ? String(agent.maxInputTokens) : "",
       maxRuntimeMinutes: agent.maxRuntimeMs ? String(Math.round(agent.maxRuntimeMs / 60000)) : "",
-      maxCostGBP: agent.maxCostGBP ? String(agent.maxCostGBP) : "",
+      maxCostUsd: agent.maxCostUsd ? String(agent.maxCostUsd) : "",
       storageId: undefined,
     });
   }
@@ -234,7 +234,7 @@ export default function AgentOverviewPage() {
         maxToolCalls: parseLimitInput(formData.maxToolCalls) ?? 0,
         maxInputTokens: parseLimitInput(formData.maxInputTokens) ?? 0,
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
-        maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
+        maxCostUsd: parseLimitInput(formData.maxCostUsd) ?? 0,
         storageId: formData.storageId
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },

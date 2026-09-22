@@ -37,7 +37,7 @@ describe("decisions screens: reading", () => {
           mode: "ACT",
           outcome,
           source: "TYPESAFE",
-          costGBP: 0.5,
+          costUsd: 0.5,
           createdAt: now - index,
         });
       }
@@ -51,7 +51,7 @@ describe("decisions screens: reading", () => {
         mode: "ACT",
         outcome: "ACTED",
         source: "TYPESAFE",
-        costGBP: 9,
+        costUsd: 9,
         createdAt: now - 8 * 24 * 60 * 60 * 1000,
       });
     });
@@ -61,7 +61,7 @@ describe("decisions screens: reading", () => {
     expect(result.decisions.every((row) => row.platformMode === "OFF" && row.effectiveMode === "OFF")).toBe(true);
     const messageKind = result.decisions.find((row) => row.key === "mailbox.message-kind")!;
     expect(messageKind).toMatchObject({ ranThisWeek: 3, handedThisWeek: 1, isCapped: false });
-    expect(messageKind.costThisWeekGBP).toBeCloseTo(1.5);
+    expect(messageKind.costThisWeekUsd).toBeCloseTo(1.5);
     expect(messageKind).not.toHaveProperty("companyMode");
     // No TypeSafe model is chosen, so every Decision would run its rule.
     expect(result.provider).toEqual({ usable: false, reason: "NO_MODEL" });
@@ -75,7 +75,7 @@ describe("decisions screens: reading", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("decisionRuns", {
         decisionKey: "mailbox.urgent", companyId: otherCompanyId, subjectKind: "email", subjectId: "x",
-        answer: "yes", mode: "ACT", outcome: "ACTED", source: "TYPESAFE", costGBP: 1, createdAt: Date.now(),
+        answer: "yes", mode: "ACT", outcome: "ACTED", source: "TYPESAFE", costUsd: 1, createdAt: Date.now(),
       });
     });
 
@@ -95,7 +95,7 @@ describe("decisions screens: reading", () => {
         await ctx.db.insert("decisionRuns", {
           decisionKey: "mailbox.message-kind", companyId, subjectKind: "email", subjectId: `gmail-${index}`,
           answer: "customer", probabilities: JSON.stringify({ customer: 0.9, spam: 0.1 }), certainty: "SURE",
-          mode: "ACT", outcome: "RECORDED", source: "TYPESAFE", costGBP: 0.1, createdAt: 1000 + index,
+          mode: "ACT", outcome: "RECORDED", source: "TYPESAFE", costUsd: 0.1, createdAt: 1000 + index,
         });
       }
     });

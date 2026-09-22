@@ -102,7 +102,7 @@ export const getJobGroups = adminQuery({
                 status: run.status,
                 startedAt: run.startedAt,
                 completedAt: run.completedAt,
-                costGBP: run.costGBP,
+                costUsd: run.costUsd,
                 triggerType: run.triggerType,
               }
             : null,

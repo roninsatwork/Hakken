@@ -159,7 +159,7 @@ function buildRunSummary(run: Doc<"agentRuns"> | null) {
     error: truncateText(run.error || run.finalOutput, 220),
     startedAt: run.startedAt,
     completedAt: run.completedAt,
-    costGBP: run.costGBP,
+    costUsd: run.costUsd,
   };
 }
 

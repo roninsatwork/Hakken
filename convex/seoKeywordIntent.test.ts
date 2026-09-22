@@ -40,7 +40,7 @@ function stubCtx(modes: Record<string, string>, t?: Harness) {
   const runMutation = vi.fn(async (ref: unknown, mutationArgs: unknown) => {
     const judged = (mutationArgs as { judged?: unknown })?.judged;
     if (judged && t) await t.mutation(internal.seoCollectionParse.writeKeywordIntents, mutationArgs as never);
-    return { runIds: [], costGBP: 0 };
+    return { runIds: [], costUsd: 0 };
   });
   return { runQuery, runMutation } as unknown as ActionCtx;
 }

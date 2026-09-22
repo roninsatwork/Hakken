@@ -19,7 +19,7 @@ const transactions = [
     status: "SUCCESS",
     inputTokens: 12400,
     outputTokens: 2100,
-    costGBP: 0.04,
+    costUsd: 0.04,
     createdAt: Date.UTC(2026, 7, 15, 2, 2),
   },
   {
@@ -29,7 +29,7 @@ const transactions = [
     status: "SUCCESS",
     inputTokens: 3100,
     outputTokens: 400,
-    costGBP: 0.01,
+    costUsd: 0.01,
     createdAt: Date.UTC(2026, 7, 14, 2, 2),
   },
 ];

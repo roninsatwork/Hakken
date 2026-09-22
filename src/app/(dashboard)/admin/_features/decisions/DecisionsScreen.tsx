@@ -30,7 +30,7 @@ type DecisionRow = {
   effectiveMode: DecisionMode;
   ranThisWeek: number;
   handedThisWeek: number;
-  costThisWeekGBP: number;
+  costThisWeekUsd: number;
   isCapped: boolean;
 };
 

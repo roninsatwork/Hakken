@@ -50,7 +50,7 @@ function detail(overrides: Record<string, unknown> = {}) {
       triggerType: "SCHEDULE",
       startedAt: START,
       completedAt: START + 31_400,
-      costGBP: 0.021,
+      costUsd: 0.021,
       error: "The property search timed out",
     },
     steps: [

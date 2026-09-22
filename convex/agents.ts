@@ -882,7 +882,7 @@ export const createAgent = superAdminMutation({
     maxToolCalls: v.optional(v.number()),
     maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
-    maxCostGBP: v.optional(v.number()),
+    maxCostUsd: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
@@ -933,7 +933,7 @@ export const createAgent = superAdminMutation({
       maxToolCalls: clampAgentLimitOverride("maxToolCalls", args.maxToolCalls),
       maxInputTokens: clampAgentLimitOverride("maxInputTokens", args.maxInputTokens),
       maxRuntimeMs: clampAgentLimitOverride("maxRuntimeMs", args.maxRuntimeMs),
-      maxCostGBP: clampAgentLimitOverride("maxCostGBP", args.maxCostGBP),
+      maxCostUsd: clampAgentLimitOverride("maxCostUsd", args.maxCostUsd),
     };
     const approvalExpiryHours = clampAgentApprovalExpiryHours(args.approvalExpiryHours);
 
@@ -964,7 +964,7 @@ export const createAgent = superAdminMutation({
       ...(limits.maxToolCalls !== undefined ? { maxToolCalls: limits.maxToolCalls } : {}),
       ...(limits.maxInputTokens !== undefined ? { maxInputTokens: limits.maxInputTokens } : {}),
       ...(limits.maxRuntimeMs !== undefined ? { maxRuntimeMs: limits.maxRuntimeMs } : {}),
-      ...(limits.maxCostGBP !== undefined ? { maxCostGBP: limits.maxCostGBP } : {}),
+      ...(limits.maxCostUsd !== undefined ? { maxCostUsd: limits.maxCostUsd } : {}),
     });
 
     await ctx.db.insert("auditLogs", {
@@ -1094,7 +1094,7 @@ export const updateAgent = superAdminMutation({
     maxToolCalls: v.optional(v.number()),
     maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
-    maxCostGBP: v.optional(v.number()),
+    maxCostUsd: v.optional(v.number()),
     inputSchema: v.optional(v.string()),
     outputSchema: v.optional(v.string()),
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),

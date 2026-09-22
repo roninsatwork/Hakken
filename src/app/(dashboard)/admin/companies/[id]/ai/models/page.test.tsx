@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Rates are stored per million tokens, which is how the provider publishes them
-// and how `calculateModelCostGBP` applies them.
+// and how `calculateModelCostUsd` applies them.
 const models = [
   {
     _id: "model_1",

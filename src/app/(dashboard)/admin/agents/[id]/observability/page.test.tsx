@@ -35,16 +35,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 function analytics(overrides: Record<string, unknown> = {}) {
   const now = Date.now();
   return {
-    totals: { runs: 694, costGBP: 9.72, successRate: 0.86 },
+    totals: { runs: 694, costUsd: 9.72, successRate: 0.86 },
     lookbackDays: 7,
     latency: { medianMs: 4200, p95Ms: 31400, averageMs: 6600, sampleSize: 694 },
     dailySeries: [
-      { dayStartMs: now - 2 * DAY_MS, total: 100, succeeded: 96, failed: 4, costGBP: 1.4 },
-      { dayStartMs: now - DAY_MS, total: 138, succeeded: 100, failed: 38, costGBP: 1.9 },
+      { dayStartMs: now - 2 * DAY_MS, total: 100, succeeded: 96, failed: 4, costUsd: 1.4 },
+      { dayStartMs: now - DAY_MS, total: 138, succeeded: 100, failed: 38, costUsd: 1.9 },
     ],
     comparison: {
-      current: { runs: 694, succeeded: 600, failed: 94, costGBP: 9.72, successRate: 0.86, costPerRunGBP: 0.014 },
-      previous: { runs: 619, succeeded: 604, failed: 15, costGBP: 8.19, successRate: 0.976, costPerRunGBP: 0.013 },
+      current: { runs: 694, succeeded: 600, failed: 94, costUsd: 9.72, successRate: 0.86, costPerRunUsd: 0.014 },
+      previous: { runs: 619, succeeded: 604, failed: 15, costUsd: 8.19, successRate: 0.976, costPerRunUsd: 0.013 },
     },
     versionChangeDays: [Date.now() - DAY_MS],
     sampleTruncated: false,
@@ -74,7 +74,7 @@ const runs = [
     triggerType: "SCHEDULE",
     startedAt: Date.now() - 600_000,
     completedAt: Date.now() - 600_000 + 31_400,
-    costGBP: 0.021,
+    costUsd: 0.021,
     error: "The property search timed out",
   },
 ];
@@ -169,7 +169,7 @@ describe("AgentObservabilityPage", () => {
 
   it("invites the first run instead of showing a wall of zeros", () => {
     analyticsFixture = analytics({
-      totals: { runs: 0, costGBP: 0, successRate: 0 },
+      totals: { runs: 0, costUsd: 0, successRate: 0 },
       dailySeries: [],
       failureGroups: [],
       toolStats: [],

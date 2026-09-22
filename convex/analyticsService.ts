@@ -1,5 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import { getDefaultModelId } from "./aiModelService";
 
 type DashboardTimeframe =
@@ -219,7 +219,7 @@ export function buildModelCostContext(aiModelsFetch: AiModelCostConfig[]) {
  * screen, which had already settled on showing dollars. Spend is reported in
  * the currency the provider bills in.
  *
- * The rates themselves are applied by `calculateModelCostGBP` rather than here.
+ * The rates themselves are applied by `calculateModelCostUsd` rather than here.
  * This function used to carry its own copy of the tiering rule, and the copies
  * disagreed: the runtime learned to fall back to the standard rate when a model
  * has no separate above-200k price, and this one kept reading that missing price
@@ -229,7 +229,7 @@ export function buildModelCostContext(aiModelsFetch: AiModelCostConfig[]) {
  * numbers stay the same number.
  */
 export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: ModelCostMap) {
-  return calculateModelCostGBP({
+  return calculateModelCostUsd({
     inputTokens: inputs,
     outputTokens: outputs,
     rates: modelMap.get(model),

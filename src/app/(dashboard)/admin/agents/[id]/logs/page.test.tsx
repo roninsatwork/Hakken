@@ -69,7 +69,7 @@ function payload(overrides: Record<string, unknown> = {}) {
           status: "FAILED",
           startedAt: START,
           completedAt: START + 31_400,
-          costGBP: 0.021,
+          costUsd: 0.021,
           triggerType: "SCHEDULE",
         },
         entries: [

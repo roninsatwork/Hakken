@@ -157,7 +157,7 @@ function buildRunTimeline(args: {
       providerModelId: step.providerModelId,
       inputTokens: step.inputTokens,
       outputTokens: step.outputTokens,
-      costGBP: step.costGBP,
+      costUsd: step.costUsd,
       linkedToolCalls: linkedToolCalls.map((toolCall) => ({
         toolCallId: toolCall._id,
         normalizedToolName: toolCall.normalizedToolName,
@@ -289,7 +289,7 @@ function buildRunSummary(run: Doc<"agentRuns">) {
     startedAt: run.startedAt,
     completedAt: run.completedAt,
     latencyMs: getRunLatencyMs(run),
-    costGBP: run.costGBP,
+    costUsd: run.costUsd,
     inputTokens: run.inputTokens,
     outputTokens: run.outputTokens,
     finalOutputPreview: buildPreview(run.finalOutput),
@@ -320,8 +320,8 @@ function buildReplayComparison(args: {
     latencyDeltaMs: sourceLatencyMs !== undefined && replayLatencyMs !== undefined
       ? replayLatencyMs - sourceLatencyMs
       : undefined,
-    costDeltaGBP: args.sourceRun.costGBP !== undefined || args.replayRun.costGBP !== undefined
-      ? (args.replayRun.costGBP ?? 0) - (args.sourceRun.costGBP ?? 0)
+    costDeltaUsd: args.sourceRun.costUsd !== undefined || args.replayRun.costUsd !== undefined
+      ? (args.replayRun.costUsd ?? 0) - (args.sourceRun.costUsd ?? 0)
       : undefined,
     tokenDelta: sourceTokens !== 0 || replayTokens !== 0 ? replayTokens - sourceTokens : undefined,
     stepCountDelta: args.replaySteps.length - args.sourceSteps.length,
@@ -473,7 +473,7 @@ export const getPageForAgent = adminQuery({
           isRehearsal: run.isRehearsal === true,
           startedAt: run.startedAt,
           completedAt: run.completedAt,
-          costGBP: run.costGBP,
+          costUsd: run.costUsd,
           error: run.error,
           finalOutput: run.finalOutput,
           agentVersionId: run.agentVersionId,
@@ -932,7 +932,7 @@ export const replayRun = adminMutation({
       providerKey: run.providerKey,
       providerModelId: run.providerModelId,
       maxSteps: run.maxSteps,
-      maxCostGBP: run.maxCostGBP,
+      maxCostUsd: run.maxCostUsd,
       maxRuntimeMs: run.maxRuntimeMs,
       startedAt: now,
       updatedAt: now,
@@ -1085,7 +1085,7 @@ export const createRunInternal = internalMutation({
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
     maxSteps: v.optional(v.number()),
-    maxCostGBP: v.optional(v.number()),
+    maxCostUsd: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
     isRehearsal: v.optional(v.boolean()),
   },
@@ -1236,7 +1236,7 @@ export const recordRunUsageInternal = internalMutation({
     runId: v.id("agentRuns"),
     inputTokens: v.number(),
     outputTokens: v.number(),
-    costGBP: v.number(),
+    costUsd: v.number(),
     modelId: v.optional(v.string()),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
@@ -1245,7 +1245,7 @@ export const recordRunUsageInternal = internalMutation({
     await ctx.db.patch(args.runId, {
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
-      costGBP: args.costGBP,
+      costUsd: args.costUsd,
       updatedAt: Date.now(),
       ...(args.modelId !== undefined ? { modelId: args.modelId } : {}),
       ...(args.providerKey !== undefined ? { providerKey: args.providerKey } : {}),
@@ -1269,7 +1269,7 @@ export const appendStepInternal = internalMutation({
     providerModelId: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    costGBP: v.optional(v.number()),
+    costUsd: v.optional(v.number()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

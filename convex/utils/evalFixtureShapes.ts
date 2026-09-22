@@ -130,7 +130,7 @@ export const checkDetailShape = v.object({
     modelId: runFields.modelId,
     inputTokens: runFields.inputTokens,
     outputTokens: runFields.outputTokens,
-    costGBP: runFields.costGBP,
+    costUsd: runFields.costUsd,
     finalOutput: runFields.finalOutput,
     error: runFields.error,
     failures: v.array(v.string()),

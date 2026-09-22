@@ -29,7 +29,7 @@ async function seedRuns(
         source: run.source ?? "TYPESAFE",
         ...(run.certainty ? { certainty: run.certainty } : {}),
         ...(run.fallbackReason ? { fallbackReason: run.fallbackReason } : {}),
-        costGBP: 0,
+        costUsd: 0,
         createdAt: now - (run.ageMs ?? 0) - index,
       });
     }

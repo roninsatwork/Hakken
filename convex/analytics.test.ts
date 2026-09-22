@@ -253,7 +253,7 @@ describe("Analytics MRR Strict Isolation", () => {
     expect(costs.avgCostPerUser).toBe(2);
     expect(costs.avgCostPerThread).toBe(2);
     expect(costs.aggregationType).toBe("day");
-    expect(costs.timeline.reduce((sum, point) => sum + point.costGBP, 0)).toBeCloseTo(2, 6);
+    expect(costs.timeline.reduce((sum, point) => sum + point.costUsd, 0)).toBeCloseTo(2, 6);
   });
 
   test("user cost overview is tenant-isolated and includes assistant thread costs", async () => {
@@ -316,7 +316,7 @@ describe("Analytics MRR Strict Isolation", () => {
           totalMessages: 1,
           totalInputTokens: 10,
           totalOutputTokens: 20,
-          costGBP: 1.5,
+          costUsd: 1.5,
         },
         uniqueUserIds: [userAId],
       });
@@ -332,7 +332,7 @@ describe("Analytics MRR Strict Isolation", () => {
 
     const overview = await adminAClient.query(api.analytics.getUserCostOverview, { userId: userAId });
 
-    expect(overview.totalCostGBP).toBe(1.9);
+    expect(overview.totalCostUsd).toBe(1.9);
     expect(overview.totalTokens).toBe(300_030);
     expect(overview.totalInputTokens).toBe(200_010);
     expect(overview.totalOutputTokens).toBe(100_020);
@@ -349,7 +349,7 @@ describe("Analytics MRR Strict Isolation", () => {
       messageCount: 2,
       threadTokens: 300_000,
     });
-    expect(threadCosts.page[0].costGBP).toBeCloseTo(0.4, 6);
+    expect(threadCosts.page[0].costUsd).toBeCloseTo(0.4, 6);
     expect(companyAId).toBeDefined();
   });
 
@@ -430,7 +430,7 @@ describe("Analytics MRR Strict Isolation", () => {
         inputTokens: 100_000,
         outputTokens: 100_000,
         modelUsed: "hakken-test-model",
-        costGBP: 0,
+        costUsd: 0,
         status: "SUCCESS",
         createdAt: now,
       });
@@ -442,7 +442,7 @@ describe("Analytics MRR Strict Isolation", () => {
           totalMessages: 2,
           totalInputTokens: 10,
           totalOutputTokens: 20,
-          costGBP: 3,
+          costUsd: 3,
         },
         uniqueUserIds: [userAId],
         modelMetrics: [{ model: "hakken-test-model", cost: 3, calls: 2 }],
@@ -476,7 +476,7 @@ describe("Analytics MRR Strict Isolation", () => {
           totalMessages: 999,
           totalInputTokens: 999,
           totalOutputTokens: 999,
-          costGBP: 999,
+          costUsd: 999,
         },
         uniqueUserIds: [userAId],
       });
@@ -510,7 +510,7 @@ describe("Analytics MRR Strict Isolation", () => {
       totalTokens: 700_030,
       totalInputTokens: 400_010,
       totalOutputTokens: 300_020,
-      totalCostGBP: 4,
+      totalCostUsd: 4,
       costPerActiveUser: 4,
       avgCostPerMessage: 1,
       aggregationType: "day",
@@ -545,7 +545,7 @@ describe("Analytics MRR Strict Isolation", () => {
           totalMessages: 2,
           totalInputTokens: 10,
           totalOutputTokens: 20,
-          costGBP: 3,
+          costUsd: 3,
         },
         uniqueUserIds: ["deleted-user"],
         leaderboards: {
@@ -612,7 +612,7 @@ describe("Analytics MRR Strict Isolation", () => {
       totalThreads: 0,
       avgInteractionDepth: 1,
       total30DCostUSD: 0,
-      costPerActiveUserGBP: 0,
+      costPerActiveUserUsd: 0,
       topUsers: [],
     });
   });

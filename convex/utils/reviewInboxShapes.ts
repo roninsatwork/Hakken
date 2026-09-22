@@ -20,7 +20,7 @@ const runSummaryShape = v.union(v.null(), v.object({
   error: v.string(),
   startedAt: runFields.startedAt,
   completedAt: runFields.completedAt,
-  costGBP: runFields.costGBP,
+  costUsd: runFields.costUsd,
 }));
 
 const reviewerShape = v.union(v.null(), v.object({

@@ -1597,7 +1597,13 @@ export default defineSchema({
     modelUsed: v.string(),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
-    costGBP: v.number(), // Processed cost for this transaction
+    /**
+     * What this call cost, in US dollars.
+     *
+     * Named `costGBP` until 2026-09-22 while holding dollars, which put a pound
+     * sign over a dollar figure on four screens before it was corrected.
+     */
+    costUsd: v.number(),
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
     // Set when the run was a rehearsal: real model spend (kept in cost
     // figures), but a drill, not customer traffic — interaction analytics
@@ -1713,11 +1719,13 @@ export default defineSchema({
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
     maxSteps: v.optional(v.number()),
-    maxCostGBP: v.optional(v.number()),
+    /** The cap on a run's spend, in US dollars. Was `maxCostGBP`. */
+    maxCostUsd: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    costGBP: v.optional(v.number()),
+    /** What this cost, in US dollars. Was `costGBP`. */
+    costUsd: v.optional(v.number()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     cancelledAt: v.optional(v.number()),
@@ -1878,7 +1886,8 @@ export default defineSchema({
     providerModelId: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    costGBP: v.optional(v.number()),
+    /** What this cost, in US dollars. Was `costGBP`. */
+    costUsd: v.optional(v.number()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),
@@ -3140,7 +3149,8 @@ export default defineSchema({
      */
     maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
-    maxCostGBP: v.optional(v.number()),
+    /** The cap on a run's spend, in US dollars. Was `maxCostGBP`. */
+    maxCostUsd: v.optional(v.number()),
     avatar: v.optional(v.string()), // Optional icon/avatar
     modelId: v.string(), // Provider model identifier
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
@@ -3821,7 +3831,8 @@ export default defineSchema({
       totalMessages: v.number(),
       totalInputTokens: v.number(),
       totalOutputTokens: v.number(),
-      costGBP: v.number(),
+      /** What this day cost, in US dollars. Was `costGBP`. */
+      costUsd: v.number(),
       activeUsersCount: v.optional(v.number()),
     }),
     uniqueUserIds: v.optional(v.array(v.string())), // Array of user IDs (strings to allow WIDGET_USER_GROUP)
@@ -4078,7 +4089,8 @@ export default defineSchema({
     source: decisionSourceValidator,
     fallbackReason: v.optional(decisionFallbackReasonValidator),
     action: v.optional(v.string()),
-    costGBP: v.number(),
+    /** What this Decision cost, in US dollars. Was `costGBP`. */
+    costUsd: v.number(),
     agentRunId: v.optional(v.id("agentRuns")),
     threadId: v.optional(v.id("threads")),
     messageId: v.optional(v.id("messages")),

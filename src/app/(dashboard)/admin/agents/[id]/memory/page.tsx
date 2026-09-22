@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { formatUpToGBP } from "@/src/lib/currency";
+import { formatUpToUsd } from "@/src/lib/currency";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -56,7 +56,7 @@ type SourceRunSummary = {
   error: string;
   startedAt: number;
   completedAt?: number;
-  costGBP?: number;
+  costUsd?: number;
 };
 type SourceSkillSummary = {
   skillId: Id<"agentSkills">;
@@ -125,9 +125,9 @@ function getReviewTypeLabel(value: string) {
   return value.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replaceAll("_", " ");
 }
 
-function formatCostGBP(value?: number) {
+function formatCostUsd(value?: number) {
   if (typeof value !== "number") return null;
-  return formatUpToGBP(value);
+  return formatUpToUsd(value);
 }
 
 function formatPatchValue(value: unknown, unpreviewableLabel: string) {
@@ -156,7 +156,7 @@ function getPatchRows(proposedPatchJson: string, unpreviewableLabel: string) {
 function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary | null; agentId: Id<"agents"> }) {
   const t = useTranslations("admin.agents.details.memory");
   if (!sourceRun) return null;
-  const cost = formatCostGBP(sourceRun.costGBP);
+  const cost = formatCostUsd(sourceRun.costUsd);
 
   return (
     <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 flex flex-col gap-1">

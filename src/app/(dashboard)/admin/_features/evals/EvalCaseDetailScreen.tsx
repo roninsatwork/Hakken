@@ -64,13 +64,13 @@ function parseResults(run: CompanyEvalRun | undefined): RunResult[] {
 function formatRunCost(run: CompanyEvalRun | undefined) {
   if (!run?.costJson) return null;
   try {
-    const parsed = JSON.parse(run.costJson) as { totalGBP?: unknown };
-    if (typeof parsed.totalGBP !== "number" || !Number.isFinite(parsed.totalGBP) || parsed.totalGBP <= 0) return null;
+    const parsed = JSON.parse(run.costJson) as { totalUsd?: unknown };
+    if (typeof parsed.totalUsd !== "number" || !Number.isFinite(parsed.totalUsd) || parsed.totalUsd <= 0) return null;
     // Sub-cent runs are the norm here, so cents with two decimals read better than
     // a string of zeros after a currency sign. Dollars, because the stored figure
     // is the provider's own price and nothing converts it.
-    const cents = parsed.totalGBP * 100;
-    return cents < 1 ? `${cents.toFixed(2)}¢` : `$${parsed.totalGBP.toFixed(2)}`;
+    const cents = parsed.totalUsd * 100;
+    return cents < 1 ? `${cents.toFixed(2)}¢` : `$${parsed.totalUsd.toFixed(2)}`;
   } catch {
     return null;
   }

@@ -193,7 +193,7 @@ describe("NewAgentPage", () => {
       maxSteps: 12,
       maxToolCalls: 0,
       maxRuntimeMs: 0,
-      maxCostGBP: 0,
+      maxCostUsd: 0,
     });
   });
 

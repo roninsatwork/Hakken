@@ -316,10 +316,10 @@ describe("AgentOverviewPage approval and run budget", () => {
     renderAgent();
 
     expect(limitInput("maxSteps").value).toBe("");
-    expect(limitInput("maxCostGBP").value).toBe("");
+    expect(limitInput("maxCostUsd").value).toBe("");
     // The placeholder names what a blank box will actually do.
     expect(limitInput("maxSteps").placeholder).toBe("25");
-    expect(limitInput("maxCostGBP").placeholder).toBe("10");
+    expect(limitInput("maxCostUsd").placeholder).toBe("10");
 
     const payload = await save();
     // Zero rather than omitted: an omitted argument means "leave the stored value
@@ -327,34 +327,34 @@ describe("AgentOverviewPage approval and run budget", () => {
     expect(payload.maxSteps).toBe(0);
     expect(payload.maxToolCalls).toBe(0);
     expect(payload.maxRuntimeMs).toBe(0);
-    expect(payload.maxCostGBP).toBe(0);
+    expect(payload.maxCostUsd).toBe(0);
   });
 
   it("shows stored overrides, runtime in minutes, and saves runtime back in milliseconds", async () => {
-    renderAgent({ maxSteps: 20, maxToolCalls: 15, maxRuntimeMs: 6 * 60 * 1000, maxCostGBP: 2.5 });
+    renderAgent({ maxSteps: 20, maxToolCalls: 15, maxRuntimeMs: 6 * 60 * 1000, maxCostUsd: 2.5 });
 
     expect(limitInput("maxSteps").value).toBe("20");
     expect(limitInput("maxToolCalls").value).toBe("15");
     // Minutes on screen. Asking an operator to type 360000 would be hostile.
     expect(limitInput("maxRuntimeMinutes").value).toBe("6");
-    expect(limitInput("maxCostGBP").value).toBe("2.5");
+    expect(limitInput("maxCostUsd").value).toBe("2.5");
 
     const payload = await save();
     expect(payload.maxSteps).toBe(20);
     expect(payload.maxRuntimeMs).toBe(6 * 60 * 1000);
     // A sub-pound budget survives as a decimal rather than being floored to zero.
-    expect(payload.maxCostGBP).toBe(2.5);
+    expect(payload.maxCostUsd).toBe(2.5);
   });
 
   it("sends a cleared box as zero so the platform default comes back", async () => {
-    renderAgent({ maxSteps: 20, maxCostGBP: 2.5 });
+    renderAgent({ maxSteps: 20, maxCostUsd: 2.5 });
 
     fireEvent.change(limitInput("maxSteps"), { target: { value: "" } });
-    fireEvent.change(limitInput("maxCostGBP"), { target: { value: "0.5" } });
+    fireEvent.change(limitInput("maxCostUsd"), { target: { value: "0.5" } });
 
     const payload = await save();
     expect(payload.maxSteps).toBe(0);
-    expect(payload.maxCostGBP).toBe(0.5);
+    expect(payload.maxCostUsd).toBe(0.5);
   });
 
 

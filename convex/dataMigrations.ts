@@ -6,7 +6,7 @@ import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
 import * as tailShapes from "./utils/tailShapes";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { dayKey as governanceDayKey } from "./governanceActivityService";
@@ -18,6 +18,7 @@ import {
   buildModelSearchText,
 } from "./aiModelService";
 import { appError } from "./utils/appError";
+import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
@@ -92,6 +93,9 @@ type MigrationRunner = (
  * dead code indefinitely.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
+  "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,
+  "2026-09-22-clear-pound-names": clearPoundNames,
+
   /**
    * Seeds every company with the platform's own capabilities (shared-screen-kit
    * plan, Phase 6).
@@ -646,7 +650,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * two hundred thousand tokens was billed for its output alone. On one agent
    * that was twenty-two calls recorded at under a cent each against a real cost
    * of about a third of a dollar, and the agent's headline spend was seven
-   * dollars light. `calculateModelCostGBP` now falls back to the standard rate,
+   * dollars light. `calculateModelCostUsd` now falls back to the standard rate,
    * so new rows are right; the rows already written keep the old number.
    *
    * Only rows the catalogue can still price are touched, and only where the
@@ -683,16 +687,18 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       const rates = await getRates(transaction.modelUsed);
       if (!rates) continue;
 
-      const recomputed = calculateModelCostGBP({
+      const recomputed = calculateModelCostUsd({
         inputTokens: transaction.inputTokens,
         outputTokens: transaction.outputTokens,
         rates,
       });
       // Idempotent, and one-directional: a second run finds nothing left below
       // its recomputed price and changes nothing.
-      if (recomputed <= transaction.costGBP + REPRICE_TOLERANCE) continue;
+      // This migration is long finished; it was repointed at `costUsd` when
+      // that column was renamed rather than left naming a field that is gone.
+      if (recomputed <= transaction.costUsd + REPRICE_TOLERANCE) continue;
 
-      await ctx.db.patch(transaction._id, { costGBP: recomputed });
+      await ctx.db.patch(transaction._id, { costUsd: recomputed });
       updated += 1;
     }
 

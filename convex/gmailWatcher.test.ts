@@ -562,7 +562,7 @@ describe("the mailbox's Decisions, switched on", () => {
     expect(transactions).toHaveLength(1);
     expect(transactions[0]).toMatchObject({ providerKey: "typesafe", inputTokens: 400, outputTokens: 40 });
     // 400 in at £1/M + 40 out at £2/M.
-    expect(transactions[0].costGBP).toBeCloseTo(0.00048);
+    expect(transactions[0].costUsd).toBeCloseTo(0.00048);
     expect(audits).toHaveLength(1);
     expect(JSON.parse(audits[0].metadata ?? "{}")).toMatchObject({ decision: "Is this email from a customer?", answer: "spam", certainty: "sure" });
   });

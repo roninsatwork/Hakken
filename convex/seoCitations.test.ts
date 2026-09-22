@@ -298,7 +298,7 @@ describe("judging how an answer treated a business", () => {
         source: "default",
       };
     });
-    const runMutation = vi.fn(async () => ({ runIds: [], costGBP: 0 }));
+    const runMutation = vi.fn(async () => ({ runIds: [], costUsd: 0 }));
     return { runQuery, runMutation } as unknown as ActionCtx;
   }
 
@@ -392,7 +392,7 @@ describe("linking a cited address to a rival already tracked", () => {
       if (keys) return Object.fromEntries(keys.map((key) => [key, modes[key] ?? "OFF"]));
       return { modelId: "m1", providerKey: "typesafe", providerModelId: "jev-latest", source: "default" };
     });
-    const runMutation = vi.fn(async () => ({ runIds: [], costGBP: 0 }));
+    const runMutation = vi.fn(async () => ({ runIds: [], costUsd: 0 }));
     return { runQuery, runMutation } as unknown as ActionCtx;
   }
 

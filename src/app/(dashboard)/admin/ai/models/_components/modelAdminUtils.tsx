@@ -186,7 +186,7 @@ export function ModelAdminHeader({
  * A model's rate, as money someone can compare.
  *
  * The rate is stored **already per million tokens**. This is not a guess:
- * `calculateModelCostGBP` divides token counts by 1,000,000 before applying it,
+ * `calculateModelCostUsd` divides token counts by 1,000,000 before applying it,
  * the detail page's own fields are labelled "per 1M tokens", and every synced
  * record carries `inputTokenUnit: "Per 1M tokens"`.
  *

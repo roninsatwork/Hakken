@@ -112,7 +112,7 @@ describe("claiming", () => {
         modelId: "test-model",
         thinkingMode: false,
         isActive: true,
-        maxCostGBP: 5,
+        maxCostUsd: 5,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       } as never));

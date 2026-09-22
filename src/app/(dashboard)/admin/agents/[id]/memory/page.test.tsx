@@ -61,7 +61,7 @@ const reviewInbox = {
       error: "Missing context",
       startedAt: Date.UTC(2026, 5, 18, 9),
       completedAt: Date.UTC(2026, 5, 18, 9, 1),
-      costGBP: 0.02,
+      costUsd: 0.02,
     },
     sourceReflectionId: "reflection_1",
     kind: "FACT",

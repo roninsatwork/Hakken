@@ -119,7 +119,7 @@ export const getPlatformOverview = superAdminQuery({
       day: key,
       questions: 0,
       aiCalls: 0,
-      spendGBP: 0,
+      spendUsd: 0,
     }]));
 
     const activeUserIds = new Set<string>();
@@ -129,7 +129,7 @@ export const getPlatformOverview = superAdminQuery({
     const signInsPerPersonPerDay = new Map<string, Map<string, number>>();
     for (const key of dayKeys) signInsPerPersonPerDay.set(key, new Map());
 
-    let aiSpendGBP = 0;
+    let aiSpendUsd = 0;
 
     /**
      * Only client seats count as active seats.
@@ -168,8 +168,8 @@ export const getPlatformOverview = superAdminQuery({
         message.outputTokens ?? 0,
         modelMap,
       );
-      bucket.spendGBP += cost;
-      aiSpendGBP += cost;
+      bucket.spendUsd += cost;
+      aiSpendUsd += cost;
       if (message.role !== "user") continue;
       bucket.questions += 1;
       noteActivity(message.userId, message.createdAt);
@@ -195,9 +195,9 @@ export const getPlatformOverview = superAdminQuery({
       // no message to be counted through and so cost the platform nothing on
       // paper, however long it ran.
       if (run.threadId) continue;
-      const runCost = run.costGBP ?? 0;
-      if (bucket) bucket.spendGBP += runCost;
-      aiSpendGBP += runCost;
+      const runCost = run.costUsd ?? 0;
+      if (bucket) bucket.spendUsd += runCost;
+      aiSpendUsd += runCost;
     }
 
     const signInBands = dayKeys.map((key) => {
@@ -260,7 +260,7 @@ export const getPlatformOverview = superAdminQuery({
     // A month of revenue against a month of spend, both over the same window,
     // so the proportion means something. A bare revenue figure hides the margin.
     const spendAsPercentOfRevenue = projectedMrrGBP > 0
-      ? Number(((aiSpendGBP / projectedMrrGBP) * 100).toFixed(1))
+      ? Number(((aiSpendUsd / projectedMrrGBP) * 100).toFixed(1))
       : null;
 
     return {
@@ -274,7 +274,7 @@ export const getPlatformOverview = superAdminQuery({
       },
       money: {
         projectedMrrGBP: Number(projectedMrrGBP.toFixed(2)),
-        aiSpendGBP: Number(aiSpendGBP.toFixed(2)),
+        aiSpendUsd: Number(aiSpendUsd.toFixed(2)),
         spendAsPercentOfRevenue,
       },
       seats: {
@@ -294,7 +294,7 @@ export const getPlatformOverview = superAdminQuery({
       ].sort((left, right) => right.companies - left.companies),
       daily: dayKeys.map((key) => {
         const bucket = daily.get(key)!;
-        return { ...bucket, spendGBP: Number(bucket.spendGBP.toFixed(4)) };
+        return { ...bucket, spendUsd: Number(bucket.spendUsd.toFixed(4)) };
       }),
       signInBands,
       portfolio,

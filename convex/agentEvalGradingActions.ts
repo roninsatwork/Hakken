@@ -13,7 +13,7 @@ import {
   selectGraderModel,
   type GradeVerdict,
 } from "./agentEvalGradingService";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import { gradeRehearsalToolPlan } from "./rehearsalEvalService";
 import { appError } from "./utils/appError";
 
@@ -23,11 +23,11 @@ const MAX_SAMPLE_COUNT = 5;
 /**
  * What a graded check cost, in pounds.
  *
- * The run already recorded tokens and the table already had `costGBP`; nothing joined
+ * The run already recorded tokens and the table already had `costUsd`; nothing joined
  * the two, so an eval's spend read as zero. Reuses the catalogue rates rather than
  * inventing a second cost calculation.
  */
-async function calculateGradedRunCostGBP(
+async function calculateGradedRunCostUsd(
   ctx: { runQuery: (ref: typeof internal.aiModels.getModelByIdInternal, args: { modelId: string }) => Promise<{
     standardInputCostBelow200k?: number;
     standardInputCostAbove200k?: number;
@@ -51,11 +51,11 @@ async function calculateGradedRunCostGBP(
     ? await ctx.runQuery(internal.aiModels.getModelByIdInternal, { modelId: args.graderModelId })
     : null;
 
-  return calculateModelCostGBP({
+  return calculateModelCostUsd({
     inputTokens: args.answerInputTokens,
     outputTokens: args.answerOutputTokens,
     rates: answerRates,
-  }) + calculateModelCostGBP({
+  }) + calculateModelCostUsd({
     inputTokens: args.gradingInputTokens,
     outputTokens: args.gradingOutputTokens,
     rates: graderRates,
@@ -210,7 +210,7 @@ export const gradeSmokeEvalWithModel = internalAction({
       const finalOutput = grade.pass
         ? `Model-graded check passed. ${grade.reason} ${independenceNote}${sampleNote}`
         : `Model-graded check failed. ${grade.reason} ${independenceNote}${sampleNote}`;
-      const costGBP = await calculateGradedRunCostGBP(ctx, {
+      const costUsd = await calculateGradedRunCostUsd(ctx, {
         answerModelId: modelConfig.modelId,
         graderModelId,
         answerInputTokens,
@@ -238,7 +238,7 @@ export const gradeSmokeEvalWithModel = internalAction({
         // what the grading pass cost on top.
         inputTokens: answerInputTokens + gradingInputTokens,
         outputTokens: answerOutputTokens + gradingOutputTokens,
-        costGBP,
+        costUsd,
       });
     } catch (error: unknown) {
       const errorMessage = normalizeAiRuntimeError(error, "Model-graded smoke eval failed.").error;

@@ -1690,7 +1690,7 @@ export const completeModelGradedSmokeEvalInternal = internalMutation({
     providerModelId: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    costGBP: v.optional(v.number()),
+    costUsd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -1707,7 +1707,7 @@ export const completeModelGradedSmokeEvalInternal = internalMutation({
       ...(args.outputTokens !== undefined ? { outputTokens: args.outputTokens } : {}),
       // The run table always had this column; nothing had ever filled it in for an
       // eval, so a check's spend read as zero however many turns it took.
-      ...(args.costGBP !== undefined ? { costGBP: args.costGBP } : {}),
+      ...(args.costUsd !== undefined ? { costUsd: args.costUsd } : {}),
     });
 
     await ctx.db.insert("agentRunSteps", {
@@ -1832,7 +1832,7 @@ export const getCheckDetail = adminQuery({
         modelId: run.modelId,
         inputTokens: run.inputTokens,
         outputTokens: run.outputTokens,
-        costGBP: run.costGBP,
+        costUsd: run.costUsd,
         finalOutput: run.finalOutput,
         error: run.error,
         failures: getStringArrayMetadataValue(metadata, "failures"),

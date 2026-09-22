@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BillingLink } from "./_components/BillingLink";
-import { formatPreciseGBP } from "@/src/lib/currency";
+import { formatPreciseUsd } from "@/src/lib/currency";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -53,7 +53,7 @@ type CompanyMetricsData = {
   aggregates: {
     mrr?: number;
     activeUsers?: number;
-    totalCostGBP?: number;
+    totalCostUsd?: number;
     totalMessages?: number;
     aggregationType: string;
   };
@@ -240,7 +240,7 @@ export default function CompanySettingsDashboard() {
             <MetricBlock
               icon={PoundSterling}
               title={t('metrics.logisticBurn')}
-              value={formatPreciseGBP(data.aggregates.totalCostGBP ?? 0)}
+              value={formatPreciseUsd(data.aggregates.totalCostUsd ?? 0)}
               sub={t('metrics.burnSub')}
               delay={0.2}
             />

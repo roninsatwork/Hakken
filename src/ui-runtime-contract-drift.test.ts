@@ -106,7 +106,7 @@ describe('UI And Runtime Contract Drift', () => {
     // The shared module names each figure rather than restating it, so what is
     // checked is that every figure is still named. A field dropped from it would
     // leave that box with no ceiling at all.
-    for (const field of ['maxSteps', 'maxToolCalls', 'maxRuntimeMinutes', 'maxInputTokens', 'maxCostGBP']) {
+    for (const field of ['maxSteps', 'maxToolCalls', 'maxRuntimeMinutes', 'maxInputTokens', 'maxCostUsd']) {
       expect(screen, `agentLimits.ts stopped naming ${field}`).toContain(`${field}:`);
     }
 
@@ -130,24 +130,24 @@ describe('UI And Runtime Contract Drift', () => {
       maxSteps: readNumber(runtimeDefaults, 'maxSteps'),
       maxToolCalls: readNumber(runtimeDefaults, 'maxToolCalls'),
       maxRuntimeMinutes: readNumber(runtimeDefaults, 'maxRuntimeMs') / 60000,
-      maxCostGBP: readNumber(runtimeDefaults, 'maxCostGBP'),
+      maxCostUsd: readNumber(runtimeDefaults, 'maxCostUsd'),
     }, 'Agent budget defaults on the settings screen drifted from the runtime').toEqual({
       maxSteps: readNumber(runtimeDefaults, 'maxSteps'),
       maxToolCalls: readNumber(runtimeDefaults, 'maxToolCalls'),
       maxRuntimeMinutes: readNumber(runtimeDefaults, 'maxRuntimeMs') / 60000,
-      maxCostGBP: readNumber(runtimeDefaults, 'maxCostGBP'),
+      maxCostUsd: readNumber(runtimeDefaults, 'maxCostUsd'),
     });
 
     expect({
       maxSteps: readNumber(runtimeCeilings, 'maxSteps'),
       maxToolCalls: readNumber(runtimeCeilings, 'maxToolCalls'),
       maxRuntimeMinutes: readNumber(runtimeCeilings, 'maxRuntimeMs') / 60000,
-      maxCostGBP: readNumber(runtimeCeilings, 'maxCostGBP'),
+      maxCostUsd: readNumber(runtimeCeilings, 'maxCostUsd'),
     }, 'Agent budget ceilings drifted from the runtime').toEqual({
       maxSteps: readNumber(runtimeCeilings, 'maxSteps'),
       maxToolCalls: readNumber(runtimeCeilings, 'maxToolCalls'),
       maxRuntimeMinutes: readNumber(runtimeCeilings, 'maxRuntimeMs') / 60000,
-      maxCostGBP: readNumber(runtimeCeilings, 'maxCostGBP'),
+      maxCostUsd: readNumber(runtimeCeilings, 'maxCostUsd'),
     });
   });
 });

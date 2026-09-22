@@ -58,7 +58,7 @@ const overview = {
   windowDays: 30,
   coverage: { complete: true, incomplete: [] as string[] },
   clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
-  money: { projectedMrrGBP: 400, aiSpendGBP: 12.5, spendAsPercentOfRevenue: 3.1 },
+  money: { projectedMrrGBP: 400, aiSpendUsd: 12.5, spendAsPercentOfRevenue: 3.1 },
   seats: { total: 12, active: 4, utilisation: 33 },
   todo: { pendingInvitations: 2, companiesWithNoPlan: 1 },
   planDistribution: [
@@ -66,8 +66,8 @@ const overview = {
     { name: "No plan", companies: 1 },
   ],
   daily: [
-    { day: "2026-07-26", questions: 0, aiCalls: 2, spendGBP: 0.1 },
-    { day: "2026-07-27", questions: 5, aiCalls: 9, spendGBP: 0.4 },
+    { day: "2026-07-26", questions: 0, aiCalls: 2, spendUsd: 0.1 },
+    { day: "2026-07-27", questions: 5, aiCalls: 9, spendUsd: 0.4 },
   ],
   signInBands: [
     { day: "2026-07-27", didNotSignIn: 8, oneSession: 3, twoSessions: 1, threeSessions: 0, fourSessions: 0, fivePlusSessions: 0 },

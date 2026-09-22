@@ -91,7 +91,7 @@ const metricsAggregatesFields = {
   totalTokens: v.number(),
   totalInputTokens: v.number(),
   totalOutputTokens: v.number(),
-  totalCostGBP: v.number(),
+  totalCostUsd: v.number(),
   costPerActiveUser: v.number(),
   avgCostPerMessage: v.number(),
   aggregationType: aggregationTypeShape,
@@ -107,7 +107,7 @@ export const globalAiCostsShape = v.object({
   avgCostPerThread: v.number(),
   periodProcessed: v.number(),
   aggregationType: aggregationTypeShape,
-  timeline: v.array(v.object({ date: v.string(), costGBP: v.number() })),
+  timeline: v.array(v.object({ date: v.string(), costUsd: v.number() })),
 });
 
 export const platformOverviewShape = v.object({
@@ -117,20 +117,20 @@ export const platformOverviewShape = v.object({
   totalThreads: v.number(),
   avgInteractionDepth: v.number(),
   total30DCostUSD: v.number(),
-  costPerActiveUserGBP: v.number(),
+  costPerActiveUserUsd: v.number(),
   topUsers: v.array(v.object({
     userId: v.string(),
     name: v.string(),
     email: v.string(),
     image: v.string(),
-    costGBP: v.number(),
+    costUsd: v.number(),
     messageCount: v.number(),
   })),
 });
 
 export const userCostOverviewShape = v.object({
   coverage: coverageShape,
-  totalCostGBP: v.number(),
+  totalCostUsd: v.number(),
   totalTokens: v.number(),
   totalInputTokens: v.number(),
   totalOutputTokens: v.number(),
@@ -147,7 +147,7 @@ export const userCostThreadsShape = v.object({
     createdAt: v.number(),
     messageCount: v.number(),
     threadTokens: v.number(),
-    costGBP: v.number(),
+    costUsd: v.number(),
   })).fields,
 });
 

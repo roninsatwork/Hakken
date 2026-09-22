@@ -16,7 +16,7 @@ export function AICostsMetricGrid({ aggregates, t }: AICostsMetricGridProps) {
         largeText
         icon={PoundSterling}
         title={t("metrics.periodCost")}
-        value={formatSmallUsdAmount(aggregates.totalCostGBP, 5)}
+        value={formatSmallUsdAmount(aggregates.totalCostUsd, 5)}
         sub={t("metrics.exchangeSub")}
         delay={0}
       />

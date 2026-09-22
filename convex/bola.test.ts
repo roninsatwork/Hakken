@@ -48,7 +48,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
           inputTokens: 100,
           outputTokens: 50,
           modelUsed: "test-model",
-          costGBP: 0.05,
+          costUsd: 0.05,
           status: "SUCCESS",
           createdAt: Date.now()
         });
@@ -60,7 +60,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
           inputTokens: 100,
           outputTokens: 50,
           modelUsed: "test-model",
-          costGBP: 0.05,
+          costUsd: 0.05,
           status: "SUCCESS",
           createdAt: Date.now()
         });

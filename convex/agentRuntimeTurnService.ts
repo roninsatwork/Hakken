@@ -1,6 +1,6 @@
 import type { Doc } from "./_generated/dataModel";
 import { buildToolResultPayload, type ToolSideEffectLevel } from "./aiToolExecutionService";
-import { calculateModelCostGBP as calculateCostGBP } from "./aiCostService";
+import { calculateModelCostUsd as calculateCostUsd } from "./aiCostService";
 import { isRecord } from "./utils/lang";
 
 /**
@@ -122,13 +122,13 @@ export function getToolConfirmationRequired(
  * from a cache; it is priced separately, which is the point of caching at all.
  */
 
-export function calculateModelCostGBP(args: {
+export function calculateModelCostUsd(args: {
     inputTokens: number;
     outputTokens: number;
     cachedInputTokens?: number;
     config?: Doc<"aiModels">;
 }) {
-    return calculateCostGBP({
+    return calculateCostUsd({
         inputTokens: args.inputTokens,
         outputTokens: args.outputTokens,
         cachedInputTokens: args.cachedInputTokens,

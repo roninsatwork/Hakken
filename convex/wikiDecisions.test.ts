@@ -49,7 +49,7 @@ describe("a staff round files its Decision runs under its agent run", () => {
     await t.mutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
     const startedAt = Date.now() - 60_000;
     await t.run(async (ctx) => {
-      const base = { companyId, subjectKind: "wikiPage", answer: "no", mode: "ACT" as const, outcome: "ACTED" as const, source: "TYPESAFE" as const, costGBP: 0.01 };
+      const base = { companyId, subjectKind: "wikiPage", answer: "no", mode: "ACT" as const, outcome: "ACTED" as const, source: "TYPESAFE" as const, costUsd: 0.01 };
       // This round's freshness run, and a mailbox run from the same window that is not the Checker's.
       await ctx.db.insert("decisionRuns", { ...base, decisionKey: "wiki.claim-supported", subjectId: "POLICY:refunds", certainty: "SURE", createdAt: startedAt + 1000 });
       await ctx.db.insert("decisionRuns", { ...base, decisionKey: "mailbox.urgent", subjectId: "gmail-1", createdAt: startedAt + 1000 });
@@ -80,7 +80,7 @@ describe("a staff round files its Decision runs under its agent run", () => {
     const agentId = await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect())[0].agentId);
     const summary = await t.withIdentity({ subject: superAdminId }).query(api.decisions.summaryForAgent, { agentId, lookbackDays: 7 });
     expect(summary).toMatchObject({ ran: 1, acted: 1, handed: 0, onRules: 0, isPartial: false });
-    expect(summary.costGBP).toBeCloseTo(0.01);
+    expect(summary.costUsd).toBeCloseTo(0.01);
 
     // Agents are shared; their runs are not. Another company's admin sees
     // none of this company's totals (review, 2026-09-18).
@@ -89,7 +89,7 @@ describe("a staff round files its Decision runs under its agent run", () => {
       return await ctx.db.insert("users", { email: "admin@elsewhere.test", role: "ADMIN", companyId: otherCompanyId });
     });
     const outsiderView = await t.withIdentity({ subject: outsiderId }).query(api.decisions.summaryForAgent, { agentId, lookbackDays: 7 });
-    expect(outsiderView).toMatchObject({ ran: 0, costGBP: 0 });
+    expect(outsiderView).toMatchObject({ ran: 0, costUsd: 0 });
     const ownView = await t.withIdentity({ subject: adminId }).query(api.decisions.summaryForAgent, { agentId, lookbackDays: 7 });
     expect(ownView).toMatchObject({ ran: 1 });
   });

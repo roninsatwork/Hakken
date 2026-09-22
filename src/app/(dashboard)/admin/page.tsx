@@ -52,11 +52,11 @@ type PlatformOverview = {
   windowDays: number;
   coverage: { complete: boolean; incomplete: string[] };
   clients: { total: number; healthy: number; needsAttention: number; unused: number };
-  money: { projectedMrrGBP: number; aiSpendGBP: number; spendAsPercentOfRevenue: number | null };
+  money: { projectedMrrGBP: number; aiSpendUsd: number; spendAsPercentOfRevenue: number | null };
   seats: { total: number; active: number; utilisation: number };
   todo: { pendingInvitations: number; companiesWithNoPlan: number };
   planDistribution: Array<{ name: string; companies: number }>;
-  daily: Array<{ day: string; questions: number; aiCalls: number; spendGBP: number }>;
+  daily: Array<{ day: string; questions: number; aiCalls: number; spendUsd: number }>;
   signInBands: Array<{
     day: string;
     didNotSignIn: number;
@@ -307,8 +307,8 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-1 text-[12px] text-muted">
               {overview.money.spendAsPercentOfRevenue === null
-                ? t("cards.spendNoPlans", { spend: formatSpend(overview.money.aiSpendGBP) })
-                : t("cards.spendPercent", { spend: formatSpend(overview.money.aiSpendGBP), percent: overview.money.spendAsPercentOfRevenue })}
+                ? t("cards.spendNoPlans", { spend: formatSpend(overview.money.aiSpendUsd) })
+                : t("cards.spendPercent", { spend: formatSpend(overview.money.aiSpendUsd), percent: overview.money.spendAsPercentOfRevenue })}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
@@ -384,7 +384,7 @@ export default function AdminDashboardPage() {
                   {/* One series, so the title names it and no legend is needed. */}
                   <Area
                     type="monotone"
-                    dataKey="spendGBP"
+                    dataKey="spendUsd"
                     stroke={CHART_PRIMARY_BLUE}
                     strokeWidth={2}
                     fill="url(#platform-spend)"

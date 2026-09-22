@@ -62,7 +62,7 @@ export const getStatsForAgent = adminQuery({
        totalTokensIngested += (tx.inputTokens || 0) + (tx.outputTokens || 0);
        totalInputTokens += (tx.inputTokens || 0);
        totalOutputTokens += (tx.outputTokens || 0);
-       totalOpexCost += (tx.costGBP || 0);
+       totalOpexCost += (tx.costUsd || 0);
     }
 
     return {
@@ -104,7 +104,7 @@ export const seedForAgent = internalMutation({
             inputTokens,
             outputTokens,
             modelUsed: model,
-            costGBP: cost,
+            costUsd: cost,
             status: Math.random() > 0.1 ? "SUCCESS" : "FAILED",
             createdAt: Date.now() - (i * 1000 * 60 * 60 * 4), // Spread over last few days
         });
@@ -124,7 +124,7 @@ export const insertTransactionInternal = internalMutation({
     providerModelId: v.optional(v.string()),
     inputTokens: v.number(),
     outputTokens: v.number(),
-    costGBP: v.number(),
+    costUsd: v.number(),
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
     isRehearsal: v.optional(v.boolean()),
   },

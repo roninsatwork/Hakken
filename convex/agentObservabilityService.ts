@@ -35,7 +35,7 @@ export type ObservabilityRun = {
   status: string;
   startedAt: number;
   completedAt?: number;
-  costGBP?: number;
+  costUsd?: number;
   error?: string;
   finalOutput?: string;
   agentVersionId?: string;
@@ -82,7 +82,7 @@ export type DayBucket = {
   total: number;
   succeeded: number;
   failed: number;
-  costGBP: number;
+  costUsd: number;
 };
 
 function startOfUtcDay(timestamp: number): number {
@@ -105,14 +105,14 @@ export function buildDailySeries(
 
   for (let offset = options.days - 1; offset >= 0; offset -= 1) {
     const dayStartMs = todayStart - offset * DAY_MS;
-    buckets.set(dayStartMs, { dayStartMs, total: 0, succeeded: 0, failed: 0, costGBP: 0 });
+    buckets.set(dayStartMs, { dayStartMs, total: 0, succeeded: 0, failed: 0, costUsd: 0 });
   }
 
   for (const run of runs) {
     const bucket = buckets.get(startOfUtcDay(run.startedAt));
     if (!bucket) continue;
     bucket.total += 1;
-    bucket.costGBP += run.costGBP ?? 0;
+    bucket.costUsd += run.costUsd ?? 0;
     if (run.status === "SUCCESS") bucket.succeeded += 1;
     if (run.status === "FAILED" || run.status === "CANCELLED") bucket.failed += 1;
   }
@@ -153,20 +153,20 @@ export type PeriodTotals = {
   runs: number;
   succeeded: number;
   failed: number;
-  costGBP: number;
+  costUsd: number;
   successRate: number;
-  costPerRunGBP: number;
+  costPerRunUsd: number;
 };
 
 export function summarisePeriod(runs: ReadonlyArray<ObservabilityRun>): PeriodTotals {
   let succeeded = 0;
   let failed = 0;
-  let costGBP = 0;
+  let costUsd = 0;
 
   for (const run of runs) {
     if (run.status === "SUCCESS") succeeded += 1;
     if (run.status === "FAILED" || run.status === "CANCELLED") failed += 1;
-    costGBP += run.costGBP ?? 0;
+    costUsd += run.costUsd ?? 0;
   }
 
   const settled = succeeded + failed;
@@ -174,9 +174,9 @@ export function summarisePeriod(runs: ReadonlyArray<ObservabilityRun>): PeriodTo
     runs: runs.length,
     succeeded,
     failed,
-    costGBP,
+    costUsd,
     successRate: settled > 0 ? succeeded / settled : 0,
-    costPerRunGBP: runs.length > 0 ? costGBP / runs.length : 0,
+    costPerRunUsd: runs.length > 0 ? costUsd / runs.length : 0,
   };
 }
 
@@ -408,16 +408,16 @@ export async function readAgentAnalytics(
     providerModelId?: string;
     runs: number;
     failures: number;
-    costGBP: number;
+    costUsd: number;
   }> = {};
   const versionStats: Record<string, {
     agentVersionId: Id<"agentVersions"> | "unversioned";
     runs: number;
     successes: number;
     failures: number;
-    costGBP: number;
+    costUsd: number;
   }> = {};
-  let totalCostGBP = 0;
+  let totalCostUsd = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let completedLatencyTotalMs = 0;
@@ -428,7 +428,7 @@ export async function readAgentAnalytics(
   for (const run of runs) {
     incrementCount(statusCounts, run.status);
     incrementCount(triggerCounts, run.triggerType);
-    totalCostGBP += run.costGBP ?? 0;
+    totalCostUsd += run.costUsd ?? 0;
     totalInputTokens += run.inputTokens ?? 0;
     totalOutputTokens += run.outputTokens ?? 0;
 
@@ -461,11 +461,11 @@ export async function readAgentAnalytics(
         providerModelId: run.providerModelId,
         runs: 0,
         failures: 0,
-        costGBP: 0,
+        costUsd: 0,
       };
     }
     modelStats[modelKey].runs += 1;
-    modelStats[modelKey].costGBP += run.costGBP ?? 0;
+    modelStats[modelKey].costUsd += run.costUsd ?? 0;
     if (run.status === "FAILED" || run.status === "CANCELLED") {
       modelStats[modelKey].failures += 1;
     }
@@ -477,11 +477,11 @@ export async function readAgentAnalytics(
         runs: 0,
         successes: 0,
         failures: 0,
-        costGBP: 0,
+        costUsd: 0,
       };
     }
     versionStats[versionKey].runs += 1;
-    versionStats[versionKey].costGBP += run.costGBP ?? 0;
+    versionStats[versionKey].costUsd += run.costUsd ?? 0;
     if (run.status === "SUCCESS") versionStats[versionKey].successes += 1;
     if (run.status === "FAILED" || run.status === "CANCELLED") versionStats[versionKey].failures += 1;
   }
@@ -577,7 +577,7 @@ export async function readAgentAnalytics(
       toolCalls: toolCalls.length,
       approvals: approvals.length,
       feedback: feedback.length,
-      costGBP: totalCostGBP,
+      costUsd: totalCostUsd,
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
       successRate: completedRuns > 0 ? successfulRuns / completedRuns : 0,
@@ -676,10 +676,10 @@ export async function readRunObservatory(
 
   const statusCounts = buildEmptyRunObservatoryStatusCounts();
   const triggerCounts: Record<string, number> = {};
-  const modelCounts: Record<string, { modelId: string; providerKey?: string; runs: number; failures: number; costGBP: number }> = {};
-  const agentCounts: Record<string, { agentId: Id<"agents">; agentName: string; runs: number; failures: number; costGBP: number; lastRunAt: number }> = {};
+  const modelCounts: Record<string, { modelId: string; providerKey?: string; runs: number; failures: number; costUsd: number }> = {};
+  const agentCounts: Record<string, { agentId: Id<"agents">; agentName: string; runs: number; failures: number; costUsd: number; lastRunAt: number }> = {};
   const failureReasons: Record<string, number> = {};
-  let totalCostGBP = 0;
+  let totalCostUsd = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let completedLatencyTotalMs = 0;
@@ -695,7 +695,7 @@ export async function readRunObservatory(
   for (const run of recentRuns) {
     statusCounts[run.status] += 1;
     incrementCount(triggerCounts, run.triggerType);
-    totalCostGBP += run.costGBP ?? 0;
+    totalCostUsd += run.costUsd ?? 0;
     totalInputTokens += run.inputTokens ?? 0;
     totalOutputTokens += run.outputTokens ?? 0;
 
@@ -716,11 +716,11 @@ export async function readRunObservatory(
         providerKey: run.providerKey,
         runs: 0,
         failures: 0,
-        costGBP: 0,
+        costUsd: 0,
       };
     }
     modelCounts[modelKey].runs += 1;
-    modelCounts[modelKey].costGBP += run.costGBP ?? 0;
+    modelCounts[modelKey].costUsd += run.costUsd ?? 0;
     if (run.status === "FAILED" || run.status === "CANCELLED") modelCounts[modelKey].failures += 1;
 
     const agentKey = run.agentId;
@@ -730,12 +730,12 @@ export async function readRunObservatory(
         agentName: agentNameById.get(run.agentId) ?? "Unknown agent",
         runs: 0,
         failures: 0,
-        costGBP: 0,
+        costUsd: 0,
         lastRunAt: run.startedAt,
       };
     }
     agentCounts[agentKey].runs += 1;
-    agentCounts[agentKey].costGBP += run.costGBP ?? 0;
+    agentCounts[agentKey].costUsd += run.costUsd ?? 0;
     agentCounts[agentKey].lastRunAt = Math.max(agentCounts[agentKey].lastRunAt, run.startedAt);
     if (run.status === "FAILED" || run.status === "CANCELLED") agentCounts[agentKey].failures += 1;
   }
@@ -795,7 +795,7 @@ export async function readRunObservatory(
       successfulRuns,
       failedRuns,
       activeRuns,
-      costGBP: totalCostGBP,
+      costUsd: totalCostUsd,
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
       successRate: completedRuns > 0 ? successfulRuns / completedRuns : 0,
@@ -820,7 +820,7 @@ export async function readRunObservatory(
       startedAt: run.startedAt,
       completedAt: run.completedAt,
       latencyMs: getRunLatencyMs(run),
-      costGBP: run.costGBP,
+      costUsd: run.costUsd,
       modelId: run.modelId || run.providerModelId,
       error: run.error || (run.status === "FAILED" || run.status === "CANCELLED" ? run.finalOutput : undefined),
       nextAction: getRunObservabilityAction(run),

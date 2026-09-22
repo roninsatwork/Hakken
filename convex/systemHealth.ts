@@ -54,7 +54,7 @@ const HEALTH_EXAMPLE_LIMIT = 10;
 const OVERDUE_SCHEDULE_THRESHOLD_MINUTES = 15;
 const STALE_RUNNING_THRESHOLD_MINUTES = 60;
 const PENDING_APPROVAL_THRESHOLD_MINUTES = 30;
-const HIGH_COST_AGENT_THRESHOLD_GBP = 5;
+const HIGH_COST_AGENT_THRESHOLD_USD = 5;
 const BUDGET_WARNING_PERCENT = 80;
 const REPEATED_PROVIDER_FAILURE_THRESHOLD = 3;
 const TOOL_FAILURE_THRESHOLD = 3;
@@ -545,27 +545,27 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     targetName: providerKey,
   }));
 
-  const costByAgent = new Map<Id<"agents">, { costGBP: number; transactions: number; lastSeenAt: number }>();
+  const costByAgent = new Map<Id<"agents">, { costUsd: number; transactions: number; lastSeenAt: number }>();
   for (const transaction of recentAgentTransactions) {
     const existing = costByAgent.get(transaction.agentId) ?? {
-      costGBP: 0,
+      costUsd: 0,
       transactions: 0,
       lastSeenAt: transaction.createdAt,
     };
-    existing.costGBP += transaction.costGBP || 0;
+    existing.costUsd += transaction.costUsd || 0;
     existing.transactions += 1;
     existing.lastSeenAt = Math.max(existing.lastSeenAt, transaction.createdAt);
     costByAgent.set(transaction.agentId, existing);
   }
   const highCostRows = Array.from(costByAgent.entries())
-    .filter(([, row]) => row.costGBP >= HIGH_COST_AGENT_THRESHOLD_GBP)
-    .sort((a, b) => b[1].costGBP - a[1].costGBP);
+    .filter(([, row]) => row.costUsd >= HIGH_COST_AGENT_THRESHOLD_USD)
+    .sort((a, b) => b[1].costUsd - a[1].costUsd);
   const highCostAgents = await Promise.all(
     highCostRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async ([agentId, row]): Promise<OperationalFailureExample> => ({
       id: agentId,
       label: "Cost threshold",
       occurredAt: row.lastSeenAt,
-      summary: `$${row.costGBP.toFixed(2)} across ${row.transactions} transaction${row.transactions === 1 ? "" : "s"}`,
+      summary: `$${row.costUsd.toFixed(2)} across ${row.transactions} transaction${row.transactions === 1 ? "" : "s"}`,
       targetName: await getAgentName(ctx, agentId),
       targetType: "agent",
     }))
@@ -711,12 +711,12 @@ async function getBudgetHealthReport(ctx: QueryCtx, args: { daysBack?: number; s
   const windowStartTs = Date.now() - daysBack * DAY_MS;
   const recentRuns = await getRecentAgentRunsForBudget(ctx, { scope: args.scope, windowStartTs });
   const agentBudgetRows = recentRuns
-    .filter((run) => run.maxCostGBP !== undefined && run.maxCostGBP > 0 && getBudgetPercent(run.costGBP ?? 0, run.maxCostGBP) >= BUDGET_WARNING_PERCENT)
-    .sort((a, b) => getBudgetPercent(b.costGBP ?? 0, b.maxCostGBP ?? 0) - getBudgetPercent(a.costGBP ?? 0, a.maxCostGBP ?? 0));
+    .filter((run) => run.maxCostUsd !== undefined && run.maxCostUsd > 0 && getBudgetPercent(run.costUsd ?? 0, run.maxCostUsd) >= BUDGET_WARNING_PERCENT)
+    .sort((a, b) => getBudgetPercent(b.costUsd ?? 0, b.maxCostUsd ?? 0) - getBudgetPercent(a.costUsd ?? 0, a.maxCostUsd ?? 0));
   const agentCostBudgets = await Promise.all(
     agentBudgetRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (run): Promise<BudgetHealthExample> => {
-      const used = run.costGBP ?? 0;
-      const limit = run.maxCostGBP ?? 0;
+      const used = run.costUsd ?? 0;
+      const limit = run.maxCostUsd ?? 0;
       return {
         id: run._id,
         limit,
@@ -816,7 +816,7 @@ function buildAlertRules(args: { budgetHealth: BudgetHealthReport; operations: O
       label: "Cost and budget pressure",
       nextAction: "Review model choice, run budget, tenant plan usage, and retrieval/tool breadth.",
       status: getRuleStatus(costPressureCount, 1),
-      threshold: `Agent spend above $${HIGH_COST_AGENT_THRESHOLD_GBP.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
+      threshold: `Agent spend above $${HIGH_COST_AGENT_THRESHOLD_USD.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
     },
     {
       count: operations.failedToolCalls.count,
@@ -860,7 +860,7 @@ async function getSystemHealthReport(ctx: QueryCtx, args: AnalyticsDataHealthArg
     daysBack,
     disabledPurgePipelines,
     operations,
-    highCostAgentThresholdGBP: HIGH_COST_AGENT_THRESHOLD_GBP,
+    highCostAgentThresholdUsd: HIGH_COST_AGENT_THRESHOLD_USD,
     overdueScheduleThresholdMinutes: OVERDUE_SCHEDULE_THRESHOLD_MINUTES,
     pendingApprovalThresholdMinutes: PENDING_APPROVAL_THRESHOLD_MINUTES,
     scope: {

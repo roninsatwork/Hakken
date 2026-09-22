@@ -99,7 +99,7 @@ export const systemHealthShape = v.object({
   checkedDate: v.string(),
   daysBack: v.number(),
   disabledPurgePipelines: v.optional(v.array(v.string())),
-  highCostAgentThresholdGBP: v.number(),
+  highCostAgentThresholdUsd: v.number(),
   operations: v.object({
     agentFailures: failureBlock,
     failedAgentTransactions: failureBlock,

@@ -193,7 +193,7 @@ export default function AgentDashboard() {
             align: "right",
             cell: (tx) => (
               <span className="text-[13px] font-mono font-medium text-foreground tracking-tight">
-                ${tx.costGBP.toFixed(6)}
+                ${(tx.costUsd ?? 0).toFixed(6)}
               </span>
             ),
           },

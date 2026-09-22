@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 
 const rates = {
   standardInputCostBelow200k: 10,
@@ -14,7 +14,7 @@ describe("model cost", () => {
   // rates apply. The tier itself is covered separately below.
   test("charges input and output at their configured rates", () => {
     // 100k input at 10 gives 1.00; 50k output at 40 gives 2.00.
-    expect(calculateModelCostGBP({
+    expect(calculateModelCostUsd({
       inputTokens: 100_000,
       outputTokens: 50_000,
       rates,
@@ -23,7 +23,7 @@ describe("model cost", () => {
 
   test("charges cached input at the cached rate", () => {
     // Half served from cache: 50k at 10 gives 0.50, 50k at 1 gives 0.05.
-    const cost = calculateModelCostGBP({
+    const cost = calculateModelCostUsd({
       inputTokens: 100_000,
       outputTokens: 0,
       cachedInputTokens: 50_000,
@@ -35,7 +35,7 @@ describe("model cost", () => {
   test("cached tokens are part of the input total, not extra", () => {
     // Providers report the cached count as a share of the prompt tokens. Adding
     // rather than subtracting would bill the same tokens twice.
-    const allCached = calculateModelCostGBP({
+    const allCached = calculateModelCostUsd({
       inputTokens: 100_000,
       outputTokens: 0,
       cachedInputTokens: 100_000,
@@ -45,8 +45,8 @@ describe("model cost", () => {
   });
 
   test("caching makes a call cheaper, never dearer", () => {
-    const uncached = calculateModelCostGBP({ inputTokens: 500_000, outputTokens: 0, rates });
-    const cached = calculateModelCostGBP({
+    const uncached = calculateModelCostUsd({ inputTokens: 500_000, outputTokens: 0, rates });
+    const cached = calculateModelCostUsd({
       inputTokens: 500_000,
       outputTokens: 0,
       cachedInputTokens: 400_000,
@@ -58,7 +58,7 @@ describe("model cost", () => {
   test("falls back to the standard rate when no cached rate is configured", () => {
     // Under-stating spend would let a run sail past a cost ceiling it had
     // actually exceeded. Over-stating slightly is the safe direction.
-    const cost = calculateModelCostGBP({
+    const cost = calculateModelCostUsd({
       inputTokens: 100_000,
       outputTokens: 0,
       cachedInputTokens: 100_000,
@@ -68,7 +68,7 @@ describe("model cost", () => {
   });
 
   test("uses the large-context tier above the threshold", () => {
-    const cost = calculateModelCostGBP({
+    const cost = calculateModelCostUsd({
       inputTokens: 400_000,
       outputTokens: 0,
       cachedInputTokens: 400_000,
@@ -84,7 +84,7 @@ describe("model cost", () => {
     // read as free rather than as unknown. Every token past two hundred thousand
     // cost nothing, so a long run's spend stopped climbing at exactly the point
     // the spend ceiling becomes the only bound still holding it.
-    const cost = calculateModelCostGBP({
+    const cost = calculateModelCostUsd({
       inputTokens: 1_000_000,
       outputTokens: 0,
       rates: { standardInputCostBelow200k: 1.5, standardInputCostAbove200k: 0 },
@@ -92,7 +92,7 @@ describe("model cost", () => {
     expect(cost).toBeCloseTo(1.5, 6);
 
     // An explicitly dearer large-context rate is still respected.
-    expect(calculateModelCostGBP({
+    expect(calculateModelCostUsd({
       inputTokens: 1_000_000,
       outputTokens: 0,
       rates: { standardInputCostBelow200k: 1.5, standardInputCostAbove200k: 3 },
@@ -102,12 +102,12 @@ describe("model cost", () => {
   test("reports zero when the model has no pricing at all", () => {
     // This is the case P3.1 had to work around: most enabled models carry no
     // rates, so the cost ceiling cannot fire and tighter step budgets apply.
-    expect(calculateModelCostGBP({ inputTokens: 9_000, outputTokens: 9_000 })).toBe(0);
-    expect(calculateModelCostGBP({ inputTokens: 9_000, outputTokens: 9_000, rates: {} })).toBe(0);
+    expect(calculateModelCostUsd({ inputTokens: 9_000, outputTokens: 9_000 })).toBe(0);
+    expect(calculateModelCostUsd({ inputTokens: 9_000, outputTokens: 9_000, rates: {} })).toBe(0);
   });
 
   test("ignores impossible token counts rather than producing a negative bill", () => {
-    const cost = calculateModelCostGBP({
+    const cost = calculateModelCostUsd({
       inputTokens: 1_000,
       outputTokens: -5,
       cachedInputTokens: 999_999,

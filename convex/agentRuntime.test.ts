@@ -2338,7 +2338,7 @@ describe("prompt caching", () => {
     // 100k tokens: 0.01 at the cached rate against 0.1 at the standard rate.
     // Charging the standard rate for cached tokens is what the model catalogue
     // has been doing while carrying a cached rate nothing read.
-    expect(run?.costGBP).toBeCloseTo(0.01, 6);
+    expect(run?.costUsd).toBeCloseTo(0.01, 6);
   });
 });
 

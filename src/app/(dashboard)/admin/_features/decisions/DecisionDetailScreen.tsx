@@ -6,7 +6,7 @@ import { Scale } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatCurrencyGBP } from "@/src/lib/currency";
+import { formatCurrencyUsd } from "@/src/lib/currency";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -25,7 +25,7 @@ type RunRow = {
   source: "TYPESAFE" | "TEXT_MODEL" | "RULES";
   fallbackReason?: "MODE_OFF" | "NO_MODEL" | "PROVIDER_FAILED";
   action?: string;
-  costGBP: number;
+  costUsd: number;
 };
 
 function parseSpread(value?: string): Record<string, number> | undefined {
@@ -99,7 +99,7 @@ export function DecisionDetailScreen({
           {t("detail.weekLine", {
             ran: data.isCapped ? t("ranAtLeast", { count: data.ranThisWeek }) : data.ranThisWeek,
             handed: data.handedThisWeek,
-            cost: formatCurrencyGBP(data.costThisWeekGBP),
+            cost: formatCurrencyUsd(data.costThisWeekUsd),
           })}{" "}
           {t(`stakes.${data.decision.stakes}`)}
         </p>

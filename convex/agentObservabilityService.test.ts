@@ -92,10 +92,10 @@ describe("buildDailySeries", () => {
   it("counts successes, failures and cost into the right day", () => {
     const series = buildDailySeries(
       [
-        run({ startedAt: NOW, status: "SUCCESS", costGBP: 0.01 }),
-        run({ startedAt: NOW, status: "FAILED", costGBP: 0.02 }),
-        run({ startedAt: NOW, status: "CANCELLED", costGBP: 0.03 }),
-        run({ startedAt: NOW - DAY_MS, status: "SUCCESS", costGBP: 0.5 }),
+        run({ startedAt: NOW, status: "SUCCESS", costUsd: 0.01 }),
+        run({ startedAt: NOW, status: "FAILED", costUsd: 0.02 }),
+        run({ startedAt: NOW, status: "CANCELLED", costUsd: 0.03 }),
+        run({ startedAt: NOW - DAY_MS, status: "SUCCESS", costUsd: 0.5 }),
       ],
       { days: 7, now: NOW }
     );
@@ -105,7 +105,7 @@ describe("buildDailySeries", () => {
     expect(today.succeeded).toBe(1);
     // A cancelled run counts as failed, matching how the rest of the screen reads.
     expect(today.failed).toBe(2);
-    expect(today.costGBP).toBeCloseTo(0.06, 5);
+    expect(today.costUsd).toBeCloseTo(0.06, 5);
 
     expect(series[series.length - 2].total).toBe(1);
   });
@@ -205,7 +205,7 @@ describe("summarisePeriod", () => {
   it("reports zero rather than NaN when nothing has run", () => {
     const totals = summarisePeriod([]);
     expect(totals.successRate).toBe(0);
-    expect(totals.costPerRunGBP).toBe(0);
+    expect(totals.costPerRunUsd).toBe(0);
   });
 });
 

@@ -307,7 +307,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t('grossCost')}</span>
-          <span className="text-3xl font-medium text-foreground tracking-tight leading-none mt-1">${costs.totalCostGBP.toFixed(4)}</span>
+          <span className="text-3xl font-medium text-foreground tracking-tight leading-none mt-1">${costs.totalCostUsd.toFixed(4)}</span>
         </div>
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t('totalTokens')}</span>
@@ -400,7 +400,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
             header: t('table.cost'),
             align: "right",
             cell: (thread) => (
-              <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>
+              <span className="text-[13px] font-medium text-brand">${thread.costUsd.toFixed(4)}</span>
             ),
           },
         ]}

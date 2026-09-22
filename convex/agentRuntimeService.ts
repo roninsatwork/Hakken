@@ -1,4 +1,4 @@
-import { calculateModelCostGBP, type ModelCostRates } from "./aiCostService";
+import { calculateModelCostUsd, type ModelCostRates } from "./aiCostService";
 import { estimatePromptTokens } from "./promptCacheService";
 import {
   buildToolFailureResult,
@@ -51,7 +51,7 @@ export const DEFAULT_AGENT_OBJECTIVE_LIMITS = {
    * than they write.
    */
   maxOutputTokens: 100000,
-  maxCostGBP: 10,
+  maxCostUsd: 10,
 } as const;
 
 /**
@@ -68,7 +68,7 @@ export const UNPRICED_MODEL_OBJECTIVE_LIMITS = {
   maxRuntimeMs: 120000,
   maxInputTokens: 200000,
   maxOutputTokens: 20000,
-  maxCostGBP: 1,
+  maxCostUsd: 1,
 } as const;
 
 /**
@@ -105,7 +105,7 @@ export const AGENT_OBJECTIVE_LIMIT_CEILINGS = {
   maxRuntimeMs: 60 * 60 * 1000,
   maxInputTokens: 10000000,
   maxOutputTokens: 1000000,
-  maxCostGBP: 50,
+  maxCostUsd: 50,
 } as const;
 
 export type AgentObjectiveLimits = {
@@ -114,7 +114,7 @@ export type AgentObjectiveLimits = {
   maxRuntimeMs: number;
   maxInputTokens: number;
   maxOutputTokens: number;
-  maxCostGBP: number;
+  maxCostUsd: number;
 };
 
 /** Per-agent overrides, as stored on the agent record. All optional. */
@@ -123,7 +123,7 @@ export type AgentLimitOverrides = {
   maxToolCalls?: number;
   maxRuntimeMs?: number;
   maxInputTokens?: number;
-  maxCostGBP?: number;
+  maxCostUsd?: number;
 };
 
 function clampLimit(
@@ -157,7 +157,7 @@ export const AGENT_LIMIT_OVERRIDE_FIELDS = [
   // looked, to anyone reading that screen, as though it had stopped for no
   // reason at all.
   "maxInputTokens",
-  "maxCostGBP",
+  "maxCostUsd",
 ] as const;
 
 export type AgentLimitOverrideField = (typeof AGENT_LIMIT_OVERRIDE_FIELDS)[number];
@@ -180,7 +180,7 @@ export function clampAgentLimitOverride(
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
   const ceiling = AGENT_OBJECTIVE_LIMIT_CEILINGS[field];
   const bounded = Math.min(value, ceiling);
-  return field === "maxCostGBP" ? bounded : Math.floor(bounded);
+  return field === "maxCostUsd" ? bounded : Math.floor(bounded);
 }
 
 /**
@@ -221,10 +221,10 @@ export function resolveAgentObjectiveLimits(
       AGENT_OBJECTIVE_LIMIT_CEILINGS.maxInputTokens,
     ),
     maxOutputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxOutputTokens,
-    maxCostGBP: clampLimit(
-      overrides?.maxCostGBP,
-      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP,
-      AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+    maxCostUsd: clampLimit(
+      overrides?.maxCostUsd,
+      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostUsd,
+      AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd,
       { integer: false },
     ),
   };
@@ -269,8 +269,8 @@ export function shouldStopForTokenBudget(args: {
   return args.inputTokens >= args.maxInputTokens || args.outputTokens >= args.maxOutputTokens;
 }
 
-export function shouldStopForCostBudget(args: { costGBP: number; maxCostGBP: number }) {
-  return args.costGBP >= args.maxCostGBP;
+export function shouldStopForCostBudget(args: { costUsd: number; maxCostUsd: number }) {
+  return args.costUsd >= args.maxCostUsd;
 }
 
 export function getToolBudgetStopMessage(maxToolCalls: number) {
@@ -298,8 +298,8 @@ export function getTokenBudgetStopMessage() {
   return "Agent stopped after reaching the configured token budget.";
 }
 
-export function getCostBudgetStopMessage(maxCostGBP: number) {
-  return `Agent stopped after reaching the maximum cost limit of GBP ${maxCostGBP.toFixed(2)}.`;
+export function getCostBudgetStopMessage(maxCostUsd: number) {
+  return `Agent stopped after reaching the maximum cost limit of USD ${maxCostUsd.toFixed(2)}.`;
 }
 
 /**
@@ -711,7 +711,7 @@ export function buildRunUsagePayload(args: {
   return {
     inputTokens: args.inputTokens,
     outputTokens: args.outputTokens,
-    costGBP: calculateModelCostGBP({
+    costUsd: calculateModelCostUsd({
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
       cachedInputTokens: args.cachedInputTokens,

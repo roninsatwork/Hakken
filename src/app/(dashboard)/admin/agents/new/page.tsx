@@ -105,7 +105,7 @@ type NewAgentForm = {
   maxToolCalls: string;
   maxInputTokens: string;
   maxRuntimeMinutes: string;
-  maxCostGBP: string;
+  maxCostUsd: string;
   isActive: boolean;
   storageId?: Id<"_storage">;
 };
@@ -127,7 +127,7 @@ const emptyForm: NewAgentForm = {
   maxToolCalls: "",
   maxInputTokens: "",
   maxRuntimeMinutes: "",
-  maxCostGBP: "",
+  maxCostUsd: "",
   // A draft by default: worth a look before it can be run, but not a rule.
   isActive: false,
 };
@@ -210,7 +210,7 @@ export default function NewAgentPage() {
         maxToolCalls: parseLimitInput(formData.maxToolCalls) ?? 0,
         maxInputTokens: parseLimitInput(formData.maxInputTokens) ?? 0,
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
-        maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
+        maxCostUsd: parseLimitInput(formData.maxCostUsd) ?? 0,
         isActive: formData.isActive,
         ...(formData.storageId ? { storageId: formData.storageId } : {}),
       }),

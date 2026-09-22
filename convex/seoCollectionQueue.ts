@@ -110,7 +110,7 @@ export const claimSeoBatch = internalMutation({
  * The cap belongs to the agent, never to a company or a website — Hakken
  * absorbs DataForSEO spend and no customer ever sees it, so the only budget
  * that means anything is the operator's own. An agent with no cap set is not
- * capped; that is the platform's existing convention for `maxCostGBP`.
+ * capped; that is the platform's existing convention for `maxCostUsd`.
  *
  * The comparison is deliberately crude while the currency question is open:
  * costs are stored in USD exactly as DataForSEO reports them, and converting
@@ -130,7 +130,7 @@ async function withinSpendCap(
   if (!run) return batch;
 
   const agent = await ctx.db.get(run.agentId);
-  const cap = agent?.maxCostGBP;
+  const cap = agent?.maxCostUsd;
   if (typeof cap !== "number" || cap <= 0) return batch;
 
   return cycle.totalCostUsd >= cap ? [] : batch;

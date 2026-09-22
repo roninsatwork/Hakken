@@ -25,7 +25,7 @@ const TOKENS_PER_RATE_UNIT = 1_000_000;
 /** The tier boundary the catalogue prices against. */
 const LARGE_CONTEXT_TOKEN_THRESHOLD = 200_000;
 
-export function calculateModelCostGBP(args: {
+export function calculateModelCostUsd(args: {
   inputTokens: number;
   outputTokens: number;
   /**

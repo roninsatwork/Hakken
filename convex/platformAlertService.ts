@@ -169,7 +169,7 @@ export type SystemHealthReport = {
    * — the alert keeps that decision visible rather than second-guessing it.
    */
   disabledPurgePipelines?: string[];
-  highCostAgentThresholdGBP: number;
+  highCostAgentThresholdUsd: number;
   operations: OperationalHealthReport;
   pendingApprovalThresholdMinutes: number;
   staleRunningThresholdMinutes: number;
@@ -621,7 +621,7 @@ function buildBudgetHealthSignals(report: BudgetHealthReport) {
       occurrences: report.agentCostBudgets.examples.map(toBudgetOccurrence),
       key: "agentCostBudgetPressure",
       label: "Agent cost budget pressure",
-      runbook: "Open the agent run timeline, check model choice, retrieval breadth, and maxCostGBP before raising the budget.",
+      runbook: "Open the agent run timeline, check model choice, retrieval breadth, and maxCostUsd before raising the budget.",
     });
   }
 

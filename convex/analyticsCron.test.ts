@@ -23,7 +23,7 @@ describe("analytics cron snapshots", () => {
         totalMessages: 0,
         totalInputTokens: 0,
         totalOutputTokens: 0,
-        costGBP: 0,
+        costUsd: 0,
         activeUsersCount: 0,
       },
       uniqueUserIds: [],
@@ -97,7 +97,7 @@ describe("analytics cron snapshots", () => {
         inputTokens: 40,
         outputTokens: 10,
         modelUsed: "model-test",
-        costGBP: 99,
+        costUsd: 99,
         status: "SUCCESS",
         createdAt: dayStart + 120_000,
       });
@@ -109,7 +109,7 @@ describe("analytics cron snapshots", () => {
         inputTokens: 999,
         outputTokens: 999,
         modelUsed: "model-test",
-        costGBP: 99,
+        costUsd: 99,
         status: "SUCCESS",
         createdAt: dayStart - 1,
       });
@@ -136,7 +136,7 @@ describe("analytics cron snapshots", () => {
       },
       uniqueUserIds: [userId],
     });
-    expect(globalSnapshot?.metrics.costGBP).toBeGreaterThan(0);
+    expect(globalSnapshot?.metrics.costUsd).toBeGreaterThan(0);
     expect(globalSnapshot?.modelMetrics?.[0]).toMatchObject({ model: "model-test", calls: 2 });
     expect(globalSnapshot?.leaderboards?.topAgents[0]).toMatchObject({
       id: agentId,
@@ -229,7 +229,7 @@ describe("analytics cron snapshots", () => {
       await ctx.db.insert("analyticsDailySnapshots", {
         date: dates[1],
         type: "global",
-        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costUsd: 1, activeUsersCount: 1 },
       });
     });
 
@@ -550,17 +550,17 @@ describe("analytics cron snapshots", () => {
       await ctx.db.insert("analyticsDailySnapshots", {
         date: dates[0],
         type: "global",
-        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costUsd: 1, activeUsersCount: 1 },
       });
       await ctx.db.insert("analyticsDailySnapshots", {
         date: dates[0],
         type: "global",
-        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costUsd: 1, activeUsersCount: 1 },
       });
       await ctx.db.insert("analyticsDailySnapshots", {
         date: dates[2],
         type: "global",
-        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costUsd: 1, activeUsersCount: 1 },
       });
 
       const missingDimensionMessageId = await ctx.db.insert("messages", {
@@ -587,7 +587,7 @@ describe("analytics cron snapshots", () => {
         inputTokens: 1,
         outputTokens: 1,
         modelUsed: "model-test",
-        costGBP: 1,
+        costUsd: 1,
         status: "SUCCESS",
         createdAt: todayStart + 300,
       });
@@ -672,7 +672,7 @@ describe("analytics cron snapshots", () => {
         inputTokens: 1,
         outputTokens: 1,
         modelUsed: "model-test",
-        costGBP: 0,
+        costUsd: 0,
         status: "FAILED",
         createdAt: now - 120_000,
       });
@@ -686,7 +686,7 @@ describe("analytics cron snapshots", () => {
         modelUsed: "model-test",
         providerKey: "google",
         providerModelId: "model-test-provider",
-        costGBP: 6.5,
+        costUsd: 6.5,
         status: "SUCCESS",
         createdAt: now - 90_000,
       });
@@ -698,8 +698,8 @@ describe("analytics cron snapshots", () => {
         companyId,
         userId,
         modelId: "model-test",
-        maxCostGBP: 1,
-        costGBP: 0.95,
+        maxCostUsd: 1,
+        costUsd: 0.95,
         startedAt: now - 2 * 60 * 60 * 1000,
         updatedAt: now - 90 * 60 * 1000,
       });

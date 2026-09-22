@@ -63,7 +63,7 @@ import { getErrorMessage } from "./utils/lang";
 
 import {
   autonomyAppliesToTool,
-  calculateModelCostGBP,
+  calculateModelCostUsd,
   getApprovalRequiredMessage,
 } from "./agentRuntimeTurnService";
 import {
@@ -418,7 +418,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             inTokens += responseInputTokens;
             outTokens += responseOutputTokens;
             cachedInTokens += response.cachedInputTokens;
-            const estimatedCostGBP = calculateModelCostGBP({
+            const estimatedCostUsd = calculateModelCostUsd({
                 inputTokens: inTokens,
                 outputTokens: outTokens,
                 cachedInputTokens: cachedInTokens,
@@ -470,10 +470,10 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             }
 
             if (shouldStopForCostBudget({
-                costGBP: estimatedCostGBP,
-                maxCostGBP: limits.maxCostGBP,
+                costUsd: estimatedCostUsd,
+                maxCostUsd: limits.maxCostUsd,
             })) {
-                assistantReply = getCostBudgetStopMessage(limits.maxCostGBP);
+                assistantReply = getCostBudgetStopMessage(limits.maxCostUsd);
                 finalStepStatus = "FAILED";
                 break;
             }
@@ -988,7 +988,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 providerModelId: modelConfig.providerModelId,
                 inputTokens: inTokens,
                 outputTokens: outTokens,
-                costGBP: runUsage.costGBP,
+                costUsd: runUsage.costUsd,
                 status: finalStepStatus,
             });
         }

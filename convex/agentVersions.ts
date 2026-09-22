@@ -91,7 +91,7 @@ export const getVersionDetail = adminQuery({
         runs: runs.length,
         fixtures: fixtures.length,
         successRate: terminalRuns.length > 0 ? successfulRuns / terminalRuns.length : 0,
-        costGBP: runs.reduce((total, run) => total + (run.costGBP ?? 0), 0),
+        costUsd: runs.reduce((total, run) => total + (run.costUsd ?? 0), 0),
       },
       runs,
       fixtures,

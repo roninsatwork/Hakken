@@ -59,7 +59,7 @@ describe("AI cost reusable display components", () => {
           aggregationType: "global",
           avgCostPerMessage: 0.00123,
           costPerActiveUser: 1.5,
-          totalCostGBP: 12.34567,
+          totalCostUsd: 12.34567,
           totalInputTokens: 1000,
           totalOutputTokens: 2500,
           totalTokens: 3500,

@@ -32,9 +32,17 @@ export function formatCurrencyGBP(value: number): string {
  * So: never change a currency symbol on the strength of a field name. Check
  * what billed the number. That mistake has been made here once already.
  *
- * The helpers below are for the other kind — what a customer earns. Sales and
- * opportunity figures come from the customer's own spreadsheet import and are
- * genuinely sterling. Both kinds live on this platform at once.
+ * **It had been made four more times, found 2026-09-22.** Four screens were
+ * calling the sterling helpers on provider spend, so a pound sign sat over a
+ * dollar figure on the Decisions detail, agent observability, agent memory and
+ * — the one that matters most — a customer's own settings page. The cause was
+ * the same each time: this file offered nothing else to call. It does now, at
+ * the end, and the dollar-named columns are being renamed to match.
+ *
+ * The helpers immediately below are for the other kind — what a customer
+ * earns. Sales and opportunity figures come from the customer's own
+ * spreadsheet import and are genuinely sterling, as are Hakken's own plan
+ * prices. Both kinds live on this platform at once.
  */
 export function formatPreciseGBP(value: number, fractionDigits = 5): string {
   return new Intl.NumberFormat("en-GB", {
@@ -81,6 +89,45 @@ export function formatUpToGBP(value: number, maxFractionDigits = 4): string {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
+    maximumFractionDigits: maxFractionDigits,
+  }).format(value);
+}
+
+/**
+ * What the platform spends, which is dollars.
+ *
+ * Providers bill in US dollars, DataForSEO bills in US dollars, and nothing
+ * converts anywhere. These exist so a screen showing spend has something
+ * correct to reach for: before them the only shared helpers were sterling, and
+ * four screens reached for those.
+ *
+ * Formatted in `en-GB` like their sterling twins, because the reader is the
+ * same person and only the currency differs.
+ */
+export function formatCurrencyUsd(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+/** Dollars at a stated precision, for a per-message cost of $0.00042. */
+export function formatPreciseUsd(value: number, fractionDigits = 5): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+/** Dollars to at most `maxFractionDigits`, trailing zeros dropped. */
+export function formatUpToUsd(value: number, maxFractionDigits = 4): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "USD",
     maximumFractionDigits: maxFractionDigits,
   }).format(value);
 }

@@ -101,7 +101,7 @@ const metrics = {
     activeUsers: 3,
     aggregationType: "day",
     mrr: 99,
-    totalCostGBP: 1.23456,
+    totalCostUsd: 1.23456,
     totalMessages: 42,
   },
   providerDistribution: [{ providerKey: "openai", calls: 7, cost: 0.1234 }],

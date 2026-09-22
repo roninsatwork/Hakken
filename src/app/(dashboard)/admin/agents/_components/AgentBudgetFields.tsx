@@ -32,7 +32,7 @@ export type AgentBudgetValues = {
   maxToolCalls: string;
   maxInputTokens: string;
   maxRuntimeMinutes: string;
-  maxCostGBP: string;
+  maxCostUsd: string;
 };
 
 type BudgetKey = keyof AgentBudgetValues;
@@ -42,7 +42,7 @@ const BUDGET_KEYS: BudgetKey[] = [
   "maxToolCalls",
   "maxInputTokens",
   "maxRuntimeMinutes",
-  "maxCostGBP",
+  "maxCostUsd",
 ];
 
 /** A limit as it should read on screen: grouped, and empty while it is empty. */
@@ -79,7 +79,7 @@ export function AgentBudgetFields({
             type={grouped ? "text" : "number"}
             inputMode={grouped ? "numeric" : undefined}
             {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[key] })}
-            step={key === "maxCostGBP" ? "0.01" : "1"}
+            step={key === "maxCostUsd" ? "0.01" : "1"}
             value={grouped ? formatLimitNumber(values[key]) : values[key]}
             onChange={(event) =>
               onChange(key, grouped ? event.target.value.replace(/[^0-9]/g, "") : event.target.value)

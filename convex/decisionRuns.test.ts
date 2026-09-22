@@ -96,12 +96,12 @@ describe("recording runs", () => {
     });
 
     // 0.5M × £2 + 0.25M × £4 = £2.00, split evenly across the two runs.
-    expect(result.costGBP).toBeCloseTo(2);
+    expect(result.costUsd).toBeCloseTo(2);
     expect(result.runIds).toHaveLength(2);
 
     await t.run(async (ctx) => {
       const runs = await ctx.db.query("decisionRuns").collect();
-      expect(runs.map((run) => run.costGBP)).toEqual([1, 1]);
+      expect(runs.map((run) => run.costUsd)).toEqual([1, 1]);
       expect(runs.every((run) => run.companyId === companyId && run.subjectKind === "email" && run.subjectId === "gmail-123")).toBe(true);
 
       const transactions = await ctx.db.query("agentTransactions").collect();
@@ -111,7 +111,7 @@ describe("recording runs", () => {
         providerKey: "typesafe",
         inputTokens: 500_000,
         outputTokens: 250_000,
-        costGBP: 2,
+        costUsd: 2,
         status: "SUCCESS",
       });
       const agent = await ctx.db.get(transactions[0].agentId);
@@ -141,7 +141,7 @@ describe("recording runs", () => {
     await t.run(async (ctx) => {
       const runs = await ctx.db.query("decisionRuns").collect();
       expect(runs).toHaveLength(1);
-      expect(runs[0]).toMatchObject({ source: "RULES", fallbackReason: "MODE_OFF", costGBP: 0 });
+      expect(runs[0]).toMatchObject({ source: "RULES", fallbackReason: "MODE_OFF", costUsd: 0 });
       expect(runs[0]).not.toHaveProperty("certainty");
       expect(runs[0]).not.toHaveProperty("probabilities");
       expect(await ctx.db.query("agentTransactions").collect()).toHaveLength(0);

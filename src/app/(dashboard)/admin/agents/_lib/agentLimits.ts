@@ -24,7 +24,7 @@ export const AGENT_LIMIT_DEFAULTS = {
   maxToolCalls: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls,
   maxRuntimeMinutes: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs / 60000,
   maxInputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
-  maxCostGBP: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP,
+  maxCostUsd: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostUsd,
 } as const;
 
 export const AGENT_LIMIT_CEILINGS = {
@@ -32,5 +32,5 @@ export const AGENT_LIMIT_CEILINGS = {
   maxToolCalls: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxToolCalls,
   maxRuntimeMinutes: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs / 60000,
   maxInputTokens: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxInputTokens,
-  maxCostGBP: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+  maxCostUsd: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd,
 } as const;

@@ -12,7 +12,7 @@ import {
   selectGraderModel,
   type GradeVerdict,
 } from "./agentEvalGradingService";
-import { calculateModelCostGBP } from "./aiCostService";
+import { calculateModelCostUsd } from "./aiCostService";
 import { appError } from "./utils/appError";
 
 /**
@@ -48,12 +48,12 @@ const MAX_SAMPLE_COUNT = 5;
 /**
  * What the run cost, in pounds.
  *
- * Reuses the catalogue rates and `calculateModelCostGBP` rather than inventing a
+ * Reuses the catalogue rates and `calculateModelCostUsd` rather than inventing a
  * second cost calculation. A model with no pricing contributes zero, which understates
  * rather than invents — the model catalogue already warns separately about unpriced
  * models.
  */
-async function calculateRunCostGBP(
+async function calculateRunCostUsd(
   ctx: { runQuery: (ref: typeof internal.aiModels.getModelByIdInternal, args: { modelId: string }) => Promise<{
     standardInputCostBelow200k?: number;
     standardInputCostAbove200k?: number;
@@ -74,11 +74,11 @@ async function calculateRunCostGBP(
     ? await ctx.runQuery(internal.aiModels.getModelByIdInternal, { modelId: args.graderModelId })
     : null;
 
-  return calculateModelCostGBP({
+  return calculateModelCostUsd({
     inputTokens: args.tokens.answerIn,
     outputTokens: args.tokens.answerOut,
     rates: answerRates,
-  }) + calculateModelCostGBP({
+  }) + calculateModelCostUsd({
     inputTokens: args.tokens.gradeIn,
     outputTokens: args.tokens.gradeOut,
     rates: graderRates,
@@ -215,7 +215,7 @@ export const runCompanyCheck = internalAction({
       }
 
       const combined = combineGradeSamples(verdicts);
-      const costGBP = await calculateRunCostGBP(ctx, { tokens, answerModelId, graderModelId });
+      const costUsd = await calculateRunCostUsd(ctx, { tokens, answerModelId, graderModelId });
 
       return await ctx.runMutation(internal.companyEvals.recordGradedRunInternal, {
         evalCaseId: args.evalCaseId,
@@ -235,7 +235,9 @@ export const runCompanyCheck = internalAction({
           gradingInputTokens: tokens.gradeIn,
           gradingOutputTokens: tokens.gradeOut,
         }),
-        costJson: JSON.stringify({ currency: "GBP", totalGBP: costGBP }),
+        // Dollars, as every provider bills. The label said GBP over the same
+        // number, which is the mistake this rename exists to stop.
+        costJson: JSON.stringify({ currency: "USD", totalUsd: costUsd }),
       });
     } catch (error: unknown) {
       // Recorded as **not tested**, not as a failure. A failure is a judgement

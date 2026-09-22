@@ -170,7 +170,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     maxSteps: agent.maxSteps,
     maxToolCalls: agent.maxToolCalls,
     maxRuntimeMs: agent.maxRuntimeMs,
-    maxCostGBP: agent.maxCostGBP,
+    maxCostUsd: agent.maxCostUsd,
     allowInternetAccess: agent.allowInternetAccess,
     triggerType: agent.triggerType,
   };

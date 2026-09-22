@@ -289,7 +289,7 @@ export const recordStaffModelCallInternal = internalMutation({
         : rates.standardInputCostBelow200k ?? 0
       : 0;
     const outRate = rates?.outputResponseCost ?? 0;
-    const costGBP =
+    const costUsd =
       (args.inputTokens / 1_000_000) * inRate +
       (args.outputTokens / 1_000_000) * outRate;
     const now = Date.now();
@@ -302,7 +302,7 @@ export const recordStaffModelCallInternal = internalMutation({
       ...(args.providerModelId ? { providerModelId: args.providerModelId } : {}),
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
-      costGBP,
+      costUsd,
       status: "SUCCESS",
       createdAt: now,
     });

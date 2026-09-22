@@ -26,13 +26,13 @@ type CompanyAggregate = {
   messages: number;
   inTokens: number;
   outTokens: number;
-  costGBP: number;
+  costUsd: number;
   activeUsers: Set<string>;
   topAgents: Map<string, AgentLeader>;
   topUsers: Map<string, UserLeader>;
   modelMetrics: Map<string, ModelMetric>;
 };
-type UserAggregate = { messages: number; inTokens: number; outTokens: number; costGBP: number };
+type UserAggregate = { messages: number; inTokens: number; outTokens: number; costUsd: number };
 
 export type SnapshotJoins = {
   userMap: Map<Id<"users">, Doc<"users">>;
@@ -49,7 +49,7 @@ export function aggregateDailySnapshots(
   const { userMap, companyMap, agentMap } = joins;
 
   // Data structures for aggregation
-  const globalMetrics = { messages: 0, inTokens: 0, outTokens: 0, costGBP: 0, activeUsers: new Set<string>() };
+  const globalMetrics = { messages: 0, inTokens: 0, outTokens: 0, costUsd: 0, activeUsers: new Set<string>() };
   const globalTopAgents = new Map<string, { id: string, name: string, avatar: string, cost: number, interactions: number }>();
   const globalTopUsers = new Map<string, { id: string, name: string, image: string, email: string, companyName: string, cost: number, messages: number }>();
   const globalModelMetrics = new Map<string, { model: string, cost: number, calls: number }>();
@@ -72,7 +72,7 @@ export function aggregateDailySnapshots(
   for (const msg of unifiedInteractions) {
      const inputs = msg.inputTokens;
      const outputs = msg.outputTokens;
-     const costGBP = computeCostFromMap(msg.modelUsed, inputs, outputs, modelMap);
+     const costUsd = computeCostFromMap(msg.modelUsed, inputs, outputs, modelMap);
 
      const activeCompanyId = msg.companyId || (msg.userId ? userMap.get(msg.userId)?.companyId : undefined);
 
@@ -80,12 +80,12 @@ export function aggregateDailySnapshots(
      globalMetrics.messages++;
      globalMetrics.inTokens += inputs;
      globalMetrics.outTokens += outputs;
-     globalMetrics.costGBP += costGBP;
+     globalMetrics.costUsd += costUsd;
      if (msg.userId) globalMetrics.activeUsers.add(msg.userId);
 
      let gm = globalModelMetrics.get(msg.modelUsed);
      if (!gm) { gm = { model: msg.modelUsed, cost: 0, calls: 0 }; globalModelMetrics.set(msg.modelUsed, gm); }
-     gm.cost += costGBP;
+     gm.cost += costUsd;
      gm.calls++;
 
      // Global Top Agents
@@ -97,7 +97,7 @@ export function aggregateDailySnapshots(
                  : { id: msg.agentId, name: agentMap.get(msg.agentId)?.name || "Unknown", avatar: agentMap.get(msg.agentId)?.avatar || "", cost: 0, interactions: 0 };
              globalTopAgents.set(msg.agentId, ga);
          }
-         ga.cost += costGBP;
+         ga.cost += costUsd;
          ga.interactions++;
      }
 
@@ -123,7 +123,7 @@ export function aggregateDailySnapshots(
              }
              globalTopUsers.set(targetLeaderId, gu);
          }
-         gu.cost += costGBP;
+         gu.cost += costUsd;
          gu.messages++;
      }
 
@@ -131,18 +131,18 @@ export function aggregateDailySnapshots(
      if (activeCompanyId) {
          let cAgg = companyAggregates.get(activeCompanyId);
          if (!cAgg) {
-             cAgg = { messages: 0, inTokens: 0, outTokens: 0, costGBP: 0, activeUsers: new Set<string>(), topAgents: new Map(), topUsers: new Map(), modelMetrics: new Map<string, ModelMetric>() };
+             cAgg = { messages: 0, inTokens: 0, outTokens: 0, costUsd: 0, activeUsers: new Set<string>(), topAgents: new Map(), topUsers: new Map(), modelMetrics: new Map<string, ModelMetric>() };
              companyAggregates.set(activeCompanyId, cAgg);
          }
          cAgg.messages++;
          cAgg.inTokens += inputs;
          cAgg.outTokens += outputs;
-         cAgg.costGBP += costGBP;
+         cAgg.costUsd += costUsd;
          if (msg.userId) cAgg.activeUsers.add(msg.userId);
 
          let cm = cAgg.modelMetrics.get(msg.modelUsed);
          if (!cm) { cm = { model: msg.modelUsed, cost: 0, calls: 0 }; cAgg.modelMetrics.set(msg.modelUsed, cm); }
-         cm.cost += costGBP;
+         cm.cost += costUsd;
          cm.calls++;
 
          if (msg.agentId) {
@@ -159,7 +159,7 @@ export function aggregateDailySnapshots(
                      };
                 cAgg.topAgents.set(msg.agentId, ca);
              }
-             ca.cost += costGBP;
+             ca.cost += costUsd;
              ca.interactions++;
          }
 
@@ -179,7 +179,7 @@ export function aggregateDailySnapshots(
                  };
                  cAgg.topUsers.set(targetLeaderId, cu);
              }
-             cu.cost += costGBP;
+             cu.cost += costUsd;
              cu.messages++;
          }
      }
@@ -188,13 +188,13 @@ export function aggregateDailySnapshots(
      if (msg.userId && !msg.widgetId) {
          let uAgg = userAggregates.get(msg.userId);
          if (!uAgg) {
-             uAgg = { messages: 0, inTokens: 0, outTokens: 0, costGBP: 0 };
+             uAgg = { messages: 0, inTokens: 0, outTokens: 0, costUsd: 0 };
              userAggregates.set(msg.userId, uAgg);
          }
          uAgg.messages++;
          uAgg.inTokens += inputs;
          uAgg.outTokens += outputs;
-         uAgg.costGBP += costGBP;
+         uAgg.costUsd += costUsd;
      }
   }
 
@@ -205,7 +205,7 @@ export function aggregateDailySnapshots(
             totalMessages: globalMetrics.messages,
             totalInputTokens: globalMetrics.inTokens,
             totalOutputTokens: globalMetrics.outTokens,
-            costGBP: Number(globalMetrics.costGBP.toFixed(6)),
+            costUsd: Number(globalMetrics.costUsd.toFixed(6)),
             activeUsersCount: globalMetrics.activeUsers.size
         },
         uniqueUserIds: Array.from(globalMetrics.activeUsers),
@@ -224,7 +224,7 @@ export function aggregateDailySnapshots(
                 totalMessages: cAgg.messages,
                 totalInputTokens: cAgg.inTokens,
                 totalOutputTokens: cAgg.outTokens,
-                costGBP: Number(cAgg.costGBP.toFixed(6)),
+                costUsd: Number(cAgg.costUsd.toFixed(6)),
                 activeUsersCount: cAgg.activeUsers.size
             },
             uniqueUserIds: Array.from(cAgg.activeUsers),
@@ -243,7 +243,7 @@ export function aggregateDailySnapshots(
                 totalMessages: uAgg.messages,
                 totalInputTokens: uAgg.inTokens,
                 totalOutputTokens: uAgg.outTokens,
-                costGBP: Number(uAgg.costGBP.toFixed(6))
+                costUsd: Number(uAgg.costUsd.toFixed(6))
             },
             uniqueUserIds: [uId]
         }));

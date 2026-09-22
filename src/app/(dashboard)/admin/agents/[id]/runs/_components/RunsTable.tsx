@@ -287,8 +287,8 @@ export function RunsTable({
           cell: (run) => (
             <>
               {run.completedAt ? formatRunDuration(run.completedAt - run.startedAt) : "—"}
-              {run.costGBP !== undefined && (
-                <span className="block text-[11px] text-muted">{formatMoney(run.costGBP)}</span>
+              {run.costUsd !== undefined && (
+                <span className="block text-[11px] text-muted">{formatMoney(run.costUsd)}</span>
               )}
             </>
           ),

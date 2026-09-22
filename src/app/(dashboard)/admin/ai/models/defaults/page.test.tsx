@@ -27,7 +27,7 @@ const models = [
     isEnabled: true,
     supportedUseCases: ["chat"],
     // Rates are stored per million tokens, which is how the provider publishes
-    // them and how `calculateModelCostGBP` applies them. This fixture used to
+    // them and how `calculateModelCostUsd` applies them. This fixture used to
     // hold per-token figures, which is the misreading that made the screen show
     // a rate a million times too big.
     standardInputCostBelow200k: 0.5,

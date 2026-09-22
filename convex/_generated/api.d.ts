@@ -127,6 +127,7 @@ import type * as connectorOAuthProviders from "../connectorOAuthProviders.js";
 import type * as connectorSecretPolicy from "../connectorSecretPolicy.js";
 import type * as connectorSecretResolver from "../connectorSecretResolver.js";
 import type * as connectorTokenCrypto from "../connectorTokenCrypto.js";
+import type * as costCurrencyMigration from "../costCurrencyMigration.js";
 import type * as crons from "../crons.js";
 import type * as customerIdentity from "../customerIdentity.js";
 import type * as dataForSeoParsers from "../dataForSeoParsers.js";
@@ -514,6 +515,7 @@ declare const fullApi: ApiFromModules<{
   connectorSecretPolicy: typeof connectorSecretPolicy;
   connectorSecretResolver: typeof connectorSecretResolver;
   connectorTokenCrypto: typeof connectorTokenCrypto;
+  costCurrencyMigration: typeof costCurrencyMigration;
   crons: typeof crons;
   customerIdentity: typeof customerIdentity;
   dataForSeoParsers: typeof dataForSeoParsers;

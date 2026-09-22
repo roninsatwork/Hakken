@@ -39,7 +39,7 @@ import { getErrorMessage } from "./utils/lang";
 import { appError } from "./utils/appError";
 import {
   buildHistoricalReplaySystemPrompt,
-  calculateModelCostGBP,
+  calculateModelCostUsd,
   getApprovedToolCompletionMessage,
   parseToolArguments,
 } from "./agentRuntimeTurnService";
@@ -875,7 +875,7 @@ export const runTriggeredAgentObjective = internalAction({
       const runModel = await ctx.runQuery(internal.aiModels.getModelByIdInternal, {
         modelId: modelConfig.modelId,
       });
-      const costGBP = calculateModelCostGBP({
+      const costUsd = calculateModelCostUsd({
         inputTokens,
         outputTokens,
         config: runModel ?? undefined,
@@ -909,7 +909,7 @@ export const runTriggeredAgentObjective = internalAction({
         providerModelId: modelConfig.providerModelId,
         inputTokens,
         outputTokens,
-        costGBP,
+        costUsd,
       });
       // The raw exchange. This path — used by Run Agent and by every schedule —
       // recorded its steps but never a word of what was actually said, so the
@@ -930,7 +930,7 @@ export const runTriggeredAgentObjective = internalAction({
         runId,
         inputTokens,
         outputTokens,
-        costGBP,
+        costUsd,
         modelId: modelConfig.modelId,
         providerKey: modelConfig.providerKey,
         providerModelId: modelConfig.providerModelId,

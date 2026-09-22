@@ -546,7 +546,7 @@ describe("Log Purge safeguards and interactive cancellation", () => {
           return await ctx.db.insert("analyticsDailySnapshots", {
             date: new Date(at + dayOffset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
             type: "global",
-            metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 0 },
+            metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costUsd: 0 },
           });
         }
         if (pipelineKey === "webhookDeliveries") {
@@ -557,7 +557,7 @@ describe("Log Purge safeguards and interactive cancellation", () => {
         }
         return await ctx.db.insert("agentTransactions", {
           agentId, actionContext: "chat", inputTokens: 10, outputTokens: 5,
-          modelUsed: "model-test", costGBP: 0.01, status: "SUCCESS", createdAt: at,
+          modelUsed: "model-test", costUsd: 0.01, status: "SUCCESS", createdAt: at,
         });
       };
 
@@ -621,7 +621,7 @@ describe("Log Purge safeguards and interactive cancellation", () => {
       });
       const transactionId = await ctx.db.insert("agentTransactions", {
         agentId, actionContext: "run", inputTokens: 1, outputTokens: 1,
-        modelUsed: "model-test", costGBP: 0.01, status: "SUCCESS", createdAt: oldAt,
+        modelUsed: "model-test", costUsd: 0.01, status: "SUCCESS", createdAt: oldAt,
       });
       // Old but still running: retention must never touch it.
       const liveRunId = await ctx.db.insert("agentRuns", {

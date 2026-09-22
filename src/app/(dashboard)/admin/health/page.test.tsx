@@ -40,7 +40,7 @@ const health = {
 const runs = {
   lookbackDays: 7,
   sampledRuns: 1,
-  totals: { runs: 1, failedRuns: 0, activeRuns: 0, costGBP: 0.0234, successRate: 1, averageLatencyMs: 4200 },
+  totals: { runs: 1, failedRuns: 0, activeRuns: 0, costUsd: 0.0234, successRate: 1, averageLatencyMs: 4200 },
   recentRuns: [
     {
       runId: "run_1",
@@ -50,7 +50,7 @@ const runs = {
       objective: "Skill setup: Document Extraction",
       startedAt: Date.UTC(2026, 6, 25, 20, 55),
       latencyMs: 4200,
-      costGBP: 0.0234,
+      costUsd: 0.0234,
     },
   ],
 };

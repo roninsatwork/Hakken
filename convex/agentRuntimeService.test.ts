@@ -55,7 +55,7 @@ describe("agentRuntimeService", () => {
       maxRuntimeMs: 30 * 60 * 1000,
       maxInputTokens: 1000000,
       maxOutputTokens: 100000,
-      maxCostGBP: 10,
+      maxCostUsd: 10,
     });
   });
 
@@ -151,14 +151,14 @@ describe("agentRuntimeService", () => {
       })
     ).toBe(true);
 
-    expect(shouldStopForCostBudget({ costGBP: 0.99, maxCostGBP: 1 })).toBe(false);
-    expect(shouldStopForCostBudget({ costGBP: 1, maxCostGBP: 1 })).toBe(true);
+    expect(shouldStopForCostBudget({ costUsd: 0.99, maxCostUsd: 1 })).toBe(false);
+    expect(shouldStopForCostBudget({ costUsd: 1, maxCostUsd: 1 })).toBe(true);
   });
 
   test("returns deterministic runtime, token, and cost budget messages", () => {
     expect(getRuntimeBudgetStopMessage(120000)).toBe("Agent stopped after reaching the maximum runtime limit of 120 seconds.");
     expect(getTokenBudgetStopMessage()).toBe("Agent stopped after reaching the configured token budget.");
-    expect(getCostBudgetStopMessage(1)).toBe("Agent stopped after reaching the maximum cost limit of GBP 1.00.");
+    expect(getCostBudgetStopMessage(1)).toBe("Agent stopped after reaching the maximum cost limit of USD 1.00.");
   });
 
   describe("tool interaction turns", () => {
@@ -273,7 +273,7 @@ describe("agentRuntimeService", () => {
       expect(resolveAgentObjectiveLimits(undefined)).toMatchObject({
         maxSteps: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps,
         maxToolCalls: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls,
-        maxCostGBP: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP,
+        maxCostUsd: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostUsd,
       });
       expect(resolveAgentObjectiveLimits({})).toMatchObject({
         maxSteps: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps,
@@ -294,12 +294,12 @@ describe("agentRuntimeService", () => {
         maxSteps: 10_000,
         maxToolCalls: 10_000,
         maxRuntimeMs: 24 * 60 * 60 * 1000,
-        maxCostGBP: 5_000,
+        maxCostUsd: 5_000,
       });
 
       expect(resolved.maxSteps).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps);
       expect(resolved.maxToolCalls).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxToolCalls);
-      expect(resolved.maxCostGBP).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP);
+      expect(resolved.maxCostUsd).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd);
       expect(resolved.maxRuntimeMs).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs);
     });
 
@@ -337,22 +337,22 @@ describe("agentRuntimeService", () => {
       // under, since the first cost check would already have met it. Harmless
       // while these fields were unreachable, a foot-gun the moment they appear on
       // a screen.
-      expect(resolveAgentObjectiveLimits({ maxCostGBP: 0.5 }).maxCostGBP).toBe(0.5);
-      expect(resolveAgentObjectiveLimits({ maxCostGBP: 2.75 }).maxCostGBP).toBe(2.75);
+      expect(resolveAgentObjectiveLimits({ maxCostUsd: 0.5 }).maxCostUsd).toBe(0.5);
+      expect(resolveAgentObjectiveLimits({ maxCostUsd: 2.75 }).maxCostUsd).toBe(2.75);
     });
 
     describe("clamping an override on the way in", () => {
       test("keeps a usable value, flooring counts and preserving pennies", () => {
         expect(clampAgentLimitOverride("maxSteps", 12)).toBe(12);
         expect(clampAgentLimitOverride("maxSteps", 12.7)).toBe(12);
-        expect(clampAgentLimitOverride("maxCostGBP", 0.5)).toBe(0.5);
+        expect(clampAgentLimitOverride("maxCostUsd", 0.5)).toBe(0.5);
       });
 
       test("clamps above the ceiling rather than storing a number the runtime will override", () => {
         // Without this the record could hold 500 while the run used 24, so the
         // settings screen would be showing a figure that never applies.
         expect(clampAgentLimitOverride("maxSteps", 500)).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps);
-        expect(clampAgentLimitOverride("maxCostGBP", 5_000)).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP);
+        expect(clampAgentLimitOverride("maxCostUsd", 5_000)).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostUsd);
         expect(clampAgentLimitOverride("maxRuntimeMs", 60 * 60 * 1000))
           .toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs);
       });
@@ -362,7 +362,7 @@ describe("agentRuntimeService", () => {
         // removal, so the platform default comes back.
         for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, undefined]) {
           expect(clampAgentLimitOverride("maxSteps", bad)).toBeUndefined();
-          expect(clampAgentLimitOverride("maxCostGBP", bad)).toBeUndefined();
+          expect(clampAgentLimitOverride("maxCostUsd", bad)).toBeUndefined();
         }
       });
 
@@ -374,7 +374,7 @@ describe("agentRuntimeService", () => {
           "maxToolCalls",
           "maxRuntimeMs",
           "maxInputTokens",
-          "maxCostGBP",
+          "maxCostUsd",
         ]);
       });
     });
@@ -748,7 +748,7 @@ describe("agentRuntimeService", () => {
       })).toEqual({
         inputTokens: 1_000_000,
         outputTokens: 500_000,
-        costGBP: 2,
+        costUsd: 2,
         modelId: "vertex-test-model",
         providerKey: "google",
         providerModelId: "models/vertex-test-model",
@@ -763,7 +763,7 @@ describe("agentRuntimeService", () => {
         cachedInputTokens: 100_000,
         rates: { standardInputCostBelow200k: 1, cachedInputCostBelow200k: 0.1 },
         model,
-      }).costGBP).toBeCloseTo(0.01, 10);
+      }).costUsd).toBeCloseTo(0.01, 10);
     });
 
     test("no rates means spend cannot be measured, so the cost is zero", () => {
@@ -773,7 +773,7 @@ describe("agentRuntimeService", () => {
         cachedInputTokens: 0,
         rates: undefined,
         model,
-      }).costGBP).toBe(0);
+      }).costUsd).toBe(0);
     });
   });
 });

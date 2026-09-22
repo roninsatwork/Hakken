@@ -105,7 +105,7 @@ describe("Agent Runs", () => {
       runId,
       inputTokens: 12,
       outputTokens: 34,
-      costGBP: 0.02,
+      costUsd: 0.02,
       modelId: "model-test",
       providerKey: "google",
       providerModelId: "provider-model-test",
@@ -133,7 +133,7 @@ describe("Agent Runs", () => {
       status: "SUCCESS",
       inputTokens: 12,
       outputTokens: 34,
-      costGBP: 0.02,
+      costUsd: 0.02,
       finalOutput: "Policy found.",
     });
     expect(run?.startedAt).toEqual(expect.any(Number));
@@ -584,7 +584,7 @@ describe("Agent Runs", () => {
         updatedAt: 180,
         inputTokens: 10,
         outputTokens: 20,
-        costGBP: 0.01,
+        costUsd: 0.01,
       });
       const stepId = await ctx.db.insert("agentRunSteps", {
         runId: runAId,
@@ -641,7 +641,7 @@ describe("Agent Runs", () => {
       latencyMs: 80,
       inputTokens: 10,
       outputTokens: 20,
-      costGBP: 0.01,
+      costUsd: 0.01,
       counts: {
         steps: 1,
         approvals: 1,
@@ -699,7 +699,7 @@ describe("Agent Runs", () => {
         providerModelId: "provider-model-a",
         inputTokens: 100,
         outputTokens: 20,
-        costGBP: 0.12,
+        costUsd: 0.12,
         startedAt: ANALYTICS_BASE + 100,
         completedAt: ANALYTICS_BASE + 160,
         updatedAt: ANALYTICS_BASE + 160,
@@ -716,7 +716,7 @@ describe("Agent Runs", () => {
         providerModelId: "provider-model-a",
         inputTokens: 40,
         outputTokens: 10,
-        costGBP: 0.02,
+        costUsd: 0.02,
         startedAt: ANALYTICS_BASE + 200,
         completedAt: ANALYTICS_BASE + 250,
         updatedAt: ANALYTICS_BASE + 250,
@@ -739,7 +739,7 @@ describe("Agent Runs", () => {
         triggerType: "SCHEDULE",
         objective: "Company B report",
         status: "SUCCESS",
-        costGBP: 0.77,
+        costUsd: 0.77,
         startedAt: ANALYTICS_BASE + 400,
         completedAt: ANALYTICS_BASE + 410,
         updatedAt: ANALYTICS_BASE + 410,
@@ -869,7 +869,7 @@ describe("Agent Runs", () => {
       positiveFeedbackRate: 0.5,
       averageLatencyMs: 55,
     });
-    expect(adminAnalytics.totals.costGBP).toBeCloseTo(0.14);
+    expect(adminAnalytics.totals.costUsd).toBeCloseTo(0.14);
     expect(adminAnalytics.statusCounts).toMatchObject({ SUCCESS: 1, FAILED: 1, PENDING_APPROVAL: 1 });
     expect(adminAnalytics.triggerCounts).toMatchObject({ CHAT: 1, WORKFLOW: 1, MANUAL: 1 });
     expect(adminAnalytics.approvalCounts).toMatchObject({ PENDING: 1 });
@@ -888,7 +888,7 @@ describe("Agent Runs", () => {
 
     const superAdminAnalytics = await superAdminClient.query(api.agentRuns.getAnalyticsForAgent, { agentId });
     expect(superAdminAnalytics.totals.runs).toBe(4);
-    expect(superAdminAnalytics.totals.costGBP).toBeCloseTo(0.91);
+    expect(superAdminAnalytics.totals.costUsd).toBeCloseTo(0.91);
     expect(superAdminAnalytics.totals.toolCalls).toBe(4);
     expect(superAdminAnalytics.totals.feedback).toBe(3);
   });
@@ -942,7 +942,7 @@ describe("Agent Runs", () => {
         providerKey: "openai",
         inputTokens: 100,
         outputTokens: 30,
-        costGBP: 0.2,
+        costUsd: 0.2,
         startedAt: now - 10_000,
         completedAt: now - 9_000,
         updatedAt: now - 9_000,
@@ -958,7 +958,7 @@ describe("Agent Runs", () => {
         providerKey: "google",
         inputTokens: 50,
         outputTokens: 10,
-        costGBP: 0.1,
+        costUsd: 0.1,
         startedAt: now - 8_000,
         completedAt: now - 7_000,
         updatedAt: now - 7_000,
@@ -973,7 +973,7 @@ describe("Agent Runs", () => {
         status: "FAILED",
         modelId: "model-support",
         providerKey: "openai",
-        costGBP: 9,
+        costUsd: 9,
         startedAt: now - 6_000,
         completedAt: now - 5_000,
         updatedAt: now - 5_000,
@@ -1029,7 +1029,7 @@ describe("Agent Runs", () => {
       successRate: 0.5,
       averageLatencyMs: 1000,
     });
-    expect(adminObservatory.totals.costGBP).toBeCloseTo(0.3);
+    expect(adminObservatory.totals.costUsd).toBeCloseTo(0.3);
     expect(adminObservatory.agentStats).toEqual(expect.arrayContaining([
       expect.objectContaining({ agentName: "Billing Agent", failures: 1 }),
       expect.objectContaining({ agentName: "Support Agent", runs: 1 }),
