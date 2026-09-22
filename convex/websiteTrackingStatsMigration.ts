@@ -155,4 +155,3 @@ export async function rebuildOperationCosts(
 
 /** Operations in the registry, with room: the whole cost table is this small. */
 const OPERATIONS_CLEARED = 200;
-

@@ -362,6 +362,40 @@ personal-data register as dissociate, like `discoveredCompetitors.decidedBy`.
 The schema's size ratchet went 4,350 → 4,500 for the seven tables stages 2 and
 3 added, raised deliberately.
 
+### Performance pass — 2026-09-22, night
+
+Anthony: *"are they all server side optimised, optimised for scale, optimised
+for page speed and generally optimised for performance."* Every query behind
+the new screens was read for where the work happens, what bounds it, whether an
+index carries it and what it re-runs on. What was found and changed:
+
+| Screen or path | Found | Now |
+|---|---|---|
+| Results · AI answers | Read the company's last 500 cycle lines, every AI pull they named and up to 250 mentions each — up to ~125,000 documents per view, re-run on any change | Pages from `aiAnswers` newest-first per question at the watcher's place, merging only enough to cut the page; mention detail read for the fifteen rows shown |
+| Results · what the engines searched | Read every place's rows for a shared host, so another town's searches appeared | Read by question, engine and the watcher's own place through the existing index; ceiling on the whole read (was 100,000 possible) |
+| Question summaries, moves | An engine that takes no location files its answers under the default place; a Leeds watcher looked under Leeds and found nothing | `answerPlace` and `fanOutPlace` in `seoAiEngines.ts`, one rule every reader uses |
+| Collection · reuse ladder | Scanned a site's newest pulls through a filter on operation and arguments | `by_website_operation_submitted`, so the scan starts at the right operation |
+| AI answer parsing | Read the first 2,000 websites per answer looking for brand names — past 2,000 sites, later brands were never matched | `hasBrandNames` with an index; only branded sites are read. Backfilled by `2026-09-22-branded-websites` |
+| All Websites list | Every watcher of every host on the page, with its company, schedule and pair | At most 100 watchers per host ("100+"), one schedule read per company per page; the host record still reads all |
+| Add dialogs | A server query on every keystroke of the address — about twenty to type one URL, each reading up to 600 rows | Asked once typing pauses (300ms) |
+| Tracking · questions | Read the question list twice, once only to learn its engines | Prices for every engine are four point lookups |
+| Website record · competition | Named every rival before cutting the page | Cuts the page first; names all only when searching |
+
+What already held and was checked rather than changed: every list pages on
+the server and ships one page; verdicts are computed from write-time summaries
+(one point lookup per row), never from history on read; searches in tables are
+debounced; dialogs and the settings sheet are lazy-loaded; the site's header
+query is shared by the layout and every tab through one subscription; only the
+visible Tracking list and Results view subscribe; every read touched by this
+rebuild is by index and bounded, with the ceilings named beside them.
+
+Worth knowing rather than fixing yet: the site header reads the host's search
+and question lists for their counts — bounded at a thousand each, and cheap at
+realistic sizes, but a host with hundreds of searches would want stored
+counts. The Brief's portfolio is the heaviest read (bounded at roughly 7,500
+point lookups for a host at every ceiling at once) and re-runs as a collection
+files results, which is the point of it.
+
 ## What is wrong
 
 Anthony, 2026-09-22, on the website detail screen: *"the new website page is

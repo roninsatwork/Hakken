@@ -765,15 +765,16 @@ async function findFreshPull(
 ) {
   // Matched on the arguments as well as the operation, because the place is
   // in them: Leeds's rankings on Monday are not London's on Wednesday, however
-  // fresh they are.
+  // fresh they are. Read by site *and* operation through the index, so the
+  // scan never wades through a busy site's other operations to find this one.
   const recent = await ctx.db
     .query("seoDataPulls")
-    .withIndex("by_website_submitted", (q) => q.eq("websiteId", args.websiteId))
+    .withIndex("by_website_operation_submitted", (q) =>
+      q.eq("websiteId", args.websiteId).eq("operationId", args.operationId))
     .order("desc")
     .filter((q) =>
       q.and(
         q.eq(q.field("status"), "READY"),
-        q.eq(q.field("operationId"), args.operationId),
         q.eq(q.field("taskArgsJson"), args.taskArgsJson),
       ))
     .first();

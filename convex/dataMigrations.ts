@@ -24,6 +24,7 @@ import {
   markExistingHoldsOwned,
 } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
+import { backfillBrandedFlag } from "./websites";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -148,6 +149,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-search-summaries": rebuildSearchSummaries,
   /** The running cost per operation, rebuilt from every charge already on file. */
   "2026-09-22-operation-costs": rebuildOperationCosts,
+  /** Which websites have brand names, for the index every AI answer reads. */
+  "2026-09-22-branded-websites": backfillBrandedFlag,
 
 
   /**

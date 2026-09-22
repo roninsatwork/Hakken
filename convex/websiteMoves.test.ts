@@ -36,6 +36,7 @@ async function world(t: Harness) {
     const companyId = await ctx.db.insert("companies", { name: "Test Agency", createdAt: Date.now() });
     const websiteId = await ctx.db.insert("websites", {
       host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
+      hasBrandNames: true,
       brandNames: [{ name: "Our Shop", isPrimary: true }],
     });
     const holdId = await ctx.db.insert("companyWebsites", {

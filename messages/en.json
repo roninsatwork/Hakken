@@ -1722,7 +1722,8 @@
         "errors": {
           "failed": "Could not do that. Try again."
         }
-      }
+      },
+      "loadingList": "Loading..."
     },
     "companyDataCollection": {
       "title": "Collection schedule",
@@ -1798,7 +1799,8 @@
       },
       "newWebsite": "New — not in the system yet.",
       "nextPull": "Next pull {when}",
-      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for."
+      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
+      "watchersMany": "{count}+ companies"
     },
     "websiteDetail": {
       "back": "Back to All Websites",

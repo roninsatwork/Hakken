@@ -1,5 +1,6 @@
 "use client";
 
+import { lazy, Suspense } from "react";
 import { useQuery } from "convex/react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,9 +9,18 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SiteSwitcher } from "../SiteSwitcher";
 import { formatMonthly, siteBase } from "../siteView";
-import { TrackedCompetitors } from "./TrackedCompetitors";
-import { TrackedQuestions } from "./TrackedQuestions";
 import { TrackedSearches } from "./TrackedSearches";
+
+/*
+  Only one list shows at a time, so only the one opened is shipped. The
+  searches are the list the tab opens on and come with the page; the other two
+  load when switched to — the Tracking route was the heaviest of the new
+  screens by exactly the two lists nobody was looking at.
+*/
+const TrackedQuestions = lazy(() =>
+  import("./TrackedQuestions").then((module) => ({ default: module.TrackedQuestions })));
+const TrackedCompetitors = lazy(() =>
+  import("./TrackedCompetitors").then((module) => ({ default: module.TrackedCompetitors })));
 
 const LISTS = ["searches", "questions", "competitors"] as const;
 type TrackedList = (typeof LISTS)[number];
@@ -69,10 +79,14 @@ export default function CompanySiteTrackingPage() {
 
       {list === "searches" ? (
         <TrackedSearches websiteId={header.websiteId} companyWebsiteId={companyWebsiteId} host={header.displayHost} place={header.placeLabel} />
-      ) : list === "questions" ? (
-        <TrackedQuestions websiteId={header.websiteId} companyWebsiteId={companyWebsiteId} host={header.displayHost} place={header.placeLabel} />
       ) : (
-        <TrackedCompetitors companyId={companyId} companyWebsiteId={companyWebsiteId} host={header.displayHost} />
+        <Suspense fallback={<p className="text-[13px] text-secondary">{t("loadingList")}</p>}>
+          {list === "questions" ? (
+            <TrackedQuestions websiteId={header.websiteId} companyWebsiteId={companyWebsiteId} host={header.displayHost} place={header.placeLabel} />
+          ) : (
+            <TrackedCompetitors companyId={companyId} companyWebsiteId={companyWebsiteId} host={header.displayHost} />
+          )}
+        </Suspense>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 
+import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
+
 /**
  * The AI engines whose answers we watch for citations.
  *
@@ -104,6 +106,33 @@ export const AI_ENGINE_CALLS: Record<AiEngine, {
     hasWebSearchSwitch: false,
   },
 };
+
+/**
+ * The place an engine's answer is filed under, for a watcher in `locationCode`.
+ *
+ * An engine that takes no location answers the same wherever it is asked
+ * from, so its answer is filed — and must be read — under the default place,
+ * whoever asked. Reading a Leeds watcher's Perplexity answers under Leeds found
+ * nothing, because nothing was ever filed there: one rule, used by every
+ * writer and reader of answers, is what keeps the two from disagreeing again.
+ */
+export function answerPlace(engine: AiEngine, locationCode: number | undefined): number {
+  return AI_ENGINE_CALLS[engine].takesLocation ? locationCode ?? DEFAULT_LOCATION_CODE : DEFAULT_LOCATION_CODE;
+}
+
+/**
+ * The same, as the `place` string fan-out rows are keyed on: what was sent.
+ *
+ * Undefined when nothing was sent — an engine that takes no location, or a
+ * watcher who never chose one, in which case the engine was asked with no
+ * place at all. A chosen "United Kingdom" sends the country, so it is "GB".
+ */
+export function fanOutPlace(engine: AiEngine, locationCode: number | undefined): string | undefined {
+  if (!AI_ENGINE_CALLS[engine].takesLocation || locationCode === undefined) return undefined;
+  const place = findSeoLocation(locationCode);
+  if (!place) return undefined;
+  return place.city ? `${place.countryIso}/${place.city}` : place.countryIso;
+}
 
 /** The registry operation id that asks one engine. One per engine. */
 export function aiCitationOperationId(engine: AiEngine): string {

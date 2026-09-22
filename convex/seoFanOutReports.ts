@@ -5,6 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import { superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
+import { pairedOwnedHold } from "./utils/websitePairing";
+import { AI_ENGINES, fanOutPlace } from "./seoAiEngines";
 
 /**
  * What the AI engines actually search for when asked this site's questions.
@@ -54,6 +56,10 @@ export const listWebsiteFanOutQueries = superAdminQuery({
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
     if (!companyWebsite) throw appError("NOT_FOUND", "That website is no longer held by this company.");
+    // What this watcher's engines were sent, which is what the rows are keyed
+    // on — another client watching the same site from another town has rows
+    // of their own, and they are not this one's.
+    const watcherPlace = (await pairedOwnedHold(ctx, companyWebsite) ?? companyWebsite).locationCode;
 
     /*
       The host's questions, not this company's copy of them.
@@ -81,14 +87,18 @@ export const listWebsiteFanOutQueries = superAdminQuery({
     }>();
 
     let read = 0;
-    for (const prompt of prompts) {
+    // Every engine, not only the ones this site asks: another site putting the
+    // same question to another engine has already paid for its searches.
+    for (const prompt of prompts) for (const engine of AI_ENGINES) {
       // A ceiling on the whole read, not only per question: two hundred
       // questions at five hundred rows each was a hundred thousand documents
-      // for one screen.
+      // for one screen. Read by question, engine and this watcher's place
+      // through the index, so no other town's rows are read at all.
       if (read >= MAX_ROWS_READ) break;
       const rows = await ctx.db
         .query("promptFanOutQueries")
-        .withIndex("by_prompt", (q) => q.eq("prompt", prompt.prompt))
+        .withIndex("by_prompt_engine_place_query", (q) =>
+          q.eq("prompt", prompt.prompt).eq("engine", engine).eq("place", fanOutPlace(engine, watcherPlace)))
         .take(Math.min(MAX_ROWS_PER_PROMPT, MAX_ROWS_READ - read));
       read += rows.length;
 

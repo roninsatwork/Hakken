@@ -35,10 +35,12 @@ async function seedWorld(t: Harness) {
     const acme = await ctx.db.insert("companies", { name: "Acme Ltd", createdAt: Date.now() });
     const ours = await ctx.db.insert("websites", {
       host: "ronins-test.co.uk", displayHost: "ronins-test.co.uk", firstSeenAt: Date.now(),
+      hasBrandNames: true,
       brandNames: [{ name: "Ronins Agency", isPrimary: true, kind: "NAME" }, { name: "Ronnins", isPrimary: false, kind: "MISSPELLING" }],
     });
     const rival = await ctx.db.insert("websites", {
       host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now(),
+      hasBrandNames: true,
       brandNames: [{ name: "Rival Plumbing", isPrimary: true, kind: "NAME" }],
     });
     const hold = await ctx.db.insert("companyWebsites", {
@@ -229,7 +231,10 @@ describe("who gets to see it", () => {
     const pullId = await t.run(async (ctx) => {
       const pullId = await ctx.db.insert("seoDataPulls", {
         operationId: "ai_citation_chatgpt", family: "AI Optimization", mode: "QUEUED",
-        companyId: world.ronins, taskArgsJson: JSON.stringify({ user_prompt: "best plumber in Leeds" }),
+        // Asked from Leeds, as a Leeds watcher's pull is — which is where its
+        // answer is filed and where the watcher's screen reads it back.
+        companyId: world.ronins,
+        taskArgsJson: JSON.stringify({ user_prompt: "best plumber in Leeds", web_search_country_iso_code: "GB", web_search_city: "Leeds" }),
         status: "READY", tag: "t", costUsd: 0.01, sandbox: false, submittedAt: Date.now(), completedAt: Date.now(),
       });
       const cycleId = await ctx.db.insert("seoCollectionCycles", {
@@ -238,6 +243,11 @@ describe("who gets to see it", () => {
       });
       await ctx.db.insert("seoCycleLines", {
         cycleId, companyId: world.ronins, websiteId: world.ours, operationId: "ai_citation_chatgpt", pullId, reused: false, createdAt: Date.now(),
+      });
+      // The question is on the website's own list — which is how its answers
+      // are found: hold, then the site's questions, then their answers.
+      await ctx.db.insert("websiteQuestions", {
+        websiteId: world.ours, prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       });
       return pullId;
     });
@@ -459,3 +469,45 @@ describe("linking a cited address to a rival already tracked", () => {
     expect(linked.every((row) => row.websiteId === undefined)).toBe(true);
   });
 });
+
+describe("reading only what the page needs", () => {
+  test("pages cut in order, another town stays out, and an engine with no place shows everywhere", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const world = await seedWorld(t);
+    const prompt = "best plumber in Leeds";
+    await t.run(async (ctx) => await ctx.db.insert("websiteQuestions", {
+      websiteId: world.ours, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
+    }));
+
+    const answer = async (engine: "chatgpt" | "perplexity", day: string, city?: string) => {
+      const pullId = await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+        operationId: `ai_citation_${engine}`, family: "AI Optimization", mode: "LIVE",
+        taskArgsJson: JSON.stringify({ user_prompt: prompt, ...(city ? { web_search_country_iso_code: "GB", web_search_city: city } : {}) }),
+        status: "READY", tag: `t-${Math.random()}`, costUsd: 0, sandbox: false, submittedAt: Date.now(), completedAt: Date.now(),
+      }));
+      await t.mutation(internal.seoCollectionParse.writeAiCitations, {
+        pullId, prompt, engine, day, brands: [{ websiteId: world.ours, text: "Ronins Agency", variantKind: "NAME" }], sources: [],
+      });
+    };
+    await answer("chatgpt", "2026-09-01", "Leeds");
+    await answer("chatgpt", "2026-09-08", "Leeds");
+    await answer("chatgpt", "2026-09-15", "Leeds");
+    // Perplexity takes no place: asked once for everyone, filed under the default.
+    await answer("perplexity", "2026-09-10");
+    // Another client watching from London. Not this watcher's answer.
+    await answer("chatgpt", "2026-09-20", "London");
+
+    const first = await admin.query(api.seoCitationReports.listCompanyWebsiteCitations, {
+      companyWebsiteId: world.hold, page: 1, pageSize: 2,
+    });
+    const second = await admin.query(api.seoCitationReports.listCompanyWebsiteCitations, {
+      companyWebsiteId: world.hold, page: 2, pageSize: 2,
+    });
+
+    expect(first.totalCount).toBe(4);
+    expect(first.data.map((row) => [row.engine, row.day])).toEqual([["chatgpt", "2026-09-15"], ["perplexity", "2026-09-10"]]);
+    expect(second.data.map((row) => [row.engine, row.day])).toEqual([["chatgpt", "2026-09-08"], ["chatgpt", "2026-09-01"]]);
+  });
+});
+

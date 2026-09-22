@@ -94,6 +94,8 @@ export const globalWebsiteRow = v.object({
   ...rowShape.websites.fields,
   _id: v.id("websites"),
   watcherCount: v.number(),
+  /** The list reads at most a hundred watchers per host; past that it says "100+". */
+  watchersCapped: v.boolean(),
   companyCount: v.number(),
   ownedCount: v.number(),
   trackedCount: v.number(),

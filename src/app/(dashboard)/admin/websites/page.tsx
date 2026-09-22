@@ -134,7 +134,9 @@ export default function AllWebsitesPage() {
             cell: (website) => (
               <div className="flex flex-col gap-0.5">
                 <span className="text-[12px] text-secondary">
-                  {t("watchers", { count: website.companyCount })}
+                  {website.watchersCapped
+                    ? t("watchersMany", { count: website.companyCount })
+                    : t("watchers", { count: website.companyCount })}
                 </span>
                 {website.watcherCount > 0 ? (
                   <span className="text-[11px] text-muted">

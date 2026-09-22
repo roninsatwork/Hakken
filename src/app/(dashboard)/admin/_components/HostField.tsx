@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import useDebounce from "@/src/hooks/useDebounce";
 import { CheckCircle2, Info } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
@@ -43,12 +44,19 @@ type HostFieldProps = {
  * second copy would drift; the only difference between them is the wording,
  * which is passed in.
  */
+/** How long typing must pause before the address is checked. */
+const PREVIEW_DELAY_MS = 300;
+
 export function HostField({ label, placeholder, value, onChange, labels }: HostFieldProps) {
-  // Only asked once there is something to read, so an empty field says nothing
-  // rather than "that does not look like a website address".
+  // Asked once typing pauses rather than on every keystroke: each keystroke
+  // was a new subscription and a server read of up to six hundred rows, twenty
+  // of them to type one address. And only once there is something to read, so
+  // an empty field says nothing rather than "that does not look like a website
+  // address".
+  const settled = useDebounce(value, PREVIEW_DELAY_MS);
   const preview = useQuery(
     api.websites.previewWebsiteHost,
-    value.trim().length > 2 ? { url: value } : "skip",
+    settled.trim().length > 2 ? { url: settled } : "skip",
   );
 
   return (

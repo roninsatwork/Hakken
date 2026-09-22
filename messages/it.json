@@ -1722,7 +1722,8 @@
         "errors": {
           "failed": "Impossibile farlo. Riprova."
         }
-      }
+      },
+      "loadingList": "Caricamento..."
     },
     "companyDataCollection": {
       "title": "Programma di raccolta",
@@ -1798,7 +1799,8 @@
       },
       "newWebsite": "Nuovo: non ancora nel sistema.",
       "nextPull": "Prossimo scarico {when}",
-      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato."
+      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato.",
+      "watchersMany": "{count}+ aziende"
     },
     "websiteDetail": {
       "back": "Torna a Tutti i siti web",

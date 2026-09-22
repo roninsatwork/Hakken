@@ -7,6 +7,7 @@ import { normaliseKeyword } from "./seoJudgments";
 import { appError } from "./utils/appError";
 import { MAX_BRAND_NAMES } from "./utils/websiteBrands";
 import { isTrackedHold } from "./utils/websitePairing";
+import { AI_ENGINES, fanOutPlace } from "./seoAiEngines";
 import { VERDICT_THRESHOLDS, daysBetween } from "./utils/trackingVerdicts";
 import { trackCompetitorCore } from "./websiteAttachments";
 import { loadQuestionRows, loadSearchRows, loadSite, untrackedNamed } from "./websiteSiteRows";
@@ -150,7 +151,8 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
     });
   }
 
-  for (const search of await untrackedBuyingSearches(ctx, site.website._id, new Set(searches.map((row) => row.keyword)))) {
+  const watcherPlace = (site.pair ?? site.hold).locationCode;
+  for (const search of await untrackedBuyingSearches(ctx, site.website._id, watcherPlace, new Set(searches.map((row) => row.keyword)))) {
     candidates.push({ kind: "UNTRACKED_SEARCH", subject: search.query, evidence: search });
   }
 
@@ -168,6 +170,7 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
 async function untrackedBuyingSearches(
   ctx: QueryCtx | MutationCtx,
   websiteId: Id<"websites">,
+  watcherPlace: number | undefined,
   tracked: ReadonlySet<string>,
 ) {
   const questions = (await ctx.db
@@ -178,11 +181,16 @@ async function untrackedBuyingSearches(
 
   const merged = new Map<string, { query: string; timesSeen: number; prompt: string }>();
   let read = 0;
-  for (const question of questions) {
+  // Every engine: another site asking the same question of another engine
+  // has already paid for its searches.
+  for (const question of questions) for (const engine of AI_ENGINES) {
     if (read >= FAN_OUT_READ) break;
+    // This watcher's place only, through the index: another town's searches
+    // are another client's moves.
     const rows = await ctx.db
       .query("promptFanOutQueries")
-      .withIndex("by_prompt", (q) => q.eq("prompt", question.prompt))
+      .withIndex("by_prompt_engine_place_query", (q) =>
+        q.eq("prompt", question.prompt).eq("engine", engine).eq("place", fanOutPlace(engine, watcherPlace)))
       .take(FAN_OUT_READ - read);
     read += rows.length;
     for (const row of rows) {
@@ -493,6 +501,7 @@ async function takeMove(
     }
     await ctx.db.patch(website._id, {
       brandNames: [...names, { name: text, isPrimary: names.length === 0, kind: "MISSPELLING" as const }],
+      hasBrandNames: true,
     });
     return;
   }

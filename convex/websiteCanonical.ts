@@ -388,7 +388,7 @@ export const listWebsiteRivals = superAdminQuery({
 
     // Resolved by id, never by querying the table: the host is already named
     // by the edge, so nothing here walks outward looking for one.
-    const named = await Promise.all(edges.map(async (edge) => {
+    const name = async (edge: (typeof edges)[number]) => {
       const rival = await ctx.db.get(edge.rivalWebsiteId);
       return {
         _id: edge._id,
@@ -397,13 +397,22 @@ export const listWebsiteRivals = superAdminQuery({
         source: edge.source,
         createdAt: edge.createdAt,
       };
-    }));
+    };
 
+    // Only a search needs every rival named before the page is cut. Without
+    // one, the page is cut first and only its rows are named — fifteen reads
+    // rather than a thousand.
     const term = normalizeSearchTerm(args.searchTerm);
-    const matching = term
-      ? named.filter((row) => includesSearchTerm(row.displayHost, term))
-      : named;
-    const paged = paginateItems(matching, args.page, args.pageSize);
+    const paged = term
+      ? paginateItems(
+        (await Promise.all(edges.map(name))).filter((row) => includesSearchTerm(row.displayHost, term)),
+        args.page,
+        args.pageSize,
+      )
+      : await (async () => {
+        const cut = paginateItems(edges, args.page, args.pageSize);
+        return { ...cut, data: await Promise.all(cut.data.map(name)) };
+      })();
 
     return {
       data: paged.data,

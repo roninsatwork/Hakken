@@ -1,5 +1,5 @@
 import { SEO_KEYWORD_CHECK_OPERATION, seoSiteOperations } from "./dataForSeoRegistry";
-import { aiCitationOperationId, type AiEngine } from "./seoAiEngines";
+import { aiCitationOperationId, answerPlace, type AiEngine } from "./seoAiEngines";
 import { resolveWebsiteSchedule, type ResolvedWebsiteSchedule } from "./seoScheduleService";
 import { SEO_COMPETITORS_PER_WEBSITE } from "./seoCollectionPolicy";
 import { appError } from "./utils/appError";
@@ -210,11 +210,14 @@ export async function loadQuestionRows(ctx: Reader, site: Site, costs: Map<strin
     .take(MAX_LIST);
 
   return await Promise.all(questions.map(async (question) => {
+    // Each engine's answers from where they are filed: an engine that takes no
+    // location answers once for every place, under the default.
     const perEngine = await Promise.all(question.engines.map((engine) =>
       ctx.db
         .query("websiteQuestionStats")
         .withIndex("by_key", (q) =>
-          q.eq("websiteId", site.website._id).eq("prompt", question.prompt).eq("engine", engine).eq("locationCode", site.place))
+          q.eq("websiteId", site.website._id).eq("prompt", question.prompt).eq("engine", engine)
+            .eq("locationCode", answerPlace(engine, site.place)))
         .unique()));
 
     let asked = 0;

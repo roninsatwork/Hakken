@@ -49,6 +49,17 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
  */
 
 const WATCHER_LIMIT = 500;
+
+/**
+ * Watchers read per row of the global list.
+ *
+ * The list says how many companies hold a host and when it is next pulled; it
+ * does not need all five hundred to say "a lot". Fifteen rows of a popular
+ * host each read every watcher, its company, its schedule and its pair, which
+ * is thousands of documents for one page. The host's own record still reads
+ * them all.
+ */
+const LIST_WATCHER_LIMIT = 100;
 /** The most competitors counted per website before the list says "100+". */
 const COMPETITOR_COUNT_LIMIT = 100;
 
@@ -211,6 +222,9 @@ async function companySchedule(ctx: QueryCtx, companyId: Id<"companies">) {
 async function loadWatchers(
   ctx: QueryCtx,
   websiteId: Id<"websites">,
+  limit: number = WATCHER_LIMIT,
+  /** Company schedules already read on this request: one company watches many hosts. */
+  schedules: Map<Id<"companies">, Doc<"schedules"> | null> = new Map(),
 ): Promise<WatcherFacts[]> {
   /*
     Every company attached to this host, owned or tracked, from one table.
@@ -223,12 +237,17 @@ async function loadWatchers(
   const attachments = await ctx.db
     .query("companyWebsites")
     .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
-    .take(WATCHER_LIMIT);
+    .take(limit);
+
+  const scheduleOf = async (companyId: Id<"companies">) => {
+    if (!schedules.has(companyId)) schedules.set(companyId, await companySchedule(ctx, companyId));
+    return schedules.get(companyId) ?? null;
+  };
 
   const watchers = await Promise.all(
     attachments.map(async (companyWebsite) => {
       const company = await ctx.db.get(companyWebsite.companyId);
-      const schedule = await companySchedule(ctx, companyWebsite.companyId);
+      const schedule = await scheduleOf(companyWebsite.companyId);
       // Absent reads as owned: every row written before the flag existed was a
       // company's own website.
       const isTracked = companyWebsite.relationship === "TRACKED";
@@ -425,14 +444,18 @@ export const getPaginatedWebsites = superAdminQuery({
         .paginate(args.paginationOpts)
       : await ctx.db.query("websites").order("desc").paginate(args.paginationOpts);
 
+    // One schedule per company across the whole page, however many of these
+    // hosts it watches.
+    const schedules = new Map<Id<"companies">, Doc<"schedules"> | null>();
     const rows = await Promise.all(
       page.page.map(async (website) => {
-        const watchers = await loadWatchers(ctx, website._id);
+        const watchers = await loadWatchers(ctx, website._id, LIST_WATCHER_LIMIT, schedules);
         const companies = new Set(watchers.map((watcher) => watcher.companyWebsite.companyId));
 
         return {
           ...website,
           watcherCount: watchers.length,
+          watchersCapped: watchers.length >= LIST_WATCHER_LIMIT,
           companyCount: companies.size,
           ownedCount: watchers.filter((w) => w.relationship === "OWNED").length,
           trackedCount: watchers.filter((w) => w.relationship === "TRACKED").length,
@@ -688,7 +711,7 @@ export const setWebsiteBrandNames = superAdminMutation({
     if (!read.ok) throw appError("INVALID_INPUT", BRAND_NAME_MESSAGES[read.problem]);
 
     const now = Date.now();
-    await ctx.db.patch(args.websiteId, { brandNames: read.names });
+    await ctx.db.patch(args.websiteId, { brandNames: read.names, hasBrandNames: read.names.length > 0 });
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -807,7 +830,12 @@ export async function listBrandedWebsites(
   ctx: QueryCtx | MutationCtx,
   limit: number,
 ): Promise<Array<{ _id: Id<"websites">; host: string; brandNames: NonNullable<Doc<"websites">["brandNames"]> }>> {
-  const rows = await ctx.db.query("websites").take(limit);
+  // Through the flag's index: only sites with names are read at all, so the
+  // ceiling is on branded sites rather than on every site ever added.
+  const rows = await ctx.db
+    .query("websites")
+    .withIndex("by_has_brand_names", (q) => q.eq("hasBrandNames", true))
+    .take(limit);
   return rows
     .filter((row): row is Doc<"websites"> & { brandNames: NonNullable<Doc<"websites">["brandNames"]> } =>
       Array.isArray(row.brandNames) && row.brandNames.length > 0)
@@ -851,3 +879,33 @@ export const resolveWebsiteIdsByHostInternal = internalQuery({
     return [...found.entries()].map(([host, websiteId]) => ({ host, websiteId }));
   },
 });
+
+/**
+ * Writing down which websites have brand names, for the index the answer
+ * parser now reads. Idempotent: a row whose flag already says the truth is
+ * left alone.
+ *
+ * Here rather than beside the other backfills because it reads the `websites`
+ * table, and the tenancy guard allows exactly two files to — this one owns the
+ * records. It walks every host and names no watcher.
+ */
+export async function backfillBrandedFlag(
+  ctx: MutationCtx,
+  cursor: string | null,
+  batchSize: number,
+): Promise<{ cursor: string | null; isDone: boolean; processed: number; updated: number }> {
+  const page = await ctx.db.query("websites").paginate({ numItems: batchSize, cursor });
+  let updated = 0;
+  for (const website of page.page) {
+    const branded = (website.brandNames?.length ?? 0) > 0;
+    if (website.hasBrandNames === branded) continue;
+    await ctx.db.patch(website._id, { hasBrandNames: branded });
+    updated += 1;
+  }
+  return {
+    cursor: page.isDone ? null : page.continueCursor,
+    isDone: page.isDone,
+    processed: page.page.length,
+    updated,
+  };
+}

@@ -142,6 +142,13 @@ export default defineSchema({
       kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
     }))),
     /**
+     * Whether `brandNames` holds any, kept beside it so every AI answer can find
+     * the sites worth matching through an index rather than a scan: the answer
+     * parser read the first two thousand websites per answer and never saw a
+     * brand beyond them.
+     */
+    hasBrandNames: v.optional(v.boolean()),
+    /**
      * What this business does and where it sells, when anyone has said.
      *
      * Facts about the site by the same test brand names pass: two companies
@@ -156,6 +163,7 @@ export default defineSchema({
     firstSeenAt: v.number(),
   })
     .index("by_host", ["host"])
+    .index("by_has_brand_names", ["hasBrandNames"])
     .searchIndex("search_host", { searchField: "displayHost" }),
 
   /*
@@ -787,6 +795,8 @@ export default defineSchema({
     .index("by_operation_submitted", ["operationId", "submittedAt"])
     .index("by_company_submitted", ["companyId", "submittedAt"])
     .index("by_website_submitted", ["websiteId", "submittedAt"])
+    /** A site's newest pulls of one operation: what the reuse ladder asks. */
+    .index("by_website_operation_submitted", ["websiteId", "operationId", "submittedAt"])
     .index("by_run", ["agentRunId"]),
 
   /**

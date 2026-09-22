@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
-import { aiEngineValidator } from "./seoAiEngines";
+import { AI_ENGINES, aiCitationOperationId, aiEngineValidator } from "./seoAiEngines";
 import { findSeoLocation } from "./utils/seoLocations";
 import { isTrackedHold } from "./utils/websitePairing";
 import {
@@ -301,11 +301,9 @@ export const listTrackedQuestions = superAdminQuery({
   }),
   handler: async (ctx, args) => {
     const site = await requireSite(ctx, args.companyWebsiteId);
-    const questionsForCost = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", site.website._id))
-      .take(MAX_LIST);
-    const costs = await unitCosts(ctx, allOperationIds(questionsForCost));
+    // Every engine's price is four point lookups; reading the question list a
+    // second time just to learn which engines it uses was a thousand.
+    const costs = await unitCosts(ctx, AI_ENGINES.map(aiCitationOperationId));
     const rows = await loadQuestionRows(ctx, site, costs);
 
     const term = normalizeSearchTerm(args.searchTerm);
