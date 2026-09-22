@@ -49,7 +49,6 @@ export default function CompanyDataCollectionPage() {
   const schedule = useQuery(api.scheduler.getCompanySchedule, { companyId });
   const agents = useQuery(api.agents.list);
   const scheduleSummary = useScheduleSummary();
-  const setSeoMethod = useMutation(api.companies.setCompanySeoMethod);
   const createSchedule = useMutation(api.scheduler.createSchedule);
   const updateSchedule = useMutation(api.scheduler.updateSchedule);
   const createAgentFromTemplate = useMutation(api.agents.createAgentFromTemplate);
@@ -57,20 +56,12 @@ export default function CompanyDataCollectionPage() {
 
   const [draft, setDraft] = useState<ScheduleDraft>(createDefaultScheduleDraft());
   const [isActive, setIsActive] = useState(false);
-  const [preferLive, setPreferLive] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
   // Adopt the server's answer during render rather than in an effect, keyed on
   // the values themselves — the effect version painted a frame of the stale
   // schedule first.
-  const [seenMethod, setSeenMethod] = useState<string | null>(null);
-  const methodKey = company === undefined ? null : String(company?.seoPreferLive ?? false);
-  if (methodKey !== null && methodKey !== seenMethod) {
-    setSeenMethod(methodKey);
-    setPreferLive(company?.seoPreferLive ?? false);
-  }
-
   const scheduleKey = schedule === undefined
     ? null
     : `${schedule?._id ?? "none"}|${schedule?.intervalStr ?? ""}|${schedule?.isActive ?? ""}`;
@@ -127,10 +118,6 @@ export default function CompanyDataCollectionPage() {
     const intervalStr = serializeScheduleDraft(draft);
     const outcome = await action.run(
       async () => {
-        // The method is a DataForSEO preference, not a scheduling one, so it
-        // saves beside the schedule rather than inside it.
-        await setSeoMethod({ id: companyId, preferLive });
-
         if (schedule) {
           await updateSchedule({
             scheduleId: schedule._id,
@@ -207,12 +194,7 @@ export default function CompanyDataCollectionPage() {
           spent on numbers that have not moved.
         */}
         <div className="border-t border-border-dim pt-5">
-          <SeoScheduleFields
-            draft={draft}
-            onChange={setDraft}
-            preferLive={preferLive}
-            onPreferLiveChange={setPreferLive}
-          />
+          <SeoScheduleFields draft={draft} onChange={setDraft} />
         </div>
 
         <p className="border-t border-border-dim pt-4 text-[12px] text-secondary">

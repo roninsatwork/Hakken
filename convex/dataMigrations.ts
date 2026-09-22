@@ -19,6 +19,10 @@ import {
 } from "./aiModelService";
 import { appError } from "./utils/appError";
 import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
+import {
+  attachTrackedFromRivals,
+  markExistingHoldsOwned,
+} from "./websiteAttachmentMigration";
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
@@ -79,7 +83,18 @@ type MigrationRunner = (
  * introduced. Never rename or reuse a key: the name is the ledger's identity.
  */
 /*
- * Two retirement migrations lived here and have been removed:
+ * Four more lived here and have been removed on 2026-09-22:
+ * `2026-09-22-canonical-website-questions`, `-website-rivals`,
+ * `2026-09-22-clear-tracked-prompts` and `-tracked-competitors`. They moved the
+ * per-client question and competitor lists onto their host and then emptied the
+ * tables they came from, and once `trackedPrompts` and `trackedCompetitors`
+ * left `schema.ts` they could no longer compile against it. All four ran on dev
+ * before the tables were dropped. The same one-way door as below: a deployment
+ * whose rows survive has no migration left to clear them, and recovering means
+ * checking out the commit before this one, deploying that, running them, then
+ * deploying forward.
+ *
+ * Two earlier retirement migrations lived here and have been removed:
  * `2026-07-26-retire-unread-company-check-fields` and
  * `2026-07-26-retire-company-check-category`. They cleared six fields off
  * `companyEvalCases`, and once the fields left `schema.ts` the migrations could no
@@ -95,6 +110,21 @@ type MigrationRunner = (
 const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,
   "2026-09-22-clear-pound-names": clearPoundNames,
+
+  /**
+   * Puts tracked websites back on the companies that chose them, and writes
+   * down that every older hold was an owned one
+   * (websites-screens-rebuild plan, stage 4).
+   *
+   * Corrects a wrong turn taken earlier the same day: a tracked competitor
+   * briefly became an edge in the host's competition graph, and the collection
+   * cycle read that graph, so one company's assertion spent another's money.
+   * Run the two together and in this order — the second is a no-op on rows the
+   * first has just written.
+   */
+  "2026-09-22-attach-tracked-from-rivals": attachTrackedFromRivals,
+  "2026-09-22-mark-existing-holds-owned": markExistingHoldsOwned,
+
 
   /**
    * Seeds every company with the platform's own capabilities (shared-screen-kit

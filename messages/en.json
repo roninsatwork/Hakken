@@ -545,7 +545,7 @@
     "manageCompanies": "Manage Companies",
     "websites": "Websites",
     "allWebsites": "All Websites",
-    "seoCollection": "Data Collection",
+    "seoCollection": "Collection pipeline",
     "seoCosts": "Cost to serve",
     "ai": "Artificial Intelligence",
     "manageAi": "Manage AI",
@@ -1113,7 +1113,7 @@
           "overview": "Overview",
           "websites": "Websites",
           "companyWebsites": "Websites",
-          "dataCollection": "Data Collection",
+          "dataCollection": "Collection schedule",
           "directory": "Directory",
           "invites": "Invites",
           "ai": "AI",
@@ -1398,35 +1398,14 @@
       "errors": {
         "saveFailed": "Could not add this website. Try again.",
         "removeFailed": "Could not remove this website. Try again."
-      }
+      },
+      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for."
     },
     "companyWebsiteDetail": {
       "back": "Back to Websites",
       "loading": "Loading website...",
       "notFound": "Website not found",
-      "subtitle": "The competitors tracked against this website.",
-      "competitorsTitle": "Competitors",
-      "addCompetitor": "Add Competitor",
-      "searchPlaceholder": "Search competitors...",
-      "empty": "No competitors tracked against this website yet.",
-      "emptySearch": "No competitors match that search.",
-      "competitorColumn": "Competitor",
-      "addedColumn": "Added",
-      "actionsColumn": "Actions",
-      "addTitle": "Add Competitor",
-      "addSubtitle": "Paste the address of a competitor to measure this website against.",
-      "urlLabel": "Competitor address",
-      "urlPlaceholder": "https://www.rival.com",
-      "savedAs": "Saved as {host}",
-      "alreadyKnown": "This website is already in the system — it will join that record, and nothing extra is fetched.",
-      "newWebsite": "New — not in the system yet.",
-      "add": "Add Competitor",
-      "removeTitle": "Stop Tracking",
-      "removeCompetitor": "Stop tracking",
-      "removeConfirm": "Stop tracking <highlight>{host}</highlight> against this website?",
-      "removeWarningTitle": "This stops tracking it here only",
-      "removeWarningBody": "The competitor's record and its data stay. Other companies tracking it are unaffected.",
-      "dataCollection": "Data collection",
+      "subtitle": "How often this client pulls it, where from, and what it is producing for them.",
       "collecting": "Collecting",
       "notCollecting": "Not collecting",
       "editSettings": "Change",
@@ -1434,8 +1413,6 @@
       "settingsSubtitle": "By default this website follows its company's schedule. Give it its own only when it needs watching more or less closely than the rest.",
       "collectionLabel": "Collect data for this website",
       "errors": {
-        "saveFailed": "Could not add this competitor. Try again.",
-        "removeFailed": "Could not stop tracking this competitor. Try again.",
         "settingsFailed": "Could not save these settings. Try again."
       },
       "noSchedule": "No schedule",
@@ -1454,43 +1431,6 @@
         "errors": {
           "saveFailed": "Could not save this location. Try again."
         }
-      },
-      "prompts": {
-        "title": "Questions we ask the AI engines",
-        "subtitle": "What we put to ChatGPT and the others to see whether this website gets named in the answer. A question belongs to a site, not to a client.",
-        "addLabel": "A question somebody would actually ask",
-        "addPlaceholder": "who is the best plumber in Leeds",
-        "add": "Add question",
-        "remaining": "{count, plural, =0 {No more questions can be added for this website.} one {# more question can be added.} other {# more questions can be added.}}",
-        "loading": "Counting.",
-        "searchPlaceholder": "Search questions...",
-        "empty": "No questions yet, so nothing is asked for this website.",
-        "noMatch": "No question matches that search.",
-        "promptColumn": "Question",
-        "enginesColumn": "Asked of",
-        "stateColumn": "State",
-        "addedColumn": "Added",
-        "actionsColumn": "Actions",
-        "asking": "Asking",
-        "paused": "Paused",
-        "pause": "Pause",
-        "resume": "Resume",
-        "remove": "Remove this question",
-        "engines": {
-          "chatgpt": "ChatGPT",
-          "perplexity": "Perplexity",
-          "gemini": "Gemini",
-          "claude": "Claude"
-        },
-        "errors": {
-          "addFailed": "Could not add that question. Try again.",
-          "toggleFailed": "Could not change that question. Try again.",
-          "removeFailed": "Could not remove that question. Try again."
-        },
-        "overAllowance": "{used} questions, {allowance} allowed on this plan. The extra ones are still being asked and still being paid for.",
-        "seeCitations": "See what the engines answered",
-        "seeKeywords": "See what it ranks for",
-        "seeFanOut": "See what the engines searched for"
       },
       "discovered": {
         "title": "Websites competing for the same searches",
@@ -1515,10 +1455,29 @@
         "errors": {
           "decideFailed": "Could not save that. Try again."
         }
+      },
+      "competitorsFollow": "Its competitors follow it — numbers pulled in different weeks are not a comparison.",
+      "summaryOwn": "{host} and its competitors are pulled {schedule}.",
+      "summaryFollows": "{host} follows {company}: {schedule}.",
+      "nothingScheduled": "Nothing is pulled for {host}.",
+      "askedLive": "Every engine is asked live, which is four times cheaper than queueing — so there is no method to choose.",
+      "tracked": {
+        "title": "Tracked on the website record",
+        "subtitle": "Searches, questions and rivals belong to the website, not to a client — one list, asked once, read by everyone watching it. Editing any of them changes what every client sees.",
+        "keywords": "Searches it is checked against",
+        "questions": "Questions put to the AI engines",
+        "competition": "Who it competes with"
+      },
+      "results": {
+        "title": "What came back, for this client",
+        "subtitle": "The pull is shared; what is read out of it is scoped to this client's place and holdings.",
+        "keywords": "Where it ranks",
+        "citations": "Where it is named in AI answers",
+        "fanOut": "What the engines searched"
       }
     },
     "companyDataCollection": {
-      "title": "Data Collection",
+      "title": "Collection schedule",
       "subtitle": "How often SEO data is pulled for this company's websites. Each website follows this unless it is set differently.",
       "settingsTitle": "Schedule",
       "collectionLabel": "Collect data for this company",
@@ -1550,9 +1509,6 @@
       "dayOfMonthLabel": "on day",
       "timeLabel": "at",
       "anchorLabel": "from",
-      "methodLabel": "How to ask DataForSEO",
-      "methodQueued": "Queued — cheaper",
-      "methodLive": "Live — instant",
       "summary": "{schedule}",
       "notCollecting": "Nothing is collected for this company.",
       "cost": {
@@ -1593,7 +1549,8 @@
         "saveFailed": "Could not add this website. Try again."
       },
       "newWebsite": "New — not in the system yet.",
-      "nextPull": "Next pull {when}"
+      "nextPull": "Next pull {when}",
+      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for."
     },
     "websiteDetail": {
       "back": "Back to All Websites",
@@ -1638,6 +1595,112 @@
         "saved": "Saved",
         "errors": {
           "saveFailed": "Could not save these names. Try again."
+        }
+      },
+      "tabs": {
+        "profile": "Profile",
+        "keywords": "Searches",
+        "questions": "Questions",
+        "competition": "Competition",
+        "watchers": "Watched by"
+      },
+      "sharedNotice": "Everything on this record is shared with every client watching this host. Who is watching is not.",
+      "profile": {
+        "title": "What this business is",
+        "subtitle": "So a starting set of searches and questions can be suggested instead of handing anyone a blank box.",
+        "sectorLabel": "Sector",
+        "sectorPlaceholder": "Branding and design",
+        "marketLabel": "Where it sells",
+        "marketPlaceholder": "Yorkshire, United Kingdom",
+        "save": "Save profile",
+        "saved": "Saved",
+        "errors": {
+          "saveFailed": "Could not save this profile. Try again."
+        }
+      },
+      "keywords": {
+        "title": "Searches this website is checked against",
+        "subtitle": "One paid task per search per cycle, per place its watchers use — not per watcher. That is where the saving comes from.",
+        "addLabel": "A search somebody types into Google",
+        "addPlaceholder": "branding agency leeds",
+        "add": "Track it",
+        "searchPlaceholder": "Search these terms...",
+        "empty": "Nothing tracked yet. Add the first search this business should be found for.",
+        "noMatch": "No search matches that.",
+        "keywordColumn": "Search",
+        "intentColumn": "What they want",
+        "stateColumn": "State",
+        "actionsColumn": "Actions",
+        "unjudged": "Not judged",
+        "active": "Checking",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove this search",
+        "tracking": "{count, plural, =0 {Nothing is checked} one {# search checked every cycle} other {# searches checked every cycle}}",
+        "intents": {
+          "BUYING": "Ready to buy",
+          "RESEARCHING": "Researching",
+          "BRANDED": "Looking for this business",
+          "IRRELEVANT": "Nothing to do with it",
+          "OTHER": "Too vague to tell"
+        },
+        "errors": {
+          "addFailed": "Could not track that search. Try again.",
+          "toggleFailed": "Could not change that search. Try again.",
+          "removeFailed": "Could not remove that search. Try again."
+        }
+      },
+      "questions": {
+        "title": "Questions put to the AI engines",
+        "subtitle": "Asked once for this host and read by every client watching it. A question belongs to a site, not to a client.",
+        "addLabel": "A question somebody would actually ask",
+        "addPlaceholder": "who is the best branding agency in Leeds",
+        "add": "Ask it",
+        "searchPlaceholder": "Search these questions...",
+        "empty": "No questions yet, so nothing is asked about this website.",
+        "noMatch": "No question matches that.",
+        "promptColumn": "Question",
+        "enginesColumn": "Asked of",
+        "stateColumn": "State",
+        "actionsColumn": "Actions",
+        "active": "Asking",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove this question",
+        "asked": "{count, plural, =0 {Nothing is asked} one {# paid answer bought every cycle} other {# paid answers bought every cycle}}",
+        "live": "Every engine is asked live, which is four times cheaper than queueing.",
+        "engines": {
+          "chatgpt": "ChatGPT",
+          "perplexity": "Perplexity",
+          "gemini": "Gemini",
+          "claude": "Claude"
+        },
+        "errors": {
+          "addFailed": "Could not add that question. Try again.",
+          "toggleFailed": "Could not change that question. Try again.",
+          "removeFailed": "Could not remove that question. Try again."
+        }
+      },
+      "competition": {
+        "title": "Who this website competes with",
+        "subtitle": "A claim about a market rather than about a client, which is why it lives here. Most of these come from what the answers already show.",
+        "addLabel": "A rival already in the system",
+        "add": "Record it",
+        "searchPlaceholder": "Search these rivals...",
+        "empty": "No rivalries recorded for this website yet.",
+        "noMatch": "No rival matches that.",
+        "hostColumn": "Rival",
+        "sourceColumn": "How we know",
+        "addedColumn": "Recorded",
+        "actionsColumn": "Actions",
+        "asserted": "Somebody said so",
+        "discovered": "Seen in the results",
+        "remove": "Remove this rivalry",
+        "errors": {
+          "addFailed": "Could not record that rivalry. Try again.",
+          "removeFailed": "Could not remove that rivalry. Try again."
         }
       }
     },
@@ -2092,7 +2155,8 @@
           "weekly": "Weekly on {day} at {time} Local ({utcTime} UTC)",
           "monthly": "Monthly on day {day} at {time} Local ({utcTime} UTC)",
           "targeted": "Targeted times: {times} Local",
-          "targetedEmpty": "No targeted times configured"
+          "targetedEmpty": "No targeted times configured",
+          "fortnightly": "Every other {day} at {time} Local ({utcTime} UTC)"
         },
         "modals": {
           "delete": {
@@ -5063,11 +5127,11 @@
       }
     },
     "seoCollection": {
-      "title": "Data Collection",
+      "title": "Collection pipeline",
       "subtitle": "The queue behind every company's SEO data, and what each run cost. One pipeline, shared by every tenant.",
       "loading": "Loading this run.",
       "notFound": "That collection run no longer exists.",
-      "back": "Back to Data Collection",
+      "back": "Back to the collection pipeline",
       "costColumn": "Cost",
       "readyOfPlanned": "{ready} of {planned} collected",
       "reused": "{count} answered by data already held",

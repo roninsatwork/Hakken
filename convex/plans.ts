@@ -1,7 +1,7 @@
 import { billingBlocksPaidAccess, billingConfig } from "./billingPolicy";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { MAX_PROMPTS_PER_WEBSITE } from "./seoPrompts";
+import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";

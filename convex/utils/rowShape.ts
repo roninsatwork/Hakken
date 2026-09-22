@@ -56,7 +56,6 @@ export const rowShape = {
   companySkills: v.object({ ...whole("companySkills"), _id: v.id("companySkills") }),
   companyWebsites: v.object({ ...whole("companyWebsites"), _id: v.id("companyWebsites") }),
   seoDataPulls: v.object({ ...whole("seoDataPulls"), _id: v.id("seoDataPulls") }),
-  trackedCompetitors: v.object({ ...whole("trackedCompetitors"), _id: v.id("trackedCompetitors") }),
   websites: v.object({ ...whole("websites"), _id: v.id("websites") }),
   knowledgeDocuments: v.object({ ...whole("knowledgeDocuments"), _id: v.id("knowledgeDocuments") }),
   logins: v.object({ ...whole("logins"), _id: v.id("logins") }),

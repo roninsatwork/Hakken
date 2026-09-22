@@ -545,7 +545,7 @@
     "manageCompanies": "Gestisci Aziende",
     "websites": "Siti web",
     "allWebsites": "Tutti i siti web",
-    "seoCollection": "Raccolta dati",
+    "seoCollection": "Pipeline di raccolta",
     "seoCosts": "Costo del servizio",
     "ai": "Intelligenza Artificiale",
     "manageAi": "Gestisci AI",
@@ -1113,7 +1113,7 @@
           "overview": "Panoramica",
           "websites": "Siti web",
           "companyWebsites": "Siti web",
-          "dataCollection": "Raccolta dati",
+          "dataCollection": "Programma di raccolta",
           "directory": "Rubrica",
           "invites": "Inviti",
           "ai": "AI",
@@ -1398,44 +1398,21 @@
       "errors": {
         "saveFailed": "Impossibile aggiungere questo sito web. Riprova.",
         "removeFailed": "Impossibile rimuovere questo sito web. Riprova."
-      }
+      },
+      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato."
     },
     "companyWebsiteDetail": {
       "back": "Torna ai siti web",
       "loading": "Caricamento sito web...",
       "notFound": "Sito web non trovato",
-      "subtitle": "I concorrenti monitorati rispetto a questo sito web.",
-      "competitorsTitle": "Concorrenti",
-      "addCompetitor": "Aggiungi concorrente",
-      "searchPlaceholder": "Cerca concorrenti...",
-      "empty": "Nessun concorrente monitorato per questo sito web.",
-      "emptySearch": "Nessun concorrente corrisponde alla ricerca.",
-      "competitorColumn": "Concorrente",
-      "addedColumn": "Aggiunto il",
-      "actionsColumn": "Azioni",
-      "addTitle": "Aggiungi concorrente",
-      "addSubtitle": "Incolla l'indirizzo di un concorrente con cui confrontare questo sito web.",
-      "urlLabel": "Indirizzo del concorrente",
-      "urlPlaceholder": "https://www.rival.com",
-      "savedAs": "Salvato come {host}",
-      "alreadyKnown": "Questo sito web è già nel sistema: si unirà a quel record e non verrà scaricato nulla in più.",
-      "newWebsite": "Nuovo: non ancora nel sistema.",
-      "add": "Aggiungi concorrente",
-      "removeTitle": "Interrompi monitoraggio",
-      "removeCompetitor": "Interrompi monitoraggio",
-      "removeConfirm": "Interrompere il monitoraggio di <highlight>{host}</highlight> per questo sito web?",
-      "removeWarningTitle": "Viene interrotto solo qui",
-      "removeWarningBody": "Il record del concorrente e i suoi dati restano. Le altre aziende che lo monitorano non sono toccate.",
-      "dataCollection": "Raccolta dati",
+      "subtitle": "Con che frequenza questo cliente lo raccoglie, da dove, e che cosa sta producendo per lui.",
       "collecting": "In raccolta",
       "notCollecting": "Nessuna raccolta",
       "editSettings": "Modifica",
       "settingsTitle": "Pianificazione per questo sito web",
-      "settingsSubtitle": "Per impostazione predefinita questo sito web segue la pianificazione dell'azienda. Assegnagliene una propria solo se va osservato più o meno da vicino degli altri.",
+      "settingsSubtitle": "Per impostazione predefinita questo sito segue il programma della sua azienda. Dagliene uno proprio solo quando va seguito più o meno da vicino degli altri.",
       "collectionLabel": "Raccogli dati per questo sito web",
       "errors": {
-        "saveFailed": "Impossibile aggiungere questo concorrente. Riprova.",
-        "removeFailed": "Impossibile interrompere il monitoraggio. Riprova.",
         "settingsFailed": "Impossibile salvare queste impostazioni. Riprova."
       },
       "noSchedule": "Nessuna pianificazione",
@@ -1454,43 +1431,6 @@
         "errors": {
           "saveFailed": "Non è stato possibile salvare questa località. Riprova."
         }
-      },
-      "prompts": {
-        "title": "Domande poste ai motori AI",
-        "subtitle": "Ciò che chiediamo a ChatGPT e agli altri per vedere se questo sito viene citato nella risposta. Una domanda appartiene a un sito, non a un cliente.",
-        "addLabel": "Una domanda che qualcuno porrebbe davvero",
-        "addPlaceholder": "chi è il miglior idraulico a Leeds",
-        "add": "Aggiungi domanda",
-        "remaining": "{count, plural, =0 {Non si possono aggiungere altre domande per questo sito.} one {Si può aggiungere ancora # domanda.} other {Si possono aggiungere ancora # domande.}}",
-        "loading": "Conteggio in corso.",
-        "searchPlaceholder": "Cerca domande...",
-        "empty": "Nessuna domanda: per questo sito non viene chiesto nulla.",
-        "noMatch": "Nessuna domanda corrisponde alla ricerca.",
-        "promptColumn": "Domanda",
-        "enginesColumn": "Rivolta a",
-        "stateColumn": "Stato",
-        "addedColumn": "Aggiunta",
-        "actionsColumn": "Azioni",
-        "asking": "Attiva",
-        "paused": "In pausa",
-        "pause": "Sospendi",
-        "resume": "Riprendi",
-        "remove": "Rimuovi questa domanda",
-        "engines": {
-          "chatgpt": "ChatGPT",
-          "perplexity": "Perplexity",
-          "gemini": "Gemini",
-          "claude": "Claude"
-        },
-        "errors": {
-          "addFailed": "Non è stato possibile aggiungere la domanda. Riprova.",
-          "toggleFailed": "Non è stato possibile modificare la domanda. Riprova.",
-          "removeFailed": "Non è stato possibile rimuovere la domanda. Riprova."
-        },
-        "overAllowance": "{used} domande, {allowance} incluse in questo piano. Le eccedenti continuano a essere poste e pagate.",
-        "seeCitations": "Vedi cosa hanno risposto i motori",
-        "seeKeywords": "Vedi per cosa si posiziona",
-        "seeFanOut": "Guarda che cosa hanno cercato i motori"
       },
       "discovered": {
         "title": "Siti in gara sulle stesse ricerche",
@@ -1515,10 +1455,29 @@
         "errors": {
           "decideFailed": "Non è stato possibile salvare. Riprova."
         }
+      },
+      "competitorsFollow": "I suoi concorrenti lo seguono: numeri raccolti in settimane diverse non sono un confronto.",
+      "summaryOwn": "{host} e i suoi concorrenti vengono raccolti {schedule}.",
+      "summaryFollows": "{host} segue {company}: {schedule}.",
+      "nothingScheduled": "Non viene raccolto nulla per {host}.",
+      "askedLive": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda: non c'è un metodo da scegliere.",
+      "tracked": {
+        "title": "Tracciato sulla scheda del sito",
+        "subtitle": "Ricerche, domande e rivali appartengono al sito, non a un cliente: una sola lista, chiesta una volta, letta da tutti quelli che lo osservano. Modificarne una cambia ciò che vede ogni cliente.",
+        "keywords": "Ricerche con cui viene verificato",
+        "questions": "Domande poste ai motori di IA",
+        "competition": "Con chi compete"
+      },
+      "results": {
+        "title": "Che cosa è tornato, per questo cliente",
+        "subtitle": "La raccolta è condivisa; ciò che se ne legge è limitato al luogo e alle proprietà di questo cliente.",
+        "keywords": "Dove si posiziona",
+        "citations": "Dove viene nominato nelle risposte IA",
+        "fanOut": "Che cosa hanno cercato i motori"
       }
     },
     "companyDataCollection": {
-      "title": "Raccolta dati",
+      "title": "Programma di raccolta",
       "subtitle": "Con quale frequenza vengono scaricati i dati SEO dei siti web di questa azienda. Ogni sito web segue questa impostazione salvo diversa indicazione.",
       "settingsTitle": "Pianificazione",
       "collectionLabel": "Raccogli dati per questa azienda",
@@ -1550,9 +1509,6 @@
       "dayOfMonthLabel": "il giorno",
       "timeLabel": "alle",
       "anchorLabel": "dal",
-      "methodLabel": "Come interrogare DataForSEO",
-      "methodQueued": "In coda — più economico",
-      "methodLive": "Live — immediato",
       "summary": "{schedule}",
       "notCollecting": "Non viene raccolto nulla per questa azienda.",
       "cost": {
@@ -1593,7 +1549,8 @@
         "saveFailed": "Impossibile aggiungere questo sito web. Riprova."
       },
       "newWebsite": "Nuovo: non ancora nel sistema.",
-      "nextPull": "Prossimo scarico {when}"
+      "nextPull": "Prossimo scarico {when}",
+      "inherits": "Questo cliente parte da ciò che c'è già: {keywords, plural, =0 {nessuna ricerca} one {1 ricerca} other {# ricerche}}, {questions, plural, =0 {nessuna domanda} one {1 domanda} other {# domande}}, {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato."
     },
     "websiteDetail": {
       "back": "Torna a Tutti i siti web",
@@ -1638,6 +1595,112 @@
         "saved": "Salvato",
         "errors": {
           "saveFailed": "Non è stato possibile salvare questi nomi. Riprova."
+        }
+      },
+      "tabs": {
+        "profile": "Profilo",
+        "keywords": "Ricerche",
+        "questions": "Domande",
+        "competition": "Concorrenza",
+        "watchers": "Osservato da"
+      },
+      "sharedNotice": "Tutto in questa scheda è condiviso con ogni cliente che osserva questo host. Chi lo osserva, no.",
+      "profile": {
+        "title": "Che cosa fa questa impresa",
+        "subtitle": "Così si può proporre una serie iniziale di ricerche e domande invece di consegnare una casella vuota.",
+        "sectorLabel": "Settore",
+        "sectorPlaceholder": "Branding e design",
+        "marketLabel": "Dove vende",
+        "marketPlaceholder": "Yorkshire, Regno Unito",
+        "save": "Salva il profilo",
+        "saved": "Salvato",
+        "errors": {
+          "saveFailed": "Non è stato possibile salvare questo profilo. Riprova."
+        }
+      },
+      "keywords": {
+        "title": "Ricerche con cui questo sito viene verificato",
+        "subtitle": "Un'attività a pagamento per ricerca per ciclo, per ogni luogo usato dagli osservatori, non per osservatore. Da lì viene il risparmio.",
+        "addLabel": "Una ricerca che qualcuno digita su Google",
+        "addPlaceholder": "agenzia di branding leeds",
+        "add": "Seguila",
+        "searchPlaceholder": "Cerca fra questi termini...",
+        "empty": "Ancora nulla. Aggiungi la prima ricerca per cui questa impresa dovrebbe essere trovata.",
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "keywordColumn": "Ricerca",
+        "intentColumn": "Che cosa vogliono",
+        "stateColumn": "Stato",
+        "actionsColumn": "Azioni",
+        "unjudged": "Non valutata",
+        "active": "In verifica",
+        "paused": "In pausa",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "remove": "Rimuovi questa ricerca",
+        "tracking": "{count, plural, =0 {Non viene verificato nulla} one {# ricerca verificata a ogni ciclo} other {# ricerche verificate a ogni ciclo}}",
+        "intents": {
+          "BUYING": "Pronto all'acquisto",
+          "RESEARCHING": "Si sta informando",
+          "BRANDED": "Cerca questa impresa",
+          "IRRELEVANT": "Non c'entra nulla",
+          "OTHER": "Troppo vaga per dirlo"
+        },
+        "errors": {
+          "addFailed": "Non è stato possibile seguire quella ricerca. Riprova.",
+          "toggleFailed": "Non è stato possibile modificare quella ricerca. Riprova.",
+          "removeFailed": "Non è stato possibile rimuovere quella ricerca. Riprova."
+        }
+      },
+      "questions": {
+        "title": "Domande poste ai motori di IA",
+        "subtitle": "Poste una volta per questo host e lette da ogni cliente che lo osserva. Una domanda appartiene a un sito, non a un cliente.",
+        "addLabel": "Una domanda che qualcuno farebbe davvero",
+        "addPlaceholder": "qual è la migliore agenzia di branding a Leeds",
+        "add": "Ponila",
+        "searchPlaceholder": "Cerca fra queste domande...",
+        "empty": "Ancora nessuna domanda, quindi non viene chiesto nulla su questo sito.",
+        "noMatch": "Nessuna domanda corrisponde.",
+        "promptColumn": "Domanda",
+        "enginesColumn": "Posta a",
+        "stateColumn": "Stato",
+        "actionsColumn": "Azioni",
+        "active": "In corso",
+        "paused": "In pausa",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "remove": "Rimuovi questa domanda",
+        "asked": "{count, plural, =0 {Non viene chiesto nulla} one {# risposta a pagamento acquistata a ogni ciclo} other {# risposte a pagamento acquistate a ogni ciclo}}",
+        "live": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda.",
+        "engines": {
+          "chatgpt": "ChatGPT",
+          "perplexity": "Perplexity",
+          "gemini": "Gemini",
+          "claude": "Claude"
+        },
+        "errors": {
+          "addFailed": "Non è stato possibile aggiungere quella domanda. Riprova.",
+          "toggleFailed": "Non è stato possibile modificare quella domanda. Riprova.",
+          "removeFailed": "Non è stato possibile rimuovere quella domanda. Riprova."
+        }
+      },
+      "competition": {
+        "title": "Con chi compete questo sito",
+        "subtitle": "Un'affermazione su un mercato, non su un cliente: per questo sta qui. La maggior parte deriva da ciò che le risposte mostrano già.",
+        "addLabel": "Un rivale già presente nel sistema",
+        "add": "Registralo",
+        "searchPlaceholder": "Cerca fra questi rivali...",
+        "empty": "Nessuna rivalità registrata per questo sito.",
+        "noMatch": "Nessun rivale corrisponde.",
+        "hostColumn": "Rivale",
+        "sourceColumn": "Come lo sappiamo",
+        "addedColumn": "Registrata",
+        "actionsColumn": "Azioni",
+        "asserted": "Lo ha detto qualcuno",
+        "discovered": "Vista nei risultati",
+        "remove": "Rimuovi questa rivalità",
+        "errors": {
+          "addFailed": "Non è stato possibile registrare quella rivalità. Riprova.",
+          "removeFailed": "Non è stato possibile rimuovere quella rivalità. Riprova."
         }
       }
     },
@@ -2092,7 +2155,8 @@
           "weekly": "Ogni settimana il {day} alle {time} locali ({utcTime} UTC)",
           "monthly": "Ogni mese il giorno {day} alle {time} locali ({utcTime} UTC)",
           "targeted": "Orari mirati: {times} locali",
-          "targetedEmpty": "Nessun orario mirato configurato"
+          "targetedEmpty": "Nessun orario mirato configurato",
+          "fortnightly": "Un {day} sì e uno no alle {time} locali ({utcTime} UTC)"
         },
         "modals": {
           "delete": {
@@ -5063,11 +5127,11 @@
       }
     },
     "seoCollection": {
-      "title": "Raccolta dati",
+      "title": "Pipeline di raccolta",
       "subtitle": "La coda dietro i dati SEO di ogni azienda e il costo di ciascuna esecuzione. Un'unica pipeline, condivisa da tutti.",
       "loading": "Caricamento dell'esecuzione.",
       "notFound": "Questa esecuzione non esiste più.",
-      "back": "Torna a Raccolta dati",
+      "back": "Torna alla pipeline di raccolta",
       "costColumn": "Costo",
       "readyOfPlanned": "{ready} di {planned} raccolte",
       "reused": "{count} risposte con dati già disponibili",

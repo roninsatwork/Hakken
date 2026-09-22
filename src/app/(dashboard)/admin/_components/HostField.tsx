@@ -15,6 +15,13 @@ type HostFieldProps = {
     savedAs: (host: string) => string;
     alreadyKnown: string;
     newWebsite: string;
+    /** What attaching to a host Hakken already tracks brings with it. */
+    inherits: (counts: {
+      keywords: number;
+      questions: number;
+      rivals: number;
+      weeks: number;
+    }) => string;
   };
 };
 
@@ -26,7 +33,11 @@ type HostFieldProps = {
  * only moment anyone can catch that they are about to watch the wrong thing.
  * And because one host is one record shared by everyone, the second line says
  * whether this will join an existing record — which is the system working, not
- * a warning, and is worded that way.
+ * a warning, and is worded that way. When it does join one, a third line says
+ * what comes with it: the searches, questions and history somebody else has
+ * already paid for. That is the best thing that can happen on this form, and it
+ * was a footnote about not fetching twice until the host gained lists of its
+ * own.
  *
  * Shared between the two add forms because they ask the same question and a
  * second copy would drift; the only difference between them is the wording,
@@ -61,6 +72,25 @@ export function HostField({ label, placeholder, value, onChange, labels }: HostF
               <Info className="mt-0.5 h-3 w-3 shrink-0" />
               {preview.alreadyKnown ? labels.alreadyKnown : labels.newWebsite}
             </p>
+            {/*
+              Only when there is something to inherit. A host that is known but
+              has nothing on it yet would otherwise announce four zeroes, which
+              reads as a fault rather than as "new".
+            */}
+            {preview.inherits && (
+              preview.inherits.keywords + preview.inherits.questions
+              + preview.inherits.rivals + preview.inherits.weeksOfHistory > 0
+            ) ? (
+              <p className="flex items-start gap-1.5 text-[11px] text-success">
+                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
+                {labels.inherits({
+                  keywords: preview.inherits.keywords,
+                  questions: preview.inherits.questions,
+                  rivals: preview.inherits.rivals,
+                  weeks: preview.inherits.weeksOfHistory,
+                })}
+              </p>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-[12px] text-destructive">{preview.message}</p>

@@ -15,10 +15,10 @@ import { appError } from "./utils/appError";
  * arriving in every answer we buy since the citations pipeline shipped — in
  * `fan_out_queries`, which the parser used to discard.
  *
- * Read through the company's own tracked prompts, so nothing starts from a
- * shared record and walks outward to find who is watching. The fan-out rows
- * are keyed on the question text, like citations, because the purchase is
- * shared; the company's own prompts are what scopes this read to the company.
+ * Read through the company's own hold on the website, so nothing starts from a
+ * shared record and walks outward to find who is watching. The fan-out rows are
+ * keyed on the question text, like citations, because the purchase is shared;
+ * the hold is what scopes this read to the company.
  *
  * The intent beside each search comes from `seo.keyword-intent`, the same
  * judgment the rankings screen uses and the same store, so a phrase met on
@@ -49,9 +49,16 @@ export const listWebsiteFanOutQueries = superAdminQuery({
     const companyWebsite = await ctx.db.get(args.companyWebsiteId);
     if (!companyWebsite) throw appError("NOT_FOUND", "That website is no longer held by this company.");
 
+    /*
+      The host's questions, not this company's copy of them.
+
+      Still read through the company's own hold — the id came in scoped, and
+      `companyWebsite.websiteId` is the entitlement — so nothing starts from a
+      shared record and walks outward to find who is watching.
+    */
     const prompts = await ctx.db
-      .query("trackedPrompts")
-      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+      .query("websiteQuestions")
+      .withIndex("by_website", (q) => q.eq("websiteId", companyWebsite.websiteId))
       .take(MAX_PROMPTS);
 
     // One row per search, however many engines produced it: a reader wants the

@@ -47,8 +47,10 @@ const countWebsites = (t: Harness) =>
   t.run(async (ctx) => (await ctx.db.query("websites").collect()).length);
 const allCompanyWebsites = (t: Harness) =>
   t.run(async (ctx) => await ctx.db.query("companyWebsites").collect());
+/** The websites a company watches rather than owns — its own list, not the graph. */
 const allCompetitors = (t: Harness) =>
-  t.run(async (ctx) => await ctx.db.query("trackedCompetitors").collect());
+  t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect())
+    .filter((row) => row.relationship === "TRACKED"));
 
 const firstPage = { numItems: 15, cursor: null };
 
@@ -216,7 +218,7 @@ describe("A company's own websites", () => {
     expect(await allCompanyWebsites(t)).toHaveLength(0);
   });
 
-  test("the list counts each website's competitors", async () => {
+  test("the list holds what a company owns and what it tracks, and pairs them", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
@@ -233,8 +235,12 @@ describe("A company's own websites", () => {
       paginationOpts: firstPage,
     });
 
-    expect(page.page).toHaveLength(1);
-    expect(page.page[0]).toMatchObject({ displayHost: "ours.com", competitorCount: 3 });
+    // Four attachments: the company's own site and the three it watches. Both
+    // kinds are on its list, because both are websites it has chosen.
+    expect(page.page).toHaveLength(4);
+    const own = page.page.find((row) => row.displayHost === "ours.com");
+    expect(own).toMatchObject({ competitorCount: 3 });
+    expect(page.page.filter((row) => row.relationship === "TRACKED")).toHaveLength(3);
   });
 
   test("the list shows only that company's websites", async () => {
@@ -263,7 +269,7 @@ describe("Competitors live inside a website", () => {
     return { admin, company, site };
   }
 
-  test("a competitor is filed against the website, and carries its company", async () => {
+  test("a tracked site joins the company's own list, against one of its sites", async () => {
     const t = harness();
     const { admin, company, site } = await seedSite(t);
 
@@ -273,9 +279,11 @@ describe("Competitors live inside a website", () => {
     });
 
     const [entry] = await allCompetitors(t);
-    expect(entry.companyWebsiteId).toBe(site);
-    // Denormalised so a tenant-scoped list never has to load the parent first.
+    // An attachment on the company's own list, pointing at the site of theirs
+    // it is watched against — which is what makes the two collect together.
+    const siteWebsiteId = await t.run(async (ctx) => (await ctx.db.get(site))!.websiteId);
     expect(entry.companyId).toBe(company);
+    expect(entry.againstWebsiteId).toBe(siteWebsiteId);
   });
 
   test("the same rival twice against one website is refused", async () => {
@@ -288,10 +296,10 @@ describe("Competitors live inside a website", () => {
         companyWebsiteId: site,
         url: "https://www.rival.com",
       }),
-    ).rejects.toThrow("already tracked against this website");
+    ).rejects.toThrow("already holds that website");
   });
 
-  test("one rival may be tracked against two of a company's websites", async () => {
+  test("a company holds a website once, whichever of its sites it rivals", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
@@ -299,11 +307,20 @@ describe("Competitors live inside a website", () => {
     const trade = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "trade.com" });
 
     await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: shop, url: "rival.com" });
-    await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: trade, url: "rival.com" });
 
-    // shop.com, trade.com, rival.com. One rival record, two links.
+    /*
+      Refused rather than filed twice. A company's list is a list of websites,
+      and the site a tracked one is watched against sets which day they collect
+      on — a second pairing would be a second answer to that. Comparing its
+      results against another of their sites is a reading question, and the pull
+      is the same one either way.
+    */
+    await expect(admin.mutation(api.websites.addTrackedCompetitor, {
+      companyWebsiteId: trade, url: "rival.com",
+    })).rejects.toThrow("already holds that website");
+
+    // shop.com, trade.com, rival.com.
     expect(await countWebsites(t)).toBe(3);
-    expect(await allCompetitors(t)).toHaveLength(2);
   });
 
   test("a website cannot be its own competitor", async () => {
@@ -315,7 +332,7 @@ describe("Competitors live inside a website", () => {
         companyWebsiteId: site,
         url: "https://www.ours.com/uk",
       }),
-    ).rejects.toThrow("cannot be its own competitor");
+    ).rejects.toThrow("cannot compete with itself");
   });
 
   test("the list is scoped to its own website and searchable", async () => {
@@ -330,13 +347,15 @@ describe("Competitors live inside a website", () => {
     }
     await admin.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: trade, url: "elsewhere.com" });
 
-    const all = await admin.query(api.websites.getTrackedCompetitors, {
-      companyWebsiteId: shop, page: 1, pageSize: 15,
+    const shopWebsiteId = await t.run(async (ctx) => (await ctx.db.get(shop))!.websiteId);
+
+    const all = await admin.query(api.websiteCanonical.listWebsiteRivals, {
+      websiteId: shopWebsiteId, page: 1, pageSize: 15,
     });
     expect(all.data.map((row) => row.displayHost).sort()).toEqual(["other.co.uk", "rival.com"]);
 
-    const searched = await admin.query(api.websites.getTrackedCompetitors, {
-      companyWebsiteId: shop, page: 1, pageSize: 15, searchTerm: "riv",
+    const searched = await admin.query(api.websiteCanonical.listWebsiteRivals, {
+      websiteId: shopWebsiteId, page: 1, pageSize: 15, searchTerm: "riv",
     });
     expect(searched.data.map((row) => row.displayHost)).toEqual(["rival.com"]);
   });
@@ -356,12 +375,16 @@ describe("Competitors live inside a website", () => {
       companyWebsiteId: acmeSite, url: "rival.com",
     });
 
-    await admin.mutation(api.websites.removeTrackedCompetitor, { id: roninsRival });
+    await admin.mutation(api.websites.removeCompanyWebsite, { id: roninsRival });
 
     expect(await countWebsites(t)).toBe(3);
-    const remaining = await allCompetitors(t);
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0].companyId).toBe(acme);
+    // Acme keeps watching it. Ronins dropping a site off their own list says
+    // nothing about anybody else's.
+    const tracked = await t.run(async (ctx) =>
+      (await ctx.db.query("companyWebsites").collect())
+        .filter((row) => row.relationship === "TRACKED"));
+    expect(tracked).toHaveLength(1);
+    expect(tracked[0].companyId).toBe(acme);
   });
 });
 
@@ -475,6 +498,88 @@ describe("The soonest watcher sets the pace", () => {
     const detail = await admin.query(api.websites.getCompanyWebsiteById, { id: site });
     expect(detail?.effective.intervalStr).toBe("daily");
     expect(detail?.effective.source).toBe("WEBSITE");
+  });
+
+  test("an hourly override is refused, because a pull is charged per call", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await scheduleFor(t, company, "weekly");
+    const site = await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: company, url: "shared.com",
+    });
+
+    // The shape the old generic builder wrote, which this mutation used to take
+    // without looking. The screen was the only thing enforcing the four SEO
+    // cadences, and the screen was offering seven.
+    await expect(admin.mutation(api.websites.setCompanyWebsiteSchedule, {
+      id: site,
+      refreshIntervalStr: JSON.stringify({
+        version: 2, kind: "recurring", cadence: "hourly",
+        everyHours: 4, startTimeLocal: "09:00", timezone: "UTC",
+      }),
+      collectionEnabled: true,
+    })).rejects.toThrow(/daily, weekly, fortnightly or monthly/);
+
+    const detail = await admin.query(api.websites.getCompanyWebsiteById, { id: site });
+    expect(detail?.refreshIntervalStr).toBeUndefined();
+  });
+
+  test("a list of exact times is refused too", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await scheduleFor(t, company, "weekly");
+    const site = await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: company, url: "shared.com",
+    });
+
+    await expect(admin.mutation(api.websites.setCompanyWebsiteSchedule, {
+      id: site,
+      refreshIntervalStr: JSON.stringify({
+        version: 2, kind: "targetedTimes", timesLocal: ["09:00", "13:00"], timezone: "UTC",
+      }),
+      collectionEnabled: true,
+    })).rejects.toThrow(/not at a list of exact times/);
+  });
+
+  test("fortnightly is accepted, because the company screen offers it", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await scheduleFor(t, company, "weekly");
+    const site = await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: company, url: "shared.com",
+    });
+
+    const fortnightly = JSON.stringify({
+      version: 2, kind: "recurring", cadence: "fortnightly",
+      dayOfWeek: 1, anchorDate: "2026-09-21", timeLocal: "09:00", timezone: "UTC",
+    });
+    await admin.mutation(api.websites.setCompanyWebsiteSchedule, {
+      id: site, refreshIntervalStr: fortnightly, collectionEnabled: true,
+    });
+
+    const detail = await admin.query(api.websites.getCompanyWebsiteById, { id: site });
+    expect(detail?.refreshIntervalStr).toBe(fortnightly);
+    expect(detail?.effective.source).toBe("WEBSITE");
+  });
+
+  test("a legacy interval the guard cannot read is left alone", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t, "Ronins Agency");
+    await scheduleFor(t, company, "weekly");
+    const site = await admin.mutation(api.websites.addCompanyWebsite, {
+      companyId: company, url: "shared.com",
+    });
+
+    // Refusing what it does not understand would break websites that work.
+    await admin.mutation(api.websites.setCompanyWebsiteSchedule, {
+      id: site, refreshIntervalStr: "daily", collectionEnabled: true,
+    });
+    const detail = await admin.query(api.websites.getCompanyWebsiteById, { id: site });
+    expect(detail?.refreshIntervalStr).toBe("daily");
   });
 
   test("a website with no override follows its company, and says so", async () => {
@@ -660,7 +765,7 @@ describe("Deleting a website", () => {
     expect((await allCompanyWebsites(t)).map((row) => row.companyId)).toEqual([acme]);
   });
 
-  test("deleting a company's own site takes its competitors with it", async () => {
+  test("deleting a host takes every hold on it and unpairs what it was compared with", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
@@ -673,9 +778,13 @@ describe("Deleting a website", () => {
     await admin.mutation(api.websites.deleteWebsite, { id: websiteId });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
 
-    // The rival's own record survives — only this company's tracking of it goes.
-    expect(await allCompanyWebsites(t)).toHaveLength(0);
-    expect(await allCompetitors(t)).toHaveLength(0);
+    // The rival's own record survives, and so does this company's decision to
+    // watch it — what goes is the hold on the deleted host, and the pairing
+    // that pointed at it, which would otherwise dangle.
+    const holds = await allCompanyWebsites(t);
+    expect(holds).toHaveLength(1);
+    expect(holds[0].relationship).toBe("TRACKED");
+    expect(holds[0].againstWebsiteId).toBeUndefined();
     const websites = await t.run(async (ctx) => await ctx.db.query("websites").collect());
     expect(websites.map((row) => row.host)).toEqual(["rival.com"]);
   });
@@ -707,7 +816,7 @@ describe("Deleting a website", () => {
     ]);
   });
 
-  test("removing a company's website sweeps its competitors and keeps their records", async () => {
+  test("removing a company's own site leaves what it tracked against it", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
@@ -717,7 +826,13 @@ describe("Deleting a website", () => {
     await admin.mutation(api.websites.removeCompanyWebsite, { id: site });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
 
-    expect(await allCompetitors(t)).toHaveLength(0);
+    /*
+      Only that one hold goes. The tracked site stays on the company's list —
+      removing your own site is not a statement about what else you watch, and
+      guessing otherwise would silently stop collecting something paid for.
+      What it is watched *against* is now gone, so it follows the company.
+    */
+    expect(await allCompetitors(t)).toHaveLength(1);
     expect(await countWebsites(t)).toBe(2);
   });
 
@@ -735,8 +850,9 @@ describe("Deleting a website", () => {
     await admin.mutation(api.companies.deleteCompany, { id: doomed });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
 
-    expect((await allCompanyWebsites(t)).map((row) => row.companyId)).toEqual([survivor]);
-    expect((await allCompetitors(t)).map((row) => row.companyId)).toEqual([survivor]);
+    // Every hold the doomed company had, owned or tracked, goes with it.
+    expect((await allCompanyWebsites(t)).map((row) => row.companyId)).toEqual([survivor, survivor]);
+    expect(await allCompetitors(t)).toHaveLength(1);
     // doomed.com, survivor.com and shared.com — three hosts, because both
     // companies tracked the same rival and that is one record. All three
     // survive the company that held them.
@@ -761,7 +877,7 @@ describe("Who may do any of this", () => {
       .rejects.toThrow("Unauthorized");
     await expect(user.mutation(api.websites.addTrackedCompetitor, { companyWebsiteId: site, url: "x.com" }))
       .rejects.toThrow("Unauthorized");
-    await expect(user.mutation(api.websites.removeTrackedCompetitor, { id: rival }))
+    await expect(user.mutation(api.websites.removeCompanyWebsite, { id: rival }))
       .rejects.toThrow("Unauthorized");
     await expect(user.mutation(api.websites.deleteWebsite, { id: websiteId }))
       .rejects.toThrow("Unauthorized");
@@ -799,7 +915,6 @@ describe("Sweeps do not run away", () => {
     await t.mutation(internal.websitePurge.purgeCompanyWebsitesInternal, { companyId: company });
 
     expect(await allCompanyWebsites(t)).toHaveLength(0);
-    expect(await allCompetitors(t)).toHaveLength(0);
     expect(await countWebsites(t)).toBe(2);
   });
 });

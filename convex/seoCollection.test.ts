@@ -139,12 +139,16 @@ describe("expanding a cycle", () => {
     await seedSchedule(t, company, DAILY);
     const own = await seedWebsite(t, "ourshop.com");
     const rival = await seedWebsite(t, "rival.com");
-    const companyWebsiteId = await seedCompanyWebsite(t, company, own);
+    await seedCompanyWebsite(t, company, own);
+    // The company's own choice to watch it, paired with the site it is compared
+    // with. The host's competition graph is not consulted: a rivalry another
+    // company asserted must not decide what this one buys.
     await t.run(async (ctx) =>
-      await ctx.db.insert("trackedCompetitors", {
-        companyWebsiteId,
+      await ctx.db.insert("companyWebsites", {
         companyId: company,
         websiteId: rival,
+        relationship: "TRACKED",
+        againstWebsiteId: own,
         createdAt: Date.now(),
       }));
     const cycleId = await openCycle(t, company);
@@ -417,11 +421,16 @@ describe("chunking", () => {
 });
 
 describe("asking the AI engines", () => {
+  /*
+    Seeded on the website, not on a company's hold on it. A question belongs to
+    the site, so three clients watching one host share one row and buy one
+    answer between them rather than three identical ones.
+  */
   async function seedPrompt(t: Harness, companyWebsiteId: Id<"companyWebsites">, engines: Array<"chatgpt" | "gemini">) {
     await t.run(async (ctx) => {
       const hold = await ctx.db.get(companyWebsiteId);
-      await ctx.db.insert("trackedPrompts", {
-        companyWebsiteId, companyId: hold!.companyId, websiteId: hold!.websiteId,
+      await ctx.db.insert("websiteQuestions", {
+        websiteId: hold!.websiteId,
         prompt: "best plumber in Leeds", engines, isActive: true, createdAt: Date.now(),
       });
     });
@@ -435,8 +444,9 @@ describe("asking the AI engines", () => {
     const rival = await seedWebsite(t, "rival.com");
     const hold = await seedCompanyWebsite(t, company, own);
     await t.run(async (ctx) =>
-      await ctx.db.insert("trackedCompetitors", {
-        companyWebsiteId: hold, companyId: company, websiteId: rival, createdAt: Date.now(),
+      await ctx.db.insert("companyWebsites", {
+        companyId: company, websiteId: rival,
+        relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now(),
       }));
     await seedPrompt(t, hold, ["chatgpt", "gemini"]);
     const cycleId = await openCycle(t, company);
@@ -474,6 +484,49 @@ describe("asking the AI engines", () => {
     expect(citationLines.filter((line) => line.reused)).toHaveLength(1);
   });
 
+  test("one question on a host is asked for every company holding it", async () => {
+    const t = harness();
+    const site = await seedWebsite(t, "shared.com");
+
+    const first = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, first, DAILY);
+    const firstHold = await seedCompanyWebsite(t, first, site);
+
+    const second = await seedCompany(t, "Northbrook Ltd");
+    await seedSchedule(t, second, DAILY);
+    await seedCompanyWebsite(t, second, site);
+
+    // Added once, against the website. Before this, the second company saw
+    // nothing until somebody typed the same question again on their own hold.
+    await seedPrompt(t, firstHold, ["chatgpt"]);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, second) });
+
+    const citation = (await pulls(t)).filter((row) => row.operationId.startsWith("ai_citation_"));
+    expect(citation).toHaveLength(1);
+  });
+
+  test("two companies on one host buy one answer between them", async () => {
+    const t = harness();
+    const site = await seedWebsite(t, "shared.com");
+
+    const first = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, first, DAILY);
+    const firstHold = await seedCompanyWebsite(t, first, site);
+    const second = await seedCompany(t, "Northbrook Ltd");
+    await seedSchedule(t, second, DAILY);
+    await seedCompanyWebsite(t, second, site);
+    await seedPrompt(t, firstHold, ["chatgpt"]);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, first) });
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, second) });
+
+    // One purchase, read by both. The key is the question, the engine and the
+    // place, so the second cycle joins the first rather than paying again.
+    const citation = (await pulls(t)).filter((row) => row.operationId.startsWith("ai_citation_"));
+    expect(citation).toHaveLength(1);
+  });
+
   test("a paused question is not asked", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");
@@ -481,8 +534,8 @@ describe("asking the AI engines", () => {
     const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
-      await ctx.db.insert("trackedPrompts", {
-        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+      await ctx.db.insert("websiteQuestions", {
+        websiteId: row!.websiteId,
         prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: false, createdAt: Date.now(),
       });
     });
@@ -501,8 +554,8 @@ describe("a refused pull", () => {
     const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
-      await ctx.db.insert("trackedPrompts", {
-        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+      await ctx.db.insert("websiteQuestions", {
+        websiteId: row!.websiteId,
         prompt: "best plumber in Leeds", engines: ["gemini"], isActive: true, createdAt: Date.now(),
       });
     });
@@ -536,8 +589,8 @@ describe("a refused pull", () => {
     const hold = await seedCompanyWebsite(t, company, await seedWebsite(t, "a.com"));
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
-      await ctx.db.insert("trackedPrompts", {
-        companyWebsiteId: hold, companyId: company, websiteId: row!.websiteId,
+      await ctx.db.insert("websiteQuestions", {
+        websiteId: row!.websiteId,
         prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       });
     });

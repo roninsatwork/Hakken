@@ -29,21 +29,42 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
 
-    for (const owner of owners) {
-      await ctx.db.delete(owner._id);
-      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsiteCompetitorsInternal, {
-        companyWebsiteId: owner._id,
-      });
+    for (const owner of owners) await ctx.db.delete(owner._id);
+
+    /*
+      Anything watched *against* the deleted host loses its pairing, not its
+      place on the list.
+
+      The site it was being compared with is gone, so the pairing is meaningless
+      and would dangle at a website id that resolves to nothing. The attachment
+      itself is still something this company chose and pays for, so clearing the
+      pairing is the honest half-measure: it then follows the company schedule,
+      exactly as an unpaired tracked site does.
+    */
+    const paired = await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_against", (q) => q.eq("againstWebsiteId", args.websiteId))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of paired) {
+      await ctx.db.patch(row._id, { againstWebsiteId: undefined });
     }
 
-    const rivals = await ctx.db
-      .query("trackedCompetitors")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+    /*
+      Both directions of the competition graph.
+
+      An edge names two hosts, so deleting one host has to clear the edges it
+      points at *and* the edges pointing at it — otherwise a deleted site stays
+      on somebody else's rival list as an id that resolves to nothing.
+    */
+    const asRival = await ctx.db
+      .query("websiteRivals")
+      .withIndex("by_rival", (q) => q.eq("rivalWebsiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
+    for (const edge of asRival) await ctx.db.delete(edge._id);
 
-    for (const rival of rivals) await ctx.db.delete(rival._id);
-
-    if (owners.length === ENTRY_PURGE_BATCH || rivals.length === ENTRY_PURGE_BATCH) {
+    if (owners.length === ENTRY_PURGE_BATCH
+      || asRival.length === ENTRY_PURGE_BATCH
+      || paired.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteHoldingsInternal, {
         websiteId: args.websiteId,
       });
@@ -52,45 +73,65 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
   },
 });
 
-/** Competitors left behind by a removed company website. */
-export const purgeCompanyWebsiteCompetitorsInternal = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites") },
+/**
+ * The host's own lists, cleared when the host goes.
+ *
+ * Replaces the per-company-website competitor purge. These hang off the
+ * website rather than off anybody's hold on it, so they are the website's to
+ * take with it, and nothing scoped to a company needs clearing separately.
+ */
+export const purgeWebsiteListsInternal = internalMutation({
+  args: { websiteId: v.id("websites") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("trackedCompetitors")
-      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+    const questions = await ctx.db
+      .query("websiteQuestions")
+      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
+    for (const row of questions) await ctx.db.delete(row._id);
 
-    for (const row of rows) await ctx.db.delete(row._id);
+    const keywords = await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of keywords) await ctx.db.delete(row._id);
 
-    if (rows.length === ENTRY_PURGE_BATCH) {
-      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsiteCompetitorsInternal, {
-        companyWebsiteId: args.companyWebsiteId,
+    const rivals = await ctx.db
+      .query("websiteRivals")
+      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of rivals) await ctx.db.delete(row._id);
+
+    if (questions.length === ENTRY_PURGE_BATCH
+      || keywords.length === ENTRY_PURGE_BATCH
+      || rivals.length === ENTRY_PURGE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteListsInternal, {
+        websiteId: args.websiteId,
       });
     }
     return null;
   },
 });
 
-/** A deleted company's websites and competitors. The `websites` rows survive it. */
+/**
+ * A deleted company's holds. The hosts and everything on them survive it.
+ *
+ * Only the holds now. It used to take the company's competitor rows too,
+ * because a rival was a per-client row; rivalry is a fact about a market and
+ * lives on the host, so it outlives whoever was watching — ready for the next
+ * company that attaches, which is the point of the lists having moved.
+ */
 export const purgeCompanyWebsitesInternal = internalMutation({
   args: { companyId: v.id("companies") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const rivals = await ctx.db
-      .query("trackedCompetitors")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .take(ENTRY_PURGE_BATCH);
-    for (const rival of rivals) await ctx.db.delete(rival._id);
-
     const owned = await ctx.db
       .query("companyWebsites")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
       .take(ENTRY_PURGE_BATCH);
     for (const row of owned) await ctx.db.delete(row._id);
 
-    if (rivals.length === ENTRY_PURGE_BATCH || owned.length === ENTRY_PURGE_BATCH) {
+    if (owned.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsitesInternal, {
         companyId: args.companyId,
       });

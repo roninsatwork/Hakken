@@ -56,6 +56,18 @@ export function useScheduleSummary() {
         utcTime,
       });
     }
+    /*
+      Fortnightly had no branch here and fell through to the daily string, so
+      every screen reading this helper announced an every-other-week schedule as
+      a daily one. The SEO cadence picker has offered it since it shipped.
+    */
+    if (draft.cadence === "fortnightly") {
+      return t("scheduleSummary.fortnightly", {
+        day: t(`editor.fields.interval.days.${DAY_KEYS[draft.dayOfWeek] ?? "monday"}`),
+        time: draft.timeLocal,
+        utcTime,
+      });
+    }
     if (draft.cadence === "monthly") {
       return t("scheduleSummary.monthly", {
         day: String(draft.dayOfMonth),

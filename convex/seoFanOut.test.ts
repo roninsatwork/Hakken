@@ -133,8 +133,9 @@ describe("fan-out searches", () => {
       const companyWebsiteId = await ctx.db.insert("companyWebsites", {
         companyId, websiteId, createdAt: Date.now(),
       } as never);
-      await ctx.db.insert("trackedPrompts", {
-        companyWebsiteId, companyId, websiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+      // The question is the host's; this company reads it through its hold.
+      await ctx.db.insert("websiteQuestions", {
+        websiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       } as never);
       await ctx.db.insert("seoKeywordIntents", {
         keyword: "best emergency plumber leeds", intent: "BUYING", judgedAt: Date.now(),

@@ -60,19 +60,6 @@ export const companyWebsiteDetailShape = v.union(v.null(), v.object({
   }),
 }));
 
-/** A competitor tracked against one of a company's websites. */
-export const trackedCompetitorRow = v.object({
-  ...rowShape.trackedCompetitors.fields,
-  _id: v.id("trackedCompetitors"),
-  host: v.string(),
-  displayHost: v.string(),
-});
-
-export const trackedCompetitorPageShape = v.object({
-  data: v.array(trackedCompetitorRow),
-  totalCount: v.number(),
-  totalPages: v.number(),
-});
 
 /**
  * One website in the global list.
@@ -127,6 +114,25 @@ export const websiteDetailShape = v.union(v.null(), v.object({
 
 /** What an add form is told before it saves, so a person sees the key first. */
 export const websitePreviewShape = v.union(
-  v.object({ ok: v.literal(true), host: v.string(), displayHost: v.string(), alreadyKnown: v.boolean() }),
+  v.object({
+    ok: v.literal(true),
+    host: v.string(),
+    displayHost: v.string(),
+    alreadyKnown: v.boolean(),
+    /**
+     * What a company attaching to a known host inherits on the day it does.
+     *
+     * The whole argument for putting the lists on the host: a client attached
+     * to a site Hakken already tracks sees its history, its searches and its
+     * questions immediately, rather than waiting a month for anything worth
+     * showing. Absent when the host is new, because there is nothing to inherit.
+     */
+    inherits: v.optional(v.object({
+      keywords: v.number(),
+      questions: v.number(),
+      rivals: v.number(),
+      weeksOfHistory: v.number(),
+    })),
+  }),
   v.object({ ok: v.literal(false), problem: v.string(), message: v.string() }),
 );

@@ -1,21 +1,23 @@
 import React from "react";
 import type { ReactElement, ReactNode } from "react";
-import { fireEvent, render as renderBase, screen, waitFor, within } from "@testing-library/react";
+import { render as renderBase, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 
 import { ToastProvider } from "@/src/context/ToastContext";
-import WebsiteDetailPage from "./page";
+import WebsiteWatchersPage from "./page";
 
 /**
- * One website, and the delete that reaches across companies.
+ * Who is watching one host.
  *
- * The assertion that matters is that the confirmation names every company and
- * division about to lose the website *before* the button is pressed. A shared
- * record makes this delete unusually far-reaching — one press can strip a
- * competitor out of three clients' divisions — and from a screen showing a
- * single host there is no way to know that unless it is said.
+ * The one page in the product that crosses companies, and the only private
+ * thing in the website record: everything else on it — names, searches,
+ * questions, rivals — is shared with every client attached, deliberately. A
+ * competitor list is a strategy and a client book, so it is not.
+ *
+ * Split out of the old single-page website detail on 2026-09-22, when the
+ * host gained lists of its own and that page became five jobs on one scroll.
  */
 
 const push = vi.fn();
@@ -102,9 +104,7 @@ const website = {
   ],
 };
 
-describe("WebsiteDetailPage", () => {
-  const deleteWebsite = vi.fn();
-
+describe("WebsiteWatchersPage", () => {
   function mockWebsite(row: unknown = website) {
     vi.mocked(useQuery).mockImplementation(((reference: unknown) =>
       convexPath(reference).includes("getWebsiteById") ? row : undefined
@@ -113,18 +113,14 @@ describe("WebsiteDetailPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    deleteWebsite.mockResolvedValue(true);
-    vi.mocked(useMutation).mockImplementation((reference: unknown) =>
-      convexPath(reference).includes("deleteWebsite") ? (deleteWebsite as never) : (vi.fn() as never),
-    );
+    vi.mocked(useMutation).mockImplementation(() => vi.fn() as never);
     mockWebsite();
   });
 
   it("lists every company holding or tracking the host, and says which", async () => {
-    render(<WebsiteDetailPage />);
+    render(<WebsiteWatchersPage />);
 
-    expect(await screen.findByRole("heading", { name: "rival.com" })).toBeInTheDocument();
-    expect(screen.getByText("Ronins Agency")).toBeInTheDocument();
+    expect(await screen.findByText("Ronins Agency")).toBeInTheDocument();
     expect(screen.getByText("Acme Ltd")).toBeInTheDocument();
     // Ronins tracks it against one of their sites; Acme holds it as their own.
     expect(screen.getByText("ourshop.com")).toBeInTheDocument();
@@ -132,78 +128,29 @@ describe("WebsiteDetailPage", () => {
   });
 
   it("shows what each watcher asks for, and when one is not collecting", async () => {
-    render(<WebsiteDetailPage />);
+    render(<WebsiteWatchersPage />);
 
     // Ronins is collecting, so its row reads its schedule back in words.
-    expect(
-      await screen.findByText(/scheduleSummary\.daily/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/scheduleSummary\.daily/)).toBeInTheDocument();
     // Acme is switched off, so it asks for nothing rather than monthly. A
     // paused watcher keeps its interval; the screen must not read it out.
     expect(screen.getByText("paused")).toBeInTheDocument();
     expect(screen.queryByText(/scheduleSummary\.monthly/)).not.toBeInTheDocument();
   });
 
-  it("names everyone who loses the website before the delete happens", async () => {
-    render(<WebsiteDetailPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
-
-    const dialog = await screen.findByRole("dialog", {}, { timeout: 5000 });
-    expect(await screen.findByText("deleteConfirm:rival.com")).toBeInTheDocument();
-    expect(screen.getByText("affectedTitle:2")).toBeInTheDocument();
-    expect(screen.getByText("deleteWarningBody")).toBeInTheDocument();
-
-    // Scoped to the dialog: both names are also in the table behind it, and the
-    // whole point is that they are repeated *inside the confirmation*.
-    expect(within(dialog).getByText("Ronins Agency")).toBeInTheDocument();
-    expect(within(dialog).getByText("Acme Ltd")).toBeInTheDocument();
-    expect(deleteWebsite).not.toHaveBeenCalled();
-  });
-
-  it("deletes on confirmation and returns to the list", async () => {
-    render(<WebsiteDetailPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
-    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ }, { timeout: 5000 });
-    fireEvent.click(confirm[confirm.length - 1]);
-
-    await waitFor(() => {
-      expect(deleteWebsite).toHaveBeenCalledWith({ id: "website_1" });
-    });
-    await waitFor(() => {
-      expect(push).toHaveBeenCalledWith("/admin/websites");
-    });
-  });
-
-  it("stays put and says why when the delete is refused", async () => {
-    deleteWebsite.mockRejectedValue(new Error("Unauthorized"));
-    render(<WebsiteDetailPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
-    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ }, { timeout: 5000 });
-    fireEvent.click(confirm[confirm.length - 1]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Unauthorized|errors\.deleteFailed/)).toBeInTheDocument();
-    });
-    expect(push).not.toHaveBeenCalled();
-  });
-
   it("says so when nobody is watching", async () => {
     mockWebsite({ ...website, nextPullAt: null, watchers: [] });
-    render(<WebsiteDetailPage />);
+    render(<WebsiteWatchersPage />);
 
-    expect((await screen.findAllByText("notFetched")).length).toBeGreaterThan(0);
-    // Twice now, and deliberately: the table's own empty state says it, and so
-    // does the footer, which is what a footer is for. Asserting one would fail
-    // the moment either half did its job.
+    // Twice, and deliberately: the table's own empty state says it, and so does
+    // the footer, which is what a footer is for. Asserting one would fail the
+    // moment either half did its job.
     expect((await screen.findAllByText("noWatchers")).length).toBeGreaterThan(0);
   });
 
   it("says so plainly when the website does not exist", () => {
     mockWebsite(null);
-    render(<WebsiteDetailPage />);
+    render(<WebsiteWatchersPage />);
 
     expect(screen.getByText("notFound")).toBeInTheDocument();
   });

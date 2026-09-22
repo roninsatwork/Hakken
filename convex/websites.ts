@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -15,16 +15,12 @@ import {
   type WebsiteIdentity,
 } from "./websiteIdentity";
 import {
+  assertSeoInterval,
   resolveWebsiteSchedule,
   soonestPull,
   type ResolvedWebsiteSchedule,
 } from "./seoScheduleService";
 import * as websiteShapes from "./utils/websiteShapes";
-import {
-  includesSearchTerm,
-  normalizeSearchTerm,
-  paginateItems,
-} from "./adminQueryService";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -50,9 +46,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
  * every handler here already scopes by company rather than trusting the route.
  */
 
-const ENTRY_PURGE_BATCH = 100;
 const WATCHER_LIMIT = 500;
-const COMPETITOR_LIMIT = 1000;
 /** The most competitors counted per website before the list says "100+". */
 const COMPETITOR_COUNT_LIMIT = 100;
 
@@ -75,14 +69,17 @@ async function websiteByHost(ctx: QueryCtx | MutationCtx, host: string) {
     .first();
 }
 
+/** Enough to say "lots" without reading a whole host's list to say it. */
+const INHERITED_CAP = 200;
+
 /**
  * What an add form is told before anything is written.
  *
  * Echoing the key back is not decoration: pasting a shop's URL and getting
  * `example.com` rather than `shop.example.com` is the only moment someone can
  * notice they are about to track the wrong thing. It also says whether the host
- * is one Hakken already holds, so joining an existing record is visible rather
- * than surprising.
+ * is one Hakken already holds — and, when it is, what the client inherits by
+ * attaching to it, which is the best thing that can happen on this form.
  */
 export const previewWebsiteHost = superAdminQuery({
   args: { url: v.string() },
@@ -98,11 +95,52 @@ export const previewWebsiteHost = superAdminQuery({
     }
 
     const existing = await websiteByHost(ctx, result.host);
+    if (!existing) {
+      return {
+        ok: true as const,
+        host: result.host,
+        displayHost: result.displayHost,
+        alreadyKnown: false,
+      };
+    }
+
+    /*
+      What attaching to a known host gets you, said before you press the button.
+
+      This case used to be a footnote about not fetching twice — true, and the
+      least interesting thing about it. Under the host's own lists it is the
+      best thing that can happen on this form: the client starts with the
+      searches, the questions and the history somebody else already paid for.
+    */
+    const [keywords, questions, rivals, firstDay] = await Promise.all([
+      ctx.db.query("websiteKeywords")
+        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
+      ctx.db.query("websiteQuestions")
+        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
+      ctx.db.query("websiteRivals")
+        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
+      ctx.db.query("seoWebsiteMetrics")
+        .withIndex("by_website_day", (q) => q.eq("websiteId", existing._id))
+        .order("asc").first(),
+    ]);
+
     return {
       ok: true as const,
       host: result.host,
       displayHost: result.displayHost,
-      alreadyKnown: existing !== null,
+      alreadyKnown: true,
+      inherits: {
+        keywords: keywords.length,
+        questions: questions.length,
+        rivals: rivals.length,
+        // From the first day anything was collected, not from first-seen: a
+        // host added and never pulled has no history to inherit.
+        weeksOfHistory: firstDay
+          ? Math.max(0, Math.floor(
+            (Date.now() - Date.parse(`${firstDay.day}T00:00:00Z`)) / (7 * 24 * 60 * 60 * 1000),
+          ))
+          : 0,
+      },
     };
   },
 });
@@ -172,52 +210,49 @@ async function loadWatchers(
   ctx: QueryCtx,
   websiteId: Id<"websites">,
 ): Promise<WatcherFacts[]> {
-  const owners = await ctx.db
+  /*
+    Every company attached to this host, owned or tracked, from one table.
+
+    It read two for a while — holders here, and a competition graph for the
+    rivals — which is how a rivalry one company asserted came to look like
+    another company watching. Whether a company watches this host is written on
+    its own attachment and nowhere else.
+  */
+  const attachments = await ctx.db
     .query("companyWebsites")
     .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
     .take(WATCHER_LIMIT);
 
-  const rivalEntries = await ctx.db
-    .query("trackedCompetitors")
-    .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
-    .take(WATCHER_LIMIT);
-
-  const asOwner = await Promise.all(
-    owners.map(async (companyWebsite) => {
+  const watchers = await Promise.all(
+    attachments.map(async (companyWebsite) => {
       const company = await ctx.db.get(companyWebsite.companyId);
       const schedule = await companySchedule(ctx, companyWebsite.companyId);
+      // Absent reads as owned: every row written before the flag existed was a
+      // company's own website.
+      const isTracked = companyWebsite.relationship === "TRACKED";
+      const against = isTracked && companyWebsite.againstWebsiteId
+        ? await ctx.db.get(companyWebsite.againstWebsiteId)
+        : null;
+
       return {
         key: companyWebsite._id,
         companyWebsite,
         company,
-        relationship: "OWNED" as const,
-        againstHost: null,
+        relationship: isTracked ? ("TRACKED" as const) : ("OWNED" as const),
+        againstHost: against?.displayHost ?? null,
+        /*
+          A tracked site follows the one it is watched against, so the two land
+          on the same day — numbers pulled in different weeks are not a
+          comparison. Its own row carries no override, so this resolves to the
+          company schedule, which is the same thing its parent resolves to
+          unless the parent has one of its own.
+        */
         resolved: resolveWebsiteSchedule(schedule, companyWebsite),
       };
     }),
   );
 
-  const asRival = await Promise.all(
-    rivalEntries.map(async (entry) => {
-      const companyWebsite = await ctx.db.get(entry.companyWebsiteId);
-      if (!companyWebsite) return null;
-      const company = await ctx.db.get(entry.companyId);
-      const parentWebsite = await ctx.db.get(companyWebsite.websiteId);
-      const schedule = await companySchedule(ctx, entry.companyId);
-      return {
-        key: entry._id,
-        companyWebsite,
-        company,
-        relationship: "TRACKED" as const,
-        againstHost: parentWebsite?.displayHost ?? null,
-        // A rival follows the website it is measured against — numbers pulled
-        // in different weeks are not a comparison.
-        resolved: resolveWebsiteSchedule(schedule, companyWebsite),
-      };
-    }),
-  );
-
-  return [...asOwner, ...asRival.filter((row): row is NonNullable<typeof row> => row !== null)];
+  return watchers;
 }
 
 /**
@@ -245,11 +280,24 @@ function deriveFetchRate(watchers: WatcherFacts[]) {
 // Reading — a company's own websites
 // ---------------------------------------------------------------------------
 
-async function countCompetitors(ctx: QueryCtx, companyWebsiteId: Id<"companyWebsites">) {
-  const rows = await ctx.db
-    .query("trackedCompetitors")
-    .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsiteId))
-    .take(COMPETITOR_COUNT_LIMIT + 1);
+/**
+ * How many sites this company watches against one of its own.
+ *
+ * The company's own attachments, not the host's competition graph: the graph
+ * says who competes with whom, which is everybody's to read, and this column is
+ * about what *this* company chose to watch.
+ */
+async function countCompetitors(
+  ctx: QueryCtx,
+  companyId: Id<"companies">,
+  againstWebsiteId: Id<"websites">,
+) {
+  const rows = (await ctx.db
+    .query("companyWebsites")
+    .withIndex("by_company", (q) => q.eq("companyId", companyId))
+    .take(COMPETITOR_COUNT_LIMIT + 1))
+    .filter((row) =>
+      row.relationship === "TRACKED" && row.againstWebsiteId === againstWebsiteId);
 
   return {
     competitorCount: Math.min(rows.length, COMPETITOR_COUNT_LIMIT),
@@ -279,7 +327,7 @@ export const getCompanyWebsites = superAdminQuery({
       page.page.map(async (companyWebsite) => {
         const website = await ctx.db.get(companyWebsite.websiteId);
         const resolved = resolveWebsiteSchedule(schedule, companyWebsite);
-        const counts = await countCompetitors(ctx, companyWebsite._id);
+        const counts = await countCompetitors(ctx, args.companyId, companyWebsite.websiteId);
 
         return {
           ...companyWebsite,
@@ -330,38 +378,6 @@ export const getCompanyWebsiteById = superAdminQuery({
   },
 });
 
-/** The competitors tracked against one of a company's websites. */
-export const getTrackedCompetitors = superAdminQuery({
-  args: {
-    companyWebsiteId: v.id("companyWebsites"),
-    searchTerm: v.optional(v.string()),
-    page: v.number(),
-    pageSize: v.number(),
-  },
-  returns: websiteShapes.trackedCompetitorPageShape,
-  handler: async (ctx, args) => {
-    const entries = await ctx.db
-      .query("trackedCompetitors")
-      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
-      .order("desc")
-      .take(COMPETITOR_LIMIT);
-
-    const joined = await Promise.all(
-      entries.map(async (entry) => {
-        const website = await ctx.db.get(entry.websiteId);
-        return website ? { ...entry, host: website.host, displayHost: website.displayHost } : null;
-      }),
-    );
-
-    const rows = joined.filter((row): row is NonNullable<typeof row> => row !== null);
-    const term = normalizeSearchTerm(args.searchTerm ?? "");
-    const matching = term
-      ? rows.filter((row) => includesSearchTerm(row.displayHost, term) || includesSearchTerm(row.host, term))
-      : rows;
-
-    return paginateItems(matching, args.page, args.pageSize);
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Reading — every website in the system
@@ -457,6 +473,7 @@ export const addCompanyWebsite = superAdminMutation({
     const companyWebsiteId = await ctx.db.insert("companyWebsites", {
       companyId: args.companyId,
       websiteId,
+      relationship: "OWNED",
       createdAt: now,
     });
 
@@ -475,88 +492,101 @@ export const addCompanyWebsite = superAdminMutation({
   },
 });
 
-/** Track a competitor against one of a company's websites. */
 /**
- * Track one website as a competitor of another, whoever asked.
+ * Attach a website to a company as one it watches.
  *
- * Shared by the add form and by accepting a discovered suggestion, so a host
- * that arrived from discovery gets the same identity check, the same shared
- * `websites` record and the same audit entry as one somebody typed.
+ * **This is the company's own list, and it is the only thing that decides what
+ * their collection buys.** For one commit on 2026-09-22 it wrote an edge into
+ * the host's competition graph instead, and the cycle read that graph — so a
+ * rivalry another company asserted spent this company's money. Who competes
+ * with whom is a fact about a market and stays on the host; what I watch is
+ * mine, and it lives on my attachment.
+ *
+ * `againstWebsiteId` is the site of theirs it is watched against, which is what
+ * makes the two collect on the same day: numbers pulled in different weeks are
+ * not a comparison.
+ *
+ * It also records the rivalry on the host, because that much *is* shared
+ * knowledge and costs nothing to know — but nothing reads it to decide a
+ * purchase.
  */
 export async function trackCompetitorCore(
   ctx: MutationCtx,
-  args: { companyWebsiteId: Id<"companyWebsites">; url: string; userId: Id<"users">; via: string },
-): Promise<Id<"trackedCompetitors">> {
-  const companyWebsite = await ctx.db.get(args.companyWebsiteId);
-  if (!companyWebsite) throw appError("NOT_FOUND", "Website not found");
+  args: {
+    companyWebsiteId: Id<"companyWebsites">;
+    url: string;
+    userId: Id<"users">;
+    via: "added" | "discovered";
+  },
+): Promise<Id<"companyWebsites">> {
+  const against = await ctx.db.get(args.companyWebsiteId);
+  if (!against) throw appError("NOT_FOUND", "That website is no longer held by this company.");
 
   const identity = requireHost(args.url);
   const now = Date.now();
+  const { websiteId } = await findOrCreateWebsite(ctx, identity, now);
 
-  // A website cannot be its own competitor. Easy to do by pasting the same
-  // address twice, and meaningless if allowed.
-  const parentWebsite = await ctx.db.get(companyWebsite.websiteId);
-  if (parentWebsite?.host === identity.host) {
-    throw appError("INVALID_INPUT", "A website cannot be its own competitor.");
+  if (websiteId === against.websiteId) {
+    throw appError("INVALID_INPUT", "A website cannot compete with itself.");
   }
 
-  const { websiteId, created } = await findOrCreateWebsite(ctx, identity, now);
-
   const existing = await ctx.db
-    .query("trackedCompetitors")
-    .withIndex("by_parent_website", (q) =>
-      q.eq("companyWebsiteId", args.companyWebsiteId).eq("websiteId", websiteId),
-    )
+    .query("companyWebsites")
+    .withIndex("by_company_website", (q) =>
+      q.eq("companyId", against.companyId).eq("websiteId", websiteId))
     .first();
-  if (existing) throw appError("CONFLICT", "That competitor is already tracked against this website.");
+  if (existing) {
+    throw appError("INVALID_INPUT", "This company already holds that website.");
+  }
 
-  const competitorId = await ctx.db.insert("trackedCompetitors", {
-    companyWebsiteId: args.companyWebsiteId,
-    companyId: companyWebsite.companyId,
+  const attachmentId = await ctx.db.insert("companyWebsites", {
+    companyId: against.companyId,
     websiteId,
+    relationship: "TRACKED",
+    againstWebsiteId: against.websiteId,
     createdAt: now,
   });
 
+  // Shared market knowledge, recorded once. Nothing spends money off it.
+  const edge = await ctx.db
+    .query("websiteRivals")
+    .withIndex("by_website_rival", (q) =>
+      q.eq("websiteId", against.websiteId).eq("rivalWebsiteId", websiteId))
+    .first();
+  if (!edge) {
+    await ctx.db.insert("websiteRivals", {
+      websiteId: against.websiteId,
+      rivalWebsiteId: websiteId,
+      source: args.via === "discovered" ? "DISCOVERED" : "ASSERTED",
+      createdAt: now,
+    });
+  }
+
   await ctx.db.insert("auditLogs", {
     actorId: args.userId,
-    actionType: "ADD_TRACKED_COMPETITOR",
-    entityId: competitorId,
-    entityType: "trackedCompetitors",
-    companyId: companyWebsite.companyId,
-    metadata: JSON.stringify({
-      host: identity.host,
-      against: parentWebsite?.host,
-      websiteCreated: created,
-      // How it got here, so the trail separates a person's own choice from
-      // one accepted off a suggestion list.
-      via: args.via,
-    }),
+    actionType: "ADD_TRACKED_WEBSITE",
+    entityId: attachmentId,
+    entityType: "companyWebsites",
+    companyId: against.companyId,
+    metadata: JSON.stringify({ host: identity.host, via: args.via }),
     timestamp: now,
   });
 
-  return competitorId;
+  return attachmentId;
 }
 
+/** Attach a rival of one of a company's own websites, from an add form. */
 export const addTrackedCompetitor = superAdminMutation({
   args: { companyWebsiteId: v.id("companyWebsites"), url: v.string() },
-  returns: v.id("trackedCompetitors"),
+  returns: v.id("companyWebsites"),
   handler: async (ctx, args) => await trackCompetitorCore(ctx, {
     companyWebsiteId: args.companyWebsiteId,
     url: args.url,
     userId: ctx.userId,
-    via: "typed",
+    via: "added",
   }),
 });
 
-/**
- * This website's own schedule, or absence meaning "follow the company".
- *
- * `refreshIntervalStr` is the same format `schedules.intervalStr` uses and is
- * edited with the same `ScheduleBuilder` control, so there is one schedule
- * vocabulary in the product rather than two. Passing `undefined` clears the
- * override and puts the website back to following — absence is what
- * inheritance is, so clearing is expressed as absence rather than as a null.
- */
 export const setCompanyWebsiteSchedule = superAdminMutation({
   args: {
     id: v.id("companyWebsites"),
@@ -567,6 +597,11 @@ export const setCompanyWebsiteSchedule = superAdminMutation({
   handler: async (ctx, args) => {
     const companyWebsite = await ctx.db.get(args.id);
     if (!companyWebsite) throw appError("NOT_FOUND", "Website not found");
+
+    // Checked here and not only in the screen. This mutation took whatever the
+    // old generic builder produced — including an hourly pull and a list of
+    // exact times, both of which are money on a per-call service.
+    if (args.refreshIntervalStr) assertSeoInterval(args.refreshIntervalStr);
 
     const now = Date.now();
     await ctx.db.patch(args.id, {
@@ -592,43 +627,13 @@ export const setCompanyWebsiteSchedule = superAdminMutation({
   },
 });
 
-/**
- * Stop tracking a competitor against one website.
- *
- * The competitor's `websites` row and its data stay. Another company may still
- * be watching it, and even if nobody is, the data was paid for. Deleting a
- * website outright is a different action on All Websites, worded so the two
- * cannot be confused.
- */
-export const removeTrackedCompetitor = superAdminMutation({
-  args: { id: v.id("trackedCompetitors") },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const entry = await ctx.db.get(args.id);
-    if (!entry) throw appError("NOT_FOUND", "That competitor is not tracked here.");
-
-    const website = await ctx.db.get(entry.websiteId);
-    await ctx.db.delete(args.id);
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "REMOVE_TRACKED_COMPETITOR",
-      entityId: args.id,
-      entityType: "trackedCompetitors",
-      companyId: entry.companyId,
-      metadata: JSON.stringify({ host: website?.host }),
-      timestamp: Date.now(),
-    });
-
-    return true;
-  },
-});
 
 /**
- * Remove one of a company's websites, and the competitors tracked against it.
+ * Remove one of a company's websites.
  *
- * The `websites` rows survive — this company's own and every rival's. What goes
- * is this company's interest in them.
+ * The `websites` row survives, and so does the host's competition graph: who a
+ * site competes with is a fact about the market, not about this company's
+ * interest in it. What goes is only the hold.
  */
 export const removeCompanyWebsite = superAdminMutation({
   args: { id: v.id("companyWebsites") },
@@ -639,9 +644,6 @@ export const removeCompanyWebsite = superAdminMutation({
 
     const website = await ctx.db.get(companyWebsite.websiteId);
     await ctx.db.delete(args.id);
-    await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsiteCompetitorsInternal, {
-      companyWebsiteId: args.id,
-    });
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -705,6 +707,10 @@ export const deleteWebsite = superAdminMutation({
     }));
 
     await ctx.db.delete(args.id);
+    // The host's own lists go with it, as well as everyone's hold on it.
+    await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteListsInternal, {
+      websiteId: args.id,
+    });
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteHoldingsInternal, {
       websiteId: args.id,
     });

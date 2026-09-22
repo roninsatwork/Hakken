@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Select } from "@/src/ui/components/screens/Select";
 import { Field } from "@/src/ui/components/screens/Field";
-import { SegmentedChoice } from "@/src/ui/components/screens/SettingsCard";
 import { cn } from "@/src/ui/lib/utils";
 import type { ScheduleCadence, ScheduleDraft } from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 
@@ -20,15 +19,21 @@ import type { ScheduleCadence, ScheduleDraft } from "@/src/app/(dashboard)/admin
  * cheaper method of DataForSEO does it not."*
  *
  * The shape is the mockup he picked: four cadence cards, then a single line
- * reading "on Monday at 02:00" with the queued-or-live choice at the far end of
- * that same line. The first build of it stacked a labelled dropdown, a labelled
- * time box and a separately headed toggle down the card — *"does the screen
- * even look like B?"* — so the row is deliberately one row, with the connecting
- * words as the labels rather than headings above each box.
+ * reading "on Monday at 02:00". The first build of it stacked a labelled
+ * dropdown, a labelled time box and a separately headed toggle down the card —
+ * *"does the screen even look like B?"* — so the row is deliberately one row,
+ * with the connecting words as the labels rather than headings above each box.
  *
  * The *format* underneath is still the platform's own `ScheduleDraft` — the
  * same serialiser, the same server-side reader, the same dispatcher. Shared
  * vocabulary, narrower choice.
+ *
+ * **Queued or live was a third control here and is gone.** Live turned out to
+ * be four times cheaper than queueing and two of the four engines could never
+ * queue at all, so every engine is now asked live and there is no choice left
+ * to offer. What it wrote — `seoPreferLive` — was read by nothing in the
+ * pipeline, which is the same fault this component was built to correct: a
+ * setting nobody acted on.
  */
 
 const CADENCES: ReadonlyArray<{ value: Extract<ScheduleCadence, "daily" | "weekly" | "fortnightly" | "monthly">; recommended?: boolean }> = [
@@ -55,16 +60,9 @@ function RowWord({ htmlFor, children }: { htmlFor: string; children: string }) {
 type SeoScheduleFieldsProps = {
   draft: ScheduleDraft;
   onChange: (draft: ScheduleDraft) => void;
-  preferLive: boolean;
-  onPreferLiveChange: (preferLive: boolean) => void;
 };
 
-export function SeoScheduleFields({
-  draft,
-  onChange,
-  preferLive,
-  onPreferLiveChange,
-}: SeoScheduleFieldsProps) {
+export function SeoScheduleFields({ draft, onChange }: SeoScheduleFieldsProps) {
   const t = useTranslations("admin.companyDataCollection");
   const tDays = useTranslations("admin.workflows.schedules.editor.fields.interval.days");
 
@@ -109,10 +107,9 @@ export function SeoScheduleFields({
       </div>
 
       {/*
-        One line: on <day> at <time>, and the method at the far end of it. The
-        connecting words are the labels — tied to their box, so clicking one
-        still focuses it — which is what keeps this a sentence rather than a
-        column of headed fields.
+        One line: on <day> at <time>. The connecting words are the labels —
+        tied to their box, so clicking one still focuses it — which is what
+        keeps this a sentence rather than a column of headed fields.
       */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-3 border-t border-border-dim pt-5">
         {needsWeekday ? (
@@ -179,17 +176,6 @@ export function SeoScheduleFields({
           />
         ) : null}
 
-        <div className="ml-auto w-full sm:w-[320px]">
-          <SegmentedChoice
-            label={t("methodLabel")}
-            value={preferLive ? "live" : "queued"}
-            options={[
-              { value: "queued", label: t("methodQueued") },
-              { value: "live", label: t("methodLive") },
-            ]}
-            onChange={(next) => onPreferLiveChange(next === "live")}
-          />
-        </div>
       </div>
     </div>
   );

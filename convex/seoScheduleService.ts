@@ -1,5 +1,56 @@
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import { appError } from "./utils/appError";
 import type { Doc } from "./_generated/dataModel";
+
+/**
+ * The cadences an SEO pull may run at.
+ *
+ * Narrower than the platform's own set on purpose. An hourly pull, or a list of
+ * exact times, is money on a service billed per call and returns numbers that
+ * have not moved — which is why `SeoScheduleFields` offers these four and the
+ * generic workflow builder is not used for this job.
+ */
+const SEO_CADENCES = new Set(["daily", "weekly", "fortnightly", "monthly"]);
+
+/**
+ * Refuse an interval an SEO schedule may not run at.
+ *
+ * **Here rather than only in the control**, because the screen was the only
+ * thing enforcing it and the screen was wrong: the website override was built
+ * on the generic builder until 2026-09-22 and wrote hourly and targeted-time
+ * intervals straight through, which this mutation accepted without looking. A
+ * limit that lives in a form is a limit the next caller does not have.
+ *
+ * Silent about anything it cannot parse. A legacy or hand-written interval is
+ * the schedule system's business, not this one's, and refusing rows it does not
+ * understand would break websites that already work.
+ */
+export function assertSeoInterval(intervalStr: string): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(intervalStr);
+  } catch {
+    return;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return;
+
+  const config = parsed as { version?: unknown; kind?: unknown; cadence?: unknown };
+  if (config.version !== 2) return;
+
+  if (config.kind === "targetedTimes") {
+    throw appError(
+      "INVALID_INPUT",
+      "SEO data is pulled on a cadence, not at a list of exact times.",
+    );
+  }
+  if (config.kind === "recurring" && typeof config.cadence === "string"
+    && !SEO_CADENCES.has(config.cadence)) {
+    throw appError(
+      "INVALID_INPUT",
+      "SEO data can be pulled daily, weekly, fortnightly or monthly.",
+    );
+  }
+}
 
 /**
  * When a website's numbers get pulled, resolved against the schedule it follows.

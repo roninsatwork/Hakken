@@ -59,6 +59,12 @@ describe('Provider Classification Drift', () => {
       'convex/seoCitations.test.ts',
       // The screen whose subject is the engines' answers.
       'src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/citations/page.tsx',
+      // And the screen where the engines are chosen. Naming them is the job:
+      // this is the only place a question's engines are picked, and picking
+      // fewer is the cheapest lever in the feature. The labels are literal keys
+      // rather than a template over the union, because the translation keys are
+      // typed and a template is not one of them.
+      'src/app/(dashboard)/admin/websites/[websiteId]/questions/page.tsx',
       'src/provider-classification-drift.test.ts',
     ]);
 

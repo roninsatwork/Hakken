@@ -106,15 +106,13 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
       + "dismissed one stays dismissed, because both are facts about the "
       + "company's estate. Only the link to the person who decided is cleared.",
   },
-  {
-    table: "trackedPrompts",
-    fields: ["createdBy"],
-    treatment: "DISSOCIATE",
-    reason:
-      "The question stays and keeps answering, because the answers already "
-      + "collected are about a website rather than about whoever typed it. Only "
-      + "the link to the person who added it is cleared.",
-  },
+  /*
+    `trackedPrompts` was listed here until 2026-09-22 and is gone. Questions
+    moved onto the website, and nothing stored on a host may name who is
+    watching it — so there is no `createdBy` left to dissociate. A question is a
+    fact about a site, which is exactly the reason its old entry gave for
+    keeping it, now true of the row itself.
+  */
   {
     table: "seoDataPulls",
     fields: ["requestedBy"],

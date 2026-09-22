@@ -74,6 +74,57 @@ describe("the shared website record stays behind its join rows", () => {
 
     expect(source).toContain("export async function requireCompanyWebsite");
     expect(source).toContain('.query("companyWebsites")');
-    expect(source).toContain('.query("trackedCompetitors")');
+    // Entitlement for a rival runs company → its holds → the competition
+    // graph. It used to read a per-company `trackedCompetitors` row; the graph
+    // names no company, so the company's own holds are what grant a host.
+    expect(source).toContain('.query("websiteRivals")');
+  });
+});
+
+/**
+ * The second rule, which arrived with the host's own lists.
+ *
+ * A host now carries what is asked about it, what it is checked against and who
+ * it competes with, and every company attached to it reads all of that. That is
+ * deliberate — Anthony, 2026-09-22: *"another agency may also want to see my
+ * keywrods and what i do to mak etheir website better. Thats a valid use
+ * case."* It is what the product sells, and it is observable from outside
+ * anyway.
+ *
+ * What must never travel with it is **who is watching**. A client's portfolio
+ * is their strategy and their client book, and it is the one thing in this
+ * model that is genuinely private. So the rule is not "keep the host clean of
+ * company data" — the lists are company data in every ordinary sense. It is
+ * narrower and sharper: nothing stored on a host may name a company.
+ *
+ * Read off the schema rather than the source, because this is a fact about the
+ * shape of the rows. A field added in a hurry is exactly how it would be lost.
+ */
+describe("nothing stored on a host names who is watching it", () => {
+  /** The host's own lists. Each hangs off a `websites` row and nothing else. */
+  const HOST_OWNED_TABLES = ["websiteQuestions", "websiteKeywords", "websiteRivals"];
+
+  /** Anything that would identify a watcher, however it were spelled. */
+  const NAMES_A_WATCHER = /\b(companyId|companyWebsiteId|tenantId|clientId|createdBy|ownerId)\b/;
+
+  const schemaSource = readFileSync(join(CONVEX, "schema.ts"), "utf8");
+
+  test.each(HOST_OWNED_TABLES)("%s carries no company", (table) => {
+    const start = schemaSource.indexOf(`${table}: defineTable({`);
+    expect(start, `${table} is not in the schema. If it was renamed, rename it here too.`)
+      .toBeGreaterThan(-1);
+
+    // The table body ends at its first index declaration, which every one of
+    // them has; taking the whole block would run into the next table.
+    const end = schemaSource.indexOf(".index(", start);
+    const body = schemaSource.slice(start, end > start ? end : start + 2000);
+
+    expect(
+      NAMES_A_WATCHER.test(body),
+      `${table} has a field naming a company. The host's lists are shared with `
+      + "every client attached to it, so a watcher's identity stored beside them "
+      + "is one query away from being read off another client's screen. Who "
+      + "watches whom belongs on companyWebsites.",
+    ).toBe(false);
   });
 });

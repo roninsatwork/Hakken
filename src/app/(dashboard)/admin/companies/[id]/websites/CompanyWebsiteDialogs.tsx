@@ -48,6 +48,7 @@ export function AddCompanyWebsiteDialog({
             savedAs: (host) => t("savedAs", { host }),
             alreadyKnown: t("alreadyKnown"),
             newWebsite: t("newWebsite"),
+            inherits: (counts) => t("inherits", counts),
           }}
         />
 

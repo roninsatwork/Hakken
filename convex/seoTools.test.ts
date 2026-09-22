@@ -54,17 +54,19 @@ describe("reading a website's numbers", () => {
     expect(result.host).toBe("ourshop.com");
   });
 
-  test("a competitor tracked under one of its websites counts as held", async () => {
+  test("a rival of one of its websites counts as held", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");
     const own = await seedWebsite(t, "ourshop.com");
     const rival = await seedWebsite(t, "rival.com");
-    const companyWebsiteId = await hold(t, company, own);
+    await hold(t, company, own);
+    // Entitlement runs company → its holds → the competition graph. The edge
+    // names no company, so holding ourshop.com is what grants rival.com.
     await t.run(async (ctx) =>
-      await ctx.db.insert("trackedCompetitors", {
-        companyWebsiteId,
-        companyId: company,
-        websiteId: rival,
+      await ctx.db.insert("websiteRivals", {
+        websiteId: own,
+        rivalWebsiteId: rival,
+        source: "ASSERTED",
         createdAt: Date.now(),
       }));
 

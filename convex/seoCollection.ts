@@ -12,7 +12,7 @@ import {
 } from "./dataForSeoRegistry";
 import { aiCitationOperationId } from "./seoAiEngines";
 import { findSeoLocation } from "./seoLocations";
-import { MAX_PROMPTS_PER_WEBSITE } from "./seoPrompts";
+import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
 import {
@@ -161,6 +161,14 @@ async function expandPage(
   for (const companyWebsite of websites) {
     lastCursor = companyWebsite._id;
 
+    /*
+      Only the company's own sites drive a cycle. A tracked one is reached
+      below, as a target of the site it is watched against — that is what makes
+      the two land on the same day, and walking it here as well would plan it
+      twice and read its parent's questions against it.
+    */
+    if (companyWebsite.relationship === "TRACKED") continue;
+
     const resolved = resolveWebsiteSchedule(schedule, companyWebsite, now);
     if (!resolved.active) continue;
 
@@ -175,17 +183,32 @@ async function expandPage(
       .first();
     if (lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
 
-    // Bounded rather than collected. A website with more rivals than this is
-    // a plan question, not something one transaction should discover the hard
-    // way at the moment it runs out of room.
-    const competitors = await ctx.db
-      .query("trackedCompetitors")
-      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsite._id))
-      .take(SEO_COMPETITORS_PER_WEBSITE);
+    /*
+      What this company has chosen to watch against this site, and nothing else.
 
-    // A competitor is collected at the rate of the website it is measured
+      It read the host's competition graph for one commit on 2026-09-22, which
+      meant a rivalry another company asserted decided what this one bought.
+      That was wrong: who competes with whom is a fact about a market, and it is
+      on the host for everyone to read; *what I watch* is my own list and it is
+      the only thing that may spend my money. Anthony: *"If someone else adds
+      ronins as competitor I don't care about that, that's up to them in their
+      own company."*
+
+      Bounded rather than collected: a website with more rivals than this is a
+      plan question, not something one transaction should discover the hard way
+      at the moment it runs out of room.
+    */
+    const tracked = (await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_company", (q) => q.eq("companyId", cycle.companyId))
+      .take(SEO_COMPETITORS_PER_WEBSITE))
+      .filter((row) =>
+        row.relationship === "TRACKED"
+        && row.againstWebsiteId === companyWebsite.websiteId);
+
+    // A tracked site is collected at the rate of the one it is measured
     // against. Numbers from different weeks are not a comparison.
-    const targets = [companyWebsite.websiteId, ...competitors.map((row) => row.websiteId)];
+    const targets = [companyWebsite.websiteId, ...tracked.map((row) => row.websiteId)];
 
     // The questions this website asks the AI engines. Planned once per
     // website, not per target: a competitor is named *in* the answer, it is
@@ -292,10 +315,23 @@ async function planCitationPulls(
   companyWebsite: Doc<"companyWebsites">,
   startIndex: number,
 ): Promise<{ planned: number; reused: number }> {
+  /*
+    Read from the host, not from this company's copy of the list.
+
+    `trackedPrompts` held one row per client per question, so three clients
+    watching one host planned three identical purchases and the idempotency key
+    was the only thing collapsing them. The question belongs to the site — which
+    that table's own docstring said while storing the opposite — so the list is
+    the host's and every watcher reads it.
+
+    It still plans per company website rather than per host, because the *place*
+    is the watcher's: the same question asked for Leeds and for London is two
+    different purchases, and that is what the key below carries.
+  */
   const prompts = await ctx.db
-    .query("trackedPrompts")
-    .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsite._id))
-    .filter((q) => q.eq(q.field("isActive"), true))
+    .query("websiteQuestions")
+    .withIndex("by_website_active", (q) =>
+      q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
     .take(MAX_PROMPTS_PER_WEBSITE);
   if (prompts.length === 0) return { planned: 0, reused: 0 };
 

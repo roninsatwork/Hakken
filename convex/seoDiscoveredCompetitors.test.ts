@@ -180,11 +180,18 @@ describe("filing and deciding suggestions", () => {
 
     // The same shared website record and the same audit entry as a typed one,
     // with the trail saying which way it arrived.
-    const competitors = await t.run(async (ctx) => await ctx.db.query("trackedCompetitors").collect());
-    expect(competitors).toHaveLength(1);
+    // It joins the company's own list, exactly as typing the address would.
+    const tracked = await t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect())
+      .filter((row) => row.relationship === "TRACKED"));
+    expect(tracked).toHaveLength(1);
+    // And the rivalry is recorded on the host as observed rather than claimed,
+    // which is the distinction the two sources exist to keep. That record is
+    // market knowledge; it decides no purchase.
+    const edges = await t.run(async (ctx) => await ctx.db.query("websiteRivals").collect());
+    expect(edges[0].source).toBe("DISCOVERED");
     const audit = await t.run(async (ctx) =>
       await ctx.db.query("auditLogs")
-        .filter((q) => q.eq(q.field("actionType"), "ADD_TRACKED_COMPETITOR")).collect());
+        .filter((q) => q.eq(q.field("actionType"), "ADD_TRACKED_WEBSITE")).collect());
     expect(JSON.parse(audit[0].metadata ?? "{}").via).toBe("discovered");
   });
 

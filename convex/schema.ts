@@ -141,10 +141,115 @@ export default defineSchema({
        */
       kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
     }))),
+    /**
+     * What this business does and where it sells, when anyone has said.
+     *
+     * Facts about the site by the same test brand names pass: two companies
+     * watching one host would write down the same answer. They exist so a host
+     * can be handed a sensible starting set of searches and questions instead
+     * of a blank box, which is the whole reason a new client attaching to a
+     * known host is worth anything.
+     */
+    sector: v.optional(v.string()),
+    /** The market as a person reads it — "Yorkshire, United Kingdom". */
+    marketLabel: v.optional(v.string()),
     firstSeenAt: v.number(),
   })
     .index("by_host", ["host"])
     .searchIndex("search_host", { searchField: "displayHost" }),
+
+  /*
+    The three lists below are the host's own, and none of them carries a
+    company.
+
+    That is the point, and it is a reversal. The rule was that anything
+    company-specific lives on the join row; the rule these follow is that
+    anything *true of the website* lives here, and a company attached to the
+    host reads the whole list. Anthony, 2026-09-22, on being asked whether a
+    rival agency seeing a client's searches was acceptable: *"another agency may
+    also want to see my keywrods and what i do to mak etheir website better.
+    Thats a valid use case."* He is right, and it is what Ahrefs and SEMrush
+    sell: what a site is found for is observable by anyone who looks.
+
+    So the tenancy rule changes shape rather than going away. It was "nothing
+    may read a website and walk out to its watchers". It becomes **nothing
+    stored on a host may name who is watching it** — no `companyId`, no
+    `createdBy` company, nothing that would let one client's portfolio be read
+    off another's. Who watches whom stays on `companyWebsites`, which is the
+    only secret in the model.
+
+    Subscription is total and implicit: attach to a host and you get its list.
+    A per-item subscription was designed and dropped — it needs three join
+    tables and an allowance model to go with them, and the canonical list is
+    Hakken's judgment of what is worth asking about that business, which does
+    not differ by who is asking. If a client ever needs less, that is a feature
+    on top, not a shape underneath.
+  */
+
+  /**
+   * A question put to the AI engines about one host.
+   *
+   * Replaces the per-client `trackedPrompts`, whose own docstring already said
+   * the right thing and then stored the opposite: "a question belongs to a
+   * site, not to a client". Three clients watching one host bought three
+   * identical answers; now one list is asked once and every watcher reads it.
+   */
+  websiteQuestions: defineTable({
+    websiteId: v.id("websites"),
+    /** What is actually sent, verbatim. Bounded in length at save. */
+    prompt: v.string(),
+    /** Which engines to ask. Empty is never stored; absent engines are not asked. */
+    engines: v.array(aiEngineValidator),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_website", ["websiteId"])
+    .index("by_website_active", ["websiteId", "isActive"]),
+
+  /**
+   * A search this host should be checked against.
+   *
+   * New: position tracking has written `seoKeywordPositions` since it shipped
+   * and nothing has ever been able to say which searches to check. This is that
+   * list. It is charged one paid task per keyword per cycle *per distinct place
+   * its watchers use* — not per watcher, which is where the saving comes from.
+   *
+   * Stored lowercased and space-collapsed, the same normalisation
+   * `seoKeywordIntents` uses, so one phrase is one row and a judgment made for
+   * one host is reused for the next.
+   */
+  websiteKeywords: defineTable({
+    websiteId: v.id("websites"),
+    keyword: v.string(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_website", ["websiteId"])
+    .index("by_website_keyword", ["websiteId", "keyword"]),
+
+  /**
+   * An edge in the competition graph: this host competes with that one.
+   *
+   * Replaces the per-client `trackedCompetitors`. "Who competes with this
+   * business" is a claim about a market, not about a client, and most of these
+   * edges are derived from what the answers and rankings already show rather
+   * than asserted by anyone.
+   *
+   * Directed, because rivalry is not always mutual: a national brand is a rival
+   * to a local firm more often than the reverse, and collapsing the pair would
+   * lose that. The reverse index exists so "who names this host as a rival" is
+   * one read.
+   */
+  websiteRivals: defineTable({
+    websiteId: v.id("websites"),
+    rivalWebsiteId: v.id("websites"),
+    /** Whether a person put it there or the collected answers did. */
+    source: v.union(v.literal("ASSERTED"), v.literal("DISCOVERED")),
+    createdAt: v.number(),
+  })
+    .index("by_website", ["websiteId"])
+    .index("by_website_rival", ["websiteId", "rivalWebsiteId"])
+    .index("by_rival", ["rivalWebsiteId"]),
 
   /**
    * One of a company's own websites.
@@ -195,12 +300,44 @@ export default defineSchema({
     locationCode: v.optional(v.number()),
     /** The same place as a person reads it — "Leeds, England, United Kingdom". */
     locationLabel: v.optional(v.string()),
+    /**
+     * Whether this company owns the site or is watching somebody else's.
+     *
+     * **A company's own choice, and the only thing that decides what its
+     * collection buys.** Anthony, 2026-09-22: *"we have owned websites and
+     * tracked websites — in a company you set which you own and which you
+     * track... If someone else adds ronins as competitor I don't care about
+     * that, that's up to them in their own company."*
+     *
+     * It briefly was not stored at all. Tracking lived in a `trackedCompetitors`
+     * table, that table became a competition graph on the host, and the cycle
+     * read the graph — so a rivalry one company asserted decided what another
+     * company pulled. That conflated two different things: who competes with
+     * whom is a fact about a market, and what I have chosen to watch is my list.
+     * `websiteRivals` still holds the first and never decides a purchase.
+     *
+     * Absent reads as owned, because every row written before this existed was
+     * a company's own website.
+     */
+    relationship: v.optional(v.union(v.literal("OWNED"), v.literal("TRACKED"))),
+    /**
+     * For a tracked site, which of this company's own it is watched against.
+     *
+     * Why it is worth storing rather than inferring: a rival is collected at
+     * the rate of the site it is compared with, because numbers pulled in
+     * different weeks are not a comparison. It is also what the "tracked
+     * against" column reads, and it records the intent — *I watch this because
+     * of that site of mine* — which nothing else on the row carries.
+     */
+    againstWebsiteId: v.optional(v.id("websites")),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_company", ["companyId"])
     .index("by_website", ["websiteId"])
-    .index("by_company_website", ["companyId", "websiteId"]),
+    .index("by_company_website", ["companyId", "websiteId"])
+    /** So a deleted host can find what was being compared with it. */
+    .index("by_against", ["againstWebsiteId"]),
 
   /**
    * One collection run for one company.
@@ -607,37 +744,6 @@ export default defineSchema({
     .index("by_company", ["companyId"])
     .index("by_company_website_host", ["companyWebsiteId", "host"]),
 
-  /**
-   * The questions we put to the AI engines for one website.
-   *
-   * A prompt belongs to a site rather than to a company: "best plumber in
-   * Leeds" is about one shop, not about an agency that holds four of them.
-   *
-   * **What we buy is the prompt, not the brand.** The answer names everyone it
-   * names, so one purchase serves every tracked site that appears in it. That
-   * is the same trick as one row per host, and it only works because brand
-   * names live on the shared `websites` record rather than here — see
-   * docs/plans/active/brands-places-and-ai-citations-plan.md.
-   */
-  trackedPrompts: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    /** Denormalised so a tenant-scoped list never loads a parent first. */
-    companyId: v.id("companies"),
-    websiteId: v.id("websites"),
-    /** What is actually sent, verbatim. Bounded in length at save. */
-    prompt: v.string(),
-    /** Which engines to ask. Empty is never stored; absent engines are not asked. */
-    engines: v.array(aiEngineValidator),
-    /** Absent follows the company website's own place. */
-    locationCode: v.optional(v.number()),
-    isActive: v.boolean(),
-    createdAt: v.number(),
-    createdBy: v.optional(v.id("users")),
-  })
-    .index("by_company_website", ["companyWebsiteId"])
-    .index("by_company", ["companyId"])
-    .index("by_website", ["websiteId"])
-    .index("by_active", ["isActive"]),
 
   /**
    * A search an AI engine derived from one of our questions before answering.
@@ -761,29 +867,6 @@ export default defineSchema({
     .index("by_website_day", ["mentionedWebsiteId", "day"])
     .index("by_pull", ["pullId"]),
 
-  /**
-   * A competitor, tracked against one of a company's own websites.
-   *
-   * The parent is a `companyWebsites` row rather than a company, because a
-   * rival is only meaningful relative to the site it is being compared with:
-   * the shop's competitors are not the trade arm's. The same rival may be
-   * tracked against several of a company's websites, and against other
-   * companies' — it is one `websites` row throughout, pulled once.
-   *
-   * `companyId` is denormalised so a tenant-scoped list does not have to load
-   * the parent first. That matters more than it looks: when customers manage
-   * their own websites, every one of those queries filters on it.
-   */
-  trackedCompetitors: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    companyId: v.id("companies"),
-    websiteId: v.id("websites"),
-    createdAt: v.number(),
-  })
-    .index("by_company_website", ["companyWebsiteId"])
-    .index("by_company", ["companyId"])
-    .index("by_website", ["websiteId"])
-    .index("by_parent_website", ["companyWebsiteId", "websiteId"]),
 
   systemSettings: defineTable({
     platformName: v.string(),

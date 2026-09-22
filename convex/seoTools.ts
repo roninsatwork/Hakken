@@ -45,6 +45,9 @@ import type { QueryCtx } from "./_generated/server";
  * never queries `websites` first: starting there and filtering afterwards is
  * the shape that leaks, because the filter is one edit away from being dropped.
  */
+/** Bounded: a company with more sites than this has a plan problem, not a query one. */
+const COMPANY_HOLD_LIMIT = 200;
+
 export async function requireCompanyWebsite(
   ctx: QueryCtx,
   companyId: Id<"companies">,
@@ -73,12 +76,28 @@ export async function requireCompanyWebsite(
     .first();
   if (owned) return { websiteId: website._id, host: website.host };
 
-  const tracked = await ctx.db
-    .query("trackedCompetitors")
+  /*
+    Or it is a rival of one of this company's own sites.
+
+    Read company → its holds → the competition graph, which is the direction
+    this file exists to keep. It used to read a `trackedCompetitors` row scoped
+    by company; rivalry is a fact about the market now and lives on the host, so
+    entitlement comes from *which hosts this company holds* rather than from a
+    per-client copy of the rival list.
+  */
+  const holds = await ctx.db
+    .query("companyWebsites")
     .withIndex("by_company", (q) => q.eq("companyId", companyId))
-    .filter((q) => q.eq(q.field("websiteId"), website._id))
-    .first();
-  if (tracked) return { websiteId: website._id, host: website.host };
+    .take(COMPANY_HOLD_LIMIT);
+
+  for (const hold of holds) {
+    const edge = await ctx.db
+      .query("websiteRivals")
+      .withIndex("by_website_rival", (q) =>
+        q.eq("websiteId", hold.websiteId).eq("rivalWebsiteId", website._id))
+      .first();
+    if (edge) return { websiteId: website._id, host: website.host };
+  }
 
   // Same words as "no such website", on purpose. A different message would
   // turn this into a way of asking which hosts the platform knows about.
