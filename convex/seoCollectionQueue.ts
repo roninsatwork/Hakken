@@ -293,7 +293,23 @@ async function recordCollectorCall(
   });
 }
 
-/** One call in words: the operation, and what it asked about. */
+/** Short names for what a call fetched, for the run's timeline. */
+const CALL_NAMES: Record<string, string> = {
+  serp_google_organic: "Google",
+  keyword_search_volume: "search volumes",
+  domain_ranked_keywords: "ranked keywords",
+  domain_competitors: "competitors",
+  backlinks_summary: "links",
+  bulk_backlinks: "link counts",
+  bulk_referring_domains: "linking sites",
+  bulk_ranks: "strength scores",
+};
+
+/**
+ * One call in words — what it fetched, and about what — as the timeline's
+ * label: "Google · web design surrey", "ranked keywords · example.com". An AI
+ * question is named by its engine, read off the operation id.
+ */
 function describeCall(row: Doc<"seoDataPulls">): string {
   let args: Record<string, unknown> = {};
   try {
@@ -301,9 +317,12 @@ function describeCall(row: Doc<"seoDataPulls">): string {
   } catch {
     // An unreadable payload still names its operation.
   }
-  const subject = args.keyword ?? args.user_prompt ?? args.target
+  const what = row.operationId.startsWith("ai_citation_")
+    ? row.operationId.slice("ai_citation_".length)
+    : CALL_NAMES[row.operationId] ?? row.operationId;
+  const about = args.keyword ?? args.user_prompt ?? args.target
     ?? (Array.isArray(args.targets) ? `${args.targets.length} websites` : undefined);
-  return subject ? `${row.operationId}: ${String(subject)}` : row.operationId;
+  return about ? `${what} · ${String(about)}` : what;
 }
 
 /**

@@ -19,6 +19,7 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
 import { ResultsSwitcher } from "../ResultsSwitcher";
+import { RemoveSearchDialog, type SearchToRemove } from "../RemoveSearchDialog";
 
 /**
  * What the AI engines search for when asked this website's questions.
@@ -45,6 +46,7 @@ export default function WebsiteFanOutPage() {
 
   const [buyingUntracked, setBuyingUntracked] = useState(false);
   const [error, setError] = useState("");
+  const [untracking, setUntracking] = useState<SearchToRemove | null>(null);
   // The header's query, shared with the layout that already holds it, for the
   // website whose list "track it" adds to.
   const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
@@ -102,7 +104,7 @@ export default function WebsiteFanOutPage() {
       <DataTable
         rows={queries === undefined ? undefined : queries.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[820px]"
+        minWidthClassName="min-w-[920px]"
         search={{
           value: searchTerm,
           onChange: (value) => {
@@ -162,26 +164,41 @@ export default function WebsiteFanOutPage() {
             header: t("timesColumn"),
             align: "right",
             cell: (row) => (
-              <div className="flex flex-col items-end gap-0.5">
-                <span className="font-mono text-[13px] text-foreground">{row.timesSeen}</span>
-                <span className="text-[11px] text-muted">{row.lastSeenDay}</span>
-              </div>
+              <span className="font-mono text-[13px] text-foreground">{row.timesSeen}</span>
             ),
+          },
+          {
+            // When it was last checked, in its own column on every results
+            // table, so no number is read without its age (Anthony, 2026-09-23).
+            key: "lastChecked",
+            header: t("lastCheckedColumn"),
+            cell: (row) => <span className="text-[12px] text-secondary">{row.lastSeenDay}</span>,
           },
           {
             /*
               "Track it" puts the search on this site's own list, so it is
-              checked from next collection on. Already-tracked says so rather
-              than offering a button that does nothing.
+              checked from next collection on; "Untrack" takes it off again,
+              asked first because the list is shared by everyone watching the
+              site. Always visible: hidden until hover, the column read as
+              empty (Anthony, 2026-09-23).
             */
             key: "track",
             header: t("trackColumn"),
             align: "right",
             cell: (row) => (
-              row.tracked ? (
-                <span className="text-[11px] text-muted">{t("alreadyTracked")}</span>
+              row.trackedKeywordId ? (
+                <RowActions alwaysVisible>
+                  <span className="text-[11px] text-muted">{t("alreadyTracked")}</span>
+                  <Button
+                    variant="quiet"
+                    className="px-2 py-1 text-[11px]"
+                    onClick={() => setUntracking({ keywordId: row.trackedKeywordId!, keyword: row.queryText })}
+                  >
+                    {t("untrack")}
+                  </Button>
+                </RowActions>
               ) : (
-                <RowActions>
+                <RowActions alwaysVisible>
                   <Button
                     variant="accent"
                     className="px-2 py-1 text-[11px]"
@@ -196,6 +213,7 @@ export default function WebsiteFanOutPage() {
           },
         ]}
       />
+      <RemoveSearchDialog target={untracking} onClose={() => setUntracking(null)} />
     </div>
   );
 }

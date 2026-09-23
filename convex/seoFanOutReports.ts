@@ -47,6 +47,8 @@ export const listWebsiteFanOutQueries = superAdminQuery({
       intent: v.union(v.string(), v.null()),
       /** Already on this site's list of searches, so "track it" has nothing to do. */
       tracked: v.boolean(),
+      /** The list entry it matches, for "Untrack"; null when not tracked. */
+      trackedKeywordId: v.union(v.id("websiteKeywords"), v.null()),
     })),
     totalCount: v.number(),
     totalPages: v.number(),
@@ -151,6 +153,7 @@ export const listWebsiteFanOutQueries = superAdminQuery({
         lastSeenDay: row.lastSeenDay,
         intent: intent?.intent ?? null,
         tracked: Boolean(tracked),
+        trackedKeywordId: tracked?._id ?? null,
       };
     }));
 

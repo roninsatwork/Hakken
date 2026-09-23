@@ -1563,7 +1563,10 @@
           "NEVER_RANKED": "Not found"
         },
         "paused": "Paused",
-        "edit": "Add or remove searches on the website record"
+        "edit": "Add searches on the website record",
+        "removeColumn": "Remove",
+        "remove": "Stop checking this search",
+        "lastCheckedColumn": "Last checked"
       },
       "competitors": {
         "title": "Competitors",
@@ -1650,6 +1653,14 @@
         "errors": {
           "failed": "Could not do that. Try again."
         }
+      },
+      "removeSearch": {
+        "title": "Stop checking this search?",
+        "body": "<highlight>{keyword}</highlight> comes off this website's list of searches, for every company watching the site. It won't be checked from the next collection on.",
+        "kept": "Rankings already collected for it are kept. You can add it again at any time.",
+        "confirm": "Stop checking",
+        "removing": "Removing...",
+        "failed": "Could not remove that search. Try again."
       }
     },
     "companyDataCollection": {
@@ -1751,7 +1762,7 @@
       "deleteTitle": "Delete Website",
       "deleteConfirm": "Delete <highlight>{host}</highlight>?",
       "deleteWarningTitle": "This deletes the website and all its SEO data",
-      "deleteWarningBody": "It is also taken off every company below, whether they own it or track it against one of their sites. This cannot be undone.",
+      "deleteWarningBody": "Its searches, questions and brand names go, and so does everything collected about it: rankings, site metrics, AI answer mentions, competitors found and the stored DataForSEO answers. It is also taken off every company below, whether they own it or track it against one of their sites. This cannot be undone.",
       "affectedNone": "No company is using this website.",
       "affectedTitle": "{count, plural, one {Used in 1 place, which will lose it:} other {Used in # places, which will lose it:}}",
       "errors": {
@@ -1789,6 +1800,9 @@
         "sectorPlaceholder": "Branding and design",
         "marketLabel": "Where it sells",
         "marketPlaceholder": "Yorkshire, United Kingdom",
+        "descriptionLabel": "What the business does",
+        "descriptionHint": "A sentence or two: what it sells, and to whom. The AI judgments read this to tell real competitors, directories and relevant searches apart — for this site, and for it wherever it turns up as someone's competitor.",
+        "descriptionPlaceholder": "Digital growth agency: web design, AI products and venture building for UK businesses, mostly in London and Surrey.",
         "save": "Save profile",
         "saved": "Saved",
         "errors": {
@@ -5424,27 +5438,22 @@
       "pullsColumn": "Pulls · 30d"
     },
     "websiteCitations": {
-      "subtitle": "Where this website gets named inside AI answers, and who else was named.",
+      "subtitle": "Whether this website gets named inside AI answers, and how.",
       "title": "Where it is named in AI answers",
-      "searchPlaceholder": "Search by question or by who was named...",
+      "searchPlaceholder": "Search by question...",
       "empty": "No answers collected yet. Add a question on the website, and the next collection will ask it.",
       "noMatch": "Nothing matches that search.",
       "promptColumn": "Question",
       "engineColumn": "Engine",
       "usColumn": "This website",
-      "othersColumn": "Who else was named",
       "waiting": "Waiting for the answer",
       "notNamed": "Not named",
-      "namedAt": "Named {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "misspelled": "Under a misspelling of the name",
-      "nobodyElse": "Nobody else",
-      "more": "+{count} more",
-      "citedAsSource": "Cited as a source",
-      "namedInAnswer": "Named in the answer",
       "couldNotAsk": "Could not be asked",
-      "recommendedAt": "Recommended, {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "warnedAgainst": "Warned against",
-      "chipRecommended": "✓"
+      "named": "Named",
+      "recommended": "Recommended",
+      "lastCheckedColumn": "Last checked"
     },
     "websiteKeywords": {
       "subtitle": "The searches this website ranks for, best position first.",
@@ -5464,7 +5473,8 @@
         "BRANDED": "Looking for this business",
         "IRRELEVANT": "Nothing to do with it",
         "OTHER": "Too vague to tell"
-      }
+      },
+      "lastCheckedColumn": "Last checked"
     },
     "websiteFanOut": {
       "subtitle": "The searches the AI engines run when asked this website's questions.",
@@ -5487,10 +5497,12 @@
       "buyingUntracked": "{count, plural, =0 {No untracked buying searches} one {1 buying search you don't track} other {# buying searches you don't track}}",
       "trackColumn": "Track",
       "track": "Track it",
-      "alreadyTracked": "already tracked",
+      "alreadyTracked": "Tracked",
       "errors": {
         "trackFailed": "Could not track that search. Try again."
-      }
+      },
+      "untrack": "Untrack",
+      "lastCheckedColumn": "Last checked"
     }
   },
   "ai": {

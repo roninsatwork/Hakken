@@ -101,6 +101,13 @@ describe("fan-out searches", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.timesSeen).toBe(2);
     expect(rows[0]!.lastSeenDay).toBe("2026-09-29");
+    // And each appearance kept, dated, for reporting over time — reading the
+    // second answer again does not add a third.
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, {
+      ...common, pullId: second, day: "2026-09-29", queries: ["best emergency plumber leeds"],
+    });
+    const dated = await t.run(async (ctx) => await ctx.db.query("promptFanOutDays").collect());
+    expect(dated.map((row) => row.day).sort()).toEqual(["2026-09-22", "2026-09-29"]);
   });
 
   test("keeps two places apart, because a fan-out is not the same in both", async () => {

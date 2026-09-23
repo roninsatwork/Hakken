@@ -19,10 +19,9 @@ import { ResultsSwitcher } from "../ResultsSwitcher";
 /**
  * Where this website gets named inside AI answers.
  *
- * One row per answer: the question, the engine, the day, whether this site was
- * named and where, and **everyone else who was**. That last column is the
- * reason the feature sells — it names the rivals a client never thought to
- * list, and it costs nothing extra because the answer named them anyway.
+ * One row per answer: the question, the engine, the day, and whether this site
+ * was named and how. Nobody else: this screen is about this website, and other
+ * businesses have their own sections (Anthony, 2026-09-23).
  *
  * Its own page under the website rather than a third table on the site's
  * detail. The detail is settings — competitors, place, questions — and this is
@@ -64,7 +63,7 @@ export default function WebsiteCitationsPage() {
       <DataTable
         rows={citations === undefined ? undefined : citations.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[860px]"
+        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (value) => {
@@ -92,10 +91,7 @@ export default function WebsiteCitationsPage() {
             key: "prompt",
             header: t("promptColumn"),
             cell: (row) => (
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] text-foreground">{row.prompt}</span>
-                <span className="text-[11px] text-muted">{row.day}</span>
-              </div>
+              <span className="text-[13px] text-foreground">{row.prompt}</span>
             ),
           },
           {
@@ -104,6 +100,13 @@ export default function WebsiteCitationsPage() {
             cell: (row) => (
               <span className="text-[12px] text-secondary">{engineLabel(row.engine)}</span>
             ),
+          },
+          {
+            // When it was last checked, in its own column on every results
+            // table, so no number is read without its age (Anthony, 2026-09-23).
+            key: "lastChecked",
+            header: t("lastCheckedColumn"),
+            cell: (row) => <span className="text-[12px] text-secondary">{row.day}</span>,
           },
           {
             key: "us",
@@ -116,7 +119,7 @@ export default function WebsiteCitationsPage() {
                 <StatusPill tone="danger">{t("couldNotAsk")}</StatusPill>
               ) : row.status !== "READY" ? (
                 <StatusPill tone="neutral">{t("waiting")}</StatusPill>
-              ) : row.ourPosition === null ? (
+              ) : !row.named ? (
                 <StatusPill tone="neutral">{t("notNamed")}</StatusPill>
               ) : (
                 <div className="flex flex-col gap-1">
@@ -127,10 +130,10 @@ export default function WebsiteCitationsPage() {
                   */}
                   <StatusPill tone={row.ourStance === "WARNED_AGAINST" ? "danger" : "success"}>
                     {row.ourStance === "RECOMMENDED"
-                      ? t("recommendedAt", { position: row.ourPosition })
+                      ? t("recommended")
                       : row.ourStance === "WARNED_AGAINST"
                         ? t("warnedAgainst")
-                        : t("namedAt", { position: row.ourPosition })}
+                        : t("named")}
                   </StatusPill>
                   {/*
                     A citation under the wrong name is a different fact from
@@ -141,37 +144,6 @@ export default function WebsiteCitationsPage() {
                   ) : null}
                 </div>
               )
-            ),
-          },
-          {
-            key: "others",
-            header: t("othersColumn"),
-            cell: (row) => (
-              <div className="flex max-w-md flex-wrap gap-1">
-                {row.others.length === 0 ? (
-                  <span className="text-[12px] text-muted">{t("nobodyElse")}</span>
-                ) : row.others.slice(0, 8).map((other, index) => (
-                  <span
-                    key={`${other.text}-${index}`}
-                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                      // A name we hold is one somebody is already tracking; a
-                      // name we do not is a rival nobody thought to list.
-                      other.websiteId
-                        ? "border-border-dim bg-foreground/5 text-secondary"
-                        : "border-warning/30 bg-warning/5 text-warning"
-                    }`}
-                    title={other.kind === "SOURCE" ? t("citedAsSource") : t("namedInAnswer")}
-                  >
-                    {other.text}
-                    {other.stance === "RECOMMENDED" ? ` ${t("chipRecommended")}` : ""}
-                  </span>
-                ))}
-                {row.others.length > 8 ? (
-                  <span className="text-[11px] text-muted">
-                    {t("more", { count: row.others.length - 8 })}
-                  </span>
-                ) : null}
-              </div>
             ),
           },
         ]}

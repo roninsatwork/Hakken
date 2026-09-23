@@ -185,6 +185,8 @@ describe("claiming", () => {
     const steps = await t.run(async (ctx) => await ctx.db.query("agentRunSteps").collect());
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({ runId, kind: "TOOL_CALL", status: "SUCCESS", costUsd: 0.024, providerKey: "dataforseo" });
+    // Labelled by what it fetched, about what, so a timeline of calls reads as work.
+    expect(steps[0].input).toBe("links · a.com");
     expect(logs[0].stepId).toBe(steps[0]._id);
   });
 });

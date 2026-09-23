@@ -1563,7 +1563,10 @@
           "NEVER_RANKED": "Non trovato"
         },
         "paused": "In pausa",
-        "edit": "Aggiungi o rimuovi ricerche nella scheda del sito"
+        "edit": "Aggiungi ricerche nella scheda del sito",
+        "removeColumn": "Rimuovi",
+        "remove": "Smetti di controllare questa ricerca",
+        "lastCheckedColumn": "Ultimo controllo"
       },
       "competitors": {
         "title": "Concorrenti",
@@ -1650,6 +1653,14 @@
         "errors": {
           "failed": "Impossibile farlo. Riprova."
         }
+      },
+      "removeSearch": {
+        "title": "Smettere di controllare questa ricerca?",
+        "body": "<highlight>{keyword}</highlight> viene tolta dall'elenco di ricerche di questo sito, per ogni azienda che lo segue. Non verrà più controllata dalla prossima raccolta.",
+        "kept": "I posizionamenti già raccolti restano. Puoi aggiungerla di nuovo in qualsiasi momento.",
+        "confirm": "Smetti di controllare",
+        "removing": "Rimozione in corso...",
+        "failed": "Impossibile rimuovere la ricerca. Riprova."
       }
     },
     "companyDataCollection": {
@@ -1751,7 +1762,7 @@
       "deleteTitle": "Elimina sito web",
       "deleteConfirm": "Eliminare <highlight>{host}</highlight>?",
       "deleteWarningTitle": "Questo elimina il sito web e tutti i suoi dati SEO",
-      "deleteWarningBody": "Viene inoltre rimosso da ogni azienda elencata sotto, sia che lo possieda sia che lo monitori. L'operazione non è reversibile.",
+      "deleteWarningBody": "Vengono eliminate le sue ricerche, domande e nomi del brand, e tutto ciò che è stato raccolto su di esso: posizionamenti, metriche del sito, menzioni nelle risposte AI, concorrenti trovati e le risposte DataForSEO archiviate. Viene anche rimosso da ogni azienda qui sotto, che lo possieda o lo segua come concorrente di uno dei suoi siti. Non si può annullare.",
       "affectedNone": "Nessuna azienda utilizza questo sito web.",
       "affectedTitle": "{count, plural, one {Usato in 1 punto, che lo perderà:} other {Usato in # punti, che lo perderanno:}}",
       "errors": {
@@ -1789,6 +1800,9 @@
         "sectorPlaceholder": "Branding e design",
         "marketLabel": "Dove vende",
         "marketPlaceholder": "Yorkshire, Regno Unito",
+        "descriptionLabel": "Cosa fa l'attività",
+        "descriptionHint": "Una o due frasi: cosa vende e a chi. I giudizi dell'AI lo leggono per distinguere concorrenti reali, directory e ricerche pertinenti — per questo sito, e per lui ovunque compaia come concorrente di qualcuno.",
+        "descriptionPlaceholder": "Agenzia di crescita digitale: siti web, prodotti AI e venture building per aziende del Regno Unito, soprattutto a Londra e nel Surrey.",
         "save": "Salva il profilo",
         "saved": "Salvato",
         "errors": {
@@ -5424,27 +5438,22 @@
       "pullsColumn": "Richieste · 30gg"
     },
     "websiteCitations": {
-      "subtitle": "Dove questo sito viene citato nelle risposte AI, e chi altro è stato citato.",
+      "subtitle": "Se questo sito viene nominato nelle risposte dell'AI, e come.",
       "title": "Dove viene citato nelle risposte dell'IA",
-      "searchPlaceholder": "Cerca per domanda o per chi è stato citato...",
+      "searchPlaceholder": "Cerca per domanda...",
       "empty": "Nessuna risposta raccolta. Aggiungi una domanda al sito e la prossima raccolta la porrà.",
       "noMatch": "Nessun risultato per questa ricerca.",
       "promptColumn": "Domanda",
       "engineColumn": "Motore",
       "usColumn": "Questo sito",
-      "othersColumn": "Chi altro è stato citato",
       "waiting": "In attesa della risposta",
       "notNamed": "Non citato",
-      "namedAt": "Citato al {position}º posto",
       "misspelled": "Con il nome scritto male",
-      "nobodyElse": "Nessun altro",
-      "more": "+{count} altri",
-      "citedAsSource": "Citato come fonte",
-      "namedInAnswer": "Citato nella risposta",
       "couldNotAsk": "Non è stato possibile chiedere",
-      "recommendedAt": "Consigliata, {position}º posto",
       "warnedAgainst": "Sconsigliata",
-      "chipRecommended": "✓"
+      "named": "Nominato",
+      "recommended": "Consigliato",
+      "lastCheckedColumn": "Ultimo controllo"
     },
     "websiteKeywords": {
       "subtitle": "Le ricerche per cui questo sito si posiziona, dalla posizione migliore.",
@@ -5464,7 +5473,8 @@
         "BRANDED": "Cerca questa attività",
         "IRRELEVANT": "Non c'entra",
         "OTHER": "Troppo vaga"
-      }
+      },
+      "lastCheckedColumn": "Ultimo controllo"
     },
     "websiteFanOut": {
       "subtitle": "Le ricerche che i motori AI eseguono quando ricevono le domande di questo sito.",
@@ -5487,10 +5497,12 @@
       "buyingUntracked": "{count, plural, =0 {Nessuna ricerca d'acquisto non monitorata} one {1 ricerca d'acquisto che non monitori} other {# ricerche d'acquisto che non monitori}}",
       "trackColumn": "Monitora",
       "track": "Monitorala",
-      "alreadyTracked": "già monitorata",
+      "alreadyTracked": "Monitorata",
       "errors": {
         "trackFailed": "Impossibile monitorare la ricerca. Riprova."
-      }
+      },
+      "untrack": "Non monitorare più",
+      "lastCheckedColumn": "Ultimo controllo"
     }
   },
   "ai": {

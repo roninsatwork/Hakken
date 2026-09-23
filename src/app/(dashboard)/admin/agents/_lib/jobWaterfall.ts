@@ -78,6 +78,17 @@ export function humaniseToolName(runtimeName: string): string {
 }
 
 /**
+ * Who a fixed-job agent paid for a step, by the key its step records.
+ *
+ * The DataForSEO Collector's calls are not tools an agent was given, so no
+ * tool record names them; the step carries the provider instead, and its own
+ * input already says what the call fetched.
+ */
+export const STEP_PROVIDER_NAMES: Record<string, string> = {
+  dataforseo: "DataForSEO",
+};
+
+/**
  * What a step is, in words. The stored kinds are the runtime's vocabulary and
  * mean nothing to somebody who has not read the runtime.
  *

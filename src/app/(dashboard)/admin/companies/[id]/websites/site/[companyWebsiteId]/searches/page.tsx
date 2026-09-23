@@ -5,25 +5,29 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowRight, ArrowUp, Search } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Search, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { ResultsSwitcher } from "../ResultsSwitcher";
 import { SEARCH_TONE } from "../siteView";
+import { RemoveSearchDialog, type SearchToRemove } from "../RemoveSearchDialog";
 
 /**
  * How this site is doing on the Google searches chosen for it.
  *
- * Read only. The searches are the website's own list, shared by every company
- * watching it, so they are added and removed on the website record; this is
- * where one company sees how its site does on them, from its own place. The
- * rows arrive judged and sorted by what needs attention, dropping first.
+ * The searches are the website's own list, shared by every company watching
+ * it; this is where one company sees how its site does on them, from its own
+ * place. A search can be removed here as well as on the website record
+ * (Anthony, 2026-09-23: "Track it" could add one from the AI searches tab, and
+ * nothing here could take one away). The rows arrive judged and sorted by what
+ * needs attention, dropping first.
  */
 export default function CompanySiteSearchesPage() {
   const t = useTranslations("admin.siteView.searches");
@@ -33,6 +37,7 @@ export default function CompanySiteSearchesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(searchTerm, 400);
+  const [removing, setRemoving] = useState<SearchToRemove | null>(null);
 
   const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
   const rows = useQuery(api.websiteClientView.listTrackedSearches, {
@@ -56,7 +61,7 @@ export default function CompanySiteSearchesPage() {
       <DataTable
         rows={isLoading ? undefined : rows.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[640px]"
+        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (value) => {
@@ -106,6 +111,15 @@ export default function CompanySiteSearchesPage() {
             },
           },
           {
+            // The day Google was last checked for it, so a position is never
+            // read without knowing how old it is (Anthony, 2026-09-23).
+            key: "lastChecked",
+            header: t("lastCheckedColumn"),
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">{row.lastCheckedDay ?? "—"}</span>
+            ),
+          },
+          {
             key: "verdict",
             header: t("verdictColumn"),
             cell: (row) => (
@@ -114,8 +128,25 @@ export default function CompanySiteSearchesPage() {
                 : <StatusPill tone="neutral">{t("paused")}</StatusPill>
             ),
           },
+          {
+            key: "remove",
+            header: t("removeColumn"),
+            align: "right",
+            cell: (row) => (
+              <RowActions alwaysVisible>
+                <RowIconButton
+                  label={t("remove")}
+                  tone="danger"
+                  onClick={() => setRemoving({ keywordId: row._id, keyword: row.keyword })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </RowIconButton>
+              </RowActions>
+            ),
+          },
         ]}
       />
+      <RemoveSearchDialog target={removing} onClose={() => setRemoving(null)} />
 
       {header ? (
         <Link

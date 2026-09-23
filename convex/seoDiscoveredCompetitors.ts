@@ -46,8 +46,23 @@ export const listDiscoveredCompetitors = superAdminQuery({
       .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
       .take(MAX_SUGGESTIONS);
 
+    // Nothing the company already watches, however it came to watch it. Only
+    // a suggestion accepted or dismissed here carries `decidedAt`; a rival
+    // added by hand or from the website record did not, and was offered again
+    // with an Add button (Anthony, 2026-09-23). Its own sites are left out too.
+    const hold = await ctx.db.get(args.companyWebsiteId);
+    const watched = new Set<string>();
+    if (hold) {
+      const holds = await ctx.db
+        .query("companyWebsites")
+        .withIndex("by_company", (q) => q.eq("companyId", hold.companyId))
+        .take(MAX_COMPANY_HOLDS);
+      const sites = await Promise.all(holds.map((row) => ctx.db.get(row.websiteId)));
+      for (const site of sites) if (site) watched.add(site.host);
+    }
+
     const term = normalizeSearchTerm(args.searchTerm ?? "");
-    const undecided = rows.filter((row) => !row.decidedAt);
+    const undecided = rows.filter((row) => !row.decidedAt && !watched.has(row.host));
     const matching = term ? undecided.filter((row) => includesSearchTerm(row.host, term)) : undecided;
 
     // Closest overlap first: the number of searches both sites rank for is
@@ -121,3 +136,6 @@ export const dismissDiscoveredCompetitor = superAdminMutation({
 
 /** Suggestions held per website. Beyond this the tail is noise. */
 const MAX_SUGGESTIONS = 200;
+
+/** A company's holds read to leave out what it already watches: its sites and their rivals. */
+const MAX_COMPANY_HOLDS = 500;

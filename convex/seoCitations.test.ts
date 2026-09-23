@@ -288,11 +288,9 @@ describe("who gets to see it", () => {
     });
 
     expect(listed.data).toHaveLength(1);
-    expect(listed.data[0].ourPosition).toBe(2);
-    // Everyone else, with the rival we hold shown by its host and the domain
-    // nobody tracks kept as it was cited.
-    expect(listed.data[0].others.map((other) => other.text))
-      .toEqual(["Rival Plumbing", "rival.com", "unknown-plumber.co.uk"]);
+    expect(listed.data[0].named).toBe(true);
+    // Only this website: the rival the answer also named is not on the row.
+    expect(listed.data[0]).not.toHaveProperty("others");
   });
 
   test("a company with no hold on the website sees nothing, not somebody else's rivals", async () => {
@@ -356,11 +354,17 @@ describe("judging how an answer treated a business", () => {
     expect(judged.every((row) => row.stance === undefined)).toBe(true);
   });
 
+  /** Answers each one-brand request by the brand it was asked about. */
+  const byBrand = (choices: Record<string, string>) => async (request: { state: unknown }) => {
+    const name = (request.state as { brand: { name: string } }).brand.name;
+    return answered({ "seo.citation-stance": choices[name] ?? "mentioned" });
+  };
+
   test("records a warning as a warning, not as a win", async () => {
     const judged = await judgeStances(
       stubCtx({ "seo.citation-stance": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, prompt: "q", answer: "a", hits: HITS },
-      { ask: async () => answered({ "0": "warned_against", "1": "recommended" }) },
+      { ask: byBrand({ "Ronins Agency": "warned_against", "Rival Plumbing": "recommended" }) as never },
     );
 
     // The whole point of the judgment: an answer saying "avoid them" names the
@@ -373,7 +377,7 @@ describe("judging how an answer treated a business", () => {
     const judged = await judgeStances(
       stubCtx({ "seo.citation-stance": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, prompt: "q", answer: "a", hits: HITS },
-      { ask: async () => answered({ "0": "other", "1": "mentioned" }) },
+      { ask: byBrand({ "Ronins Agency": "other", "Rival Plumbing": "mentioned" }) as never },
     );
 
     // A short brand name matching unrelated prose is the false positive no
@@ -381,17 +385,19 @@ describe("judging how an answer treated a business", () => {
     expect(judged.map((row) => row.text)).toEqual(["Rival Plumbing"]);
   });
 
-  test("asks about each business by name, in one request", async () => {
-    const ask = vi.fn(async () => answered({ "0": "mentioned", "1": "mentioned" }));
+  test("asks about each business on its own", async () => {
+    const ask = vi.fn(byBrand({}));
     await judgeStances(
       stubCtx({ "seo.citation-stance": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, prompt: "q", answer: "a", hits: HITS },
       { ask: ask as never },
     );
 
-    // Independent judgments over the same answer ride together: two businesses
-    // judged, one call paid for.
-    expect(ask).toHaveBeenCalledTimes(1);
+    // One business per request. Asked about several at once, keyed by number,
+    // the live model gave every item the same answer (2026-09-23).
+    expect(ask).toHaveBeenCalledTimes(2);
+    const named = ask.mock.calls.map(([request]) => (request.state as { brand: { name: string } }).brand.name);
+    expect(named.sort()).toEqual(["Rival Plumbing", "Ronins Agency"]);
   });
 
   test("claims nothing when the model could not be asked", async () => {
@@ -444,7 +450,7 @@ describe("linking a cited address to a rival already tracked", () => {
     const linked = await linkCitedAddresses(
       stubCtx({ "seo.same-business": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
-      { ask: async () => scored({ "0": 2 }) },
+      { ask: async () => scored({ "seo.same-business": 2 }) },
     );
 
     // One business, two addresses. Without this it shows as a stranger.
@@ -456,7 +462,7 @@ describe("linking a cited address to a rival already tracked", () => {
     const linked = await linkCitedAddresses(
       stubCtx({ "seo.same-business": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, branded, sources },
-      { ask: async () => scored({ "0": 1 }) },
+      { ask: async () => scored({ "seo.same-business": 1 }) },
     );
 
     // A wrong link quietly merges two rivals into one; an unlinked address is
@@ -465,7 +471,7 @@ describe("linking a cited address to a rival already tracked", () => {
   });
 
   test("never asks about addresses that share nothing", async () => {
-    const ask = vi.fn(async () => scored({ "0": 0 }));
+    const ask = vi.fn(async () => scored({ "seo.same-business": 0 }));
     await linkCitedAddresses(
       stubCtx({ "seo.same-business": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, branded, sources },

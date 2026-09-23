@@ -68,12 +68,12 @@ const CHAT_STATE_NOTE =
  * The SEO judgments (brands, places and AI citations plan).
  *
  * State shape every question reads: `{ question, answer: { text },
- * brand: { name } }` — `question` is what was put to the AI engine,
+ * brand: { name } }`, one brand per request — `question` is what was put to the AI engine,
  * `answer.text` is what it replied, and `brand.name` is the one name found in
  * that reply. The answer reaches the model as state and is stored nowhere.
  */
 const CITATION_STATE_NOTE =
-  "`question` was put to an AI engine and `answer.text` is its reply. `brands` maps each candidate's key to the name of a business found in that reply. Judge only the business whose key matches this question's id.";
+  "`question` was put to an AI engine and `answer.text` is its reply. `brand.name` is the name of one business found in that reply.";
 
 export const DECISIONS: readonly DecisionDefinition[] = [
   {
@@ -88,7 +88,7 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     question: {
       type: "choice",
       instructions: {
-        task: "Decide how the reply treats one named business — the one whose key equals this question's id.",
+        task: "Decide how the reply treats the business named in `brand`.",
         context: CITATION_STATE_NOTE,
         guidance:
           "Judge only how that one business is treated, ignoring every other business in the reply. A business put forward as an answer to the question is recommended, whether it is first in a list or last. A business named only as context, as a source, or in passing is merely mentioned.",
@@ -125,9 +125,9 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     question: {
       type: "choice",
       instructions: {
-        task: "Decide what the person typing this search is trying to do — the search whose key equals this question's id.",
+        task: "Decide what the person typing this search is trying to do.",
         context:
-          "`business` describes the website that ranks for these searches, and is absent when the searches came from an AI engine expanding a question rather than from one site's rankings. `searches` maps each key to one search someone typed. Judge only the search whose key matches this question's id.",
+          "`business` describes the website that ranks for this search, and is absent when the search came from an AI engine expanding a question rather than from one site's rankings. `search.text` is what someone typed.",
         guidance:
           "Judge the searcher's purpose, not the words. Someone ready to buy, book or hire is buying, whether or not the word 'buy' appears. Someone learning about the subject is researching. A search for a business by name, or for one of its own products by name, is branded. With no `business` given, judge the search on its own terms.",
       },
@@ -159,9 +159,9 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     question: {
       type: "choice",
       instructions: {
-        task: "Decide what kind of website this is, relative to the business we are watching — the candidate whose key equals this question's id.",
+        task: "Decide what kind of website the candidate is, relative to the business we are watching.",
         context:
-          "`ours` is the website being watched. `candidates` maps each key to a website that ranks for many of the same searches. Judge only the candidate whose key matches this question's id. Ranking for the same searches is why it is here; it is not evidence that it is a competitor.",
+          "`ours` is the website being watched: its address, and where known what it sells, where, the names it goes by and what it is searched for. `candidate` is a website that ranks for many of the same searches. Ranking for the same searches is why it is here; it is not evidence that it is a competitor.",
         guidance:
           "A competitor sells what our business sells, to the people our business sells to. A site that merely writes about the trade, lists businesses in it, or sells everything, is not a competitor however well it ranks.",
       },
@@ -193,9 +193,9 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     question: {
       type: "score",
       instructions: {
-        task: "Decide whether the two web addresses belong to the same business — the pair whose key equals this question's id.",
+        task: "Decide whether the two web addresses belong to the same business.",
         context:
-          "`pairs` maps each candidate's key to `seen`, an address an AI answer cited, and `tracked`, a website already being watched, with the names it goes by. Judge only the pair whose key matches this question's id.",
+          "`seen` is an address an AI answer cited, and `tracked` is a website already being watched, with the name it goes by.",
         guidance:
           "Businesses often hold several addresses: a country domain and a dot-com, an old name and a new one, a brand and its parent. Two addresses that merely work in the same trade are not the same business.",
       },

@@ -34,8 +34,13 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "seoKeywordPositions", page: 500 },
   { table: "seoWebsiteMetrics", page: 200 },
   { table: "aiCitations", page: 500 },
+  // One row per answer, read by the AI answers screen. Missed at first, which
+  // left every cleared answer still listed with nothing behind it.
+  { table: "aiAnswers", page: 500 },
   { table: "promptFanOutQueries", page: 500 },
+  { table: "promptFanOutDays", page: 500 },
   { table: "discoveredCompetitors", page: 500 },
+  { table: "discoveredCompetitorDays", page: 500 },
   { table: "seoDayRollups", page: 500 },
   { table: "websiteSearchStats", page: 500 },
   { table: "websiteQuestionStats", page: 500 },

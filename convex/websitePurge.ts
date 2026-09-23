@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { purgeHoldMoves } from "./websiteMoves";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -30,7 +31,16 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
 
+    let holdsLeft = false;
     for (const owner of owners) {
+      // What discovery found for this company's hold goes with the hold,
+      // dated history included. A hold is only deleted once both are clear,
+      // so a large list is finished on the next pass rather than orphaned.
+      const cleared = await purgeHoldDiscoveries(ctx, owner._id);
+      if (!cleared) {
+        holdsLeft = true;
+        continue;
+      }
       await purgeHoldMoves(ctx, owner._id);
       await ctx.db.delete(owner._id);
     }
@@ -66,7 +76,8 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       .take(ENTRY_PURGE_BATCH);
     for (const edge of asRival) await ctx.db.delete(edge._id);
 
-    if (owners.length === ENTRY_PURGE_BATCH
+    if (holdsLeft
+      || owners.length === ENTRY_PURGE_BATCH
       || asRival.length === ENTRY_PURGE_BATCH
       || paired.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteHoldingsInternal, {
@@ -76,6 +87,89 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
     return null;
   },
 });
+
+/** A hold's discovered competitors and their dated history; true once none are left. */
+async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<boolean> {
+  const found = await ctx.db
+    .query("discoveredCompetitors")
+    .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .take(ENTRY_PURGE_BATCH);
+  for (const row of found) await ctx.db.delete(row._id);
+  const dated = await ctx.db
+    .query("discoveredCompetitorDays")
+    .withIndex("by_company_website_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .take(ENTRY_PURGE_BATCH);
+  for (const row of dated) await ctx.db.delete(row._id);
+  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH;
+}
+
+/**
+ * Everything collected about the host, cleared when the host goes.
+ *
+ * Anthony, 2026-09-23: deleting a website should take all the data we store
+ * for it. It used to take the record, its lists and everyone's holds, and
+ * leave its rankings, metrics, summaries, AI mentions and DataForSEO answers
+ * behind, pointing at a website that no longer existed. A stored answer can be
+ * half a megabyte, so pulls go a few at a time; everything else in batches.
+ */
+export const purgeWebsiteCollectedDataInternal = internalMutation({
+  args: { websiteId: v.id("websites") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    let more = false;
+
+    const pulls = await ctx.db
+      .query("seoDataPulls")
+      .withIndex("by_website_submitted", (q) => q.eq("websiteId", args.websiteId))
+      .take(PULL_PURGE_BATCH);
+    for (const pull of pulls) {
+      const lines = await ctx.db
+        .query("seoCycleLines")
+        .withIndex("by_pull", (q) => q.eq("pullId", pull._id))
+        .take(ENTRY_PURGE_BATCH);
+      for (const line of lines) await ctx.db.delete(line._id);
+      if (lines.length === ENTRY_PURGE_BATCH) {
+        more = true;
+        continue;
+      }
+      // The AI answer screen's row for it, or the answer stays listed after
+      // the call behind it has gone. One per call; a handful at most.
+      const answers = await ctx.db
+        .query("aiAnswers")
+        .withIndex("by_pull", (q) => q.eq("pullId", pull._id))
+        .take(ENTRY_PURGE_BATCH);
+      for (const answer of answers) await ctx.db.delete(answer._id);
+      await ctx.db.delete(pull._id);
+    }
+    if (pulls.length === PULL_PURGE_BATCH) more = true;
+
+    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> }>) => {
+      for (const row of rows) await ctx.db.delete(row._id);
+      if (rows.length === ENTRY_PURGE_BATCH) more = true;
+    };
+    await byWebsite(await ctx.db.query("seoKeywordPositions")
+      .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("seoWebsiteMetrics")
+      .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("websiteSearchStats")
+      .withIndex("by_website_place", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("websiteQuestionStats")
+      .withIndex("by_website_place", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // Its mentions in AI answers, wherever they were asked.
+    await byWebsite(await ctx.db.query("aiCitations")
+      .withIndex("by_website_day", (q) => q.eq("mentionedWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+
+    if (more) {
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteCollectedDataInternal, {
+        websiteId: args.websiteId,
+      });
+    }
+    return null;
+  },
+});
+
+/** DataForSEO calls removed per pass: a stored answer can be half a megabyte. */
+const PULL_PURGE_BATCH = 16;
 
 /**
  * The host's own lists, cleared when the host goes.

@@ -29,6 +29,7 @@ import {
   buildWaterfall,
   describeToolCallSubject,
   humaniseToolName,
+  STEP_PROVIDER_NAMES,
   summariseWaterfall,
   type WaterfallRow,
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
@@ -152,13 +153,21 @@ export function AgentJobDetailContent({
       nameByRuntimeName.set(toolCall.normalizedToolName, name);
     }
 
-    const steps = detail.steps.map((step) => ({
-      ...step,
-      toolName: nameByStepId.get(step._id)
-        ?? (step.input ? nameByRuntimeName.get(step.input.trim()) : undefined)
-        ?? (step.kind === "TOOL_RESULT" && step.input ? humaniseToolName(step.input) : undefined),
-      toolSubject: subjectByStepId.get(step._id),
-    }));
+    const steps = detail.steps.map((step) => {
+      // A fixed-job agent's call names its provider on the step, and its own
+      // input says what it fetched — there is no tool record to read.
+      const provider = step.kind === "TOOL_CALL" && step.providerKey && !nameByStepId.has(step._id)
+        ? STEP_PROVIDER_NAMES[step.providerKey] ?? step.providerKey
+        : undefined;
+      return {
+        ...step,
+        toolName: provider
+          ?? nameByStepId.get(step._id)
+          ?? (step.input ? nameByRuntimeName.get(step.input.trim()) : undefined)
+          ?? (step.kind === "TOOL_RESULT" && step.input ? humaniseToolName(step.input) : undefined),
+        toolSubject: subjectByStepId.get(step._id) ?? (provider ? step.input : undefined),
+      };
+    });
 
     return buildWaterfall(steps, {
       runStartedAt: detail.run.startedAt,

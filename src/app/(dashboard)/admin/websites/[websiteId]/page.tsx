@@ -9,7 +9,7 @@ import { Building2, Share2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Field } from "@/src/ui/components/screens/Field";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { BrandNames } from "./BrandNames";
@@ -36,6 +36,7 @@ export default function WebsiteProfilePage() {
 
   const [sector, setSector] = useState("");
   const [marketLabel, setMarketLabel] = useState("");
+  const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [isSaved, setIsSaved] = useState(false);
 
@@ -45,11 +46,12 @@ export default function WebsiteProfilePage() {
   const [seenKey, setSeenKey] = useState<string | null>(null);
   const savedKey = website === undefined
     ? null
-    : `${website?.sector ?? ""}|${website?.marketLabel ?? ""}`;
+    : `${website?.sector ?? ""}|${website?.marketLabel ?? ""}|${website?.businessDescription ?? ""}`;
   if (savedKey !== null && savedKey !== seenKey) {
     setSeenKey(savedKey);
     setSector(website?.sector ?? "");
     setMarketLabel(website?.marketLabel ?? "");
+    setDescription(website?.businessDescription ?? "");
   }
 
   if (website === undefined) {
@@ -70,6 +72,7 @@ export default function WebsiteProfilePage() {
         // able to say so, and a wrong one is worse than none.
         sector: sector.trim().length > 0 ? sector : null,
         marketLabel: marketLabel.trim().length > 0 ? marketLabel : null,
+        description: description.trim().length > 0 ? description : null,
       }),
       { suppressErrorToast: true, fallbackMessage: tProfile("errors.saveFailed") },
     );
@@ -116,6 +119,24 @@ export default function WebsiteProfilePage() {
             }}
           />
         </div>
+
+        {/* Anthony, 2026-09-23: the AI judgments were guessing a business's
+            trade from its web address. A sentence here is handed to every one
+            of them — for this site, and for it wherever it turns up as
+            somebody else's competitor. */}
+        <TextAreaField
+          id="website-description"
+          label={tProfile("descriptionLabel")}
+          hint={tProfile("descriptionHint")}
+          rows={3}
+          maxLength={600}
+          value={description}
+          placeholder={tProfile("descriptionPlaceholder")}
+          onChange={(event) => {
+            setDescription(event.target.value);
+            setIsSaved(false);
+          }}
+        />
 
         <SaveError>{error}</SaveError>
 

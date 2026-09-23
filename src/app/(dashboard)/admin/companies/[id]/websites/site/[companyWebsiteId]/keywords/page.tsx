@@ -66,7 +66,7 @@ export default function WebsiteKeywordsPage() {
       <DataTable
         rows={keywords === undefined ? undefined : keywords.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[760px]"
+        minWidthClassName="min-w-[860px]"
         search={{
           value: searchTerm,
           onChange: (value) => {
@@ -94,10 +94,7 @@ export default function WebsiteKeywordsPage() {
             key: "keyword",
             header: t("keywordColumn"),
             cell: (row) => (
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] text-foreground">{row.keyword}</span>
-                <span className="text-[11px] text-muted">{row.day}</span>
-              </div>
+              <span className="text-[13px] text-foreground">{row.keyword}</span>
             ),
           },
           {
@@ -126,6 +123,13 @@ export default function WebsiteKeywordsPage() {
                 {row.position === null ? "—" : row.position}
               </span>
             ),
+          },
+          {
+            // When it was last checked, in its own column on every results
+            // table, so no number is read without its age (Anthony, 2026-09-23).
+            key: "lastChecked",
+            header: t("lastCheckedColumn"),
+            cell: (row) => <span className="text-[12px] text-secondary">{row.day}</span>,
           },
           {
             key: "volume",

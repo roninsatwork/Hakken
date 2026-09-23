@@ -766,6 +766,57 @@ describe("Deleting a website", () => {
     expect((await allCompanyWebsites(t)).map((row) => row.companyId)).toEqual([acme]);
   });
 
+  test("takes everything collected about it too, and nothing about any other site", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t);
+    const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "gone.com" });
+    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "kept.com" });
+    const [gone, kept] = await t.run(async (ctx) => {
+      const rows = await ctx.db.query("websites").collect();
+      return [rows.find((row) => row.host === "gone.com")!._id, rows.find((row) => row.host === "kept.com")!._id];
+    });
+
+    // A little of every kind of collected data, for both sites.
+    await t.run(async (ctx) => {
+      for (const websiteId of [gone, kept]) {
+        const pullId = await ctx.db.insert("seoDataPulls", {
+          operationId: "backlinks_summary", family: "Backlinks", mode: "LIVE", websiteId, taskArgsJson: "{}",
+          status: "READY", tag: `t-${websiteId}`, attempts: 0, costUsd: 0.02, sandbox: false, submittedAt: Date.now(),
+          resultJson: "{}",
+        } as never);
+        const cycleId = await ctx.db.insert("seoCollectionCycles", {
+          companyId: company, trigger: "MANUAL", status: "DONE", plannedCount: 1, reusedCount: 0,
+          sentCount: 1, readyCount: 1, failedCount: 0, totalCostUsd: 0.02, startedAt: Date.now(),
+        });
+        await ctx.db.insert("seoCycleLines", { cycleId, companyId: company, websiteId, operationId: "backlinks_summary", pullId, reused: false, createdAt: Date.now() });
+        await ctx.db.insert("seoKeywordPositions", { websiteId, keyword: "web design", day: "2026-09-23", position: 3, locationCode: 2826, pullId, createdAt: Date.now() });
+        await ctx.db.insert("seoWebsiteMetrics", { websiteId, day: "2026-09-23", operationId: "backlinks_summary", pullId, metricsJson: "{}", createdAt: Date.now() });
+        await ctx.db.insert("aiCitations", { prompt: "q", engine: "chatgpt", day: "2026-09-23", pullId, kind: "BRAND", mentionedWebsiteId: websiteId, mentionedText: "x", position: 1, createdAt: Date.now() } as never);
+        await ctx.db.insert("aiAnswers", { prompt: `q-${websiteId}`, engine: "chatgpt", locationCode: 2826, day: "2026-09-23", pullId, named: [websiteId], recommended: [], warnedAgainst: [], createdAt: Date.now() });
+      }
+      await ctx.db.insert("discoveredCompetitors", { companyWebsiteId: site, companyId: company, host: "rival.com", intersections: 5, discoveredAt: Date.now() });
+    });
+
+    const websiteId = gone;
+    await admin.mutation(api.websites.deleteWebsite, { id: websiteId });
+    await finishScheduled(t);
+
+    const left = await t.run(async (ctx) => ({
+      pulls: (await ctx.db.query("seoDataPulls").collect()).map((row) => row.websiteId),
+      lines: (await ctx.db.query("seoCycleLines").collect()).map((row) => row.websiteId),
+      positions: (await ctx.db.query("seoKeywordPositions").collect()).map((row) => row.websiteId),
+      metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).map((row) => row.websiteId),
+      citations: (await ctx.db.query("aiCitations").collect()).map((row) => row.mentionedWebsiteId),
+      discovered: (await ctx.db.query("discoveredCompetitors").collect()).length,
+      answers: (await ctx.db.query("aiAnswers").collect()).map((row) => row.prompt),
+    }));
+    expect(left).toEqual({
+      pulls: [kept], lines: [kept], positions: [kept], metrics: [kept], citations: [kept], discovered: 0,
+      answers: [`q-${kept}`],
+    });
+  });
+
   test("deleting a host takes every hold on it and unpairs what it was compared with", async () => {
     const t = harness();
     const admin = await superAdmin(t);

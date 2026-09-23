@@ -166,10 +166,28 @@ export const parseSeoResult = internalAction({
         const found = parseDomainCompetitors(JSON.parse(pull.resultJson))
           .filter((row) => row.host !== pull.target)
           .slice(0, MAX_DISCOVERED);
+        const ours = await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
+          websiteId: pull.websiteId as Id<"websites">,
+        });
+        // Competitors the platform already holds, described by an admin, are
+        // judged on what they sell rather than on their address alone.
+        const held = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+          hosts: found.map((row) => row.host),
+        });
+        const described = await ctx.runQuery(internal.websiteCanonical.describeWebsitesForJudging, {
+          websiteIds: held.map((row) => row.websiteId),
+        });
+        const hostById = new Map(held.map((row) => [row.websiteId, row.host]));
+        const knownCandidates = Object.fromEntries(described.map((row) => [
+          hostById.get(row.websiteId)!,
+          { ...(row.sector ? { sector: row.sector } : {}), ...(row.does ? { does: row.does } : {}) },
+        ]));
         const judged = await judgeCompetitors(ctx, {
           ...(pull.companyId ? { companyId: pull.companyId } : {}),
           pullId: args.pullId,
           ourHost: pull.target ?? "",
+          ours,
+          knownCandidates,
           found,
         });
         await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
@@ -258,6 +276,9 @@ export const parseSeoResult = internalAction({
         ...(pull.companyId ? { companyId: pull.companyId } : {}),
         pullId: args.pullId,
         host: pull.target ?? "",
+        business: await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
+          websiteId: pull.websiteId as Id<"websites">,
+        }),
         keywords: positions.map((entry) => entry.keyword),
       });
     } catch (error) {
@@ -469,6 +490,24 @@ export const writeFanOutQueries = internalMutation({
     for (const queryText of args.queries.slice(0, MAX_FAN_OUT_QUERIES)) {
       const query = normaliseKeyword(queryText);
       if (!query) continue;
+
+      // The dated record, for reporting over time. Once per answer: reading
+      // the same answer twice is still one appearance.
+      const alreadyDated = await ctx.db
+        .query("promptFanOutDays")
+        .withIndex("by_pull_query", (q) => q.eq("pullId", args.pullId).eq("query", query))
+        .first();
+      if (!alreadyDated) {
+        await ctx.db.insert("promptFanOutDays", {
+          prompt: args.prompt,
+          engine: args.engine,
+          ...(args.place !== undefined ? { place: args.place } : {}),
+          query,
+          day: args.day,
+          pullId: args.pullId,
+          createdAt: now,
+        });
+      }
 
       const existing = await ctx.db
         .query("promptFanOutQueries")
@@ -747,6 +786,8 @@ export const writeDiscoveredCompetitors = internalMutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     await ctx.db.patch(args.pullId, { error: undefined });
+    const pull = await ctx.db.get(args.pullId);
+    const day = new Date(pull?.completedAt ?? now).toISOString().slice(0, 10);
 
     // One pull, many holders: the website is shared, so everyone watching it
     // gets the suggestions from the one purchase.
@@ -762,6 +803,32 @@ export const writeDiscoveredCompetitors = internalMutation({
           .withIndex("by_company_website_host", (q) =>
             q.eq("companyWebsiteId", hold._id).eq("host", row.host))
           .unique();
+
+        // The day's figures, kept whatever the suggestion's state, for
+        // reporting over time — the suggestion row itself is overwritten.
+        const dated = {
+          intersections: row.intersections,
+          ...(row.averagePosition !== undefined ? { averagePosition: row.averagePosition } : {}),
+          ...(row.estimatedTraffic !== undefined ? { estimatedTraffic: row.estimatedTraffic } : {}),
+          ...(row.kind ? { kind: row.kind } : {}),
+          pullId: args.pullId,
+        };
+        const sameDay = await ctx.db
+          .query("discoveredCompetitorDays")
+          .withIndex("by_company_website_host_day", (q) =>
+            q.eq("companyWebsiteId", hold._id).eq("host", row.host).eq("day", day))
+          .first();
+        if (sameDay) await ctx.db.patch(sameDay._id, dated);
+        else {
+          await ctx.db.insert("discoveredCompetitorDays", {
+            companyWebsiteId: hold._id,
+            companyId: hold.companyId,
+            host: row.host,
+            day,
+            createdAt: now,
+            ...dated,
+          });
+        }
 
         if (existing?.decidedAt) continue;
 

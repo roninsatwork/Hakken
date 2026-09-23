@@ -1,20 +1,27 @@
 "use client";
 
 import { lazy, Suspense, useState, type FormEvent } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Globe, Plus } from "lucide-react";
+import { Globe, Plus, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
+
+const loadDeleteDialog = () => import("./[websiteId]/DeleteWebsiteDialog");
+const DeleteWebsiteDialog = lazy(() =>
+  loadDeleteDialog().then((module) => ({ default: module.DeleteWebsiteDialog })),
+);
 
 const loadAddDialog = () => import("./AddWebsiteDialog");
 const AddWebsiteDialog = lazy(() =>
@@ -37,8 +44,19 @@ export default function AllWebsitesPage() {
   const t = useTranslations("admin.websites");
   const router = useRouter();
 
+  const tDetail = useTranslations("admin.websiteDetail");
   const createWebsite = useMutation(api.websites.createWebsite);
+  const deleteWebsite = useMutation(api.websites.deleteWebsite);
   const action = useAdminAction({ scope: "admin-websites" });
+
+  // Deleting from the list, as from the record: the same confirmation, naming
+  // every company that loses the site. Anthony, 2026-09-23: "I need to be able
+  // to delete from this list too." Its watchers are loaded only once a row's
+  // bin is pressed, so the list itself reads nothing extra.
+  const [deleting, setDeleting] = useState<{ id: Id<"websites">; host: string } | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteDialogActivated, setDeleteDialogActivated] = useState(false);
+  const deletingRecord = useQuery(api.websites.getWebsiteById, deleting ? { id: deleting.id } : "skip");
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
@@ -78,6 +96,24 @@ export default function AllWebsitesPage() {
     } else {
       setSubmitError(outcome.message);
     }
+  };
+
+  const handleOpenDelete = (id: Id<"websites">, host: string) => {
+    void loadDeleteDialog();
+    setDeleteDialogActivated(true);
+    setDeleteError("");
+    setDeleting({ id, host });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteError("");
+    const outcome = await action.run(() => deleteWebsite({ id: deleting.id }), {
+      suppressErrorToast: true,
+      fallbackMessage: tDetail("errors.deleteFailed"),
+    });
+    if (outcome.ok) setDeleting(null);
+    else setDeleteError(outcome.message);
   };
 
   return (
@@ -181,8 +217,48 @@ export default function AllWebsitesPage() {
               <span className="text-[12px] text-secondary">{formatDate(website.firstSeenAt)}</span>
             ),
           },
+          {
+            key: "actions",
+            header: t("actionsColumn"),
+            align: "right",
+            // Always shown rather than on hover, which is how the kit's
+            // RowActions hides its buttons: Anthony looked for it and could
+            // not see it.
+            cell: (website) => (
+              <div className="flex justify-end">
+                <RowIconButton
+                  label={tDetail("deleteWebsite")}
+                  tone="danger"
+                  onClick={() => handleOpenDelete(website._id, website.displayHost)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </RowIconButton>
+              </div>
+            ),
+          },
         ]}
       />
+
+      {deleteDialogActivated ? (
+        <Suspense fallback={null}>
+          <DeleteWebsiteDialog
+            host={deleting?.host ?? null}
+            affected={(deletingRecord?.watchers ?? []).map((watcher) => ({
+              companyName: watcher.companyName,
+              detail: watcher.againstHost
+                ? tDetail("lostAsCompetitorOf", { host: watcher.againstHost })
+                : tDetail("lostAsTheirOwn"),
+            }))}
+            onClose={() => {
+              setDeleting(null);
+              setDeleteError("");
+            }}
+            onConfirm={confirmDelete}
+            isSubmitting={action.isBusy()}
+            error={deleteError}
+          />
+        </Suspense>
+      ) : null}
 
       {dialogActivated ? (
         <Suspense fallback={null}>

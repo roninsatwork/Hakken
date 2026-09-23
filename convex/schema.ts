@@ -145,6 +145,8 @@ export default defineSchema({
     sector: v.optional(v.string()),
     /** The market as a person reads it — "Yorkshire, United Kingdom". */
     marketLabel: v.optional(v.string()),
+    /** What the business does, in a sentence or two, written by an admin so the AI judgments know the trade. */
+    businessDescription: v.optional(v.string()),
     firstSeenAt: v.number(),
   })
     .index("by_host", ["host"])
@@ -905,6 +907,43 @@ export default defineSchema({
   })
     .index("by_prompt", ["prompt"])
     .index("by_prompt_engine_place_query", ["prompt", "engine", "place", "query"]),
+
+  /**
+   * The same searches, dated: one row each time an answer ran one, for
+   * reporting over time. `promptFanOutQueries` keeps only the running total and
+   * the last day, which cannot draw a trend. (Anthony, 2026-09-23: paying users
+   * get date-based reporting, as in Ahrefs and Semrush.)
+   */
+  promptFanOutDays: defineTable({
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    place: v.optional(v.string()),
+    query: v.string(),
+    day: v.string(),
+    pullId: v.id("seoDataPulls"),
+    createdAt: v.number(),
+  })
+    .index("by_prompt_day", ["prompt", "day"])
+    .index("by_pull_query", ["pullId", "query"]),
+
+  /**
+   * A discovered competitor's figures on one day, per company site. The
+   * suggestion row is overwritten each collection; this keeps each day's.
+   */
+  discoveredCompetitorDays: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    host: v.string(),
+    day: v.string(),
+    intersections: v.number(),
+    averagePosition: v.optional(v.number()),
+    estimatedTraffic: v.optional(v.number()),
+    kind: v.optional(v.union(v.literal("COMPETITOR"), v.literal("DIRECTORY"), v.literal("PUBLISHER"), v.literal("SUPPLIER"), v.literal("OTHER"))),
+    pullId: v.id("seoDataPulls"),
+    createdAt: v.number(),
+  })
+    .index("by_company_website_day", ["companyWebsiteId", "day"])
+    .index("by_company_website_host_day", ["companyWebsiteId", "host", "day"]),
 
   /**
    * One name, in one AI answer, to one question, on one day.

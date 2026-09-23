@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 
+import { internalQuery } from "./_generated/server";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
@@ -25,6 +26,9 @@ import type { MutationCtx } from "./_generated/server";
  * lists are shared across every client watching a host, so an edit is an edit
  * for all of them, and the audit trail matters more than the convenience.
  */
+
+/** What the business does: room for two or three sentences, and no more. */
+const MAX_BUSINESS_DESCRIPTION = 600;
 
 /** A generous ceiling, not a plan allowance. The allowance question is deferred. */
 const MAX_CANONICAL_ROWS = 1_000;
@@ -526,6 +530,8 @@ export const setWebsiteProfile = superAdminMutation({
     websiteId: v.id("websites"),
     sector: v.union(v.string(), v.null()),
     marketLabel: v.union(v.string(), v.null()),
+    /** Optional so a caller that predates it leaves the description alone. */
+    description: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -542,7 +548,16 @@ export const setWebsiteProfile = superAdminMutation({
 
     const sector = trim(args.sector);
     const marketLabel = trim(args.marketLabel);
-    await ctx.db.patch(args.websiteId, { sector, marketLabel });
+    // A sentence or two, not an essay: every judgment about this site carries it.
+    let businessDescription = website.businessDescription;
+    if (args.description !== undefined) {
+      const read = (args.description ?? "").replace(/\s+/g, " ").trim();
+      if (read.length > MAX_BUSINESS_DESCRIPTION) {
+        throw appError("INVALID_INPUT", `Keep what the business does to ${MAX_BUSINESS_DESCRIPTION} characters.`);
+      }
+      businessDescription = read.length > 0 ? read : undefined;
+    }
+    await ctx.db.patch(args.websiteId, { sector, marketLabel, businessDescription });
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -550,10 +565,84 @@ export const setWebsiteProfile = superAdminMutation({
       entityId: args.websiteId,
       entityType: "websites",
       // Shared like the names are, so an edit is readable afterwards.
-      metadata: JSON.stringify({ host: website.host, sector, marketLabel }),
+      metadata: JSON.stringify({ host: website.host, sector, marketLabel, businessDescription }),
       timestamp: Date.now(),
     });
 
     return null;
+  },
+});
+
+/* ------------------------------------------------------- for judging rivals */
+
+/** Searches named to the judge: enough to show the trade, few enough to stay a hint. */
+const SEARCHES_FOR_JUDGING = 10;
+
+/**
+ * What a website's business does, for a judgment about its competitors.
+ *
+ * From its own record when it has one. A tracked rival rarely does — its
+ * sector is nobody's to fill in — so it borrows the profile of the site it is
+ * compared with, which is in the same trade by definition.
+ */
+export const describeBusinessForJudging = internalQuery({
+  args: { websiteId: v.id("websites") },
+  returns: v.union(v.null(), v.object({
+    sector: v.optional(v.string()),
+    market: v.optional(v.string()),
+    does: v.optional(v.string()),
+    names: v.array(v.string()),
+    searches: v.array(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    let website = await ctx.db.get(args.websiteId);
+    if (!website) return null;
+    if (!website.sector && !website.businessDescription) {
+      const pairing = (await ctx.db
+        .query("companyWebsites")
+        .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+        .take(20))
+        .find((hold) => hold.againstWebsiteId);
+      const pairedWith = pairing?.againstWebsiteId ? await ctx.db.get(pairing.againstWebsiteId) : null;
+      if (pairedWith?.sector || pairedWith?.businessDescription) website = pairedWith;
+    }
+    const searches = await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_website_active", (q) => q.eq("websiteId", website._id).eq("isActive", true))
+      .take(SEARCHES_FOR_JUDGING);
+    return {
+      ...(website.sector ? { sector: website.sector } : {}),
+      ...(website.marketLabel ? { market: website.marketLabel } : {}),
+      ...(website.businessDescription ? { does: website.businessDescription } : {}),
+      names: (website.brandNames ?? []).map((entry) => entry.name),
+      searches: searches.map((row) => row.keyword),
+    };
+  },
+});
+
+/**
+ * What each of these websites does, where an admin has written it down —
+ * so a discovered competitor the platform already knows is judged on what it
+ * sells, not on its address alone. Ids only: the caller resolved them.
+ */
+export const describeWebsitesForJudging = internalQuery({
+  args: { websiteIds: v.array(v.id("websites")) },
+  returns: v.array(v.object({
+    websiteId: v.id("websites"),
+    sector: v.optional(v.string()),
+    does: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const described = [];
+    for (const websiteId of args.websiteIds.slice(0, 200)) {
+      const website = await ctx.db.get(websiteId);
+      if (!website || (!website.sector && !website.businessDescription)) continue;
+      described.push({
+        websiteId,
+        ...(website.sector ? { sector: website.sector } : {}),
+        ...(website.businessDescription ? { does: website.businessDescription } : {}),
+      });
+    }
+    return described;
   },
 });

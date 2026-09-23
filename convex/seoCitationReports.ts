@@ -5,14 +5,14 @@ import { aiEngineValidator, answerPlace } from "./seoAiEngines";
 import { includesSearchTerm, normalizeSearchTerm } from "./adminQueryService";
 import { appError } from "./utils/appError";
 import { pairedOwnedHold } from "./utils/websitePairing";
-import type { Id } from "./_generated/dataModel";
 
 /**
  * What the AI engines said, for one of a company's websites.
  *
- * One row per answer: the question, the engine, the day, whether this website
- * was named and where, and everyone else who was. The last column is the
- * reason the feature sells.
+ * One row per answer: the question, the engine, the day, and whether this
+ * website was named and how. Only this website: other businesses in the answer
+ * have their own sections (Anthony, 2026-09-23 — "this is about the website
+ * only, not anyone else"), so the answer's other names are not returned here.
  *
  * **Paged by answer, and read only for the page.** It used to read the
  * company's last five hundred cycle lines, then every AI pull they pointed at,
@@ -29,17 +29,6 @@ import type { Id } from "./_generated/dataModel";
  * one thing that never appears.
  */
 
-const namedShape = v.object({
-  text: v.string(),
-  websiteId: v.union(v.id("websites"), v.null()),
-  /** Set for a brand match; absent for a cited source. */
-  variantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
-  kind: v.union(v.literal("BRAND"), v.literal("SOURCE")),
-  stance: v.optional(v.union(
-    v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
-  )),
-});
-
 export const listCompanyWebsiteCitations = superAdminQuery({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
@@ -53,15 +42,17 @@ export const listCompanyWebsiteCitations = superAdminQuery({
       prompt: v.string(),
       engine: aiEngineValidator,
       day: v.string(),
-      /** Where this website was named, from 1, or null when it was not. */
-      ourPosition: v.union(v.number(), v.null()),
+      /**
+       * Whether the answer named this website. No place in the answer: the
+       * stored order counts only businesses we know by name, so it read
+       * "2nd" where the answer listed seven firms and this one last.
+       */
+      named: v.boolean(),
       ourVariantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
       /** How the answer treated this website, when it was judged. */
       ourStance: v.optional(v.union(
         v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
       )),
-      /** Everyone else the answer named or cited, in order. */
-      others: v.array(namedShape),
       status: v.string(),
     })),
     totalCount: v.number(),
@@ -99,28 +90,9 @@ export const listCompanyWebsiteCitations = superAdminQuery({
 
     let totalCount: number;
     if (term) {
-      // A search reads the names the answers put forward, from the websites
-      // they matched — each looked up once, however many answers named it.
-      const hosts = new Map<Id<"websites">, string>();
-      const hostOf = async (websiteId: Id<"websites">) => {
-        if (!hosts.has(websiteId)) hosts.set(websiteId, (await ctx.db.get(websiteId))?.displayHost ?? "");
-        return hosts.get(websiteId)!;
-      };
-      const kept = [];
-      for (const answer of answers) {
-        if (includesSearchTerm(answer.prompt, term)) {
-          kept.push(answer);
-          continue;
-        }
-        for (const websiteId of answer.named) {
-          if (includesSearchTerm(await hostOf(websiteId), term)) {
-            kept.push(answer);
-            break;
-          }
-        }
-      }
-      answers = kept;
-      totalCount = kept.length;
+      // By question only: the screen names nobody but this website.
+      answers = answers.filter((answer) => includesSearchTerm(answer.prompt, term));
+      totalCount = answers.length;
     } else {
       // The whole count, from the summaries rather than from reading every
       // answer: each question's summary already knows how often it was asked.
@@ -152,31 +124,14 @@ export const listCompanyWebsiteCitations = superAdminQuery({
       const ours = mentions.find((row) =>
         row.kind === "BRAND" && row.mentionedWebsiteId === companyWebsite.websiteId);
 
-      const others = [];
-      const seen = new Set<string>();
-      for (const row of mentions) {
-        if (row.mentionedWebsiteId === companyWebsite.websiteId) continue;
-        const key = `${row.kind}:${row.mentionedText.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        others.push({
-          text: row.mentionedText,
-          ...(row.stance ? { stance: row.stance } : {}),
-          websiteId: row.mentionedWebsiteId ?? null,
-          ...(row.variantKind ? { variantKind: row.variantKind } : {}),
-          kind: row.kind,
-        });
-      }
-
       return {
         _id: answer.pullId,
         prompt: answer.prompt,
         engine: answer.engine,
         day: answer.day,
-        ourPosition: ours?.position ?? null,
+        named: ours !== undefined,
         ...(ours?.variantKind ? { ourVariantKind: ours.variantKind } : {}),
         ...(ours?.stance ? { ourStance: ours.stance } : {}),
-        others,
         status: pull?.status ?? "READY",
       };
     }));

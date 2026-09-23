@@ -260,11 +260,16 @@ export function TableEmptyRow({ colSpan, icon, label, action }: AdminTableEmptyR
 
 type AdminRowActionsProps = {
   children: ReactNode;
+  /**
+   * Shown all the time instead of on hover. For a column whose whole job is
+   * the action — "Track it" — where a hidden button reads as an empty cell.
+   */
+  alwaysVisible?: boolean;
 };
 
-export function RowActions({ children }: AdminRowActionsProps) {
+export function RowActions({ children, alwaysVisible = false }: AdminRowActionsProps) {
   return (
-    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className={`flex items-center justify-end gap-2 ${alwaysVisible ? "" : "opacity-0 group-hover:opacity-100 transition-opacity"}`}>
       {children}
     </div>
   );

@@ -670,6 +670,11 @@ export const deleteWebsite = superAdminMutation({
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteHoldingsInternal, {
       websiteId: args.id,
     });
+    // And everything collected about it: rankings, metrics, summaries, AI
+    // mentions and the DataForSEO answers themselves.
+    await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteCollectedDataInternal, {
+      websiteId: args.id,
+    });
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,

@@ -84,6 +84,12 @@ describe("judging what a discovered website is", () => {
     return { runQuery, runMutation } as unknown as ActionCtx;
   }
 
+  /** Answers each single-website request by the candidate it was asked about. */
+  const byCandidate = (choices: Record<string, string>) => async (request: { state: unknown }) => {
+    const address = (request.state as { candidate: { address: string } }).candidate.address;
+    return chose({ "seo.real-competitor": choices[address] ?? "other" });
+  };
+
   const chose = (choices: Record<string, string>): TypesafeAskResult => ({
     model: "jev-latest",
     answers: Object.fromEntries(Object.entries(choices).map(([id, choice]) => [
@@ -96,7 +102,7 @@ describe("judging what a discovered website is", () => {
     const judged = await judgeCompetitors(
       stubCtx({ "seo.real-competitor": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, ourHost: "ourshop.com", found },
-      { ask: async () => chose({ "0": "competitor", "1": "directory" }) },
+      { ask: byCandidate({ "rival.com": "competitor", "yell.com": "directory" }) as never },
     );
 
     // The directory has three times the overlap and is not a competitor. This
@@ -105,11 +111,35 @@ describe("judging what a discovered website is", () => {
     expect(judged[1]).toMatchObject({ host: "yell.com", kind: "DIRECTORY" });
   });
 
+  test("the judge is told what the business sells, not just two web addresses", async () => {
+    let sentState: Record<string, unknown> | undefined;
+    await judgeCompetitors(
+      stubCtx({ "seo.real-competitor": "ACT" }),
+      {
+        pullId: "p1" as Id<"seoDataPulls">,
+        ourHost: "ourshop.com",
+        ours: { sector: "Digital agency", market: "London, England", names: ["Our Shop"], searches: ["web design surrey"] },
+        found,
+      },
+      { ask: (async (request: { state: unknown }) => { sentState = request.state as Record<string, unknown>; return chose({ "seo.real-competitor": "competitor" }); }) as never },
+    );
+
+    // With only two addresses to go on it answered "other, not sure" for 186
+    // of 196 on the first live run, 2026-09-23.
+    expect(sentState?.ours).toEqual({
+      address: "ourshop.com",
+      sells: "Digital agency",
+      market: "London, England",
+      knownAs: ["Our Shop"],
+      searchedFor: ["web design surrey"],
+    });
+  });
+
   test("keeps everything, labelled, rather than hiding what is not a rival", async () => {
     const judged = await judgeCompetitors(
       stubCtx({ "seo.real-competitor": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, ourHost: "ourshop.com", found },
-      { ask: async () => chose({ "0": "publisher", "1": "directory" }) },
+      { ask: byCandidate({ "rival.com": "publisher", "yell.com": "directory" }) as never },
     );
 
     // Being outranked by a directory is still worth knowing.
@@ -128,14 +158,18 @@ describe("judging what a discovered website is", () => {
     expect(judged.every((row) => row.kind === undefined)).toBe(true);
   });
 
-  test("asks about the whole batch in one request", async () => {
-    const ask = vi.fn(async () => chose({ "0": "competitor", "1": "competitor" }));
+  test("asks about each website on its own", async () => {
+    // Asked about many at once, the live model gave every one the same answer
+    // (2026-09-23). One request per website, each with only that website in it.
+    const ask = vi.fn(byCandidate({}));
     await judgeCompetitors(
       stubCtx({ "seo.real-competitor": "ACT" }),
       { pullId: "p1" as Id<"seoDataPulls">, ourHost: "ourshop.com", found },
       { ask: ask as never },
     );
-    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask).toHaveBeenCalledTimes(2);
+    const asked = ask.mock.calls.map(([request]) => (request.state as { candidate: { address: string } }).candidate.address);
+    expect(asked.sort()).toEqual(["rival.com", "yell.com"]);
   });
 });
 
@@ -160,6 +194,14 @@ describe("filing and deciding suggestions", () => {
     // Closest overlap first, and the directory is on the list, labelled.
     expect(listed.data.map((row) => [row.host, row.kind]))
       .toEqual([["yell.com", "DIRECTORY"], ["rival.com", "COMPETITOR"]]);
+    // Each day's figures kept too, one row per competitor per day, however
+    // often that day's result is filed.
+    await t.mutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+      pullId: world.pullId, websiteId: world.websiteId, found,
+    });
+    const dated = await t.run(async (ctx) => await ctx.db.query("discoveredCompetitorDays").collect());
+    expect(dated.map((row) => [row.host, row.intersections]).sort())
+      .toEqual([["rival.com", 412], ["yell.com", 1200]]);
   });
 
   test("tracking one adds it exactly as typing it in would", async () => {
@@ -195,6 +237,25 @@ describe("filing and deciding suggestions", () => {
     expect(JSON.parse(audit[0].metadata ?? "{}").via).toBe("discovered");
   });
 
+  test("a rival already tracked another way is not suggested again", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const world = await seedWorld(t);
+    await t.mutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+      pullId: world.pullId, websiteId: world.websiteId, found,
+    });
+    // Typed in by hand, not accepted from the list, so the suggestion row
+    // itself was never marked decided.
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, {
+      companyWebsiteId: world.hold, url: "rival.com",
+    });
+
+    const listed = await admin.query(api.seoDiscoveredCompetitors.listDiscoveredCompetitors, {
+      companyWebsiteId: world.hold, ...firstPage,
+    });
+    expect(listed.data.map((row) => row.host)).toEqual(["yell.com"]);
+  });
+
   test("a dismissal survives the next discovery run", async () => {
     const t = harness();
     const admin = await superAdmin(t);
@@ -219,5 +280,52 @@ describe("filing and deciding suggestions", () => {
       companyWebsiteId: world.hold, ...firstPage,
     });
     expect(after.data.map((row) => row.host)).toEqual(["rival.com"]);
+  });
+});
+
+describe("what the judge is told about the business", () => {
+  test("its own profile, or the one of the site it is compared with", async () => {
+    const t = harness();
+    const { own, rival } = await t.run(async (ctx) => {
+      const own = await ctx.db.insert("websites", {
+        host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
+        sector: "Digital agency", marketLabel: "London, England",
+        brandNames: [{ name: "Our Shop", isPrimary: true }],
+      });
+      await ctx.db.insert("websiteKeywords", { websiteId: own, keyword: "web design surrey", isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteKeywords", { websiteId: own, keyword: "paused one", isActive: false, createdAt: Date.now() });
+      const rival = await ctx.db.insert("websites", { host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() });
+      await ctx.db.insert("companyWebsites", { companyId, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now() });
+      return { own, rival };
+    });
+
+    const expected = { sector: "Digital agency", market: "London, England", names: ["Our Shop"], searches: ["web design surrey"] };
+    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId: own })).toEqual(expected);
+    // A tracked rival has no profile of its own; it is in the same trade as
+    // the site it is compared with, so it borrows that one.
+    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId: rival })).toEqual(expected);
+  });
+
+  test("an admin's description of what the business does is saved and handed to the judge", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const websiteId = await t.run(async (ctx) => await ctx.db.insert("websites", {
+      host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
+    }));
+
+    await admin.mutation(api.websiteCanonical.setWebsiteProfile, {
+      websiteId, sector: "Digital agency", marketLabel: null,
+      description: "  Web design and AI products   for UK businesses. ",
+    });
+    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId }))
+      .toMatchObject({ sector: "Digital agency", does: "Web design and AI products for UK businesses." });
+    expect(await t.query(internal.websiteCanonical.describeWebsitesForJudging, { websiteIds: [websiteId] }))
+      .toEqual([{ websiteId, sector: "Digital agency", does: "Web design and AI products for UK businesses." }]);
+
+    // Saving the profile without the field leaves the description alone.
+    await admin.mutation(api.websiteCanonical.setWebsiteProfile, { websiteId, sector: "Digital agency", marketLabel: "London" });
+    expect((await t.run(async (ctx) => await ctx.db.get(websiteId)))?.businessDescription)
+      .toBe("Web design and AI products for UK businesses.");
   });
 });

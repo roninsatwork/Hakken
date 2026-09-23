@@ -81,6 +81,7 @@ const unwatchedHost = {
 
 describe("AllWebsitesPage", () => {
   const createWebsite = vi.fn();
+  const deleteWebsite = vi.fn();
 
   function mockRows(results: unknown[]) {
     vi.mocked(usePaginatedQuery).mockReturnValue({
@@ -95,8 +96,11 @@ describe("AllWebsitesPage", () => {
     vi.clearAllMocks();
     createWebsite.mockResolvedValue({ websiteId: "website_3", created: true });
 
+    deleteWebsite.mockResolvedValue(null);
     vi.mocked(useMutation).mockImplementation((reference: unknown) =>
-      convexPath(reference).includes("createWebsite") ? (createWebsite as never) : (vi.fn() as never),
+      convexPath(reference).includes("createWebsite") ? (createWebsite as never)
+        : convexPath(reference).includes("deleteWebsite") ? (deleteWebsite as never)
+          : (vi.fn() as never),
     );
     vi.mocked(useQuery).mockImplementation(((reference: unknown) =>
       convexPath(reference).includes("previewWebsiteHost")
@@ -139,6 +143,22 @@ describe("AllWebsitesPage", () => {
 
     fireEvent.click(await screen.findByText("rival.com"));
     expect(push).toHaveBeenCalledWith("/admin/websites/website_1");
+  });
+
+  it("deletes a website from its row, after the same confirmation as its record", async () => {
+    render(<AllWebsitesPage />);
+
+    const bins = await screen.findAllByRole("button", { name: "deleteWebsite" });
+    fireEvent.click(bins[1]);
+    // The confirmation names the site, and nothing is deleted until it is confirmed.
+    expect(await screen.findByText("deleteTitle", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(deleteWebsite).not.toHaveBeenCalled();
+    // Pressing the bin does not also open the record behind it.
+    expect(push).not.toHaveBeenCalled();
+
+    const confirm = screen.getAllByRole("button", { name: "deleteWebsite" }).at(-1)!;
+    fireEvent.click(confirm);
+    await waitFor(() => expect(deleteWebsite).toHaveBeenCalledWith({ id: "website_2" }));
   });
 
   it("adds a host and goes straight to it", async () => {

@@ -4,7 +4,8 @@ import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FileText, Globe, MessageSquare, Search, Swords, Trash2, Users } from "lucide-react";
+import { ArrowLeft, FileText, Globe, MessageSquare, Search, Swords, Trash2, Users } from "lucide-react";
+import Link from "next/link";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -96,9 +97,19 @@ export default function WebsiteRecordLayout({ children }: { children: ReactNode 
             : t("notFetched")
         }
         actions={
-          <PagePrimaryAction icon={<Trash2 className="h-4 w-4" />} onClick={handleOpenDelete}>
-            {t("deleteWebsite")}
-          </PagePrimaryAction>
+          <>
+            <PagePrimaryAction icon={<Trash2 className="h-4 w-4" />} onClick={handleOpenDelete}>
+              {t("deleteWebsite")}
+            </PagePrimaryAction>
+            {/* The way back to the list, as the Companies section has one. */}
+            <Link
+              href="/admin/websites"
+              className="flex items-center gap-2 rounded-[10px] border border-border-dim/50 bg-foreground/5 px-5 py-2 text-[13px] font-medium text-foreground transition-all hover:bg-foreground/10"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {t("back")}
+            </Link>
+          </>
         }
       >
         {children}

@@ -53,6 +53,12 @@ const chose = (choices: Record<string, string>): TypesafeAskResult => ({
   usage: { inputTokens: 60, outputTokens: 6 },
 });
 
+/** Answers each one-search request by the search it was asked about. */
+const bySearch = (choices: Record<string, string>) => async (request: { state: unknown }) => {
+  const text = (request.state as { search: { text: string } }).search.text;
+  return chose({ "seo.keyword-intent": choices[text] ?? "other" });
+};
+
 describe("one phrase, one row", () => {
   test("differently typed spellings of one search are one phrase", () => {
     // Otherwise the same question is bought twice for the same meaning.
@@ -66,7 +72,7 @@ describe("judging what people mean", () => {
     await judgeNewKeywords(
       stubCtx({ "seo.keyword-intent": "ACT" }, t),
       { pullId: "p1" as Id<"seoDataPulls">, host: "ourshop.com", keywords: ["emergency plumber leeds", "how does a boiler work"] },
-      { ask: async () => chose({ "0": "buying", "1": "researching" }) },
+      { ask: bySearch({ "emergency plumber leeds": "buying", "how does a boiler work": "researching" }) as never },
     );
 
     const rows = await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect());
@@ -76,7 +82,7 @@ describe("judging what people mean", () => {
 
   test("never pays twice for the same phrase", async () => {
     const t = harness();
-    const ask = vi.fn(async () => chose({ "0": "buying" }));
+    const ask = vi.fn(bySearch({ "emergency plumber leeds": "buying" }));
     const args = {
       pullId: "p1" as Id<"seoDataPulls">, host: "ourshop.com",
       keywords: ["emergency plumber leeds"],
@@ -103,29 +109,31 @@ describe("judging what people mean", () => {
     expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(0);
   });
 
-  test("judges every new search in one run, in calls of fifty", async () => {
+  test("judges every new search in one run, one search per request", async () => {
     const t = harness();
     const many = Array.from({ length: 80 }, (_, index) => `search number ${index}`);
-    const askedSizes: number[] = [];
+    const asked: string[] = [];
     await judgeNewKeywords(
       stubCtx({ "seo.keyword-intent": "ACT" }, t),
       { pullId: "p1" as Id<"seoDataPulls">, host: "ourshop.com", keywords: many },
       {
-        ask: async ({ questions }) => {
-          askedSizes.push(Object.keys(questions).length);
-          return chose(Object.fromEntries(Object.keys(questions).map((id) => [id, "buying"])));
+        ask: async (request) => {
+          // Only the one search in each request: asked about many at once, the
+          // live model called every one "buying" (2026-09-23).
+          asked.push((request.state as { search: { text: string } }).search.text);
+          expect(Object.keys(request.questions)).toEqual(["seo.keyword-intent"]);
+          return chose({ "seo.keyword-intent": "buying" });
         },
       },
     );
 
     // Nothing is left for tomorrow: a Decision costs a fraction of a penny and
-    // no company is on a budget. The batching is only so that one call never
-    // carries eighty questions against one timeout.
-    expect(askedSizes).toEqual([50, 30]);
+    // no company is on a budget.
+    expect(asked).toHaveLength(80);
     expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(80);
   });
 
-  test("stops asking once a whole batch comes back from the rules", async () => {
+  test("stops asking once a whole round comes back from the rules", async () => {
     const t = harness();
     const many = Array.from({ length: 200 }, (_, index) => `search number ${index}`);
     let calls = 0;
@@ -140,9 +148,9 @@ describe("judging what people mean", () => {
       },
     );
 
-    // A provider that failed on the first fifty would fail on the next
-    // hundred and fifty too, so the run gives up rather than repeating it.
-    expect(calls).toBe(1);
+    // A provider that failed on the first round of fifty would fail on the
+    // next hundred and fifty too, so the run gives up rather than repeating it.
+    expect(calls).toBe(50);
     expect(await t.run(async (ctx) => await ctx.db.query("seoKeywordIntents").collect())).toHaveLength(0);
   });
 

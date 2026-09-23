@@ -27,12 +27,40 @@ import type { Id } from "./_generated/dataModel";
 
 
 
+/** Judgments in flight at once, so fifty items take seconds, not a minute. */
+const JUDGMENTS_AT_ONCE = 8;
+
 /**
- * Ask the stance Decision about every brand found in one answer.
+ * Ask a Decision about each item on its own, a few at a time.
  *
- * One request, not one per brand: the questions are independent judgments over
- * the same state, so they ride together and cost a single call. Each carries
- * its own id because the same Decision is asked several times.
+ * Every judgment here used to ask about a whole batch in one request, the
+ * items keyed by number in one shared state. Tested against the live model on
+ * 2026-09-23, that gave nearly the same answer for every item — every search
+ * "buying", every website "directory" — each around 40% sure. Asked about one
+ * item at a time it told them apart, most near certain. So each item is its
+ * own request, each a fraction of a penny. A failed request leaves that one
+ * item unjudged; the rest still are.
+ */
+async function askEach<T>(
+  items: T[],
+  ask: (item: T) => Promise<DecisionResult | undefined>,
+): Promise<Array<DecisionResult | undefined>> {
+  const results: Array<DecisionResult | undefined> = new Array(items.length);
+  for (let start = 0; start < items.length; start += JUDGMENTS_AT_ONCE) {
+    await Promise.all(items.slice(start, start + JUDGMENTS_AT_ONCE).map(async (item, offset) => {
+      try {
+        results[start + offset] = await ask(item);
+      } catch {
+        results[start + offset] = undefined;
+      }
+    }));
+  }
+  return results;
+}
+
+/**
+ * Ask the stance Decision about every brand found in one answer — one brand
+ * per request (see `askEach`).
  *
  * Switched off, or not sure enough, or the model unavailable — all three leave
  * the stance absent, and the screen then reads the row as a plain mention,
@@ -59,36 +87,19 @@ export async function judgeStances(
 }>> {
   if (args.hits.length === 0) return [];
 
-  let results: Record<string, DecisionResult> = {};
-  try {
-    results = await runDecisions(ctx, {
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      subject: { kind: "seo-citation", id: args.pullId },
-      // One state for all the questions, with a map keyed by the id each
-      // question carries — the platform's pattern for asking one Decision
-      // about several things. Requests in a call cannot hold their own state.
-      state: {
-        question: args.prompt,
-        answer: { text: args.answer },
-        brands: Object.fromEntries(args.hits.map((hit, index) => [`${index}`, { name: hit.text }])),
-      },
-      requests: args.hits.map((_hit, index) => ({
-        key: "seo.citation-stance",
-        id: `${index}`,
-        fallback: () => ({ kind: "pick-one" as const, choice: "mentioned" }),
-      })),
-    }, deps);
-  } catch {
-    // A Decision that cannot be asked leaves the stance unclaimed rather than
-    // guessed. The row still stands as a mention.
-    return args.hits.map((hit) => ({
-      websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind,
-    }));
-  }
+  const answers = await askEach(args.hits, async (hit) => (await runDecisions(ctx, {
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    subject: { kind: "seo-citation", id: args.pullId },
+    state: { question: args.prompt, answer: { text: args.answer }, brand: { name: hit.text } },
+    requests: [{
+      key: "seo.citation-stance",
+      fallback: () => ({ kind: "pick-one" as const, choice: "mentioned" }),
+    }],
+  }, deps))["seo.citation-stance"]);
 
   const judged = [];
   for (const [index, hit] of args.hits.entries()) {
-    const result = results[`${index}`];
+    const result = answers[index];
     const base = { websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind };
 
     // The rules answered, so nothing was judged and nothing is claimed.
@@ -162,31 +173,23 @@ export async function linkCitedAddresses(
 
   const linkedByIndex = new Map<number, Id<"websites">>();
   if (pairs.length > 0) {
-    try {
-      const results = await runDecisions(ctx, {
-        ...(args.companyId ? { companyId: args.companyId } : {}),
-        subject: { kind: "seo-address", id: args.pullId },
-        state: {
-          pairs: Object.fromEntries(pairs.map((pair) => [pair.id, {
-            seen: { address: pair.seenHost },
-            tracked: { address: pair.trackedHost, name: pair.trackedName },
-          }])),
-        },
-        requests: pairs.map((pair) => ({
-          key: "seo.same-business",
-          id: pair.id,
-          // Before this Decision existed only an exact address matched.
-          fallback: () => ({ kind: "score" as const, score: 0 }),
-        })),
-      }, deps);
-
-      for (const pair of pairs) {
-        const result = results[pair.id];
-        if (!result || result.source === "RULES" || result.answer.kind !== "score") continue;
-        if (Math.round(result.answer.score) === 2) linkedByIndex.set(pair.index, pair.websiteId);
-      }
-    } catch {
-      // Unasked means unlinked, which is what the screen showed before.
+    const answers = await askEach(pairs, async (pair) => (await runDecisions(ctx, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      subject: { kind: "seo-address", id: args.pullId },
+      state: {
+        seen: { address: pair.seenHost },
+        tracked: { address: pair.trackedHost, name: pair.trackedName },
+      },
+      requests: [{
+        key: "seo.same-business",
+        // Before this Decision existed only an exact address matched.
+        fallback: () => ({ kind: "score" as const, score: 0 }),
+      }],
+    }, deps))["seo.same-business"]);
+    for (const [index, pair] of pairs.entries()) {
+      const result = answers[index];
+      if (!result || result.source === "RULES" || result.answer.kind !== "score") continue;
+      if (Math.round(result.answer.score) === 2) linkedByIndex.set(pair.index, pair.websiteId);
     }
   }
 
@@ -204,8 +207,8 @@ export async function linkCitedAddresses(
  * suppliers all outrank a small business for its own trade. Without this the
  * client is handed a list of everything that beats them.
  *
- * One request for the batch, keyed by id with a state map, like the others.
- * Nothing is hidden by the verdict — a directory outranking you is worth
+ * One request per website — see the note in the body for why. Nothing is
+ * hidden by the verdict — a directory outranking you is worth
  * knowing — so this labels rather than filters.
  */
 export async function judgeCompetitors(
@@ -214,7 +217,11 @@ export async function judgeCompetitors(
     companyId?: Id<"companies">;
     pullId: Id<"seoDataPulls">;
     ourHost: string;
+    /** What the watched business does, so the judge has more than two web addresses to go on. */
+    ours?: BusinessForJudging | null;
     found: Array<{ host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null }>;
+    /** What known candidates do, by host, where an admin has written it down. */
+    knownCandidates?: Record<string, { sector?: string; does?: string }>;
   },
   deps: RunDecisionsDeps = {},
 ): Promise<Array<{
@@ -233,32 +240,38 @@ export async function judgeCompetitors(
   }));
   if (base.length === 0) return base;
 
-  let results: Record<string, DecisionResult> = {};
-  try {
-    results = await runDecisions(ctx, {
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      subject: { kind: "seo-competitors", id: args.pullId },
-      state: {
-        ours: { address: args.ourHost },
-        candidates: Object.fromEntries(args.found.map((row, index) => [`${index}`, {
-          address: row.host,
-          searchesInCommon: row.intersections,
-        }])),
+  // One website per request — see `askEach`.
+  const ours = {
+    address: args.ourHost,
+    ...(args.ours?.sector ? { sells: args.ours.sector } : {}),
+    ...(args.ours?.does ? { does: args.ours.does } : {}),
+    ...(args.ours?.market ? { market: args.ours.market } : {}),
+    ...(args.ours?.names.length ? { knownAs: args.ours.names } : {}),
+    ...(args.ours?.searches.length ? { searchedFor: args.ours.searches } : {}),
+  };
+  const results = await askEach(args.found, async (row) => (await runDecisions(ctx, {
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    subject: { kind: "seo-competitors", id: args.pullId },
+    state: {
+      ours,
+      candidate: {
+        address: row.host,
+        ...(args.knownCandidates?.[row.host]?.sector ? { sells: args.knownCandidates[row.host]!.sector } : {}),
+        ...(args.knownCandidates?.[row.host]?.does ? { does: args.knownCandidates[row.host]!.does } : {}),
+        searchesInCommon: row.intersections,
+        ...(row.averagePosition !== null ? { averageGooglePosition: row.averagePosition } : {}),
       },
-      requests: args.found.map((_row, index) => ({
-        key: "seo.real-competitor",
-        id: `${index}`,
-        // Before this Decision existed every discovered site was offered as
-        // a competitor, so that is the rule it replaces.
-        fallback: () => ({ kind: "pick-one" as const, choice: "competitor" }),
-      })),
-    }, deps);
-  } catch {
-    return base;
-  }
+    },
+    requests: [{
+      key: "seo.real-competitor",
+      // Before this Decision existed every discovered site was offered as a
+      // competitor, so that is the rule it replaces.
+      fallback: () => ({ kind: "pick-one" as const, choice: "competitor" }),
+    }],
+  }, deps))["seo.real-competitor"]);
 
   return base.map((row, index) => {
-    const result = results[`${index}`];
+    const result = results[index];
     if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") return row;
     return {
       ...row,
@@ -304,6 +317,8 @@ export async function judgeNewKeywords(
     /** The site these searches came from, when they came from one. A fan-out
      * belongs to a question rather than to a website, so it passes none. */
     host?: string;
+    /** What that site's business does, when known, so "irrelevant" can be judged. */
+    business?: BusinessForJudging | null;
     keywords: string[];
   },
   deps: RunDecisionsDeps = {},
@@ -320,35 +335,35 @@ export async function judgeNewKeywords(
   }
   if (unjudged.length === 0) return;
 
-  for (let start = 0; start < unjudged.length; start += KEYWORDS_PER_REQUEST) {
-    const batch = unjudged.slice(start, start + KEYWORDS_PER_REQUEST);
-
-    let results: Record<string, DecisionResult> = {};
-    try {
-      results = await runDecisions(ctx, {
-        ...(args.companyId ? { companyId: args.companyId } : {}),
-        subject: { kind: "seo-keywords", id: args.pullId },
-        state: {
-          ...(args.host ? { business: { address: args.host } } : {}),
-          searches: Object.fromEntries(batch.map((keyword, index) => [`${index}`, { text: keyword }])),
-        },
-        requests: batch.map((_keyword, index) => ({
-          key: "seo.keyword-intent",
-          id: `${index}`,
-          // Before this Decision existed every search looked alike, so the rule
-          // it replaces is "no opinion".
-          fallback: () => ({ kind: "pick-one" as const, choice: "other" }),
-        })),
-      }, deps);
-    } catch {
-      // Unjudged searches are simply judged next time. Nothing is lost and
-      // nothing is guessed.
-      return;
-    }
+  // One search per request — see `askEach` — in rounds, so a Decision that
+  // is switched off, or a provider that is down, is found out after one round
+  // rather than after every search has been tried.
+  for (let start = 0; start < unjudged.length; start += KEYWORDS_PER_ROUND) {
+    const round = unjudged.slice(start, start + KEYWORDS_PER_ROUND);
+    const answers = await askEach(round, async (keyword) => (await runDecisions(ctx, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      subject: { kind: "seo-keywords", id: args.pullId },
+      state: {
+        ...(args.host ? {
+          business: {
+            address: args.host,
+            ...(args.business?.sector ? { sells: args.business.sector } : {}),
+            ...(args.business?.does ? { does: args.business.does } : {}),
+          },
+        } : {}),
+        search: { text: keyword },
+      },
+      requests: [{
+        key: "seo.keyword-intent",
+        // Before this Decision existed every search looked alike, so the rule
+        // it replaces is "no opinion".
+        fallback: () => ({ kind: "pick-one" as const, choice: "other" }),
+      }],
+    }, deps))["seo.keyword-intent"]);
 
     const judged = [];
-    for (const [index, keyword] of batch.entries()) {
-      const result = results[`${index}`];
+    for (const [index, keyword] of round.entries()) {
+      const result = answers[index];
       if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") continue;
       judged.push({
         keyword,
@@ -361,8 +376,8 @@ export async function judgeNewKeywords(
       await ctx.runMutation(internal.seoCollectionParse.writeKeywordIntents, { judged });
     }
 
-    // Nothing in this batch reached a model: the Decision is off, or the
-    // provider is down. Asking the next batch would only repeat the failure.
+    // Nothing in this round reached a model: the Decision is off, or the
+    // provider is down. Asking the next round would only repeat the failure.
     if (judged.length === 0) return;
   }
 }
@@ -384,10 +399,10 @@ export function normaliseKeyword(keyword: string): string {
 const KEYWORDS_PER_LOOKUP = 500;
 
 /**
- * Searches asked in one request.
- *
- * A request shape, not a spending limit: all of a run's new searches are
- * judged, in calls of this size, so no single call carries hundreds of
- * questions against one twenty-second timeout.
+ * Searches judged per round. Each is its own request; a round is how many are
+ * tried before checking that the Decision is actually answering.
  */
-const KEYWORDS_PER_REQUEST = 50;
+const KEYWORDS_PER_ROUND = 50;
+
+/** What a watched business does, from `describeBusinessForJudging` in websiteCanonical.ts. */
+export type BusinessForJudging = { sector?: string; market?: string; does?: string; names: string[]; searches: string[] };

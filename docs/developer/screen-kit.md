@@ -73,7 +73,7 @@ Use:
 - `TableHeaderRow` and `TableHeaderCell` for headers.
 - `TableLoadingRow` while Convex data is `undefined`.
 - `TableEmptyRow` for empty table states.
-- `RowActions` and `RowIconButton` for row hover actions.
+- `RowActions` and `RowIconButton` for row hover actions. Pass `alwaysVisible` when the column exists only for its action (Track it / Untrack, Remove on a results tab), so the cell never looks empty.
 
 `RowIconButton` stops propagation before calling its action, so it can sit inside clickable table rows without also triggering row navigation. It supports `tone="danger"` for destructive row actions.
 
