@@ -16,7 +16,6 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
-import { CollectNow } from "./CollectNow";
 
 /**
  * Every DataForSEO pull, at whatever stage it has reached.
@@ -79,7 +78,6 @@ export default function SeoCollectionPage() {
         icon={<Layers className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
-        action={<CollectNow />}
       />
 
       <div className="flex flex-col gap-2">

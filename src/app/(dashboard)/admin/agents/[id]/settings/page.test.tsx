@@ -46,6 +46,8 @@ vi.mock("next-intl", () => ({
       // The model name is interpolated into the inherit option, so the mock has
       // to carry it through or the test cannot see what the screen names.
       if (values?.model !== undefined) return `${key} ${values.model}`;
+      // The price beside each model, with its figures carried through.
+      if (values?.input !== undefined) return `${values.input} in · ${values.output} out`;
       return key;
     };
   },
@@ -438,5 +440,77 @@ describe("AgentOverviewPage activation", () => {
     fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
 
     expect(screen.queryByText(/unprovenReason/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The Role dropdown.
+ *
+ * An agent's job used to be found by its name, so renaming the DataForSEO
+ * agent broke the screen that looked for it. The role is chosen here, a role
+ * held by another agent cannot be taken twice, and a built-in role is shown
+ * and never offered for change.
+ */
+describe("AgentOverviewPage role", () => {
+  const mutationMock = vi.fn();
+  let agentFixture: unknown;
+  const holders = [
+    { systemKey: "DATAFORSEO_PLANNER", agentId: "agent_9", name: "SEO Planner" },
+    { systemKey: "WIKI_DISTILLER", agentId: "agent_7", name: "The Distiller" },
+  ];
+
+  const renderAgent = (agentOverrides: Record<string, unknown> = {}) => {
+    agentFixture = { ...agent, ...agentOverrides };
+    render(<AgentOverviewPage />);
+  };
+  const roleSelect = () => screen.getByLabelText("sections.role.label") as HTMLSelectElement;
+  const save = async () => {
+    fireEvent.click(screen.getByRole("button", { name: "sections.identity.saveButton" }));
+    await waitFor(() => expect(mutationMock).toHaveBeenCalled());
+    return mutationMock.mock.calls
+      .map(([payload]) => payload as Record<string, unknown>)
+      .find((payload) => payload && "name" in payload)!;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
+      const functionName = getFunctionName(queryFn);
+      if (functionName === "agents:get") return agentFixture as ReturnType<typeof useQuery>;
+      if (functionName === "agents:getAgentReadiness") {
+        return { ...readiness, modelReadiness: inheritedReadiness } as ReturnType<typeof useQuery>;
+      }
+      if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
+      if (functionName === "agentRoles:listAgentRoleHolders") return holders as unknown as ReturnType<typeof useQuery>;
+      return undefined as unknown as ReturnType<typeof useQuery>;
+    });
+    vi.mocked(useMutation).mockReturnValue(mutationMock as unknown as ReturnType<typeof useMutation>);
+    mutationMock.mockResolvedValue(undefined);
+  });
+
+  it("offers the DataForSEO roles, with one already held shown as taken", () => {
+    renderAgent();
+
+    const options = Array.from(roleSelect().options);
+    expect(roleSelect().value).toBe("NONE");
+    expect(options.find((option) => option.value === "DATAFORSEO_PLANNER")?.disabled).toBe(true);
+    expect(options.find((option) => option.value === "DATAFORSEO_COLLECTOR")?.disabled).toBe(false);
+    // Built-in roles are listed so the reader sees who holds them, never chosen.
+    expect(options.find((option) => option.value === "WIKI_DISTILLER")?.disabled).toBe(true);
+  });
+
+  it("saves the role chosen with the rest of the page", async () => {
+    renderAgent();
+
+    fireEvent.change(roleSelect(), { target: { value: "DATAFORSEO_COLLECTOR" } });
+    expect((await save()).role).toBe("DATAFORSEO_COLLECTOR");
+  });
+
+  it("shows a built-in role and never sends it", async () => {
+    renderAgent({ systemKey: "WIKI_DISTILLER", name: "The Distiller" });
+
+    expect(roleSelect().disabled).toBe(true);
+    expect("role" in (await save())).toBe(false);
   });
 });

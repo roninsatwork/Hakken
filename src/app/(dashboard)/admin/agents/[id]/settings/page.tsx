@@ -1,14 +1,12 @@
 "use client";
 
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AgentBudgetFields } from "../../_components/AgentBudgetFields";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -16,52 +14,13 @@ import {
   SaveAction,
   SaveError,
 } from "@/src/ui/components/screens/SaveControls";
-import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-// Shared with the create screen, which used to be built from a different set of
-// cards, labels and buttons entirely.
-import {
-  FieldLabel,
-  SegmentedChoice,
-  SettingSwitch,
-  SettingsCard,
-} from "@/src/ui/components/screens/SettingsCard";
-import {
-  formatModelDisplayName,
-  formatTokenCost,
-} from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+import { isAssignableAgentRole } from "@/convex/utils/agentRoles";
+import { formatModelDisplayName } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+import { AgentFormSections, parseLimitInput, type AgentFormValues } from "../../_components/AgentFormSections";
 
-const AdminAvatarPicker = dynamic(() =>
-  import("@/src/app/(dashboard)/admin/_components/AdminAvatarPicker").then(
-    (module) => module.AdminAvatarPicker,
-  ),
-);
 
-type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
-type ModelSelectionMode = "inherit" | "override";
-type AgentSettingsFormData = {
-  name: string;
-  description: string;
-  ownerId: string;
-  riskLevel: string;
-  avatar: string;
-  modelId: string;
-  modelSelectionMode: ModelSelectionMode;
-  thinkingMode: boolean;
-  reasoningEffort: ReasoningEffort;
-  allowInternetAccess: boolean;
-  isActive: boolean;
-  /** Inverted for display: the switch reads as the safe state being on. */
-  requireHumanApproval: boolean;
-  /** Blank follows the platform window. */
-  approvalExpiryHours: string;
-  /** Blank means inherit the platform default. Held as text so a box can be empty. */
-  maxSteps: string;
-  maxToolCalls: string;
-  maxInputTokens: string;
-  maxRuntimeMinutes: string;
-  maxCostUsd: string;
-  storageId?: Id<"_storage">;
-};
+/** The shared form, plus what only an existing agent carries. */
+type AgentSettingsFormData = AgentFormValues & { thinkingMode: boolean };
 
 const emptyFormData: AgentSettingsFormData = {
   name: "",
@@ -82,30 +41,12 @@ const emptyFormData: AgentSettingsFormData = {
   maxInputTokens: "",
   maxRuntimeMinutes: "",
   maxCostUsd: "",
+  role: "NONE",
+  plannerMode: "TEST",
 };
-
-const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
-
-/**
- * The token budget is shown as the number the runtime actually uses.
- *
- * Named for what a stopped run reports — "reached the configured token budget"
- * — so the message and the setting can be joined up by whoever reads them, and
- * shown in whole tokens rather than thousands so the number on screen is the
- * number that applies.
- */
-
-/** Empty, zero and nonsense all mean "inherit the default", matching the server. */
-function parseLimitInput(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return undefined;
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
 
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");
-  const tAgents = useTranslations("admin.agents");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -125,6 +66,7 @@ export default function AgentOverviewPage() {
   // leaving the reader to guess.
   const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
+  const roleHolders = useQuery(api.agentRoles.listAgentRoleHolders, {}) ?? [];
   const updateAgent = useMutation(api.agents.updateAgent);
   const action = useAdminAction({ scope: "admin-agent-settings" });
 
@@ -146,26 +88,12 @@ export default function AgentOverviewPage() {
       ? t("sections.engine.model.followDefault")
       : t("sections.engine.model.followDefaultMissing");
 
-  // An agent pinned to a model that is no longer offered still shows what it is
-  // pinned to, rather than appearing unset.
-  const isLegacyOverride = formData.modelSelectionMode === "override"
-    && Boolean(formData.modelId)
-    && activeModels.length > 0
-    && !activeModels.some((model) => model.modelId === formData.modelId);
-
   // Only about the model that is actually saved: an unsaved change to this
   // control has not been judged yet.
   const isOverrideUnusable = modelReadiness?.source === "override"
     && modelReadiness.status === "WARN"
     && formData.modelSelectionMode === "override"
     && formData.modelId === modelReadiness.modelId;
-
-  const describeModelPrice = (model: Doc<"aiModels">) => {
-    const input = formatTokenCost(model.standardInputCostBelow200k);
-    const output = formatTokenCost(model.outputResponseCost);
-    if (input === "—" && output === "—") return "";
-    return ` · ${input} in · ${output} out`;
-  };
 
   const [seenAgentId, setSeenAgentId] = useState<Id<"agents"> | null>(null);
 
@@ -203,9 +131,15 @@ export default function AgentOverviewPage() {
       maxInputTokens: agent.maxInputTokens ? String(agent.maxInputTokens) : "",
       maxRuntimeMinutes: agent.maxRuntimeMs ? String(Math.round(agent.maxRuntimeMs / 60000)) : "",
       maxCostUsd: agent.maxCostUsd ? String(agent.maxCostUsd) : "",
+      role: isAssignableAgentRole(agent.systemKey) ? agent.systemKey : "NONE",
+      plannerMode: agent.plannerMode ?? "TEST",
       storageId: undefined,
     });
   }
+
+  // The wiki staff and the Decisions agent carry a role the code finds them
+  // by, so it is shown and never offered for change.
+  const hasFixedRole = Boolean(agent?.systemKey) && !isAssignableAgentRole(agent?.systemKey);
 
   const handleSave = async (e?: FormEvent) => {
     if (e) {
@@ -235,6 +169,9 @@ export default function AgentOverviewPage() {
         maxInputTokens: parseLimitInput(formData.maxInputTokens) ?? 0,
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
         maxCostUsd: parseLimitInput(formData.maxCostUsd) ?? 0,
+        // A built-in role is never sent: the server refuses to move it.
+        ...(hasFixedRole ? {} : { role: formData.role }),
+        ...(formData.role === "DATAFORSEO_PLANNER" ? { plannerMode: formData.plannerMode } : {}),
         storageId: formData.storageId
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },
@@ -281,234 +218,31 @@ export default function AgentOverviewPage() {
         </div>
         <SaveError>{action.error}</SaveError>
 
-        {/* Two columns rather than one.
-            Every control on this page used to be full width, so seven settings
-            needed three screens of scrolling and the right-hand half of the
-            page was empty throughout. Nothing here is narrower than it was
-            legible at; the height comes back from the width that was going
-            unused. */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <SettingsCard title={t("sections.identity.title")}>
-            <AdminAvatarPicker
-              avatar={formData.avatar}
-              labels={{
-                updateButton: t("sections.identity.avatar.updateButton"),
-                hint: t("sections.identity.avatar.hint"),
-                modalTitle: t("uploadModal.title"),
-                modalSubtitle: t("uploadModal.subtitle"),
-                processing: t("uploadModal.processing"),
-                dropText: t("uploadModal.dropText"),
-                dropHint: t("uploadModal.dropHint"),
-                cancel: t("uploadModal.cancel"),
-                uploadFailed: t("errors.uploadFailed"),
-              }}
-              onUploaded={({ storageId, previewUrl }) =>
-                setFormData((prev) => ({ ...prev, storageId, avatar: previewUrl }))
-              }
-            />
-
-            <Field
-              label={t("sections.identity.name")}
-              id="agent-name"
-              type="text"
-              value={formData.name || ""}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-
-            {/* Grows into whatever height the column ends up at, rather than
-                leaving the card half empty beside a taller neighbour. Both the
-                wrapper and the box have to stretch for that to reach through. */}
-            <TextAreaField
-              label={t("sections.identity.description")}
-              id="agent-description"
-              rows={3}
-              value={formData.description || ""}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              wrapperClassName="flex-1"
-              className="flex-1"
-            />
-
-            {/*
-              How the assistants that predate the register get an accountable
-              person. Without this the register could report that nobody owns
-              them and offer no way to fix it.
-            */}
-            <FieldLabel htmlFor="agent-owner">{tAgents("owner.label")}</FieldLabel>
-            <select
-              id="agent-owner"
-              value={formData.ownerId}
-              onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
-              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
-            >
-              <option value="">{tAgents("owner.choose")}</option>
-              {accountablePeople.map((person) => (
-                <option key={person._id} value={person._id}>{person.name}</option>
-              ))}
-            </select>
-            <p className="text-[12px] text-secondary">{tAgents("owner.hint")}</p>
-            {/*
-              The rating is not a label. Choosing High makes human approval a
-              consequence rather than a preference, and the platform refuses to
-              switch it off afterwards.
-            */}
-            <FieldLabel htmlFor="agent-risk">{tAgents("risk.label")}</FieldLabel>
-            <select
-              id="agent-risk"
-              value={formData.riskLevel}
-              onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value })}
-              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
-            >
-              <option value="">{tAgents("risk.unrated")}</option>
-              <option value="LOW">{tAgents("risk.low")}</option>
-              <option value="MEDIUM">{tAgents("risk.medium")}</option>
-              <option value="HIGH">{tAgents("risk.high")}</option>
-            </select>
-            <p className="text-[12px] text-secondary">
-              {formData.riskLevel === "HIGH" ? tAgents("risk.highHint") : tAgents("risk.hint")}
-            </p>
-          </SettingsCard>
-
-          <SettingsCard title={t("sections.engine.groups.behaviour")}>
-            {/* One control, not two.
-                Asking for a mode and then a model split one decision in half, and
-                the model box sat greyed out with no way to tell what would run
-                instead. The first option names it. */}
-            <FieldLabel htmlFor="agent-model">{t("sections.engine.model.label")}</FieldLabel>
-            <select
-              id="agent-model"
-              value={formData.modelSelectionMode === "inherit" ? "" : formData.modelId || ""}
-              onChange={(e) => {
-                const nextModelId = e.target.value;
-                setFormData({
-                  ...formData,
-                  modelSelectionMode: nextModelId ? "override" : "inherit",
-                  ...(nextModelId ? { modelId: nextModelId } : {}),
-                });
-              }}
-              className="h-[46px] w-full cursor-pointer appearance-none rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
-            >
-              <option value="">{inheritOptionLabel}</option>
-              {activeModels.map((m) => (
-                <option key={m.modelId} value={m.modelId}>
-                  {formatModelDisplayName(m)}{describeModelPrice(m)}
-                </option>
-              ))}
-              {isLegacyOverride && (
-                <option value={formData.modelId}>
-                  {t("sections.engine.model.legacy", { id: formData.modelId })}
-                </option>
-              )}
-            </select>
-            <p className="text-[11px] leading-relaxed text-muted">
-              {t("sections.engine.model.hint")}
-            </p>
-            {/* Readiness already knows when the chosen model cannot run. It was
-                computed and never shown next to the choice it is about. */}
-            {isOverrideUnusable && (
-              <p className="text-[12px] leading-relaxed text-[#f59e0b]">
-                {t("sections.engine.model.unusable")}
-              </p>
-            )}
-
-            <div className="flex flex-col gap-2 pt-1">
-              <FieldLabel>{t("sections.engine.reasoning.label")}</FieldLabel>
-              <SegmentedChoice
-                label={t("sections.engine.reasoning.label")}
-                value={formData.reasoningEffort}
-                options={reasoningLevels.map((level) => ({
-                  value: level,
-                  label: t(`sections.engine.reasoning.levels.${level}`),
-                }))}
-                onChange={(level) => setFormData({ ...formData, reasoningEffort: level })}
-              />
-              <p className="text-[11px] leading-relaxed text-muted">
-                {t("sections.engine.reasoning.hint")}
-              </p>
-            </div>
-
-            {/* Four paired buttons, each a full-width band, held what amounts to
-                four switches. As switches they read the same and cost a third of
-                the height. */}
-            <div className="mt-1 divide-y divide-border-dim/40 border-t border-border-dim/40">
-              <SettingSwitch
-                label={t("sections.engine.internet.label")}
-                description={formData.allowInternetAccess
-                  ? t("sections.engine.internet.hintOn")
-                  : t("sections.engine.internet.hintOff")}
-                checked={formData.allowInternetAccess}
-                onChange={(next) => setFormData({ ...formData, allowInternetAccess: next })}
-              />
-              <SettingSwitch
-                label={t("sections.engine.approval.label")}
-                description={formData.requireHumanApproval
-                  ? t("sections.engine.approval.hintRequired")
-                  : t("sections.engine.approval.hintAutonomous")}
-                checked={formData.requireHumanApproval}
-                onChange={(next) => setFormData({ ...formData, requireHumanApproval: next })}
+        <AgentFormSections
+          values={formData}
+          onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+          models={activeModels}
+          inheritOptionLabel={inheritOptionLabel}
+          modelWarning={isOverrideUnusable ? t("sections.engine.model.unusable") : undefined}
+          accountablePeople={accountablePeople}
+          approvalExpiry={approvalExpiry ?? undefined}
+          roleHolders={roleHolders}
+          agentId={agentId}
+          builtInRoleName={hasFixedRole ? agent.name : undefined}
+          activeDescription={t("sections.engine.status.hintActive")}
+          statusExtra={activationWarning ? (
+            <div className="mt-3 flex flex-col gap-2 rounded-[10px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-[13px] leading-relaxed text-amber-200 sm:flex-row sm:items-center sm:justify-between">
+              <span>{t(`sections.engine.status.unprovenReason.${activationWarning}`)}</span>
+              <Link
+                href={`/admin/agents/${agentId}/evals`}
+                className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-amber-100 underline-offset-4 hover:underline"
               >
-                {/* Only meaningful while approval is on: an autonomous agent never
-                    waits, so there is nothing for a window to bound. */}
-                {formData.requireHumanApproval && (
-                  <Field
-                    label={t("sections.engine.approval.expiryLabel")}
-                    id="agent-approval-expiry"
-                    type="number"
-                    min={0}
-                    step="1"
-                    max={approvalExpiry?.maxHours ?? 720}
-                    value={formData.approvalExpiryHours}
-                    onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
-                    placeholder={String(approvalExpiry?.expiryHours ?? 24)}
-                    hint={t("sections.engine.approval.expiryHint", {
-                      hours: approvalExpiry?.expiryHours ?? 24,
-                    })}
-                    wrapperClassName="pt-3"
-                    className="h-[42px] max-w-[220px] px-3 text-[13px] focus:border-brand/40"
-                  />
-                )}
-              </SettingSwitch>
+                {t("sections.engine.status.unprovenLink")}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-          </SettingsCard>
-
-          {/* The budget is what remains when approval is off, and the switch that
-              turns the agent on sits with it — the two things that decide what
-              this agent can do unattended. */}
-          <SettingsCard title={t("sections.engine.groups.limits")} className="xl:col-span-2">
-            <p className="-mt-1 text-[12px] leading-relaxed text-secondary">
-              {t("sections.engine.budget.hint")}
-            </p>
-            <AgentBudgetFields
-              values={formData}
-              onChange={(key, value) => setFormData({ ...formData, [key]: value })}
-            />
-
-            <div className="mt-2 border-t border-border-dim/40">
-              <SettingSwitch
-                label={formData.isActive
-                  ? t("sections.engine.status.active")
-                  : t("sections.engine.status.inactive")}
-                description={formData.isActive
-                  ? t("sections.engine.status.hintActive")
-                  : t("sections.engine.status.hintInactive")}
-                checked={formData.isActive}
-                onChange={(next) => setFormData({ ...formData, isActive: next })}
-              >
-                {activationWarning ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-[10px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-[13px] leading-relaxed text-amber-200 sm:flex-row sm:items-center sm:justify-between">
-                    <span>{t(`sections.engine.status.unprovenReason.${activationWarning}`)}</span>
-                    <Link
-                      href={`/admin/agents/${agentId}/evals`}
-                      className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-amber-100 underline-offset-4 hover:underline"
-                    >
-                      {t("sections.engine.status.unprovenLink")}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                ) : null}
-              </SettingSwitch>
-            </div>
-          </SettingsCard>
-        </div>
+          ) : null}
+        />
       </form>
 
     </div>

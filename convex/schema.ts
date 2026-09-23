@@ -3412,11 +3412,13 @@ export default defineSchema({
     releaseGateSuitePresetId: v.optional(v.id("agentEvalSuitePresets")),
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
     isActive: v.boolean(),
-    // Names a built-in member of the wiki's staff (wiki-agents plan, phase
-    // 0): "WIKI_DISTILLER", "WIKI_TIDIER", "WIKI_LINKER", and later hires.
-    // System agents are seeded, visible on the Agents screen, switchable
-    // via isActive above — and never deletable.
+    // The agent's role. Fixed for the wiki staff ("WIKI_DISTILLER", …) and
+    // the Decisions agent, which are seeded; chosen from the Role dropdown for
+    // the DataForSEO roles (convex/utils/agentRoles.ts). Found by this key,
+    // never by name. An agent with a role is switchable via isActive above,
+    // and never deletable.
     systemKey: v.optional(v.string()),
+    plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))), // DataForSEO Planner: TEST queues everything, LIVE only what is due; absent reads as TEST.
     // Inline Sandbox Configuration
     companyId: v.optional(v.id("companies")),
     isGlobal: v.optional(v.boolean()),
@@ -3427,6 +3429,7 @@ export default defineSchema({
     .index("by_workflow", ["workflowId", "isGlobal"])
     .index("by_workflow_created", ["workflowId", "createdAt"])
     .index("by_active_created", ["isActive", "createdAt"])
+    .index("by_system_key", ["systemKey"])
     .searchIndex("search_name", { searchField: "name" }),
 
   agentEvalSuitePresets: defineTable({

@@ -22,15 +22,13 @@
 export const SEO_EXPANSION_PAGE = 100;
 
 /**
- * Worker chains draining the queue at once.
+ * How long one Collector run keeps sending before it hands back.
  *
- * Four is sized for domain-level collection, where a cycle is thousands of
- * tasks. Per-keyword position tracking puts a cycle in the hundreds of
- * thousands and wants eight. The knowledge file queue runs three for the same
- * kind of reason, and found that wider lost more to provider rate limits than
- * it gained.
+ * Under Convex's ten-minute ceiling for an action, with room to finish the
+ * batch in hand and record the run. Whatever is left waits in the queue for
+ * the Collector's next run.
  */
-export const SEO_WORKER_WIDTH = 4;
+export const SEO_COLLECTOR_RUN_MS = 8 * 60 * 1000;
 
 /**
  * Tasks in one `task_post` request.
@@ -162,7 +160,7 @@ export const SEO_PAGE_LINE_BUDGET = 2_000;
 export const SEO_MOVES_DELAY_MS = 5 * 60 * 1000;
 
 /**
- * How old an answer a manual "Collect now" will reuse: one hour. A scheduled
+ * How old an answer a manual (Planner) collection will reuse: one hour. A scheduled
  * run reuses anything its own cadence still calls fresh; a person pressing the
  * button wants today's numbers, and this only stops a double press paying twice.
  */

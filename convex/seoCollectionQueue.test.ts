@@ -114,58 +114,78 @@ describe("claiming", () => {
     expect(claim.nextDueAt).toBeNull();
   });
 
-  test("the agent's spend cap stops the next batch and says so", async () => {
+  test("the Collector stops at its spend limit, and the rest waits for its next run", async () => {
     const t = harness();
-    const company = await t.run(async (ctx) =>
-      await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() }));
     const agent = await t.run(async (ctx) =>
       await ctx.db.insert("agents", {
-        name: "DataForSEO Agent",
+        name: "Anything",
         // Not a real model id: nothing here calls a model, and a literal one
         // would be a runtime model choice hidden in a fixture.
         modelId: "test-model",
         thinkingMode: false,
         isActive: true,
-        maxCostUsd: 5,
+        systemKey: "DATAFORSEO_COLLECTOR",
+        maxCostUsd: 1,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       } as never));
-    const run = await t.run(async (ctx) =>
+    const run = (costUsd: number) => t.run(async (ctx) =>
       await ctx.db.insert("agentRuns", {
         agentId: agent,
-        triggerType: "SCHEDULE",
+        triggerType: "MANUAL",
         objective: "collect",
         status: "RUNNING",
+        costUsd,
         startedAt: Date.now(),
         updatedAt: Date.now(),
       } as never));
-    const cycleId = await t.run(async (ctx) =>
-      await ctx.db.insert("seoCollectionCycles", {
-        companyId: company,
-        agentRunId: run,
-        trigger: "SCHEDULE",
-        status: "SENDING",
-        plannedCount: 10,
-        reusedCount: 0,
-        sentCount: 5,
-        readyCount: 5,
-        failedCount: 0,
-        // Already past the agent's cap.
-        totalCostUsd: 9,
-        startedAt: Date.now(),
-      }));
-    await seedPull(t, { cycleId, companyId: company });
+    await seedPull(t);
 
-    const claim = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
-
-    // Checked before every batch, not once when the cycle opened: a cycle runs
-    // for hours after the run that started it has ended.
-    expect(claim.pulls).toHaveLength(0);
-    const cycle = await t.run(async (ctx) => await ctx.db.get(cycleId));
-    expect(cycle?.status).toBe("CAPPED_SPEND");
-    // The rows are left pending, not thrown away, so raising the cap resumes.
+    // Checked before every batch against what this run has already spent.
+    const spent = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one", runId: await run(1) });
+    expect(spent).toMatchObject({ pulls: [], capped: true });
+    // Nothing is marked on the queue: the row simply waits.
     expect((await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))[0].status)
       .toBe("PENDING");
+
+    // A fresh run starts with its limit untouched and takes it.
+    const fresh = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "two", runId: await run(0) });
+    expect(fresh.pulls).toHaveLength(1);
+  });
+
+  test("a call settled on the Collector's run lands in its cost and its log", async () => {
+    const t = harness();
+    const agent = await t.run(async (ctx) =>
+      await ctx.db.insert("agents", {
+        name: "Anything", modelId: "test-model", thinkingMode: false, isActive: true,
+        createdAt: Date.now(), updatedAt: Date.now(),
+      } as never));
+    const runId = await t.run(async (ctx) =>
+      await ctx.db.insert("agentRuns", {
+        agentId: agent, triggerType: "MANUAL", objective: "collect", status: "RUNNING",
+        startedAt: Date.now(), updatedAt: Date.now(),
+      } as never));
+    const pullId = await seedPull(t, { status: "CLAIMED" });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, {
+      pullId, runId, costUsd: 0.024, sandbox: false, ready: true,
+    });
+
+    const { run, transactions, logs } = await t.run(async (ctx) => ({
+      run: await ctx.db.get(runId),
+      transactions: await ctx.db.query("agentTransactions").collect(),
+      logs: await ctx.db.query("agentLogs").collect(),
+    }));
+    expect(run?.costUsd).toBeCloseTo(0.024);
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject({ agentId: agent, providerKey: "dataforseo", costUsd: 0.024 });
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ runId, outcome: "SUCCESS" });
+    // And a step on the run's timeline, carrying the cost, that the log points at.
+    const steps = await t.run(async (ctx) => await ctx.db.query("agentRunSteps").collect());
+    expect(steps).toHaveLength(1);
+    expect(steps[0]).toMatchObject({ runId, kind: "TOOL_CALL", status: "SUCCESS", costUsd: 0.024, providerKey: "dataforseo" });
+    expect(logs[0].stepId).toBe(steps[0]._id);
   });
 });
 

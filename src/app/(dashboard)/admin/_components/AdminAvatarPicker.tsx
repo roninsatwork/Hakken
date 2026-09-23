@@ -122,7 +122,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
           >
             {labels.updateButton}
           </button>
-          <p className="text-[11px] text-muted">{labels.hint}</p>
+          {labels.hint ? <p className="text-[11px] text-muted">{labels.hint}</p> : null}
         </div>
       </div>
 

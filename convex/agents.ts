@@ -35,6 +35,8 @@ import { appError } from "./utils/appError";
 import * as agentShapes from "./utils/agentShapes";
 import { evalFixtureTypes as EVAL_FIXTURE_TYPE_ORDER, type EvalFixtureType as AgentEvalFixtureType } from "./utils/skillContracts";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
+import { agentRoleChoiceValidator } from "./utils/agentRoles";
+import { applyAgentRole } from "./agentRoles";
 
 const AGENT_CATALOG_LIMIT = 500;
 const DEFAULT_MODEL_LIMIT = 10;
@@ -885,6 +887,8 @@ export const createAgent = superAdminMutation({
     maxCostUsd: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
+    role: v.optional(agentRoleChoiceValidator),
+    plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))),
   },
   returns: v.id("agents"),
   handler: async (ctx, args) => {
@@ -965,6 +969,7 @@ export const createAgent = superAdminMutation({
       ...(limits.maxInputTokens !== undefined ? { maxInputTokens: limits.maxInputTokens } : {}),
       ...(limits.maxRuntimeMs !== undefined ? { maxRuntimeMs: limits.maxRuntimeMs } : {}),
       ...(limits.maxCostUsd !== undefined ? { maxCostUsd: limits.maxCostUsd } : {}),
+      ...(args.plannerMode ? { plannerMode: args.plannerMode } : {}),
     });
 
     await ctx.db.insert("auditLogs", {
@@ -977,6 +982,7 @@ export const createAgent = superAdminMutation({
         ? JSON.stringify({ name: args.name, scope: "global", builderIntent: args.builderIntent })
         : buildCreateAgentAuditMetadata(args.name)
     });
+    if (args.role) await applyAgentRole(ctx, (await ctx.db.get(newAgentId))!, args.role, userId);
 
     return newAgentId;
   },
@@ -1102,14 +1108,18 @@ export const updateAgent = superAdminMutation({
     releaseGateTags: v.optional(v.array(v.string())),
     releaseGateSuitePresetId: v.optional(v.id("agentEvalSuitePresets")),
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
+    /** The agent's job, from the Role dropdown — see convex/agentRoles.ts. */
+    role: v.optional(agentRoleChoiceValidator),
+    plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))),
   },
   returns: v.id("agents"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
-    const { id, storageId, ...updates } = args;
+    const { id, storageId, role, ...updates } = args;
     const existingAgent = await ctx.db.get(id);
     if (!existingAgent) throw appError("NOT_FOUND", "Agent not found");
+    if (role !== undefined) await applyAgentRole(ctx, existingAgent, role, userId);
     if (updates.ownerId !== undefined && !(await ctx.db.get(updates.ownerId))) {
       throw appError("INVALID_INPUT", "Choose the person accountable for this.");
     }
@@ -1271,7 +1281,7 @@ export const deleteAgent = superAdminMutation({
     // (wiki-agents plan, phase 0): a deleted staff agent would leave its
     // sweeps running with no face, which is exactly what the plan forbids.
     if (agent?.systemKey) {
-      throw appError("INVALID_INPUT", "This is a built-in member of the wiki's staff. Switch it off instead of deleting it.");
+      throw appError("INVALID_INPUT", "This agent holds a role. Switch it off instead, or set its role back to General agent first.");
     }
 
     // Cleanse tool bindings

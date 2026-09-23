@@ -107,6 +107,36 @@ export function FieldHint({ children, id }: { children: ReactNode; id?: string }
 }
 
 /**
+ * One setting as a row: what it is on the left, the control on the right.
+ *
+ * The shape `SettingSwitch` already had, opened up to any control — a box, a
+ * select, a segmented choice. Anthony chose it for the agent Settings page on
+ * 2026-09-23 from a screen where each setting says what it is in a line
+ * beside it, rather than a label stacked over a box with a hint underneath.
+ *
+ * The left side is text, not a `<label>`: the control carries its own
+ * accessible name (`Field`'s `labelHidden`, or `aria-label`), so the words are
+ * not announced twice. The control column is capped at a readable width —
+ * a single control stretched across a monitor looks broken — and stacks
+ * under the text on a narrow screen.
+ */
+export function SettingRow({ label, description, children }: {
+  label: string;
+  description?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-[13px] font-medium text-foreground">{label}</span>
+        {description ? <div className="text-[12px] leading-relaxed text-muted">{description}</div> : null}
+      </div>
+      <div className="w-full shrink-0 sm:max-w-[380px]">{children}</div>
+    </div>
+  );
+}
+
+/**
  * A yes/no setting, said once.
  *
  * Each of these was two side-by-side buttons filling the width, so the reader

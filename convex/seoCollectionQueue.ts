@@ -10,6 +10,7 @@ import {
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { recordOperationCost } from "./websiteTrackingStats";
+import { appendRunStep } from "./agentRunStepWriter";
 import type { MutationCtx } from "./_generated/server";
 
 /**
@@ -48,14 +49,27 @@ const claimedPull = v.object({
  * which here is not a duplicated log line but a duplicated charge.
  */
 export const claimSeoBatch = internalMutation({
-  args: { workerId: v.string() },
+  args: {
+    workerId: v.string(),
+    /** The Collector's run, whose spend limit this batch must fit inside. */
+    runId: v.optional(v.id("agentRuns")),
+  },
   returns: v.object({
     pulls: v.array(claimedPull),
     /** When the next row comes due, if the queue is not empty but not ready. */
     nextDueAt: v.union(v.number(), v.null()),
+    /** The run has spent its limit; what is left waits for the next run. */
+    capped: v.boolean(),
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
+
+    // The Collector's spend limit, checked before every batch against what its
+    // run has already spent. Nothing is marked on the queue when it is reached:
+    // the rows stay waiting, and the next run of the Collector takes them.
+    if (args.runId && await runHasSpentItsLimit(ctx, args.runId)) {
+      return { pulls: [], nextDueAt: null, capped: true };
+    }
 
     const due = await ctx.db
       .query("seoDataPulls")
@@ -69,7 +83,7 @@ export const claimSeoBatch = internalMutation({
         .withIndex("by_status_due", (q) => q.eq("status", "PENDING"))
         .order("asc")
         .first();
-      return { pulls: [], nextDueAt: waiting?.dueAt ?? null };
+      return { pulls: [], nextDueAt: waiting?.dueAt ?? null, capped: false };
     }
 
     const operationId = due[0].operationId;
@@ -79,18 +93,8 @@ export const claimSeoBatch = internalMutation({
     const batchSize = due[0].mode === "LIVE" ? 1 : SEO_BATCH_SIZE;
     const batch = due.filter((row) => row.operationId === operationId).slice(0, batchSize);
 
-    // Checked before every batch rather than once when the cycle opened. A
-    // cycle runs for hours after the agent run that started it has ended, and a
-    // cap that was only read at the start would let the rest of those hours
-    // spend freely.
-    const affordable = await withinSpendCap(ctx, batch);
-    if (affordable.length === 0) {
-      await markCyclesCapped(ctx, batch, affordable.length === 0 ? "SPEND" : null);
-      return { pulls: [], nextDueAt: null };
-    }
-
     const claimed: Array<typeof claimedPull.type> = [];
-    for (const row of affordable) {
+    for (const row of batch) {
       await ctx.db.patch(row._id, {
         status: "CLAIMED",
         claimedBy: args.workerId,
@@ -107,57 +111,26 @@ export const claimSeoBatch = internalMutation({
       });
     }
 
-    return { pulls: claimed, nextDueAt: null };
+    return { pulls: claimed, nextDueAt: null, capped: false };
   },
 });
 
 /**
- * How much of this batch the agent's budget will still cover.
+ * Whether the Collector's run has spent its agent's limit.
  *
- * The cap belongs to the agent, never to a company or a website — Hakken
- * absorbs DataForSEO spend and no customer ever sees it, so the only budget
- * that means anything is the operator's own. An agent with no cap set is not
- * capped; that is the platform's existing convention for `maxCostUsd`.
- *
- * The comparison is deliberately crude while the currency question is open:
- * costs are stored in USD exactly as DataForSEO reports them, and converting
- * them on the way in would make the ledger uncheckable against an invoice.
+ * The limit belongs to the agent that spends — the Collector — and is counted
+ * per run, from the run's own cost. An agent with no limit set is not capped;
+ * that is the platform's existing convention for `maxCostUsd`. One batch can
+ * carry a run a little past the line, because the check comes before a batch
+ * and a live batch is one call.
  */
-async function withinSpendCap(
-  ctx: MutationCtx,
-  batch: Doc<"seoDataPulls">[],
-): Promise<Doc<"seoDataPulls">[]> {
-  const cycleId = batch[0]?.cycleId;
-  if (!cycleId) return batch;
-
-  const cycle = await ctx.db.get(cycleId);
-  if (!cycle?.agentRunId) return batch;
-
-  const run = await ctx.db.get(cycle.agentRunId);
-  if (!run) return batch;
-
+async function runHasSpentItsLimit(ctx: MutationCtx, runId: Id<"agentRuns">): Promise<boolean> {
+  const run = await ctx.db.get(runId);
+  if (!run) return false;
   const agent = await ctx.db.get(run.agentId);
   const cap = agent?.maxCostUsd;
-  if (typeof cap !== "number" || cap <= 0) return batch;
-
-  return cycle.totalCostUsd >= cap ? [] : batch;
-}
-
-async function markCyclesCapped(
-  ctx: MutationCtx,
-  batch: Doc<"seoDataPulls">[],
-  reason: "SPEND" | null,
-) {
-  if (!reason) return;
-  const cycleIds = new Set(batch.map((row) => row.cycleId).filter(Boolean));
-  for (const cycleId of cycleIds) {
-    const cycle = await ctx.db.get(cycleId as Id<"seoCollectionCycles">);
-    if (!cycle || cycle.status === "CAPPED_SPEND") continue;
-    await ctx.db.patch(cycle._id, {
-      status: "CAPPED_SPEND",
-      cappedReason: "The collecting agent's spend cap was reached; the rest of this cycle was left unsent.",
-    });
-  }
+  if (typeof cap !== "number" || cap <= 0) return false;
+  return (run.costUsd ?? 0) >= cap;
 }
 
 /**
@@ -217,6 +190,8 @@ export const releaseSeoBatch = internalMutation({
 export const settleSeoSend = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
+    /** The Collector's run, which this call's cost and log line belong to. */
+    runId: v.optional(v.id("agentRuns")),
     taskId: v.optional(v.string()),
     costUsd: v.number(),
     sandbox: v.boolean(),
@@ -251,9 +226,85 @@ export const settleSeoSend = internalMutation({
     // What this operation really costs, for the per-row prices on the Tracking
     // screen. The sandbox charges nothing and says nothing about the price.
     if (!args.sandbox) await recordOperationCost(ctx, row.operationId, args.costUsd);
+    if (args.runId) await recordCollectorCall(ctx, args.runId, row, status, args.costUsd, args.error);
     return null;
   },
 });
+
+/**
+ * One DataForSEO call, on the Collector's run: its cost, a cost record and a
+ * log line, so the agent's Observability shows what it spent and on what —
+ * the reason collection runs through an agent at all.
+ */
+async function recordCollectorCall(
+  ctx: MutationCtx,
+  runId: Id<"agentRuns">,
+  row: Doc<"seoDataPulls">,
+  status: "READY" | "SUBMITTED" | "FAILED",
+  costUsd: number,
+  error: string | undefined,
+) {
+  const run = await ctx.db.get(runId);
+  if (!run) return;
+  const now = Date.now();
+  if (costUsd > 0) {
+    await ctx.db.patch(runId, { costUsd: (run.costUsd ?? 0) + costUsd, updatedAt: now });
+    await ctx.db.insert("agentTransactions", {
+      agentId: run.agentId,
+      ...(row.companyId ? { companyId: row.companyId } : {}),
+      actionContext: `dataforseo:${row.operationId}`,
+      modelUsed: row.operationId,
+      providerKey: "dataforseo",
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd,
+      status: status === "FAILED" ? "FAILED" : "SUCCESS",
+      createdAt: now,
+    });
+  }
+  const said = status === "FAILED"
+    ? `Failed: ${error ?? "no reason given"}`
+    : status === "SUBMITTED"
+      ? `Accepted, $${costUsd.toFixed(4)}. The answer arrives later.`
+      : `Answered, $${costUsd.toFixed(4)}.`;
+  const stepId = await appendRunStep(ctx, {
+    runId,
+    agentId: run.agentId,
+    ...(row.companyId ? { companyId: row.companyId } : {}),
+    kind: "TOOL_CALL",
+    status: status === "FAILED" ? "FAILED" : "SUCCESS",
+    input: describeCall(row),
+    output: said,
+    costUsd,
+    providerKey: "dataforseo",
+    ...(row.claimedAt ? { startedAt: row.claimedAt } : {}),
+    ...(status === "FAILED" && error ? { error } : {}),
+  });
+  await ctx.db.insert("agentLogs", {
+    agentId: run.agentId,
+    runId,
+    stepId,
+    ...(row.companyId ? { companyId: row.companyId } : {}),
+    interactionType: `DataForSEO: ${row.operationId}`,
+    promptContent: row.taskArgsJson.slice(0, 2_000),
+    responseContent: said,
+    outcome: status === "FAILED" ? "FAILED" : "SUCCESS",
+    createdAt: now,
+  });
+}
+
+/** One call in words: the operation, and what it asked about. */
+function describeCall(row: Doc<"seoDataPulls">): string {
+  let args: Record<string, unknown> = {};
+  try {
+    args = JSON.parse(row.taskArgsJson) as Record<string, unknown>;
+  } catch {
+    // An unreadable payload still names its operation.
+  }
+  const subject = args.keyword ?? args.user_prompt ?? args.target
+    ?? (Array.isArray(args.targets) ? `${args.targets.length} websites` : undefined);
+  return subject ? `${row.operationId}: ${String(subject)}` : row.operationId;
+}
 
 /**
  * Move a cycle's counters and the day's rollup.

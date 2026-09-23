@@ -120,11 +120,17 @@ describe('UI And Runtime Contract Drift', () => {
       'src/app/(dashboard)/admin/agents/new/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/settings/page.tsx',
     ]) {
+      // Both screens draw their sections through one component, which is
+      // where the budget boxes now live.
       expect(
         readRepoFile(file),
-        `${file} stopped using the shared budget section`,
-      ).toContain('<AgentBudgetFields');
+        `${file} stopped using the shared agent form`,
+      ).toContain('<AgentFormSections');
     }
+    expect(
+      readRepoFile('src/app/(dashboard)/admin/agents/_components/AgentFormSections.tsx'),
+      'the shared agent form stopped using the shared budget section',
+    ).toContain('<AgentBudgetFields');
 
     expect({
       maxSteps: readNumber(runtimeDefaults, 'maxSteps'),

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { internalAction } from "./_generated/server";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   DataForSeoBackoff,
@@ -11,16 +11,12 @@ import {
   type DataForSeoCredentials,
 } from "./dataForSeoRest";
 import { findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
-import { SEO_WORKER_WIDTH } from "./seoCollectionPolicy";
 import { getErrorMessage } from "./utils/lang";
+import type { Id } from "./_generated/dataModel";
 
 /**
- * The workers: the only place in the pipeline that spends money.
- *
- * A small pool of self-scheduling chains. Each one claims a batch, sends it,
- * records what it cost and chains itself; an empty queue starts nothing, which
- * is why this pipeline needs no per-minute cron. The same shape as the
- * knowledge base's own drain chains, for the same reasons.
+ * The sending: the only place in the pipeline that spends money, and it runs
+ * only inside the DataForSEO Collector agent's run (convex/seoAgentRuns.ts).
  *
  * Three rules hold the money side together.
  *
@@ -37,40 +33,32 @@ import { getErrorMessage } from "./utils/lang";
  * a later due time rather than burning their attempts.
  */
 
-export const startSeoWorkers = internalAction({
-  args: { cycleId: v.optional(v.id("seoCollectionCycles")) },
-  returns: v.null(),
-  handler: async (ctx) => {
-    for (let chain = 0; chain < SEO_WORKER_WIDTH; chain += 1) {
-      // Staggered like the knowledge queue's chains, so they claim different
-      // batches rather than colliding on the first one and retrying.
-      await ctx.scheduler.runAfter(chain * 250, internal.seoCollectionActions.processSeoQueue, {
-        workerId: `seo-worker-${chain}-${Date.now()}`,
-      });
-    }
-    return null;
-  },
-});
+/** What one call of `sendNextBatch` did, so the Collector knows whether to go on. */
+export type SendOutcome =
+  | { kind: "SENT"; count: number }
+  | { kind: "EMPTY"; nextDueAt: number | null }
+  | { kind: "CAPPED" };
 
-export const processSeoQueue = internalAction({
-  args: { workerId: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
+/**
+ * Claim the next batch and send it — one step of the Collector's run.
+ *
+ * This was a pool of self-scheduling worker chains, started the moment work
+ * was queued, so data was bought with no agent run behind it and none of it
+ * reached an agent's logs or costs. Anthony, 2026-09-23: collection works
+ * only through the agents. The Collector now calls this in a loop, and every
+ * call it sends is settled against the Collector's run.
+ */
+export async function sendNextBatch(
+  ctx: ActionCtx,
+  args: { workerId: string; runId: Id<"agentRuns"> },
+): Promise<SendOutcome> {
     const claim = await ctx.runMutation(internal.seoCollectionQueue.claimSeoBatch, {
       workerId: args.workerId,
+      runId: args.runId,
     });
 
-    if (claim.pulls.length === 0) {
-      // Nothing due. If something is waiting, wake for it; if the queue is
-      // empty, stop entirely rather than spinning.
-      if (claim.nextDueAt) {
-        const wait = Math.max(claim.nextDueAt - Date.now(), 1000);
-        await ctx.scheduler.runAfter(wait, internal.seoCollectionActions.processSeoQueue, {
-          workerId: args.workerId,
-        });
-      }
-      return null;
-    }
+    if (claim.capped) return { kind: "CAPPED" };
+    if (claim.pulls.length === 0) return { kind: "EMPTY", nextDueAt: claim.nextDueAt };
 
     const operation = findSeoOperation(claim.pulls[0].operationId);
     if (!operation) {
@@ -79,7 +67,7 @@ export const processSeoQueue = internalAction({
         attempt: 0,
         reason: `No registered operation called '${claim.pulls[0].operationId}'.`,
       });
-      return null;
+      return { kind: "SENT", count: 0 };
     }
 
     let credentials: DataForSeoCredentials;
@@ -91,7 +79,7 @@ export const processSeoQueue = internalAction({
         attempt: 0,
         reason: getErrorMessage(error),
       });
-      return null;
+      return { kind: "SENT", count: 0 };
     }
 
     const pingbackUrl = seoPingbackUrl();
@@ -130,6 +118,7 @@ export const processSeoQueue = internalAction({
 
         await ctx.runMutation(internal.seoCollectionQueue.settleSeoSend, {
           pullId: pull.pullId,
+          runId: args.runId,
           ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
           costUsd: credentials.sandbox ? 0 : outcome.costUsd,
           sandbox: credentials.sandbox,
@@ -156,12 +145,8 @@ export const processSeoQueue = internalAction({
       });
     }
 
-    await ctx.scheduler.runAfter(0, internal.seoCollectionActions.processSeoQueue, {
-      workerId: args.workerId,
-    });
-    return null;
-  },
-});
+    return { kind: "SENT", count: claim.pulls.length };
+}
 
 /**
  * Collect a finished task.

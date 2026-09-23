@@ -37,7 +37,7 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/Field.tsx`: labelled field wrapper for typed form controls that must carry an accessible label.
 - `src/ui/components/screens/Checkbox.tsx`: shared checkbox/tick-box control, including hidden-label table-cell use.
 - `src/ui/components/screens/Leaderboard.tsx`: ranked or unranked compact lists for repeated "who used the most" panels.
-- `src/ui/components/screens/SettingsCard.tsx`: settings card, field label, field hint, segmented choice, and setting switch.
+- `src/ui/components/screens/SettingsCard.tsx`: settings card, field label, field hint, segmented choice, setting switch, and setting row (label and explanation on the left, any control on the right — the agent Settings page is built from it).
 - `src/ui/components/screens/AccessLevel.tsx`: the read/write context, `useCanWriteHere`, and the write-gated button. Table, page header, modal form and save controls all consult it, so a read-only viewer loses write affordances without each screen checking.
 - `src/ui/components/screens/SaveControls.tsx`: save button, inline error, animated success/error feedback, and feedback pill.
 - `src/ui/components/screens/TableControls.tsx`: table-search controls used where a page needs the kit's input styling without a full `DataTable`.

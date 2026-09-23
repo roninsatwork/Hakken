@@ -143,8 +143,6 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/app/(dashboard)/admin/agents/[id]/layout.tsx', 1],
   ['src/app/(dashboard)/admin/agents/[id]/memory/page.tsx', 2],
   ['src/app/(dashboard)/admin/agents/[id]/runs/_components/RunsTable.tsx', 3],
-  ['src/app/(dashboard)/admin/agents/[id]/settings/page.tsx', 1],
-  ['src/app/(dashboard)/admin/agents/new/page.tsx', 1],
   ['src/app/(dashboard)/admin/ai/costs/_components/AICostDistributionCharts.tsx', 1],
   ['src/app/(dashboard)/admin/ai/voice/page.tsx', 1],
   ['src/app/(dashboard)/admin/companies/CompanyDialogs.tsx', 1],

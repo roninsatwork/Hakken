@@ -2892,7 +2892,7 @@
           "notFound": "Agent not found",
           "sections": {
             "identity": {
-              "title": "Agent Profile",
+              "title": "About",
               "synchronized": "Saved",
               "saveButton": "Save Changes",
               "saving": "Saving...",
@@ -2902,7 +2902,10 @@
                 "label": "Avatar Image",
                 "updateButton": "Upload Avatar",
                 "hint": "PNG/JPG recommended. 400x400px."
-              }
+              },
+              "nameHint": "Shown on the Agents list and in logs.",
+              "descriptionHint": "One line on what it is for.",
+              "image": "Image"
             },
             "engine": {
               "title": "AI Model Settings",
@@ -2915,7 +2918,8 @@
                 "followDefault": "Follow the platform default",
                 "followDefaultNamed": "Follow the platform default — {model}",
                 "followDefaultMissing": "Follow the platform default — none set",
-                "unusable": "This model is not available, so this agent has nothing to run. Choose another, or follow the platform default."
+                "unusable": "This model is not available, so this agent has nothing to run. Choose another, or follow the platform default.",
+                "price": "{input} in · {output} out"
               },
               "reasoning": {
                 "label": "Reasoning Effort",
@@ -2949,7 +2953,7 @@
                   "maxToolCalls": "Tool calls",
                   "maxInputTokens": "Token budget",
                   "maxRuntimeMinutes": "Minutes",
-                  "maxCostGBP": "Spend ($)"
+                  "maxCostUsd": "Spend ($)"
                 }
               },
               "status": {
@@ -2974,9 +2978,36 @@
                 }
               },
               "groups": {
-                "behaviour": "How it behaves",
-                "limits": "What bounds it"
+                "behaviour": "Model",
+                "limits": "Limits"
               }
+            },
+            "role": {
+              "title": "Role",
+              "label": "What this agent does",
+              "hint": "A general agent thinks with its model. A role is a fixed job the platform runs, and the agent is found by its role, never by its name.",
+              "fixedHint": "A built-in role. The platform finds this agent by it, so it can't be changed here.",
+              "fixed": "{name} (built in)",
+              "general": "General agent",
+              "groups": {
+                "dataforseo": "DataForSEO",
+                "builtIn": "Built-in roles"
+              },
+              "takenBy": "{role} — taken by {name}",
+              "roles": {
+                "DATAFORSEO_PLANNER": "DataForSEO Planner",
+                "DATAFORSEO_COLLECTOR": "DataForSEO Collector"
+              },
+              "mode": {
+                "label": "Mode",
+                "test": "Test",
+                "live": "Live",
+                "testHint": "Test: every run adds everything for every company to the queue, whatever its cadence says.",
+                "liveHint": "Live: every run adds only what is due by each company's cadence."
+              }
+            },
+            "status": {
+              "title": "Status"
             }
           },
           "errors": {
@@ -5375,19 +5406,7 @@
         "search": "Filter states...",
         "noMatches": "No state matches that."
       },
-      "manySites": "{count, plural, one {# website} other {# websites}} in one call",
-      "collectNow": {
-        "button": "Collect now",
-        "title": "Start a collection",
-        "companyLabel": "Company",
-        "companyPlaceholder": "Choose a company",
-        "confirm": "Start collecting",
-        "starting": "Starting...",
-        "warning": "This buys data. A cycle plans one paid request per website per operation the moment it opens.",
-        "alreadyRunning": "A collection for that company is already under way.",
-        "failed": "The collection could not be started.",
-        "started": "Collection started."
-      }
+      "manySites": "{count, plural, one {# website} other {# websites}} in one call"
     },
     "seoCosts": {
       "title": "Cost to serve",

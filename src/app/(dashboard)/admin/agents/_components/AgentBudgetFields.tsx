@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { Field } from "@/src/ui/components/screens/Field";
+import { SettingRow } from "@/src/ui/components/screens/SettingsCard";
 import { AGENT_LIMIT_CEILINGS, AGENT_LIMIT_DEFAULTS } from "../_lib/agentLimits";
 
 /**
@@ -55,26 +56,37 @@ function formatLimitNumber(raw: string) {
 export function AgentBudgetFields({
   values,
   onChange,
+  layout = "grid",
 }: {
   values: AgentBudgetValues;
   onChange: (key: BudgetKey, value: string) => void;
+  /**
+   * `rows` for the Settings page, which is one setting per row; `grid` for the
+   * create screen. The same five boxes either way — only where the words sit.
+   */
+  layout?: "grid" | "rows";
 }) {
   // The settings screen's own wording, on both screens, so the two cannot say
   // the same thing two different ways.
   const t = useTranslations("admin.agents.details.settings");
+  const rows = layout === "rows";
 
-  return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {BUDGET_KEYS.map((key) => {
+  const fields = BUDGET_KEYS.map((key) => {
         // A number input cannot carry separators, so the token budget — the only
         // limit here in the millions — is a text box that formats what is typed
         // and strips the commas on the way out.
         const grouped = key === "maxInputTokens";
+        const label = t(`sections.engine.budget.fields.${key}`);
+        const hint = t("sections.engine.budget.inherits", {
+          value: AGENT_LIMIT_DEFAULTS[key].toLocaleString("en-GB"),
+          ceiling: AGENT_LIMIT_CEILINGS[key].toLocaleString("en-GB"),
+        });
 
-        return (
+        const field = (
           <Field
             key={key}
-            label={t(`sections.engine.budget.fields.${key}`)}
+            label={label}
+            labelHidden={rows}
             id={`agent-limit-${key}`}
             type={grouped ? "text" : "number"}
             inputMode={grouped ? "numeric" : undefined}
@@ -85,14 +97,16 @@ export function AgentBudgetFields({
               onChange(key, grouped ? event.target.value.replace(/[^0-9]/g, "") : event.target.value)
             }
             placeholder={AGENT_LIMIT_DEFAULTS[key].toLocaleString("en-GB")}
-            hint={t("sections.engine.budget.inherits", {
-              value: AGENT_LIMIT_DEFAULTS[key].toLocaleString("en-GB"),
-              ceiling: AGENT_LIMIT_CEILINGS[key].toLocaleString("en-GB"),
-            })}
+            hint={rows ? undefined : hint}
             className="px-3 text-[13px] focus:border-brand/40"
           />
         );
-      })}
-    </div>
-  );
+        return rows
+          ? <SettingRow key={key} label={label} description={hint}>{field}</SettingRow>
+          : field;
+      });
+
+  return rows
+    ? <div className="divide-y divide-border-dim/40">{fields}</div>
+    : <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">{fields}</div>;
 }

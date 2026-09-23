@@ -2892,7 +2892,7 @@
           "notFound": "Agent non trovato",
           "sections": {
             "identity": {
-              "title": "Identità Agent & Configurazione Core",
+              "title": "Informazioni",
               "synchronized": "Sincronizzato",
               "saveButton": "Salva Profilo Agent",
               "saving": "Salvataggio...",
@@ -2902,7 +2902,10 @@
                 "label": "Visualizzazione Neurale (Avatar)",
                 "updateButton": "Aggiorna Frame Neurale",
                 "hint": "Consigliato PNG/JPG. 400x400px."
-              }
+              },
+              "nameHint": "Mostrato nell'elenco degli agenti e nei log.",
+              "descriptionHint": "Una riga su a cosa serve.",
+              "image": "Immagine"
             },
             "engine": {
               "title": "Configurazione Motore Cognitivo",
@@ -2915,7 +2918,8 @@
                 "followDefault": "Segui il default della piattaforma",
                 "followDefaultNamed": "Segui il default della piattaforma — {model}",
                 "followDefaultMissing": "Segui il default della piattaforma — nessuno impostato",
-                "unusable": "Questo modello non è disponibile, quindi questo agente non ha nulla da eseguire. Scegline un altro, oppure segui il default della piattaforma."
+                "unusable": "Questo modello non è disponibile, quindi questo agente non ha nulla da eseguire. Scegline un altro, oppure segui il default della piattaforma.",
+                "price": "{input} in entrata · {output} in uscita"
               },
               "reasoning": {
                 "label": "Intensità di Ragionamento",
@@ -2949,7 +2953,7 @@
                   "maxToolCalls": "Chiamate strumenti",
                   "maxInputTokens": "Budget token",
                   "maxRuntimeMinutes": "Minuti",
-                  "maxCostGBP": "Spesa ($)"
+                  "maxCostUsd": "Spesa ($)"
                 }
               },
               "status": {
@@ -2974,9 +2978,36 @@
                 }
               },
               "groups": {
-                "behaviour": "Come si comporta",
-                "limits": "Cosa lo limita"
+                "behaviour": "Modello",
+                "limits": "Limiti"
               }
+            },
+            "role": {
+              "title": "Ruolo",
+              "label": "Cosa fa questo agente",
+              "hint": "Un agente generico ragiona con il suo modello. Un ruolo è un compito fisso che la piattaforma esegue, e l'agente viene trovato dal ruolo, mai dal nome.",
+              "fixedHint": "Un ruolo integrato. La piattaforma trova questo agente tramite il ruolo, quindi qui non si può cambiare.",
+              "fixed": "{name} (integrato)",
+              "general": "Agente generico",
+              "groups": {
+                "dataforseo": "DataForSEO",
+                "builtIn": "Ruoli integrati"
+              },
+              "takenBy": "{role} — assegnato a {name}",
+              "roles": {
+                "DATAFORSEO_PLANNER": "Pianificatore DataForSEO",
+                "DATAFORSEO_COLLECTOR": "Raccoglitore DataForSEO"
+              },
+              "mode": {
+                "label": "Modalità",
+                "test": "Prova",
+                "live": "Operativa",
+                "testHint": "Prova: ogni esecuzione aggiunge alla coda tutto, per ogni azienda, qualunque sia la sua cadenza.",
+                "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda."
+              }
+            },
+            "status": {
+              "title": "Stato"
             }
           },
           "errors": {
@@ -5375,19 +5406,7 @@
         "search": "Filtra stati...",
         "noMatches": "Nessuno stato corrisponde."
       },
-      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata",
-      "collectNow": {
-        "button": "Raccogli ora",
-        "title": "Avvia una raccolta",
-        "companyLabel": "Azienda",
-        "companyPlaceholder": "Scegli un'azienda",
-        "confirm": "Avvia la raccolta",
-        "starting": "Avvio in corso...",
-        "warning": "Questo acquista dati. Un ciclo pianifica una richiesta a pagamento per ogni sito e per ogni operazione nel momento in cui si apre.",
-        "alreadyRunning": "Una raccolta per quell'azienda è già in corso.",
-        "failed": "Non è stato possibile avviare la raccolta.",
-        "started": "Raccolta avviata."
-      }
+      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata"
     },
     "seoCosts": {
       "title": "Costo del servizio",

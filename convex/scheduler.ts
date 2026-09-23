@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { isAssignableAgentRole, type AssignableAgentRole } from "./utils/agentRoles";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -217,6 +218,8 @@ export const manualRunSchedule = superAdminMutation({
     let standingObjective = "";
     /** Set when the agent is one of the wiki staff, whose Run is a sweep. */
     let wikiStaffKey: string | undefined;
+    /** Set when the agent holds a DataForSEO role, whose Run is that role's job. */
+    let seoRole: AssignableAgentRole | undefined;
 
     if (args.agentId) {
       const agent = await ctx.db.get(args.agentId);
@@ -234,6 +237,7 @@ export const manualRunSchedule = superAdminMutation({
       wikiStaffKey = WIKI_STAFF.some((member) => member.systemKey === agent.systemKey)
         ? agent.systemKey
         : undefined;
+      seoRole = isAssignableAgentRole(agent.systemKey) ? agent.systemKey : undefined;
 
       agentRunId = await ctx.db.insert("agentRuns", {
         agentId: args.agentId,
@@ -271,6 +275,17 @@ export const manualRunSchedule = superAdminMutation({
         */
        await ctx.scheduler.runAfter(0, internal.wikiStaffRunActions.runStaffNow, {
            systemKey: wikiStaffKey,
+           runId: agentRunId as Id<"agentRuns">,
+           workflowExecutionId: executionId,
+       });
+       return executionId;
+    }
+
+    if (args.agentId && seoRole) {
+       // A DataForSEO agent's Run does its role's fixed job, with no model
+       // call — see convex/seoAgentRuns.ts.
+       await ctx.scheduler.runAfter(0, internal.seoAgentRuns.runSeoRoleNow, {
+           role: seoRole,
            runId: agentRunId as Id<"agentRuns">,
            workflowExecutionId: executionId,
        });

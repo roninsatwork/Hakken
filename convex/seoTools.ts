@@ -119,7 +119,7 @@ export const startSeoCollection = internalMutation({
 /**
  * Open a cycle, whoever asked for it.
  *
- * Extracted so the agent's tool and the operator's button are the same code
+ * Extracted so the Planner agent and the agent tool are the same code
  * rather than two copies that drift. The one-open-cycle rule is the reason
  * this must not be duplicated: a second copy that forgot it would plan the
  * same work twice, and the only thing between that and a doubled bill would be
@@ -176,7 +176,7 @@ export async function openSeoCycle(
     return {
       ok: true,
       cycleId,
-      message: "Collection started. The work list is being written and will send itself.",
+      message: "Collection planned. The work list is being written; the DataForSEO Collector sends it on its next run.",
     };
   }
 }
@@ -253,12 +253,11 @@ export const requestSeoPull = internalMutation({
       submittedAt: startedAt,
     });
 
-    await ctx.scheduler.runAfter(0, internal.seoCollectionActions.startSeoWorkers, {});
-
+    // Only queued: the DataForSEO Collector agent sends it on its next run.
     return {
       ok: true,
       reused: false,
-      message: `Queued ${operation.id} for ${host}. The answer arrives separately.`,
+      message: `Queued ${operation.id} for ${host}. The DataForSEO Collector sends it on its next run.`,
     };
   },
 });

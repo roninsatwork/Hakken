@@ -108,7 +108,6 @@ export const expandSeoCycle = internalMutation({
         cursor: outcome.lastCursor ?? cycle.cursor,
         cappedReason: `Planned ${plannedCount} pulls, which is this cycle's ceiling of ${SEO_MAX_SENDS_PER_CYCLE}.`,
       });
-      await startSending(ctx, args.cycleId, plannedCount);
       return null;
     }
 
@@ -140,22 +139,10 @@ export const expandSeoCycle = internalMutation({
         cycleId: args.cycleId,
       });
     }
-    await startSending(ctx, args.cycleId, plannedCount);
     return null;
   },
 });
 
-async function startSending(
-  ctx: MutationCtx,
-  cycleId: Id<"seoCollectionCycles">,
-  plannedCount: number,
-) {
-  // Nothing planned means nothing to drain. An empty queue must start no
-  // chains at all — that is the whole reason this pipeline needs no
-  // per-minute cron.
-  if (plannedCount <= 0) return;
-  await ctx.scheduler.runAfter(0, internal.seoCollectionActions.startSeoWorkers, { cycleId });
-}
 
 async function expandPage(
   ctx: MutationCtx,
@@ -232,7 +219,7 @@ async function expandPage(
       .order("desc")
       .first();
     //
-    // Unless somebody pressed "Collect now": that is a request for today's
+    // Unless the Planner opened it as a manual collection: that is a request for today's
     // numbers, and a manual run that quietly skipped every site not yet due
     // planned nothing at all — the first live run on 2026-09-23 did exactly that.
     if (cycle.trigger !== "MANUAL" && lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
@@ -792,7 +779,7 @@ async function findFreshPull(
 
   if (!recent?.completedAt) return null;
 
-  // "Collect now" asks for today's numbers, so only an answer from the last
+  // A manual collection asks for today's numbers, so only an answer from the last
   // hour serves it — enough to stop a double press paying twice, and no more.
   if (args.cycle.trigger === "MANUAL") {
     return args.now.getTime() - recent.completedAt <= SEO_MANUAL_FRESH_MS ? recent : null;

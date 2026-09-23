@@ -10,23 +10,11 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { AgentBudgetFields } from "../_components/AgentBudgetFields";
-import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import {
-  FieldLabel,
-  SegmentedChoice,
-  SettingSwitch,
-  SettingsCard,
-  fieldClassName,
-} from "@/src/ui/components/screens/SettingsCard";
-import {
-  formatModelDisplayName,
-  formatTokenCost,
-} from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+import { formatModelDisplayName } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
 import { describePurposeAndOwnerProblems } from "@/convex/agentAccountabilityService";
+import { AgentFormSections, parseLimitInput, type AgentFormValues } from "../_components/AgentFormSections";
 
 /**
  * Creating an agent, on its own screen.
@@ -46,10 +34,11 @@ import { describePurposeAndOwnerProblems } from "@/convex/agentAccountabilitySer
  * *"these are missing and the add has more fields that we need make it like teh
  * edit"*.
  *
- * So this screen is now the settings screen's three cards, in the same order,
- * with the same labels and the same help text — read from the settings screen's
- * own translation keys, so the wording cannot drift between them. What you set
- * here is what you will see when it opens.
+ * So this screen is now the settings screen's sections, drawn by the very same
+ * component — `AgentFormSections` — so the layout, the order, the wording and
+ * the controls cannot drift between them. It had drifted a third time on
+ * 2026-09-23, when Settings moved to rows and this screen did not. What you set
+ * here, the role included, is what you will see when it opens.
  *
  * ## What went, and why
  *
@@ -66,51 +55,7 @@ import { describePurposeAndOwnerProblems } from "@/convex/agentAccountabilitySer
  *   Reasoning Effort, saved onto the agent.
  */
 
-type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
-type ModelSelectionMode = "inherit" | "override";
-
-const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
-
-/**
- * The token budget is shown as the number the runtime actually uses.
- *
- * Named for what a stopped run reports — "reached the configured token budget"
- * — so the message and the setting can be joined up by whoever reads them, and
- * shown in whole tokens rather than thousands so the number on screen is the
- * number that applies.
- */
-
-/** Empty, zero and nonsense all mean "inherit the default", matching the server. */
-function parseLimitInput(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return undefined;
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-type NewAgentForm = {
-  name: string;
-  description: string;
-  ownerId: string;
-  riskLevel: string;
-  avatar: string;
-  modelId: string;
-  modelSelectionMode: ModelSelectionMode;
-  reasoningEffort: ReasoningEffort;
-  allowInternetAccess: boolean;
-  /** Inverted for display: the switch reads as the safe state being on. */
-  requireHumanApproval: boolean;
-  approvalExpiryHours: string;
-  maxSteps: string;
-  maxToolCalls: string;
-  maxInputTokens: string;
-  maxRuntimeMinutes: string;
-  maxCostUsd: string;
-  isActive: boolean;
-  storageId?: Id<"_storage">;
-};
-
-const emptyForm: NewAgentForm = {
+const emptyForm: AgentFormValues = {
   name: "",
   description: "",
   ownerId: "",
@@ -130,6 +75,8 @@ const emptyForm: NewAgentForm = {
   maxCostUsd: "",
   // A draft by default: worth a look before it can be run, but not a rule.
   isActive: false,
+  role: "NONE",
+  plannerMode: "TEST",
 };
 
 export default function NewAgentPage() {
@@ -144,6 +91,7 @@ export default function NewAgentPage() {
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
+  const roleHolders = useQuery(api.agentRoles.listAgentRoleHolders, {}) ?? [];
 
   const activeModels = useMemo(
     () => (activeModelsData ?? []) as Doc<"aiModels">[],
@@ -151,7 +99,7 @@ export default function NewAgentPage() {
   );
   const defaultModel = activeModels.find((model) => model.isDefault);
 
-  const [formData, setFormData] = useState<NewAgentForm>(emptyForm);
+  const [formData, setFormData] = useState<AgentFormValues>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // What "follow the platform default" would actually mean, named before it is
@@ -161,13 +109,6 @@ export default function NewAgentPage() {
     : activeModelsData === undefined
       ? ts("sections.engine.model.followDefault")
       : ts("sections.engine.model.followDefaultMissing");
-
-  const describeModelPrice = (model: Doc<"aiModels">) => {
-    const input = formatTokenCost(model.standardInputCostBelow200k);
-    const output = formatTokenCost(model.outputResponseCost);
-    if (input === "—" && output === "—") return "";
-    return ` · ${input} in · ${output} out`;
-  };
 
   /**
    * What still has to be said before this can be created.
@@ -212,6 +153,8 @@ export default function NewAgentPage() {
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
         maxCostUsd: parseLimitInput(formData.maxCostUsd) ?? 0,
         isActive: formData.isActive,
+        ...(formData.role !== "NONE" ? { role: formData.role } : {}),
+        ...(formData.role === "DATAFORSEO_PLANNER" ? { plannerMode: formData.plannerMode } : {}),
         ...(formData.storageId ? { storageId: formData.storageId } : {}),
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.create") },
@@ -244,194 +187,20 @@ export default function NewAgentPage() {
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
         <SaveError>{action.error}</SaveError>
 
-        {/* The settings screen's layout, card for card. */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <SettingsCard title={ts("sections.identity.title")}>
-            <AdminAvatarPicker
-              avatar={formData.avatar}
-              labels={{
-                updateButton: ts("sections.identity.avatar.updateButton"),
-                hint: ts("sections.identity.avatar.hint"),
-                modalTitle: ts("uploadModal.title"),
-                modalSubtitle: ts("uploadModal.subtitle"),
-                processing: ts("uploadModal.processing"),
-                dropText: ts("uploadModal.dropText"),
-                dropHint: ts("uploadModal.dropHint"),
-                cancel: ts("uploadModal.cancel"),
-                uploadFailed: ts("errors.uploadFailed"),
-              }}
-              onUploaded={({ storageId, previewUrl }) =>
-                setFormData((previous) => ({ ...previous, storageId, avatar: previewUrl }))
-              }
-            />
-
-            <Field
-              label={ts("sections.identity.name")}
-              id="agent-name"
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={t("placeholders.name")}
-            />
-
-            <TextAreaField
-              label={ts("sections.identity.description")}
-              id="agent-description"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder={t("placeholders.description")}
-            />
-
-            {/*
-              Who answers for this assistant. Not the person who creates it —
-              creation is already in the audit trail, and the register asks a
-              different question: who is accountable now.
-            */}
-            <FieldLabel htmlFor="agent-owner">{t("owner.label")}</FieldLabel>
-            <select
-              id="agent-owner"
-              value={formData.ownerId}
-              onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
-              className={fieldClassName}
-            >
-              <option value="">{t("owner.choose")}</option>
-              {accountablePeople.map((person) => (
-                <option key={person._id} value={person._id}>{person.name}</option>
-              ))}
-            </select>
-            <p className="text-[12px] text-secondary">{t("owner.hint")}</p>
-            {/*
-              The rating is not a label. Choosing High makes human approval a
-              consequence rather than a preference, and the platform refuses to
-              switch it off afterwards.
-            */}
-            <FieldLabel htmlFor="agent-risk">{t("risk.label")}</FieldLabel>
-            <select
-              id="agent-risk"
-              value={formData.riskLevel}
-              onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value })}
-              className={fieldClassName}
-            >
-              <option value="">{t("risk.unrated")}</option>
-              <option value="LOW">{t("risk.low")}</option>
-              <option value="MEDIUM">{t("risk.medium")}</option>
-              <option value="HIGH">{t("risk.high")}</option>
-            </select>
-            <p className="text-[12px] text-secondary">
-              {formData.riskLevel === "HIGH" ? t("risk.highHint") : t("risk.hint")}
-            </p>
-          </SettingsCard>
-
-          <SettingsCard title={ts("sections.engine.groups.behaviour")}>
-            <FieldLabel htmlFor="agent-model">{ts("sections.engine.model.label")}</FieldLabel>
-            <select
-              id="agent-model"
-              value={formData.modelSelectionMode === "inherit" ? "" : formData.modelId || ""}
-              onChange={(e) => {
-                const nextModelId = e.target.value;
-                setFormData({
-                  ...formData,
-                  modelSelectionMode: nextModelId ? "override" : "inherit",
-                  ...(nextModelId ? { modelId: nextModelId } : {}),
-                });
-              }}
-              className="h-[46px] w-full cursor-pointer appearance-none rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
-            >
-              <option value="">{inheritOptionLabel}</option>
-              {activeModels.map((m) => (
-                <option key={m.modelId} value={m.modelId}>
-                  {formatModelDisplayName(m)}{describeModelPrice(m)}
-                </option>
-              ))}
-            </select>
-            <p className="text-[11px] leading-relaxed text-muted">
-              {ts("sections.engine.model.hint")}
-            </p>
-
-            <div className="flex flex-col gap-2 pt-1">
-              <FieldLabel>{ts("sections.engine.reasoning.label")}</FieldLabel>
-              <SegmentedChoice
-                label={ts("sections.engine.reasoning.label")}
-                value={formData.reasoningEffort}
-                options={reasoningLevels.map((level) => ({
-                  value: level,
-                  label: ts(`sections.engine.reasoning.levels.${level}`),
-                }))}
-                onChange={(level) => setFormData({ ...formData, reasoningEffort: level })}
-              />
-              <p className="text-[11px] leading-relaxed text-muted">
-                {ts("sections.engine.reasoning.hint")}
-              </p>
-            </div>
-
-            <div className="mt-1 divide-y divide-border-dim/40 border-t border-border-dim/40">
-              <SettingSwitch
-                label={ts("sections.engine.internet.label")}
-                description={formData.allowInternetAccess
-                  ? ts("sections.engine.internet.hintOn")
-                  : ts("sections.engine.internet.hintOff")}
-                checked={formData.allowInternetAccess}
-                onChange={(next) => setFormData({ ...formData, allowInternetAccess: next })}
-              />
-              <SettingSwitch
-                label={ts("sections.engine.approval.label")}
-                description={formData.requireHumanApproval
-                  ? ts("sections.engine.approval.hintRequired")
-                  : ts("sections.engine.approval.hintAutonomous")}
-                checked={formData.requireHumanApproval}
-                onChange={(next) => setFormData({ ...formData, requireHumanApproval: next })}
-              >
-                {formData.requireHumanApproval && (
-                  <Field
-                    label={ts("sections.engine.approval.expiryLabel")}
-                    id="agent-approval-expiry"
-                    type="number"
-                    min={0}
-                    step="1"
-                    max={approvalExpiry?.maxHours ?? 720}
-                    value={formData.approvalExpiryHours}
-                    onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
-                    placeholder={String(approvalExpiry?.expiryHours ?? 24)}
-                    hint={ts("sections.engine.approval.expiryHint", {
-                      hours: approvalExpiry?.expiryHours ?? 24,
-                    })}
-                    wrapperClassName="pt-3"
-                    className="h-[42px] max-w-[220px] px-3 text-[13px] focus:border-brand/40"
-                  />
-                )}
-              </SettingSwitch>
-            </div>
-          </SettingsCard>
-
-          <SettingsCard title={ts("sections.engine.groups.limits")} className="xl:col-span-2">
-            <p className="-mt-1 text-[12px] leading-relaxed text-secondary">
-              {ts("sections.engine.budget.hint")}
-            </p>
-            <AgentBudgetFields
-              values={formData}
-              onChange={(key, value) => setFormData({ ...formData, [key]: value })}
-            />
-
-            {/* The same switch the settings screen carries, and it works here
-                for the same reason it works there: checks report, they do not
-                decide. A new agent still defaults to a draft, because most are
-                worth a look before they can be run. */}
-            <div className="mt-2 border-t border-border-dim/40">
-              <SettingSwitch
-                label={formData.isActive
-                  ? ts("sections.engine.status.active")
-                  : ts("sections.engine.status.inactive")}
-                description={formData.isActive
-                  ? t("builder.startsOnWarning")
-                  : ts("sections.engine.status.hintInactive")}
-                checked={formData.isActive}
-                onChange={(next) => setFormData({ ...formData, isActive: next })}
-              />
-            </div>
-          </SettingsCard>
-        </div>
+        {/* The settings screen's sections, drawn by the same component. */}
+        <AgentFormSections
+          values={formData}
+          onChange={(patch) => setFormData((previous) => ({ ...previous, ...patch }))}
+          models={activeModels}
+          inheritOptionLabel={inheritOptionLabel}
+          accountablePeople={accountablePeople}
+          approvalExpiry={approvalExpiry ?? undefined}
+          roleHolders={roleHolders}
+          placeholders={{ name: t("placeholders.name"), description: t("placeholders.description") }}
+          // Checks report, they do not decide: switching a new agent on here
+          // says plainly that nothing has tested it yet.
+          activeDescription={t("builder.startsOnWarning")}
+        />
 
         <div className="flex items-center gap-3">
           <WriteButton
