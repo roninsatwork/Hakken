@@ -382,9 +382,10 @@ dark mode depending on the switcher."
 - **Built by extending the existing `ChartExportWrapper`**
   (`src/ui/components/charts/ChartExportWrapper.tsx`), which already follows
   the theme through `useTheme` but hardcodes its backgrounds (`#0d0d0d` /
-  `#ffffff`), shows its button only on hover and offers PNG only. Extend it and
-  say so in a comment — the admin charts that use it keep working unchanged
-  (D13 still holds: no admin screen changes; they may simply gain the fix).
+  `#ffffff`), shows its button only on hover and offers PNG only. Extend it
+  with options that Sites turns on, and say so in a comment. The defaults stay
+  exactly as they are, so the admin charts that already use it look and behave
+  the same (D13: no admin screen changes).
 - Tables keep their own CSV export (see "Tables"); big ones are built on the
   server (see "Speed").
 
