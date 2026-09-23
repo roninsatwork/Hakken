@@ -164,7 +164,7 @@ search, which is every row of Top pages.
 | Impressions, clicks | Need Search Console — a later layer, not this plan. |
 | Ahrefs' own scores (DR, UR) | Theirs. We show DataForSEO's rank and page rank instead, on their own scale. |
 
-**Thirty-one pages: Overview and Calendar plus five sub menus.** Pages marked
+**Thirty-two pages: Overview and Calendar plus five sub menus.** Pages marked
 💷 wait for Phase 4; the rest are built from data we already buy.
 
 ## Collecting more (D10)
