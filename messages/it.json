@@ -5347,6 +5347,7 @@
       "operation": {
         "backlinks_summary": "Chi la collega",
         "domain_ranked_keywords": "Per cosa si posiziona",
+        "domain_competitors": "Chi compete con lui",
         "serp_google_organic": "Posizione per una ricerca",
         "keyword_search_volume": "Frequenza di ricerca dei termini",
         "bulk_backlinks": "Conteggio link, più siti insieme",

@@ -24,6 +24,7 @@ import {
   SEO_EXPANSION_PAGE,
   SEO_COMPETITORS_PER_WEBSITE,
   SEO_KEYWORD_CHECKS_PER_WEBSITE,
+  SEO_MANUAL_FRESH_MS,
   SEO_MAX_SENDS_PER_CYCLE,
   SEO_MOVES_DELAY_MS,
   SEO_PAGE_LINE_BUDGET,
@@ -230,7 +231,11 @@ async function expandPage(
         q.eq("companyId", cycle.companyId).eq("websiteId", companyWebsite.websiteId))
       .order("desc")
       .first();
-    if (lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
+    //
+    // Unless somebody pressed "Collect now": that is a request for today's
+    // numbers, and a manual run that quietly skipped every site not yet due
+    // planned nothing at all — the first live run on 2026-09-23 did exactly that.
+    if (cycle.trigger !== "MANUAL" && lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
 
     /*
       What this company has chosen to watch against this site, and nothing else.
@@ -342,9 +347,12 @@ async function reusableByKey(
   ctx: MutationCtx,
   idempotencyKey: string,
 ): Promise<Doc<"seoDataPulls"> | null> {
+  // A sandbox answer is made up, so it is never served to a live run — the
+  // switch can be flipped mid-day, and the key carries only the date.
   const existing = await ctx.db
     .query("seoDataPulls")
     .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
+    .filter((q) => q.neq(q.field("sandbox"), true))
     .first();
   if (!existing) return null;
   if (existing.status !== "FAILED") return existing;
@@ -754,6 +762,7 @@ async function planPull(
 async function findFreshPull(
   ctx: MutationCtx,
   args: {
+    cycle: Doc<"seoCollectionCycles">;
     schedule: Doc<"schedules"> | null;
     companyWebsite: Doc<"companyWebsites">;
     websiteId: Id<"websites">;
@@ -776,10 +785,18 @@ async function findFreshPull(
       q.and(
         q.eq(q.field("status"), "READY"),
         q.eq(q.field("taskArgsJson"), args.taskArgsJson),
+        // Made-up sandbox numbers are never somebody's fresh answer.
+        q.neq(q.field("sandbox"), true),
       ))
     .first();
 
   if (!recent?.completedAt) return null;
+
+  // "Collect now" asks for today's numbers, so only an answer from the last
+  // hour serves it — enough to stop a double press paying twice, and no more.
+  if (args.cycle.trigger === "MANUAL") {
+    return args.now.getTime() - recent.completedAt <= SEO_MANUAL_FRESH_MS ? recent : null;
+  }
 
   // "Fresh enough" is the asker's own cadence, asked of the same helper that
   // decides whether a website is due at all. A weekly watcher handed six-day-old

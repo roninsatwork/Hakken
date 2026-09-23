@@ -21,6 +21,7 @@ async function seedPull(
   t: Harness,
   overrides: Partial<{
     operationId: string;
+    mode: "LIVE" | "QUEUED";
     status: "PENDING" | "CLAIMED" | "SUBMITTED" | "READY" | "FAILED";
     dueAt: number;
     attempts: number;
@@ -33,7 +34,7 @@ async function seedPull(
     await ctx.db.insert("seoDataPulls", {
       operationId: overrides.operationId ?? "backlinks_summary",
       family: "Backlinks",
-      mode: "LIVE",
+      mode: overrides.mode ?? "LIVE",
       taskArgsJson: JSON.stringify({ target: "a.com" }),
       status: overrides.status ?? "PENDING",
       tag: `tag-${Math.random()}`,
@@ -53,8 +54,8 @@ const pull = (t: Harness, id: Id<"seoDataPulls">) => t.run(async (ctx) => await 
 describe("claiming", () => {
   test("two workers never hold the same row", async () => {
     const t = harness();
-    await seedPull(t);
-    await seedPull(t);
+    await seedPull(t, { operationId: "serp_google_organic", mode: "QUEUED" });
+    await seedPull(t, { operationId: "serp_google_organic", mode: "QUEUED" });
 
     const first = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
     const second = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "two" });
@@ -64,6 +65,19 @@ describe("claiming", () => {
     // a log line, it would duplicate a charge.
     expect(first.pulls).toHaveLength(2);
     expect(second.pulls).toHaveLength(0);
+  });
+
+  test("a live endpoint is sent one task per request, because it refuses the rest", async () => {
+    const t = harness();
+    await seedPull(t);
+    await seedPull(t);
+
+    // DataForSEO answered a batch of two live tasks with "You can set only one
+    // task at a time" on 2026-09-23, and the second was lost.
+    const first = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
+    const second = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "two" });
+    expect(first.pulls).toHaveLength(1);
+    expect(second.pulls).toHaveLength(1);
   });
 
   test("a batch is all one operation, because one request is one endpoint", async () => {

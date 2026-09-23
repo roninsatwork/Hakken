@@ -98,11 +98,16 @@ async function seedCompanyWebsite(
     }));
 }
 
-async function openCycle(t: Harness, companyId: Id<"companies">, startedAt = Date.now()) {
+async function openCycle(
+  t: Harness,
+  companyId: Id<"companies">,
+  startedAt = Date.now(),
+  trigger: "SCHEDULE" | "MANUAL" = "SCHEDULE",
+) {
   return await t.run(async (ctx) =>
     await ctx.db.insert("seoCollectionCycles", {
       companyId,
-      trigger: "SCHEDULE",
+      trigger,
       status: "EXPANDING",
       plannedCount: 0,
       reusedCount: 0,
@@ -584,6 +589,64 @@ describe("the reuse ladder", () => {
     // Absence of an override is what makes a site follow its company;
     // presence is what makes it stop.
     expect((await cycle(t, cycleId))?.plannedCount).toBe(0);
+  });
+});
+
+describe("collecting now, by hand", () => {
+  /** One site collected yesterday for real, on a weekly schedule. */
+  async function collectedYesterday(t: Harness, fields: { sandbox: boolean; completedAt: number }) {
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, WEEKLY);
+    const website = await seedWebsite(t, "ronins.co.uk");
+    await seedCompanyWebsite(t, company, website);
+    const first = await openCycle(t, company, fields.completedAt);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: first });
+    await t.run(async (ctx) => {
+      for (const row of await ctx.db.query("seoDataPulls").collect()) {
+        await ctx.db.patch(row._id, { status: "READY", completedAt: fields.completedAt, sandbox: fields.sandbox });
+      }
+    });
+    return company;
+  }
+
+  test("collects a site the timetable says is not due yet", async () => {
+    const t = harness();
+    const company = await collectedYesterday(t, { sandbox: false, completedAt: Date.now() - 86_400_000 });
+
+    const scheduled = await openCycle(t, company);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: scheduled });
+    expect((await cycle(t, scheduled))?.plannedCount).toBe(0);
+
+    // The first live run on 2026-09-23 planned nothing for exactly this reason.
+    const manual = await openCycle(t, company, Date.now(), "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: manual });
+    expect((await cycle(t, manual))?.plannedCount).toBeGreaterThan(0);
+  });
+
+  test("reuses an answer from the last hour, so a double press does not pay twice", async () => {
+    const t = harness();
+    const company = await collectedYesterday(t, { sandbox: false, completedAt: Date.now() - 10 * 60_000 });
+
+    const manual = await openCycle(t, company, Date.now(), "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: manual });
+    expect((await cycle(t, manual))?.plannedCount).toBe(0);
+  });
+
+  test("never serves a sandbox answer to a live run, however fresh", async () => {
+    const t = harness();
+    await collectedYesterday(t, { sandbox: true, completedAt: Date.now() - 60_000 });
+    // A second company on the same host, due now: a real answer this fresh
+    // would serve it for free, as "the reuse ladder" shows. A made-up one must not.
+    const acme = await seedCompany(t, "Acme Ltd");
+    await seedSchedule(t, acme, WEEKLY);
+    const host = await t.run(async (ctx) => (await ctx.db.query("websites").first())!._id);
+    await seedCompanyWebsite(t, acme, host);
+
+    const second = await openCycle(t, acme);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: second });
+    const secondLines = (await lines(t)).filter((line) => line.cycleId === second);
+    expect(secondLines.length).toBeGreaterThan(0);
+    expect(secondLines.some((line) => line.reused)).toBe(false);
   });
 });
 

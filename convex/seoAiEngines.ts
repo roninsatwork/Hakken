@@ -83,18 +83,21 @@ export const AI_ENGINE_CALLS: Record<AiEngine, {
   claude: {
     platform: "claude",
     mode: "LIVE",
-    // The dated name rather than the `-latest` alias. Their docs mark both as
-    // queueable, but the sandbox refused the alias with "this model does not
-    // support task_post mode" on 2026-09-22, and a dated name is what they
-    // resolve an alias to anyway.
-    modelName: "claude-3-5-haiku-20241022",
+    // The cheapest Claude on DataForSEO's list with web search. The 3.5 Haiku
+    // named here before was retired: the first live run, on 2026-09-23, was
+    // refused with "Invalid Field: 'model_name'". Checked against
+    // /v3/ai_optimization/claude/llm_responses/models the same day.
+    modelName: "claude-haiku-4-5",
     takesLocation: true,
     hasWebSearchSwitch: true,
   },
   gemini: {
     platform: "gemini",
     mode: "LIVE",
-    modelName: "gemini-2.0-flash",
+    // gemini-2.0-flash was retired and refused on the first live run,
+    // 2026-09-23. 2.5 Flash is the cheapest stable flash on DataForSEO's list
+    // with web search, checked against its models endpoint the same day.
+    modelName: "gemini-2.5-flash",
     takesLocation: false,
     hasWebSearchSwitch: true,
   },

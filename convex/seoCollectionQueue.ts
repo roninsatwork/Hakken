@@ -73,7 +73,11 @@ export const claimSeoBatch = internalMutation({
     }
 
     const operationId = due[0].operationId;
-    const batch = due.filter((row) => row.operationId === operationId).slice(0, SEO_BATCH_SIZE);
+    // A live endpoint takes one task per request and refuses the rest with
+    // "You can set only one task at a time" — the first live run on 2026-09-23
+    // lost three pulls that way. Only a queued endpoint takes a batch.
+    const batchSize = due[0].mode === "LIVE" ? 1 : SEO_BATCH_SIZE;
+    const batch = due.filter((row) => row.operationId === operationId).slice(0, batchSize);
 
     // Checked before every batch rather than once when the cycle opened. A
     // cycle runs for hours after the agent run that started it has ended, and a

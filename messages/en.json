@@ -5347,6 +5347,7 @@
       "operation": {
         "backlinks_summary": "Who links to it",
         "domain_ranked_keywords": "What it ranks for",
+        "domain_competitors": "Who competes with it",
         "serp_google_organic": "Where it ranks for one search",
         "keyword_search_volume": "How often terms are searched",
         "bulk_backlinks": "Link counts, many sites at once",
