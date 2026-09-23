@@ -7,6 +7,13 @@ completed work.
 
 ## Active Plans
 
+- [Sites — what a client sees for each website they track](./active/user-sites-plan.md) —
+  the user front end for the SEO data, Semrush-style: a Sites list, then one
+  site with a side menu of one sub menu per kind of data we collect (AI
+  answers, Google results, organic keywords, competitors, backlinks) and a
+  date range on every page. Base layer first: only data we already collect,
+  read-only, editing stays in admin. **Planned 2026-09-23, nothing built.**
+
 - [One Website, Many Watchers — Websites, Competitors and the Collection Pipeline](./active/websites-and-competitors-plan.md) —
   the admin structure Hakken's SEO data hangs off, and the DataForSEO pipeline
   that fills it. A website exists once; a company holds its own websites and
