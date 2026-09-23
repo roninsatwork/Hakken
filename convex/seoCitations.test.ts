@@ -82,6 +82,26 @@ describe("reading an answer", () => {
     expect(parseLlmResponse(null)).toEqual(nothing);
     expect(parseLlmResponse([{ items: [{ type: "message" }] }])).toEqual(nothing);
   });
+
+  test("a Gemini source is filed under the real website, not Google's redirect", () => {
+    // The shape of a live Gemini answer, 2026-09-23: `url` is a grounding
+    // redirect that names no site, and the page itself is in `direct_url`.
+    const parsed = parseLlmResponse([{
+      items: [{
+        type: "message",
+        sections: [{
+          type: "text",
+          text: "Create Designs is a strong choice.",
+          annotations: [{
+            title: "createdesigns.co.uk",
+            url: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8",
+            direct_url: "https://createdesigns.co.uk/website-design/surrey/",
+          }],
+        }],
+      }],
+    }]);
+    expect(parsed.sources).toEqual([{ url: "https://createdesigns.co.uk/website-design/surrey/", title: "createdesigns.co.uk" }]);
+  });
 });
 
 describe("recording who was named", () => {

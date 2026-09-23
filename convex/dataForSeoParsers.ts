@@ -255,7 +255,8 @@ export function isBulkOperation(operationId: string): boolean {
  *
  * Shape, from DataForSEO's docs on 2026-09-22:
  * `result[0].items[]` of type "message", each with `sections[]` holding `text`
- * and, when web search was on, `annotations[]` holding `url` and `title`;
+ * and, when web search was on, `annotations[]` holding `url` and `title` —
+ * and, from one engine, `direct_url`, the real page behind a Google redirect;
  * `result[0].fan_out_queries[]` holding plain strings.
  */
 export function parseLlmResponse(result: unknown): {
@@ -283,7 +284,12 @@ export function parseLlmResponse(result: unknown): {
 
       for (const annotation of asArray(part.annotations)) {
         const note = asRecord(annotation);
-        const url = asString(note?.url);
+        // One engine's `url` is a Google grounding redirect
+        // (vertexaisearch.cloud.google.com/grounding-api-redirect/…) that names
+        // no website; the real page is in `direct_url`. Reading `url` alone
+        // filed every one of its sources under Google on the first live run,
+        // 2026-09-23. Prefer the real address wherever it is given.
+        const url = asString(note?.direct_url) ?? asString(note?.url);
         if (!url || seen.has(url)) continue;
         seen.add(url);
         sources.push({ url, ...(asString(note?.title) ? { title: asString(note?.title) } : {}) });
