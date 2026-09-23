@@ -219,7 +219,7 @@ one instead of filling in over two years.
 - The Collector's spend cap per run (`agents.maxCostUsd`) applies to them.
 - **One test call first** for each new call, on one site, to record its real
   price in the running cost table before it is switched on for everyone.
-- **Row caps.** Lists can be huge (ronins.co.uk shows about 34,000 backlinks,
+- **Row caps.** Lists can be huge (pixelfield.co.uk shows about 34,000 backlinks,
   most from `.tv` spam), so each list call has a row limit and asks for one
   link per linking website unless a page needs every link.
 - Each call's own cadence (the column above) — link lists do not change daily.
