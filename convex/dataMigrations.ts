@@ -113,6 +113,10 @@ type MigrationRunner = (
  * running both migrations, then deploying forward. Anthony confirmed on 2026-07-26
  * that nothing real was live, which is why that trade was taken rather than carrying
  * dead code indefinitely.
+ *
+ * The same was done on 2026-09-23 with `2026-09-23-clear-seo-prefer-live`,
+ * which emptied `companies.seoPreferLive` on dev before the field left the
+ * schema. There is no production deployment yet, so no other copy carries it.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,

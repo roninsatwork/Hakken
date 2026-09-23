@@ -33,7 +33,7 @@ import type { ScheduleCadence, ScheduleDraft } from "@/src/app/(dashboard)/admin
  * queue at all, so every engine is now asked live and there is no choice left
  * to offer. What it wrote — `seoPreferLive` — was read by nothing in the
  * pipeline, which is the same fault this component was built to correct: a
- * setting nobody acted on.
+ * setting nobody acted on. The field itself was removed on 2026-09-23.
  */
 
 const CADENCES: ReadonlyArray<{ value: Extract<ScheduleCadence, "daily" | "weekly" | "fortnightly" | "monthly">; recommended?: boolean }> = [

@@ -63,21 +63,6 @@ export default defineSchema({
      * means the platform defaults. Never hidden maths. */
     moneyMinutesPerConversation: v.optional(v.number()),
     moneyMinutesPerCall: v.optional(v.number()),
-    /**
-     * Whether this company's SEO pulls should ask DataForSEO for a live answer
-     * rather than a queued one.
-     *
-     * **Absent reads as queued**, which is the cheaper of the two and what a
-     * nightly fetcher wants: nobody is waiting for the numbers, so paying extra
-     * for them to arrive in seconds buys nothing.
-     *
-     * It is a preference, not a guarantee. DataForSEO publishes both modes for
-     * SERP and Keywords Data but only `/live` for Labs and Backlinks — checked
-     * against their docs on 2026-09-21, where the `task_post` pages 404. Those
-     * operations stay live whatever this says, and `dataForSeoRegistry.ts`
-     * carries the mode per operation for that reason.
-     */
-    seoPreferLive: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])

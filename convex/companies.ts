@@ -363,38 +363,6 @@ export const updateCompanyPrompt = superAdminMutation({
   },
 });
 
-/**
- * Whether this company's SEO pulls prefer a live answer over a queued one.
- *
- * Separate from the schedule, because it is not a scheduling question: the
- * schedule says when to ask, this says how to ask. Kept on the company rather
- * than the `schedules` row so the generic schedule machinery stays generic.
- */
-export const setCompanySeoMethod = superAdminMutation({
-  args: { id: v.id("companies"), preferLive: v.boolean() },
-  returns: v.id("companies"),
-  handler: async (ctx, args) => {
-    const company = await ctx.db.get(args.id);
-    if (!company) throw appError("NOT_FOUND", "Company not found");
-
-    await ctx.db.patch(args.id, { seoPreferLive: args.preferLive });
-
-    // Audited: live costs more per call than queued, so this is a spending
-    // decision even though it looks like a preference.
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "UPDATE_COMPANY_SEO_METHOD",
-      entityId: args.id,
-      entityType: "companies",
-      companyId: args.id,
-      metadata: JSON.stringify({ preferLive: args.preferLive }),
-      timestamp: Date.now(),
-    });
-
-    return args.id;
-  },
-});
-
 export const updateCompanyDescription = superAdminMutation({
   args: { id: v.id("companies"), description: v.string() },
   returns: v.id("companies"),
