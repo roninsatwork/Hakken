@@ -351,12 +351,29 @@ and go.
   is not built; one that needs data not in them is a new decision, recorded
   here first.
 - **Read-only (D1).** No add, remove, track or dismiss buttons on Sites.
-- **Only this company's data.** Queries are `tenantQuery`
-  (`convex/tenantFunctions.ts`) entered through the company's own hold,
-  exactly as the admin site screens are (`convex/websiteSiteRows.ts`
-  `requireSite`). Never start from a shared table and walk outward — that is
-  what keeps one client's rivals off another client's screen. Admin
-  `superAdminQuery` functions are not reused for the user side.
+- **Sites are company-scoped and dynamic.** Anthony, 2026-09-23: "the
+  websites are company scoped so will be dynamic, and one company cannot see
+  another company's sites."
+  - The Sites list is whatever the signed-in user's company holds as its own
+    (`companyWebsites` with `relationship` `OWNED`), read at request time — never
+    a fixed list. A tracked rival is not a Site; it appears only beside one.
+  - The company comes from the caller (`ctx.companyId`, from `tenantQuery` in
+    `convex/tenantFunctions.ts`, which honours super-admin impersonation),
+    **never from the URL**. The `siteId` in the URL is checked against it: a
+    hold that belongs to another company answers "not found", exactly as a
+    missing one does, so an address cannot be guessed into another client's
+    data. Use `requireTenant` and `assertTenantAccess` on the hold before
+    reading anything else.
+  - Every query enters through that hold, as the admin site screens do
+    (`convex/websiteSiteRows.ts` `requireSite`). Never start from a shared
+    table (`websites`, `aiAnswers`, `seoKeywordPositions` …) and walk outward.
+    The website record is shared between companies that watch the same host;
+    which companies watch it, and whom each compares it with, never reaches
+    another company's screen.
+  - Admin `superAdminQuery` functions are not reused for the user side.
+  - **A test for every Sites query** proves another company's user gets "not
+    found" for a site that is not theirs, and that two companies watching the
+    same host each see only their own rivals.
 - **A page is about this site (D2).** Other businesses appear only as
   comparison beside it, never as a page of their own.
 - **The admin UI stays as it is (D13).** No admin screen is added, changed or
@@ -389,3 +406,6 @@ None open. Add new questions here, dated, before building the page they block.
 - 2026-09-23 — D13 added: admin is settings and data collection, the user
   front end displays, and the admin UI stays exactly as it is (the first
   wording, which retired the admin display tabs, was withdrawn the same day).
+- 2026-09-23 — Tenancy rule spelled out: Sites are company-scoped and dynamic,
+  the company comes from the caller never the URL, another company's site
+  answers "not found", and every Sites query has a cross-company test.
