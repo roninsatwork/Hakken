@@ -14,7 +14,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { siteBase } from "./siteView";
 
 /**
- * Moves worth making: what the last collection says to do next.
+ * What to do next: what the last collection says is worth doing.
  *
  * Each card says what was seen and offers the one action that answers it,
  * which the server carries out — track the rival, add the spelling, pause the
@@ -25,9 +25,12 @@ import { siteBase } from "./siteView";
 export function SiteMoves({
   companyId,
   companyWebsiteId,
+  websiteId,
 }: {
   companyId: Id<"companies">;
   companyWebsiteId: Id<"companyWebsites">;
+  /** Questions are the website's, so rewriting one happens on its record. */
+  websiteId: Id<"websites">;
 }) {
   const t = useTranslations("admin.siteView.moves");
   const data = useQuery(api.websiteMoves.listSiteMoves, { companyWebsiteId });
@@ -97,7 +100,7 @@ export function SiteMoves({
       label = t("kinds.DEAD_QUESTION");
       title = t("dead.title", { prompt: move.evidence.prompt, weeks: move.evidence.weeks });
       detail = t("dead.detail", { asked: move.evidence.asked });
-      actions = <>{go(`${base}/tracking?list=questions`, t("dead.rewrite"))}{take(t("dead.take"))}{dismiss(t("dead.dismiss"))}</>;
+      actions = <>{go(`/admin/websites/${websiteId}/questions`, t("dead.rewrite"))}{take(t("dead.take"))}{dismiss(t("dead.dismiss"))}</>;
     } else {
       label = t("kinds.UNTRACKED_SEARCH");
       title = t("gap.title", { query: move.evidence.query, times: move.evidence.timesSeen });
@@ -124,9 +127,9 @@ export function SiteMoves({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+      <div className="flex flex-col gap-1">
         <h2 className="text-[16px] font-semibold text-foreground">{t("title")}</h2>
-        <span className="text-[12px] text-muted">{t("subtitle")}</span>
+        <span className="text-[13px] text-secondary">{t("subtitle")}</span>
       </div>
       {data.moves.length === 0 ? (
         <p className="rounded-[13px] border border-dashed border-border-dim px-4 py-3 text-[12px] text-muted">

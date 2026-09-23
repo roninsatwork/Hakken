@@ -15,7 +15,7 @@ vi.mock("next/navigation", async () =>
 /**
  * The frame every tab of a site sits in.
  *
- * An owned site has Brief, Tracking and Results; a tracked one has only what it
+ * An owned site has Overview, Competitors and Results; a tracked one has only what it
  * can use — its overview and its rankings — and a paired one has no settings
  * button at all, because its day and place are its pair's.
  */
@@ -28,11 +28,12 @@ describe("the site's frame", () => {
     renderWithProviders(<CompanySiteLayout><p>tab body</p></CompanySiteLayout>);
 
     const base = "/admin/companies/company_1/websites/site/companyWebsite_1";
-    expect(await screen.findByRole("link", { name: /admin.siteView.tabs.brief/ })).toHaveAttribute("href", base);
-    expect(screen.getByRole("link", { name: /admin.siteView.tabs.tracking/ })).toHaveAttribute("href", `${base}/tracking`);
-    expect(screen.getByRole("link", { name: /admin.siteView.tabs.results/ })).toHaveAttribute("href", `${base}/citations`);
+    expect(await screen.findByRole("link", { name: /admin.siteView.tabs.overview/ })).toHaveAttribute("href", base);
+    expect(screen.getByRole("link", { name: /admin.siteView.tabs.competitors/ })).toHaveAttribute("href", `${base}/competitors`);
+    expect(screen.getByRole("link", { name: /admin.siteView.tabs.results/ })).toHaveAttribute("href", `${base}/searches`);
     expect(screen.getByRole("button", { name: /admin.siteView.settings/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /admin.siteView.record/ })).toHaveAttribute("href", "/admin/websites/website_9");
+    // The website's own lists are edited on its record, not here.
+    expect(screen.getByRole("link", { name: /admin.siteView.recordEdit/ })).toHaveAttribute("href", "/admin/websites/website_9");
     expect(screen.getByText("tab body")).toBeInTheDocument();
   });
 
@@ -42,7 +43,7 @@ describe("the site's frame", () => {
 
     expect(await screen.findByRole("link", { name: /admin.siteView.tabs.overview/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /admin.siteView.tabs.rankings/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /admin.siteView.tabs.tracking/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /admin.siteView.tabs.competitors/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /admin.siteView.settings/ })).not.toBeInTheDocument();
     expect(screen.getByText("admin.siteView.collectedWith")).toBeInTheDocument();
   });

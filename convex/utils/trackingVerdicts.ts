@@ -144,15 +144,6 @@ export const SEARCH_ATTENTION: Record<SearchVerdict, number> = {
   TOP_THREE: 7,
 };
 
-export const QUESTION_ATTENTION: Record<QuestionVerdict, number> = {
-  WARNED: 0,
-  NEVER_LANDED: 1,
-  THIN: 2,
-  TOO_NEW: 3,
-  NOT_ASKED: 4,
-  EARNING: 5,
-};
-
 export const RIVAL_ATTENTION: Record<RivalVerdict, number> = {
   AHEAD: 0,
   GONE_QUIET: 1,

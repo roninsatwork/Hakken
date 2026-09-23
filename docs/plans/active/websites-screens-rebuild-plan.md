@@ -1,9 +1,10 @@
 # The Websites Screens, Rebuilt
 
-Status: **Approved 2026-09-22. All four stages built.** Build order was
-1 → 4 → 2 → 3; the reason is below. What remains is the performance pass over
-every new screen that Anthony asked for, and seeing stage 3's moves against a
-real collection. Roughly 90% of the plan.
+Status: **Approved 2026-09-22. All four stages built; the company site screens
+simplified on 2026-09-23 (below).** What remains is checking the simplified
+screens by eye, and seeing stage 3's moves against a real collection — every
+collection on dev so far ran in DataForSEO's sandbox, before moves existed.
+Roughly 85% of the plan.
 Owner: Anthony
 
 ## Built so far — 2026-09-22
@@ -395,6 +396,54 @@ realistic sizes, but a host with hundreds of searches would want stored
 counts. The Brief's portfolio is the heaviest read (bounded at roughly 7,500
 point lookups for a host at every ceiling at once) and re-runs as a collection
 files results, which is the point of it.
+
+### The company site simplified — 2026-09-23
+
+Anthony, on the Tracking tab: *"are these screens even needed anymore, they are
+super complex — I don't understand them at all."* And on where editing lives:
+*"I thought we were doing all the settings in the global website section and
+only attaching it to the company."* Stage 4 had put the lists on the host, but
+the company screen still edited them — a second editor for a shared list,
+without saying it was shared.
+
+- **Tabs are Overview, Competitors, Results.** Tracking and its three sub-tabs
+  are gone. Searches, questions and brand names are edited only on the global
+  website record; the header button and a line under the Overview cards say
+  so and link there.
+- **Overview** is three cards (Google searches, AI questions, competitors),
+  each opening the results behind it, then "What to do next".
+- **Competitors** is the company's own list plus one list of suggestions, each
+  saying why — AI mentions and ranking overlap were two separate tables.
+- **Results** gains "Your searches", a read-only view of the chosen searches
+  with position and verdict, since the verdicts had lived only on Tracking.
+- **No prices on these screens**, and the wording across the site view, the
+  website record and the company's website list is rewritten in plain words.
+  `listTrackedQuestions` went with its screen.
+
+### Review fixes — 2026-09-23
+
+A read-through of the 21 commits behind this plan found two faults in the
+moves, both fixed with tests that fail on the old code:
+
+- **Taking an "untracked search" move skipped the list's rules.** It inserted
+  the search directly, past the 1,000-search ceiling, the length checks and the
+  audit entry. It now goes through `addWebsiteKeywordCore` in
+  `websiteCanonical.ts`, the same path as the add button, and a full list
+  refuses the move and leaves it open.
+- **Answered moves could crowd out open ones.** `reconcileMoves` read every
+  move a site had ever had under a 500-row ceiling, and the index sorts
+  dismissed and done ahead of open. Dismissed moves are kept forever, so an
+  old site would have started raising the same move twice. It now reads only
+  open moves and looks up each candidate's history by its own key.
+  `purgeHoldMoves` had the same ceiling and now streams.
+
+`seoPreferLive` is gone: its setter is removed, dev was emptied by a one-off
+migration, and the field has left the schema (stage 1, item 4's "migration
+pass").
+
+Taking a "pause this question" or "add this spelling" move now also writes the
+audit entry the manual path writes (`PAUSE_WEBSITE_QUESTION`,
+`SET_WEBSITE_BRAND_NAMES`), not only the move's own.
 
 ## What is wrong
 

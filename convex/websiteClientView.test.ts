@@ -149,31 +149,6 @@ describe("the searches list", () => {
   });
 });
 
-describe("the questions list", () => {
-  test("named and asked add up across the engines a question is put to", async () => {
-    const t = harness();
-    const admin = await superAdmin(t);
-    const { websiteId, holdId } = await world(t);
-    const prompt = "who is the best branding agency in Leeds";
-    await t.run(async (ctx) => {
-      await ctx.db.insert("websiteQuestions", {
-        websiteId, prompt, engines: ["chatgpt", "claude"], isActive: true, createdAt: Date.now(),
-      });
-      for (const [engine, asked, named] of [["chatgpt", 10, 1], ["claude", 10, 0]] as const) {
-        await ctx.db.insert("websiteQuestionStats", {
-          websiteId, prompt, engine, locationCode: UK, asked, named, recommended: 0, warnedAgainst: 0,
-          firstAskedDay: daysAgo(70), lastAskedDay: today(), lastNamed: false, othersNamed: [], updatedAt: Date.now(),
-        });
-      }
-    });
-
-    const list = await admin.query(api.websiteClientView.listTrackedQuestions, {
-      companyWebsiteId: holdId, page: 1, pageSize: 15,
-    });
-    expect(list.data[0]).toMatchObject({ asked: 20, named: 1, verdict: "THIN", weeksRunning: 10 });
-  });
-});
-
 describe("the competitors list", () => {
   test("a rival is compared on this site's own searches, from its place", async () => {
     const t = harness();

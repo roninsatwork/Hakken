@@ -3,11 +3,9 @@ import { v } from "convex/values";
 import { superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
-import { AI_ENGINES, aiCitationOperationId, aiEngineValidator } from "./seoAiEngines";
 import { findSeoLocation } from "./utils/seoLocations";
 import { isTrackedHold } from "./utils/websitePairing";
 import {
-  QUESTION_ATTENTION,
   RIVAL_ATTENTION,
   SEARCH_ATTENTION,
   daysBetween,
@@ -204,7 +202,7 @@ export const getSitePortfolio = superAdminQuery({
 });
 
 // ---------------------------------------------------------------------------
-// The Tracking lists
+// The lists behind the Results and Competitors tabs
 // ---------------------------------------------------------------------------
 
 const listArgs = {
@@ -271,56 +269,6 @@ export const listTrackedSearches = superAdminQuery({
       };
     }));
     return { ...paged, data };
-  },
-});
-
-const questionVerdictValidator = v.union(
-  v.literal("NOT_ASKED"), v.literal("TOO_NEW"), v.literal("WARNED"),
-  v.literal("NEVER_LANDED"), v.literal("THIN"), v.literal("EARNING"),
-);
-
-/** The questions on this site's record, judged across the engines each is put to. */
-export const listTrackedQuestions = superAdminQuery({
-  args: listArgs,
-  returns: v.object({
-    data: v.array(v.object({
-      _id: v.id("websiteQuestions"),
-      prompt: v.string(),
-      isActive: v.boolean(),
-      engines: v.array(aiEngineValidator),
-      asked: v.number(),
-      named: v.number(),
-      recommended: v.number(),
-      warnedAgainst: v.number(),
-      weeksRunning: v.union(v.number(), v.null()),
-      verdict: questionVerdictValidator,
-      monthlyUsd: moneyOrNull,
-    })),
-    totalCount: v.number(),
-    totalPages: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    const site = await requireSite(ctx, args.companyWebsiteId);
-    // Every engine's price is four point lookups; reading the question list a
-    // second time just to learn which engines it uses was a thousand.
-    const costs = await unitCosts(ctx, AI_ENGINES.map(aiCitationOperationId));
-    const rows = await loadQuestionRows(ctx, site, costs);
-
-    const term = normalizeSearchTerm(args.searchTerm);
-    const matching = (term ? rows.filter((row) => includesSearchTerm(row.prompt, term)) : rows)
-      .sort((left, right) =>
-        Number(right.isActive) - Number(left.isActive)
-        || QUESTION_ATTENTION[left.verdict] - QUESTION_ATTENTION[right.verdict]
-        || left.prompt.localeCompare(right.prompt));
-
-    const paged = paginateItems(matching, args.page, args.pageSize);
-    return {
-      ...paged,
-      data: paged.data.map(({ others: _others, firstAskedDay, ...row }) => ({
-        ...row,
-        weeksRunning: firstAskedDay ? Math.floor(daysBetween(firstAskedDay, site.today) / 7) : null,
-      })),
-    };
   },
 });
 
