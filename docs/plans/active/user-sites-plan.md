@@ -41,7 +41,7 @@ rest of Hakken is built on.
 | D10 | How much data? | **Be thorough and collect as much as we can.** Read out everything in what we already buy, and buy the extra DataForSEO calls that fill the gaps (link lists, history). Paid calls stay behind the Collector's spend cap. See "Collecting more". |
 | D11 | Chart style | **Like Ahrefs:** tick boxes choose which measures are drawn, a Competitors overlay adds rivals as lines, a Years view compares this year with last, and the viewer picks daily, weekly or monthly. |
 | D12 | Tables | **Every table can compare two dates** ("23 Sep vs 23 Aug") and shows the change, New and Lost; keyword and page tables have **filters** for every column we hold. |
-| D13 | Admin or user front end? | **Admin is settings and data collection. The user front end displays what comes back.** Anthony, 2026-09-23. See "Admin and the user front end". |
+| D13 | Admin or user front end? | **Admin is settings and data collection. The user front end displays what comes back. The admin UI stays exactly as it is.** Anthony, 2026-09-23. See "Admin and the user front end". |
 
 ## Where it lives
 
@@ -64,16 +64,13 @@ end is about displaying the information we get back."
   "Collecting more" lands here: new calls, their cadence and their caps.
 - **User front end** — the Sites pages in this plan. Every chart and table of
   collected data lives here, once.
-- **The admin display tabs retire.** The company site screens in admin
-  (`src/app/(dashboard)/admin/companies/[id]/websites/site/[companyWebsiteId]/`
-  — the Results tabs: Your searches, AI answers, Everything it ranks for, What
-  the AI searched; and the figures on its Overview and Competitors tabs) show
-  collected data today. As each Sites page replaces one, the admin tab is
-  removed and replaced by a **View in Sites** link, so the same data is never
-  drawn in two places. Their settings actions — remove a search, track or
-  untrack a search, add or dismiss a rival — move to the admin settings
-  screens they belong to (the website record's Searches list, the company
-  site's Competitors settings), not to Sites (D1).
+- **The admin UI does not change.** Anthony, 2026-09-23: "don't change
+  anything in admin — I want the admin UI as it is, I'm happy with it." Its
+  existing screens, including the company site Results tabs, stay exactly as
+  they are. This plan builds nothing new in admin and removes nothing from it.
+  The only admin-side work is behind the screens: the new DataForSEO calls go
+  into the collection (registry, Planner, Collector), the test-data reset and
+  the website purge.
 - **A super admin sees Sites as the client does**, by opening the company's
   Sites pages; admin never gets its own copy of them.
 
@@ -343,9 +340,6 @@ Add the new calls under "Collecting more" to the registry, the Planner and the
 Collector; one test call each to record the price; run the two history calls
 once per site; then turn the 💷 pages on.
 
-Throughout Phases 1–4, retire each admin display tab as its Sites page
-lands (D13), in the same change.
-
 ### Phase 5 — more we can buy (about 10%)
 
 Paid search estimates and the site crawl, each only after its own price test
@@ -365,8 +359,8 @@ and go.
   `superAdminQuery` functions are not reused for the user side.
 - **A page is about this site (D2).** Other businesses appear only as
   comparison beside it, never as a page of their own.
-- **Admin sets up and collects; Sites displays (D13).** No new chart or table
-  of collected data is added to admin.
+- **The admin UI stays as it is (D13).** No admin screen is added, changed or
+  removed by this plan.
 - **Every paid call goes through the agents** — Planner and Collector — with
   the spend cap, never a button or a cron.
 - **Screen kit.** Read `docs/developer/screen-kit.md`; use `DataTable`,
@@ -393,4 +387,5 @@ None open. Add new questions here, dated, before building the page they block.
   Organic keywords and Top pages columns; Calendar, Site structure, Organic
   competitors, Content gap and the backlink list pages; five phases.
 - 2026-09-23 — D13 added: admin is settings and data collection, the user
-  front end displays; the admin display tabs retire as Sites replaces them.
+  front end displays, and the admin UI stays exactly as it is (the first
+  wording, which retired the admin display tabs, was withdrawn the same day).
