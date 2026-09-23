@@ -6,6 +6,7 @@ import { appError } from "./utils/appError";
 import { AI_ENGINES, DEFAULT_AI_ENGINES, aiEngineValidator, isAiEngine } from "./seoAiEngines";
 import { MAX_PROMPT_LENGTH, MIN_PROMPT_LENGTH } from "./utils/promptLimits";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 /**
  * A host's own lists: what it is asked, what it is checked against, who it
@@ -260,54 +261,67 @@ export const listWebsiteKeywords = superAdminQuery({
   },
 });
 
+/**
+ * Add one search to a host's list, with every check the list keeps.
+ *
+ * Shared by the screen's add button and by taking an "untracked search" move,
+ * so a search added either way meets the same length rules, the same ceiling
+ * and leaves the same audit entry.
+ */
+export async function addWebsiteKeywordCore(
+  ctx: MutationCtx,
+  args: { websiteId: Id<"websites">; keyword: string; userId: Id<"users"> },
+): Promise<Id<"websiteKeywords">> {
+  const keyword = readKeyword(args.keyword);
+  if (keyword.length < MIN_KEYWORD_LENGTH) {
+    throw appError("INVALID_INPUT", "Write the search as somebody would type it.");
+  }
+  if (keyword.length > MAX_KEYWORD_LENGTH) {
+    throw appError("INVALID_INPUT", `A search can be at most ${MAX_KEYWORD_LENGTH} characters.`);
+  }
+
+  const duplicate = await ctx.db
+    .query("websiteKeywords")
+    .withIndex("by_website_keyword", (q) =>
+      q.eq("websiteId", args.websiteId).eq("keyword", keyword))
+    .first();
+  if (duplicate) {
+    throw appError("INVALID_INPUT", "That search is already tracked for this website.");
+  }
+
+  const existing = await ctx.db
+    .query("websiteKeywords")
+    .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+    .take(MAX_CANONICAL_ROWS + 1);
+  if (existing.length >= MAX_CANONICAL_ROWS) {
+    throw appError("INVALID_INPUT", `A website can track at most ${MAX_CANONICAL_ROWS} searches.`);
+  }
+
+  const keywordId = await ctx.db.insert("websiteKeywords", {
+    websiteId: args.websiteId,
+    keyword,
+    isActive: true,
+    createdAt: Date.now(),
+  });
+
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "ADD_WEBSITE_KEYWORD",
+    entityId: keywordId,
+    entityType: "websiteKeywords",
+    metadata: JSON.stringify({ keyword }),
+    timestamp: Date.now(),
+  });
+
+  return keywordId;
+}
+
 export const addWebsiteKeyword = superAdminMutation({
   args: { websiteId: v.id("websites"), keyword: v.string() },
   returns: v.id("websiteKeywords"),
   handler: async (ctx, args) => {
     await requireWebsite(ctx, args.websiteId);
-
-    const keyword = readKeyword(args.keyword);
-    if (keyword.length < MIN_KEYWORD_LENGTH) {
-      throw appError("INVALID_INPUT", "Write the search as somebody would type it.");
-    }
-    if (keyword.length > MAX_KEYWORD_LENGTH) {
-      throw appError("INVALID_INPUT", `A search can be at most ${MAX_KEYWORD_LENGTH} characters.`);
-    }
-
-    const duplicate = await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website_keyword", (q) =>
-        q.eq("websiteId", args.websiteId).eq("keyword", keyword))
-      .first();
-    if (duplicate) {
-      throw appError("INVALID_INPUT", "That search is already tracked for this website.");
-    }
-
-    const existing = await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_CANONICAL_ROWS + 1);
-    if (existing.length >= MAX_CANONICAL_ROWS) {
-      throw appError("INVALID_INPUT", `A website can track at most ${MAX_CANONICAL_ROWS} searches.`);
-    }
-
-    const keywordId = await ctx.db.insert("websiteKeywords", {
-      websiteId: args.websiteId,
-      keyword,
-      isActive: true,
-      createdAt: Date.now(),
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "ADD_WEBSITE_KEYWORD",
-      entityId: keywordId,
-      entityType: "websiteKeywords",
-      metadata: JSON.stringify({ keyword }),
-      timestamp: Date.now(),
-    });
-
-    return keywordId;
+    return await addWebsiteKeywordCore(ctx, { ...args, userId: ctx.userId });
   },
 });
 

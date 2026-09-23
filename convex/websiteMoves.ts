@@ -10,6 +10,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { AI_ENGINES, fanOutPlace } from "./seoAiEngines";
 import { VERDICT_THRESHOLDS, daysBetween } from "./utils/trackingVerdicts";
 import { trackCompetitorCore } from "./websiteAttachments";
+import { addWebsiteKeywordCore } from "./websiteCanonical";
 import { loadQuestionRows, loadSearchRows, loadSite, untrackedNamed } from "./websiteSiteRows";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -238,11 +239,13 @@ async function reconcileMoves(
   if (!drawn) return 0;
   const { site, candidates } = drawn;
 
-  const existing = await ctx.db
+  // Only open moves are read as a set: dismissed and done ones pile up
+  // forever, so reading them all would push open ones past any ceiling. A
+  // candidate's history is looked up by its own key instead.
+  const open = await ctx.db
     .query("websiteMoves")
-    .withIndex("by_company_website_state", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_company_website_state", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("state", "OPEN"))
     .take(MOVES_READ);
-  const byKey = new Map(existing.map((move) => [`${move.kind}:${move.subject}`, move]));
   const live = new Set<string>();
   const now = Date.now();
   let opened = 0;
@@ -250,7 +253,11 @@ async function reconcileMoves(
   for (const candidate of candidates) {
     const key = `${candidate.kind}:${candidate.subject}`;
     live.add(key);
-    const held = byKey.get(key);
+    const held = await ctx.db
+      .query("websiteMoves")
+      .withIndex("by_key", (q) =>
+        q.eq("companyWebsiteId", companyWebsiteId).eq("kind", candidate.kind).eq("subject", candidate.subject))
+      .first();
     const evidenceJson = JSON.stringify(candidate.evidence);
 
     if (!held) {
@@ -294,8 +301,8 @@ async function reconcileMoves(
     }
   }
 
-  for (const move of existing) {
-    if (move.state === "OPEN" && !live.has(`${move.kind}:${move.subject}`)) {
+  for (const move of open) {
+    if (!live.has(`${move.kind}:${move.subject}`)) {
       await ctx.db.delete(move._id);
     }
   }
@@ -499,9 +506,21 @@ async function takeMove(
     if (names.length >= MAX_BRAND_NAMES) {
       throw appError("INVALID_INPUT", `A website can have at most ${MAX_BRAND_NAMES} brand names. Remove one on the website record first.`);
     }
-    await ctx.db.patch(website._id, {
-      brandNames: [...names, { name: text, isPrimary: names.length === 0, kind: "MISSPELLING" as const }],
-      hasBrandNames: true,
+    const after = [...names, { name: text, isPrimary: names.length === 0, kind: "MISSPELLING" as const }];
+    await ctx.db.patch(website._id, { brandNames: after, hasBrandNames: true });
+    // The same entry the brand names screen writes: the list is shared across
+    // every client watching this host, so each change has to be readable.
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "SET_WEBSITE_BRAND_NAMES",
+      entityId: website._id,
+      entityType: "websites",
+      metadata: JSON.stringify({
+        host: website.host,
+        before: names.map((entry) => entry.name),
+        after: after.map((entry) => entry.name),
+      }),
+      timestamp: Date.now(),
     });
     return;
   }
@@ -510,6 +529,14 @@ async function takeMove(
     const question = await ctx.db.get(evidence.questionId as Id<"websiteQuestions">);
     if (question && question.websiteId === hold.websiteId && question.isActive) {
       await ctx.db.patch(question._id, { isActive: false });
+      await ctx.db.insert("auditLogs", {
+        actorId: userId,
+        actionType: "PAUSE_WEBSITE_QUESTION",
+        entityId: question._id,
+        entityType: "websiteQuestions",
+        metadata: JSON.stringify({ prompt: question.prompt }),
+        timestamp: Date.now(),
+      });
     }
     return;
   }
@@ -524,21 +551,20 @@ async function takeMove(
       if (!existing.isActive) await ctx.db.patch(existing._id, { isActive: true });
       return;
     }
-    await ctx.db.insert("websiteKeywords", {
-      websiteId: hold.websiteId,
-      keyword,
-      isActive: true,
-      createdAt: Date.now(),
-    });
+    await addWebsiteKeywordCore(ctx, { websiteId: hold.websiteId, keyword, userId });
   }
   // A slipping search has nothing to take but a look; handling it is the act.
 }
 
-/** Every move on a hold, for when the hold itself goes. */
+/**
+ * Every move on a hold, for when the hold itself goes.
+ *
+ * Streamed rather than taken, because dismissed moves are kept forever and a
+ * ceiling here would leave rows behind for a hold that no longer exists.
+ */
 export async function purgeHoldMoves(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<void> {
-  const moves = await ctx.db
+  const moves = ctx.db
     .query("websiteMoves")
-    .withIndex("by_company_website_state", (q) => q.eq("companyWebsiteId", companyWebsiteId))
-    .take(MOVES_READ);
-  for (const move of moves) await ctx.db.delete(move._id);
+    .withIndex("by_company_website_state", (q) => q.eq("companyWebsiteId", companyWebsiteId));
+  for await (const move of moves) await ctx.db.delete(move._id);
 }

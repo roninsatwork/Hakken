@@ -129,6 +129,8 @@ describe("drawing the moves", () => {
     await admin.mutation(api.websiteMoves.actOnMove, { moveId: move._id, action: "TAKE" });
 
     expect((await t.run(async (ctx) => await ctx.db.get(questionId)))?.isActive).toBe(false);
+    const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+    expect(audit.some((row) => row.actionType === "PAUSE_WEBSITE_QUESTION" && row.entityId === questionId)).toBe(true);
   });
 
   test("a move the results no longer support goes away on its own", async () => {
@@ -174,6 +176,9 @@ describe("drawing the moves", () => {
     await admin.mutation(api.websiteMoves.actOnMove, { moveId: move._id, action: "TAKE" });
     const website = await t.run(async (ctx) => await ctx.db.get(websiteId));
     expect(website?.brandNames?.map((entry) => entry.name)).toEqual(["Our Shop", "Our Shopp"]);
+    const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+    const named = audit.find((row) => row.actionType === "SET_WEBSITE_BRAND_NAMES");
+    expect(JSON.parse(named!.metadata!)).toMatchObject({ before: ["Our Shop"], after: ["Our Shop", "Our Shopp"] });
   });
 
   test("a slip handled once reopens only when it slips again later", async () => {
@@ -258,5 +263,89 @@ describe("when moves are drawn", () => {
 
     await admin.mutation(api.websites.removeCompanyWebsite, { id: holdId });
     expect(await moves(t)).toHaveLength(0);
+  });
+});
+
+describe("moves over a site's long life", () => {
+  /** Answered moves as a years-old site would have them: kept forever. */
+  async function answeredMoves(t: Harness, companyId: Id<"companies">, holdId: Id<"companyWebsites">, count: number) {
+    await t.run(async (ctx) => {
+      for (let index = 0; index < count; index += 1) {
+        await ctx.db.insert("websiteMoves", {
+          companyWebsiteId: holdId, companyId, kind: "NAME", subject: `old spelling ${index}`,
+          evidenceJson: JSON.stringify({ text: `old spelling ${index}`, times: 2 }),
+          state: "DISMISSED", raisedAt: Date.now(), updatedAt: Date.now(), decidedAt: Date.now(),
+        });
+      }
+    });
+  }
+
+  test("a move is drawn once, however many answered moves sit before it", async () => {
+    const t = harness();
+    const { companyId, websiteId, holdId } = await world(t);
+    await answeredMoves(t, companyId, holdId, 600);
+    await askedAndNamed(t, websiteId, { asked: 10, named: 0, firstAskedDay: daysAgo(70) });
+
+    for (const _cycle of [1, 2, 3]) await derive(t, holdId);
+
+    const open = (await moves(t)).filter((move) => move.state === "OPEN");
+    expect(open).toHaveLength(1);
+    expect(open[0].kind).toBe("DEAD_QUESTION");
+  });
+
+  test("removing a site takes every move it ever had", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const { companyId, holdId } = await world(t);
+    await answeredMoves(t, companyId, holdId, 600);
+
+    await admin.mutation(api.websites.removeCompanyWebsite, { id: holdId });
+    expect(await moves(t)).toHaveLength(0);
+  });
+});
+
+describe("taking an untracked search", () => {
+  async function untrackedMove(t: Harness, companyId: Id<"companies">, holdId: Id<"companyWebsites">, query: string) {
+    return await t.run(async (ctx) => await ctx.db.insert("websiteMoves", {
+      companyWebsiteId: holdId, companyId, kind: "UNTRACKED_SEARCH", subject: query,
+      evidenceJson: JSON.stringify({ query, timesSeen: 3, prompt: "who is the best shop in town" }),
+      state: "OPEN", raisedAt: Date.now(), updatedAt: Date.now(),
+    }));
+  }
+
+  test("adds the search the way the add button does, audit entry included", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const { companyId, websiteId, holdId } = await world(t);
+    const moveId = await untrackedMove(t, companyId, holdId, "Best Shop  Near Me");
+
+    await admin.mutation(api.websiteMoves.actOnMove, { moveId, action: "TAKE" });
+
+    const added = await t.run(async (ctx) => await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
+      .collect());
+    expect(added.map((row) => row.keyword)).toEqual(["best shop near me"]);
+    const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+    expect(audit.some((row) => row.actionType === "ADD_WEBSITE_KEYWORD" && row.entityId === added[0]._id)).toBe(true);
+  });
+
+  test("is refused when the site's list is full, and the move stays open", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const { companyId, websiteId, holdId } = await world(t);
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 1_000; index += 1) {
+        await ctx.db.insert("websiteKeywords", {
+          websiteId, keyword: `search ${index}`, isActive: true, createdAt: Date.now(),
+        });
+      }
+    });
+    const moveId = await untrackedMove(t, companyId, holdId, "best shop near me");
+
+    await expect(admin.mutation(api.websiteMoves.actOnMove, { moveId, action: "TAKE" }))
+      .rejects.toThrow(/at most 1000 searches/);
+    const move = await t.run(async (ctx) => await ctx.db.get(moveId));
+    expect(move?.state).toBe("OPEN");
   });
 });
