@@ -42,6 +42,8 @@ rest of Hakken is built on.
 | D11 | Chart style | **Like Ahrefs:** tick boxes choose which measures are drawn, a Competitors overlay adds rivals as lines, a Years view compares this year with last, and the viewer picks daily, weekly or monthly. |
 | D12 | Tables | **Every table can compare two dates** ("23 Sep vs 23 Aug") and shows the change, New and Lost; keyword and page tables have **filters** for every column we hold. |
 | D13 | Admin or user front end? | **Admin is settings and data collection. The user front end displays what comes back. The admin UI stays exactly as it is.** Anthony, 2026-09-23. See "Admin and the user front end". |
+| D14 | Finding things in big tables | **Every table has a search box and filters.** Some sites rank for tens of thousands of keywords and pages; a client must reach any row in a few seconds. Anthony, 2026-09-23. See "Tables". |
+| D15 | Speed | **Every screen is built for speed on the server** — indexes, paging, summaries, page-load targets — across all of them. Anthony, 2026-09-23. See "Speed". |
 
 ## Where it lives
 
@@ -274,15 +276,86 @@ Bar and line charts, built with the chart library already in the app
 - **Not enough data yet** is said in words ("Charts fill in as more checks
   run"), never shown as a flat line that looks like no change.
 
-## Tables (D12)
+## Tables (D12, D14)
 
+- **Search and filter on every table (D14).** A search box above every table
+  (keywords, pages, questions, linking sites, anchors — whatever the first
+  column holds, and the page address where there is one), then a filter for
+  each column we hold (position, volume, intent, difficulty, cost per click,
+  traffic, page type, New / Lost, follow / nofollow …), a sort, and a count of
+  results. Search and filters stay in the URL, so a filtered view can be
+  bookmarked and shared.
 - **Compare two dates.** Every table has a "this date vs that date" picker, like
   Ahrefs ("23 Sep 2026 vs 23 Aug 2026"). Rows show the change between them,
   and New and Lost where a row exists on only one side.
-- **Filters** on the keyword and page tables for every column we hold; a
-  filter for a column we do not hold is not shown.
+- A filter for a column we do not hold is not shown.
 - **Last checked** in its own column on every table.
 - 15 rows per page, `DataTable` from the screen kit, export to CSV.
+
+## Speed (D15)
+
+Sites is built for sites with tens of thousands of keywords, pages and links,
+and two years of history. Anthony, 2026-09-23: "these screens need to be
+server-side optimised — indexes, page speed and page load time — across all
+of them." These rules apply to every Sites query and page.
+
+**The server does the work; the browser gets one page.**
+
+- Every table is searched, filtered, sorted and paged **on the server**, and
+  only the rows on screen (15) are sent. Use cursor pages through
+  `useServerPagedTable` (`src/hooks/useServerPagedTable.ts`) over a Convex
+  paginated query. **Never** `paginateItems` (`convex/adminQueryService.ts`),
+  which loads every row and slices it in memory — fine for a list of twenty
+  companies, fatal for 40,000 keywords.
+- **No query reads more documents than it shows**, give or take a small, fixed
+  margin. A query that scans a site's rows to filter or count them is a bug.
+
+**Indexes for every way a table can be read.**
+
+- Each sort and each common filter has its own index, led by the site and the
+  day it reads (for example keywords by site, day and position; by site, day
+  and volume; by site, day and traffic), so a filter is a range read on an
+  index, not a scan.
+- Search uses Convex **search indexes** (`searchIndex`, as `websites` already
+  has for its host) on keyword text and page address, with the site and day
+  as filter fields.
+- A filter combination with no index of its own is not offered until it has
+  one.
+
+**Latest view and history kept apart.**
+
+- The tables read a **latest snapshot** per site — the most recent check of
+  each keyword, page and link — kept up to date when a result is filed, so a
+  table never has to find "the newest row per keyword" across two years of
+  rows.
+- Changes between two dates (D12) read the two dates' rows by index, not the
+  whole history.
+- Charts read the day, week and month **summaries** (see "Charts"), never raw
+  rows.
+
+**Counts and totals are stored, not counted.** "807 keywords", "Page 1 of
+54", the side menu's numbers and the Overview figures come from summary rows
+written when data is filed. Nothing counts 40,000 rows on page load. A
+filtered count is stored where the filter is common, and otherwise shown as
+"more than N" rather than counted.
+
+**Page load.**
+
+- **Targets:** the page frame and header on screen in under 1 second; each
+  table's first page and each chart in under 1 second after that, on a site
+  with 50,000 keywords and two years of history.
+- Each page loads only its own data; nothing loads the other 31 pages' data.
+- Charts load the chart library only on pages that draw one, and every table
+  and chart shows a skeleton while it loads, never an empty box.
+- Search waits for typing to pause (`useDebounce`, `src/hooks/useDebounce.ts`)
+  before asking the server.
+- Large exports (every keyword as CSV) are made on the server and handed over
+  when ready, never built in the browser.
+
+**Proven, not assumed.** A test seeds one site with 50,000 keywords, 5,000
+pages, 20,000 backlinks and two years of summaries, and checks that every
+Sites query reads a bounded number of documents and returns within the
+targets. It runs before each phase is called done.
 
 ## Stored answers (D9)
 
@@ -380,6 +453,8 @@ and go.
   removed by this plan.
 - **Every paid call goes through the agents** — Planner and Collector — with
   the spend cap, never a button or a cron.
+- **Server-side and indexed (D15).** No Sites table pages, filters, searches
+  or counts in memory; every read is an index range or a search index.
 - **Screen kit.** Read `docs/developer/screen-kit.md`; use `DataTable`,
   `PageHeader`, `StatusPill`, 15 rows per page, theme tokens only, English and
   Italian copy kept in step.
@@ -409,3 +484,7 @@ None open. Add new questions here, dated, before building the page they block.
 - 2026-09-23 — Tenancy rule spelled out: Sites are company-scoped and dynamic,
   the company comes from the caller never the URL, another company's site
   answers "not found", and every Sites query has a cross-company test.
+- 2026-09-23 — D14 and D15 added: search and filters on every table, and a
+  Speed section — server-side paging, an index for every sort and filter,
+  search indexes, a latest snapshot per site, stored counts, page-load
+  targets and a 50,000-keyword load test.
