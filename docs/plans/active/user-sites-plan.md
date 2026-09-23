@@ -44,6 +44,7 @@ rest of Hakken is built on.
 | D13 | Admin or user front end? | **Admin is settings and data collection. The user front end displays what comes back. The admin UI stays exactly as it is.** Anthony, 2026-09-23. See "Admin and the user front end". |
 | D14 | Finding things in big tables | **Every table has a search box and filters.** Some sites rank for tens of thousands of keywords and pages; a client must reach any row in a few seconds. Anthony, 2026-09-23. See "Tables". |
 | D15 | Speed | **Every screen is built for speed on the server** — indexes, paging, summaries, page-load targets — across all of them. Anthony, 2026-09-23. See "Speed". |
+| D16 | Downloading charts | **Every chart can be downloaded, in light or dark to match the theme switcher.** Anthony, 2026-09-23. See "Downloads". |
 
 ## Where it lives
 
@@ -269,8 +270,8 @@ Bar and line charts, built with the chart library already in the app
   table kept by day, week and month, written when a result is filed — the
   same way `seoWebsiteMetrics` already keeps one row per site per day. A chart
   that has to scan raw rows is a bug.
-- **Every chart can be exported** through `ChartExportWrapper`, and has a
-  plain table view underneath for anyone who wants the numbers.
+- **Every chart can be downloaded** (D16, see "Downloads"), and has a plain
+  table view underneath for anyone who wants the numbers.
 - **Colours from `chartPalette.ts` only** — no hardcoded colours
   (`src/theme-drift.test.ts`).
 - **Not enough data yet** is said in words ("Charts fill in as more checks
@@ -356,6 +357,36 @@ filtered count is stored where the filter is common, and otherwise shown as
 pages, 20,000 backlinks and two years of summaries, and checks that every
 Sites query reads a bounded number of documents and returns within the
 targets. It runs before each phase is called done.
+
+## Downloads (D16)
+
+Anthony, 2026-09-23: "I would like all charts to be downloadable in light or
+dark mode depending on the switcher."
+
+- **Every chart has a download button**, always visible in the chart's header
+  — not revealed on hover, which a phone cannot do.
+- **Three formats:** PNG (for slides and reports), SVG (sharp at any size), and
+  CSV (the numbers behind the chart, for the dates and step chosen).
+- **Light or dark follows the app's theme switcher** (`next-themes`, as the
+  sidebar uses it). Whatever theme the viewer is looking at is the theme the
+  file is drawn in; switch the theme and the next download follows.
+- **Colours come from the theme tokens**, not literals: the file's background
+  is the theme's card colour and every line, bar, label and gridline its chart
+  colour, so a light download is a proper light chart, not a dark one on
+  white.
+- **A downloaded chart stands on its own:** it carries its title, the site,
+  the dates and step, the legend, and "Hakken" in small type, so it can be
+  dropped into a report without explanation.
+- **File names say what they are:**
+  `ronins.co.uk-estimated-traffic-2026-08-24-to-2026-09-23.png`.
+- **Built by extending the existing `ChartExportWrapper`**
+  (`src/ui/components/charts/ChartExportWrapper.tsx`), which already follows
+  the theme through `useTheme` but hardcodes its backgrounds (`#0d0d0d` /
+  `#ffffff`), shows its button only on hover and offers PNG only. Extend it and
+  say so in a comment — the admin charts that use it keep working unchanged
+  (D13 still holds: no admin screen changes; they may simply gain the fix).
+- Tables keep their own CSV export (see "Tables"); big ones are built on the
+  server (see "Speed").
 
 ## Stored answers (D9)
 
@@ -488,3 +519,5 @@ None open. Add new questions here, dated, before building the page they block.
   Speed section — server-side paging, an index for every sort and filter,
   search indexes, a latest snapshot per site, stored counts, page-load
   targets and a 50,000-keyword load test.
+- 2026-09-23 — D16 added: every chart downloads as PNG, SVG or CSV in the
+  theme the viewer has chosen, standing on its own with title, site and dates.
