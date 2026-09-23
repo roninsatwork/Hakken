@@ -32,6 +32,10 @@ rest of Hakken is built on.
 | D3 | Date ranges? | **Yes.** Every page has 7 / 30 / 90 days and a custom date picker. |
 | D4 | How are the pages reached? | **A side menu**, one item per page. |
 | D5 | How is the side menu grouped? | **One sub menu per kind of content we collect** — five, one per DataForSEO call family — plus Overview. |
+| D6 | Suggested rivals on a read-only site? | **Keep the page**, read-only. Adding one stays in admin. |
+| D7 | Share of voice counts only rivals we know by name | **Accepted.** The page says so: "against your tracked competitors". |
+| D8 | Charts | **A full range of bar and line charts**, designed as if two years of data were already collected. See "Charts". |
+| D9 | Store the AI answers? | **Yes.** Answers are kept and shown, because strategies are made from them. This reverses the earlier "keep no answer text" rule on purpose. See "Stored answers". |
 
 ## Where it lives
 
@@ -61,8 +65,8 @@ new DataForSEO call.
 | Page | Shows | Source | Status |
 |---|---|---|---|
 | Mentions | Per question and engine: named, recommended, warned against or not named, over time | `aiAnswers`, `aiCitations` | ✅ stored |
-| Share of voice | How often this site is named against its tracked rivals, per engine | `aiAnswers.named` | ✅ stored — see open question Q2 |
-| Full answers | What the engine actually said | answer text in `seoDataPulls.resultJson` | ⛔ blocked — see Q4 |
+| Share of voice | How often this site is named against its tracked rivals, per engine | `aiAnswers.named` | ✅ stored — labelled "against your tracked competitors" (D7) |
+| Full answers | What the engine actually said | answer text in `seoDataPulls.resultJson` | 🔧 in raw — kept from now on (D9) |
 | Sources cited | Which of this site's pages the engines link to | `aiCitations` (kind `SOURCE`) | ✅ stored |
 | What the AI searched | The searches the engines ran behind the scenes | `promptFanOutQueries`, `promptFanOutDays` | ✅ stored |
 
@@ -93,7 +97,7 @@ new DataForSEO call.
 |---|---|---|---|
 | Side by side | This site against each tracked rival: searches won, AI answers | `websiteSiteRows.loadRivalRows` | ✅ stored |
 | Market map | Traffic and keyword count, this site against rivals | `full_domain_metrics` | 🔧 in raw |
-| Suggested rivals | Sites we found, with what kind of site each is | `discoveredCompetitors`, `discoveredCompetitorDays` | ✅ stored — read-only, see Q1 |
+| Suggested rivals | Sites we found, with what kind of site each is | `discoveredCompetitors`, `discoveredCompetitorDays` | ✅ stored — read-only (D6) |
 
 ### 5. Backlinks — links from other websites (`backlinks_summary`, `bulk_*`)
 
@@ -105,8 +109,55 @@ new DataForSEO call.
 | Where links come from | By country, domain ending (.com, .tv …), site type (blog, news, shop) | `referring_links_countries`, `_tld`, `_platform_types` | 🔧 in raw |
 
 **Twenty-two pages: Overview plus five sub menus.** Thirteen are fed by data
-already stored; eight need their data read out first (Phase 2), two stored
-pages gain extra columns from it, and one (Full answers) waits on a decision.
+already stored; nine need their data read out first (Phase 2), and two stored
+pages gain extra columns from it.
+
+## Charts (D8)
+
+Bar and line charts, built with the chart library already in the app
+(`recharts`, with `src/ui/components/charts/` — `chartPalette.ts`,
+`ChartTooltip.tsx`, `ChartExportWrapper.tsx`). No second chart library.
+
+**Design for two years of data from day one.** Only one day exists today
+(2026-09-23), but every chart and query is built as if two years were stored:
+
+- **Line charts for anything over time**: positions, AI mentions per engine,
+  share of voice, estimated traffic, keyword counts, backlinks, linking
+  websites, domain rank.
+- **Bar charts for anything split into groups**: position bands, keywords by
+  intent, mentions by engine, wins against losses, links by country, domain
+  ending and site type, this site against each rival.
+- **The dates pick the step.** Up to 90 days shows each day; up to a year shows
+  weeks; longer shows months. A chart never draws hundreds of points.
+- **Charts read summaries, never raw rows.** Two years of one site's keyword
+  rankings is several hundred thousand rows. Each chart reads a small summary
+  table kept by day, week and month, written when a result is filed — the
+  same way `seoWebsiteMetrics` already keeps one row per site per day. A chart
+  that has to scan raw rows is a bug.
+- **Every chart can be exported** through `ChartExportWrapper`, and has a
+  plain table view underneath for anyone who wants the numbers.
+- **Colours from `chartPalette.ts` only** — no hardcoded colours
+  (`src/theme-drift.test.ts`).
+- **Not enough data yet** is said in words ("Charts fill in as more checks
+  run"), never shown as a flat line that looks like no change.
+
+## Stored answers (D9)
+
+Anthony, 2026-09-23: "we need to show the answers — we need to make
+strategies from this." The earlier rule in `convex/dataForSeoParsers.ts`
+(above `parseLlmResponse`) kept no answer text, so that nothing another AI
+wrote could reach an agent's prompt. That rule is reversed on purpose:
+
+- Each answer's text is stored with the answer (`aiAnswers`), by day, and
+  shown on the Full answers page.
+- The parser comment is rewritten to say the text is now kept and why, citing
+  this decision, so nobody "fixes" it back.
+- Answers stored before this change have no text; the stored raw results can
+  fill in the days still held, for free.
+- When an agent later reads answers to build a strategy, the text is passed as
+  quoted material to analyse, never as instructions to follow. That belongs to
+  the strategy work, not to this plan, but it is the condition the old rule
+  was protecting, and it is written here so it is not lost.
 
 ## Phases
 
@@ -126,7 +177,8 @@ and of the phase, per `AGENTS.md`.
 
 ### Phase 2 — read out what is in the raw answers (about 30%)
 
-Extend the parsers in `convex/seoCollectionParse.ts` and
+Store the AI answer text (D9) and write the chart summaries (D8). Extend the
+parsers in `convex/seoCollectionParse.ts` and
 `convex/dataForSeoParsers.ts` so every 🔧 field is written to our own tables,
 **by day**, the same way `seoWebsiteMetrics` already is. Re-read the stored
 results so existing days are filled in — free, no new DataForSEO call. Each
@@ -136,7 +188,8 @@ new table goes into `convex/seoTestDataReset.ts` and the website purge in
 
 ### Phase 3 — the remaining pages (about 30%)
 
-Turn each "Coming soon" item on once its data is stored.
+Turn each "Coming soon" item on once its data is stored, and add the charts
+(D8) to every page that has a time series or a split.
 
 ## Rules for building these pages (drift guards)
 
@@ -161,26 +214,14 @@ Turn each "Coming soon" item on once its data is stored.
   `convex/websiteSiteRows.ts`), move that logic somewhere both can call rather
   than writing it twice.
 
-## Open questions — answer before the page they block
+## Open questions
 
-- **Q1. Suggested rivals on a read-only page.** With editing in admin (D1), a
-  client can see suggestions but not add them. Keep the page read-only, or
-  leave it off the user side until editing moves? Blocks: Suggested rivals.
-- **Q2. Share of voice counts only rivals we know by name.** An AI answer
-  names many firms; we recognise only sites with saved brand names. The page
-  must say "against your tracked competitors", or wait for the answer-reading
-  step that lists every firm named (discussed 2026-09-23, not yet agreed).
-  Blocks: Share of voice.
-- **Q4. Full answers contradicts a standing decision.** The AI answer parser
-  deliberately keeps no answer text (`convex/dataForSeoParsers.ts`, the
-  comment above `parseLlmResponse`: "Neither the text nor any passage of it is
-  stored … the way to keep it out of any agent's prompt is not to keep it").
-  The text survives only in the raw pull, which is not kept for good. Showing
-  answers means reversing that on purpose — for example, stored for display
-  only and never read into an agent. Blocks: Full answers.
-- **Q3. Charts.** Which trend charts, and on which pages? Only one day of data
-  exists so far (2026-09-23), so charts are flat until more collections run.
+None open. Q1–Q4 of the first draft were answered on 2026-09-23 as D6–D9.
+Add new questions here, dated, before building the page they block.
 
 ## Change log
 
 - 2026-09-23 — Plan written from the owner's decisions D1–D5.
+- 2026-09-23 — D6–D9 added: suggested rivals stay read-only, share of voice
+  counts tracked rivals only, full bar and line charts designed for two years
+  of data, and AI answer text is now stored and shown.
