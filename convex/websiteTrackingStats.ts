@@ -1,6 +1,7 @@
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import type { AiEngine } from "./seoAiEngines";
+import { requestRebuildEverywhere } from "./siteRankings";
 
 /**
  * Keeping each host's search and question summaries current as results land.
@@ -147,6 +148,8 @@ export async function recordAnswer(
 
   for (const asker of askers) {
     await rebuildQuestionStats(ctx, asker.websiteId, answer, answers);
+    // The asker's Sites summaries count its answers per day and engine.
+    await requestRebuildEverywhere(ctx, asker.websiteId);
   }
 }
 

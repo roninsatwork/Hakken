@@ -689,6 +689,15 @@ async function planPull(
   // Asked from the watcher's place. For a rival that is the place of the site
   // it is compared with, which is the hold being walked — the same place on
   // the same day, or the two are not a comparison.
+  // A call with its own cadence — a weekly or monthly link list — is held for
+  // that long whatever this cycle's own cadence, a manual one included: a
+  // week-old list is this week's list.
+  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now);
+  if (held) {
+    await writeLine(ctx, args, held, true);
+    return "REUSED";
+  }
+
   const params = seoSiteOperationParams(operation, website.host, {
     locationCode: args.companyWebsite.locationCode,
   });
@@ -745,6 +754,47 @@ async function planPull(
   await writeLine(ctx, args, pullId, false);
   return "PLANNED";
 }
+
+/**
+ * The answer an operation with its own cadence is still held on: the newest
+ * one bought for this website within `everyDays` — or one already on its way,
+ * planned within that time and not yet sent or answered. Without the second,
+ * a weekly list left unsent while the Collector was at its spending cap would
+ * be planned again by the next day's cycle, and both would be bought. Null
+ * for everything else, which the cycle's cadence decides.
+ *
+ * Also the ad hoc door's check (`requestSeoPull` in `seoTools.ts`), so an
+ * agent cannot buy a weekly list daily.
+ */
+export async function heldByOwnCadence(
+  ctx: MutationCtx,
+  operation: SeoOperation,
+  websiteId: Id<"websites">,
+  now: Date,
+): Promise<Id<"seoDataPulls"> | null> {
+  if (!operation.refresh) return null;
+  const window = operation.refresh.everyDays * DAY_MS;
+  const recent = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", operation.id))
+    .order("desc")
+    .take(PULLS_READ_FOR_HOLD);
+  for (const pull of recent) {
+    if (pull.sandbox === true || pull.status === "FAILED") continue;
+    if (pull.status === "READY") {
+      if (pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return pull._id;
+      continue;
+    }
+    // Planned, claimed or sent, and not answered yet: on its way.
+    if (now.getTime() - pull.submittedAt < window) return pull._id;
+  }
+  return null;
+}
+
+const DAY_MS = 86_400_000;
+
+/** A site's newest pulls of one operation read for the hold; failures in a row past this many are not a week. */
+const PULLS_READ_FOR_HOLD = 50;
 
 async function findFreshPull(
   ctx: MutationCtx,

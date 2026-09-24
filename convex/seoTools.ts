@@ -8,6 +8,7 @@ import {
   SEO_OPERATIONS,
   seoSiteOperationParams,
 } from "./dataForSeoRegistry";
+import { heldByOwnCadence } from "./seoCollection";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { WEBSITE_IDENTITY_MESSAGES, readWebsiteHost } from "./websiteIdentity";
 import { appError } from "./utils/appError";
@@ -215,6 +216,16 @@ export const requestSeoPull = internalMutation({
     const { websiteId, host } = await requireCompanyWebsite(ctx, args.companyId, args.host);
     const params = seoSiteOperationParams(operation, host);
     const startedAt = Date.now();
+
+    // A call with its own cadence — a weekly or monthly link list, the monthly
+    // crawl — is held for it here too, exactly as a scheduled cycle holds it.
+    if (operation.refresh && await heldByOwnCadence(ctx, operation, websiteId, new Date(startedAt))) {
+      return {
+        ok: true,
+        reused: true,
+        message: `${host} already has ${operation.id} from the last ${operation.refresh.everyDays} days, or one on its way; it is bought at most that often.`,
+      };
+    }
     const idempotencyKey = buildSeoIdempotencyKey({
       operationId: operation.id,
       websiteId,

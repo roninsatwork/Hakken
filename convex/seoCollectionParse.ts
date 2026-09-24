@@ -1,8 +1,17 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
+import {
+  fileKeywordRank, patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild, type RankExtras,
+} from "./siteRankings";
+import { fileAnswerText } from "./siteAnswers";
+import { fileSiteLinkPull, isSiteLinkOperation } from "./siteLinkFiling";
+import { filePaidKeywords, paidPositionValidator } from "./sitePaid";
+import { fileSiteCrawlPull } from "./siteCrawl";
+import { serpSnapshotOf } from "./siteSerp";
+import { rankedPositionValidator } from "./utils/siteShapes";
 import { findBrandMention } from "./utils/websiteBrands";
 import {
   parseDomainCompetitors,
@@ -19,11 +28,9 @@ import { resolveWebsiteIdsByHost } from "./websites";
 import { readWebsiteHost } from "./websiteIdentity";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
-import { DEFAULT_LOCATION_CODE, SEO_LOCATIONS } from "./utils/seoLocations";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { readLocationCode, readSentLocationCode } from "./utils/seoSentPlace";
 
-const LOCATION_BY_CITY = new Map(
-  SEO_LOCATIONS.filter((location) => location.city).map((location) => [location.city!, location.code]),
-);
 
 /**
  * Reading a raw payload into the numbers that are kept forever.
@@ -42,15 +49,19 @@ const LOCATION_BY_CITY = new Map(
 export const parseSeoResult = internalAction({
   args: { pullId: v.id("seoDataPulls") },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  // Stated, not inferred: inferred, it reads `internal`, which reads this.
+  handler: async (ctx, args): Promise<null> => {
     const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, {
       pullId: args.pullId,
     });
     if (!pull?.resultJson) return null;
+    // The Sites link lists and histories file on their own (`siteLinkFiling.ts`).
+    if (isSiteLinkOperation(pull.operationId)) return await fileSiteLinkPull(ctx, args.pullId, pull);
+    if (pull.operationId === "site_crawl") return await fileSiteCrawlPull(ctx, args.pullId, pull);
 
-    // An AI answer is read for who it names, then dropped. The matching and
-    // the stance judgment both happen here, in the action, so the answer text
-    // never reaches a mutation at all.
+    // An AI answer is read for who it names, and its text is kept for the
+    // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
+    // matching and the stance judgment happen here, in the action.
     const engine = engineForOperationId(pull.operationId);
     if (engine) {
       try {
@@ -118,6 +129,7 @@ export const parseSeoResult = internalAction({
           day,
           brands: judged,
           sources: linked,
+          answer: parsed.answer,
         });
 
         // The engine's own expansion of the question. These arrive in every
@@ -234,6 +246,7 @@ export const parseSeoResult = internalAction({
               ? [{ websiteId, position: row.position, ...(row.url ? { url: row.url } : {}) }]
               : [];
           }),
+          serp: serpSnapshotOf(page),
         });
 
         await judgeNewKeywords(ctx, {
@@ -270,6 +283,7 @@ export const parseSeoResult = internalAction({
         ...(sentPlace !== undefined ? { locationCode: sentPlace } : {}),
         metricsJson: JSON.stringify(parsed.metrics),
         positions,
+        ...(parsed.paidPositions ? { paidPositions: parsed.paidPositions.slice(0, MAX_POSITION_ROWS) } : {}),
       });
 
       await judgeNewKeywords(ctx, {
@@ -366,12 +380,9 @@ export const writeSeoMetrics = internalMutation({
     /** The place the positions were measured from, as it was sent. */
     locationCode: v.optional(v.number()),
     metricsJson: v.string(),
-    positions: v.array(v.object({
-      keyword: v.string(),
-      position: v.optional(v.number()),
-      url: v.optional(v.string()),
-      searchVolume: v.optional(v.number()),
-    })),
+    positions: v.array(rankedPositionValidator),
+    /** The adverts in a ranked-keywords answer, filed apart (`sitePaid.ts`). */
+    paidPositions: v.optional(v.array(paidPositionValidator)),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -394,6 +405,9 @@ export const writeSeoMetrics = internalMutation({
       operationId: args.operationId,
       pullId: args.pullId,
       metricsJson: args.metricsJson,
+      // Rankings are measured from a place, and so are their totals. A
+      // site-wide figure (a backlinks summary) is sent no place and keeps none.
+      ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
       createdAt: now,
     });
 
@@ -440,7 +454,29 @@ export const writeSeoMetrics = internalMutation({
       if (tracked.has(entry.keyword)) {
         await recomputeSearchStats(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place });
       }
+      // The Sites screens' latest ranking of this search, from this place.
+      if (entry.position !== undefined) {
+        await fileKeywordRank(ctx, {
+          websiteId: args.websiteId,
+          locationCode: place,
+          keyword: entry.keyword,
+          day: args.day,
+          position: entry.position,
+          ...(entry.url ? { url: entry.url } : {}),
+          ...(entry.searchVolume !== undefined ? { volume: entry.searchVolume } : {}),
+          extras: rankExtrasOf(entry),
+        });
+      }
     }
+
+    if (args.paidPositions) {
+      await filePaidKeywords(ctx, { websiteId: args.websiteId, locationCode: place, pullId: args.pullId, day: args.day, rows: args.paidPositions });
+    }
+
+    // Rankings are this place's; a site-wide figure (backlinks) is every
+    // watcher's, so it refreshes the summary of every place the site is read from.
+    if (args.positions.length > 0) await requestSiteRebuild(ctx, args.websiteId, place);
+    else await requestRebuildEverywhere(ctx, args.websiteId);
     return null;
   },
 });
@@ -455,9 +491,11 @@ export const writeSeoMetrics = internalMutation({
  * are still kept, as the cited domain, so a rival added later already has a
  * history waiting.
  *
- * The answer text arrives here, is read once, and is not stored. Only the
- * matched variant or the cited domain is written, so nothing an engine wrote
- * can ever reach an agent's prompt from this table.
+ * The citation rows hold only the matched variant or the cited domain. The
+ * answer's text is kept beside them in `aiAnswerTexts` since D9
+ * (docs/plans/active/user-sites-plan.md, "Stored answers"): people need to
+ * read what was said to plan from it, and an agent reading it later is handed
+ * it as quoted material to analyse, never as instructions.
  *
  * Replaces by pull, like every other parse, so a corrected matcher can be run
  * over stored payloads without anyone auditing the result afterwards.
@@ -575,18 +613,31 @@ export const writeAiCitations = internalMutation({
       title: v.optional(v.string()),
       websiteId: v.optional(v.id("websites")),
     })),
+    /** What the engine said, kept word for word since D9. Absent from a caller that has none. */
+    answer: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
     const pull = await ctx.db.get(args.pullId);
     const locationCode = readLocationCode(pull?.taskArgsJson);
+    if (args.answer !== undefined) {
+      await fileAnswerText(ctx, {
+        pullId: args.pullId, prompt: args.prompt, engine: args.engine,
+        locationCode: locationCode ?? DEFAULT_LOCATION_CODE, day: args.day, text: args.answer,
+        sources: args.sources.map((source) => source.url),
+      });
+    }
 
     const existing = await ctx.db
       .query("aiCitations")
       .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
       .take(MAX_CITATION_ROWS + 100);
     for (const row of existing) await ctx.db.delete(row._id);
+    // Pages this answer cited before and after this parse, recounted below, so
+    // a page a corrected parse no longer finds loses the citation.
+    const citedPages: Array<{ websiteId: Id<"websites">; url: string }> = existing.flatMap((row) =>
+      row.kind === "SOURCE" && row.mentionedWebsiteId && row.url ? [{ websiteId: row.mentionedWebsiteId, url: row.url }] : []);
 
     // A parse that now succeeds clears what an earlier attempt left behind,
     // or the row would carry "Parse failed" forever after the fix that fixed it.
@@ -640,7 +691,9 @@ export const writeAiCitations = internalMutation({
         position: sourcePosition,
         createdAt: now,
       });
+      if (websiteId) citedPages.push({ websiteId, url: source.url });
     }
+    await recountCitedPages(ctx, citedPages);
 
     // The answer as a whole — including when it named nobody we know, which a
     // row per mention cannot record — and the summaries of every host asking
@@ -658,36 +711,12 @@ export const writeAiCitations = internalMutation({
   },
 });
 
-/**
- * Which place a ranking was measured from, read back from what was sent.
- *
- * The ranking operations take DataForSEO's location code directly, unlike the
- * AI engines below, which take a country and a city.
- */
-function readSentLocationCode(taskArgsJson: string | undefined): number | undefined {
-  if (!taskArgsJson) return undefined;
-  try {
-    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
-    return typeof args.location_code === "number" ? args.location_code : undefined;
-  } catch {
-    return undefined;
-  }
+/** The Sites extras of one parsed ranking: everything but the ranking itself. */
+function rankExtrasOf(entry: Infer<typeof rankedPositionValidator>): RankExtras {
+  const { cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks } = entry;
+  return { cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks };
 }
 
-/** Which place the question was asked from, read back from what was sent. */
-function readLocationCode(taskArgsJson: string | undefined): number | undefined {
-  if (!taskArgsJson) return undefined;
-  try {
-    const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
-    // The engines take a country and city, not a code; the code is what the
-    // company website stored, and it is recovered from the city when present.
-    const city = typeof args.web_search_city === "string" ? args.web_search_city : undefined;
-    if (!city) return undefined;
-    return LOCATION_BY_CITY.get(city);
-  } catch {
-    return undefined;
-  }
-}
 /** Discovered websites kept per pull. Beyond this the tail is noise. */
 const MAX_DISCOVERED = 50;
 
@@ -751,6 +780,8 @@ export const writeBulkMetrics = internalMutation({
         metricsJson: row.metricsJson,
         createdAt: now,
       });
+      // A site-wide figure, so every place the site is read from.
+      await requestRebuildEverywhere(ctx, websiteId);
     }
     return null;
   },
@@ -773,6 +804,8 @@ export const writeDiscoveredCompetitors = internalMutation({
       intersections: v.number(),
       averagePosition: v.optional(v.number()),
       estimatedTraffic: v.optional(v.number()),
+      domainKeywords: v.optional(v.number()),
+      domainTraffic: v.optional(v.number()),
       kind: v.optional(v.union(
         v.literal("COMPETITOR"), v.literal("DIRECTORY"), v.literal("PUBLISHER"),
         v.literal("SUPPLIER"), v.literal("OTHER"),
@@ -830,9 +863,19 @@ export const writeDiscoveredCompetitors = internalMutation({
           });
         }
 
-        if (existing?.decidedAt) continue;
+        // The domain's own size is a fact, not a suggestion, so it is kept
+        // current even once a person has decided (the Sites Market map).
+        const domain = {
+          ...(row.domainKeywords !== undefined ? { domainKeywords: row.domainKeywords } : {}),
+          ...(row.domainTraffic !== undefined ? { domainTraffic: row.domainTraffic } : {}),
+        };
+        if (existing?.decidedAt) {
+          await ctx.db.patch(existing._id, domain);
+          continue;
+        }
 
         const fields = {
+          ...domain,
           intersections: row.intersections,
           ...(row.averagePosition !== undefined ? { averagePosition: row.averagePosition } : {}),
           ...(row.estimatedTraffic !== undefined ? { estimatedTraffic: row.estimatedTraffic } : {}),
@@ -908,6 +951,7 @@ export const writeKeywordIntents = internalMutation({
       // opinion about the same phrase.
       if (existing) await ctx.db.patch(existing._id, { ...row, judgedAt: now });
       else await ctx.db.insert("seoKeywordIntents", { ...row, judgedAt: now });
+      await patchKeywordIntent(ctx, row.keyword, row.intent);
     }
     return null;
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -22,7 +22,17 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 export function useServerPagedTable<Query extends Parameters<typeof usePaginatedQuery>[0]>(
   query: Query,
   args: Parameters<typeof usePaginatedQuery<Query>>[1],
-  pageSize: number = TABLE_PAGE_SIZE
+  pageSize: number = TABLE_PAGE_SIZE,
+  options: {
+    /**
+     * Top up a page the server sent back short. A query that narrows its
+     * read with `maximumRowsRead` may answer with fewer rows than asked while
+     * more remain, and page two would then start past rows nobody saw — or
+     * show nothing at all. The Sites tables opt in (`useSitePagedTable`);
+     * every other screen behaves exactly as it always has.
+     */
+    fillShortPages?: boolean;
+  } = {},
 ) {
   const [page, setPage] = useState(1);
   const paginated = usePaginatedQuery(query, args, { initialNumItems: pageSize });
@@ -46,6 +56,11 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
   const totalPages = canLoadMore ? loadedPages + 1 : loadedPages;
   const safePage = Math.min(page, totalPages);
   const rows = results.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const short = options.fillShortPages === true && canLoadMore && loadedCount < safePage * pageSize;
+  useEffect(() => {
+    if (short) loadMore(pageSize);
+  }, [short, loadedCount, loadMore, pageSize]);
 
   const goToPage = (next: number) => {
     const wanted = Math.max(1, next);

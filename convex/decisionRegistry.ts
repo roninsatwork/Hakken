@@ -211,6 +211,44 @@ export const DECISIONS: readonly DecisionDefinition[] = [
         : null,
   },
   {
+    // The Sites Top pages "page type" column (docs/plans/active/user-sites-plan.md,
+    // Phase 2). Asked only about pages whose address does not already say
+    // what they are (`pageTypeByAddress` in convex/utils/siteShapes.ts).
+    key: "seo.page-type",
+    name: "What kind of page is this?",
+    copyKey: "seoPageType",
+    usedIn: "seo",
+    // It labels a row on a report. Nothing is tracked, sent or charged on it.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide what kind of page this is on the business's own website.",
+        context:
+          "`business` is the website: its address, and where known what it sells and does. `page.address` is the page's path on that website, and `page.topSearch` the search that brings it the most visitors from Google.",
+        guidance:
+          "Judge what the page is for, from its address and the search it ranks for. A page selling one service is a service page even if it sits at the top of the site. A page about a town or area the business serves is a location page. An article, guide or news item is an article, wherever it lives.",
+      },
+      criteria: {
+        home: "The website's home page.",
+        service: "A page describing one service the business offers, or its list of services.",
+        product: "A page for one product for sale.",
+        category: "A page listing many products or items of one kind.",
+        article: "A blog post, guide, news item or other article.",
+        "case-study": "A case study, portfolio piece or example of past work.",
+        about: "A page about the business itself or its people.",
+        contact: "A page for getting in touch, booking or asking for a quote.",
+        location: "A page about the business in one town, city or area.",
+        careers: "A page about jobs at the business.",
+        legal: "A privacy, cookie, terms or other legal page.",
+        other: "None of these fits, or there is not enough here to tell.",
+      },
+    },
+    // A label on a report; acting on it changes nothing and there is nothing to audit.
+    describeAction: () => null,
+  },
+  {
     key: "chat.hidden-instructions",
     name: "Is this message trying to extract hidden instructions?",
     copyKey: "chatHiddenInstructions",

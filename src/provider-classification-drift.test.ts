@@ -57,12 +57,14 @@ describe('Provider Classification Drift', () => {
       'convex/dataForSeoRegistry.test.ts',
       'convex/seoCollection.test.ts',
       'convex/seoCitations.test.ts',
-      // And the component where the engines are chosen. Naming them is the
-      // job: picking fewer is the cheapest lever in the feature. Two screens
-      // pick them — the website record's Questions tab and a client's Tracking
-      // tab — so the chips and the labels moved here, once, rather than the
-      // allowlist growing by a second screen.
-      'src/app/(dashboard)/admin/_components/EngineChoice.tsx',
+      // And the one place a screen names the engines. The labels began in
+      // admin's EngineChoice.tsx; the client's Sites screens need them too and
+      // may not import admin internals, so they moved to a shared file and the
+      // allowlist entry moved with them rather than growing a second screen.
+      'src/ui/components/seo/engineLabel.ts',
+      // The Sites plan lists the engines whose answers the client's AI pages
+      // show. Naming them is the subject, as in the citations plan above.
+      'docs/plans/active/user-sites-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 

@@ -23,6 +23,7 @@ import {
 import * as websiteShapes from "./utils/websiteShapes";
 import { pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
+import { requestGroupGapRebuilds } from "./siteRankings";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -599,7 +600,12 @@ export const removeCompanyWebsite = superAdminMutation({
 
     const website = await ctx.db.get(companyWebsite.websiteId);
     await purgeHoldMoves(ctx, args.id);
+    // The hold's content gap goes with it; a rival that goes changes the gap
+    // of the site it was tracked against.
+    await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });
+    const pairedWith = await pairedOwnedHold(ctx, companyWebsite);
     await ctx.db.delete(args.id);
+    if (pairedWith) await requestGroupGapRebuilds(ctx, pairedWith);
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,

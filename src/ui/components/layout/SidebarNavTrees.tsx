@@ -319,6 +319,14 @@ export function UserNavTree({
   />
   )}
 
+  <NavItem
+    icon={Globe}
+    label={t('sites')}
+    href="/app/sites"
+    isActive={activeItem === 'Sites' || pathname.startsWith('/app/sites')}
+    onClick={() => setActiveItem('Sites')}
+  />
+
   {hasCapability(CORE_MODULES.reception) && (
   <NavItem
     icon={MonitorSpeaker}

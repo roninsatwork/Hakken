@@ -11,6 +11,8 @@ import {
   type DataForSeoCredentials,
 } from "./dataForSeoRest";
 import { findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
+import { slimSeoResult } from "./dataForSeoSlim";
+import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
 
@@ -112,8 +114,10 @@ export async function sendNextBatch(
         }
 
         const isLive = operation.mode === "LIVE";
+        // Trimmed to what the parsers read first, for the calls whose full
+        // answer would not fit the raw copy (`dataForSeoSlim.ts`).
         const raw = isLive && outcome.result !== undefined
-          ? packRaw(outcome.result)
+          ? packRaw(slimSeoResult(operation.id, outcome.result))
           : null;
 
         await ctx.runMutation(internal.seoCollectionQueue.settleSeoSend, {
@@ -175,6 +179,10 @@ export const fetchSeoResult = internalAction({
       const envelope = await getDataForSeo(path, credentials);
       const task = envelope.tasks?.[0];
 
+      // A crawl's summary can be asked for while the crawl is still running.
+      // That is not the answer yet: leave the task to be asked again.
+      if (task && isCrawlUnfinished(pull.operationId, task.result)) return null;
+
       if (!task || (task.status_code !== undefined && task.status_code >= 40000)) {
         await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
           pullId: args.pullId,
@@ -183,7 +191,7 @@ export const fetchSeoResult = internalAction({
         return null;
       }
 
-      const raw = packRaw(task.result ?? null);
+      const raw = packRaw(slimSeoResult(pull.operationId, task.result ?? null));
       await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
         pullId: args.pullId,
         ...(raw.json ? { resultJson: raw.json } : {}),

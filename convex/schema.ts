@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
+import { siteTables } from "./siteSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -24,6 +25,7 @@ export default defineSchema({
   ...authTables,
   ...billingTables,
   ...uploadTables,
+  ...siteTables,
   
   companies: defineTable({
     name: v.string(),
@@ -556,6 +558,8 @@ export default defineSchema({
     pullId: v.id("seoDataPulls"),
     /** Top-level counts and scores only. Never page text. */
     metricsJson: v.string(),
+    /** Where a place-bound figure (a ranked-keywords total) was measured from, as sent; absent on site-wide ones and older rows. */
+    locationCode: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_website_day", ["websiteId", "day"])
@@ -838,6 +842,9 @@ export default defineSchema({
     intersections: v.number(),
     averagePosition: v.optional(v.number()),
     estimatedTraffic: v.optional(v.number()),
+    /** The whole domain's keywords and traffic, for the Sites Market map. */
+    domainKeywords: v.optional(v.number()),
+    domainTraffic: v.optional(v.number()),
     /** What the judgment made of it, absent when nothing judged it. */
     kind: v.optional(v.union(
       v.literal("COMPETITOR"),
@@ -906,7 +913,8 @@ export default defineSchema({
     lastPullId: v.id("seoDataPulls"),
   })
     .index("by_prompt", ["prompt"])
-    .index("by_prompt_engine_place_query", ["prompt", "engine", "place", "query"]),
+    .index("by_prompt_engine_place_query", ["prompt", "engine", "place", "query"])
+    .index("by_prompt_engine_place_seen", ["prompt", "engine", "place", "timesSeen"]),
 
   /**
    * The same searches, dated: one row each time an answer ran one, for
@@ -1017,6 +1025,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_website_day", ["mentionedWebsiteId", "day"])
+    .index("by_website_url", ["mentionedWebsiteId", "url"])
     .index("by_pull", ["pullId"]),
 
   /**

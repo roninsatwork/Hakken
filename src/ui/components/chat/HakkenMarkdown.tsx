@@ -6,9 +6,45 @@ import type { ComponentProps } from 'react';
 
 interface HakkenMarkdownProps {
   content: string;
+  /**
+   * Words to pick out wherever they appear, as `<mark>`. Added for the Sites
+   * Full answers page, which shows an AI engine's answer with the website's
+   * own names marked (docs/plans/active/user-sites-plan.md, D9). Absent, the
+   * renderer is exactly what it was.
+   */
+  highlight?: readonly string[];
 }
 
-export function HakkenMarkdown({ content }: HakkenMarkdownProps) {
+type HastNode = { type: string; value?: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
+
+/** A rehype step that wraps each occurrence of the words in a `mark`, outside code. */
+function markWords(words: readonly string[]) {
+  const escaped = words.filter((word) => word.trim().length > 1)
+    .map((word) => word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .sort((left, right) => right.length - left.length);
+  const pattern = escaped.length > 0 ? new RegExp(`(${escaped.join("|")})`, "gi") : null;
+  const walk = (node: HastNode) => {
+    if (!node.children || node.tagName === "code" || node.tagName === "pre") return;
+    node.children = node.children.flatMap((child): HastNode[] => {
+      if (child.type !== "text" || !child.value || !pattern) {
+        walk(child);
+        return [child];
+      }
+      const parts = child.value.split(pattern);
+      if (parts.length === 1) return [child];
+      // With one capturing group, the matches sit at the odd places.
+      return parts.flatMap((part, index): HastNode[] => {
+        if (!part) return [];
+        return index % 2 === 1
+          ? [{ type: "element", tagName: "mark", properties: {}, children: [{ type: "text", value: part }] }]
+          : [{ type: "text", value: part }];
+      });
+    });
+  };
+  return () => (tree: HastNode) => walk(tree);
+}
+
+export function HakkenMarkdown({ content, highlight }: HakkenMarkdownProps) {
   type MarkdownCodeProps = ComponentProps<"code"> & {
     node?: unknown;
     inline?: boolean;
@@ -23,7 +59,9 @@ export function HakkenMarkdown({ content }: HakkenMarkdownProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={highlight && highlight.length > 0 ? [markWords(highlight)] : []}
       components={{
+        mark: (props) => <mark className="rounded-[3px] bg-brand/20 px-0.5 text-foreground" {...omitMarkdownNode(props)} />,
         p: (props) => <p className="mb-3 last:mb-0 leading-[1.6] opacity-90" {...omitMarkdownNode(props)} />,
         a: (props) => (
           <a className="text-brand font-medium hover:underline underline-offset-4 decoration-brand/30 transition-all" target="_blank" rel="noopener noreferrer" {...omitMarkdownNode(props)} />

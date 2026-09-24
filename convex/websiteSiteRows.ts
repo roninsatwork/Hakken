@@ -133,8 +133,18 @@ export function monthly(units: ReadonlyArray<number | undefined>, perMonth: numb
 
 export const SITE_OPERATION_IDS = seoSiteOperations().map((operation) => operation.id);
 
-export function siteUnits(costs: Map<string, number>): Array<number | undefined> {
-  return SITE_OPERATION_IDS.map((operationId) => costs.get(operationId));
+/**
+ * Each whole-site call's price, as a share of one collection: a call bought
+ * every collection counts whole, and a weekly or monthly list only as often
+ * as it is bought in a month of this cadence (docs/plans/active/
+ * user-sites-plan.md, "Collecting more").
+ */
+export function siteUnits(costs: Map<string, number>, perMonth: number): Array<number | undefined> {
+  return seoSiteOperations().map((operation) => {
+    const unit = costs.get(operation.id);
+    if (unit === undefined || !operation.refresh || perMonth <= 0) return unit;
+    return unit * Math.min(1, 30 / operation.refresh.everyDays / perMonth);
+  });
 }
 
 export function engineUnits(costs: Map<string, number>, engines: readonly AiEngine[]): Array<number | undefined> {
@@ -343,7 +353,7 @@ export async function loadRivalRows(
       answersCounted,
       lastSeenDay,
       verdict: rivalVerdict({ beatsYouOn, youBeatOn, lastSeenDay, trackedSinceDay }, site.today),
-      monthlyUsd: monthly(siteUnits(costs), site.perMonth),
+      monthlyUsd: monthly(siteUnits(costs, site.perMonth), site.perMonth),
     };
   }));
 }

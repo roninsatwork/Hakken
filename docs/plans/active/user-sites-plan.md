@@ -30,7 +30,7 @@ rest of Hakken is built on.
 | # | Question | Decision |
 |---|---|---|
 | D1 | Who edits a site's searches, questions and competitors? | **Admin only, for now.** The Sites pages are read-only. Editing stays on the website record and the company site screens in admin. |
-| D2 | Can a client open a competitor as if it were their own site? | **No.** Competitors are only ever shown beside the client's own site. |
+| D2 | Can a client open a competitor as if it were their own site? | ~~**No.** Competitors are only ever shown beside the client's own site.~~ **Replaced by D17 on 2026-09-23:** yes, every held website opens the full set of pages. |
 | D3 | Date ranges? | **Yes.** Every page has 7 / 30 / 90 days and a custom date picker. |
 | D4 | How are the pages reached? | **A side menu**, one item per page. |
 | D5 | How is the side menu grouped? | **One sub menu per kind of content we collect** — five, one per DataForSEO call family — plus Overview. |
@@ -45,12 +45,39 @@ rest of Hakken is built on.
 | D14 | Finding things in big tables | **Every table has a search box and filters.** Some sites rank for tens of thousands of keywords and pages; a client must reach any row in a few seconds. Anthony, 2026-09-23. See "Tables". |
 | D15 | Speed | **Every screen is built for speed on the server** — indexes, paging, summaries, page-load targets — across all of them. Anthony, 2026-09-23. See "Speed". |
 | D16 | Downloading charts | **Every chart can be downloaded, in light or dark to match the theme switcher.** Anthony, 2026-09-23. See "Downloads". |
+| D17 | Which websites are Sites? | **Every website the company holds — owned or competitor — is a Site, listed on `/app/sites`, and any of them opens the full set of pages.** Anthony, 2026-09-23: "I'm expecting to see all of these sites on the front end and then see all 33 screens for any of the sites I choose." This **replaces D2**: a competitor is no longer only a comparison beside the owned site. See "Which websites are Sites". |
+
+## Which websites are Sites (D17)
+
+The admin **Websites** screen for a company lists every website it holds:
+its own (`relationship` `OWNED`) and the ones it watches (`COMPETITOR`, each
+"of" an owned site). Anthony, 2026-09-23: the client front end shows **all of
+them**, and every one opens the same pages.
+
+- `/app/sites` lists every hold of the company, owned and competitor, with the
+  same columns for each: type (Owned, or Competitor of which site), AI
+  mentions, top 3, estimated traffic, to do, last checked, added.
+- Opening any of them gives the full side menu and every page, drawn for that
+  website. A page that says "you" on an owned site says "this site" on a
+  competitor; the copy never assumes the reader owns the site.
+- **Rivals on a page are the company's other holds.** On an owned site they
+  are its competitors, as before. On a competitor's pages they are the owned
+  site and the other competitors, so Share of voice, Side by side, Content gap
+  and Compared with rivals work the same way whichever site is open.
+- A website that has not been checked yet (added, first collection still to
+  run) still opens: its header says when the first check runs and every figure
+  reads as not yet checked, never as zero.
+- The site switcher in the page header moves between all of the company's
+  holds.
+- The tenancy rule is unchanged: every one of these is a hold of the caller's
+  company, checked through `requireSite`; the shared website record is still
+  never the entry point.
 
 ## Where it lives
 
 - A new **Sites** item in the user app sidebar
   (`src/ui/components/layout/SidebarNavigation.tsx`, next to Calls).
-- `/app/sites` — the list of the company's own websites.
+- `/app/sites` — every website the company holds, owned and competitor (D17).
 - `/app/sites/[siteId]/…` — one site, with the side menu below. `siteId` is
   the company's hold (`companyWebsites._id`), never the shared `websites._id`.
 - The date range and step live in the URL (`?from=…&to=…&step=day|week|month`,
@@ -190,7 +217,9 @@ search, which is every row of Top pages.
 | Ahrefs' own scores (DR, UR) | Theirs. We show DataForSEO's rank and page rank instead, on their own scale. |
 
 **Thirty-two pages: Overview and Calendar plus five sub menus.** Pages marked
-💷 wait for Phase 4; the rest are built from data we already buy.
+💷 wait for Phase 4; the rest are built from data we already buy. Phase 5
+added three (Site audit, Paid search and Paid keywords), so the menu holds
+thirty-five — see the build log.
 
 ## Collecting more (D10)
 
@@ -207,11 +236,17 @@ they go into `convex/dataForSeoRegistry.ts`):
 | Anchors (`/v3/backlinks/anchors/live`) | Anchors | monthly |
 | Referring networks (`/v3/backlinks/referring_networks/live`) | Referring IPs | monthly |
 | Backlink new / lost over time (`/v3/backlinks/timeseries_new_lost_summary/live`) | New and lost links | weekly |
-| Backlink history (`/v3/backlinks/timeseries_summary/live`) | Two years of backlink and linking-website history, at once | **once per site**, then our own collection continues it |
-| Ranking history (`/v3/dataforseo_labs/google/historical_rank_overview/live`) | Two years of monthly traffic, keyword counts and position bands, at once | **once per site**, then our own collection continues it |
+| ~~Backlink history (`/v3/backlinks/timeseries_summary/live`)~~ | ~~Two years of backlink and linking-website history, at once~~ | **Withdrawn 2026-09-23** — no backfilling (see below) |
+| ~~Ranking history (`/v3/dataforseo_labs/google/historical_rank_overview/live`)~~ | ~~Two years of monthly traffic, keyword counts and position bands, at once~~ | **Withdrawn 2026-09-23** — no backfilling (see below) |
 
-The two history calls mean the two-year charts (D8) have real data on day
-one instead of filling in over two years.
+**No backfilling (2026-09-23).** The two history calls above were to give the
+two-year charts real data on day one. Anthony withdrew them the same night:
+"We are not backfilling the data as part of this plan — we are coding as if we
+have the data … so we don't spend a fortune backdating all the data." So the
+screens are built for two years of data, and the data arrives from our own
+collection from now on. Neither call is in the registry; nothing collects
+them. (Before the message arrived, the night's testing had bought them once
+for each of the five sites, $0.89 in all; those answers are filed and stay.)
 
 **How the new calls are run — the same rules as every call today:**
 
@@ -251,7 +286,7 @@ Bar and line charts, built with the chart library already in the app
   We collect the same figures for every tracked rival, so this needs no extra
   call.
 - **Years view** — this year against last year, once a year of data exists
-  (at once, with the history calls).
+  (from our own collection; no history is bought — no backfilling, 2026-09-23).
 - **Step picker** — the viewer picks daily, weekly or monthly; the date range
   picks a sensible default (up to 90 days daily, up to a year weekly, longer
   monthly).
@@ -415,8 +450,8 @@ and of the phase, per `AGENTS.md`.
 
 ### Phase 1 — the shell and the stored pages (about 25% of the plan)
 
-1. `/app/sites` list: one row per held site — AI mentions, top-3 and
-   page-one counts, what moved, last checked.
+1. `/app/sites` list: one row per held website, owned and competitor (D17)
+   — type, AI mentions, top-3 and page-one counts, what moved, last checked.
 2. The site layout: title, the side menu (D4, D5), the shared date range and
    step control that writes the URL, and the compare-two-dates control (D12).
 3. Every page marked ✅ stored, filtered by the date range.
@@ -442,8 +477,9 @@ page that has a time series or a split.
 ### Phase 4 — collect more (about 25%)
 
 Add the new calls under "Collecting more" to the registry, the Planner and the
-Collector; one test call each to record the price; run the two history calls
-once per site; then turn the 💷 pages on.
+Collector; one test call each to record the price; ~~run the two history calls
+once per site~~ (withdrawn 2026-09-23: no backfilling); then turn the 💷 pages
+on.
 
 ### Phase 5 — more we can buy (about 10%)
 
@@ -459,9 +495,9 @@ and go.
 - **Sites are company-scoped and dynamic.** Anthony, 2026-09-23: "the
   websites are company scoped so will be dynamic, and one company cannot see
   another company's sites."
-  - The Sites list is whatever the signed-in user's company holds as its own
-    (`companyWebsites` with `relationship` `OWNED`), read at request time — never
-    a fixed list. A tracked rival is not a Site; it appears only beside one.
+  - The Sites list is whatever the signed-in user's company holds
+    (`companyWebsites`, owned and competitor alike — D17), read at request
+    time — never a fixed list.
   - The company comes from the caller (`ctx.companyId`, from `tenantQuery` in
     `convex/tenantFunctions.ts`, which honours super-admin impersonation),
     **never from the URL**. The `siteId` in the URL is checked against it: a
@@ -479,8 +515,9 @@ and go.
   - **A test for every Sites query** proves another company's user gets "not
     found" for a site that is not theirs, and that two companies watching the
     same host each see only their own rivals.
-- **A page is about this site (D2).** Other businesses appear only as
-  comparison beside it, never as a page of their own.
+- **A page is about the open site (D17).** Any held website, owned or
+  competitor, can be the open site; the other holds appear beside it as
+  comparison. A website the company does not hold never appears as a page.
 - **The admin UI stays as it is (D13).** No admin screen is added, changed or
   removed by this plan.
 - **Every paid call goes through the agents** — Planner and Collector — with
@@ -495,9 +532,226 @@ and go.
   `convex/websiteSiteRows.ts`), move that logic somewhere both can call rather
   than writing it twice.
 
+## Build log
+
+**Phase 1 — built 2026-09-23 (night).** Checked in the browser against the
+dev data (Ronins Agency, impersonated), 14 backend tests, lint, types and
+guards green.
+
+- Tables: `convex/siteSchema.ts` (latest rankings, pages, sections, day
+  summaries, cited pages, content gaps, rebuild requests), kept current from
+  the parser's writers through `convex/siteRankings.ts`, rebuilt by
+  `convex/siteSummaries.ts` and `convex/siteContentGap.ts`, filled from what
+  was already stored by `convex/siteBackfill.ts`.
+- Queries: `sites.ts`, `siteKeywords.ts`, `siteCharts.ts`, `siteAi.ts`,
+  `siteGoogle.ts`, `siteCompetitors.ts`, all through `siteAccess.ts`.
+- Screens: `src/app/(dashboard)/app/sites/**` — the list, the site layout
+  (record header, switcher, date range, side menu with key numbers and "Jump
+  to a page"), and the sixteen pages whose data was stored.
+- Downloads (D16): the kit's `ChartExportWrapper` gained opt-in PNG/SVG/CSV,
+  themed background and an always-visible button; admin charts unchanged.
+
+Clarifications made while building, so nobody re-decides them:
+
+- **Bounded lists may be read whole.** A company's holds, a site's chosen
+  searches and questions, its folders and its discovered competitors are
+  capped on their records (a few hundred at most), so they are read whole by
+  index and narrowed in place. The unbounded tables — keywords, pages, cited
+  pages, the content gap, and in Phase 4 the link lists — are searched,
+  filtered and paged on the server from indexes, as "Speed" says.
+- **Weeks and months are bucketed from the day summaries at read time.** One
+  row per site per day is the summary; a two-year chart reads at most 800 of
+  them and folds them into weeks or months in the query. No separate week or
+  month tables.
+- **D17 on the AI pages.** A competitor asks nothing, so its AI figures come
+  from the answers to the owned site's questions — this company's questions
+  only; a mention in an answer to another client's question never reaches
+  this company's screen.
+- **Admin untouched (D13).** Two shared pieces moved out of admin files
+  without changing any admin screen: the verdict validators
+  (`convex/utils/trackingVerdicts.ts`) and the engine names
+  (`src/ui/components/seo/engineLabel.ts`, re-exported by admin's
+  `EngineChoice.tsx`).
+- **Coordination.** A second session briefly built the first screens in
+  parallel; its work was merged here and it stopped. One set of queries.
+
+**Phase 2 — built 2026-09-23 (night).** Everything marked 🔧 is read out of
+the answers we already buy, filed by day, and re-read from the stored answers
+for free (`convex/siteBackfillRaw.ts`: `npx convex run
+siteBackfillRaw:readStoredResults`, no model asked anything).
+
+- Keywords: difficulty and its band, cost per click, twelve months of
+  searches, traffic and its value, the results page's features, and the
+  ranking page's page rank and links (`dataForSeoParsers.ts` →
+  `siteKeywordRanks`, carried to `sitePageRanks` and `siteSections`).
+- Day summaries: DataForSEO's own position bands and new / up / down / lost
+  counts across everything the site ranks for, traffic value, spam score,
+  broken pages.
+- Google results pages kept per search, place and day (`siteSerpPages`,
+  `siteSerp.ts`): page one, features, the domains an AI Overview or map pack
+  names, "People also ask" and related searches.
+- AI answer text, word for word (D9), in `aiAnswerTexts` beside `aiAnswers`
+  (`siteAnswers.ts`) — beside, not on, because the answer rows are read many
+  times to count and none of those reads should carry pages of text.
+- Competitors' whole-domain keywords and traffic, for the Market map.
+- Page type: the address settles the obvious pages for free; the rest are
+  for the new `seo.page-type` Decision (`sitePageTypes.ts`), which ships off
+  like every Decision — see Open questions.
+
+**Phase 3 — built 2026-09-23 (night).** The nine 🔧 pages — Full answers, Who
+ranks above you, Search features, Questions people ask, Position bands, New
+and lost, Market map, Link quality, Where links come from — and the new
+columns on All keywords (KD, CPC, traffic, trend, features; KD filter; sort
+by traffic or CPC), Top pages (type, traffic and share, value, page rank,
+linking websites; type filter; sort by traffic), Site structure (traffic) and
+Organic competitors (their whole keywords and traffic).
+
+**Phase 4 — built 2026-09-23 (night).** Six new calls
+(`convex/dataForSeoLinkOperations.ts`): the backlinks list (one per linking
+website), broken backlinks, referring domains, anchors, referring IPs, and
+links gained and lost; each with its own cadence (`refresh`) so a list is
+bought weekly or monthly whatever a cycle's cadence, a manual one included;
+filed by `siteLinkFiling.ts`; six pages on them (`siteLinkLists.ts`). One
+test call each on ronins.co.uk through the Collector, recorded in the cost
+table:
+
+| Call | Price per call | Cadence |
+|---|---|---|
+| Backlinks list (1,000 rows) | $0.043 | weekly |
+| Broken backlinks | $0.024 | weekly |
+| Referring domains (1,000 rows) | $0.043 | weekly |
+| Links gained and lost | $0.037 | weekly |
+| Anchors (1,000 rows) | $0.035 | monthly |
+| Referring IPs (1,000 rows) | $0.037 | monthly |
+
+About $0.72 a site a month with the site crawl below as first built (100
+pages); about $0.86 with the crawl at 1,000 pages (2026-09-24). The two history calls
+were withdrawn the same night — no backfilling (see "Collecting more").
+
+**Phase 5 — built 2026-09-23 (night).** Paid search needs no new call: the
+ranked-keywords answer already carries adverts beside organic results, so
+they are filed apart (`sitePaid.ts`) — which also fixed an old bug, an
+advertiser's adverts being read as organic rankings — and the paid figures
+go into the day summaries. The site crawl is DataForSEO On-Page, monthly,
+behind the Site audit page and the Overview's "Crawled pages"
+(`dataForSeoCrawlOperations.ts`, `siteCrawl.ts`). Built at 100 pages ($0.015
+a crawl); raised to 1,000 pages on 2026-09-24 (about $0.15), see Open
+question 3. Three new pages: Site audit, Paid search, Paid keywords.
+
+**Checks, 2026-09-23 (night).** Every page opened in Chrome against the dev
+data for ronins.co.uk and a competitor; the full check (guards, lint, types,
+every test: 576 files, 5,034 tests) green after the review below; the
+production build passes; the 50,000-keyword load test
+(`convex/sitesLoad.test.ts`) holds every query to well under half of one full
+scan of the table, each timed as the fastest of a few runs so a busy machine
+cannot fail it. The "Download all" buttons were not pressed in Chrome — that
+saves files to the machine — so their server side was run against the dev
+data instead (every table read correctly).
+
+**Review, 2026-09-23 (late).** Three independent read-only reviews — tenancy
+and safety, collection and filing, the screens — found no way for one company
+to open another's site, and about twenty-five real faults, fixed the same
+night:
+
+- **D17, twice.** Pages cited by AI answers were counted across every
+  company's questions, and a competitor's chart line counted mentions in any
+  answer from any place. Cited pages are now kept per question, engine and
+  place, and read for the site's own questions only (`citedPagesOf`);
+  competitor mentions are worked out with the asking site's day summaries
+  into `siteRivalAiDays`, per asking website and place. Tests prove another
+  company's answers never reach the screen.
+- **Money.** A 1,000-row link list could be paid for weekly and never filed
+  (over the stored copy's ceiling): lists are now kept as compact tables,
+  half the size, and one still too big keeps its strongest rows and files.
+  A weekly or monthly call already on its way now holds its cadence (it was
+  bought twice when the Collector hit its cap), and the agents'
+  `request_website_data` tool now obeys each call's own cadence.
+- **Places.** Ranking totals now record the place they were measured from,
+  so a host watched from two places no longer mixes their totals or marks
+  one place's rankings lost from the other's pull.
+- **Older answers.** Re-filing an old pull can no longer bring back adverts
+  a site has stopped, or thinner link counts; the ranked total counts
+  organic searches only, not adverts.
+- **Screens.** "Custom" dates can be chosen (`range=custom` in the address);
+  the Sites list's search and type filter no longer leak into a site (a
+  `type=OWNED` from the list crashed Top pages); every filter accepts only
+  the values its page offers; search boxes no longer drop letters typed
+  while the address catches up; filtered tables top up short pages;
+  the Years view pairs months by calendar month; SVG downloads draw the
+  chart (not an icon above it) with its legend; wins and losses has a
+  search box; the servers list keeps its network while searching; whole
+  lists page at fifteen rows; dates and numbers follow the reader's language.
+- **Smaller.** CSV cells with a carriage return or a semicolon are quoted;
+  page sizes are capped at 100; "What the AI searched" gives each question
+  an even share of its read, most persistent first; the Sites list reads
+  each owned site's answers once, not once per competitor.
+
+One fault is left for a decision: see Open question 4.
+
+More clarifications, made while building:
+
+- **No page text, still.** A ranking page's title and a cited source's title
+  are page text and are not kept; the page-type Decision reads the address
+  and the top search instead. Searches (fan-out, "People also ask", related
+  searches) and the AI answer text (D9) are the two kinds of text kept.
+- **Anchors are kept for people.** A link's words are the point of the
+  Anchors page; they are shown, never handed to a model.
+- **DataForSEO refused `date_from`** on the backlinks time series ("Invalid
+  Field", uncharged, 2026-09-23); without it the whole history since 2019
+  comes back for the same price, so none is sent. Weeks are filed under
+  their Monday.
+- **Answers trimmed before storing.** A 1,000-row link list with every field
+  is bigger than the raw copy a pull may keep, so the new calls' answers are
+  trimmed to the fields we read first (`dataForSeoSlim.ts`).
+- **Search and filters live in the address (D14)** on every table, and only
+  the dates, step and "compare with" travel between pages.
+- **Every table downloads as CSV:** the lists a page already holds straight
+  away, and the big ones — keywords, pages, the content gap, cited pages, the
+  link lists, paid keywords, full answers — built on the server from the
+  table's own index and handed straight back to the button that asked
+  (`siteExports.ts`). Never stored, so there is nothing to clean up; a file
+  holds at most 50,000 rows, and a bigger table says so when it is cut.
+- **Tables of days** (Position bands, New and lost, Link quality, New and lost
+  links) are filtered by the date picker, not a search box: a date is not
+  something to type.
+- **A downloaded chart carries the site, the dates, the step and the
+  platform's name** under its title, stamped on the file only. The name is
+  the one set in System Settings, never written into the copy, so a clone
+  that renames the platform gets its own.
+
 ## Open questions
 
-None open. Add new questions here, dated, before building the page they block.
+Added 2026-09-23 (night), for Anthony in the morning:
+
+1. **"What kind of page is this?" — decided 2026-09-24: on.** Anthony: "Yes
+   do it". Switched to Act for the whole platform (Admin → Decisions,
+   `seo.page-type`), like the other four SEO Decisions, and run once over
+   the five held sites: 38 pages labelled for $0.0013 of AI, so every
+   ranking page on Top pages now has a type. From here each site's pages are
+   labelled after its rankings are rebuilt.
+2. **Feature counts across every keyword.** The ranked-keywords call asks for
+   organic and paid results only, so DataForSEO does not count how often the
+   site appears in AI Overviews, map packs and featured snippets across all of
+   them. Asking for those too would change a call every site already makes;
+   left as it is until decided. (Search features still shows them for the
+   tracked searches.)
+3. **Site crawl depth — decided 2026-09-24: 1,000 pages a month per site.**
+   ronins.co.uk's first crawl stopped at exactly 100 of its pages, so the
+   audit covered only part of the site. The price goes with the pages
+   crawled: about $0.15 a crawl at 1,000, against $0.015 at 100. Anthony
+   agreed the recommendation. The next crawl of each site uses it; Admin's
+   cost estimate shows the old price until then, because it is worked out
+   from what the crawls have actually cost.
+4. **What deleting a website removes — decided 2026-09-24: everything.**
+   Anthony: "delete everything about the website". Built the same morning
+   (`websitePurge.ts`): a question no other website asks goes with every
+   answer to it — its words, citations, the searches the engines ran and the
+   purchases behind them — and a search no other website tracks goes with
+   every results page and purchase for it; the pages those answers cited are
+   counted again without them, and the website's name is taken out of other
+   answers' lists of who they named. A question or search another website
+   still asks or tracks stays, because those answers are that website's too.
+   Tested in `convex/websitePurge.test.ts`.
 
 ## Change log
 
@@ -522,3 +776,22 @@ None open. Add new questions here, dated, before building the page they block.
   targets and a 50,000-keyword load test.
 - 2026-09-23 — D16 added: every chart downloads as PNG, SVG or CSV in the
   theme the viewer has chosen, standing on its own with title, site and dates.
+- 2026-09-23 — D17 added, replacing D2: every website the company holds, owned
+  or competitor, is a Site on the list and opens the full set of pages; the
+  rivals on a page are the company's other holds. The drawing ("Hakken Sites
+  Drawing") was redrawn the same day with a site picker, so all 33 screens can
+  be seen for any of the five websites.
+- 2026-09-23 (night) — Phases 2 to 5 built, checked in the browser and by the
+  full check; see the build log. The two history calls were withdrawn at
+  Anthony's word — no backfilling in this plan — after one testing round had
+  bought them once per site ($0.89). Three pages added in Phase 5 (Site audit,
+  Paid search, Paid keywords). Open questions 1–3 added.
+- 2026-09-23 (late) — Independent review of the build; about twenty-five
+  faults fixed, two of them D17 breaches (cited pages and competitor
+  mentions counted other companies' questions). Downloads now hand the file
+  straight back rather than storing it. Open question 4 added.
+- 2026-09-24 — Open questions decided: 1, the page-type Decision is on;
+  3, the site crawl reads up to 1,000 pages a month per site, not 100; 4,
+  deleting a website deletes everything about it, shared answers and results
+  pages included unless another website still uses them. Question 2 is
+  explained and waiting on Anthony.

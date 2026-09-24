@@ -9,6 +9,8 @@ import {
   RIVAL_ATTENTION,
   SEARCH_ATTENTION,
   daysBetween,
+  rivalVerdictValidator,
+  searchVerdictValidator,
 } from "./utils/trackingVerdicts";
 import {
   MAX_LIST,
@@ -112,12 +114,12 @@ export const getSiteHeader = superAdminQuery({
     const liveQuestions = questions.filter((row) => row.isActive);
     const costs = await unitCosts(ctx, allOperationIds(liveQuestions));
 
-    const siteMonthly = monthly(siteUnits(costs), site.perMonth);
+    const siteMonthly = monthly(siteUnits(costs, site.perMonth), site.perMonth);
     const perSearch = monthly([costs.get(SEO_KEYWORD_CHECK_OPERATION)], site.perMonth);
     const searchesMonthly = liveSearches.length === 0 ? 0 : perSearch === null ? null : perSearch * liveSearches.length;
     const questionsMonthly = sumMonthly(liveQuestions.map((row) =>
       monthly(engineUnits(costs, row.engines), site.perMonth)));
-    const perRival = monthly(siteUnits(costs), site.perMonth);
+    const perRival = monthly(siteUnits(costs, site.perMonth), site.perMonth);
     const rivalsMonthly = rivals.length === 0 ? 0 : perRival === null ? null : perRival * rivals.length;
 
     const place = findSeoLocation(site.place);
@@ -212,10 +214,6 @@ const listArgs = {
   pageSize: v.number(),
 };
 
-const searchVerdictValidator = v.union(
-  v.literal("NOT_CHECKED"), v.literal("TOO_NEW"), v.literal("TOP_THREE"), v.literal("PAGE_ONE"),
-  v.literal("SLIPPING"), v.literal("RANKING"), v.literal("NOT_FOUND"), v.literal("NEVER_RANKED"),
-);
 
 /**
  * The searches on this site's record, judged from this company's place.
@@ -272,10 +270,6 @@ export const listTrackedSearches = superAdminQuery({
   },
 });
 
-const rivalVerdictValidator = v.union(
-  v.literal("TOO_NEW"), v.literal("AHEAD"), v.literal("LEVEL"),
-  v.literal("BEHIND"), v.literal("GONE_QUIET"), v.literal("NOT_CHECKED"),
-);
 
 /**
  * The rivals this company watches against this site, and the ones the answers

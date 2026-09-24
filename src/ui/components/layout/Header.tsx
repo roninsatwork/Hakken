@@ -2,20 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Bot,
-  Building2,
-  Gamepad2,
-  LayoutDashboard,
-  ListChecks,
-  User,
-  Settings,
-  LogOut,
-  Sidebar,
-  ShieldCheck,
-  ChevronsUpDown,
-  Phone,
-} from "lucide-react";
+import { Bot, Building2, Gamepad2, LayoutDashboard, ListChecks, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -76,6 +63,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/assistant")) return [askLabel];
   if (pathname.startsWith("/app/tasks")) return [t("tasks")];
   if (pathname.startsWith("/app/calls")) return [t("calls")];
+  if (pathname.startsWith("/app/sites")) return [t("sites")];
   if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
   if (pathname.startsWith("/app/settings")) return [t("organization")];
   if (pathname.startsWith("/app/arcade/ronins-run-3d")) return [t("arcade"), t("roninsRun3D")];
@@ -119,6 +107,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? ListChecks
       : pathname.startsWith("/app/calls")
       ? Phone
+      : pathname.startsWith("/app/sites")
+      ? Globe
       : pathname.startsWith("/app/arcade")
         ? Gamepad2
         : isAdmin

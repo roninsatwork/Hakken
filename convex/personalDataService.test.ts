@@ -20,7 +20,7 @@ import {
  * manifest is checked against it.
  */
 function schemaSource() {
-  return ["schema.ts", "billingSchema.ts", "uploadSchema.ts"].map(file => fs.readFileSync(path.join(process.cwd(), "convex", file), "utf8")).join("\n");
+  return ["schema.ts", "billingSchema.ts", "uploadSchema.ts", "siteSchema.ts"].map(file => fs.readFileSync(path.join(process.cwd(), "convex", file), "utf8")).join("\n");
 }
 
 function tablesReferencingUsers(): Map<string, string[]> {

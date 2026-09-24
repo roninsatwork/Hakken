@@ -219,7 +219,10 @@ export async function judgeCompetitors(
     ourHost: string;
     /** What the watched business does, so the judge has more than two web addresses to go on. */
     ours?: BusinessForJudging | null;
-    found: Array<{ host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null }>;
+    found: Array<{
+      host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null;
+      domainKeywords?: number | null; domainTraffic?: number | null;
+    }>;
     /** What known candidates do, by host, where an admin has written it down. */
     knownCandidates?: Record<string, { sector?: string; does?: string }>;
   },
@@ -229,6 +232,8 @@ export async function judgeCompetitors(
   intersections: number;
   averagePosition?: number;
   estimatedTraffic?: number;
+  domainKeywords?: number;
+  domainTraffic?: number;
   kind?: "COMPETITOR" | "DIRECTORY" | "PUBLISHER" | "SUPPLIER" | "OTHER";
   kindCertainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE";
 }>> {
@@ -237,6 +242,9 @@ export async function judgeCompetitors(
     intersections: row.intersections,
     ...(row.averagePosition !== null ? { averagePosition: row.averagePosition } : {}),
     ...(row.estimatedTraffic !== null ? { estimatedTraffic: row.estimatedTraffic } : {}),
+    // Carried for the Sites Market map; nothing here judges on them.
+    ...(typeof row.domainKeywords === "number" ? { domainKeywords: row.domainKeywords } : {}),
+    ...(typeof row.domainTraffic === "number" ? { domainTraffic: row.domainTraffic } : {}),
   }));
   if (base.length === 0) return base;
 

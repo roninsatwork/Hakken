@@ -1,3 +1,5 @@
+import { v } from "convex/values";
+
 /**
  * What the Tracking screen calls each row, and the thresholds behind it.
  *
@@ -10,6 +12,17 @@
  * In `utils/` because a client screen prints them, and importing a Convex
  * module that defines functions ships the backend to the browser.
  */
+
+/** The verdicts as validators, for the queries that return them — admin's and the client's. */
+export const searchVerdictValidator = v.union(
+  v.literal("NOT_CHECKED"), v.literal("TOO_NEW"), v.literal("TOP_THREE"), v.literal("PAGE_ONE"),
+  v.literal("SLIPPING"), v.literal("RANKING"), v.literal("NOT_FOUND"), v.literal("NEVER_RANKED"),
+);
+
+export const rivalVerdictValidator = v.union(
+  v.literal("TOO_NEW"), v.literal("AHEAD"), v.literal("LEVEL"),
+  v.literal("BEHIND"), v.literal("GONE_QUIET"), v.literal("NOT_CHECKED"),
+);
 
 export const VERDICT_THRESHOLDS = {
   /** Under this many days, a row is too new to judge either way. */

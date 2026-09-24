@@ -5,6 +5,8 @@ import {
   aiCitationOperationId,
   type AiEngine,
 } from "./seoAiEngines";
+import { SITE_LINK_OPERATIONS } from "./dataForSeoLinkOperations";
+import { CRAWL_OPERATIONS } from "./dataForSeoCrawlOperations";
 import { appError } from "./utils/appError";
 
 /**
@@ -103,6 +105,15 @@ export type SeoOperation = {
    * as one row per host. See `seoAiEngines.ts` for how each engine is asked.
    */
   aiEngine?: AiEngine;
+  /**
+   * How often one website's answer is bought again: `{ everyDays }` holds a
+   * bought answer for that many days, whatever the cycle's own cadence.
+   * Absent: every cycle, as everything began. See
+   * docs/plans/active/user-sites-plan.md, "Collecting more".
+   */
+  refresh?: { everyDays: number };
+  /** Settings sent with every call exactly as written: filters, sort order, grouping. */
+  fixed?: Record<string, unknown>;
 };
 
 /**
@@ -145,6 +156,8 @@ const AI_CITATION_OPERATIONS: readonly SeoOperation[] = AI_ENGINES.map((engine) 
 
 export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...AI_CITATION_OPERATIONS,
+  ...SITE_LINK_OPERATIONS,
+  ...CRAWL_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",
@@ -446,8 +459,8 @@ export function seoSiteOperationParams(
   operation: SeoOperation,
   host: string,
   place: SeoPlace = {},
-): Record<string, string | number> {
-  const params: Record<string, string | number> = {};
+): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
   for (const [name, param] of Object.entries(operation.params)) {
     if (param.kind === "host") {
       params[name] = host;
@@ -459,7 +472,8 @@ export function seoSiteOperationParams(
     }
     if (param.default !== undefined) params[name] = param.default;
   }
-  return params;
+  // Settings every call sends as written: filters, sort order, grouping.
+  return { ...params, ...operation.fixed };
 }
 
 /**
@@ -613,7 +627,7 @@ export function buildSeoTask(
     task[name] = coerced.value;
   }
 
-  return { ok: true, operation, task };
+  return { ok: true, operation, task: { ...task, ...operation.fixed } };
 }
 
 type Coerced = { ok: true; value: unknown } | { ok: false; message: string };

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { recountCitedPages } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
 import type { Id } from "./_generated/dataModel";
 
@@ -88,7 +89,10 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
   },
 });
 
-/** A hold's discovered competitors and their dated history; true once none are left. */
+/**
+ * A hold's discovered competitors, their dated history and the content gap
+ * worked out from its rivals; true once none are left.
+ */
 async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<boolean> {
   const found = await ctx.db
     .query("discoveredCompetitors")
@@ -100,7 +104,12 @@ async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"comp
     .withIndex("by_company_website_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(ENTRY_PURGE_BATCH);
   for (const row of dated) await ctx.db.delete(row._id);
-  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH;
+  const gaps = await ctx.db
+    .query("siteContentGaps")
+    .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .take(ENTRY_PURGE_BATCH);
+  for (const row of gaps) await ctx.db.delete(row._id);
+  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH;
 }
 
 /**
@@ -139,11 +148,18 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
         .withIndex("by_pull", (q) => q.eq("pullId", pull._id))
         .take(ENTRY_PURGE_BATCH);
       for (const answer of answers) await ctx.db.delete(answer._id);
+      // Its words and its results page, kept for the Sites screens.
+      for (const row of await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
+        await ctx.db.delete(row._id);
+      }
+      for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
+        await ctx.db.delete(row._id);
+      }
       await ctx.db.delete(pull._id);
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteRivalAiDays"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -155,9 +171,58 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_website_place", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("websiteQuestionStats")
       .withIndex("by_website_place", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    // Its mentions in AI answers, wherever they were asked.
-    await byWebsite(await ctx.db.query("aiCitations")
-      .withIndex("by_website_day", (q) => q.eq("mentionedWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // Its mentions in AI answers, wherever they were asked — and its name
+    // taken out of those answers' lists of who they named, so nothing is left
+    // pointing at a website that no longer exists.
+    const mentions = await ctx.db.query("aiCitations")
+      .withIndex("by_website_day", (q) => q.eq("mentionedWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH);
+    for (const mention of mentions) {
+      if (mention.kind !== "BRAND") continue;
+      const answer = await ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", mention.pullId)).first();
+      if (!answer) continue;
+      const without = (ids: Id<"websites">[]) => ids.filter((id) => id !== args.websiteId);
+      await ctx.db.patch(answer._id, {
+        named: without(answer.named),
+        recommended: without(answer.recommended),
+        warnedAgainst: without(answer.warnedAgainst),
+      });
+    }
+    await byWebsite(mentions);
+    // What the Sites screens worked out from all of the above.
+    await byWebsite(await ctx.db.query("siteKeywordRanks")
+      .withIndex("by_site_keyword", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("sitePageRanks")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteSections")
+      .withIndex("by_site_section", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteDaySummaries")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteCitedPages")
+      .withIndex("by_site_url", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // How often its questions' answers named others, and others' answers named it.
+    await byWebsite(await ctx.db.query("siteRivalAiDays")
+      .withIndex("by_asker_day", (q) => q.eq("askerWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteRivalAiDays")
+      .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("sitePageTypes")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // Its links, linking websites, anchors, servers and link history (Phase 4).
+    await byWebsite(await ctx.db.query("siteBacklinks")
+      .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteReferringDomains")
+      .withIndex("by_site_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteAnchors")
+      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteReferringIps")
+      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteLinkDays")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteReferringSubnets")
+      .withIndex("by_site_domains", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("sitePaidKeywords")
+      .withIndex("by_site_traffic", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteCrawls")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
 
     if (more) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteCollectedDataInternal, {
@@ -186,13 +251,33 @@ export const purgeWebsiteListsInternal = internalMutation({
       .query("websiteQuestions")
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
-    for (const row of questions) await ctx.db.delete(row._id);
+    for (const row of questions) {
+      // A question no other website asks takes its answers with it.
+      const askers = await ctx.db
+        .query("websiteQuestions")
+        .withIndex("by_prompt", (q) => q.eq("prompt", row.prompt))
+        .take(2);
+      if (askers.every((asker) => asker.websiteId === args.websiteId)) {
+        await ctx.scheduler.runAfter(0, internal.websitePurge.purgeQuestionAnswersInternal, { prompt: row.prompt });
+      }
+      await ctx.db.delete(row._id);
+    }
 
     const keywords = await ctx.db
       .query("websiteKeywords")
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
-    for (const row of keywords) await ctx.db.delete(row._id);
+    for (const row of keywords) {
+      // A search no other website tracks takes its results pages with it.
+      const trackers = await ctx.db
+        .query("websiteKeywords")
+        .withIndex("by_keyword", (q) => q.eq("keyword", row.keyword))
+        .take(2);
+      if (trackers.every((tracker) => tracker.websiteId === args.websiteId)) {
+        await ctx.scheduler.runAfter(0, internal.websitePurge.purgeSearchResultsInternal, { keyword: row.keyword });
+      }
+      await ctx.db.delete(row._id);
+    }
 
     const rivals = await ctx.db
       .query("websiteRivals")
@@ -210,6 +295,136 @@ export const purgeWebsiteListsInternal = internalMutation({
     return null;
   },
 });
+
+/**
+ * The shared purchases a deleted website leaves behind: the answers to its
+ * questions and the Google results pages for its searches.
+ *
+ * They are bought once for every website asking the same question or tracking
+ * the same search, so they are saved without a website, and the purges by
+ * website never reach them. Anthony, 2026-09-24: "delete everything about the
+ * website". So a question no other website asks goes with every answer to it,
+ * and a search no other website tracks goes with every results page — each
+ * purchase with everything it filed. One another website still asks or tracks
+ * stays: those answers are that website's too, and deleting them would wipe
+ * another client's history. Checked again on every pass, so a question asked
+ * afresh in the meantime keeps what is left.
+ */
+export const purgeQuestionAnswersInternal = internalMutation({
+  args: { prompt: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const asked = await ctx.db
+      .query("websiteQuestions")
+      .withIndex("by_prompt", (q) => q.eq("prompt", args.prompt))
+      .first();
+    if (asked) return null;
+
+    let more = false;
+    const cited: Array<{ websiteId: Id<"websites">; url: string }> = [];
+    const answers = await ctx.db
+      .query("aiAnswers")
+      .withIndex("by_question", (q) => q.eq("prompt", args.prompt))
+      .take(SHARED_PURCHASES_BATCH);
+    for (const answer of answers) {
+      if (await purgePurchase(ctx, answer.pullId, cited)) more = true;
+    }
+    if (answers.length === SHARED_PURCHASES_BATCH) more = true;
+
+    // What was filed for the question beside its answers: the words of an
+    // answer that named nobody, and the searches the engines ran.
+    const texts = await ctx.db
+      .query("aiAnswerTexts")
+      .withIndex("by_prompt_day", (q) => q.eq("prompt", args.prompt))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of texts) await ctx.db.delete(row._id);
+    const searches = await ctx.db
+      .query("promptFanOutQueries")
+      .withIndex("by_prompt", (q) => q.eq("prompt", args.prompt))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of searches) await ctx.db.delete(row._id);
+    const searchDays = await ctx.db
+      .query("promptFanOutDays")
+      .withIndex("by_prompt_day", (q) => q.eq("prompt", args.prompt))
+      .take(ENTRY_PURGE_BATCH);
+    for (const row of searchDays) await ctx.db.delete(row._id);
+    if (texts.length === ENTRY_PURGE_BATCH || searches.length === ENTRY_PURGE_BATCH || searchDays.length === ENTRY_PURGE_BATCH) {
+      more = true;
+    }
+
+    // Pages those answers cited, counted again without them.
+    await recountCitedPages(ctx, cited);
+    if (more) {
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeQuestionAnswersInternal, { prompt: args.prompt });
+    }
+    return null;
+  },
+});
+
+/** The Google results pages for a search no website tracks any more, and the purchases behind them. */
+export const purgeSearchResultsInternal = internalMutation({
+  args: { keyword: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const tracked = await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_keyword", (q) => q.eq("keyword", args.keyword))
+      .first();
+    if (tracked) return null;
+
+    let more = false;
+    const pages = await ctx.db
+      .query("siteSerpPages")
+      .withIndex("by_keyword_place_day", (q) => q.eq("keyword", args.keyword))
+      .take(SHARED_PURCHASES_BATCH);
+    for (const page of pages) {
+      if (await purgePurchase(ctx, page.pullId, [])) more = true;
+    }
+    if (pages.length === SHARED_PURCHASES_BATCH || more) {
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeSearchResultsInternal, { keyword: args.keyword });
+    }
+    return null;
+  },
+});
+
+/**
+ * One shared purchase and everything it filed, the rows it is found by last:
+ * true when it needs another pass. The pages its answer cited are added to
+ * `cited`, to be counted again once it has gone.
+ */
+async function purgePurchase(
+  ctx: MutationCtx,
+  pullId: Id<"seoDataPulls">,
+  cited: Array<{ websiteId: Id<"websites">; url: string }>,
+): Promise<boolean> {
+  const citations = await ctx.db.query("aiCitations").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
+  for (const row of citations) {
+    if (row.kind === "SOURCE" && row.mentionedWebsiteId && row.url) cited.push({ websiteId: row.mentionedWebsiteId, url: row.url });
+    await ctx.db.delete(row._id);
+  }
+  const texts = await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
+  for (const row of texts) await ctx.db.delete(row._id);
+  const searchDays = await ctx.db.query("promptFanOutDays").withIndex("by_pull_query", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
+  for (const row of searchDays) await ctx.db.delete(row._id);
+  const positions = await ctx.db.query("seoKeywordPositions").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
+  for (const row of positions) await ctx.db.delete(row._id);
+  const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
+  for (const row of lines) await ctx.db.delete(row._id);
+  if ([citations, texts, searchDays, positions, lines].some((rows) => rows.length === ENTRY_PURGE_BATCH)) return true;
+
+  // Last, the rows the purchase is found by, and the purchase itself.
+  for (const row of await ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH)) {
+    await ctx.db.delete(row._id);
+  }
+  for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH)) {
+    await ctx.db.delete(row._id);
+  }
+  if (await ctx.db.get(pullId)) await ctx.db.delete(pullId);
+  return false;
+}
+
+/** Shared purchases taken per pass: each carries its citations, words and searches. */
+const SHARED_PURCHASES_BATCH = 10;
 
 /**
  * A deleted company's holds. The hosts and everything on them survive it.

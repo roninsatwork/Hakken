@@ -95,6 +95,8 @@ describe("the registry holds well-formed entries", () => {
       "Backlinks",
       "DataForSEO Labs",
       "Keywords Data",
+      // The site crawl behind the Sites Site audit (Phase 5).
+      "On-Page",
       "SERP",
     ]);
   });

@@ -15,6 +15,7 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
     "governanceOverview -> /app/governance",
     "policiesInForce -> /app/governance/policies",
     "reception -> /app/reception",
+    "sites -> /app/sites",
     "tasks -> /app/tasks",
     "teamMembers -> /app/settings/team",
   ],
@@ -31,6 +32,7 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
     "Hakken -> /",
     "askPlatform -> /app/assistant",
     "dashboard -> /app",
+    "sites -> /app/sites",
   ],
   "sections": [],
 }
@@ -44,6 +46,7 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
     "calls -> /app/calls",
     "dashboard -> /app",
     "reception -> /app/reception",
+    "sites -> /app/sites",
     "tasks -> /app/tasks",
   ],
   "sections": [],

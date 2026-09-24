@@ -5,6 +5,8 @@ import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { recomputeSearchStats } from "./websiteTrackingStats";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { fileKeywordRank, requestSiteRebuild } from "./siteRankings";
+import { fileSerpPage, serpSnapshotValidator } from "./siteSerp";
 
 /**
  * Filing one checked search against every site it answers for.
@@ -75,10 +77,18 @@ export const writeKeywordCheck = internalMutation({
       position: v.number(),
       url: v.optional(v.string()),
     })),
+    /** The page itself, for the Sites screens (`siteSerp.ts`). */
+    serp: v.optional(serpSnapshotValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
+    if (args.serp) {
+      await fileSerpPage(ctx, {
+        pullId: args.pullId, keyword: args.keyword, locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
+        day: args.day, snapshot: args.serp,
+      });
+    }
 
     // A re-parse replaces what the last parse of this pull wrote, so a
     // corrected parser can be run over stored pages without anyone auditing
@@ -131,6 +141,19 @@ export const writeKeywordCheck = internalMutation({
         keyword: args.keyword,
         locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
       });
+      // The Sites screens' latest ranking. Only a sighting is filed: not being
+      // on this page says nothing about the positions below it.
+      if (entry.position !== undefined) {
+        await fileKeywordRank(ctx, {
+          websiteId,
+          locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
+          keyword: args.keyword,
+          day: args.day,
+          position: entry.position,
+          ...(entry.url ? { url: entry.url } : {}),
+        });
+        await requestSiteRebuild(ctx, websiteId, args.locationCode ?? DEFAULT_LOCATION_CODE);
+      }
     }
     return null;
   },

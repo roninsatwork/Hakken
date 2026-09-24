@@ -222,6 +222,31 @@ describe("asking for one website now", () => {
     expect(await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect())).toHaveLength(1);
   });
 
+  test("a call with its own cadence is not bought again inside it, however the agent asks", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    const website = await seedWebsite(t, "ourshop.com");
+    await hold(t, company, website);
+    // A weekly list bought three days ago.
+    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+    await t.run(async (ctx) => {
+      await ctx.db.insert("seoDataPulls", {
+        operationId: "backlinks_list", family: "Backlinks", mode: "LIVE", target: "ourshop.com", websiteId: website,
+        taskArgsJson: "{}", status: "READY", tag: "bought", costUsd: 0.043, sandbox: false,
+        submittedAt: threeDaysAgo, completedAt: threeDaysAgo,
+      });
+    });
+
+    const asked = await t.mutation(internal.seoTools.requestSeoPull, {
+      companyId: company,
+      host: "ourshop.com",
+      operationId: "backlinks_list",
+    });
+    expect(asked).toMatchObject({ ok: true, reused: true });
+    expect(asked.message).toMatch(/at most that often/);
+    expect(await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect())).toHaveLength(1);
+  });
+
   test("an invented data type is refused rather than sent", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");

@@ -2,34 +2,23 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
+import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 
 /**
- * Which AI engines a question is put to — the one place the screens name them.
+ * Which AI engines a question is put to.
  *
  * Picking fewer engines is the cheapest lever in the citations feature: every
- * engine is a paid answer on every collection. Two screens pick them now, the
+ * engine is a paid answer on every collection. Two screens pick them, the
  * website record's Questions tab and a client's Tracking tab, so the choice
- * and the names live here once rather than in both. The provider guard allows
- * the engines to be named in this file for exactly that reason.
- *
- * The labels are literal keys rather than a template over the union, because
- * the translation keys are typed and a template is not one of them.
+ * lives here once rather than in both. The engines' names live in
+ * `src/ui/components/seo/engineLabel.ts`, shared with the client's screens,
+ * and are re-exported here so the admin screens read them as they always have.
  */
-export function useEngineLabel() {
-  const t = useTranslations("admin.websiteDetail.questions");
-  return (engine: string) => {
-    if (engine === "chatgpt") return t("engines.chatgpt");
-    if (engine === "claude") return t("engines.claude");
-    if (engine === "gemini") return t("engines.gemini");
-    if (engine === "perplexity") return t("engines.perplexity");
-    return engine;
-  };
-}
+export { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 
 /**
  * The engines a new question will be put to.

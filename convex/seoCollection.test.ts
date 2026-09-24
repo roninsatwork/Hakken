@@ -46,8 +46,13 @@ const WEEKLY = JSON.stringify({
  * `seoSiteOperations()` picks it up without a second edit anywhere. That is
  * the point of deriving the set rather than listing it, and it is why this
  * number is a constant here rather than a literal in eight assertions.
+ *
+ * Ten since the six Sites link calls and the site crawl joined them on
+ * 2026-09-23 (`dataForSeoLinkOperations.ts`, `dataForSeoCrawlOperations.ts`).
+ * Each has its own cadence, so on a first collection — every test here —
+ * each is planned like any other.
  */
-const SITE_OPERATIONS = 3;
+const SITE_OPERATIONS = 10;
 
 /**
  * The operations that ask about every website on a page in one paid call.
@@ -501,6 +506,68 @@ describe("the reuse ladder", () => {
 
     // Five days old for a daily watcher is not an answer any more.
     expect((await cycle(t, cycleId))?.plannedCount).toBe(SITE_OPERATIONS + BULK_OPERATIONS);
+  });
+
+  test("a call with its own cadence is held for it, even by a manual collection", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const website = await seedWebsite(t, "ourshop.com");
+    await seedCompanyWebsite(t, company, website);
+
+    const day = 24 * 60 * 60 * 1000;
+    const bought = async (operationId: string, ago: number) => await t.run(async (ctx) => {
+      const at = Date.now() - ago;
+      await ctx.db.insert("seoDataPulls", {
+        operationId, family: "Backlinks", mode: "LIVE", target: "ourshop.com", websiteId: website,
+        taskArgsJson: "{}", status: "READY", tag: `old-${operationId}`, costUsd: 0.05, sandbox: false,
+        submittedAt: at, completedAt: at,
+      });
+    });
+    // A weekly list bought four days ago is still this week's; a monthly one
+    // bought forty days ago is not.
+    await bought("backlinks_list", 4 * day);
+    await bought("anchors_list", 40 * day);
+
+    const cycleId = await openCycle(t, company, Date.now(), "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    const planned = (await pulls(t)).filter((row) => row.status === "PENDING").map((row) => row.operationId);
+    expect(planned).not.toContain("backlinks_list");
+    expect(planned).toContain("anchors_list");
+    expect((await cycle(t, cycleId))?.reusedCount).toBe(1);
+    // No history is ever bought: the plan does not backfill (2026-09-23).
+    expect(planned).not.toContain("backlinks_history");
+    expect(planned).not.toContain("ranking_history");
+  });
+
+  test("a weekly list already on its way is not planned again the next day", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const website = await seedWebsite(t, "ourshop.com");
+    await seedCompanyWebsite(t, company, website);
+
+    // Planned yesterday and still unsent — the Collector was at its cap.
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+    await t.run(async (ctx) => {
+      await ctx.db.insert("seoDataPulls", {
+        operationId: "backlinks_list", family: "Backlinks", mode: "LIVE", target: "ourshop.com", websiteId: website,
+        taskArgsJson: "{}", status: "PENDING", tag: "waiting-list", costUsd: 0, sandbox: false, submittedAt: yesterday,
+      });
+      // A failed one is no answer, and is not held on.
+      await ctx.db.insert("seoDataPulls", {
+        operationId: "anchors_list", family: "Backlinks", mode: "LIVE", target: "ourshop.com", websiteId: website,
+        taskArgsJson: "{}", status: "FAILED", tag: "failed-anchors", costUsd: 0, sandbox: false, submittedAt: yesterday,
+      });
+    });
+
+    const cycleId = await openCycle(t, company, Date.now());
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    const planned = (await pulls(t)).filter((row) => row.status === "PENDING" && row.tag !== "waiting-list").map((row) => row.operationId);
+    expect(planned).not.toContain("backlinks_list");
+    expect(planned).toContain("anchors_list");
   });
 
   test("two cycles in the same hour share the one in-flight pull", async () => {

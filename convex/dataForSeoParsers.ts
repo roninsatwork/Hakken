@@ -11,18 +11,60 @@
  * web, and a title can be written to read as an instruction. Positions,
  * counts and scores are safe to store and show; titles and snippets are not,
  * and the way to keep them out of an agent's prompt is not to keep them.
+ *
+ * Two kinds of text are kept, each on purpose. **Searches** — an engine's
+ * fan-out, Google's "People also ask" questions and its related searches — are
+ * what people type, not what a page says, and are kept like any search. **An
+ * AI engine's answer** is kept word for word since D9 (see `parseLlmResponse`),
+ * to be read as quoted material, never followed.
  */
 
 export type ParsedSeoResult = {
   /** The small, permanent numbers, stored as JSON on the metrics row. */
   metrics: Record<string, number | string | null>;
   /** One row per keyword, when the operation was about keywords. */
-  positions?: Array<{
-    keyword: string;
-    position?: number;
-    url?: string;
-    searchVolume?: number;
-  }>;
+  positions?: Array<RankedPosition>;
+  /**
+   * The searches the site buys adverts on, from the same ranked-keywords
+   * answer, which returns adverts beside organic results unless told not to.
+   * Kept apart so an advert is never read as a ranking the site earned.
+   */
+  paidPositions?: Array<PaidPosition>;
+};
+
+export type PaidPosition = {
+  keyword: string;
+  position?: number;
+  url?: string;
+  searchVolume?: number;
+  cpc?: number;
+  traffic?: number;
+  trafficCost?: number;
+};
+
+/**
+ * One keyword a site ranks for, with what DataForSEO says about it and about
+ * the page that ranks. Everything past `searchVolume` is read out for the
+ * client's Sites screens (docs/plans/active/user-sites-plan.md, Phase 2):
+ * what a click costs, how hard the search is, how it has been searched month
+ * by month, the traffic it brings, what else is on its results page, and the
+ * ranking page's page rank and links — never its title (see above).
+ */
+export type RankedPosition = {
+  keyword: string;
+  position?: number;
+  url?: string;
+  searchVolume?: number;
+  cpc?: number;
+  difficulty?: number;
+  /** Monthly searches over the last year, oldest first. */
+  trend?: number[];
+  traffic?: number;
+  trafficValue?: number;
+  serpFeatures?: string[];
+  pageRank?: number;
+  pageReferringDomains?: number;
+  pageBacklinks?: number;
 };
 
 type Unknown = Record<string, unknown>;
@@ -65,8 +107,30 @@ export function parseBacklinksSummary(result: unknown): ParsedSeoResult {
       referringMainDomains: asNumber(item.referring_main_domains) ?? 0,
       rank: asNumber(item.rank) ?? 0,
       brokenBacklinks: asNumber(item.broken_backlinks) ?? 0,
+      // For the Link quality and Where links come from screens. The
+      // breakdowns are small maps (domain ending, country, kind of site),
+      // kept as JSON text because a metrics row holds flat values.
+      spamScore: asNumber(item.backlinks_spam_score) ?? null,
+      brokenPages: asNumber(item.broken_pages) ?? null,
+      nofollowReferringDomains: asNumber(item.referring_domains_nofollow) ?? null,
+      tldsJson: topCounts(item.referring_links_tld),
+      countriesJson: topCounts(item.referring_links_countries),
+      platformsJson: topCounts(item.referring_links_platform_types),
+      linkTypesJson: topCounts(item.referring_links_types),
+      attributesJson: topCounts(item.referring_links_attributes),
     },
   };
+}
+
+/** A breakdown map's largest entries, as JSON text: `[["com", 3333], …]`. */
+function topCounts(value: unknown, keep = 15): string | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const entries = Object.entries(record)
+    .flatMap(([key, count]) => (typeof count === "number" && count > 0 ? [[key || "(none)", count] as [string, number]] : []))
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, keep);
+  return JSON.stringify(entries);
 }
 
 /**
@@ -83,6 +147,7 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
 
   const rows = asArray(item.items);
   const positions: NonNullable<ParsedSeoResult["positions"]> = [];
+  const paidPositions: PaidPosition[] = [];
 
   for (const row of rows) {
     const record = asRecord(row);
@@ -92,31 +157,105 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
     const keyword = asString(keywordData?.keyword);
     if (!keyword) continue;
 
-    const serpElement = asRecord(asRecord(record.ranked_serp_element)?.serp_item);
+    const rankedElement = asRecord(record.ranked_serp_element);
+    const serpElement = asRecord(rankedElement?.serp_item);
     const keywordInfo = asRecord(keywordData?.keyword_info);
 
+    // An advert is not a ranking. The call returns both unless told not to,
+    // so an advertiser's adverts were read as organic places until
+    // 2026-09-23; now they are kept apart, for the Sites Paid search pages.
+    if (asString(serpElement?.type) === "paid") {
+      const optional = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value });
+      paidPositions.push({
+        keyword,
+        ...optional("position", asNumber(serpElement?.rank_absolute)),
+        ...optional("url", asString(serpElement?.url)),
+        ...optional("searchVolume", asNumber(keywordInfo?.search_volume)),
+        ...optional("cpc", asNumber(keywordInfo?.cpc)),
+        ...optional("traffic", asNumber(serpElement?.etv)),
+        ...optional("trafficCost", asNumber(serpElement?.estimated_paid_traffic_cost)),
+      } as PaidPosition);
+      continue;
+    }
+    const properties = asRecord(keywordData?.keyword_properties);
+    const serpInfo = asRecord(keywordData?.serp_info);
+    const pageLinks = asRecord(serpElement?.backlinks_info);
+    const pageRank = asRecord(serpElement?.rank_info);
+
+    const trend = asArray(keywordInfo?.monthly_searches)
+      .map((month) => asRecord(month))
+      .flatMap((month) => {
+        const year = asNumber(month?.year);
+        const number = asNumber(month?.month);
+        const volume = asNumber(month?.search_volume);
+        return year !== undefined && number !== undefined ? [{ order: year * 12 + number, volume: volume ?? 0 }] : [];
+      })
+      .sort((left, right) => left.order - right.order)
+      .slice(-12)
+      .map((month) => month.volume);
+    const features = asArray(serpInfo?.serp_item_types ?? rankedElement?.serp_item_types)
+      .flatMap((type) => (asString(type) && asString(type) !== "organic" ? [asString(type) as string] : []));
+
+    const optional = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value });
     positions.push({
       keyword,
-      ...(asNumber(serpElement?.rank_absolute) !== undefined
-        ? { position: asNumber(serpElement?.rank_absolute) }
-        : {}),
-      ...(asString(serpElement?.url) ? { url: asString(serpElement?.url) } : {}),
-      ...(asNumber(keywordInfo?.search_volume) !== undefined
-        ? { searchVolume: asNumber(keywordInfo?.search_volume) }
-        : {}),
-    });
+      ...optional("position", asNumber(serpElement?.rank_absolute)),
+      ...optional("url", asString(serpElement?.url)),
+      ...optional("searchVolume", asNumber(keywordInfo?.search_volume)),
+      ...optional("cpc", asNumber(keywordInfo?.cpc)),
+      ...optional("difficulty", asNumber(properties?.keyword_difficulty) ?? asNumber(rankedElement?.keyword_difficulty)),
+      ...(trend.length > 0 ? { trend } : {}),
+      ...optional("traffic", asNumber(serpElement?.etv)),
+      ...optional("trafficValue", asNumber(serpElement?.estimated_paid_traffic_cost)),
+      ...(features.length > 0 ? { serpFeatures: features } : {}),
+      ...optional("pageRank", asNumber(pageRank?.page_rank)),
+      ...optional("pageReferringDomains", asNumber(pageLinks?.referring_domains)),
+      ...optional("pageBacklinks", asNumber(pageLinks?.backlinks)),
+    } as RankedPosition);
   }
 
-  const metrics = asRecord(asRecord(item.metrics)?.organic);
+  const allMetrics = asRecord(item.metrics);
+  const metrics = asRecord(allMetrics?.organic);
+  const paid = asRecord(allMetrics?.paid);
+  const count = (key: string) => asNumber(metrics?.[key]) ?? 0;
+  const inFeature = (feature: string) => asNumber(asRecord(allMetrics?.[feature])?.count) ?? null;
 
   return {
     metrics: {
-      rankedKeywords: asNumber(item.total_count) ?? positions.length,
+      // Organic only: `total_count` also counts the adverts the answer carries
+      // (`paidPositions`), and a total an advertiser's adverts swelled would
+      // never let a pull be complete, nor the Overview's figure be right.
+      rankedKeywords: asNumber(metrics?.count) ?? asNumber(item.total_count) ?? positions.length,
       returnedKeywords: positions.length,
       estimatedTraffic: asNumber(metrics?.etv) ?? 0,
       top3: asNumber(metrics?.pos_1) ?? 0,
+      // DataForSEO's own counts across everything the site ranks for — not
+      // only the keywords a capped pull returned — for the Position bands and
+      // New and lost screens.
+      bandTop3: count("pos_1") + count("pos_2_3"),
+      band4to10: count("pos_4_10"),
+      band11to20: count("pos_11_20"),
+      band21to50: count("pos_21_30") + count("pos_31_40") + count("pos_41_50"),
+      band51up: count("pos_51_60") + count("pos_61_70") + count("pos_71_80") + count("pos_81_90") + count("pos_91_100"),
+      trafficValue: asNumber(metrics?.estimated_paid_traffic_cost) ?? 0,
+      keywordsNew: count("is_new"),
+      keywordsUp: count("is_up"),
+      keywordsDown: count("is_down"),
+      keywordsLost: count("is_lost"),
+      // Paid search, from the same answer (Phase 5): how many searches the
+      // site buys adverts on, the visits and what they would cost. Nought for
+      // a site that does not advertise, which is most.
+      paidKeywords: asNumber(paid?.count) ?? null,
+      paidTraffic: asNumber(paid?.etv) ?? null,
+      paidTrafficCost: asNumber(paid?.estimated_paid_traffic_cost) ?? null,
+      // Across everything the site ranks for: how many searches show it in a
+      // featured snippet, a map pack, or an AI Overview's references.
+      featuredSnippets: inFeature("featured_snippet"),
+      localPacks: inFeature("local_pack"),
+      aiOverviewRefs: inFeature("ai_overview_reference"),
     },
     positions,
+    paidPositions,
   };
 }
 
@@ -241,12 +380,16 @@ export function isBulkOperation(operationId: string): boolean {
 }
 
 /**
- * An AI engine's answer, reduced to the three things we read from it.
+ * An AI engine's answer, read for the three things we use from it.
  *
- * The text is kept only long enough to run the brand matcher over it, and the
- * sources are the URLs the engine cited. Neither the text nor any passage of
- * it is stored: an answer is prose from a model that read the open web, and the
- * way to keep it out of any agent's prompt is not to keep it.
+ * The text is run through the brand matcher, and — since D9, 2026-09-23 — kept
+ * word for word (`aiAnswerTexts`, `siteAnswers.ts`) for the Sites Full answers
+ * page. It used to be dropped here, so that nothing another model wrote could
+ * reach an agent's prompt; the owner reversed that on purpose ("we need to show
+ * the answers — we need to make strategies from this"). The condition it
+ * protected still holds: an agent that reads the text gets it as quoted
+ * material to analyse, never as instructions. The sources are the URLs the
+ * engine cited.
  *
  * The third is the fan-out: the related searches the engine derived from the
  * question before answering it. Those are searches, not prose, and they are
@@ -326,21 +469,30 @@ export function parseDomainCompetitors(result: unknown): Array<{
   intersections: number;
   averagePosition: number | null;
   estimatedTraffic: number | null;
+  /** The whole domain's figures, for the Market map: every keyword it ranks for, and its traffic. */
+  domainKeywords: number | null;
+  domainTraffic: number | null;
 }> {
   const item = firstItem(result);
   const rows = asArray(item?.items);
-  const found: Array<{ host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null }> = [];
+  const found: Array<{
+    host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null;
+    domainKeywords: number | null; domainTraffic: number | null;
+  }> = [];
 
   for (const row of rows) {
     const record = asRecord(row);
     const host = asString(record?.domain);
     if (!record || !host) continue;
     const metrics = asRecord(asRecord(record.metrics)?.organic);
+    const whole = asRecord(asRecord(record.full_domain_metrics)?.organic);
     found.push({
       host,
       intersections: asNumber(record.intersections) ?? 0,
       averagePosition: asNumber(record.avg_position) ?? null,
       estimatedTraffic: asNumber(metrics?.etv) ?? null,
+      domainKeywords: asNumber(whole?.count) ?? null,
+      domainTraffic: asNumber(whole?.etv) ?? null,
     });
   }
 
@@ -357,21 +509,29 @@ export function parseDomainCompetitors(result: unknown): Array<{
  * site earned. A domain appearing twice keeps its better place, because "where
  * does it rank" has one answer.
  *
- * Domains only, never titles or snippets — the same rule as the rest of this
- * file. Which domain is which website is the caller's job, through the host
- * rules that decide what counts as one site.
+ * Domains only, never titles or snippets. The rest of the page — its
+ * features, the domains an AI Overview or map pack names, and Google's "People
+ * also ask" questions and related searches — is read into `page` for the Sites
+ * screens (docs/plans/active/user-sites-plan.md, Phase 2). Which domain is
+ * which website is the caller's job, through the host rules that decide what
+ * counts as one site.
  */
 export function parseSerpPage(result: unknown): {
   resultCount: number;
   rows: Array<{ domain: string; position: number; url?: string }>;
+  /** What else the page carries, for the Sites screens (Phase 2). */
+  page: SerpPageExtras;
 } {
   const item = firstItem(result);
-  if (!item) return { resultCount: 0, rows: [] };
+  if (!item) return { resultCount: 0, rows: [], page: emptyExtras() };
 
+  const page = emptyExtras();
   const best = new Map<string, { domain: string; position: number; url?: string }>();
   for (const row of asArray(item.items)) {
     const record = asRecord(row);
-    if (!record || asString(record.type) !== "organic") continue;
+    const type = asString(record?.type);
+    if (record && type && type !== "organic") collectExtras(page, type, record);
+    if (!record || type !== "organic") continue;
     const domain = asString(record.domain)?.toLowerCase();
     const position = asNumber(record.rank_absolute);
     if (!domain || position === undefined) continue;
@@ -385,7 +545,69 @@ export function parseSerpPage(result: unknown): {
   return {
     resultCount: asNumber(item.se_results_count) ?? 0,
     rows: [...best.values()].sort((left, right) => left.position - right.position),
+    page,
   };
+}
+
+/**
+ * The rest of a results page: which features it shows, which domains an AI
+ * Overview, a map pack or a featured snippet name, and the "People also ask"
+ * questions and related searches. Questions and searches are Google's own
+ * short prompts, kept for the Questions people ask screen; domains only for
+ * everything else, as for the organic results.
+ */
+export type SerpPageExtras = {
+  features: string[];
+  aiOverviewDomains: string[];
+  localPackDomains: string[];
+  featuredSnippetDomain: string | null;
+  questions: string[];
+  related: string[];
+};
+
+function emptyExtras(): SerpPageExtras {
+  return { features: [], aiOverviewDomains: [], localPackDomains: [], featuredSnippetDomain: null, questions: [], related: [] };
+}
+
+/** Every `domain` inside a feature, however deep its references sit. Bounded. */
+function domainsIn(value: unknown, found: Set<string>, depth = 0): void {
+  if (depth > 5 || found.size >= 30) return;
+  if (Array.isArray(value)) {
+    for (const entry of value) domainsIn(entry, found, depth + 1);
+    return;
+  }
+  const record = asRecord(value);
+  if (!record) return;
+  const domain = asString(record.domain)?.toLowerCase();
+  if (domain) found.add(domain);
+  for (const [key, child] of Object.entries(record)) {
+    if (key === "domain" || typeof child !== "object" || child === null) continue;
+    domainsIn(child, found, depth + 1);
+  }
+}
+
+function collectExtras(page: SerpPageExtras, type: string, record: Unknown): void {
+  if (!page.features.includes(type)) page.features.push(type);
+  if (type === "ai_overview") {
+    const found = new Set(page.aiOverviewDomains);
+    domainsIn(record, found);
+    page.aiOverviewDomains = [...found];
+  } else if (type === "local_pack") {
+    const domain = asString(record.domain)?.toLowerCase();
+    if (domain && !page.localPackDomains.includes(domain)) page.localPackDomains.push(domain);
+  } else if (type === "featured_snippet") {
+    page.featuredSnippetDomain ??= asString(record.domain)?.toLowerCase() ?? null;
+  } else if (type === "people_also_ask") {
+    for (const entry of asArray(record.items)) {
+      const question = asString(asRecord(entry)?.title)?.trim();
+      if (question && page.questions.length < 20 && !page.questions.includes(question)) page.questions.push(question);
+    }
+  } else if (type === "related_searches") {
+    for (const entry of asArray(record.items)) {
+      const search = (asString(entry) ?? asString(asRecord(entry)?.title))?.trim();
+      if (search && page.related.length < 20 && !page.related.includes(search)) page.related.push(search);
+    }
+  }
 }
 
 export function parseSeoResultFor(

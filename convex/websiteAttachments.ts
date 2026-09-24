@@ -6,6 +6,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { findOrCreateWebsite, requireHost } from "./websites";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { requestGroupGapRebuilds } from "./siteRankings";
 
 /**
  * A company's choice of which websites it owns and which it watches.
@@ -113,6 +114,9 @@ export async function trackWebsiteCore(
         createdAt: now,
       });
     }
+    // A new rival changes what every site in the group is missing, on the
+    // client's Sites screens — its own gap included.
+    await requestGroupGapRebuilds(ctx, args.against);
   }
 
   await ctx.db.insert("auditLogs", {
