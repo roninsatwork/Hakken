@@ -380,8 +380,11 @@ export async function judgeNewKeywords(
       });
     }
 
-    if (judged.length > 0) {
-      await ctx.runMutation(internal.seoCollectionParse.writeKeywordIntents, { judged });
+    // Written a few at a time: each meaning is carried onto every ranking and
+    // gap that holds the search, rows other filings are writing too, and a
+    // short write is over before it meets them.
+    for (let at = 0; at < judged.length; at += INTENTS_PER_WRITE) {
+      await ctx.runMutation(internal.seoCollectionParse.writeKeywordIntents, { judged: judged.slice(at, at + INTENTS_PER_WRITE) });
     }
 
     // Nothing in this round reached a model: the Decision is off, or the
@@ -411,6 +414,9 @@ const KEYWORDS_PER_LOOKUP = 500;
  * tried before checking that the Decision is actually answering.
  */
 const KEYWORDS_PER_ROUND = 50;
+
+/** Meanings written per mutation (`writeKeywordIntents`). */
+const INTENTS_PER_WRITE = 10;
 
 /** What a watched business does, from `describeBusinessForJudging` in websiteCanonical.ts. */
 export type BusinessForJudging = { sector?: string; market?: string; does?: string; names: string[]; searches: string[] };

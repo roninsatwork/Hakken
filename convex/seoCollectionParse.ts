@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
 import {
@@ -48,255 +48,211 @@ import { readLocationCode, readSentLocationCode } from "./utils/seoSentPlace";
  */
 
 export const parseSeoResult = internalAction({
-  args: { pullId: v.id("seoDataPulls") },
+  args: {
+    pullId: v.id("seoDataPulls"),
+    /** How many times this filing has been tried again after a clash (`refileIfClashed`). */
+    retry: v.optional(v.number()),
+  },
   returns: v.null(),
   // Stated, not inferred: inferred, it reads `internal`, which reads this.
   handler: async (ctx, args): Promise<null> => {
-    const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, {
-      pullId: args.pullId,
-    });
-    if (!pull?.resultJson) return null;
-    // The Sites link lists and histories file on their own (`siteLinkFiling.ts`).
-    if (isSiteLinkOperation(pull.operationId)) return await fileSiteLinkPull(ctx, args.pullId, pull);
-    if (pull.operationId === "site_crawl") return await fileSiteCrawlPull(ctx, args.pullId, pull);
-    // The full keyword list files a page at a time (`siteKeywordList.ts`).
-    if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
+    await fileSeoResult(ctx, args);
+    await ctx.runMutation(internal.seoCollectionParse.refileIfClashed, { pullId: args.pullId, retry: args.retry ?? 0 });
+    return null;
+  },
+});
 
-    // An AI answer is read for who it names, and its text is kept for the
-    // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
-    // matching and the stance judgment happen here, in the action.
-    const engine = engineForOperationId(pull.operationId);
-    if (engine) {
-      try {
-        const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
-        const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
-        const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : "";
+/**
+ * A filing's clash, as Convex words it: another write changed the same rows
+ * while this one ran, on every retry it made. Nothing is wrong with the answer
+ * or the parser — the other write simply got there first.
+ */
+const CLASH = /changed while this mutation was being run|OptimisticConcurrencyControlFailure/;
 
-        const branded = await ctx.runQuery(internal.websites.listBrandedWebsitesInternal, {
-          limit: MAX_BRANDED_WEBSITES,
-        });
+/** Times a clashed filing is tried again, each a random 20 to 60 seconds after the last. */
+const REFILE_TRIES = 3;
 
-        // Every brand we hold, not just the one who asked: the answer names
-        // whoever it names and one purchase should serve every watcher.
-        const hits = [];
-        for (const website of branded) {
-          const found = findBrandMention(parsed.answer, website.brandNames);
-          if (found) {
-            hits.push({
-              websiteId: website.websiteId,
-              text: found.matched,
-              variantKind: found.kind,
-              at: found.at,
-            });
-          }
+/**
+ * File again, a little later, a filing that lost a clash.
+ *
+ * On Korda's first full run (2026-09-24) seven of 138 answers did not file:
+ * competitors' keyword lists, the meanings of their searches and the owned
+ * site's content gap were all being written at once, over the same rows.
+ * Filed again one at a time from the saved answers, every one went in. This
+ * does that by itself: the saved answer is read again, so it costs nothing,
+ * and the random wait lets the other writes finish first.
+ */
+export const refileIfClashed = internalMutation({
+  args: { pullId: v.id("seoDataPulls"), retry: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const pull = await ctx.db.get(args.pullId);
+    if (!pull?.error || !CLASH.test(pull.error) || args.retry >= REFILE_TRIES) return null;
+    const wait = 20_000 + Math.floor(Math.random() * 40_000);
+    await ctx.scheduler.runAfter(wait, internal.seoCollectionParse.parseSeoResult, { pullId: args.pullId, retry: args.retry + 1 });
+    return null;
+  },
+});
+
+/** File one bought answer into the tables the screens read. Failures are recorded on the pull. */
+async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> }): Promise<null> {
+  const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, {
+    pullId: args.pullId,
+  });
+  if (!pull?.resultJson) return null;
+  // The Sites link lists and histories file on their own (`siteLinkFiling.ts`).
+  if (isSiteLinkOperation(pull.operationId)) return await fileSiteLinkPull(ctx, args.pullId, pull);
+  if (pull.operationId === "site_crawl") return await fileSiteCrawlPull(ctx, args.pullId, pull);
+  // The full keyword list files a page at a time (`siteKeywordList.ts`).
+  if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
+
+  // An AI answer is read for who it names, and its text is kept for the
+  // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
+  // matching and the stance judgment happen here, in the action.
+  const engine = engineForOperationId(pull.operationId);
+  if (engine) {
+    try {
+      const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
+      const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+      const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : "";
+
+      const branded = await ctx.runQuery(internal.websites.listBrandedWebsitesInternal, {
+        limit: MAX_BRANDED_WEBSITES,
+      });
+
+      // Every brand we hold, not just the one who asked: the answer names
+      // whoever it names and one purchase should serve every watcher.
+      const hits = [];
+      for (const website of branded) {
+        const found = findBrandMention(parsed.answer, website.brandNames);
+        if (found) {
+          hits.push({
+            websiteId: website.websiteId,
+            text: found.matched,
+            variantKind: found.kind,
+            at: found.at,
+          });
         }
-        hits.sort((left, right) => left.at - right.at);
+      }
+      hits.sort((left, right) => left.at - right.at);
 
-        const sources = parsed.sources.slice(0, MAX_SOURCES);
-        const sourceHosts = sources.map((source) => {
-          const host = readWebsiteHost(source.url);
-          return host.ok ? host.host : null;
-        });
-        const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
-          hosts: sourceHosts.filter((host): host is string => host !== null),
-        });
-        const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
+      const sources = parsed.sources.slice(0, MAX_SOURCES);
+      const sourceHosts = sources.map((source) => {
+        const host = readWebsiteHost(source.url);
+        return host.ok ? host.host : null;
+      });
+      const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+        hosts: sourceHosts.filter((host): host is string => host !== null),
+      });
+      const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
 
-        const judged = await judgeStances(ctx, {
-          ...(pull.companyId ? { companyId: pull.companyId } : {}),
-          pullId: args.pullId,
-          prompt,
-          answer: parsed.answer,
-          hits: hits.slice(0, MAX_CITATION_ROWS),
-        });
+      const judged = await judgeStances(ctx, {
+        ...(pull.companyId ? { companyId: pull.companyId } : {}),
+        pullId: args.pullId,
+        prompt,
+        answer: parsed.answer,
+        hits: hits.slice(0, MAX_CITATION_ROWS),
+      });
 
-        const linked = await linkCitedAddresses(ctx, {
-          ...(pull.companyId ? { companyId: pull.companyId } : {}),
-          pullId: args.pullId,
-          branded,
-          sources: sources.map((source, index) => ({
-            url: source.url,
-            host: sourceHosts[index],
-            ...(sourceHosts[index] && byHost.get(sourceHosts[index]!)
-              ? { websiteId: byHost.get(sourceHosts[index]!)! }
-              : {}),
-          })),
-        });
+      const linked = await linkCitedAddresses(ctx, {
+        ...(pull.companyId ? { companyId: pull.companyId } : {}),
+        pullId: args.pullId,
+        branded,
+        sources: sources.map((source, index) => ({
+          url: source.url,
+          host: sourceHosts[index],
+          ...(sourceHosts[index] && byHost.get(sourceHosts[index]!)
+            ? { websiteId: byHost.get(sourceHosts[index]!)! }
+            : {}),
+        })),
+      });
 
-        const day = new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10);
+      const day = new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10);
 
-        await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
+      await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
+        pullId: args.pullId,
+        prompt,
+        engine,
+        day,
+        brands: judged,
+        sources: linked,
+        answer: parsed.answer,
+      });
+
+      // The engine's own expansion of the question. These arrive in every
+      // answer we already buy, and they are searches rather than prose, so
+      // they are kept and then judged like any other search.
+      if (parsed.fanOutQueries.length > 0) {
+        // The place as sent, which for these endpoints is a country and an
+        // optional city rather than a location code.
+        const country = typeof sent.web_search_country_iso_code === "string"
+          ? sent.web_search_country_iso_code
+          : undefined;
+        const city = typeof sent.web_search_city === "string" ? sent.web_search_city : undefined;
+        const place = country ? (city ? `${country}/${city}` : country) : undefined;
+
+        await ctx.runMutation(internal.seoCollectionParse.writeFanOutQueries, {
           pullId: args.pullId,
           prompt,
           engine,
+          ...(place !== undefined ? { place } : {}),
           day,
-          brands: judged,
-          sources: linked,
-          answer: parsed.answer,
+          queries: parsed.fanOutQueries,
         });
 
-        // The engine's own expansion of the question. These arrive in every
-        // answer we already buy, and they are searches rather than prose, so
-        // they are kept and then judged like any other search.
-        if (parsed.fanOutQueries.length > 0) {
-          // The place as sent, which for these endpoints is a country and an
-          // optional city rather than a location code.
-          const country = typeof sent.web_search_country_iso_code === "string"
-            ? sent.web_search_country_iso_code
-            : undefined;
-          const city = typeof sent.web_search_city === "string" ? sent.web_search_city : undefined;
-          const place = country ? (city ? `${country}/${city}` : country) : undefined;
-
-          await ctx.runMutation(internal.seoCollectionParse.writeFanOutQueries, {
-            pullId: args.pullId,
-            prompt,
-            engine,
-            ...(place !== undefined ? { place } : {}),
-            day,
-            queries: parsed.fanOutQueries,
-          });
-
-          // A fan-out search is a search: judged once per phrase and shared
-          // with every other client who meets it, which is why adding this
-          // costs almost nothing beyond the first time a phrase appears.
-          await judgeNewKeywords(ctx, {
-            ...(pull.companyId ? { companyId: pull.companyId } : {}),
-            pullId: args.pullId,
-            keywords: parsed.fanOutQueries,
-          });
-        }
-      } catch (error) {
-        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
-          pullId: args.pullId,
-          error: getErrorMessage(error),
-        });
-      }
-      return null;
-    }
-
-    // Discovery is about one website and returns many others, so it is filed
-    // as suggestions against the company's hold rather than as metrics.
-    if (pull.operationId === "domain_competitors" && pull.websiteId) {
-      try {
-        const found = parseDomainCompetitors(JSON.parse(pull.resultJson))
-          .filter((row) => row.host !== pull.target)
-          .slice(0, MAX_DISCOVERED);
-        const ours = await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
-          websiteId: pull.websiteId as Id<"websites">,
-        });
-        // Competitors the platform already holds, described by an admin, are
-        // judged on what they sell rather than on their address alone.
-        const held = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
-          hosts: found.map((row) => row.host),
-        });
-        const described = await ctx.runQuery(internal.websiteCanonical.describeWebsitesForJudging, {
-          websiteIds: held.map((row) => row.websiteId),
-        });
-        const hostById = new Map(held.map((row) => [row.websiteId, row.host]));
-        const knownCandidates = Object.fromEntries(described.map((row) => [
-          hostById.get(row.websiteId)!,
-          { ...(row.sector ? { sector: row.sector } : {}), ...(row.does ? { does: row.does } : {}) },
-        ]));
-        const judged = await judgeCompetitors(ctx, {
-          ...(pull.companyId ? { companyId: pull.companyId } : {}),
-          pullId: args.pullId,
-          ourHost: pull.target ?? "",
-          ours,
-          knownCandidates,
-          found,
-        });
-        await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
-          pullId: args.pullId,
-          websiteId: pull.websiteId as Id<"websites">,
-          found: judged,
-        });
-      } catch (error) {
-        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
-          pullId: args.pullId,
-          error: getErrorMessage(error),
-        });
-      }
-      return null;
-    }
-
-    // A search checked for everyone who tracks it. It has no website of its
-    // own, so it is filed against every known site on the page instead.
-    if (pull.operationId === SEO_KEYWORD_CHECK_OPERATION && !pull.websiteId) {
-      try {
-        const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
-        const keyword = normaliseKeyword(typeof sent.keyword === "string" ? sent.keyword : "");
-        if (!keyword) return null;
-        const locationCode = typeof sent.location_code === "number" ? sent.location_code : undefined;
-
-        const page = parseSerpPage(JSON.parse(pull.resultJson));
-        const onPage = page.rows.flatMap((row) => {
-          const identity = readWebsiteHost(row.domain);
-          return identity.ok ? [{ ...row, host: identity.host }] : [];
-        });
-        const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
-          hosts: [...new Set(onPage.map((row) => row.host))],
-        });
-        const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
-
-        await ctx.runMutation(internal.seoKeywordChecks.writeKeywordCheck, {
-          pullId: args.pullId,
-          keyword,
-          ...(locationCode !== undefined ? { locationCode } : {}),
-          day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
-          found: onPage.flatMap((row) => {
-            const websiteId = byHost.get(row.host);
-            return websiteId
-              ? [{ websiteId, position: row.position, ...(row.url ? { url: row.url } : {}) }]
-              : [];
-          }),
-          serp: serpSnapshotOf(page),
-        });
-
+        // A fan-out search is a search: judged once per phrase and shared
+        // with every other client who meets it, which is why adding this
+        // costs almost nothing beyond the first time a phrase appears.
         await judgeNewKeywords(ctx, {
           ...(pull.companyId ? { companyId: pull.companyId } : {}),
           pullId: args.pullId,
-          keywords: [keyword],
-        });
-      } catch (error) {
-        await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
-          pullId: args.pullId,
-          error: getErrorMessage(error),
+          keywords: parsed.fanOutQueries,
         });
       }
-      return null;
-    }
-
-    if (!pull.websiteId) return null;
-
-    try {
-      const parsed = parseSeoResultFor(
-        pull.operationId,
-        JSON.parse(pull.resultJson),
-        pull.target ?? undefined,
-      );
-      if (!parsed) return null;
-
-      const positions = (parsed.positions ?? []).slice(0, MAX_POSITION_ROWS);
-      const sentPlace = readSentLocationCode(pull.taskArgsJson ?? undefined);
-      await ctx.runMutation(internal.seoCollectionParse.writeSeoMetrics, {
+    } catch (error) {
+      await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
         pullId: args.pullId,
-        websiteId: pull.websiteId as Id<"websites">,
-        operationId: pull.operationId,
-        day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
-        ...(sentPlace !== undefined ? { locationCode: sentPlace } : {}),
-        metricsJson: JSON.stringify(parsed.metrics),
-        positions,
-        ...(parsed.paidPositions ? { paidPositions: parsed.paidPositions.slice(0, MAX_POSITION_ROWS) } : {}),
+        error: getErrorMessage(error),
       });
+    }
+    return null;
+  }
 
-      await judgeNewKeywords(ctx, {
+  // Discovery is about one website and returns many others, so it is filed
+  // as suggestions against the company's hold rather than as metrics.
+  if (pull.operationId === "domain_competitors" && pull.websiteId) {
+    try {
+      const found = parseDomainCompetitors(JSON.parse(pull.resultJson))
+        .filter((row) => row.host !== pull.target)
+        .slice(0, MAX_DISCOVERED);
+      const ours = await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
+        websiteId: pull.websiteId as Id<"websites">,
+      });
+      // Competitors the platform already holds, described by an admin, are
+      // judged on what they sell rather than on their address alone.
+      const held = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+        hosts: found.map((row) => row.host),
+      });
+      const described = await ctx.runQuery(internal.websiteCanonical.describeWebsitesForJudging, {
+        websiteIds: held.map((row) => row.websiteId),
+      });
+      const hostById = new Map(held.map((row) => [row.websiteId, row.host]));
+      const knownCandidates = Object.fromEntries(described.map((row) => [
+        hostById.get(row.websiteId)!,
+        { ...(row.sector ? { sector: row.sector } : {}), ...(row.does ? { does: row.does } : {}) },
+      ]));
+      const judged = await judgeCompetitors(ctx, {
         ...(pull.companyId ? { companyId: pull.companyId } : {}),
         pullId: args.pullId,
-        host: pull.target ?? "",
-        business: await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
-          websiteId: pull.websiteId as Id<"websites">,
-        }),
-        keywords: positions.map((entry) => entry.keyword),
+        ourHost: pull.target ?? "",
+        ours,
+        knownCandidates,
+        found,
+      });
+      await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+        pullId: args.pullId,
+        websiteId: pull.websiteId as Id<"websites">,
+        found: judged,
       });
     } catch (error) {
       await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
@@ -305,8 +261,95 @@ export const parseSeoResult = internalAction({
       });
     }
     return null;
-  },
-});
+  }
+
+  // A search checked for everyone who tracks it. It has no website of its
+  // own, so it is filed against every known site on the page instead.
+  if (pull.operationId === SEO_KEYWORD_CHECK_OPERATION && !pull.websiteId) {
+    try {
+      const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
+      const keyword = normaliseKeyword(typeof sent.keyword === "string" ? sent.keyword : "");
+      if (!keyword) return null;
+      const locationCode = typeof sent.location_code === "number" ? sent.location_code : undefined;
+
+      const page = parseSerpPage(JSON.parse(pull.resultJson));
+      const onPage = page.rows.flatMap((row) => {
+        const identity = readWebsiteHost(row.domain);
+        return identity.ok ? [{ ...row, host: identity.host }] : [];
+      });
+      const resolved = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
+        hosts: [...new Set(onPage.map((row) => row.host))],
+      });
+      const byHost = new Map(resolved.map((row) => [row.host, row.websiteId]));
+
+      await ctx.runMutation(internal.seoKeywordChecks.writeKeywordCheck, {
+        pullId: args.pullId,
+        keyword,
+        ...(locationCode !== undefined ? { locationCode } : {}),
+        day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+        found: onPage.flatMap((row) => {
+          const websiteId = byHost.get(row.host);
+          return websiteId
+            ? [{ websiteId, position: row.position, ...(row.url ? { url: row.url } : {}) }]
+            : [];
+        }),
+        serp: serpSnapshotOf(page),
+      });
+
+      await judgeNewKeywords(ctx, {
+        ...(pull.companyId ? { companyId: pull.companyId } : {}),
+        pullId: args.pullId,
+        keywords: [keyword],
+      });
+    } catch (error) {
+      await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+        pullId: args.pullId,
+        error: getErrorMessage(error),
+      });
+    }
+    return null;
+  }
+
+  if (!pull.websiteId) return null;
+
+  try {
+    const parsed = parseSeoResultFor(
+      pull.operationId,
+      JSON.parse(pull.resultJson),
+      pull.target ?? undefined,
+    );
+    if (!parsed) return null;
+
+    const positions = (parsed.positions ?? []).slice(0, MAX_POSITION_ROWS);
+    const sentPlace = readSentLocationCode(pull.taskArgsJson ?? undefined);
+    await ctx.runMutation(internal.seoCollectionParse.writeSeoMetrics, {
+      pullId: args.pullId,
+      websiteId: pull.websiteId as Id<"websites">,
+      operationId: pull.operationId,
+      day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+      ...(sentPlace !== undefined ? { locationCode: sentPlace } : {}),
+      metricsJson: JSON.stringify(parsed.metrics),
+      positions,
+      ...(parsed.paidPositions ? { paidPositions: parsed.paidPositions.slice(0, MAX_POSITION_ROWS) } : {}),
+    });
+
+    await judgeNewKeywords(ctx, {
+      ...(pull.companyId ? { companyId: pull.companyId } : {}),
+      pullId: args.pullId,
+      host: pull.target ?? "",
+      business: await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
+        websiteId: pull.websiteId as Id<"websites">,
+      }),
+      keywords: positions.map((entry) => entry.keyword),
+    });
+  } catch (error) {
+    await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+      pullId: args.pullId,
+      error: getErrorMessage(error),
+    });
+  }
+  return null;
+}
 
 /**
  * The ceiling on keyword rows written from one pull.

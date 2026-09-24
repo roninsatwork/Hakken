@@ -39,6 +39,27 @@ describe("running a DataForSEO agent", () => {
     expect(names.some((name) => name.includes("runTriggeredAgentObjective"))).toBe(false);
   });
 
+  test.each(["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"])("a schedule starts the %s's job too, not a model", async (role) => {
+    // A company's collection schedule woke the Collector through the model
+    // path at 09:00 on 2026-09-24; it asked a model that was not there and
+    // collected nothing, while the Run button did the job.
+    const t = harness();
+    const { agentId } = await setup(t, role);
+    await t.run(async (ctx) => {
+      const creator = (await ctx.db.query("users").first())!._id;
+      await ctx.db.insert("schedules", {
+        name: "SEO data — Korda", agentId, intervalStr: "daily", isActive: true,
+        nextRunAt: Date.now() - 1000, createdAt: Date.now() - 2000, createdBy: creator,
+      });
+    });
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const names = await scheduledNames(t);
+    expect(names.some((name) => name.includes("runSeoRoleNow"))).toBe(true);
+    expect(names.some((name) => name.includes("runTriggeredAgentObjective"))).toBe(false);
+  });
+
   test("a Planner with no company collecting says so, and adds nothing", async () => {
     const t = harness();
     const { agentId } = await setup(t, "DATAFORSEO_PLANNER");

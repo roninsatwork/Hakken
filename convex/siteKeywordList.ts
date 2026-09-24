@@ -26,11 +26,16 @@ import { recomputeSearchStats } from "./websiteTrackingStats";
  * page records).
  *
  * **Filed in pieces.** A thousand keywords is several thousand reads and
- * writes, so a page is filed a few hundred keywords at a time.
+ * writes, so a page is filed a hundred keywords at a time.
  */
 
-/** Keywords filed per mutation. */
-const POSITIONS_PER_WRITE = 250;
+/**
+ * Keywords filed per mutation. A hundred, not the 250 it was: each keyword
+ * reads rows other filings write too — what the search means, a competitor's
+ * gap — and a shorter write is over before another reaches the same rows
+ * (Korda's first full run, 2026-09-24).
+ */
+const POSITIONS_PER_WRITE = 100;
 
 /** Feature appearances cleared per filing from older lists; the rest go next time. */
 const OLD_FEATURES_CLEARED = 500;

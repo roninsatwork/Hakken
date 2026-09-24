@@ -31,9 +31,9 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     id: "dataforseo-agent",
     name: "DataForSEO Agent",
-    // The Data Collection screen looks for an agent by this exact name and
-    // shows "no collecting agent yet" until one exists, so it is not a label
-    // that can be tidied up later.
+    // Only a label now: the Data Collection screen finds the agent that
+    // collects by its role (`systemKey` DATAFORSEO_COLLECTOR, set on the
+    // agent's Settings), never by this name.
     agentName: "DataForSEO Agent",
     description:
       "Collects search data on a schedule for every website a company holds, and the "

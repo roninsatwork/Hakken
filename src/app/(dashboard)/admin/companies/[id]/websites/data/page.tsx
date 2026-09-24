@@ -73,9 +73,11 @@ export default function CompanyDataCollectionPage() {
     setIsActive(schedule?.isActive ?? false);
   }
 
-  // The fetcher is an ordinary agent, found by the name its template gives it,
-  // so this screen needs no notion of its own about which agent collects data.
-  const collectorAgent = agents?.find((agent) => agent.name === "DataForSEO Agent");
+  // The Collector, found by its role (`systemKey`), never its name: looking it
+  // up by name broke this screen once the agent was renamed "DataForSEO Agent
+  // Collector", and a company with no schedule yet could not be switched on
+  // (`convex/utils/agentRoles.ts`).
+  const collectorAgent = agents?.find((agent) => agent.systemKey === "DATAFORSEO_COLLECTOR");
   const canSchedule = Boolean(schedule || collectorAgent);
 
   /**

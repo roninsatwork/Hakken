@@ -11,6 +11,7 @@ import {
 } from "./utils/workflowTypes";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
+import { isAssignableAgentRole } from "./utils/agentRoles";
 import {
   APPROVAL_EXPIRY_CONFIG_KEY,
   getApprovalExpiredMessage,
@@ -952,16 +953,29 @@ export const scheduleDispatcher = internalMutation({
                   startedBy: schedule.createdBy,
                 });
 
-                await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
-                  agentId: schedule.agentId,
-                  objective,
-                  triggerType: "SCHEDULE",
-                  runId: agentRunId,
-                  scheduleId: schedule._id,
-                  workflowExecutionId: executionId,
-                  companyId: creator?.companyId,
-                  userId: schedule.createdBy,
-                });
+                // A DataForSEO role does its fixed job, exactly as its Run
+                // button does (`seoAgentRuns.ts`). Sent down the model path, a
+                // company's collection schedule woke the Collector at 09:00 on
+                // 2026-09-24 to ask a model that was not there, and it
+                // collected nothing.
+                if (isAssignableAgentRole(agent.systemKey)) {
+                  await ctx.scheduler.runAfter(0, internal.seoAgentRuns.runSeoRoleNow, {
+                    role: agent.systemKey,
+                    runId: agentRunId,
+                    workflowExecutionId: executionId,
+                  });
+                } else {
+                  await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
+                    agentId: schedule.agentId,
+                    objective,
+                    triggerType: "SCHEDULE",
+                    runId: agentRunId,
+                    scheduleId: schedule._id,
+                    workflowExecutionId: executionId,
+                    companyId: creator?.companyId,
+                    userId: schedule.createdBy,
+                  });
+                }
 
                 await ctx.db.patch(schedule._id, {
                   lastRunTs: now,

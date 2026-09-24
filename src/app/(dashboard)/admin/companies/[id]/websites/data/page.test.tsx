@@ -43,7 +43,7 @@ function convexPath(reference: unknown) {
   }
 }
 
-const collectorAgent = { _id: "agent_1", name: "DataForSEO Agent" };
+const collectorAgent = { _id: "agent_1", name: "DataForSEO Agent Collector", systemKey: "DATAFORSEO_COLLECTOR" };
 
 describe("CompanyDataCollectionPage", () => {
   const createSchedule = vi.fn();
@@ -124,6 +124,21 @@ describe("CompanyDataCollectionPage", () => {
       );
     });
     expect(createSchedule).not.toHaveBeenCalled();
+  });
+
+  it("finds the collecting agent by its role, not by what it is called", async () => {
+    // Renamed agents broke this once: a company with no schedule could not be
+    // switched on while the Collector was called anything but its old name.
+    mockQueries({ agents: [{ _id: "agent_9", name: "DataForSEO Agent" }, collectorAgent] });
+    render(<CompanyDataCollectionPage />);
+
+    fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(createSchedule).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent_1" }));
+    });
+    expect(screen.queryByText("noAgentTitle")).not.toBeInTheDocument();
   });
 
   it("says so when there is no agent to run the schedule", async () => {
