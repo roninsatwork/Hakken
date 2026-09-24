@@ -803,6 +803,12 @@ describe("chunking", () => {
   });
 });
 
+// Plans a whole 230-website company, page by page. About four seconds on a
+// laptop; coverage on the two-core CI runner took it past 45s (run #14,
+// 2026-09-24) without a planning failure — the same slowdown the Arcade's
+// whole-map simulations were given room for.
+const WHOLE_COMPANY_TIMEOUT_MS = 120_000;
+
 describe("a company too big for one page", () => {
   test("every website is reached, page after page", async () => {
     // Each page used to read the company's *first* rows and slice after the
@@ -833,7 +839,7 @@ describe("a company too big for one page", () => {
 
     const reached = new Set((await lines(t)).map((row) => row.websiteId));
     expect(reached.size).toBe(total);
-  });
+  }, WHOLE_COMPANY_TIMEOUT_MS);
 });
 
 describe("asking the AI engines", () => {
