@@ -10,12 +10,16 @@ import type { SerpPageExtras } from "./dataForSeoParsers";
  *
  * The keyword check already files every known site's position on the page
  * (`seoKeywordChecks.ts`); this keeps the page itself, once per search, place
- * and day, so a page can show the whole of page one and not just the sites we
- * happen to hold.
+ * and day, so a page can show who else ranks — down to position 100 — and not
+ * just the sites we happen to hold.
  */
 
-/** Results kept per page: page one and a little of page two. One per domain. */
-const RESULTS_KEPT = 30;
+/**
+ * Results kept per page: all hundred a check reads (2026-09-24, "store
+ * whatever we can"), one per domain. About fifteen kilobytes a page, so even a
+ * list at its ceiling of a thousand searches reads inside a query's limit.
+ */
+const RESULTS_KEPT = 100;
 
 /** Rows one pull may have written before, cleared on a re-parse. */
 const SAME_PULL_LIMIT = 5;

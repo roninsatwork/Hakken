@@ -42,6 +42,9 @@ const LIMIT = {
   default: 1000,
 };
 
+/** Every link to a website, a thousand a request up to its limit (`sitePagedLists.ts`). */
+export const BACKLINK_LIST_OPERATION_ID = "backlinks_all";
+
 export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
   {
     id: "backlinks_list",
@@ -56,6 +59,25 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     // Lost links too, so the page can say which went.
     fixed: { mode: "one_per_domain", backlinks_status_type: "all", order_by: ["domain_from_rank,desc"] },
     params: { target: TARGET, limit: LIMIT },
+  },
+  {
+    id: BACKLINK_LIST_OPERATION_ID,
+    question: "Every link to this website, strongest first, up to its limit — not one per linking website.",
+    family: "Backlinks",
+    mode: "LIVE",
+    path: "/v3/backlinks/backlinks/live",
+    costBand: "medium",
+    refresh: { everyDays: 7 },
+    // Every link as it is (Anthony, 2026-09-24: "store whatever we can"), a
+    // thousand a request, as many requests as the site's limit allows
+    // (`companyDataLimits.ts`), planned and paged like the full keyword list
+    // (`sitePagedLists.ts`).
+    fixed: { mode: "as_is", backlinks_status_type: "all", order_by: ["domain_from_rank,desc"] },
+    params: {
+      target: TARGET,
+      limit: LIMIT,
+      offset: { kind: "number", required: false, description: "Where this request starts in the list.", default: 0 },
+    },
   },
   {
     id: "backlinks_broken",

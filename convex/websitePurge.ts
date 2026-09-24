@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { purgeHoldDataLimits } from "./companyDataLimits";
 import { recountCitedPages } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
 import type { Id } from "./_generated/dataModel";
@@ -43,6 +44,7 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
         continue;
       }
       await purgeHoldMoves(ctx, owner._id);
+      await purgeHoldDataLimits(ctx, owner._id);
       await ctx.db.delete(owner._id);
     }
 
@@ -159,7 +161,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteRivalAiDays"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteRivalAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -204,6 +206,12 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_asker_day", (q) => q.eq("askerWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteRivalAiDays")
       .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteCrawlPages")
+      .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteCrawlLinks")
+      .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    await byWebsite(await ctx.db.query("siteKeywordFeatures")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("sitePageTypes")
       .withIndex("by_site_page", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     // Its links, linking websites, anchors, servers and link history (Phase 4).
@@ -444,6 +452,11 @@ export const purgeCompanyWebsitesInternal = internalMutation({
       .take(ENTRY_PURGE_BATCH);
     for (const row of owned) {
       await purgeHoldMoves(ctx, row._id);
+      await purgeHoldDataLimits(ctx, row._id);
+      await ctx.db.delete(row._id);
+    }
+    // How much it collected per website goes with it.
+    for (const row of await ctx.db.query("companyDataLimits").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(5)) {
       await ctx.db.delete(row._id);
     }
 

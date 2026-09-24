@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate } from "@/src/lib/dates";
+import { SiteDataLimits } from "./SiteDataLimits";
 import { SiteMoves } from "./SiteMoves";
 import { TrackedPairing } from "./TrackedPairing";
 import { siteBase } from "./siteView";
@@ -23,9 +24,11 @@ import { siteBase } from "./siteView";
  * shared by every company watching it, so one line under the cards says so
  * and opens the website record, the only place they are edited.
  * No prices here: cost is a setting's business, not a reason to read a page.
+ * Last, how much is kept about the site (`SiteDataLimits`).
  *
  * A tracked site has no lists of its own, so this route is its overview
- * instead: what it is compared with, and how it is collected.
+ * instead: what it is compared with, how it is collected, and how much of it
+ * is kept.
  */
 export default function CompanySiteOverviewPage() {
   const t = useTranslations("admin.siteView");
@@ -68,6 +71,7 @@ export default function CompanySiteOverviewPage() {
         ) : (
           <p className="text-[13px] text-secondary">{t("paired.alone")}</p>
         )}
+        <SiteDataLimits companyWebsiteId={companyWebsiteId} />
       </div>
     );
   }
@@ -174,6 +178,8 @@ export default function CompanySiteOverviewPage() {
       </p>
 
       <SiteMoves companyId={companyId} companyWebsiteId={companyWebsiteId} websiteId={header.websiteId} />
+
+      <SiteDataLimits companyWebsiteId={companyWebsiteId} />
     </div>
   );
 }

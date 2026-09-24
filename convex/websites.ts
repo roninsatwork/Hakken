@@ -26,6 +26,7 @@ import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
 import { requestGroupGapRebuilds } from "./siteRankings";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { purgeHoldDataLimits, readCompanyDataLimits, resolveSiteDataLimits } from "./companyDataLimits";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -340,6 +341,7 @@ export const getCompanyWebsites = superAdminQuery({
     // against the same schedule row, so fetching it per row would be the same
     // read repeated fifteen times.
     const schedule = await companySchedule(ctx, args.companyId);
+    const companyLimits = await readCompanyDataLimits(ctx, args.companyId);
     const page = await ctx.db
       .query("companyWebsites")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
@@ -371,6 +373,7 @@ export const getCompanyWebsites = superAdminQuery({
           collecting: resolved.active,
           scheduleSource: pair ? ("PAIR" as const) : resolved.source,
           nextRunAt: resolved.nextRunAt,
+          limits: await resolveSiteDataLimits(ctx, companyLimits, companyWebsite._id),
         };
       }),
     );
@@ -600,6 +603,7 @@ export const removeCompanyWebsite = superAdminMutation({
 
     const website = await ctx.db.get(companyWebsite.websiteId);
     await purgeHoldMoves(ctx, args.id);
+    await purgeHoldDataLimits(ctx, args.id);
     // The hold's content gap goes with it; a rival that goes changes the gap
     // of the site it was tracked against.
     await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });

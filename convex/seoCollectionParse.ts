@@ -1,15 +1,17 @@
-import { v, type Infer } from "convex/values";
+import { v } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
 import {
-  fileKeywordRank, patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild, type RankExtras,
+  patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild,
 } from "./siteRankings";
 import { fileAnswerText } from "./siteAnswers";
 import { fileSiteLinkPull, isSiteLinkOperation } from "./siteLinkFiling";
 import { filePaidKeywords, paidPositionValidator } from "./sitePaid";
 import { fileSiteCrawlPull } from "./siteCrawl";
+import { fileKeywordListPull, fileRankedPositions } from "./siteKeywordList";
+import { isKeywordListOperation } from "./dataForSeoKeywordListOperations";
 import { serpSnapshotOf } from "./siteSerp";
 import { rankedPositionValidator } from "./utils/siteShapes";
 import { findBrandMention } from "./utils/websiteBrands";
@@ -20,8 +22,7 @@ import {
   parseSerpPage,
 } from "./dataForSeoParsers";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
-import { replaceSameDayPosition } from "./seoKeywordChecks";
-import { recomputeSearchStats, recordAnswer } from "./websiteTrackingStats";
+import { recordAnswer } from "./websiteTrackingStats";
 
 import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
 import { resolveWebsiteIdsByHost } from "./websites";
@@ -58,6 +59,8 @@ export const parseSeoResult = internalAction({
     // The Sites link lists and histories file on their own (`siteLinkFiling.ts`).
     if (isSiteLinkOperation(pull.operationId)) return await fileSiteLinkPull(ctx, args.pullId, pull);
     if (pull.operationId === "site_crawl") return await fileSiteCrawlPull(ctx, args.pullId, pull);
+    // The full keyword list files a page at a time (`siteKeywordList.ts`).
+    if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
 
     // An AI answer is read for who it names, and its text is kept for the
     // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
@@ -334,8 +337,6 @@ const MAX_BULK_ROWS = 1_200;
  */
 const REPLACE_LIMIT = MAX_POSITION_ROWS + 100;
 
-/** A host's own searches read when filing its rankings: its whole list, at the list's ceiling. */
-const TRACKED_SEARCHES_READ = 1_000;
 
 export const getPullForParse = internalQuery({
   args: { pullId: v.id("seoDataPulls") },
@@ -417,59 +418,16 @@ export const writeSeoMetrics = internalMutation({
       .take(REPLACE_LIMIT);
     for (const row of priorPositions) await ctx.db.delete(row._id);
 
-    // The searches on this host's own record, so the ones a ranked-keywords
-    // pull happens to cover bring their summaries up to date too. Only those:
-    // a large site ranks for thousands of phrases nobody is tracking.
-    const tracked = new Set((await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(TRACKED_SEARCHES_READ))
-      .map((row) => row.keyword));
+    await fileRankedPositions(ctx, {
+      websiteId: args.websiteId,
+      pullId: args.pullId,
+      day: args.day,
+      ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
+      positions: args.positions,
+    });
     const place = args.locationCode ?? DEFAULT_LOCATION_CODE;
 
-    for (const entry of args.positions) {
-      // The same keyword measured twice on one day from one place is one fact,
-      // so an earlier row is replaced rather than joined by a second. From
-      // another place it is another fact, and stays.
-      await replaceSameDayPosition(ctx, {
-        websiteId: args.websiteId,
-        keyword: entry.keyword,
-        day: args.day,
-        ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
-      });
-
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId: args.websiteId,
-        keyword: entry.keyword,
-        day: args.day,
-        ...(entry.position !== undefined ? { position: entry.position } : {}),
-        ...(entry.url ? { url: entry.url } : {}),
-        ...(entry.searchVolume !== undefined ? { searchVolume: entry.searchVolume } : {}),
-        // Always written, so a watcher's view can be read through the place
-        // index. Unset means the registry default was sent.
-        locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
-        pullId: args.pullId,
-        createdAt: now,
-      });
-      if (tracked.has(entry.keyword)) {
-        await recomputeSearchStats(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place });
-      }
-      // The Sites screens' latest ranking of this search, from this place.
-      if (entry.position !== undefined) {
-        await fileKeywordRank(ctx, {
-          websiteId: args.websiteId,
-          locationCode: place,
-          keyword: entry.keyword,
-          day: args.day,
-          position: entry.position,
-          ...(entry.url ? { url: entry.url } : {}),
-          ...(entry.searchVolume !== undefined ? { volume: entry.searchVolume } : {}),
-          extras: rankExtrasOf(entry),
-        });
-      }
-    }
-
-    if (args.paidPositions) {
+    if (args.paidPositions && args.operationId === "domain_ranked_keywords") {
       await filePaidKeywords(ctx, { websiteId: args.websiteId, locationCode: place, pullId: args.pullId, day: args.day, rows: args.paidPositions });
     }
 
@@ -710,12 +668,6 @@ export const writeAiCitations = internalMutation({
     return null;
   },
 });
-
-/** The Sites extras of one parsed ranking: everything but the ranking itself. */
-function rankExtrasOf(entry: Infer<typeof rankedPositionValidator>): RankExtras {
-  const { cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks } = entry;
-  return { cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks };
-}
 
 /** Discovered websites kept per pull. Beyond this the tail is noise. */
 const MAX_DISCOVERED = 50;

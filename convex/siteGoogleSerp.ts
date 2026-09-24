@@ -6,9 +6,10 @@ import { listWebsiteId, myRivals, requireMySite } from "./siteAccess";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 
 /**
- * Google's first page for each of the site's searches, as the Sites screens
- * read it: who ranks above the site, which features the page shows, and what
- * people also ask (docs/plans/active/user-sites-plan.md, section 2).
+ * Google's results for each of the site's searches, down to position 100, as
+ * the Sites screens read them: who ranks above the site, which features the
+ * page shows, and what people also ask (docs/plans/active/user-sites-plan.md,
+ * section 2).
  *
  * Read from the kept results pages (`siteSerpPages`), the newest for each
  * search on the site's list at the place the site is read from. The list is
@@ -63,9 +64,13 @@ const resultValidator = v.object({
   isRival: v.boolean(),
 });
 
+/** The results a search's first page holds. */
+const PAGE_ONE = 10;
+
 /**
  * Who ranks above the site on each of its searches: every result higher on
- * the page than the site's own, or the whole page when the site is not on it.
+ * the page than the site's own, or the whole of page one when the site is not
+ * in the hundred a check reads.
  */
 export const listAbove = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
@@ -86,7 +91,7 @@ export const listAbove = tenantQuery({
     const rows = (await latestPages(ctx, site)).map(({ keyword, isActive, page }) => {
       const mine = page?.results.find((result) => isHost(result.domain, host)) ?? null;
       const above = (page?.results ?? [])
-        .filter((result) => !isHost(result.domain, host) && (mine === null || result.position < mine.position))
+        .filter((result) => !isHost(result.domain, host) && (mine === null ? result.position <= PAGE_ONE : result.position < mine.position))
         .map((result) => ({
           position: result.position,
           domain: bare(result.domain),

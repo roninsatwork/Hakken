@@ -178,6 +178,29 @@ export const rankedPositionValidator = v.object({
   pageRank: v.optional(v.number()),
   pageReferringDomains: v.optional(v.number()),
   pageBacklinks: v.optional(v.number()),
+  competition: v.optional(v.number()),
+  competitionLevel: v.optional(v.string()),
+  searchIntent: v.optional(v.string()),
+  resultsCount: v.optional(v.number()),
+  previousPositionDfs: v.optional(v.number()),
+  movementDfs: v.optional(v.union(v.literal("NEW"), v.literal("UP"), v.literal("DOWN"), v.literal("SAME"))),
+});
+
+/** The results-page features a site can appear in besides the organic places, as the full keyword list files them. */
+export const KEYWORD_FEATURES = ["ai_overview_reference", "featured_snippet", "local_pack"] as const;
+export type KeywordFeature = (typeof KEYWORD_FEATURES)[number];
+export const keywordFeatureValidator = v.union(
+  v.literal("ai_overview_reference"),
+  v.literal("featured_snippet"),
+  v.literal("local_pack"),
+);
+
+/** One appearance of a site in a results-page feature, as parsed. */
+export const featurePositionValidator = v.object({
+  keyword: v.string(),
+  feature: keywordFeatureValidator,
+  position: v.optional(v.number()),
+  url: v.optional(v.string()),
 });
 
 /**
@@ -235,11 +258,11 @@ export function pageTypeByAddress(path: string): PageType | null {
 
 /** The Sites tables that can be downloaded whole, as a CSV file built on the server (`siteExports.ts`). */
 export const SITE_EXPORT_KINDS = [
-  "keywords", "pages", "gap", "cited", "backlinks", "broken", "domains", "anchors", "ips", "paid", "answers",
+  "keywords", "pages", "gap", "cited", "backlinks", "links", "broken", "domains", "anchors", "ips", "paid", "answers",
 ] as const;
 export type SiteExportKind = (typeof SITE_EXPORT_KINDS)[number];
 export const siteExportKindValidator = v.union(
   v.literal("keywords"), v.literal("pages"), v.literal("gap"), v.literal("cited"), v.literal("backlinks"),
-  v.literal("broken"), v.literal("domains"), v.literal("anchors"), v.literal("ips"), v.literal("paid"),
-  v.literal("answers"),
+  v.literal("links"), v.literal("broken"), v.literal("domains"), v.literal("anchors"), v.literal("ips"),
+  v.literal("paid"), v.literal("answers"),
 );

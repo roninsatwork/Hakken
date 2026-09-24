@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { slimSeoResult } from "./dataForSeoSlim";
 
 /**
  * The Sites link pages (docs/plans/active/user-sites-plan.md, Phase 4): each
@@ -81,6 +82,62 @@ describe("link lists", () => {
     expect(await list({ search: "c.com" })).toEqual(["c.com"]);
     const broken = await asRonins.query(api.siteLinkLists.listBrokenBacklinks, { siteId: own.holdId, paginationOpts: first });
     expect(broken.page.map((row) => [row.domainFrom, row.day])).toEqual([["broken.com", "2026-09-01"]]);
+  });
+
+  test("every link comes a thousand a page: filed under its list's day, the rest asked for up to the website's limit, older lists gone", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "kordatackle.com");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 10_000, backlinksPerSite: 10_000, updatedAt: Date.now() });
+      // This website keeps two thousand links, whatever its company keeps.
+      await ctx.db.insert("websiteDataLimits", { companyWebsiteId: own.holdId, companyId: korda, backlinksPerSite: 2_000, updatedAt: Date.now() });
+    });
+    const page = async (day: string, offset: number, items: unknown[], total: number) => {
+      const when = Date.parse(`${day}T10:00:00Z`);
+      const pullId = await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+        operationId: "backlinks_all", family: "Backlinks", mode: "LIVE", websiteId: own.websiteId, companyId: korda,
+        target: "kordatackle.com", taskArgsJson: JSON.stringify({ target: "kordatackle.com", limit: 1_000, offset, mode: "as_is" }),
+        status: "READY", tag: `all-${day}-${offset}`, idempotencyKey: `all-${day}-${offset}`, attempts: 0, costUsd: 0.04,
+        sandbox: false, submittedAt: when, completedAt: when + 60_000,
+        resultJson: JSON.stringify(slimSeoResult("backlinks_all", [{ total_count: total, items }])),
+      } as never));
+      await t.action(internal.seoCollectionParse.parseSeoResult, { pullId });
+    };
+    const kept = async () => (await t.run(async (ctx) => await ctx.db.query("siteBacklinks").collect()))
+      .filter((row) => row.pass === "ALL")
+      .map((row) => `${row.domainFrom} ${row.day}`)
+      .sort();
+
+    await page("2026-09-14", 0, [link("old.com")], 1);
+    await page("2026-09-21", 0, [
+      link("a.com", { domain_from_rank: 400, attributes: ["nofollow"], semantic_location: "footer", backlink_spam_score: 30, rank: 12 }),
+      link("a.com", { url_from: "https://a.com/other", domain_from_rank: 400 }),
+      link("b.com"),
+    ], 5_000);
+    // Both of a.com's links — every link, not one per website — and last week's list gone.
+    expect(await kept()).toEqual(["a.com 2026-09-21", "a.com 2026-09-21", "b.com 2026-09-21"]);
+    const footer = await t.run(async (ctx) => (await ctx.db.query("siteBacklinks").collect()).find((row) => row.location === "footer"));
+    expect(footer).toMatchObject({ attributes: ["nofollow"], spamScore: 30, linkRank: 12 });
+
+    // 5,000 links, and this website keeps 2,000: one more page, asked for once.
+    const queued = async () => (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))
+      .filter((pull) => pull.status === "PENDING")
+      .map((pull) => JSON.parse(pull.taskArgsJson) as { offset: number; limit: number })
+      .map((sent) => [sent.offset, sent.limit]);
+    expect(await queued()).toEqual([[1_000, 1_000]]);
+
+    // A late page of last week's list does not bring its links back.
+    await page("2026-09-14", 1_000, [link("late.com")], 1);
+    expect(await kept()).toEqual(["a.com 2026-09-21", "a.com 2026-09-21", "b.com 2026-09-21"]);
+
+    const asKorda = await member(t, korda);
+    const first = { numItems: 15, cursor: null };
+    const every = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, paginationOpts: first, every: true });
+    expect(every.page.map((row) => row.domainFrom)).toEqual(["a.com", "a.com", "b.com"]);
+    // The strongest link from each website is a list of its own.
+    const one = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, paginationOpts: first });
+    expect(one.page).toEqual([]);
   });
 
   test("linking websites, anchors and servers, with the servers' networks counted once", async () => {

@@ -21,7 +21,7 @@ import { formatNumber, toCsv } from "./siteFormat";
  * the server builds the file and hands it back to be saved.
  */
 
-type SiteExportKind = "keywords" | "pages" | "gap" | "cited" | "backlinks" | "broken" | "domains" | "anchors" | "ips" | "paid" | "answers";
+type SiteExportKind = "keywords" | "pages" | "gap" | "cited" | "backlinks" | "links" | "broken" | "domains" | "anchors" | "ips" | "paid" | "answers";
 
 /** Hand a file to the browser to save. */
 function save(href: string, fileName: string) {

@@ -30,6 +30,8 @@ export type ParsedSeoResult = {
    * Kept apart so an advert is never read as a ranking the site earned.
    */
   paidPositions?: Array<PaidPosition>;
+  /** Appearances in results-page features, when the call asked for them (the full keyword list). */
+  featurePositions?: Array<FeaturePosition>;
 };
 
 export type PaidPosition = {
@@ -65,7 +67,27 @@ export type RankedPosition = {
   pageRank?: number;
   pageReferringDomains?: number;
   pageBacklinks?: number;
+  /** How competitive the search is for adverts, 0–1, and as DataForSEO's LOW/MEDIUM/HIGH. */
+  competition?: number;
+  competitionLevel?: string;
+  /** What DataForSEO reads the searcher as wanting: informational, commercial and so on. */
+  searchIntent?: string;
+  /** How many results Google has for the search. */
+  resultsCount?: number;
+  /** Where the site was at DataForSEO's previous check, and whether it is new, up or down since. */
+  previousPositionDfs?: number;
+  movementDfs?: "NEW" | "UP" | "DOWN" | "SAME";
 };
+
+/** A site's appearance in a results-page feature — an AI Overview's source, an answer box, a map pack. */
+export type FeaturePosition = {
+  keyword: string;
+  feature: "ai_overview_reference" | "featured_snippet" | "local_pack";
+  position?: number;
+  url?: string;
+};
+
+const FEATURE_TYPES = new Set(["ai_overview_reference", "featured_snippet", "local_pack"]);
 
 type Unknown = Record<string, unknown>;
 
@@ -133,6 +155,15 @@ function topCounts(value: unknown, keep = 15): string | null {
   return JSON.stringify(entries);
 }
 
+/** DataForSEO's own move for a ranking since its previous check, from `rank_changes`. */
+function movementOf(changes: Record<string, unknown> | null): RankedPosition["movementDfs"] {
+  if (!changes) return undefined;
+  if (changes.is_new === true) return "NEW";
+  if (changes.is_up === true) return "UP";
+  if (changes.is_down === true) return "DOWN";
+  return typeof changes.previous_rank_absolute === "number" ? "SAME" : undefined;
+}
+
 /**
  * What a site already ranks for.
  *
@@ -148,6 +179,7 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
   const rows = asArray(item.items);
   const positions: NonNullable<ParsedSeoResult["positions"]> = [];
   const paidPositions: PaidPosition[] = [];
+  const featurePositions: FeaturePosition[] = [];
 
   for (const row of rows) {
     const record = asRecord(row);
@@ -164,7 +196,8 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
     // An advert is not a ranking. The call returns both unless told not to,
     // so an advertiser's adverts were read as organic places until
     // 2026-09-23; now they are kept apart, for the Sites Paid search pages.
-    if (asString(serpElement?.type) === "paid") {
+    const type = asString(serpElement?.type) ?? "organic";
+    if (type === "paid") {
       const optional = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value });
       paidPositions.push({
         keyword,
@@ -177,10 +210,26 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
       } as PaidPosition);
       continue;
     }
+    // Nor is a results-page feature the site appears in — an AI Overview's
+    // source, a map pack, an answer box. The call returns those only when
+    // asked for them (`item_types`); they are kept apart, never filed as a
+    // place in the organic results.
+    if (type !== "organic") {
+      if (FEATURE_TYPES.has(type)) {
+        featurePositions.push({
+          keyword,
+          feature: type as FeaturePosition["feature"],
+          ...(asNumber(serpElement?.rank_absolute) !== undefined ? { position: asNumber(serpElement?.rank_absolute) } : {}),
+          ...(asString(serpElement?.url) ? { url: asString(serpElement?.url) } : {}),
+        });
+      }
+      continue;
+    }
     const properties = asRecord(keywordData?.keyword_properties);
     const serpInfo = asRecord(keywordData?.serp_info);
     const pageLinks = asRecord(serpElement?.backlinks_info);
     const pageRank = asRecord(serpElement?.rank_info);
+    const rankChanges = asRecord(serpElement?.rank_changes);
 
     const trend = asArray(keywordInfo?.monthly_searches)
       .map((month) => asRecord(month))
@@ -211,6 +260,12 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
       ...optional("pageRank", asNumber(pageRank?.page_rank)),
       ...optional("pageReferringDomains", asNumber(pageLinks?.referring_domains)),
       ...optional("pageBacklinks", asNumber(pageLinks?.backlinks)),
+      ...optional("competition", asNumber(keywordInfo?.competition)),
+      ...optional("competitionLevel", asString(keywordInfo?.competition_level)),
+      ...optional("searchIntent", asString(asRecord(keywordData?.search_intent_info)?.main_intent)),
+      ...optional("resultsCount", asNumber(serpInfo?.se_results_count)),
+      ...optional("previousPositionDfs", asNumber(rankChanges?.previous_rank_absolute)),
+      ...optional("movementDfs", movementOf(rankChanges)),
     } as RankedPosition);
   }
 
@@ -256,6 +311,7 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
     },
     positions,
     paidPositions,
+    ...(featurePositions.length > 0 ? { featurePositions } : {}),
   };
 }
 

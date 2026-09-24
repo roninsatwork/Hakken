@@ -1376,6 +1376,10 @@
       "websiteColumn": "Sito web",
       "heldAsColumn": "Tipo",
       "collectionColumn": "Controllo",
+      "limitsColumn": "Limiti",
+      "limitKeywords": "{count, number} parole chiave",
+      "limitBacklinks": "{count, number} backlink",
+      "ownLimit": "limite proprio",
       "owned": "Di proprietà",
       "tracked": "Concorrente",
       "against": "di {host}",
@@ -1417,6 +1421,21 @@
       "movesColumn": "Da fare"
     },
     "companyWebsiteDetail": {
+      "limits": {
+        "title": "Limiti dei dati per questo sito",
+        "subtitle": "Quanti dati si conservano su questo sito. Lasciato su “Come l'azienda”, conserva ciò che indica la schermata Raccolta dati dell'azienda.",
+        "keywordsLabel": "Parole chiave conservate",
+        "keywordsDescription": "Le ricerche che portano più visite a questo sito, aggiornate ogni settimana.",
+        "backlinksLabel": "Backlink conservati",
+        "backlinksDescription": "Ogni link verso questo sito, dai più forti, aggiornati ogni settimana.",
+        "follow": "Come l'azienda ({count, number})",
+        "keywordsChoice": "{count, number} parole chiave",
+        "backlinksChoice": "{count, number} backlink",
+        "appliesNext": "Le modifiche valgono dal prossimo aggiornamento settimanale di questo sito.",
+        "save": "Salva i limiti",
+        "saved": "Limiti salvati",
+        "saveFailed": "Non è stato possibile salvare i limiti."
+      },
       "loading": "Caricamento sito web...",
       "notFound": "Sito web non trovato",
       "settingsTitle": "Con quale frequenza, e da dove",
@@ -1549,7 +1568,7 @@
         "searchColumn": "Ricerca",
         "positionColumn": "Posizione",
         "notCheckedYet": "Non ancora controllata",
-        "notOnPage": "Non in prima pagina",
+        "notOnPage": "Non tra i primi 100",
         "up": "su",
         "down": "giù",
         "verdictColumn": "Come sta andando",
@@ -1633,7 +1652,7 @@
         },
         "slipping": {
           "title": "“{keyword}” è scesa da {from} a {to}",
-          "titleGone": "“{keyword}” è uscita dalla prima pagina (era {from})",
+          "titleGone": "“{keyword}” è uscita dai primi 100 (era {from})",
           "detail": "Controllata il {day}.",
           "look": "Vedi le ricerche",
           "take": "Fatto"
@@ -1708,6 +1727,20 @@
         "standaloneHint": "Quanto costerebbe senza altri clienti che condividono i dati. Basa il prezzo su questo.",
         "saving": "Risparmiato · 30gg",
         "savingHint": "Servito con dati già pagati da un altro cliente."
+      },
+      "limits": {
+        "title": "Limiti dei dati",
+        "intro": "Quanti dati si conservano per ogni sito di questa azienda: i suoi siti e ogni concorrente che osserva. Più righe danno elenchi più completi da aprire nelle schermate Siti, e costano di più.",
+        "keywordsLabel": "Parole chiave conservate per sito",
+        "keywordsDescription": "Le ricerche che portano più visite a ogni sito, aggiornate ogni settimana. Circa 0,13 $ ogni 1.000 parole chiave a settimana; un sito con meno parole chiave costa solo quelle che ha.",
+        "backlinksLabel": "Backlink conservati per sito",
+        "backlinksDescription": "Ogni link verso ogni sito, dal più forte, aggiornati ogni settimana. Circa 0,04 $ ogni 1.000 link a settimana.",
+        "choice": "{count, number} per sito",
+        "usingDefaults": "Valori predefiniti: 1.000 parole chiave e 1.000 backlink per sito.",
+        "costNote": "Le modifiche valgono dal prossimo aggiornamento settimanale di ogni sito.",
+        "save": "Salva i limiti",
+        "saved": "Limiti salvati",
+        "saveFailed": "Non è stato possibile salvare i limiti."
       }
     },
     "websites": {
@@ -5393,6 +5426,7 @@
       "operation": {
         "backlinks_summary": "Chi la collega",
         "domain_ranked_keywords": "Per cosa si posiziona",
+        "domain_ranked_keywords_list": "Tutte le parole chiave per cui si posiziona",
         "domain_competitors": "Chi compete con lui",
         "serp_google_organic": "Posizione per una ricerca",
         "keyword_search_volume": "Frequenza di ricerca dei termini",
@@ -5404,6 +5438,7 @@
         "ai_citation_gemini": "Chiesto a Gemini",
         "ai_citation_perplexity": "Chiesto a Perplexity",
         "backlinks_list": "Ogni sito che la collega",
+        "backlinks_all": "Ogni link verso il sito",
         "backlinks_broken": "Link alle sue pagine non funzionanti",
         "referring_domains_list": "Ogni sito che rimanda",
         "anchors_list": "Le parole usate dai link",
@@ -7940,7 +7975,7 @@
     "common": {
       "lastChecked": "Ultimo controllo",
       "notChecked": "Non ancora controllato",
-      "notOnPageOne": "Non in prima pagina",
+      "notOnPageOne": "Non tra i primi 100",
       "yes": "Sì",
       "none": "–",
       "you": "{host} (questo sito)",
@@ -8445,14 +8480,14 @@
     },
     "googleAbove": {
       "title": "Chi si posiziona sopra di te",
-      "description": "Per ogni ricerca su cui questo sito viene misurato, i siti che Google mette sopra di esso, o l'intera prima pagina quando non c'è. Controllato da {place}.",
+      "description": "Per ogni ricerca su cui questo sito viene misurato, i siti che Google mette sopra di esso, o l'intera prima pagina quando non è tra i primi 100. Controllato da {place}.",
       "searchPlaceholder": "Cerca una ricerca o un sito…",
       "positionFilter": "Dove sei",
       "anyPosition": "Ovunque",
       "positions": {
         "top3": "Nelle prime 3",
         "pageOne": "Più in basso in prima pagina",
-        "notOnPage": "Non in prima pagina"
+        "notOnPage": "Non tra i primi 100"
       },
       "columns": {
         "search": "Ricerca",
@@ -8463,7 +8498,7 @@
       },
       "rival": "concorrente",
       "nobodyAbove": "Nessuno: sei primo",
-      "notOnPage": "Non in prima pagina",
+      "notOnPage": "Non tra i primi 100",
       "notChecked": "Non ancora controllata",
       "more": "+{count} altri",
       "chartTitle": "Concorrenti sopra di te",
@@ -8640,9 +8675,13 @@
     "backlinksAll": {
       "title": "Tutti i backlink",
       "description": "Ogni sito che rimanda qui, con il suo link più forte: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono.",
+      "descriptionEvery": "Ogni link verso questo sito, dai siti più forti in giù, quanti ne conserva il suo limite: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono.",
       "searchPlaceholder": "Cerca un sito, una pagina o un anchor…",
       "sortRank": "Sito più forte prima",
       "sortNewest": "Più recenti prima",
+      "showLabel": "Quali link",
+      "showOne": "Il link più forte di ogni sito",
+      "showEvery": "Ogni link",
       "columns": {
         "from": "Pagina che rimanda",
         "anchor": "Anchor e link",
@@ -8767,6 +8806,13 @@
       "empty": "Nessun cambiamento dei link registrato in queste date."
     },
     "audit": {
+      "problemPages": {
+        "loading": "Caricamento delle pagine…",
+        "none": "Nessun dettaglio delle pagine per questa scansione. Si recupera dopo ogni scansione, dalla prossima in poi.",
+        "count": "{count, plural, one {# pagina} other {# pagine}} nell'ultima scansione.",
+        "answer": "Risposta {code}",
+        "brokenTo": "Link rotto verso {to} (risposta {code})"
+      },
       "title": "Controllo del sito",
       "description": "Cosa ha trovato una scansione fino a cento pagine di questo sito: pagine che non funzionano, titoli mancanti o duplicati, pagine lente e altro. Ripetuta ogni mese.",
       "score": "Punteggio tecnico",

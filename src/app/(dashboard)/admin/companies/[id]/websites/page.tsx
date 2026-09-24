@@ -231,6 +231,24 @@ export default function CompanyWebsitesPage() {
             ),
           },
           {
+            // How much is kept about the site: its own limit where one is set
+            // on its page, else the company's (`companyDataLimits.ts`).
+            key: "limits",
+            header: t("limitsColumn"),
+            cell: (row) => (
+              <div className="flex flex-col gap-1 whitespace-nowrap">
+                <span className="text-[12px] text-foreground">
+                  {t("limitKeywords", { count: row.limits.keywordsPerSite })}
+                  {row.limits.keywordsOwn ? <span className="text-muted"> · {t("ownLimit")}</span> : null}
+                </span>
+                <span className="text-[11px] text-muted">
+                  {t("limitBacklinks", { count: row.limits.backlinksPerSite })}
+                  {row.limits.backlinksOwn ? ` · ${t("ownLimit")}` : ""}
+                </span>
+              </div>
+            ),
+          },
+          {
             key: "added",
             header: t("addedColumn"),
             cell: (row) => (

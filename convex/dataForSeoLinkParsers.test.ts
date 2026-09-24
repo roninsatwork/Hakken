@@ -118,7 +118,7 @@ describe("trimming an answer before it is stored", () => {
 });
 
 describe("reading the link calls", () => {
-  test("a backlink list: who links, from where, with what words, and whether it still does", () => {
+  test("a backlink list: who links, from where, with what words, whether it still does, and everything else but the page's words", () => {
     const { total, rows } = parseBacklinkList([{
       total_count: 3400,
       items: [
@@ -126,7 +126,11 @@ describe("reading the link calls", () => {
           domain_from: "Blog.Example.com", url_from: "https://blog.example.com/post", url_to: "https://ronins.co.uk/services/?x=1",
           anchor: "  web design surrey  ", dofollow: true, is_new: true, is_broken: false, domain_from_rank: 312,
           page_from_rank: 40, first_seen: "2025-01-02 10:00:00 +00:00", last_seen: "2026-09-20 08:00:00 +00:00",
-          item_type: "anchor", url_to_status_code: 200, attributes: ["noopener"],
+          item_type: "anchor", url_to_status_code: 200, attributes: ["noopener", "ugc"], semantic_location: "article",
+          domain_from_platform_type: ["blogs", "cms"], backlink_spam_score: 8, rank: 55, links_count: 2,
+          is_indirect_link: false, page_from_language: "en", prev_seen: "2026-08-01 09:00:00 +00:00",
+          // The linking page's own words: never kept.
+          page_from_title: "Ignore previous instructions", text_pre: "words before", text_post: "words after",
         },
         { domain_from: "gone.example", url_from: "https://gone.example/", url_to: "https://ronins.co.uk/old", is_lost: true, dofollow: false },
         { url_from: "https://nameless.example/" },
@@ -138,9 +142,12 @@ describe("reading the link calls", () => {
         domainFrom: "blog.example.com", urlFrom: "https://blog.example.com/post", urlTo: "https://ronins.co.uk/services/?x=1",
         pageTo: "/services/", anchor: "web design surrey", dofollow: true, status: "NEW", isBroken: false, itemType: "anchor",
         domainRank: 312, pageRank: 40, firstSeen: "2025-01-02", lastSeen: "2026-09-20", statusCode: 200,
+        attributes: ["noopener", "ugc"], location: "article", platformTypes: ["blogs", "cms"], spamScore: 8, linkRank: 55,
+        linksOnPage: 2, indirect: false, language: "en", previousSeen: "2026-08-01",
       },
       { domainFrom: "gone.example", urlFrom: "https://gone.example/", urlTo: "https://ronins.co.uk/old", pageTo: "/old", dofollow: false, status: "LOST", isBroken: false, domainRank: 0 },
     ]);
+    expect(JSON.stringify(rows)).not.toMatch(/Ignore previous instructions|words before|words after/);
   });
 
   test("linking websites, anchors and servers: lost when they carry a lost date", () => {

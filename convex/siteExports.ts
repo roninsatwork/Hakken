@@ -68,6 +68,14 @@ const HEADERS: Record<ExportKind, string[]> = {
   gap: ["keyword", "volume", "intent", "competitors_ranking", "best_competitor_position", "last_checked"],
   cited: ["page", "times_cited", "engines", "first_cited", "last_cited"],
   backlinks: ["linking_website", "linking_page", "anchor", "linked_page", "followed", "domain_rank", "first_seen", "last_seen", "status", "last_checked"],
+  // Every link, with everything kept about it (2026-09-24, "store whatever
+  // we can"), so the whole of it can be read before anyone decides what the
+  // page should show.
+  links: [
+    "linking_website", "linking_page", "anchor", "linked_page", "followed", "rel", "where_on_page", "site_type",
+    "link_rank", "link_spam_score", "domain_rank", "page_rank", "same_link_on_page", "through_redirect", "language",
+    "country", "first_seen", "previously_seen", "last_seen", "status", "last_checked",
+  ],
   broken: ["linking_website", "linking_page", "broken_page", "answer", "anchor", "domain_rank", "first_seen", "last_checked"],
   domains: ["website", "rank", "links", "pages_linking", "spam_score", "first_seen", "lost", "status", "last_checked"],
   anchors: ["anchor", "links", "linking_websites", "rank", "first_seen", "status", "last_checked"],
@@ -214,6 +222,14 @@ export const exportPage = internalQuery({
           .order("desc").paginate(page), (row: Doc<"siteBacklinks">) => job.kind === "broken"
           ? line([row.domainFrom, row.urlFrom, row.pageTo, row.statusCode, row.anchor, row.domainRank, row.firstSeen, row.day])
           : line([row.domainFrom, row.urlFrom, row.anchor, row.pageTo, row.dofollow, row.domainRank, row.firstSeen, row.lastSeen, row.status, row.day]));
+      case "links":
+        return done(await ctx.db.query("siteBacklinks")
+          .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ALL"))
+          .order("desc").paginate(page), (row: Doc<"siteBacklinks">) => line([
+          row.domainFrom, row.urlFrom, row.anchor, row.pageTo, row.dofollow, row.attributes?.join(" "), row.location,
+          row.platformTypes?.join(" "), row.linkRank, row.spamScore, row.domainRank, row.pageRank, row.linksOnPage,
+          row.indirect, row.language, row.country, row.firstSeen, row.previousSeen, row.lastSeen, row.status, row.day,
+        ]));
       case "domains":
         return done(await ctx.db.query("siteReferringDomains")
           .withIndex("by_site_rank", (q) => q.eq("websiteId", websiteId))

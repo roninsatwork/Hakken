@@ -7,6 +7,7 @@ import {
 } from "./seoAiEngines";
 import { SITE_LINK_OPERATIONS } from "./dataForSeoLinkOperations";
 import { CRAWL_OPERATIONS } from "./dataForSeoCrawlOperations";
+import { KEYWORD_LIST_OPERATIONS } from "./dataForSeoKeywordListOperations";
 import { appError } from "./utils/appError";
 
 /**
@@ -158,6 +159,7 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...AI_CITATION_OPERATIONS,
   ...SITE_LINK_OPERATIONS,
   ...CRAWL_OPERATIONS,
+  ...KEYWORD_LIST_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",
@@ -166,6 +168,13 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     path: "/v3/serp/google/organic/task_post",
     resultPath: "/v3/serp/google/organic/task_get/advanced/$id",
     costBand: "low",
+    // The first hundred results, not the first ten (Anthony, 2026-09-24:
+    // "store whatever we can"), so a site on page four has a position rather
+    // than "not on page one". DataForSEO's default depth is ten, and each ten
+    // results is charged as one page: $0.0006 a page in the standard queue,
+    // so a check of a hundred is up to $0.006 — read from their docs and
+    // pricing page on 2026-09-24, to be confirmed on the first charged check.
+    fixed: { depth: 100 },
     params: {
       keyword: {
         kind: "keyword",
@@ -518,7 +527,8 @@ export function seoKeywordCheckParams(
     }
     if (param.default !== undefined) params[name] = param.default;
   }
-  return params;
+  // How far down the page to read, sent as written like every operation's settings.
+  return { ...params, ...(operation.fixed as Record<string, string | number> | undefined) };
 }
 
 /** Where to collect a finished queued task from, or null if it is not queued. */

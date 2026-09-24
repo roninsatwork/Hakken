@@ -23,6 +23,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 import { CollectionCost } from "./CollectionCost";
+import { CollectionLimits } from "./CollectionLimits";
 
 /**
  * When this company's SEO data gets collected.
@@ -216,6 +217,8 @@ export default function CompanyDataCollectionPage() {
           />
         </div>
       </SettingsCard>
+
+      <CollectionLimits companyId={companyId} />
 
       <CollectionCost companyId={companyId} />
     </div>

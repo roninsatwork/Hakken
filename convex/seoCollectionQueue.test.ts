@@ -558,3 +558,43 @@ describe("what a company costs to serve", () => {
       .toBeUndefined();
   });
 });
+
+describe("respecting the collection switch (2026-09-24)", () => {
+  test("a waiting call is dropped, not bought, once nobody asking for it still collects — company or website", async () => {
+    const t = harness();
+    const { off, on, offSite, onSite, sharedSite } = await t.run(async (ctx) => {
+      const off = await ctx.db.insert("companies", { name: "Switched off", createdAt: Date.now() });
+      const on = await ctx.db.insert("companies", { name: "Collecting", createdAt: Date.now() });
+      for (const [companyId, isActive] of [[off, false], [on, true]] as const) {
+        await ctx.db.insert("schedules", { name: "Collection", companyId, intervalStr: "daily", isActive, createdAt: Date.now() } as never);
+      }
+      const site = async (host: string) => await ctx.db.insert("websites", { host, displayHost: host, firstSeenAt: Date.now() });
+      const offSite = await site("off.com");
+      const onSite = await site("on.com");
+      const sharedSite = await site("shared.com");
+      await ctx.db.insert("companyWebsites", { companyId: on, websiteId: offSite, relationship: "OWNED", collectionEnabled: false, createdAt: Date.now() });
+      await ctx.db.insert("companyWebsites", { companyId: on, websiteId: onSite, relationship: "OWNED", createdAt: Date.now() });
+      return { off, on, offSite, onSite, sharedSite };
+    });
+    const queued = async (companyId: Id<"companies">, websiteId: Id<"websites">) => {
+      const id = await seedPull(t, { operationId: "serp_google_organic", mode: "QUEUED", companyId });
+      await t.run(async (ctx) => await ctx.db.patch(id, { websiteId }));
+      return id;
+    };
+    const companyOff = await queued(off, sharedSite);
+    const websiteOff = await queued(on, offSite);
+    const wanted = await queued(on, onSite);
+    // Planned by the company now off, but shared with one still collecting.
+    const shared = await queued(off, onSite);
+    await t.run(async (ctx) => {
+      const cycleId = await ctx.db.insert("seoCollectionCycles", { companyId: on, status: "SENDING", trigger: "SCHEDULE", startedAt: Date.now(), plannedCount: 1, reusedCount: 0, sentCount: 0, readyCount: 0, failedCount: 0, totalCostUsd: 0 } as never);
+      await ctx.db.insert("seoCycleLines", { cycleId, companyId: on, websiteId: onSite, operationId: "serp_google_organic", pullId: shared, reused: true, createdAt: Date.now() });
+    });
+
+    const batch = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "collector" });
+    expect(batch.pulls.map((row) => row.pullId).sort()).toEqual([wanted, shared].sort());
+    for (const id of [companyOff, websiteOff]) {
+      expect(await pull(t, id)).toMatchObject({ status: "FAILED", error: expect.stringMatching(/switched off/) });
+    }
+  });
+});

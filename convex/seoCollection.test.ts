@@ -48,11 +48,16 @@ const WEEKLY = JSON.stringify({
  * number is a constant here rather than a literal in eight assertions.
  *
  * Ten since the six Sites link calls and the site crawl joined them on
- * 2026-09-23 (`dataForSeoLinkOperations.ts`, `dataForSeoCrawlOperations.ts`).
- * Each has its own cadence, so on a first collection — every test here —
- * each is planned like any other.
+ * 2026-09-23 (`dataForSeoLinkOperations.ts`, `dataForSeoCrawlOperations.ts`),
+ * and eleven with the full keyword list's first request on 2026-09-24
+ * (`dataForSeoKeywordListOperations.ts`): a company on the default limit keeps
+ * a thousand keywords a site, and a site whose count is not known yet gets the
+ * list's first request alone. Twelve with the list of every link
+ * (`backlinks_all`), paged the same way on the same limits
+ * (`sitePagedLists.ts`). Each has its own cadence, so on a first collection —
+ * every test here — each is planned like any other.
  */
-const SITE_OPERATIONS = 10;
+const SITE_OPERATIONS = 12;
 
 /**
  * The operations that ask about every website on a page in one paid call.
@@ -539,6 +544,63 @@ describe("the reuse ladder", () => {
     // No history is ever bought: the plan does not backfill (2026-09-23).
     expect(planned).not.toContain("backlinks_history");
     expect(planned).not.toContain("ranking_history");
+  });
+
+  test("the long lists ask a thousand a request, up to the company's limit — no keyword list on the everyday hundred", async () => {
+    const t = harness();
+    const big = await seedCompany(t, "Korda");
+    const small = await seedCompany(t, "Small Co");
+    await seedSchedule(t, big, DAILY);
+    await seedSchedule(t, small, DAILY);
+    const bigSite = await seedWebsite(t, "kordatackle.com");
+    const smallSite = await seedWebsite(t, "smallshop.com");
+    await seedCompanyWebsite(t, big, bigSite);
+    await seedCompanyWebsite(t, small, smallSite);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: big, keywordsPerSite: 10_000, backlinksPerSite: 10_000, updatedAt: Date.now() });
+      await ctx.db.insert("companyDataLimits", { companyId: small, keywordsPerSite: 100, backlinksPerSite: 100, updatedAt: Date.now() });
+      // The everyday calls' last counts: 2,500 keywords and 3,200 links.
+      await ctx.db.insert("siteDaySummaries", {
+        websiteId: bigSite, locationCode: 2826, day: "2026-09-20", rankedKeywordsTotal: 2_500, backlinks: 3_200, updatedAt: Date.now(),
+      } as never);
+    });
+
+    for (const company of [big, small]) {
+      const cycleId = await openCycle(t, company);
+      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+    }
+    const all = await pulls(t);
+    const pages = (operationId: string, websiteId: Id<"websites">) => all
+      .filter((row) => row.operationId === operationId && row.websiteId === websiteId)
+      .map((row) => JSON.parse(row.taskArgsJson) as { offset: number; limit: number })
+      .sort((a, b) => a.offset - b.offset)
+      .map((sent) => [sent.offset, sent.limit]);
+    expect(pages("domain_ranked_keywords_list", bigSite)).toEqual([[0, 1_000], [1_000, 1_000], [2_000, 1_000]]);
+    expect(pages("domain_ranked_keywords_list", smallSite)).toEqual([]);
+    // Every link: no everyday call lists them all, so even a hundred is a list.
+    expect(pages("backlinks_all", bigSite)).toEqual([[0, 1_000], [1_000, 1_000], [2_000, 1_000], [3_000, 1_000]]);
+    expect(pages("backlinks_all", smallSite)).toEqual([[0, 100]]);
+  });
+
+  test("a website's own limit wins over its company's: a small competitor on the everyday hundred gets no list", async () => {
+    const t = harness();
+    const korda = await seedCompany(t, "Korda");
+    await seedSchedule(t, korda, DAILY);
+    const own = await seedWebsite(t, "kordatackle.com");
+    const small = await seedWebsite(t, "gocatch.fish");
+    await seedCompanyWebsite(t, korda, own);
+    const smallHold = await t.run(async (ctx) => await ctx.db.insert("companyWebsites", {
+      companyId: korda, websiteId: small, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now(),
+    }));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 10_000, backlinksPerSite: 10_000, updatedAt: Date.now() });
+      await ctx.db.insert("websiteDataLimits", { companyWebsiteId: smallHold, companyId: korda, keywordsPerSite: 100, updatedAt: Date.now() });
+    });
+
+    const cycleId = await openCycle(t, korda);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+    const list = (await pulls(t)).filter((row) => row.operationId === "domain_ranked_keywords_list");
+    expect(list.map((row) => row.websiteId)).toEqual([own]);
   });
 
   test("a weekly list already on its way is not planned again the next day", async () => {

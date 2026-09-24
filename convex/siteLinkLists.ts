@@ -71,14 +71,16 @@ function shapeBacklink(row: Doc<"siteBacklinks">) {
 }
 
 /**
- * Every link to the site — one per linking website — strongest first, newest
- * first, or matching a search; filtered by live, new or lost, and followed or
- * not.
+ * The links to the site — the strongest from each linking website, or with
+ * `every` every link its limit keeps (`backlinks_all`) — strongest first,
+ * newest first, or matching a search; filtered by live, new or lost, and
+ * followed or not.
  */
 export const listBacklinks = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
     paginationOpts: paginationOptsValidator,
+    every: v.optional(v.boolean()),
     search: v.optional(v.string()),
     status: v.optional(status),
     follow: v.optional(v.union(v.literal("FOLLOW"), v.literal("NOFOLLOW"))),
@@ -88,7 +90,7 @@ export const listBacklinks = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
-    const pass = "ONE_PER_DOMAIN" as const;
+    const pass = args.every ? "ALL" as const : "ONE_PER_DOMAIN" as const;
     const dofollow = args.follow === undefined ? undefined : args.follow === "FOLLOW";
     const term = args.search?.trim();
     const narrowed = { ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ };

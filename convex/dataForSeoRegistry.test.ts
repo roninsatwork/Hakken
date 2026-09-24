@@ -14,6 +14,7 @@ import {
   seoBulkOperationParams,
   seoAiCitationOperations,
   seoAiCitationParams,
+  seoKeywordCheckParams,
 } from "./dataForSeoRegistry";
 
 /**
@@ -215,6 +216,18 @@ describe("building a task — what it produces", () => {
       keyword: "emergency plumber leeds",
       location_code: 2826,
       language_code: "en",
+      depth: 100,
+    });
+  });
+
+  test("a search is checked down to position 100, however it is asked for", () => {
+    // DataForSEO reads ten results unless told otherwise, and a site on page
+    // four would read as "not on page one" (2026-09-24).
+    expect(seoKeywordCheckParams("carp rods", { locationCode: 1006886 })).toEqual({
+      keyword: "carp rods",
+      location_code: 1006886,
+      language_code: "en",
+      depth: 100,
     });
   });
 

@@ -73,10 +73,38 @@ export type BacklinkRow = {
   lastSeen?: string;
   statusCode?: number;
   country?: string;
+  /** The link's rel values — nofollow, ugc, sponsored and the like. */
+  attributes?: string[];
+  /** Where on the linking page it sits: an article, a footer, the navigation … */
+  location?: string;
+  /** What kind of site links: a blog, a forum, an online shop … */
+  platformTypes?: string[];
+  spamScore?: number;
+  /** The link's own rank, 0–1,000, where `domainRank` is the linking website's. */
+  linkRank?: number;
+  /** How many times the same link appears on the linking page. */
+  linksOnPage?: number;
+  /** Reaches the site through a redirect rather than directly. */
+  indirect?: boolean;
+  language?: string;
+  /** The sighting before the latest one. */
+  previousSeen?: string;
 };
 
 /** Anchors kept at most this long: a link's words, not a paragraph. */
 const ANCHOR_CHARS = 300;
+
+/** Labels kept from a list of them (rel values, site kinds): short, and a handful. */
+const LABEL_CHARS = 60;
+const LABELS_KEPT = 12;
+
+/** A list of short labels, or undefined when there are none. */
+function labels(value: unknown): string[] | undefined {
+  const kept = asArray(value)
+    .flatMap((entry) => (typeof entry === "string" && entry.length > 0 ? [entry.slice(0, LABEL_CHARS)] : []))
+    .slice(0, LABELS_KEPT);
+  return kept.length > 0 ? kept : undefined;
+}
 
 export function parseBacklinkList(result: unknown): { total: number | undefined; rows: BacklinkRow[] } {
   const { items, total } = firstResult(result);
@@ -103,6 +131,15 @@ export function parseBacklinkList(result: unknown): { total: number | undefined;
       ...optional("lastSeen", dayOf(item.last_seen)),
       ...optional("statusCode", asNumber(item.url_to_status_code)),
       ...optional("country", asString(item.domain_from_country)),
+      ...optional("attributes", labels(item.attributes)),
+      ...optional("location", asString(item.semantic_location)?.slice(0, LABEL_CHARS)),
+      ...optional("platformTypes", labels(item.domain_from_platform_type)),
+      ...optional("spamScore", asNumber(item.backlink_spam_score)),
+      ...optional("linkRank", asNumber(item.rank)),
+      ...optional("linksOnPage", asNumber(item.links_count)),
+      ...optional("indirect", typeof item.is_indirect_link === "boolean" ? item.is_indirect_link : undefined),
+      ...optional("language", asString(item.page_from_language)?.slice(0, LABEL_CHARS)),
+      ...optional("previousSeen", dayOf(item.prev_seen)),
     } as BacklinkRow];
   });
   return { total, rows };

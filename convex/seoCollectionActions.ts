@@ -203,6 +203,10 @@ export const fetchSeoResult = internalAction({
       await ctx.scheduler.runAfter(0, internal.seoCollectionParse.parseSeoResult, {
         pullId: args.pullId,
       });
+      // A finished crawl's page-by-page detail is free for thirty days: fetch it now.
+      if (pull.operationId === "site_crawl") {
+        await ctx.scheduler.runAfter(0, internal.siteCrawlDetail.fetchCrawlDetail, { pullId: args.pullId });
+      }
     } catch (error) {
       if (error instanceof DataForSeoBackoff) return null;
       await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {

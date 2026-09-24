@@ -19,8 +19,9 @@ type Follow = "FOLLOW" | "NOFOLLOW";
 
 /**
  * All backlinks: every website linking here with its strongest link — one
- * per website, as Ahrefs shows by default — searched, filtered and paged on
- * the server, with the search and filters kept in the address.
+ * per website, as Ahrefs shows by default — or every link the site's limit
+ * keeps, searched, filtered and paged on the server, with the choice, the
+ * search and the filters kept in the address.
  */
 export default function SiteAllBacklinksPage() {
   const t = useTranslations("sites.backlinksAll");
@@ -30,8 +31,11 @@ export default function SiteAllBacklinksPage() {
   const [status, setStatus] = useSiteParam<Status | "">("status", "", ["LIVE", "NEW", "LOST"]);
   const [follow, setFollow] = useSiteParam<Follow | "">("follow", "", ["FOLLOW", "NOFOLLOW"]);
   const [sort, setSort] = useSiteParam<"rank" | "newest">("sort", "rank", ["rank", "newest"]);
+  const [links, setLinks] = useSiteParam<"one" | "every">("links", "one", ["one", "every"]);
+  const every = links === "every";
   const table = useSitePagedTable(api.siteLinkLists.listBacklinks, {
     siteId,
+    ...(every ? { every } : {}),
     ...(term ? { search: term } : {}),
     ...(status ? { status } : {}),
     ...(follow ? { follow } : {}),
@@ -40,7 +44,11 @@ export default function SiteAllBacklinksPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Link2 className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <PageHeader
+        icon={<Link2 className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={every ? t("descriptionEvery") : t("description")}
+      />
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
@@ -48,6 +56,10 @@ export default function SiteAllBacklinksPage() {
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
+            <Select aria-label={t("showLabel")} value={links} onChange={(value) => setLinks(value as "one" | "every")}>
+              <option value="one">{t("showOne")}</option>
+              <option value="every">{t("showEvery")}</option>
+            </Select>
             <Select aria-label={tl("statusFilter")} value={status} onChange={(value) => setStatus(value as Status | "")}>
               <option value="">{tl("anyStatus")}</option>
               {(["LIVE", "NEW", "LOST"] as const).map((entry) => <option key={entry} value={entry}>{tl(`statuses.${entry}`)}</option>)}
@@ -61,7 +73,7 @@ export default function SiteAllBacklinksPage() {
               <option value="rank">{t("sortRank")}</option>
               <option value="newest">{t("sortNewest")}</option>
             </Select>
-            <TableDownload siteId={siteId} kind="backlinks" />
+            <TableDownload siteId={siteId} kind={every ? "links" : "backlinks"} />
           </>
         }
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: term || status || follow ? t("noMatch") : t("empty") }}

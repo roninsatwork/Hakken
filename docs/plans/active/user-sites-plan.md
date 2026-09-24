@@ -136,7 +136,10 @@ under "Not available", so nobody goes looking.
 | Sources cited | Which of this site's pages the engines link to | `aiCitations` (kind `SOURCE`) | ✅ stored |
 | What the AI searched | The searches the engines ran behind the scenes | `promptFanOutQueries`, `promptFanOutDays` | ✅ stored |
 
-### 2. Google results — page one for each tracked search (`serp_google_organic`)
+### 2. Google results — the first hundred results for each tracked search (`serp_google_organic`)
+
+Page one only until 2026-09-24; every check now reads down to position 100
+(see "Storing everything" below).
 
 | Page | Shows | Source | Status |
 |---|---|---|---|
@@ -719,6 +722,56 @@ More clarifications, made while building:
   the one set in System Settings, never written into the copy, so a clone
   that renames the platform gets its own.
 
+## Storing everything (2026-09-24)
+
+Anthony, on finding the screens thin: "I think we need to store whatever we
+can please, then we can fully evaluate the screens to see what is useful and
+what we keep. We also get an idea of costs etc which was kind of the purpose
+of this exercise in the first place." Built the same day; nothing has been
+collected with it yet — Anthony: "Until I am ready we are just building".
+
+- **Limits, per company and per website** (`convex/companyDataLimits.ts`).
+  How many keywords and how many backlinks are kept per website: 100, 1,000,
+  2,000, 5,000 or 10,000, default 1,000. Set per company on its Data
+  collection screen, and per website — owned or competitor — in a "Data
+  limits for this website" section on the website's own page, where
+  "Follow the company" keeps no setting of its own. Anthony: "I think we
+  need to set a limit on the website not the just the company."
+- **Every keyword** (`domain_ranked_keywords_list`,
+  `convex/siteKeywordList.ts`): a thousand a request, the ones bringing most
+  visits first, weekly, with the site's AI Overview, featured snippet and map
+  pack appearances kept apart from its rankings (`siteKeywordFeatures`).
+  $0.012 a request plus $0.00012 a keyword: about $0.13 a thousand.
+- **Every link** (`backlinks_all`): every link rather than one per linking
+  website, strongest linking websites first, weekly, with everything about a
+  link but the linking page's words — rel values, where on the page it sits,
+  the kind of site, its spam score and rank, repeats on the page, redirects,
+  language, the sighting before last. Shown on All backlinks by a "Which
+  links" choice, and downloadable whole. About $0.04 a thousand links.
+- **Both lists come in pages** (`convex/sitePagedLists.ts`): a request per
+  thousand rows, planned from the site's last count and completed from the
+  first answer's; every page dated by the day its collection was planned, so
+  a list is one list however many days its pages take.
+- **Every page of the site audit** (`convex/siteCrawlDetail.ts`): which pages
+  have each problem, and the broken links, free for thirty days after a
+  crawl; the Site audit's rows open them.
+- **Tracked searches to position 100.** Each check reads the first hundred
+  results, not ten, so a site on page four has a position; "Not on page one"
+  now reads "Not in the top 100". DataForSEO charges each ten results as a
+  page, so a check costs up to $0.006 rather than $0.0006 — from their docs
+  and pricing page, to be confirmed on the first charged check. All hundred
+  results are kept with each results page; Who ranks above you still shows
+  page one for a search the site is not in. A results page too big for the
+  raw copy is cut to what is read rather than dropped.
+- **The collection switch is obeyed at the last moment.** A call waiting in
+  the queue for a company or website whose collection has since been switched
+  off is dropped by the Collector before it is sent, and never paid for.
+- **Still not kept: page text.** Titles, descriptions and body copy of other
+  people's pages are left out, as before.
+
+**Cost report** — after the first full run, from what each call actually
+cost, per company and per website.
+
 ## Open questions
 
 Added 2026-09-23 (night), for Anthony in the morning:
@@ -729,12 +782,13 @@ Added 2026-09-23 (night), for Anthony in the morning:
    the five held sites: 38 pages labelled for $0.0013 of AI, so every
    ranking page on Top pages now has a type. From here each site's pages are
    labelled after its rankings are rebuilt.
-2. **Feature counts across every keyword.** The ranked-keywords call asks for
-   organic and paid results only, so DataForSEO does not count how often the
-   site appears in AI Overviews, map packs and featured snippets across all of
-   them. Asking for those too would change a call every site already makes;
-   left as it is until decided. (Search features still shows them for the
-   tracked searches.)
+2. **How much to keep — decided 2026-09-24: everything, up to a limit.**
+   Anthony: "I think we need to store whatever we can please, then we can
+   fully evaluate the screens to see what is useful and what we keep. We also
+   get an idea of costs". Every keyword a site ranks for — AI Overview,
+   featured snippet and map pack appearances included, filed apart — and
+   every link to it are now kept, weekly, up to a limit chosen per company
+   and per website; see "Storing everything" below.
 3. **Site crawl depth — decided 2026-09-24: 1,000 pages a month per site.**
    ronins.co.uk's first crawl stopped at exactly 100 of its pages, so the
    audit covered only part of the site. The price goes with the pages
@@ -795,3 +849,8 @@ Added 2026-09-23 (night), for Anthony in the morning:
   deleting a website deletes everything about it, shared answers and results
   pages included unless another website still uses them. Question 2 is
   explained and waiting on Anthony.
+- 2026-09-24 (afternoon) — Question 2 decided: store everything, up to a
+  limit per company and per website. Built: the limits, every keyword, every
+  link, the site audit's page-by-page detail, tracked searches to position
+  100, and the collection switch obeyed before anything is sent. See
+  "Storing everything"; not yet collected, at Anthony's word.

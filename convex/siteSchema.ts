@@ -8,6 +8,7 @@ import {
   pageTypeValidator,
   rankBandValidator,
   rankIntentValidator,
+  keywordFeatureValidator,
   rankStatusValidator,
 } from "./utils/siteShapes";
 
@@ -15,7 +16,7 @@ import {
 const maybeNumber = v.optional(v.number());
 
 /** Which list a backlink came from: one per linking website, or every broken one. */
-const linkPassValidator = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"));
+const linkPassValidator = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
 
 /** Whether a link, linking website, anchor or server is still there, new, or gone. */
 const linkStatusValidator = v.union(v.literal("LIVE"), v.literal("NEW"), v.literal("LOST"));
@@ -90,6 +91,19 @@ export const siteTables = {
     pageRank: maybeNumber,
     pageReferringDomains: maybeNumber,
     pageBacklinks: maybeNumber,
+    /**
+     * What else DataForSEO says about the search and this ranking (2026-09-24,
+     * "store whatever we can"): how competitive the search is for adverts
+     * (0–1, and as LOW/MEDIUM/HIGH), what it reads the searcher as wanting,
+     * how many results Google has for it, and — from the full list — where the
+     * site was at DataForSEO's previous check and whether it is new, up or down.
+     */
+    competition: maybeNumber,
+    competitionLevel: v.optional(v.string()),
+    searchIntent: v.optional(v.string()),
+    resultsCount: maybeNumber,
+    previousPositionDfs: maybeNumber,
+    movementDfs: v.optional(v.union(v.literal("NEW"), v.literal("UP"), v.literal("DOWN"), v.literal("SAME"))),
     updatedAt: v.number(),
   })
     .index("by_site_keyword", ["websiteId", "locationCode", "keyword"])
@@ -388,6 +402,23 @@ export const siteTables = {
     lastSeen: v.optional(v.string()),
     statusCode: maybeNumber,
     country: v.optional(v.string()),
+    /**
+     * More about the link (2026-09-24, "store whatever we can"): its rel
+     * attributes (nofollow, ugc, sponsored …), where on the page it sits
+     * (article, footer, nav …), what kind of site the linking one is, the
+     * link's own spam score and rank, links on its page, whether it reaches
+     * the site through a redirect, the linking page's language, and when it
+     * was seen before its latest sighting.
+     */
+    attributes: v.optional(v.array(v.string())),
+    location: v.optional(v.string()),
+    platformTypes: v.optional(v.array(v.string())),
+    spamScore: maybeNumber,
+    linkRank: maybeNumber,
+    linksOnPage: maybeNumber,
+    indirect: v.optional(v.boolean()),
+    language: v.optional(v.string()),
+    previousSeen: v.optional(v.string()),
     /** Linking website, linking page, anchor and linked page, for the search box. */
     searchText: v.string(),
   })
@@ -395,6 +426,7 @@ export const siteTables = {
     .index("by_site_pass_first_seen", ["websiteId", "pass", "firstSeen"])
     .index("by_site_pass_status_rank", ["websiteId", "pass", "status", "domainRank"])
     .index("by_site_pass_follow_rank", ["websiteId", "pass", "dofollow", "domainRank"])
+    .index("by_site_pass_day", ["websiteId", "pass", "day"])
     .index("by_pull", ["pullId"])
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "pass", "status", "dofollow"] }),
 
@@ -547,6 +579,105 @@ export const siteTables = {
     lostMainDomains: v.number(),
     updatedAt: v.number(),
   }).index("by_site_day", ["websiteId", "day"]),
+
+  /**
+   * Every page a site crawl reached, with the problems found on it — never its
+   * words: the address, the answer it gave, the checks that failed and a few
+   * figures (`siteCrawlDetail.ts`). Fetched free after each crawl; the newest
+   * crawl's pages are kept, an older crawl's cleared.
+   */
+  siteCrawlPages: defineTable({
+    websiteId: v.id("websites"),
+    pullId: v.id("seoDataPulls"),
+    day: v.string(),
+    url: v.string(),
+    page: v.string(),
+    statusCode: maybeNumber,
+    resourceType: v.optional(v.string()),
+    problems: v.array(v.string()),
+    score: maybeNumber,
+    loadMs: maybeNumber,
+    largestPaintMs: maybeNumber,
+    sizeBytes: maybeNumber,
+    words: maybeNumber,
+    internalLinks: maybeNumber,
+    externalLinks: maybeNumber,
+    inboundLinks: maybeNumber,
+    clickDepth: maybeNumber,
+    redirectTo: v.optional(v.string()),
+    canonical: v.optional(v.string()),
+  })
+    .index("by_pull", ["pullId"])
+    .index("by_site", ["websiteId"]),
+
+  /** The broken links a site crawl found, page by page: where each is and where it points. */
+  siteCrawlLinks: defineTable({
+    websiteId: v.id("websites"),
+    pullId: v.id("seoDataPulls"),
+    day: v.string(),
+    from: v.string(),
+    fromPage: v.string(),
+    to: v.string(),
+    type: v.optional(v.string()),
+    direction: v.optional(v.string()),
+    statusCode: maybeNumber,
+    dofollow: v.optional(v.boolean()),
+  })
+    .index("by_pull", ["pullId"])
+    .index("by_site", ["websiteId"]),
+
+  /**
+   * Where a site appears in a results-page feature besides the organic places
+   * — cited in an AI Overview, holding the answer box, in the map pack — for
+   * each search in its full keyword list (`siteKeywordList.ts`). The newest
+   * list's rows, dated by the week of that list.
+   */
+  siteKeywordFeatures: defineTable({
+    websiteId: v.id("websites"),
+    locationCode: v.number(),
+    keyword: v.string(),
+    feature: keywordFeatureValidator,
+    position: maybeNumber,
+    url: v.optional(v.string()),
+    page: v.optional(v.string()),
+    day: v.string(),
+    pullId: v.id("seoDataPulls"),
+    updatedAt: v.number(),
+  })
+    .index("by_site_feature_keyword", ["websiteId", "locationCode", "feature", "keyword"])
+    .index("by_site_keyword", ["websiteId", "locationCode", "keyword"])
+    .index("by_site_day", ["websiteId", "locationCode", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * How much this company collects about each website it holds: how many of a
+   * site's keywords, and how many of its backlinks, are kept. Set on the
+   * company's Data collection screen; absent reads as the defaults
+   * (`companyDataLimits.ts`). Anthony, 2026-09-24: "some may get 100, some may
+   * get 1000 or 2000 … is 10,000 a good limit".
+   */
+  companyDataLimits: defineTable({
+    companyId: v.id("companies"),
+    keywordsPerSite: v.number(),
+    backlinksPerSite: v.number(),
+    updatedAt: v.number(),
+  }).index("by_company", ["companyId"]),
+
+  /**
+   * A website's own data limits, where they differ from its company's
+   * (Anthony, 2026-09-24: "we need to set a limit on the website not just the
+   * company"). A field left absent follows the company; a website following
+   * its company stores no row at all, so changing the company moves it.
+   */
+  websiteDataLimits: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    companyId: v.id("companies"),
+    keywordsPerSite: v.optional(v.number()),
+    backlinksPerSite: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_hold", ["companyWebsiteId"])
+    .index("by_company", ["companyId"]),
 
   /**
    * How often the answers to one website's questions named another website,

@@ -14,9 +14,11 @@ import {
   type SeoOperation,
 } from "./dataForSeoRegistry";
 import { aiCitationOperationId } from "./seoAiEngines";
-import { findSeoLocation } from "./utils/seoLocations";
+import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
+import { readSiteDataLimits } from "./companyDataLimits";
+import { LIST_COUNT_DAYS, listPages, pagedListOf, pagedListParams } from "./sitePagedLists";
 import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import {
@@ -251,6 +253,11 @@ async function expandPage(
     // A tracked site is collected at the rate of the one it is measured
     // against. Numbers from different weeks are not a comparison.
     const targets = [companyWebsite.websiteId, ...tracked.map((row) => row.websiteId)];
+    // Each target's own hold, for the limits it may set for itself.
+    const holdOf = new Map<Id<"websites">, Doc<"companyWebsites">>([
+      [companyWebsite.websiteId, companyWebsite],
+      ...tracked.map((row) => [row.websiteId, row] as [Id<"websites">, Doc<"companyWebsites">]),
+    ]);
 
     // The questions this website asks the AI engines. Planned once per
     // website, not per target: a competitor is named *in* the answer, it is
@@ -285,6 +292,16 @@ async function expandPage(
       for (const operation of operations) {
         if (planned + cycle.plannedCount >= SEO_MAX_SENDS_PER_CYCLE) {
           return { planned, reused, lastCursor, lastCreatedAt, exhausted: false, cappedPlan: true };
+        }
+
+        // Every keyword and every link are as many requests as the
+        // website's limit allows, not one (`sitePagedLists.ts`).
+        if (pagedListOf(operation.id)) {
+          const list = await planPagedList(ctx, { cycle, companyWebsite, hold: holdOf.get(websiteId) ?? companyWebsite, websiteId, operation, sendIndex, now });
+          planned += list.planned;
+          reused += list.reused;
+          sendIndex += list.planned;
+          continue;
         }
 
         const result = await planPull(ctx, {
@@ -753,6 +770,102 @@ async function planPull(
 
   await writeLine(ctx, args, pullId, false);
   return "PLANNED";
+}
+
+/**
+ * A website's long list for this cycle — every keyword, or every link: nothing
+ * when its limit (its own, else its company's) is no more than an everyday
+ * call already brings, the week's list when one is held or on its way, and
+ * otherwise a request per thousand rows up to the limit — as many as the
+ * site's last count says it has, or the first alone when that is not known
+ * yet (`listPages` and `queueListPages` in `sitePagedLists.ts`).
+ */
+async function planPagedList(
+  ctx: MutationCtx,
+  args: {
+    cycle: Doc<"seoCollectionCycles">;
+    /** The hold being walked, whose place a rival is asked from. */
+    companyWebsite: Doc<"companyWebsites">;
+    /** The target's own hold, whose limit it keeps — the walked hold, or a rival's. */
+    hold: Doc<"companyWebsites">;
+    websiteId: Id<"websites">;
+    operation: SeoOperation;
+    sendIndex: number;
+    now: Date;
+  },
+): Promise<{ planned: number; reused: number }> {
+  const { operation } = args;
+  const list = pagedListOf(operation.id);
+  const website = await ctx.db.get(args.websiteId);
+  if (!list || !website) return { planned: 0, reused: 0 };
+  const limit = (await readSiteDataLimits(ctx, args.cycle.companyId, args.hold._id))[list.limit];
+  if (limit <= list.coveredUpTo) return { planned: 0, reused: 0 };
+
+  const lineArgs = { cycle: args.cycle, websiteId: args.websiteId, operationId: operation.id };
+  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now);
+  if (held) {
+    await writeLine(ctx, lineArgs, held, true);
+    return { planned: 0, reused: 1 };
+  }
+
+  const place = args.companyWebsite.locationCode ?? DEFAULT_LOCATION_CODE;
+  const counted = (await ctx.db
+    .query("siteDaySummaries")
+    .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", place))
+    .order("desc")
+    .take(LIST_COUNT_DAYS))
+    .map((row) => row[list.count])
+    .find((count): count is number => typeof count === "number") ?? null;
+
+  let planned = 0;
+  for (const page of listPages(limit, counted)) {
+    const params = pagedListParams(operation.id, website.host, args.companyWebsite.locationCode, page);
+    if (!params) break;
+    const idempotencyKey = buildSeoIdempotencyKey({
+      operationId: operation.id,
+      websiteId: args.websiteId,
+      params,
+      cycleStartedAt: args.cycle.startedAt,
+    });
+    // Today's same request already on its way is shared, as `planPull`
+    // shares one. A finished answer was the hold's to find above — and a
+    // sandbox answer or a failure is never served.
+    const inFlight = await ctx.db
+      .query("seoDataPulls")
+      .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
+      .filter((q) => q.or(
+        q.eq(q.field("status"), "PENDING"),
+        q.eq(q.field("status"), "CLAIMED"),
+        q.eq(q.field("status"), "SUBMITTED"),
+      ))
+      .first();
+    if (inFlight) {
+      await writeLine(ctx, lineArgs, inFlight._id, true);
+      continue;
+    }
+    const pullId = await ctx.db.insert("seoDataPulls", {
+      operationId: operation.id,
+      family: operation.family,
+      mode: operation.mode,
+      target: website.host,
+      websiteId: args.websiteId,
+      companyId: args.cycle.companyId,
+      taskArgsJson: JSON.stringify(params),
+      status: "PENDING",
+      tag: idempotencyKey,
+      idempotencyKey,
+      cycleId: args.cycle._id,
+      dueAt: args.cycle.startedAt + (args.sendIndex + planned) * SEO_DUE_SPACING_MS,
+      attempts: 0,
+      costUsd: 0,
+      sandbox: false,
+      agentRunId: args.cycle.agentRunId,
+      submittedAt: Date.now(),
+    });
+    await writeLine(ctx, lineArgs, pullId, false);
+    planned += 1;
+  }
+  return { planned, reused: 0 };
 }
 
 /**

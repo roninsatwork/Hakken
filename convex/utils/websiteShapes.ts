@@ -40,6 +40,16 @@ export const companyWebsiteRow = v.object({
   collecting: v.boolean(),
   scheduleSource,
   nextRunAt: v.union(v.number(), v.null()),
+  /**
+   * How much is kept about it (`companyDataLimits.ts`): its own limit where
+   * one is set on its page, else its company's — and which each is.
+   */
+  limits: v.object({
+    keywordsPerSite: v.number(),
+    backlinksPerSite: v.number(),
+    keywordsOwn: v.boolean(),
+    backlinksOwn: v.boolean(),
+  }),
 });
 
 export const companyWebsitePageShape = paginationResultValidator(companyWebsiteRow);

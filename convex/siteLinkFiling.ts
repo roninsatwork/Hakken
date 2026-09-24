@@ -11,7 +11,9 @@ import {
   parseReferringDomains,
   parseReferringIps,
 } from "./dataForSeoLinkParsers";
+import { BACKLINK_LIST_OPERATION_ID } from "./dataForSeoLinkOperations";
 import { expandSeoResult } from "./dataForSeoSlim";
+import { sentOffset } from "./sitePagedLists";
 import { placesWatching } from "./siteRankings";
 import { getErrorMessage } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
@@ -26,6 +28,12 @@ import { bandCountsValidator } from "./utils/siteShapes";
  * page at a time. A re-parse of an old pull changes nothing, because only the
  * newest bought list of each kind may stand.
  *
+ * **Every link comes in pages.** The list of every link (`backlinks_all`) is
+ * bought a thousand links a request (`sitePagedLists.ts`), so it is one list
+ * by its day rather than by one pull: each page files under the list's day,
+ * lists from earlier days are removed, and a page from an older list than
+ * the one standing is not filed at all.
+ *
  * **Histories fill in.** Links gained and lost are kept a row per week,
  * replaced by any later answer about the same week. The two history calls
  * (`backlinks_history`, `ranking_history`) are no longer collected — the owner
@@ -35,8 +43,8 @@ import { bandCountsValidator } from "./utils/siteShapes";
  */
 
 const LINK_OPERATIONS = new Set([
-  "backlinks_list", "backlinks_broken", "referring_domains_list", "anchors_list", "referring_ips_list",
-  "backlinks_new_lost", "backlinks_history", "ranking_history",
+  "backlinks_list", BACKLINK_LIST_OPERATION_ID, "backlinks_broken", "referring_domains_list", "anchors_list",
+  "referring_ips_list", "backlinks_new_lost", "backlinks_history", "ranking_history",
 ]);
 
 /** Whether an operation is filed here rather than by the generic parse. */
@@ -54,7 +62,7 @@ const CLEAR_PAGE = 400;
 const DAYS_PER_WRITE = 60;
 
 const linkStatus = v.union(v.literal("LIVE"), v.literal("NEW"), v.literal("LOST"));
-const linkPass = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"));
+const linkPass = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
 const maybeNumber = v.optional(v.number());
 const maybeString = v.optional(v.string());
 
@@ -102,6 +110,24 @@ export async function fileSiteLinkPull(ctx: ActionCtx, pullId: Id<"seoDataPulls"
           await ctx.runMutation(internal.siteLinkFiling.writeBacklinks, { websiteId, pullId, pass, day, rows });
         }
         await clearOlder(ctx, "siteBacklinks", websiteId, pullId, pass);
+        break;
+      }
+      case BACKLINK_LIST_OPERATION_ID: {
+        const listPage: { day: string } | null = await ctx.runQuery(internal.sitePagedLists.listPageOf, { pullId });
+        if (!listPage) break;
+        // A late page of last week's list, filed over this week's, would
+        // bring back links since lost.
+        const newer: boolean = await ctx.runQuery(internal.siteLinkFiling.hasNewerLinkList, { websiteId, day: listPage.day });
+        if (newer) break;
+        const { rows: links, total } = parseBacklinkList(result);
+        await clearPull(ctx, "siteBacklinks", pullId);
+        for (const rows of chunks(links, ROWS_PER_WRITE)) {
+          await ctx.runMutation(internal.siteLinkFiling.writeBacklinks, { websiteId, pullId, pass: "ALL", day: listPage.day, rows });
+        }
+        await clearLinkListBefore(ctx, websiteId, listPage.day);
+        if (sentOffset(pull.taskArgsJson) === 0 && total !== undefined) {
+          await ctx.runMutation(internal.sitePagedLists.queueListPages, { pullId, total });
+        }
         break;
       }
       case "referring_domains_list": {
@@ -228,6 +254,40 @@ async function clearOlder(
   }
 }
 
+/** Remove the website's every-link rows from lists older than this day, a page at a time. */
+async function clearLinkListBefore(ctx: ActionCtx, websiteId: Id<"websites">, day: string): Promise<void> {
+  for (;;) {
+    const removed: number = await ctx.runMutation(internal.siteLinkFiling.removeLinkListBefore, { websiteId, day });
+    if (removed < CLEAR_PAGE) return;
+  }
+}
+
+/** Whether a list of every link newer than this day already stands. */
+export const hasNewerLinkList = internalQuery({
+  args: { websiteId: v.id("websites"), day: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const newer = await ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_day", (q) => q.eq("websiteId", args.websiteId).eq("pass", "ALL").gt("day", args.day))
+      .first();
+    return newer !== null;
+  },
+});
+
+export const removeLinkListBefore = internalMutation({
+  args: { websiteId: v.id("websites"), day: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_day", (q) => q.eq("websiteId", args.websiteId).eq("pass", "ALL").lt("day", args.day))
+      .take(CLEAR_PAGE);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  },
+});
+
 /**
  * Whether this is the newest bought answer of its kind for the website. A
  * list filed from an older one would put last month's links back.
@@ -316,6 +376,15 @@ export const writeBacklinks = internalMutation({
       lastSeen: maybeString,
       statusCode: maybeNumber,
       country: maybeString,
+      attributes: v.optional(v.array(v.string())),
+      location: maybeString,
+      platformTypes: v.optional(v.array(v.string())),
+      spamScore: maybeNumber,
+      linkRank: maybeNumber,
+      linksOnPage: maybeNumber,
+      indirect: v.optional(v.boolean()),
+      language: maybeString,
+      previousSeen: maybeString,
     })),
   },
   returns: v.null(),

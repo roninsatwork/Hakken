@@ -39,13 +39,19 @@ const HOLDS_READ = 200;
  */
 export type RankExtras = Partial<Pick<Doc<"siteKeywordRanks">,
   | "cpc" | "difficulty" | "trend" | "serpFeatures" | "traffic" | "trafficValue"
-  | "pageRank" | "pageReferringDomains" | "pageBacklinks">>;
+  | "pageRank" | "pageReferringDomains" | "pageBacklinks"
+  | "competition" | "competitionLevel" | "searchIntent" | "resultsCount"
+  | "previousPositionDfs" | "movementDfs">>;
 
 /** The facts about the search itself, which do not depend on who ranks or where. */
-const SEARCH_FACTS = ["cpc", "difficulty", "trend", "serpFeatures"] as const;
+const SEARCH_FACTS = ["cpc", "difficulty", "trend", "serpFeatures", "competition", "competitionLevel", "searchIntent", "resultsCount"] as const;
 
-/** The facts about the ranking page, which belong to that page and no other. */
-const PAGE_FACTS = ["pageRank", "pageReferringDomains", "pageBacklinks"] as const;
+/**
+ * The facts about the ranking page, which belong to that page and no other —
+ * and DataForSEO's own previous place and move for it, which are about this
+ * ranking of this page.
+ */
+const PAGE_FACTS = ["pageRank", "pageReferringDomains", "pageBacklinks", "previousPositionDfs", "movementDfs"] as const;
 
 /**
  * The extras a row should hold after a sighting: the sighting's own where it

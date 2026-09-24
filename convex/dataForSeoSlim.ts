@@ -19,7 +19,8 @@
  * pull always files, and what is lost is the weakest links.
  *
  * Only the calls added for the Sites link pages are trimmed
- * (`dataForSeoLinkOperations.ts`); everything else is stored as it came.
+ * (`dataForSeoLinkOperations.ts`); everything else is stored as it came —
+ * except a Google results page too big to keep whole (`fitSerpResult`).
  * `expandSeoResult` lays a table back out as the items the parsers read.
  */
 
@@ -30,13 +31,18 @@ const LINK_FIELDS = [
   "domain_from", "url_from", "url_to", "anchor", "dofollow", "is_new", "is_lost", "is_broken",
   "first_seen", "last_seen", "page_from_rank", "domain_from_rank", "item_type",
   "url_to_status_code", "domain_from_country",
+  // Everything else about the link that is not the linking page's words
+  // (2026-09-24, "store whatever we can").
+  "attributes", "semantic_location", "domain_from_platform_type", "backlink_spam_score", "rank",
+  "links_count", "is_indirect_link", "page_from_language", "prev_seen",
 ];
 
 /** Dates DataForSEO sends with a time and zone; the parsers read the day. */
-const DAY_FIELDS = new Set(["first_seen", "last_seen", "lost_date"]);
+const DAY_FIELDS = new Set(["first_seen", "last_seen", "lost_date", "prev_seen"]);
 
 const LIST_FIELDS: Record<string, readonly string[]> = {
   backlinks_list: LINK_FIELDS,
+  backlinks_all: LINK_FIELDS,
   backlinks_broken: LINK_FIELDS,
   referring_domains_list: [
     "domain", "rank", "backlinks", "first_seen", "lost_date", "backlinks_spam_score",
@@ -134,6 +140,14 @@ export function expandSeoResult(result: unknown): unknown {
   if (!Array.isArray(result)) return result;
   return result.map((entry) => {
     const record = asRecord(entry);
+    const ranked = asRecord(record?.packedRanked);
+    if (record && ranked && Array.isArray(ranked.fields) && Array.isArray(ranked.rows)) {
+      const fields = ranked.fields.filter((field): field is string => typeof field === "string");
+      const expanded: Unknown = {};
+      for (const [key, value] of Object.entries(record)) if (key !== "packedRanked") expanded[key] = value;
+      expanded.items = ranked.rows.map((row) => (Array.isArray(row) ? expandRankedRow(fields, row) : {}));
+      return expanded;
+    }
     const packed = asRecord(record?.packedItems);
     if (!record || !packed || !Array.isArray(packed.fields) || !Array.isArray(packed.rows)) return entry;
     const fields = packed.fields.filter((field): field is string => typeof field === "string");
@@ -152,8 +166,202 @@ export function expandSeoResult(result: unknown): unknown {
   });
 }
 
+/**
+ * The full keyword list's rows, flattened to what is read: a thousand rows of
+ * DataForSEO's nested items — each carrying the ranking page's title and
+ * description, which are page text — are several times the raw copy's size.
+ * Every fact the parser reads is kept; the page's words are not.
+ */
+const RANKED_FIELDS = [
+  "keyword", "type", "rank_absolute", "url", "etv", "estimated_paid_traffic_cost",
+  "search_volume", "cpc", "competition", "competition_level", "keyword_difficulty",
+  "trend_from", "trend", "serp_item_types", "main_intent", "se_results_count",
+  "previous_rank_absolute", "is_new", "is_up", "is_down", "page_rank", "referring_domains", "backlinks",
+] as const;
+
+/** One ranked-keywords item as a row of `RANKED_FIELDS`. */
+function rankedRow(item: Unknown): unknown[] {
+  const data = asRecord(item.keyword_data);
+  const info = asRecord(data?.keyword_info);
+  const element = asRecord(item.ranked_serp_element);
+  const serp = asRecord(element?.serp_item);
+  const changes = asRecord(serp?.rank_changes);
+  // The monthly searches as volumes, oldest first, from the month they start.
+  const months = (Array.isArray(info?.monthly_searches) ? info.monthly_searches : [])
+    .map(asRecord)
+    .flatMap((month) => (month && typeof month.year === "number" && typeof month.month === "number"
+      ? [{ order: month.year * 12 + (month.month - 1), volume: typeof month.search_volume === "number" ? month.search_volume : 0 }]
+      : []))
+    .sort((left, right) => left.order - right.order);
+  const from = months[0]?.order;
+  const values: Record<(typeof RANKED_FIELDS)[number], unknown> = {
+    keyword: data?.keyword,
+    type: serp?.type,
+    rank_absolute: serp?.rank_absolute,
+    url: serp?.url,
+    etv: serp?.etv,
+    estimated_paid_traffic_cost: serp?.estimated_paid_traffic_cost,
+    search_volume: info?.search_volume,
+    cpc: info?.cpc,
+    competition: info?.competition,
+    competition_level: info?.competition_level,
+    keyword_difficulty: asRecord(data?.keyword_properties)?.keyword_difficulty ?? element?.keyword_difficulty,
+    trend_from: from === undefined ? null : `${Math.floor(from / 12)}-${String((from % 12) + 1).padStart(2, "0")}`,
+    trend: months.length > 0 ? months.map((month) => month.volume) : null,
+    serp_item_types: asRecord(data?.serp_info)?.serp_item_types ?? element?.serp_item_types,
+    main_intent: asRecord(data?.search_intent_info)?.main_intent,
+    se_results_count: asRecord(data?.serp_info)?.se_results_count,
+    previous_rank_absolute: changes?.previous_rank_absolute,
+    is_new: changes?.is_new,
+    is_up: changes?.is_up,
+    is_down: changes?.is_down,
+    page_rank: asRecord(serp?.rank_info)?.page_rank,
+    referring_domains: asRecord(serp?.backlinks_info)?.referring_domains,
+    backlinks: asRecord(serp?.backlinks_info)?.backlinks,
+  };
+  return RANKED_FIELDS.map((field) => (values[field] === undefined ? null : values[field]));
+}
+
+/** A ranked-keywords answer with its items as `packedRanked` rows, its metrics kept whole. */
+function packRankedResult(result: unknown): unknown {
+  if (!Array.isArray(result)) return result;
+  const budget = Math.floor(STORED_LIST_CHARS / Math.max(result.length, 1));
+  return result.map((entry) => {
+    const record = asRecord(entry);
+    if (!record) return entry;
+    const top = { ...topLevel(record), ...(asRecord(record.metrics) ? { metrics: record.metrics } : {}) };
+    const items = Array.isArray(record.items) ? record.items : [];
+    const rows = items.flatMap((item) => (asRecord(item) ? [rankedRow(asRecord(item)!)] : []));
+    let room = budget - JSON.stringify(top).length - JSON.stringify(RANKED_FIELDS).length - 100;
+    let fit = 0;
+    for (const row of rows) {
+      room -= JSON.stringify(row).length + 1;
+      if (room < 0) break;
+      fit += 1;
+    }
+    return { ...top, packedRanked: { fields: [...RANKED_FIELDS], rows: rows.slice(0, fit), dropped: rows.length - fit } };
+  });
+}
+
+/** One packed ranked-keywords row laid back out as the item DataForSEO sent, as far as it was kept. */
+function expandRankedRow(fields: string[], row: unknown[]): Unknown {
+  const value = (field: string) => {
+    const at = fields.indexOf(field);
+    return at < 0 || row[at] === null ? undefined : row[at];
+  };
+  const trend = value("trend");
+  const from = value("trend_from");
+  const [year, month] = typeof from === "string" ? from.split("-").map(Number) : [NaN, NaN];
+  const monthly = Array.isArray(trend) && Number.isFinite(year) && Number.isFinite(month)
+    ? trend.map((volume, index) => {
+      const order = year * 12 + (month - 1) + index;
+      return { year: Math.floor(order / 12), month: (order % 12) + 1, search_volume: volume };
+    })
+    : undefined;
+  const compact = (record: Unknown) => Object.fromEntries(Object.entries(record).filter(([, entry]) => entry !== undefined));
+  return {
+    keyword_data: compact({
+      keyword: value("keyword"),
+      keyword_info: compact({
+        search_volume: value("search_volume"),
+        cpc: value("cpc"),
+        competition: value("competition"),
+        competition_level: value("competition_level"),
+        ...(monthly ? { monthly_searches: monthly } : {}),
+      }),
+      keyword_properties: compact({ keyword_difficulty: value("keyword_difficulty") }),
+      serp_info: compact({ serp_item_types: value("serp_item_types"), se_results_count: value("se_results_count") }),
+      search_intent_info: compact({ main_intent: value("main_intent") }),
+    }),
+    ranked_serp_element: {
+      serp_item: compact({
+        type: value("type"),
+        rank_absolute: value("rank_absolute"),
+        url: value("url"),
+        etv: value("etv"),
+        estimated_paid_traffic_cost: value("estimated_paid_traffic_cost"),
+        rank_changes: compact({
+          previous_rank_absolute: value("previous_rank_absolute"),
+          is_new: value("is_new"),
+          is_up: value("is_up"),
+          is_down: value("is_down"),
+        }),
+        rank_info: compact({ page_rank: value("page_rank") }),
+        backlinks_info: compact({ referring_domains: value("referring_domains"), backlinks: value("backlinks") }),
+      }),
+    },
+  };
+}
+
+/** An organic result's facts: where, whose, which page — not its title or snippet. */
+const SERP_ORGANIC_FIELDS = [
+  "type", "rank_group", "rank_absolute", "position", "domain", "url", "website_name",
+  "is_featured_snippet", "is_image", "is_video", "is_malicious", "is_web_story", "amp_version",
+];
+
+/** Every `domain` and its `url` inside a feature, however deep its references sit. Bounded. */
+function sourcesIn(value: unknown, found: Unknown[], depth = 0): void {
+  if (depth > 5 || found.length >= 60) return;
+  if (Array.isArray(value)) {
+    for (const entry of value) sourcesIn(entry, found, depth + 1);
+    return;
+  }
+  const record = asRecord(value);
+  if (!record) return;
+  if (typeof record.domain === "string") found.push(pick(record, ["domain", "url"]));
+  for (const child of Object.values(record)) {
+    if (typeof child === "object" && child !== null) sourcesIn(child, found, depth + 1);
+  }
+}
+
+/** One results-page item as `parseSerpPage` reads it. */
+function serpItem(item: Unknown): Unknown {
+  const type = item.type;
+  if (type === "organic") return pick(item, SERP_ORGANIC_FIELDS);
+  const kept = pick(item, ["type", "rank_group", "rank_absolute", "domain", "url"]);
+  // Google's own short prompts, kept for the Questions people ask screen.
+  if (type === "people_also_ask" || type === "related_searches") {
+    const items = Array.isArray(item.items) ? item.items : [];
+    return {
+      ...kept,
+      items: items.map((entry) => (typeof entry === "string" ? entry : pick(asRecord(entry) ?? {}, ["type", "title"]))),
+    };
+  }
+  // Everything else — an AI Overview, a map pack, a featured snippet — by
+  // the websites it names.
+  const sources: Unknown[] = [];
+  for (const [key, child] of Object.entries(item)) {
+    if (key !== "domain" && typeof child === "object" && child !== null) sourcesIn(child, sources);
+  }
+  return sources.length > 0 ? { ...kept, references: sources } : kept;
+}
+
+/**
+ * A Google results page, whole when it fits the raw copy, and otherwise cut
+ * to what the parsers read. A check reads a hundred results (2026-09-24), and
+ * a hundred with their titles, snippets and sitelinks — beside an AI Overview
+ * and "People also ask" answers — can pass the ceiling, when the copy would be
+ * dropped and a paid check filed nothing at all.
+ */
+function fitSerpResult(result: unknown): unknown {
+  if (!Array.isArray(result) || JSON.stringify(result).length <= STORED_LIST_CHARS) return result;
+  return result.map((entry) => {
+    const record = asRecord(entry);
+    if (!record) return entry;
+    const items = Array.isArray(record.items) ? record.items : [];
+    return {
+      ...topLevel(record),
+      ...(Array.isArray(record.item_types) ? { item_types: record.item_types } : {}),
+      items: items.map((item) => (asRecord(item) ? serpItem(asRecord(item)!) : item)),
+      trimmed: true,
+    };
+  });
+}
+
 /** The answer as it should be stored for this operation. */
 export function slimSeoResult(operationId: string, result: unknown): unknown {
+  if (operationId === "serp_google_organic") return fitSerpResult(result);
+  if (operationId === "domain_ranked_keywords_list") return packRankedResult(result);
   const fields = LIST_FIELDS[operationId];
   if (fields) return packResult(result, fields);
   if (operationId === "ranking_history") {

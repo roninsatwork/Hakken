@@ -71,6 +71,14 @@ describe("paid search", () => {
       items: [ranked("plumber leeds", "organic"), ranked("emergency plumber", "paid")],
     }]);
     expect(counted.metrics).toMatchObject({ rankedKeywords: 1, returnedKeywords: 1 });
+    // A results-page feature the site appears in is counted, never filed as a ranking.
+    const withFeatures = parseDomainRankedKeywords([{
+      total_count: 3,
+      metrics: { organic: { count: 1 }, ai_overview_reference: { count: 4 }, featured_snippet: { count: 2 }, local_pack: { count: 1 } },
+      items: [ranked("plumber leeds", "organic"), ranked("plumber near me", "ai_overview_reference" as never), ranked("boiler repair", "local_pack" as never)],
+    }]);
+    expect(withFeatures.positions?.map((row) => row.keyword)).toEqual(["plumber leeds"]);
+    expect(withFeatures.metrics).toMatchObject({ aiOverviewRefs: 4, featuredSnippets: 2, localPacks: 1, returnedKeywords: 1 });
   });
 
   test("the paid list is the newest answer's, and an older answer filed again cannot bring stopped adverts back", async () => {

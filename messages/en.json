@@ -1376,6 +1376,10 @@
       "websiteColumn": "Website",
       "heldAsColumn": "Type",
       "collectionColumn": "Checked",
+      "limitsColumn": "Limits",
+      "limitKeywords": "{count, number} keywords",
+      "limitBacklinks": "{count, number} backlinks",
+      "ownLimit": "own limit",
       "owned": "Owned",
       "tracked": "Competitor",
       "against": "of {host}",
@@ -1417,6 +1421,21 @@
       "movesColumn": "To do"
     },
     "companyWebsiteDetail": {
+      "limits": {
+        "title": "Data limits for this website",
+        "subtitle": "How much is kept about this website. Left on “Follow the company”, it keeps whatever the company's Data collection screen says.",
+        "keywordsLabel": "Keywords kept",
+        "keywordsDescription": "The searches that bring this site the most visits, refreshed weekly.",
+        "backlinksLabel": "Backlinks kept",
+        "backlinksDescription": "Every link to this site, strongest first, refreshed weekly.",
+        "follow": "Follow the company ({count, number})",
+        "keywordsChoice": "{count, number} keywords",
+        "backlinksChoice": "{count, number} backlinks",
+        "appliesNext": "Changes apply from this website’s next weekly refresh.",
+        "save": "Save limits",
+        "saved": "Limits saved",
+        "saveFailed": "The limits could not be saved."
+      },
       "loading": "Loading website...",
       "notFound": "Website not found",
       "settingsTitle": "How often, and from where",
@@ -1549,7 +1568,7 @@
         "searchColumn": "Search",
         "positionColumn": "Position",
         "notCheckedYet": "Not checked yet",
-        "notOnPage": "Not on page one",
+        "notOnPage": "Not in the top 100",
         "up": "up",
         "down": "down",
         "verdictColumn": "How it's doing",
@@ -1633,7 +1652,7 @@
         },
         "slipping": {
           "title": "“{keyword}” dropped from {from} to {to}",
-          "titleGone": "“{keyword}” dropped off page one (it was {from})",
+          "titleGone": "“{keyword}” dropped out of the top 100 (it was {from})",
           "detail": "Checked {day}.",
           "look": "See the searches",
           "take": "Done"
@@ -1708,6 +1727,20 @@
         "standaloneHint": "What they would cost with no other client sharing the data. Price against this.",
         "saving": "Saved by sharing · 30d",
         "savingHint": "Served from data another client had already paid for."
+      },
+      "limits": {
+        "title": "Data limits",
+        "intro": "How much is kept about each website this company holds — its own sites and every competitor it watches. More rows mean fuller lists to open on the Sites screens, and cost more.",
+        "keywordsLabel": "Keywords kept per website",
+        "keywordsDescription": "The searches that bring each site the most visits, refreshed weekly. About $0.13 per 1,000 keywords a week; a site with fewer keywords costs only what it has.",
+        "backlinksLabel": "Backlinks kept per website",
+        "backlinksDescription": "Every link to each site, strongest first, refreshed weekly. About $0.04 per 1,000 links a week.",
+        "choice": "{count, number} per website",
+        "usingDefaults": "Using the defaults: 1,000 keywords and 1,000 backlinks per website.",
+        "costNote": "Changes apply from each website's next weekly refresh.",
+        "save": "Save limits",
+        "saved": "Limits saved",
+        "saveFailed": "The limits could not be saved."
       }
     },
     "websites": {
@@ -5393,6 +5426,7 @@
       "operation": {
         "backlinks_summary": "Who links to it",
         "domain_ranked_keywords": "What it ranks for",
+        "domain_ranked_keywords_list": "Every keyword it ranks for",
         "domain_competitors": "Who competes with it",
         "serp_google_organic": "Where it ranks for one search",
         "keyword_search_volume": "How often terms are searched",
@@ -5404,6 +5438,7 @@
         "ai_citation_gemini": "Asked Gemini",
         "ai_citation_perplexity": "Asked Perplexity",
         "backlinks_list": "Every site linking to it",
+        "backlinks_all": "Every link to it",
         "backlinks_broken": "Links to its broken pages",
         "referring_domains_list": "Every linking website",
         "anchors_list": "The words links use",
@@ -7940,7 +7975,7 @@
     "common": {
       "lastChecked": "Last checked",
       "notChecked": "Not checked yet",
-      "notOnPageOne": "Not on page one",
+      "notOnPageOne": "Not in the top 100",
       "yes": "Yes",
       "none": "–",
       "you": "{host} (this site)",
@@ -8445,14 +8480,14 @@
     },
     "googleAbove": {
       "title": "Who ranks above you",
-      "description": "For each search this website is measured on, the websites Google puts above it — or the whole of page one when it is not there. Checked from {place}.",
+      "description": "For each search this website is measured on, the websites Google puts above it — or the whole of page one when it is not in the top 100. Checked from {place}.",
       "searchPlaceholder": "Find a search or website…",
       "positionFilter": "Where you are",
       "anyPosition": "Anywhere",
       "positions": {
         "top3": "In the top 3",
         "pageOne": "Lower on page one",
-        "notOnPage": "Not on page one"
+        "notOnPage": "Not in the top 100"
       },
       "columns": {
         "search": "Search",
@@ -8463,7 +8498,7 @@
       },
       "rival": "competitor",
       "nobodyAbove": "Nobody — you are first",
-      "notOnPage": "Not on page one",
+      "notOnPage": "Not in the top 100",
       "notChecked": "Not checked yet",
       "more": "+{count} more",
       "chartTitle": "Competitors above you",
@@ -8640,9 +8675,13 @@
     "backlinksAll": {
       "title": "All backlinks",
       "description": "Every website linking here, with its strongest link: the page it is on, the words used and whether search engines follow it.",
+      "descriptionEvery": "Every link to this site, from the strongest linking websites down, as many as its limit keeps: the page it is on, the words used and whether search engines follow it.",
       "searchPlaceholder": "Find a website, page or anchor…",
       "sortRank": "Strongest website first",
       "sortNewest": "Newest first",
+      "showLabel": "Which links",
+      "showOne": "Strongest link from each website",
+      "showEvery": "Every link",
       "columns": {
         "from": "Linking page",
         "anchor": "Anchor and link",
@@ -8767,6 +8806,13 @@
       "empty": "No link changes recorded in these dates."
     },
     "audit": {
+      "problemPages": {
+        "loading": "Loading the pages…",
+        "none": "No page detail for this crawl yet. It is fetched after each crawl, from the next one on.",
+        "count": "{count, plural, one {# page} other {# pages}} in the newest crawl.",
+        "answer": "Answered {code}",
+        "brokenTo": "Broken link to {to} (answered {code})"
+      },
       "title": "Site audit",
       "description": "What a crawl of up to a hundred of this website's pages found: pages that do not work, missing or duplicate titles, slow pages and more. Recrawled monthly.",
       "score": "Technical score",

@@ -19,6 +19,7 @@ import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_component
 import { useSite, useSiteId } from "../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { ListDownload } from "../../_components/SiteDownloads";
+import { ProblemPages } from "./ProblemPages";
 
 type Severity = "ERROR" | "WARNING" | "NOTICE";
 const SEVERITIES: Severity[] = ["ERROR", "WARNING", "NOTICE"];
@@ -46,6 +47,8 @@ export default function SiteAuditPage() {
   const site = useSite();
   const range = useSiteRange();
   const audit = useQuery(api.siteCrawl.siteAudit, { siteId });
+  // The problem opened to see its pages.
+  const [openCheck, setOpenCheck] = useState<string | null>(null);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const [search, setSearch, term] = useSiteSearch();
   const [severity, setSeverity] = useSiteParam<Severity | "">("severity", "", SEVERITIES);
@@ -110,6 +113,7 @@ export default function SiteAuditPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.check}
+        onRowClick={(row) => setOpenCheck(row.check)}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
         filters={
@@ -138,6 +142,7 @@ export default function SiteAuditPage() {
           { key: "checked", header: t("columns.lastChecked"), cell: () => <CheckedCell day={audit?.day ?? null} /> },
         ]}
       />
+      <ProblemPages siteId={siteId} check={openCheck} label={openCheck ? label(openCheck) : ""} onClose={() => setOpenCheck(null)} />
     </div>
   );
 }

@@ -542,7 +542,7 @@ describe("Google's first page for each search", () => {
       questions: ["How much does a website cost?"],
       related: ["cheap web design"],
     });
-    await check("ai agency", [{ position: 1, domain: "reddit.com" }, { position: 2, domain: "example.com" }], {
+    await check("ai agency", [{ position: 1, domain: "reddit.com" }, { position: 2, domain: "example.com" }, { position: 12, domain: "deep.example" }], {
       features: ["people_also_ask", "local_pack"],
       localPackDomains: ["maps-agency.com"],
       questions: ["How much does a website cost?", "What does an AI agency do?"],
@@ -552,7 +552,7 @@ describe("Google's first page for each search", () => {
     const above = await asRonins.query(api.siteGoogleSerp.listAbove, { siteId: own.holdId });
     expect(above.map((row) => [row.keyword, row.position, row.above.map((result) => [result.domain, result.isRival]), row.rivalsAbove])).toEqual([
       ["web design surrey", 4, [["lightflows.co.uk", true], ["example.com", false]], 1],
-      // Not on the page at all: the whole page is above it.
+      // Not in the hundred a check reads: page one is above it, not all hundred.
       ["ai agency", null, [["reddit.com", false], ["example.com", false]], 0],
     ]);
 

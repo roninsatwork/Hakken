@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { answerPlace, type AiEngine } from "./seoAiEngines";
 import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
+import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import {
@@ -309,19 +310,29 @@ export const completeRankedDay = internalQuery({
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     // From this place only: another place's complete pull says nothing about
-    // what this place's rankings lost.
-    const newest = (await ctx.db
-      .query("seoWebsiteMetrics")
-      .withIndex("by_website_operation_day", (q) =>
-        q.eq("websiteId", args.websiteId).eq("operationId", "domain_ranked_keywords"))
-      .order("desc")
-      .take(PLACES_READ_FOR_COMPLETE_DAY))
-      .find((row) => isThisPlace(row, args.locationCode));
-    if (!newest) return null;
-    const metrics = JSON.parse(newest.metricsJson) as { rankedKeywords?: number; returnedKeywords?: number };
-    const ranked = metrics.rankedKeywords ?? 0;
-    const returned = metrics.returnedKeywords ?? 0;
-    return ranked > 0 && returned >= ranked ? newest.day : null;
+    // what this place's rankings lost. The everyday call is complete when the
+    // site ranks for no more than it returns; the full list when its pages,
+    // counted as they go, reach the site's whole count. The newest of the two
+    // that is complete decides.
+    let newestComplete: string | null = null;
+    for (const operationId of ["domain_ranked_keywords", KEYWORD_LIST_OPERATION_ID]) {
+      const rows = (await ctx.db
+        .query("seoWebsiteMetrics")
+        .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", operationId))
+        .order("desc")
+        .take(PLACES_READ_FOR_COMPLETE_DAY))
+        .filter((row) => isThisPlace(row, args.locationCode));
+      // The everyday call speaks for itself only at its newest; a list's day is
+      // complete if any of its pages says so.
+      const candidates = operationId === KEYWORD_LIST_OPERATION_ID ? rows : rows.slice(0, 1);
+      const complete = candidates.find((row) => {
+        const metrics = JSON.parse(row.metricsJson) as { rankedKeywords?: number; returnedKeywords?: number };
+        const ranked = metrics.rankedKeywords ?? 0;
+        return ranked > 0 && (metrics.returnedKeywords ?? 0) >= ranked;
+      });
+      if (complete && (newestComplete === null || complete.day > newestComplete)) newestComplete = complete.day;
+    }
+    return newestComplete;
   },
 });
 
@@ -561,6 +572,12 @@ export const syncDays = internalMutation({
         if (typeof figures.paidTrafficCost === "number") into.paidTrafficCost = Math.round(figures.paidTrafficCost);
         const allBands = bandsFrom(figures);
         if (allBands) into.allBands = allBands;
+      } else if (row.operationId === KEYWORD_LIST_OPERATION_ID) {
+        // The full list asks for the site's results-page features, so its
+        // counts of them are the ones to show.
+        copy("featuredSnippets", "featuredSnippets");
+        copy("localPacks", "localPacks");
+        copy("aiOverviewRefs", "aiOverviewRefs");
       } else if (row.operationId === "backlinks_summary") {
         copy("backlinks", "backlinks");
         copy("referringDomains", "referringDomains");

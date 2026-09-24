@@ -71,11 +71,27 @@ export const claimSeoBatch = internalMutation({
       return { pulls: [], nextDueAt: null, capped: true };
     }
 
-    const due = await ctx.db
+    const waitingNow = await ctx.db
       .query("seoDataPulls")
       .withIndex("by_status_due", (q) => q.eq("status", "PENDING").lte("dueAt", now))
       .order("asc")
       .take(SEO_BATCH_SIZE * 2);
+
+    // A call waits for the Collector's next run. Collection switched off in
+    // the meantime — for the company, or for this website on the company —
+    // means nobody wants it any more, and it is dropped rather than bought.
+    const due: typeof waitingNow = [];
+    let dropped = 0;
+    for (const row of waitingNow) {
+      if (await stillWanted(ctx, row)) {
+        due.push(row);
+        continue;
+      }
+      await ctx.db.patch(row._id, { status: "FAILED", error: SWITCHED_OFF, completedAt: now });
+      dropped += 1;
+    }
+    // Everything this look found was dropped: say so, and look again straight away.
+    if (due.length === 0 && dropped > 0) return { pulls: [], nextDueAt: now, capped: false };
 
     if (due.length === 0) {
       const waiting = await ctx.db
@@ -114,6 +130,45 @@ export const claimSeoBatch = internalMutation({
     return { pulls: claimed, nextDueAt: null, capped: false };
   },
 });
+
+/** Why a waiting call was not bought, on its row. */
+const SWITCHED_OFF = "Not bought: data collection was switched off for this company or website before it was sent.";
+
+/**
+ * Whether anyone still collecting wants this call (Anthony, 2026-09-24:
+ * "respect the switch"). A call is wanted by the company that planned it and
+ * by every company whose collection shares it; it is still wanted while any
+ * of them has collection switched on — for the company, and for this website
+ * on that company. A call nobody's company asked for is left alone.
+ */
+async function stillWanted(ctx: MutationCtx, pull: Doc<"seoDataPulls">): Promise<boolean> {
+  const companies = new Set<Id<"companies">>();
+  if (pull.companyId) companies.add(pull.companyId);
+  const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(LINES_READ_FOR_SWITCH);
+  for (const line of lines) companies.add(line.companyId);
+  if (companies.size === 0) return true;
+
+  for (const companyId of companies) {
+    const schedule = await ctx.db
+      .query("schedules")
+      .withIndex("by_company_agent", (q) => q.eq("companyId", companyId))
+      .first();
+    if (!schedule?.isActive) continue;
+    if (pull.websiteId) {
+      const websiteId = pull.websiteId;
+      const hold = await ctx.db
+        .query("companyWebsites")
+        .withIndex("by_company_website", (q) => q.eq("companyId", companyId).eq("websiteId", websiteId))
+        .first();
+      if (hold?.collectionEnabled === false) continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+/** Companies sharing one call read to decide whether it is still wanted. */
+const LINES_READ_FOR_SWITCH = 50;
 
 /**
  * Whether the Collector's run has spent its agent's limit.

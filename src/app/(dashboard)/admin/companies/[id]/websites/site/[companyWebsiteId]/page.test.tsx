@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 
@@ -19,7 +19,8 @@ const base = "/admin/companies/company_1/websites/site/companyWebsite_1";
  *
  * What it holds is that **every card opens the results behind it**, that the
  * shared lists are edited in one place — the website record — and that no
- * price appears on it. A tracked site gets its pairing instead.
+ * price appears on it. A tracked site gets its pairing instead. Both keep
+ * limits of their own on how much is collected about them.
  */
 describe("the Overview", () => {
   beforeEach(() => {
@@ -101,5 +102,49 @@ describe("the Overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "admin.siteView.moves.rival.take" }));
     expect(actOnMove).toHaveBeenCalledWith({ moveId: "move_1", action: "TAKE" });
+  });
+
+  it("keeps limits of its own on a competitor, following the company until one is chosen", async () => {
+    const saveLimits = vi.fn(async () => null);
+    vi.mocked(useMutation).mockImplementation(() => saveLimits as never);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": trackedHeader,
+      "websiteAttachments:listCompanyOwnedWebsites": [],
+      "companyDataLimits:getSiteDataLimits": {
+        own: { keywordsPerSite: null, backlinksPerSite: 5000 },
+        company: { keywordsPerSite: 10000, backlinksPerSite: 1000 },
+        choices: [100, 1000, 2000, 5000, 10000],
+      },
+    }));
+    renderWithProviders(<CompanySiteOverviewPage />);
+
+    const keywords = await screen.findByRole("combobox", { name: "admin.companyWebsiteDetail.limits.keywordsLabel" });
+    expect(keywords).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "admin.companyWebsiteDetail.limits.backlinksLabel" })).toHaveValue("5000");
+
+    fireEvent.change(keywords, { target: { value: "2000" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin.companyWebsiteDetail.limits.save" }));
+    await waitFor(() => expect(saveLimits).toHaveBeenCalledWith({
+      companyWebsiteId: "companyWebsite_1",
+      keywordsPerSite: 2000,
+      backlinksPerSite: 5000,
+    }));
+  });
+
+  it("puts the same limits on the company's own site", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websiteClientView:getSiteHeader": ownedHeader,
+      "websiteClientView:getSitePortfolio": { searches: {}, questions: {}, rivals: {}, untrackedNamed: 0 },
+      "companyDataLimits:getSiteDataLimits": {
+        own: { keywordsPerSite: null, backlinksPerSite: null },
+        company: { keywordsPerSite: 1000, backlinksPerSite: 1000 },
+        choices: [100, 1000, 2000, 5000, 10000],
+      },
+    }));
+    renderWithProviders(<CompanySiteOverviewPage />);
+
+    expect(await screen.findByText("admin.companyWebsiteDetail.limits.title")).toBeInTheDocument();
+    // Nothing chosen yet, so there is nothing to save.
+    expect(screen.getByRole("button", { name: "admin.companyWebsiteDetail.limits.save" })).toBeDisabled();
   });
 });

@@ -244,6 +244,29 @@ describe("A company's own websites", () => {
     expect(page.page.filter((row) => row.relationship === "TRACKED")).toHaveLength(3);
   });
 
+  test("the list says how much is kept about each website, and whose limit it is", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const company = await seedCompany(t);
+    const site = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "ours.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: site, url: "rival.com" });
+    const limitsOf = async () => Object.fromEntries((await admin.query(api.websites.getCompanyWebsites, {
+      companyId: company,
+      paginationOpts: firstPage,
+    })).page.map((row) => [row.displayHost, row.limits]));
+
+    // Nothing set: the defaults, followed from the company.
+    expect((await limitsOf())["rival.com"]).toEqual({ keywordsPerSite: 1_000, backlinksPerSite: 1_000, keywordsOwn: false, backlinksOwn: false });
+
+    await admin.mutation(api.companyDataLimits.setCompanyDataLimits, { companyId: company, keywordsPerSite: 10_000, backlinksPerSite: 1_000 });
+    const rivalHold = await t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect()).find((row) => row._id !== site)!._id);
+    await admin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: rivalHold, keywordsPerSite: 2_000, backlinksPerSite: null });
+
+    const limits = await limitsOf();
+    expect(limits["ours.com"]).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 1_000, keywordsOwn: false, backlinksOwn: false });
+    expect(limits["rival.com"]).toEqual({ keywordsPerSite: 2_000, backlinksPerSite: 1_000, keywordsOwn: true, backlinksOwn: false });
+  });
+
   test("the list shows only that company's websites", async () => {
     const t = harness();
     const admin = await superAdmin(t);
