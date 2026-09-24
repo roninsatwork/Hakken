@@ -11,20 +11,13 @@ import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { SiteFigure } from "../../_components/SiteFigure";
+import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 
 type Measure = "referringDomains" | "backlinks" | "domainRank";
 const MEASURES: Measure[] = ["referringDomains", "backlinks", "domainRank"];
 
-function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">
-      <div className="text-[12px] text-secondary">{label}</div>
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
-      {note ? <div className="mt-1 text-[12px] text-muted">{note}</div> : null}
-    </div>
-  );
-}
 
 /**
  * Backlinks › Summary: the site's domain rank, backlinks and linking websites
@@ -34,6 +27,7 @@ export default function SiteBacklinksPage() {
   const t = useTranslations("sites.backlinks");
   const tm = useTranslations("sites.measures");
   const siteId = useSiteId();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const range = useSiteRange();
   const [shown, setShown] = useState<Record<Measure, boolean>>({ referringDomains: true, backlinks: false, domainRank: true });
@@ -47,10 +41,10 @@ export default function SiteBacklinksPage() {
       <PageHeader icon={<LinkIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Figure label={t("domainRank")} value={formatNumber(latest?.domainRank)} note={t("rankScale")} />
-        <Figure label={t("backlinks")} value={formatNumber(latest?.backlinks)} />
-        <Figure label={t("referringDomains")} value={formatNumber(latest?.referringDomains ?? site?.counts.referringDomains)} />
-        <Figure label={t("broken")} value={formatNumber(latest?.brokenBacklinks ?? site?.counts.brokenBacklinks)} />
+        <SiteFigure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />
+        <SiteFigure label={t("backlinks")} value={formatNumber(latest?.backlinks)} href={listHref("backlinks/all", { links: "every" })} />
+        <SiteFigure label={t("referringDomains")} value={formatNumber(latest?.referringDomains ?? site?.counts.referringDomains)} href={listHref("backlinks/domains")} />
+        <SiteFigure label={t("broken")} value={formatNumber(latest?.brokenBacklinks ?? site?.counts.brokenBacklinks)} href={listHref("backlinks/broken")} />
       </div>
 
       <SiteChartCard

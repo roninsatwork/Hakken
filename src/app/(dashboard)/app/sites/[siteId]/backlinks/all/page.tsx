@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Link2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -7,7 +8,8 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { CheckedCell, ExternalUrlCell, LinkStatusPill } from "../../../_components/SiteCells";
+import { ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -27,6 +29,8 @@ export default function SiteAllBacklinksPage() {
   const t = useTranslations("sites.backlinksAll");
   const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<Status | "">("status", "", ["LIVE", "NEW", "LOST"]);
   const [follow, setFollow] = useSiteParam<Follow | "">("follow", "", ["FOLLOW", "NOFOLLOW"]);
@@ -52,7 +56,8 @@ export default function SiteAllBacklinksPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[1200px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "domain", domain: row.domainFrom }))}
+        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -92,7 +97,7 @@ export default function SiteAllBacklinksPage() {
             header: t("columns.from"),
             cell: (row) => (
               <span className="flex max-w-[34ch] flex-col gap-0.5">
-                <span className="text-[13px] text-foreground">{row.domainFrom}</span>
+                <RecordLinkCell href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
                 <ExternalUrlCell url={row.urlFrom} />
               </span>
             ),
@@ -114,9 +119,7 @@ export default function SiteAllBacklinksPage() {
           },
           { key: "domainRank", header: t("columns.domainRank"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainRank)}</span> },
           { key: "firstSeen", header: t("columns.firstSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
-          { key: "lastSeen", header: t("columns.lastSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.lastSeen)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

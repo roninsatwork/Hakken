@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -10,13 +9,14 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { sharedSiteQuery } from "../../../_components/useSiteParam";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
+import { sharedSiteQuery, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const KINDS = ["new", "up", "down", "lost"] as const;
@@ -34,7 +34,8 @@ export default function SiteNewLostPage() {
   const params = useSearchParams();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const listHref = useSiteListHref(siteId);
 
   const points = (series?.[0]?.points ?? []).flatMap((point) =>
     point.keywordsNew === undefined && point.keywordsLost === undefined
@@ -47,6 +48,10 @@ export default function SiteNewLostPage() {
         lost: point.keywordsLost ?? 0,
       }]);
   const newestFirst = [...points].reverse();
+  // The newest check's counts open the keywords behind them on Wins and losses;
+  // an older check's keywords are not kept one by one.
+  const newestDay = newestFirst[0]?.day ?? null;
+  const DIRECTION_OF = { new: "NEW", up: "UP", down: "DOWN", lost: "LOST" } as const;
   const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
   const shown = series === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
   const colours = { new: SITE_SERIES_COLOURS[1], up: SITE_SERIES_COLOURS[4], down: SITE_SERIES_COLOURS[3], lost: SITE_SERIES_COLOURS[5] };
@@ -99,7 +104,9 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-new-and-lost`} rows={n
             key: kind,
             header: t(`columns.${kind}`),
             align: "right" as const,
-            cell: (row: (typeof points)[number]) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row[kind])}</span>,
+            cell: (row: (typeof points)[number]) => row.day === newestDay && row[kind] > 0
+              ? <RecordLinkCell href={listHref("google/moves", { direction: DIRECTION_OF[kind] })} className="font-mono text-[12px] text-info">{formatNumber(row[kind])}</RecordLinkCell>
+              : <span className="font-mono text-[12px] text-foreground">{formatNumber(row[kind])}</span>,
           })),
         ]}
       />

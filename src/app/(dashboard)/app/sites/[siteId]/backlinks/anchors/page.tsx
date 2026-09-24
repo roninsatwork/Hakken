@@ -1,12 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Anchor } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { CheckedCell, LinkStatusPill } from "../../../_components/SiteCells";
+import { LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -23,6 +25,8 @@ export default function SiteAnchorsPage() {
   const t = useTranslations("sites.backlinksAnchors");
   const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const site = useSite();
   const [search, setSearch, term] = useSiteSearch();
   const [sort, setSort] = useSiteParam<"backlinks" | "domains">("sort", "backlinks", ["backlinks", "domains"]);
@@ -55,7 +59,8 @@ export default function SiteAnchorsPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[900px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "anchor", anchor: row.anchor }))}
+        minWidthClassName="min-w-[680px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -81,15 +86,13 @@ export default function SiteAnchorsPage() {
             key: "anchor",
             header: t("columns.anchor"),
             cell: (row) => (row.anchor
-              ? <span className="text-[13px] text-foreground">{row.anchor}</span>
-              : <span className="text-[12px] text-muted">{t("noAnchor")}</span>),
+              ? <RecordLinkCell href={recordHref({ kind: "anchor", anchor: row.anchor })}>{row.anchor}</RecordLinkCell>
+              : <RecordLinkCell href={recordHref({ kind: "anchor", anchor: "" })} className="text-[12px] text-muted">{t("noAnchor")}</RecordLinkCell>),
           },
           { key: "backlinks", header: t("columns.backlinks"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.backlinks)}</span> },
           { key: "domains", header: t("columns.domains"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.referringDomains)}</span> },
-          { key: "rank", header: t("columns.rank"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.rank)}</span> },
           { key: "firstSeen", header: t("columns.firstSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

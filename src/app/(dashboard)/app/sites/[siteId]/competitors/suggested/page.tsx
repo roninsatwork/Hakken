@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Lightbulb } from "lucide-react";
@@ -12,7 +11,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell } from "../../../_components/SiteCells";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
-import { useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 /**
@@ -27,7 +26,7 @@ export default function SiteSuggestedPage() {
   const siteId = useSiteId();
   const rows = useQuery(api.siteCompetitors.listSuggested, { siteId });
   const [search, setSearch, settled] = useSiteSearch();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
   const term = settled.toLowerCase();
   const matching = rows?.filter((row) => !term || row.host.includes(term));
   const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
@@ -40,7 +39,7 @@ export default function SiteSuggestedPage() {
         rows={shown}
         rowKey={(row) => row.host}
         minWidthClassName="min-w-[700px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
 filters={<ListDownload fileName={"suggested-competitors"} rows={matching} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.why"), value: (row) => (row.reason === "NAMED_BY_AI" ? t("namedByAi", { times: row.times ?? 0 }) : t("ranksFor", { count: String(row.intersections ?? 0) })) }, { header: tc("lastChecked"), value: (row) => row.day }]} />}
         empty={{ icon: <Lightbulb className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={{

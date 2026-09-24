@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowUpDown } from "lucide-react";
@@ -7,11 +8,12 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { ChangeCell, CheckedCell, PageCell, PositionCell } from "../../../_components/SiteCells";
+import { ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -31,6 +33,8 @@ export default function SiteMovesPage() {
   const siteId = useSiteId();
   const site = useSite();
   const range = useSiteRange();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const [direction, setDirection] = useSiteParam<Direction>("direction", "UP", DIRECTIONS);
   const [search, setSearch, settled] = useSiteSearch();
   const table = useSitePagedTable(api.siteKeywords.listMoves, {
@@ -64,7 +68,8 @@ export default function SiteMovesPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[860px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -96,7 +101,7 @@ export default function SiteMovesPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
+          { key: "keyword", header: t("columns.keyword"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "fromTo",
             header: t("columns.fromTo"),
@@ -110,7 +115,11 @@ export default function SiteMovesPage() {
             ),
           },
           { key: "change", header: t("columns.change"), align: "right", cell: (row) => <ChangeCell change={row.change} /> },
-          { key: "page", header: t("columns.page"), cell: (row) => <PageCell page={row.page} was={row.previousPage} /> },
+          {
+            key: "page",
+            header: t("columns.page"),
+            cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <span className="text-muted">–</span>),
+          },
           { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />

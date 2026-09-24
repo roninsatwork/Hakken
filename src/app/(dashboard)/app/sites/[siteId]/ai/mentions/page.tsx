@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
@@ -12,13 +12,14 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const STANCES = ["RECOMMENDED", "NAMED", "WARNED_AGAINST", "NOT_NAMED"] as const;
@@ -46,7 +47,11 @@ export default function SiteMentionsPage() {
   const [search, setSearch, settled] = useSiteSearch();
   const [engine, setEngine] = useSiteParam<string>("engine", "");
   const [stance, setStance] = useSiteParam<Stance | "">("stance", "", STANCES);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const listHref = useSiteListHref(siteId);
+  // A question opens what that engine said to it, word for word.
+  const answersHref = (row: { prompt: string; engine: string }) => listHref("ai/answers", { question: row.prompt, engine: row.engine });
 
   const rows = useQuery(api.siteAi.listMentions, { siteId });
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
@@ -86,15 +91,16 @@ export default function SiteMentionsPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => `${row.prompt}::${row.engine}`}
-        minWidthClassName="min-w-[900px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(answersHref(row))}
+        minWidthClassName="min-w-[760px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("engineFilter")} value={engine} onChange={(value) => { setEngine(value); setPage(1); }}>
+            <Select aria-label={t("engineFilter")} value={engine} onChange={setEngine}>
               <option value="">{t("allEngines")}</option>
               {allEngines.map((entry) => <option key={entry} value={entry}>{engineLabel(entry)}</option>)}
             </Select>
-            <Select aria-label={t("stanceFilter")} value={stance} onChange={(value) => { setStance(value as Stance | ""); setPage(1); }}>
+            <Select aria-label={t("stanceFilter")} value={stance} onChange={(value) => setStance(value as Stance | "")}>
               <option value="">{t("anyStance")}</option>
               {STANCES.map((entry) => <option key={entry} value={entry}>{t(`stances.${entry}`)}</option>)}
             </Select>
@@ -112,7 +118,7 @@ export default function SiteMentionsPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "question", header: t("columns.question"), cell: (row) => <span className="text-[13px] text-foreground">{row.prompt}</span> },
+          { key: "question", header: t("columns.question"), cell: (row) => <RecordLinkCell href={answersHref(row)}>{row.prompt}</RecordLinkCell> },
           { key: "engine", header: t("columns.engine"), cell: (row) => <span className="text-[12px] text-secondary">{engineLabel(row.engine)}</span> },
           {
             key: "latest",
@@ -124,7 +130,6 @@ export default function SiteMentionsPage() {
           },
           { key: "named", header: t("columns.named"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{t("namedOf", { named: row.named, asked: row.asked })}</span> },
           { key: "recommended", header: t("columns.recommended"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.recommended}</span> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.lastAskedDay} /> },
         ]}
       />
     </div>

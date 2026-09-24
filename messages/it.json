@@ -1112,6 +1112,7 @@
           "websites": "Siti web",
           "companyWebsites": "Siti web",
           "dataCollection": "Programma di raccolta",
+          "collectionRuns": "Esecuzioni della raccolta",
           "directory": "Rubrica",
           "invites": "Inviti",
           "ai": "AI",
@@ -1741,6 +1742,170 @@
         "save": "Salva i limiti",
         "saved": "Limiti salvati",
         "saveFailed": "Non è stato possibile salvare i limiti."
+      }
+    },
+    "collectionRuns": {
+      "title": "Esecuzioni della raccolta",
+      "subtitle": "Ogni esecuzione per questo cliente: cosa ha acquistato, quanto è costata e su quali siti sono andati i soldi. Mai mostrata al cliente.",
+      "figures": {
+        "month": "Speso questo mese",
+        "monthHint": "{count, plural, =0 {Ancora nessuna esecuzione} one {# esecuzione · dati e IA} other {# esecuzioni · dati e IA}}",
+        "lastRun": "Ultima esecuzione",
+        "noRunYet": "Ancora nessuna",
+        "estimate": "Stima al mese",
+        "estimateHint": "Con i limiti e la pianificazione di oggi",
+        "estimateOff": "La raccolta è disattivata",
+        "nextRun": "Prossima esecuzione",
+        "nextRunHint": "{time} · {cadence}",
+        "notScheduled": "Non pianificata"
+      },
+      "cadence": {
+        "daily": "ogni giorno",
+        "weekly": "ogni settimana",
+        "fortnightly": "ogni due settimane",
+        "monthly": "ogni mese"
+      },
+      "period": {
+        "label": "Periodo",
+        "months3": "Ultimi 3 mesi",
+        "months12": "Ultimi 12 mesi",
+        "all": "Tutte le esecuzioni"
+      },
+      "columns": {
+        "run": "Esecuzione",
+        "websites": "Siti",
+        "requests": "Richieste",
+        "held": "Già disponibili",
+        "data": "DataForSEO",
+        "ai": "IA",
+        "total": "Totale",
+        "status": "Stato"
+      },
+      "runLine": "{count, plural, =0 {Messa in coda dal Planner} one {Inviata in # esecuzione del Collector} other {Inviata in # esecuzioni del Collector}}",
+      "status": {
+        "complete": "Completata",
+        "answering": "{count, plural, one {# ancora in attesa di risposta} other {# ancora in attesa di risposta}}",
+        "waiting": "{count, plural, one {# da inviare} other {# da inviare}}",
+        "failed": "{count, plural, one {# non riuscita} other {# non riuscite}}",
+        "costUp": "{percent}% in più dell'esecuzione precedente"
+      },
+      "workingOut": "Calcolo in corso",
+      "empty": "Nessuna raccolta è ancora stata eseguita per questo cliente.",
+      "detail": {
+        "back": "Esecuzioni della raccolta",
+        "title": "Esecuzione del {when}",
+        "description": "Messa in coda dal Planner per {websites, plural, one {# sito} other {# siti}} di {company}, e inviata dal Collector in {runs, plural, one {# esecuzione} other {# esecuzioni}} tra le {from} e le {to}.",
+        "descriptionUnsent": "Messa in coda dal Planner per {company}. Non è ancora stato inviato nulla.",
+        "filed": "{filed} di {requests} archiviate",
+        "workedOut": "Calcolato alle {time}.",
+        "notReady": "Il resoconto di questa esecuzione è ancora in calcolo. Compare circa un minuto dopo l'invio della prima richiesta.",
+        "notFound": "Impossibile trovare questa esecuzione.",
+        "figures": {
+          "total": "Totale",
+          "totalHint": "{data} DataForSEO + {ai} IA",
+          "requests": "Richieste pagate",
+          "requestsHint": "{count, plural, one {Su # sito} other {Su # siti}}",
+          "held": "Risposte da dati già disponibili",
+          "heldHint": "Non pagate di nuovo",
+          "ai": "Valutazioni dell'IA",
+          "aiHint": "{cost} · valutate una volta, conservate"
+        },
+        "money": {
+          "title": "Dove sono andati i soldi",
+          "subtitle": "Spesa DataForSEO, {total}",
+          "legend": "{name} · {cost} · {share}%",
+          "categories": {
+            "BACKLINKS": "Backlink",
+            "SITE_AUDIT": "Audit del sito",
+            "KEYWORD_LISTS": "Elenchi di parole chiave",
+            "SUMMARIES": "Riepiloghi",
+            "COMPARISONS": "Confronti affiancati",
+            "SEARCHES": "Ricerche monitorate",
+            "AI_ANSWERS": "Risposte dell'IA",
+            "OTHER": "Altro"
+          }
+        },
+        "bought": {
+          "title": "Cosa è stato acquistato",
+          "columns": {
+            "what": "Cosa",
+            "requests": "Richieste",
+            "cost": "Costo",
+            "change": "Variazione",
+            "share": "Quota",
+            "repeats": "Si ripete"
+          },
+          "answering": "{count, plural, one {# ancora in attesa di risposta} other {# ancora in attesa di risposta}}",
+          "total": "Totale",
+          "weekly": "Ogni settimana",
+          "monthly": "Ogni mese",
+          "everyDays": "Ogni {days} giorni",
+          "company": "Con la pianificazione di {company} ({cadence})",
+          "companyOff": "Con la pianificazione di {company}"
+        },
+        "change": {
+          "new": "Nuovo",
+          "none": "–"
+        },
+        "sites": {
+          "title": "Per sito",
+          "columns": {
+            "website": "Sito",
+            "keeps": "Conserva",
+            "requests": "Richieste",
+            "keywords": "Parole chiave",
+            "perThousand": "Ogni 1.000 pc",
+            "cost": "Costo",
+            "change": "Variazione",
+            "share": "Quota"
+          },
+          "owned": "Proprio",
+          "competitor": "Concorrente",
+          "keeps": "{keywords} pc · {links} link",
+          "shared": "Chiesto su più siti insieme"
+        },
+        "ai": {
+          "title": "IA",
+          "columns": {
+            "judged": "Cosa è stato valutato",
+            "count": "Quante",
+            "cost": "Costo"
+          },
+          "note": "Per lo più una tantum: una parola chiave o una pagina viene valutata una volta e conservata, quindi le esecuzioni successive pagano solo le nuove.",
+          "none": "Nessuna valutazione dell'IA è venuta da questa esecuzione."
+        },
+        "estimate": {
+          "title": "Quanto costerà {company} da qui in avanti",
+          "subtitle": "Con i limiti e la pianificazione di oggi, dalle richieste di questa esecuzione.",
+          "every": {
+            "DAY": "Ogni giorno",
+            "WEEK": "Ogni settimana",
+            "FORTNIGHT": "Ogni due settimane",
+            "MONTH": "Ogni mese"
+          },
+          "line": "{cost} ogni volta · {perMonth} al mese",
+          "perMonth": "Al mese",
+          "aiNote": "L'IA non è inclusa: è per lo più una tantum.",
+          "off": "La raccolta per {company} è disattivata, quindi non è pianificato altro."
+        },
+        "sent": {
+          "title": "Come è stata inviata",
+          "columns": {
+            "run": "Esecuzione del Collector",
+            "started": "Iniziata",
+            "requests": "Richieste",
+            "cost": "Costo",
+            "stopped": "Fermata"
+          },
+          "runName": "Esecuzione {number}",
+          "stopped": {
+            "SPEND_LIMIT": "Limite di spesa",
+            "QUEUE_EMPTY": "Coda vuota",
+            "TIME_UP": "Tempo scaduto"
+          },
+          "unknown": "–",
+          "none": "Nessuna esecuzione del Collector ne ha ancora inviato una parte."
+        }
       }
     },
     "websites": {
@@ -7925,7 +8090,8 @@
         "siteAudit": "Controllo del sito",
         "paidSummary": "Riepilogo",
         "paidKeywords": "Parole chiave a pagamento"
-      }
+      },
+      "notSetUp": "Non impostato"
     },
     "range": {
       "label": "Date",
@@ -8047,7 +8213,7 @@
     },
     "overview": {
       "title": "Panoramica",
-      "description": "Come sta andando questo sito nelle date scelte, e cosa è cambiato rispetto al giorno prima.",
+      "description": "Come sta andando questo sito? I numeri principali per le date scelte, e cosa è cambiato rispetto al giorno prima.",
       "aiMentions": "Menzioni AI",
       "ofEngines": "{named} su {asked} motori",
       "estimatedTraffic": "Traffico stimato",
@@ -8083,7 +8249,7 @@
     },
     "calendar": {
       "title": "Calendario",
-      "description": "Cosa è cambiato ogni giorno: posizioni guadagnate e perse, risposte AI che hanno nominato questo sito, siti che linkano guadagnati e persi.",
+      "description": "Cosa è cambiato, e quando? Per ogni giorno: posizioni guadagnate e perse, risposte AI che hanno citato questo sito, siti che rimandano qui guadagnati e persi.",
       "previous": "Mese precedente",
       "next": "Mese successivo",
       "weekdays": {
@@ -8106,7 +8272,7 @@
     },
     "aiMentions": {
       "title": "Menzioni",
-      "description": "Se ogni motore AI nomina questo sito quando riceve le domande su cui è misurato, e come lo presenta.",
+      "description": "Gli assistenti AI citano questo sito? Per ogni domanda su cui è misurato, come lo tratta ciascun assistente. Apri una domanda per leggere le risposte.",
       "searchPlaceholder": "Cerca tra le domande…",
       "engineFilter": "Motore",
       "allEngines": "Tutti i motori",
@@ -8135,7 +8301,7 @@
     },
     "aiShare": {
       "title": "Quota di voce",
-      "description": "Quanto spesso i motori AI nominano questo sito rispetto agli altri siti del suo gruppo.",
+      "description": "Quanto spesso gli assistenti AI citano questo sito, rispetto ai suoi concorrenti?",
       "note": "Contata solo rispetto ai siti che segui: una risposta nomina molte aziende, e si contano quelle di cui conosciamo il nome.",
       "columns": {
         "website": "Sito",
@@ -8149,7 +8315,7 @@
     },
     "aiSources": {
       "title": "Fonti citate",
-      "description": "Le pagine di questo sito a cui le risposte AI rimandano, le più citate per prime.",
+      "description": "Quali pagine di questo sito vengono citate nelle risposte AI? Prima le più citate. Aprine una per vedere la sua pagina.",
       "searchPlaceholder": "Cerca tra le pagine…",
       "columns": {
         "page": "Pagina",
@@ -8163,7 +8329,7 @@
     },
     "aiSearched": {
       "title": "Cosa ha cercato l'AI",
-      "description": "Le ricerche che i motori hanno fatto dietro le quinte ricevendo le domande, le più ricorrenti per prime.",
+      "description": "Cosa hanno cercato gli assistenti AI dietro le quinte? Le ricerche fatte per rispondere, prima le più ripetute: ognuna è una ricerca su cui vale la pena posizionarsi.",
       "searchPlaceholder": "Cerca tra queste ricerche…",
       "trackedFilter": "Seguite",
       "anyTracked": "Seguite o no",
@@ -8183,7 +8349,7 @@
     },
     "googleSearches": {
       "title": "Le tue ricerche",
-      "description": "Dove si posiziona questo sito su ogni ricerca su cui è misurato, controllato da {place}.",
+      "description": "Dove si posiziona questo sito sulle ricerche più importanti per lui? Ognuna controllata da {place}. Apri una ricerca per la sua storia e l'intera pagina dei risultati di Google.",
       "searchPlaceholder": "Trova una ricerca…",
       "verdictFilter": "Come sta andando",
       "anyVerdict": "Qualsiasi",
@@ -8213,7 +8379,7 @@
     },
     "googleMoves": {
       "title": "Salite e discese",
-      "description": "Le parole chiave che si sono mosse all'ultimo controllo, dalla variazione più grande.",
+      "description": "Quali ricerche si sono mosse all'ultimo controllo? Prima lo spostamento più grande. Aprine una per la sua storia.",
       "tabs": {
         "UP": "Salite",
         "DOWN": "Scese",
@@ -8237,8 +8403,8 @@
     },
     "keywords": {
       "title": "Tutte le parole chiave",
-      "description": "Ogni ricerca per cui questo sito si posiziona su Google, dalla posizione migliore.",
-      "listing": "Sono elencate {stored} delle {total} parole chiave trovate da DataForSEO per questo sito.",
+      "description": "Quali ricerche portano visite a questo sito? Ogni ricerca per cui si posiziona su Google. Aprine una per la sua storia, la sua pagina e i suoi concorrenti.",
+      "listing": "Sono mostrate {stored} delle {total} ricerche per cui questo sito si posiziona: quelle che gli portano più visite.",
       "searchPlaceholder": "Cerca parole chiave o pagine…",
       "bandFilter": "Posizione",
       "anyBand": "Qualsiasi posizione",
@@ -8282,15 +8448,15 @@
       },
       "sortTraffic": "Più traffico prima",
       "sortCpc": "Clic più costosi prima",
-      "kdHint": "Difficoltà della parola chiave secondo DataForSEO, da 0 a 100",
-      "cpcHint": "Quanto costa un clic in pubblicità, in dollari USA (DataForSEO)",
-      "trafficHint": "Visite al mese che DataForSEO stima questa ricerca porti al sito",
+      "kdHint": "Quanto è difficile arrivare in prima pagina per questa ricerca, da 0 (facile) a 100 (difficilissima)",
+      "cpcHint": "Quanto pagano gli inserzionisti per un clic su questa ricerca, in dollari USA",
+      "trafficHint": "Visite al mese stimate che questa ricerca porta al sito",
       "trendHint": "Ricerche al mese nell'ultimo anno",
       "featuresCount": "{count, plural, =0 {Nessuna} =1 {1 funzione} other {# funzioni}}"
     },
     "pages": {
       "title": "Pagine principali",
-      "description": "Le pagine di questo sito, per numero di ricerche su cui si posizionano.",
+      "description": "Quali pagine di questo sito portano le visite? Le sue pagine per numero di ricerche per cui si posizionano. Aprine una per le sue ricerche, i link e i problemi.",
       "searchPlaceholder": "Cerca pagine o parole chiave…",
       "sectionFilter": "Sezione",
       "allSections": "Tutte le sezioni",
@@ -8310,7 +8476,7 @@
       },
       "citedBy": "Citata {times} volte",
       "chartTitle": "Pagine posizionate",
-      "chartHint": "Quante pagine di questo sito si posizionano per almeno una ricerca, e il traffico che DataForSEO stima portino.",
+      "chartHint": "Quante pagine di questo sito si posizionano per almeno una ricerca, e le visite che si stima portino.",
       "empty": "Nessuna pagina posizionata per ora.",
       "noMatch": "Nessuna pagina corrisponde.",
       "typeFilter": "Tipo di pagina",
@@ -8318,13 +8484,316 @@
       "sortLabel": "Ordina",
       "sortKeywords": "Più parole chiave prima",
       "sortTraffic": "Più traffico prima",
-      "pageRankHint": "Il page rank di DataForSEO, da 0 a 1.000: la sua scala, non l'UR di Ahrefs",
+      "pageRankHint": "Quanto è forte questa pagina, in base ai link che puntano a essa: da 0 a 1.000",
       "shareOf": "{share} del traffico",
       "backlinksTitle": "{count} backlink"
     },
+    "record": {
+      "back": "Indietro",
+      "backTo": "Torna a {page}",
+      "loading": "Caricamento…"
+    },
+    "setup": {
+      "questions": {
+        "title": "Nessuna domanda AI impostata",
+        "body": "Queste schermate mostrano come assistenti AI come ChatGPT, Gemini e Perplexity rispondono alle domande dei tuoi clienti, e se citano questo sito. Per ora non c'è nessuna domanda impostata. Quando ci saranno, le prime risposte arriveranno con la prossima raccolta."
+      },
+      "trackedSearches": {
+        "title": "Nessuna ricerca monitorata",
+        "body": "Questa schermata segue le ricerche su Google più importanti per questo sito, controllate una per una: dove si posiziona, chi è sopra di lui e cos'altro mostra Google. Per ora non ce n'è nessuna. Quando ci saranno, il primo controllo arriverà con la prossima raccolta."
+      }
+    },
+    "keywordRecord": {
+      "description": "Dove questo sito si posiziona per questa ricerca, come è cambiato e quanto vale la ricerca.",
+      "missingTitle": "Nessuna ricerca scelta",
+      "missingBody": "Apri una ricerca da uno degli elenchi di parole chiave per vederla qui.",
+      "notRanking": "All'ultimo controllo questo sito non si posiziona per questa ricerca.",
+      "trackedPill": "Una delle tue ricerche",
+      "figures": {
+        "position": "Posizione",
+        "notRanking": "Non posizionato",
+        "movedSince": "{moved} dal {day}",
+        "unchangedSince": "Nessun cambiamento dal {day}",
+        "newAtCheck": "Nuova a questo controllo",
+        "lostAtCheck": "Persa a questo controllo",
+        "volume": "Ricerche al mese",
+        "volumeDetail": "Quante volte la cercano",
+        "traffic": "Visite al mese",
+        "trafficDetail": "Visite stimate che porta a questo sito",
+        "cpc": "Costo per clic",
+        "cpcDetail": "Quanto pagano gli inserzionisti, in dollari USA"
+      },
+      "chartTitle": "Posizione nel tempo",
+      "chartHint": "Dove si trovava questo sito a ogni controllo. Più in alto nel grafico è meglio: 1 è il primo posto su Google.",
+      "about": {
+        "title": "Questa ricerca",
+        "difficulty": "Quanto è difficile arrivare in prima pagina",
+        "outOf100": "{value} su 100",
+        "competition": "Concorrenza negli annunci",
+        "competitionLevels": {
+          "LOW": "Bassa",
+          "MEDIUM": "Media",
+          "HIGH": "Alta"
+        },
+        "searchIntent": "Cosa vogliono le persone",
+        "searchIntents": {
+          "informational": "Informarsi",
+          "navigational": "Raggiungere un sito preciso",
+          "commercial": "Confrontare prima di comprare",
+          "transactional": "Comprare o prenotare"
+        },
+        "ourIntent": "Come la classifichiamo",
+        "results": "Risultati su Google",
+        "features": "Cosa mostra la pagina dei risultati",
+        "trend": "Ricerche nell'ultimo anno",
+        "trendRange": "Da {low} a {high} al mese",
+        "firstSeen": "Posizionata la prima volta",
+        "lastChecked": "Ultimo controllo"
+      },
+      "rankingPage": {
+        "title": "La pagina che si posiziona",
+        "page": "Pagina",
+        "was": "Prima di questo controllo: {page}",
+        "strength": "Forza della pagina",
+        "outOf1000": "{value} su 1.000",
+        "linkingWebsites": "Siti che rimandano a essa",
+        "links": "Link verso di essa",
+        "value": "Quanto costerebbero le sue visite in annunci",
+        "none": "Nessuna pagina di questo sito si posiziona per questa ricerca."
+      },
+      "features": {
+        "title": "Dove altro compare su Google",
+        "kinds": {
+          "ai_overview_reference": "Citato nella panoramica AI",
+          "featured_snippet": "Il riquadro di risposta in cima",
+          "local_pack": "La mappa delle attività locali"
+        },
+        "at": "Posizione {position}",
+        "none": "Solo nei risultati normali."
+      },
+      "rivals": {
+        "title": "I tuoi concorrenti su questa ricerca",
+        "thisWebsite": "Questo sito",
+        "notRanking": "Non trovato nei loro posizionamenti",
+        "none": "Nessun concorrente impostato per questo sito."
+      },
+      "tracked": {
+        "title": "Controllata come una delle tue ricerche",
+        "position": "Posizione all'ultimo controllo",
+        "best": "Posizione migliore",
+        "firstChecked": "Primo controllo",
+        "lastChecked": "Ultimo controllo",
+        "paused": "In pausa: non viene controllata"
+      },
+      "serp": {
+        "title": "La pagina dei risultati di Google",
+        "checked": "Controllata il {day}",
+        "thisWebsite": "Questo sito",
+        "competitor": "Concorrente",
+        "showAll": "Mostra tutti i {count}",
+        "showTop": "Mostra i primi dieci",
+        "questions": "Le domande che le persone fanno",
+        "related": "Ricerche correlate"
+      }
+    },
+    "pageRecord": {
+      "description": "Per cosa si posiziona questa pagina, le visite che porta, cosa ha trovato il controllo del sito e i siti che rimandano a essa.",
+      "missingTitle": "Nessuna pagina scelta",
+      "missingBody": "Apri una pagina da Pagine principali o dal Controllo del sito per vederla qui.",
+      "notRanking": "All'ultimo controllo questa pagina non si posiziona per nessuna ricerca.",
+      "openPage": "Apri la pagina",
+      "citedPill": "Citata nelle risposte AI",
+      "figures": {
+        "keywords": "Ricerche per cui si posiziona",
+        "top3": "{count} tra le prime tre",
+        "best": "Posizione migliore",
+        "traffic": "Visite al mese",
+        "worth": "Valgono {value} in annunci",
+        "linking": "Siti che rimandano a essa",
+        "links": "{count} link"
+      },
+      "keywordsTitle": "Ricerche per cui si posiziona questa pagina",
+      "ranks": {
+        "title": "Come si posiziona",
+        "topKeyword": "La sua parola chiave più cercata",
+        "searches": "{count} ricerche al mese",
+        "section": "Cartella",
+        "strength": "Forza della pagina",
+        "outOf1000": "{value} su 1.000",
+        "firstSeen": "Posizionata la prima volta",
+        "lastChecked": "Ultimo controllo"
+      },
+      "crawl": {
+        "title": "Cosa ha trovato il controllo del sito",
+        "checked": "Scansionata il {day}",
+        "answered": "Risposta",
+        "problems": "Problemi",
+        "noProblems": "Nessun problema trovato",
+        "score": "Punteggio della pagina",
+        "outOf100": "{value} su 100",
+        "load": "Tempo di caricamento",
+        "paint": "Tempo per mostrare il contenuto principale",
+        "seconds": "{value} s",
+        "size": "Dimensione",
+        "kilobytes": "{value} KB",
+        "words": "Parole",
+        "internalLinks": "Link ad altre pagine di questo sito",
+        "externalLinks": "Link ad altri siti",
+        "inboundLinks": "Link da altre pagine di questo sito",
+        "depth": "Clic dalla home page",
+        "redirect": "Rimanda i visitatori a",
+        "canonical": "Indica come copia principale",
+        "none": "L'ultima scansione non ha raggiunto questa pagina."
+      },
+      "cited": {
+        "title": "Risposte AI che rimandano a essa",
+        "times": "{count, plural, one {Citata una volta} other {Citata # volte}}",
+        "none": "Nessuna risposta AI alle tue domande rimanda ancora a questa pagina."
+      },
+      "links": {
+        "title": "I link più forti verso di essa",
+        "followed": "Seguito",
+        "notFollowed": "Non seguito",
+        "strength": "Forza {rank}",
+        "none": "Nessun link verso questa pagina nell'ultimo elenco."
+      }
+    },
+    "featureRecord": {
+      "titles": {
+        "ai_overview_reference": "Citato nella panoramica AI",
+        "featured_snippet": "Nel riquadro di risposta in cima",
+        "local_pack": "Nella mappa delle attività locali"
+      },
+      "description": "Ogni ricerca dell'elenco di parole chiave di questo sito in cui Google lo mostra in questa funzione, con la sua posizione nei risultati normali più sotto.",
+      "missingTitle": "Nessuna funzione scelta",
+      "missingBody": "Apri un dato in Elementi della ricerca per vedere le ricerche che lo compongono.",
+      "columns": {
+        "keyword": "Ricerca",
+        "position": "Posto nella funzione",
+        "organic": "Posizione più sotto",
+        "volume": "Ricerche al mese",
+        "page": "Pagina"
+      },
+      "empty": "Nessuna ricerca dell'elenco di questo sito lo mostra ancora qui."
+    },
+    "answerRecord": {
+      "description": "Cosa ha detto {engine}, parola per parola, a questa domanda il {day}.",
+      "missingTitle": "Nessuna risposta scelta",
+      "missingBody": "Apri una risposta da Risposte complete per leggerla qui.",
+      "notFoundTitle": "Risposta non trovata",
+      "notFoundBody": "Questa risposta non è di questo sito, oppure è stata sostituita da una più recente.",
+      "answerTitle": "La risposta",
+      "sourcesTitle": "Fonti citate",
+      "onThisWebsite": "Su questo sito",
+      "noSources": "Non ha citato fonti.",
+      "searchesTitle": "Cosa ha cercato {engine} per questa domanda",
+      "searchesHint": "Tra le sue risposte a questa domanda, prima le ricerche a cui è tornato più spesso.",
+      "timesSeen": "{count, plural, one {Vista una volta} other {Vista # volte}}",
+      "noSearches": "Nessuna ricerca conservata ancora per questa domanda."
+    },
+    "rivalRecord": {
+      "description": "Come si confronta {rival} con {site}: su ogni ricerca per cui vi posizionate entrambi, chi è davanti.",
+      "missingTitle": "Nessun concorrente scelto",
+      "missingBody": "Apri un concorrente da Confronto diretto per confrontarlo qui.",
+      "notFoundTitle": "Concorrente non trovato",
+      "notFoundBody": "Quel sito non è tra i concorrenti accanto a questo.",
+      "openTheirs": "Apri le loro schermate",
+      "figures": {
+        "traffic": "Visite al mese",
+        "keywords": "Ricerche per cui si posiziona",
+        "linking": "Siti che rimandano a esso",
+        "rank": "Forza del sito",
+        "yours": "Il tuo: {value}"
+      },
+      "tableTitle": "Ricerche per cui vi posizionate entrambi",
+      "tableHint": "Prima le loro ricerche di maggior valore.",
+      "leads": {
+        "THEM": "Dove sono davanti loro",
+        "YOU": "Dove sei davanti tu",
+        "ALL": "Ogni ricerca in comune"
+      },
+      "columns": {
+        "keyword": "Ricerca",
+        "theirs": "La loro posizione",
+        "yours": "La tua posizione",
+        "gap": "Posizioni tra voi",
+        "volume": "Ricerche al mese"
+      },
+      "empty": "Ancora nessuna ricerca in comune qui."
+    },
+    "domainRecord": {
+      "description": "Un sito che rimanda a questo: quanto è forte, e ciascuno dei suoi link qui per intero.",
+      "missingTitle": "Nessun sito scelto",
+      "missingBody": "Apri un sito da Tutti i backlink o Domini di riferimento per vederlo qui.",
+      "notInList": "Questo sito non è nell'ultimo elenco dei siti che rimandano qui.",
+      "figures": {
+        "rank": "Forza del sito",
+        "rankDetail": "Da 0 a 1.000",
+        "links": "Link qui",
+        "pages": "Pagine che rimandano qui",
+        "spam": "Punteggio spam",
+        "spamDetail": "Più basso è più pulito"
+      },
+      "facts": {
+        "title": "Questo sito",
+        "firstSeen": "Primo link visto",
+        "lost": "Ha smesso di rimandare",
+        "nofollowPages": "Pagine con link non seguiti",
+        "broken": "Link a pagine non funzionanti qui",
+        "checked": "Nell'elenco del"
+      },
+      "linksTitle": "I suoi link qui",
+      "linksHint": "Prima i più forti. Se ne mostrano fino a cinquanta."
+    },
+    "anchorRecord": {
+      "description": "Le parole con cui altri siti rimandano a questo, e ogni link che le usa.",
+      "noWords": "Nessuna parola: un'immagine o un indirizzo nudo",
+      "missingTitle": "Nessun testo scelto",
+      "missingBody": "Apri un testo da Testi dei link per vederne qui i link.",
+      "notInList": "Queste parole non sono nell'ultimo elenco dei testi dei link.",
+      "figures": {
+        "links": "Link con queste parole",
+        "websites": "Siti che rimandano",
+        "firstSeen": "Visto la prima volta",
+        "spam": "Punteggio spam",
+        "spamDetail": "Più basso è più pulito"
+      },
+      "linksTitle": "Link con queste parole",
+      "linksHint": "Prima il sito più forte. Se ne mostrano fino a cinquanta."
+    },
+    "linkCard": {
+      "to": "Rimanda a",
+      "anchor": "Parole",
+      "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
+      "followed": "Seguito",
+      "notFollowed": "Non seguito",
+      "rel": "Indicato come",
+      "place": "Dove si trova nella pagina",
+      "kind": "Tipo di sito",
+      "spam": "Punteggio spam {value}",
+      "strength": "Forza del link {value}",
+      "websiteStrength": "Forza del sito {value}",
+      "linksOnPage": "{count} link nella sua pagina",
+      "throughRedirect": "Arriva a questo sito tramite un reindirizzamento",
+      "language": "Lingua: {value}",
+      "firstSeen": "Visto la prima volta il {day}",
+      "lastSeen": "Visto l'ultima volta il {day}",
+      "broken": "Punta a una pagina non funzionante ({code})",
+      "none": "Nessuno di questi link è tra quelli conservati per questo sito: i suoi link più forti, fino al suo limite."
+    },
+    "problemRecord": {
+      "description": "Le pagine in cui l'ultima scansione ha trovato questo problema. Ognuna apre la schermata della sua pagina.",
+      "missingTitle": "Nessun problema scelto",
+      "missingBody": "Apri un problema dal Controllo del sito per vedere le pagine che lo hanno.",
+      "columns": {
+        "page": "Pagina",
+        "answered": "Risposta",
+        "brokenLinks": "Link non funzionanti"
+      }
+    },
     "structure": {
       "title": "Struttura del sito",
-      "description": "Parole chiave e pagine per sezione del sito.",
+      "description": "Quali parti di questo sito si posizionano meglio? Ricerche, pagine e visite per cartella. Apri una cartella per vederne le pagine.",
       "columns": {
         "section": "Sezione",
         "pages": "Pagine",
@@ -8341,7 +8810,7 @@
     },
     "sideBySide": {
       "title": "Confronto diretto",
-      "description": "Questo sito accanto agli altri del suo gruppo, come ciascuno risultava all'ultimo controllo.",
+      "description": "Come si confronta questo sito con i suoi concorrenti? Ognuno com'era al suo ultimo controllo. Apri un concorrente per il confronto ricerca per ricerca.",
       "columns": {
         "website": "Sito",
         "traffic": "Traffico stimato",
@@ -8369,7 +8838,7 @@
     },
     "organic": {
       "title": "Concorrenti organici",
-      "description": "Ogni sito che DataForSEO ha trovato posizionato sulle stesse ricerche, dalla sovrapposizione maggiore.",
+      "description": "Chi altro si posiziona sulle stesse ricerche? Ogni sito che lo fa, dalla sovrapposizione maggiore.",
       "searchPlaceholder": "Trova un sito…",
       "kindFilter": "Tipo",
       "anyKind": "Qualsiasi tipo",
@@ -8395,7 +8864,7 @@
     },
     "gap": {
       "title": "Divario di contenuti",
-      "description": "Le ricerche su cui si posizionano gli altri siti del gruppo e questo no, dalle più cercate.",
+      "description": "Per quali ricerche si posizionano i concorrenti e questo sito no? Prima le più cercate: le lacune da colmare.",
       "ceiling": "Letto dalle {count} parole chiave più cercate di ogni concorrente.",
       "searchPlaceholder": "Cerca parole chiave…",
       "rivalsFilter": "Concorrenti posizionati",
@@ -8413,7 +8882,7 @@
     },
     "suggested": {
       "title": "Concorrenti suggeriti",
-      "description": "Siti da tenere d'occhio: nominati dalle risposte AI, o posizionati sulle stesse ricerche. Li aggiungiamo noi per te.",
+      "description": "Quali siti vale la pena seguire? Citati nelle risposte AI, o posizionati sulle stesse ricerche. Li aggiungiamo noi per te.",
       "columns": {
         "website": "Sito",
         "why": "Perché"
@@ -8426,7 +8895,7 @@
     },
     "backlinks": {
       "title": "Backlink",
-      "description": "I link verso questo sito da altri siti: rank del dominio, backlink e siti che linkano, nel tempo.",
+      "description": "Quanti siti rimandano a questo, e quanto sono forti quei link? Nel tempo.",
       "domainRank": "Rank del dominio",
       "rankScale": "su 1.000",
       "backlinks": "Backlink",
@@ -8437,7 +8906,7 @@
     },
     "backlinksCompared": {
       "title": "Confronto con i rivali",
-      "description": "I link di questo sito accanto a quelli degli altri del suo gruppo.",
+      "description": "Come si confrontano i link di questo sito con quelli dei concorrenti? Apri un concorrente per i suoi link.",
       "columns": {
         "website": "Sito",
         "rank": "Rank del dominio",
@@ -8451,7 +8920,7 @@
     },
     "aiAnswers": {
       "title": "Risposte complete",
-      "description": "Cosa ha detto ogni motore di IA, parola per parola, alle domande su cui questo sito viene misurato.",
+      "description": "Cosa ha detto esattamente ogni assistente AI? Le risposte, parola per parola, alle domande su cui questo sito è misurato. Aprine una per leggerla per intero.",
       "questionLabel": "Domanda",
       "engineFilter": "Motore",
       "allEngines": "Tutti i motori",
@@ -8462,10 +8931,7 @@
         "WARNED_AGAINST": "Lo ha sconsigliato",
         "NOT_NAMED": "Non lo ha nominato"
       },
-      "readMore": "Leggi tutta la risposta",
-      "readLess": "Mostra meno",
       "sources": "{count, plural, =0 {Nessuna fonte} =1 {1 fonte} other {# fonti}}",
-      "sourcesTitle": "Fonti citate",
       "keptFrom": "Le risposte sono conservate parola per parola dal 23 settembre 2026. I controlli precedenti hanno conservato solo chi veniva nominato.",
       "noQuestions": "Nessuna domanda ancora. Chiedici di aggiungere le domande che i tuoi clienti fanno all'IA.",
       "empty": "Nessuna risposta in queste date.",
@@ -8476,11 +8942,12 @@
         "stance": "Questo sito",
         "answer": "Risposta",
         "sources": "Fonti"
-      }
+      },
+      "readFull": "Leggi la risposta completa"
     },
     "googleAbove": {
       "title": "Chi si posiziona sopra di te",
-      "description": "Per ogni ricerca su cui questo sito viene misurato, i siti che Google mette sopra di esso, o l'intera prima pagina quando non è tra i primi 100. Controllato da {place}.",
+      "description": "Chi supera questo sito sulle sue ricerche più importanti? I siti che Google mette sopra di lui su ciascuna, controllati da {place}.",
       "searchPlaceholder": "Cerca una ricerca o un sito…",
       "positionFilter": "Dove sei",
       "anyPosition": "Ovunque",
@@ -8508,7 +8975,7 @@
     },
     "googleFeatures": {
       "title": "Funzioni della ricerca",
-      "description": "Cosa mostra Google nella pagina dei risultati di ogni ricerca oltre ai link — una Panoramica AI, un riquadro mappa, uno snippet in primo piano, «Altre domande» — e se questo sito vi compare.",
+      "description": "Cos'altro mostra Google sulle ricerche di questo sito — una panoramica AI, una mappa delle attività locali, un riquadro di risposta — e questo sito ci compare?",
       "chartTitle": "Funzioni nelle tue ricerche",
       "chartHint": "Quante delle {count} ricerche controllate mostrano ogni funzione, e in quante questo sito è tra quelli nominati.",
       "seriesSearches": "Ricerche che la mostrano",
@@ -8531,11 +8998,11 @@
       "inAiOverviews": "Nelle Panoramiche AI",
       "inLocalPacks": "Nei riquadri mappa",
       "inSnippets": "Negli snippet in primo piano",
-      "acrossAllHint": "Il conteggio di DataForSEO all'ultimo controllo: ricerche la cui pagina dei risultati mostra questo sito nella funzione."
+      "acrossAllHint": "All'ultimo controllo: ricerche la cui pagina dei risultati mostra questo sito nella funzione."
     },
     "googleQuestions": {
       "title": "Domande che le persone fanno",
-      "description": "Le domande «Altre domande» e le ricerche correlate che Google mostra nelle ricerche di questo sito: cosa le persone vogliono sapere dopo.",
+      "description": "Cosa vogliono sapere le persone dopo? Le domande e le ricerche correlate che Google mostra sulle ricerche di questo sito: idee su cosa scrivere.",
       "searchPlaceholder": "Cerca una domanda o una ricerca…",
       "kindFilter": "Tipo",
       "anyKind": "Domande e ricerche",
@@ -8556,7 +9023,7 @@
     },
     "bands": {
       "title": "Fasce di posizione",
-      "description": "Quante delle ricerche per cui questo sito si posiziona stanno in ogni fascia dei risultati di Google, nel tempo. Il conteggio di DataForSEO su tutto ciò per cui si posiziona, non solo le parole chiave elencate.",
+      "description": "Quanto in alto si posiziona questo sito su Google? Quante delle sue ricerche sono in prima pagina e più in basso, nel tempo.",
       "chartTitle": "Parole chiave per posizione",
       "chartHint": "Impilate, la fascia migliore in basso.",
       "columns": {
@@ -8568,7 +9035,7 @@
     },
     "newLost": {
       "title": "Parole chiave nuove e perse",
-      "description": "Per quante ricerche questo sito si posiziona per la prima volta, sale o scende, o che ha perso: i conteggi di DataForSEO a ogni controllo, su tutto ciò per cui si posiziona.",
+      "description": "Questo sito sta guadagnando o perdendo ricerche? Per quante si posiziona per la prima volta, sale o scende, o le perde, a ogni controllo.",
       "chartTitle": "Nuove, in salita, in discesa e perse",
       "chartHint": "A ogni controllo. Le frecce indicano la direzione.",
       "series": {
@@ -8589,13 +9056,13 @@
     },
     "marketMap": {
       "title": "Mappa del mercato",
-      "description": "Ogni sito nel mercato di questo, per quante ricerche si posiziona e il traffico che portano.",
+      "description": "Dove si trova questo sito nel suo mercato? Ogni sito per numero di ricerche per cui si posiziona e le visite che portano.",
       "chartTitle": "Parole chiave e traffico",
       "chartHint": "Ogni forma è un sito. Più a destra si posiziona per più ricerche; più in alto riceve più visite.",
       "roles": {
         "YOU": "Questo sito",
         "RIVAL": "I tuoi concorrenti",
-        "FOUND": "Trovati da DataForSEO"
+        "FOUND": "Posizionati anche sulle tue ricerche"
       },
       "axes": {
         "keywords": "Parole chiave",
@@ -8619,7 +9086,7 @@
     },
     "linkQuality": {
       "title": "Qualità dei link",
-      "description": "Quanto sono puliti i link di questo sito: il punteggio spam di DataForSEO, i link che puntano a pagine non funzionanti e le pagine non funzionanti qui a cui altri rimandano.",
+      "description": "I link di questo sito sono sani? Un punteggio spam, i link che puntano a pagine non funzionanti e le pagine non funzionanti qui a cui altri rimandano.",
       "spamScore": "Punteggio spam",
       "spamScale": "su 100: più basso è meglio",
       "brokenBacklinks": "Backlink non funzionanti",
@@ -8635,7 +9102,7 @@
     },
     "linkSources": {
       "title": "Da dove arrivano i link",
-      "description": "Da dove arrivano i link a questo sito: paesi, estensioni di dominio e i tipi di sito e di link.",
+      "description": "Da dove arrivano i link di questo sito? Per paese, estensione del dominio e tipo di sito e di link.",
       "breakdowns": {
         "countries": "Per paese",
         "tlds": "Per estensione di dominio",
@@ -8674,8 +9141,8 @@
     },
     "backlinksAll": {
       "title": "Tutti i backlink",
-      "description": "Ogni sito che rimanda qui, con il suo link più forte: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono.",
-      "descriptionEvery": "Ogni link verso questo sito, dai siti più forti in giù, quanti ne conserva il suo limite: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono.",
+      "description": "Quali siti rimandano qui, e come? Ognuno con il suo link più forte: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono. Aprine uno per tutti i suoi link.",
+      "descriptionEvery": "Ogni link verso questo sito, prima i siti più forti, fino al suo limite: la pagina in cui si trova, le parole usate e se i motori di ricerca lo seguono.",
       "searchPlaceholder": "Cerca un sito, una pagina o un anchor…",
       "sortRank": "Sito più forte prima",
       "sortNewest": "Più recenti prima",
@@ -8698,7 +9165,7 @@
     },
     "backlinksDomains": {
       "title": "Domini di riferimento",
-      "description": "Ogni sito che rimanda qui: quanto è forte, quanti link invia e quando ha iniziato.",
+      "description": "Quali siti rimandano qui? Quanto è forte ciascuno, quanti link invia e da quando. Aprine uno per tutti i suoi link.",
       "searchPlaceholder": "Cerca un sito…",
       "sortRank": "Più forti prima",
       "sortBacklinks": "Più link prima",
@@ -8716,11 +9183,11 @@
       },
       "empty": "Nessun sito che rimanda raccolto ancora.",
       "noMatch": "Nessun sito corrisponde.",
-      "rankHint": "Il rank di DataForSEO per i link di questo sito verso il tuo, da 0 a 1.000"
+      "rankHint": "Quanto sono forti i link di questo sito verso il tuo, da 0 a 1.000"
     },
     "backlinksAnchors": {
       "title": "Anchor",
-      "description": "Le parole che gli altri siti usano quando rimandano qui, le più usate prima.",
+      "description": "Con quali parole gli altri siti rimandano qui? Prima le più usate. Aprine una per vederne i link.",
       "searchPlaceholder": "Cerca parole…",
       "sortBacklinks": "Più link prima",
       "sortDomains": "Più siti prima",
@@ -8741,7 +9208,7 @@
     },
     "backlinksIps": {
       "title": "IP di riferimento",
-      "description": "I server da cui arrivano i link e le reti in cui si trovano. Molti siti che rimandano da una sola rete possono essere una rete di link.",
+      "description": "Dove sono ospitati i siti che rimandano qui? I server da cui arrivano i link e le reti in cui si trovano: molti siti su una stessa rete possono essere una rete di link.",
       "searchPlaceholder": "Cerca un indirizzo…",
       "subnetFilter": "Rete",
       "anySubnet": "Tutte le reti",
@@ -8766,7 +9233,7 @@
     },
     "backlinksBroken": {
       "title": "Backlink non funzionanti",
-      "description": "Link da altri siti che arrivano a una pagina di questo sito che non funziona più. Vale la pena ripararli: rimetti la pagina, o manda il suo indirizzo a una che funziona.",
+      "description": "Quali link da altri siti finiscono su una pagina non funzionante qui? Vale la pena sistemarli: rimetti la pagina, o manda il suo indirizzo a una che funziona.",
       "searchPlaceholder": "Cerca un sito, una pagina o un anchor…",
       "columns": {
         "from": "Pagina che rimanda",
@@ -8782,7 +9249,7 @@
     },
     "backlinksNewLost": {
       "title": "Link nuovi e persi",
-      "description": "Link e siti che rimandano guadagnati e persi nelle date scelte, dal conteggio settimanale di DataForSEO.",
+      "description": "Questo sito sta guadagnando o perdendo link? Link e siti che rimandano qui guadagnati e persi nelle date scelte, contati ogni settimana.",
       "chartTitle": "Link guadagnati e persi",
       "chartHint": "Per intervallo. Le frecce indicano la direzione.",
       "series": {
@@ -8807,16 +9274,14 @@
     },
     "audit": {
       "problemPages": {
-        "loading": "Caricamento delle pagine…",
         "none": "Nessun dettaglio delle pagine per questa scansione. Si recupera dopo ogni scansione, dalla prossima in poi.",
         "count": "{count, plural, one {# pagina} other {# pagine}} nell'ultima scansione.",
-        "answer": "Risposta {code}",
         "brokenTo": "Link rotto verso {to} (risposta {code})"
       },
       "title": "Controllo del sito",
-      "description": "Cosa ha trovato una scansione fino a cento pagine di questo sito: pagine che non funzionano, titoli mancanti o duplicati, pagine lente e altro. Ripetuta ogni mese.",
+      "description": "Cosa non va nelle pagine di questo sito? Cosa ha trovato l'ultima scansione — pagine che non funzionano, titoli mancanti o ripetuti, pagine lente — prima i problemi più gravi. Apri un problema per vederne le pagine.",
       "score": "Punteggio tecnico",
-      "scoreScale": "su 100, secondo DataForSEO",
+      "scoreScale": "su 100",
       "pages": "Pagine scansionate",
       "pagesOf": "su {max} richieste",
       "errors": "Errori",
@@ -8900,7 +9365,7 @@
     },
     "paid": {
       "title": "Ricerca a pagamento",
-      "description": "Se questo sito compra annunci su Google, per quante ricerche, e quanto costerebbero le visite: la stima di DataForSEO, dai posizionamenti che già raccogliamo.",
+      "description": "Questo sito paga annunci su Google? Su quante ricerche, e quanto costerebbero le visite.",
       "keywords": "Ricerche con annunci",
       "traffic": "Visite al mese dagli annunci",
       "spend": "Spesa stimata al mese",
@@ -8911,7 +9376,7 @@
     },
     "paidKeywords": {
       "title": "Parole chiave a pagamento",
-      "description": "Le ricerche per cui questo sito mostra annunci su Google, con la posizione dell'annuncio e quanto costerebbero le visite.",
+      "description": "Su quali ricerche questo sito compra annunci? Dove si trova ogni annuncio e quanto costano le sue visite.",
       "searchPlaceholder": "Cerca una ricerca o una pagina…",
       "sortLabel": "Ordina",
       "sortTraffic": "Più visite prima",

@@ -276,7 +276,7 @@ export function gapRebuildKey(companyWebsiteId: Id<"companyWebsites">): string {
  * Mark a request pending and schedule it, unless one is already waiting.
  * Returns whether this call scheduled the work.
  */
-async function claimSchedule(ctx: MutationCtx, key: string): Promise<boolean> {
+export async function claimSchedule(ctx: MutationCtx, key: string): Promise<boolean> {
   const existing = await ctx.db
     .query("siteSummaryRequests")
     .withIndex("by_key", (q) => q.eq("key", key))

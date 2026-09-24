@@ -174,6 +174,8 @@ export const getMySite = tenantQuery({
       aiNamed: numberOrNull,
       aiAsked: numberOrNull,
       trackedSearches: v.number(),
+      /** Whether any question the site is measured on in AI answers is switched on: none means AI answers is not set up. */
+      questionsSetUp: v.boolean(),
       rankedUp: numberOrNull,
       rankedDown: numberOrNull,
       suggestions: v.number(),
@@ -187,7 +189,7 @@ export const getMySite = tenantQuery({
     const websiteId = site.website._id;
 
     const askerId = listWebsiteId(site);
-    const [holds, rivals, latest, collectedAt, days, searches, suggestions, cited, watchedAi] = await Promise.all([
+    const [holds, rivals, latest, collectedAt, days, searches, suggestions, cited, watchedAi, questions] = await Promise.all([
       companyHolds(ctx, companyId),
       myRivals(ctx, site),
       latestFigures(ctx, websiteId, site.place),
@@ -207,6 +209,10 @@ export const getMySite = tenantQuery({
         .take(COUNT_CEILING),
       citedPagesOf(ctx, websiteId, askerId, site.place, QUESTIONS_FOR_CITED_PAGES),
       askerId === websiteId ? Promise.resolve(null) : newestAnswerEngines(ctx, askerId, websiteId, site.place),
+      ctx.db
+        .query("websiteQuestions")
+        .withIndex("by_website_active", (q) => q.eq("websiteId", askerId).eq("isActive", true))
+        .first(),
     ]);
 
     const me: HoldSummary = holds.find((entry) => entry.hold._id === args.siteId)?.summary ?? {
@@ -242,6 +248,7 @@ export const getMySite = tenantQuery({
         aiNamed: ai?.named ?? null,
         aiAsked: ai?.asked ?? null,
         trackedSearches: searches.filter((row) => row.isActive).length,
+        questionsSetUp: questions !== null,
         rankedUp: latest.ranking?.rankedUp ?? null,
         rankedDown: latest.ranking?.rankedDown ?? null,
         // What the Suggested page shows: not decided, and not already held.

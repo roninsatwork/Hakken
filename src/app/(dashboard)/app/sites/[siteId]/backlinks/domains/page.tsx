@@ -1,12 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Network } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { CheckedCell, LinkStatusPill } from "../../../_components/SiteCells";
+import { LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -24,6 +26,8 @@ export default function SiteReferringDomainsPage() {
   const t = useTranslations("sites.backlinksDomains");
   const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<Status | "">("status", "", ["LIVE", "NEW", "LOST"]);
   const [sort, setSort] = useSiteParam<Sort>("sort", "rank", ["rank", "backlinks", "newest"]);
@@ -40,7 +44,8 @@ export default function SiteReferringDomainsPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[1100px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "domain", domain: row.domain }))}
+        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -68,15 +73,12 @@ export default function SiteReferringDomainsPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "domain", header: t("columns.domain"), cell: (row) => <span className="text-[13px] text-foreground">{row.domain}</span> },
+          { key: "domain", header: t("columns.domain"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "domain", domain: row.domain })}>{row.domain}</RecordLinkCell> },
           { key: "rank", header: <span title={t("rankHint")}>{t("columns.rank")}</span>, align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.rank)}</span> },
           { key: "backlinks", header: t("columns.backlinks"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.backlinks)}</span> },
-          { key: "pages", header: t("columns.pages"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.referringPages)}</span> },
           { key: "spam", header: t("columns.spam"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.spamScore)}</span> },
           { key: "firstSeen", header: t("columns.firstSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
-          { key: "lost", header: t("columns.lost"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.lostDate)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

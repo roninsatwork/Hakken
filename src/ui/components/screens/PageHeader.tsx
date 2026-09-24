@@ -66,23 +66,33 @@ const BACK_ROW_CLASSES =
 export function DetailHeader({ back, ...headerProps }: AdminDetailHeaderProps) {
   return (
     <div className="flex flex-col gap-3">
-      {back.href ? (
-        <Link href={back.href} className={BACK_ROW_CLASSES}>
-          <ArrowLeft className="w-3.5 h-3.5" />
-          {back.label}
-        </Link>
-      ) : (
-        <Button
-          variant="ghost"
-          onClick={back.onClick}
-          className={cn(BACK_ROW_CLASSES, "px-0 py-0 rounded-none hover:bg-transparent")}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          {back.label}
-        </Button>
-      )}
+      <BackRow {...back} />
       <PageHeader {...headerProps} divider />
     </div>
+  );
+}
+
+/**
+ * The quiet "← Back to …" row on its own. `DetailHeader` draws it above a
+ * record's title; a list page opened from a link on another page — a figure
+ * that opens the records behind it, on the client's Sites screens — draws it
+ * alone above its own header, so the reader can return the way they came.
+ */
+export function BackRow({ label, href, onClick }: AdminDetailHeaderProps["back"]) {
+  return href ? (
+    <Link href={href} className={BACK_ROW_CLASSES}>
+      <ArrowLeft className="w-3.5 h-3.5" />
+      {label}
+    </Link>
+  ) : (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      className={cn(BACK_ROW_CLASSES, "px-0 py-0 rounded-none hover:bg-transparent")}
+    >
+      <ArrowLeft className="w-3.5 h-3.5" />
+      {label}
+    </Button>
   );
 }
 

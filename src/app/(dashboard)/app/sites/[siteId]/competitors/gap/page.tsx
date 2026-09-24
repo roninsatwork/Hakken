@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Puzzle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -7,8 +8,9 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { GAP_KEYWORDS_PER_RIVAL } from "@/convex/utils/siteShapes";
-import { CheckedCell, IntentPill } from "../../../_components/SiteCells";
+import { IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { formatNumber } from "../../../_components/siteFormat";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -23,9 +25,11 @@ type Intent = (typeof INTENTS)[number];
  * site in the group is filed, then searched, filtered and paged on the server.
  */
 export default function SiteContentGapPage() {
+  const router = useRouter();
   const t = useTranslations("sites.gap");
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
+  const recordHref = useSiteRecordHref(siteId);
   const site = useSite();
   const [search, setSearch, settled] = useSiteSearch();
   const [intent, setIntent] = useSiteParam<Intent | "">("intent", "", INTENTS);
@@ -50,7 +54,8 @@ export default function SiteContentGapPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[900px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -78,7 +83,7 @@ export default function SiteContentGapPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
+          { key: "keyword", header: t("columns.keyword"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "intent", header: t("columns.intent"), cell: (row) => <IntentPill intent={row.intent} /> },
           { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.volume)}</span> },
           {
@@ -91,7 +96,6 @@ export default function SiteContentGapPage() {
             ),
           },
           { key: "best", header: t("columns.best"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{row.bestRivalPosition}</span> },
-          { key: "checked", header: tc("lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

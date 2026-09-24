@@ -1112,6 +1112,7 @@
           "websites": "Websites",
           "companyWebsites": "Websites",
           "dataCollection": "Collection schedule",
+          "collectionRuns": "Collection runs",
           "directory": "Directory",
           "invites": "Invites",
           "ai": "AI",
@@ -1741,6 +1742,170 @@
         "save": "Save limits",
         "saved": "Limits saved",
         "saveFailed": "The limits could not be saved."
+      }
+    },
+    "collectionRuns": {
+      "title": "Collection runs",
+      "subtitle": "Every run for this client: what it bought, what it cost and which websites the money went on. Never shown to the client.",
+      "figures": {
+        "month": "Spent this month",
+        "monthHint": "{count, plural, =0 {No runs yet} one {# run · data and AI} other {# runs · data and AI}}",
+        "lastRun": "Last run",
+        "noRunYet": "None yet",
+        "estimate": "Estimated per month",
+        "estimateHint": "At today's limits and schedule",
+        "estimateOff": "Collection is off",
+        "nextRun": "Next run",
+        "nextRunHint": "{time} · {cadence}",
+        "notScheduled": "Not scheduled"
+      },
+      "cadence": {
+        "daily": "daily",
+        "weekly": "weekly",
+        "fortnightly": "fortnightly",
+        "monthly": "monthly"
+      },
+      "period": {
+        "label": "Period",
+        "months3": "Last 3 months",
+        "months12": "Last 12 months",
+        "all": "All runs"
+      },
+      "columns": {
+        "run": "Run",
+        "websites": "Websites",
+        "requests": "Requests",
+        "held": "Already held",
+        "data": "DataForSEO",
+        "ai": "AI",
+        "total": "Total",
+        "status": "Status"
+      },
+      "runLine": "{count, plural, =0 {Queued by the Planner} one {Sent in # Collector run} other {Sent in # Collector runs}}",
+      "status": {
+        "complete": "Complete",
+        "answering": "{count, plural, one {# still being answered} other {# still being answered}}",
+        "waiting": "{count, plural, one {# waiting to go} other {# waiting to go}}",
+        "failed": "{count, plural, one {# failed} other {# failed}}",
+        "costUp": "{percent}% more than the last run"
+      },
+      "workingOut": "Adding it up",
+      "empty": "No collection has run for this client yet.",
+      "detail": {
+        "back": "Collection runs",
+        "title": "Run of {when}",
+        "description": "Queued by the Planner for {company}'s {websites, plural, one {# website} other {# websites}}, and sent by the Collector in {runs, plural, one {# run} other {# runs}} between {from} and {to}.",
+        "descriptionUnsent": "Queued by the Planner for {company}. Nothing has been sent yet.",
+        "filed": "{filed} of {requests} filed",
+        "workedOut": "Worked out at {time}.",
+        "notReady": "This run's report is still being worked out. It appears about a minute after its first request is sent.",
+        "notFound": "That run could not be found.",
+        "figures": {
+          "total": "Total",
+          "totalHint": "{data} DataForSEO + {ai} AI",
+          "requests": "Requests paid for",
+          "requestsHint": "{count, plural, one {Across # website} other {Across # websites}}",
+          "held": "Answered from data already held",
+          "heldHint": "Not paid for again",
+          "ai": "AI judgements",
+          "aiHint": "{cost} · judged once, kept"
+        },
+        "money": {
+          "title": "Where the money went",
+          "subtitle": "DataForSEO spend, {total}",
+          "legend": "{name} · {cost} · {share}%",
+          "categories": {
+            "BACKLINKS": "Backlinks",
+            "SITE_AUDIT": "Site audit",
+            "KEYWORD_LISTS": "Keyword lists",
+            "SUMMARIES": "Summaries",
+            "COMPARISONS": "Side-by-side comparisons",
+            "SEARCHES": "Tracked searches",
+            "AI_ANSWERS": "AI answers",
+            "OTHER": "Other"
+          }
+        },
+        "bought": {
+          "title": "What was bought",
+          "columns": {
+            "what": "What",
+            "requests": "Requests",
+            "cost": "Cost",
+            "change": "Change",
+            "share": "Share",
+            "repeats": "Repeats"
+          },
+          "answering": "{count, plural, one {# still being answered} other {# still being answered}}",
+          "total": "Total",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "everyDays": "Every {days} days",
+          "company": "With {company}'s schedule ({cadence})",
+          "companyOff": "With {company}'s schedule"
+        },
+        "change": {
+          "new": "New",
+          "none": "–"
+        },
+        "sites": {
+          "title": "By website",
+          "columns": {
+            "website": "Website",
+            "keeps": "Keeps",
+            "requests": "Requests",
+            "keywords": "Keywords",
+            "perThousand": "Per 1,000 kw",
+            "cost": "Cost",
+            "change": "Change",
+            "share": "Share"
+          },
+          "owned": "Owned",
+          "competitor": "Competitor",
+          "keeps": "{keywords} kw · {links} links",
+          "shared": "Asked about several websites at once"
+        },
+        "ai": {
+          "title": "AI",
+          "columns": {
+            "judged": "What was judged",
+            "count": "How many",
+            "cost": "Cost"
+          },
+          "note": "Mostly a one-off: a keyword or page is judged once and kept, so later runs only pay for new ones.",
+          "none": "No AI judgements came from this run."
+        },
+        "estimate": {
+          "title": "What {company} will cost from here",
+          "subtitle": "At today's limits and schedule, from this run's requests.",
+          "every": {
+            "DAY": "Every day",
+            "WEEK": "Every week",
+            "FORTNIGHT": "Every fortnight",
+            "MONTH": "Every month"
+          },
+          "line": "{cost} each time · {perMonth} a month",
+          "perMonth": "Per month",
+          "aiNote": "AI isn't included: it is mostly a one-off.",
+          "off": "Collection is off for {company}, so nothing more is planned."
+        },
+        "sent": {
+          "title": "How it was sent",
+          "columns": {
+            "run": "Collector run",
+            "started": "Started",
+            "requests": "Requests",
+            "cost": "Cost",
+            "stopped": "Stopped"
+          },
+          "runName": "Run {number}",
+          "stopped": {
+            "SPEND_LIMIT": "Spend limit",
+            "QUEUE_EMPTY": "Queue empty",
+            "TIME_UP": "Time up"
+          },
+          "unknown": "–",
+          "none": "No Collector run has sent any of it yet."
+        }
       }
     },
     "websites": {
@@ -7925,7 +8090,8 @@
         "siteAudit": "Site audit",
         "paidSummary": "Summary",
         "paidKeywords": "Paid keywords"
-      }
+      },
+      "notSetUp": "Not set up"
     },
     "range": {
       "label": "Dates",
@@ -8047,7 +8213,7 @@
     },
     "overview": {
       "title": "Overview",
-      "description": "How this website is doing in the dates chosen, and what changed since the day before them.",
+      "description": "How is this website doing? The headline numbers for the dates chosen, and what changed since the day before them.",
       "aiMentions": "AI mentions",
       "ofEngines": "{named} of {asked} engines",
       "estimatedTraffic": "Estimated traffic",
@@ -8083,7 +8249,7 @@
     },
     "calendar": {
       "title": "Calendar",
-      "description": "What changed on each day: rankings won and lost, AI answers that named this website, and linking websites gained and lost.",
+      "description": "What changed, and when? Each day's rankings won and lost, AI answers that named this website, and linking websites gained and lost.",
       "previous": "Previous month",
       "next": "Next month",
       "weekdays": {
@@ -8106,7 +8272,7 @@
     },
     "aiMentions": {
       "title": "Mentions",
-      "description": "Whether each AI engine names this website when asked the questions it is measured on, and how it treats it.",
+      "description": "Do AI assistants mention this website? For each question it is measured on, how each assistant treats it. Open a question to read the answers.",
       "searchPlaceholder": "Search questions…",
       "engineFilter": "Engine",
       "allEngines": "All engines",
@@ -8135,7 +8301,7 @@
     },
     "aiShare": {
       "title": "Share of voice",
-      "description": "How often the AI engines name this website against the other websites in its group.",
+      "description": "How often do AI assistants name this website, against its competitors?",
       "note": "Counted against the websites you track only: an answer names many firms, and the ones counted are the ones we hold names for.",
       "columns": {
         "website": "Website",
@@ -8149,7 +8315,7 @@
     },
     "aiSources": {
       "title": "Sources cited",
-      "description": "This website's pages that AI answers link to, most cited first.",
+      "description": "Which of this website's pages do AI answers link to? Most cited first. Open one to see its page.",
       "searchPlaceholder": "Search pages…",
       "columns": {
         "page": "Page",
@@ -8163,7 +8329,7 @@
     },
     "aiSearched": {
       "title": "What the AI searched",
-      "description": "The searches the engines ran behind the scenes when asked the questions, most persistent first.",
+      "description": "What did the AI assistants search for behind the scenes? The searches they ran when answering, most repeated first: each one a search worth ranking for.",
       "searchPlaceholder": "Search these searches…",
       "trackedFilter": "Tracked",
       "anyTracked": "Tracked or not",
@@ -8183,7 +8349,7 @@
     },
     "googleSearches": {
       "title": "Your searches",
-      "description": "Where this website ranks on each search it is measured on, checked from {place}.",
+      "description": "Where does this website rank on the searches that matter most to it? Each one checked from {place}. Open a search for its history and Google's whole results page.",
       "searchPlaceholder": "Find a search…",
       "verdictFilter": "How it's doing",
       "anyVerdict": "Any",
@@ -8213,7 +8379,7 @@
     },
     "googleMoves": {
       "title": "Wins and losses",
-      "description": "Keywords that moved at their last check, biggest move first.",
+      "description": "Which searches moved at the last check? Biggest move first. Open one for its history.",
       "tabs": {
         "UP": "Moved up",
         "DOWN": "Moved down",
@@ -8237,8 +8403,8 @@
     },
     "keywords": {
       "title": "All keywords",
-      "description": "Every search this website ranks for on Google, best position first.",
-      "listing": "Listing {stored} of the {total} keywords DataForSEO found for this website.",
+      "description": "Which searches bring this website visits? Every search it ranks for on Google. Open one for its history, its page and its competitors.",
+      "listing": "Showing {stored} of the {total} searches this website ranks for — the ones that bring it the most visits.",
       "searchPlaceholder": "Search keywords or pages…",
       "bandFilter": "Position",
       "anyBand": "Any position",
@@ -8282,15 +8448,15 @@
       },
       "sortTraffic": "Most traffic first",
       "sortCpc": "Dearest clicks first",
-      "kdHint": "Keyword difficulty from DataForSEO, 0 to 100",
-      "cpcHint": "What a click costs as an advert, in US dollars (DataForSEO)",
-      "trafficHint": "Visits a month DataForSEO estimates this search brings the website",
+      "kdHint": "How hard it is to reach page one for this search, from 0 (easy) to 100 (hardest)",
+      "cpcHint": "What advertisers pay for a click on this search, in US dollars",
+      "trafficHint": "Estimated visits a month this search brings the website",
       "trendHint": "Searches a month over the last year",
       "featuresCount": "{count, plural, =0 {None} =1 {1 feature} other {# features}}"
     },
     "pages": {
       "title": "Top pages",
-      "description": "This website's pages, by how many searches each ranks for.",
+      "description": "Which of this website's pages bring the visits? Its pages by how many searches each ranks for. Open one for its searches, links and problems.",
       "searchPlaceholder": "Search pages or keywords…",
       "sectionFilter": "Section",
       "allSections": "Every section",
@@ -8310,7 +8476,7 @@
       },
       "citedBy": "Cited {times} times",
       "chartTitle": "Ranking pages",
-      "chartHint": "How many of this website's pages rank for at least one search, and the traffic DataForSEO estimates they bring.",
+      "chartHint": "How many of this website's pages rank for at least one search, and the visits they are estimated to bring.",
       "empty": "No ranking pages yet.",
       "noMatch": "No page matches that.",
       "typeFilter": "Page type",
@@ -8318,13 +8484,316 @@
       "sortLabel": "Sort",
       "sortKeywords": "Most keywords first",
       "sortTraffic": "Most traffic first",
-      "pageRankHint": "DataForSEO's page rank, 0 to 1,000 — its own scale, not Ahrefs' UR",
+      "pageRankHint": "How strong this page is, from the links pointing at it: 0 to 1,000",
       "shareOf": "{share} of traffic",
       "backlinksTitle": "{count} backlinks"
     },
+    "record": {
+      "back": "Back",
+      "backTo": "Back to {page}",
+      "loading": "Loading…"
+    },
+    "setup": {
+      "questions": {
+        "title": "No AI questions set up yet",
+        "body": "These screens show how AI assistants such as ChatGPT, Gemini and Perplexity answer the questions your customers ask, and whether they mention this website. No questions are set up for it yet. Once they are, the first answers arrive with the next collection."
+      },
+      "trackedSearches": {
+        "title": "No searches tracked yet",
+        "body": "This screen follows the Google searches that matter most to this website, checked one by one: where it ranks, who ranks above it, and what else Google shows. None are tracked for it yet. Once they are, the first check arrives with the next collection."
+      }
+    },
+    "keywordRecord": {
+      "description": "Where this website ranks for this search, how that has moved, and what the search is worth.",
+      "missingTitle": "No search chosen",
+      "missingBody": "Open a search from one of the keyword lists to see it here.",
+      "notRanking": "This website does not rank for this search at its newest check.",
+      "trackedPill": "One of your searches",
+      "figures": {
+        "position": "Position",
+        "notRanking": "Not ranking",
+        "movedSince": "{moved} since {day}",
+        "unchangedSince": "No change since {day}",
+        "newAtCheck": "New at this check",
+        "lostAtCheck": "Lost at this check",
+        "volume": "Searches a month",
+        "volumeDetail": "How often people search for it",
+        "traffic": "Visits a month",
+        "trafficDetail": "Estimated visits it brings this website",
+        "cpc": "Cost per click",
+        "cpcDetail": "What advertisers pay, in US dollars"
+      },
+      "chartTitle": "Position over time",
+      "chartHint": "Where this website stood at each check. Higher on the chart is better: 1 is the top of Google.",
+      "about": {
+        "title": "About this search",
+        "difficulty": "How hard it is to reach page one",
+        "outOf100": "{value} of 100",
+        "competition": "Competition for adverts",
+        "competitionLevels": {
+          "LOW": "Low",
+          "MEDIUM": "Medium",
+          "HIGH": "High"
+        },
+        "searchIntent": "What searchers want",
+        "searchIntents": {
+          "informational": "To find something out",
+          "navigational": "To reach a particular website",
+          "commercial": "To compare before buying",
+          "transactional": "To buy or book"
+        },
+        "ourIntent": "How we sort it",
+        "results": "Results on Google",
+        "features": "What the results page shows",
+        "trend": "Searches over the last year",
+        "trendRange": "From {low} to {high} a month",
+        "firstSeen": "First seen ranking",
+        "lastChecked": "Last checked"
+      },
+      "rankingPage": {
+        "title": "The page that ranks",
+        "page": "Page",
+        "was": "Before this check: {page}",
+        "strength": "Page strength",
+        "outOf1000": "{value} of 1,000",
+        "linkingWebsites": "Websites linking to it",
+        "links": "Links to it",
+        "value": "What its visits would cost as adverts",
+        "none": "No page of this website ranks for this search."
+      },
+      "features": {
+        "title": "Where else it shows on Google",
+        "kinds": {
+          "ai_overview_reference": "Linked in the AI Overview",
+          "featured_snippet": "The answer box at the top",
+          "local_pack": "The map of local businesses"
+        },
+        "at": "Position {position}",
+        "none": "Only in the ordinary results."
+      },
+      "rivals": {
+        "title": "Your competitors on this search",
+        "thisWebsite": "This website",
+        "notRanking": "Not found in their rankings",
+        "none": "No competitors are set up for this website yet."
+      },
+      "tracked": {
+        "title": "Checked as one of your searches",
+        "position": "Position at the last check",
+        "best": "Best position",
+        "firstChecked": "First checked",
+        "lastChecked": "Last checked",
+        "paused": "Paused: not being checked"
+      },
+      "serp": {
+        "title": "Google's results page",
+        "checked": "Checked on {day}",
+        "thisWebsite": "This website",
+        "competitor": "Competitor",
+        "showAll": "Show all {count}",
+        "showTop": "Show the top ten",
+        "questions": "What people also ask",
+        "related": "Related searches"
+      }
+    },
+    "pageRecord": {
+      "description": "What this page ranks for, the visits it brings, what the site audit found on it, and the websites linking to it.",
+      "missingTitle": "No page chosen",
+      "missingBody": "Open a page from Top pages or the Site audit to see it here.",
+      "notRanking": "This page does not rank for any search at the newest check.",
+      "openPage": "Open the page",
+      "citedPill": "Linked in AI answers",
+      "figures": {
+        "keywords": "Searches it ranks for",
+        "top3": "{count} in the top three",
+        "best": "Best position",
+        "traffic": "Visits a month",
+        "worth": "Worth {value} as adverts",
+        "linking": "Websites linking to it",
+        "links": "{count} links"
+      },
+      "keywordsTitle": "Searches this page ranks for",
+      "ranks": {
+        "title": "How it ranks",
+        "topKeyword": "Its most-searched keyword",
+        "searches": "{count} searches a month",
+        "section": "Folder",
+        "strength": "Page strength",
+        "outOf1000": "{value} of 1,000",
+        "firstSeen": "First seen ranking",
+        "lastChecked": "Last checked"
+      },
+      "crawl": {
+        "title": "What the site audit found",
+        "checked": "Crawled on {day}",
+        "answered": "Answered",
+        "problems": "Problems",
+        "noProblems": "No problems found",
+        "score": "Page score",
+        "outOf100": "{value} of 100",
+        "load": "Time to load",
+        "paint": "Time to show its main content",
+        "seconds": "{value} s",
+        "size": "Size",
+        "kilobytes": "{value} KB",
+        "words": "Words",
+        "internalLinks": "Links to other pages of this website",
+        "externalLinks": "Links to other websites",
+        "inboundLinks": "Links to it from this website's other pages",
+        "depth": "Clicks from the home page",
+        "redirect": "Sends visitors on to",
+        "canonical": "Says the main copy is",
+        "none": "The newest crawl did not reach this page."
+      },
+      "cited": {
+        "title": "AI answers that link to it",
+        "times": "{count, plural, one {Linked once} other {Linked # times}}",
+        "none": "No AI answer to your questions links to this page yet."
+      },
+      "links": {
+        "title": "Strongest links to it",
+        "followed": "Followed",
+        "notFollowed": "Not followed",
+        "strength": "Strength {rank}",
+        "none": "No links to this page in the newest list."
+      }
+    },
+    "featureRecord": {
+      "titles": {
+        "ai_overview_reference": "Linked in the AI Overview",
+        "featured_snippet": "In the answer box at the top",
+        "local_pack": "In the map of local businesses"
+      },
+      "description": "Every search in this website's keyword list where Google shows it in this feature, with where it ranks in the ordinary results below.",
+      "missingTitle": "No feature chosen",
+      "missingBody": "Open a figure on Search features to see the searches behind it.",
+      "columns": {
+        "keyword": "Search",
+        "position": "Place in the feature",
+        "organic": "Ranking below it",
+        "volume": "Searches a month",
+        "page": "Page"
+      },
+      "empty": "No search in this website's keyword list shows it here yet."
+    },
+    "answerRecord": {
+      "description": "What {engine} said, word for word, when asked this on {day}.",
+      "missingTitle": "No answer chosen",
+      "missingBody": "Open an answer from Full answers to read it here.",
+      "notFoundTitle": "Answer not found",
+      "notFoundBody": "This answer is not one of this website's, or it has been replaced by a newer one.",
+      "answerTitle": "The answer",
+      "sourcesTitle": "Sources it cited",
+      "onThisWebsite": "On this website",
+      "noSources": "It cited no sources.",
+      "searchesTitle": "What {engine} searched for this question",
+      "searchesHint": "Across its answers to this question, the searches it came back to most first.",
+      "timesSeen": "{count, plural, one {Seen once} other {Seen # times}}",
+      "noSearches": "No searches kept for this question yet."
+    },
+    "rivalRecord": {
+      "description": "How {rival} compares with {site}: on every search you both rank for, who is ahead.",
+      "missingTitle": "No competitor chosen",
+      "missingBody": "Open a competitor from Side by side to compare it here.",
+      "notFoundTitle": "Competitor not found",
+      "notFoundBody": "That website is not one of the competitors beside this one.",
+      "openTheirs": "Open their own screens",
+      "figures": {
+        "traffic": "Visits a month",
+        "keywords": "Searches it ranks for",
+        "linking": "Websites linking to it",
+        "rank": "Website strength",
+        "yours": "Yours: {value}"
+      },
+      "tableTitle": "Searches you both rank for",
+      "tableHint": "Their most valuable searches first.",
+      "leads": {
+        "THEM": "Where they are ahead",
+        "YOU": "Where you are ahead",
+        "ALL": "Every search you share"
+      },
+      "columns": {
+        "keyword": "Search",
+        "theirs": "Their position",
+        "yours": "Your position",
+        "gap": "Places between you",
+        "volume": "Searches a month"
+      },
+      "empty": "No shared searches here yet."
+    },
+    "domainRecord": {
+      "description": "A website linking to this one: how strong it is, and each of its links here in full.",
+      "missingTitle": "No website chosen",
+      "missingBody": "Open a linking website from All backlinks or Referring domains to see it here.",
+      "notInList": "This website is not in the newest list of linking websites.",
+      "figures": {
+        "rank": "Website strength",
+        "rankDetail": "0 to 1,000",
+        "links": "Links here",
+        "pages": "Pages linking here",
+        "spam": "Spam score",
+        "spamDetail": "Lower is cleaner"
+      },
+      "facts": {
+        "title": "About this website",
+        "firstSeen": "First seen linking",
+        "lost": "Stopped linking",
+        "nofollowPages": "Pages with links not followed",
+        "broken": "Links to broken pages here",
+        "checked": "In the list from"
+      },
+      "linksTitle": "Its links here",
+      "linksHint": "Strongest first. Up to fifty are shown."
+    },
+    "anchorRecord": {
+      "description": "Words other websites link to this one with, and each link that uses them.",
+      "noWords": "No words: an image or a bare address",
+      "missingTitle": "No anchor chosen",
+      "missingBody": "Open an anchor from Anchors to see its links here.",
+      "notInList": "These words are not in the newest list of anchors.",
+      "figures": {
+        "links": "Links using these words",
+        "websites": "Linking websites",
+        "firstSeen": "First seen",
+        "spam": "Spam score",
+        "spamDetail": "Lower is cleaner"
+      },
+      "linksTitle": "Links using these words",
+      "linksHint": "Strongest linking website first. Up to fifty are shown."
+    },
+    "linkCard": {
+      "to": "Links to",
+      "anchor": "Words",
+      "noAnchor": "No words (an image or a bare address)",
+      "followed": "Followed",
+      "notFollowed": "Not followed",
+      "rel": "Marked as",
+      "place": "Where on the page",
+      "kind": "Kind of website",
+      "spam": "Spam score {value}",
+      "strength": "Link strength {value}",
+      "websiteStrength": "Website strength {value}",
+      "linksOnPage": "{count} links on its page",
+      "throughRedirect": "Reaches this site through a redirect",
+      "language": "Language: {value}",
+      "firstSeen": "First seen {day}",
+      "lastSeen": "Last seen {day}",
+      "broken": "Points at a broken page ({code})",
+      "none": "None of these links are among the ones kept for this website: its strongest links, up to its limit."
+    },
+    "problemRecord": {
+      "description": "The pages the newest crawl found with this problem. Each opens its page's screen.",
+      "missingTitle": "No problem chosen",
+      "missingBody": "Open a problem from the Site audit to see the pages that have it.",
+      "columns": {
+        "page": "Page",
+        "answered": "Answered",
+        "brokenLinks": "Broken links on it"
+      }
+    },
     "structure": {
       "title": "Site structure",
-      "description": "Keywords and pages by section of the website.",
+      "description": "Which parts of this website rank best? Searches, pages and visits by folder. Open a folder to see its pages.",
       "columns": {
         "section": "Section",
         "pages": "Pages",
@@ -8341,7 +8810,7 @@
     },
     "sideBySide": {
       "title": "Side by side",
-      "description": "This website beside the others in its group, as each stood at its newest check.",
+      "description": "How does this website compare with its competitors? Each as it stood at its newest check. Open a competitor to compare search by search.",
       "columns": {
         "website": "Website",
         "traffic": "Estimated traffic",
@@ -8369,7 +8838,7 @@
     },
     "organic": {
       "title": "Organic competitors",
-      "description": "Every website DataForSEO found ranking for the same searches, most overlap first.",
+      "description": "Who else ranks for the same searches? Every website that does, most overlap first.",
       "searchPlaceholder": "Find a website…",
       "kindFilter": "Kind",
       "anyKind": "Any kind",
@@ -8395,7 +8864,7 @@
     },
     "gap": {
       "title": "Content gap",
-      "description": "Searches the other websites in this group rank for and this one does not, most searched first.",
+      "description": "Which searches do competitors rank for that this website does not? Most searched first: the gaps worth filling.",
       "ceiling": "Read from each competitor's {count} most-searched keywords.",
       "searchPlaceholder": "Search keywords…",
       "rivalsFilter": "Competitors ranking",
@@ -8413,7 +8882,7 @@
     },
     "suggested": {
       "title": "Suggested competitors",
-      "description": "Websites worth watching: named by the AI answers, or ranking for the same searches. We add them for you.",
+      "description": "Which websites are worth watching? Named in AI answers, or ranking for the same searches. We add them for you.",
       "columns": {
         "website": "Website",
         "why": "Why"
@@ -8426,7 +8895,7 @@
     },
     "backlinks": {
       "title": "Backlinks",
-      "description": "Links to this website from others: its domain rank, backlinks and linking websites, over time.",
+      "description": "How many websites link to this one, and how strong are those links? Over time.",
       "domainRank": "Domain rank",
       "rankScale": "of 1,000",
       "backlinks": "Backlinks",
@@ -8437,7 +8906,7 @@
     },
     "backlinksCompared": {
       "title": "Compared with rivals",
-      "description": "This website's links beside the others in its group.",
+      "description": "How do this website's links compare with its competitors'? Open a competitor for its own links.",
       "columns": {
         "website": "Website",
         "rank": "Domain rank",
@@ -8451,7 +8920,7 @@
     },
     "aiAnswers": {
       "title": "Full answers",
-      "description": "What each AI engine said, word for word, when asked the questions this website is measured on.",
+      "description": "What exactly did each AI assistant say? The answers, word for word, to the questions this website is measured on. Open one to read it in full.",
       "questionLabel": "Question",
       "engineFilter": "Engine",
       "allEngines": "All engines",
@@ -8462,10 +8931,7 @@
         "WARNED_AGAINST": "Warned against it",
         "NOT_NAMED": "Did not name it"
       },
-      "readMore": "Read the whole answer",
-      "readLess": "Show less",
       "sources": "{count, plural, =0 {No sources} =1 {1 source} other {# sources}}",
-      "sourcesTitle": "Sources it cited",
       "keptFrom": "Answers are kept word for word from 23 September 2026. Earlier checks kept only who was named.",
       "noQuestions": "No questions yet. Ask us to add the questions your customers put to AI.",
       "empty": "No answers in these dates.",
@@ -8476,11 +8942,12 @@
         "stance": "This website",
         "answer": "Answer",
         "sources": "Sources"
-      }
+      },
+      "readFull": "Read the full answer"
     },
     "googleAbove": {
       "title": "Who ranks above you",
-      "description": "For each search this website is measured on, the websites Google puts above it — or the whole of page one when it is not in the top 100. Checked from {place}.",
+      "description": "Who beats this website on its most important searches? The websites Google puts above it on each, checked from {place}.",
       "searchPlaceholder": "Find a search or website…",
       "positionFilter": "Where you are",
       "anyPosition": "Anywhere",
@@ -8508,7 +8975,7 @@
     },
     "googleFeatures": {
       "title": "Search features",
-      "description": "What Google shows on each search's results page besides the links — an AI Overview, a map pack, a featured snippet, “People also ask” — and whether this website is in them.",
+      "description": "What else does Google show on this website's searches — an AI Overview, a map of local businesses, an answer box — and is this website in them?",
       "chartTitle": "Features on your searches",
       "chartHint": "How many of the {count} checked searches show each feature, and on how many this website is one of those it names.",
       "seriesSearches": "Searches showing it",
@@ -8531,11 +8998,11 @@
       "inAiOverviews": "In AI Overviews",
       "inLocalPacks": "In map packs",
       "inSnippets": "In featured snippets",
-      "acrossAllHint": "DataForSEO's count, at the newest check: searches whose results page shows this website in the feature."
+      "acrossAllHint": "At the newest check: searches whose results page shows this website in the feature."
     },
     "googleQuestions": {
       "title": "Questions people ask",
-      "description": "The “People also ask” questions and related searches Google shows on this website's searches: what people want to know next.",
+      "description": "What do people want to know next? The questions and related searches Google shows on this website's searches: ideas for what to write about.",
       "searchPlaceholder": "Find a question or search…",
       "kindFilter": "Kind",
       "anyKind": "Questions and searches",
@@ -8556,7 +9023,7 @@
     },
     "bands": {
       "title": "Position bands",
-      "description": "How many of the searches this website ranks for sit in each band of Google's results, over time. DataForSEO's count across everything it ranks for, not only the keywords listed.",
+      "description": "How high up Google does this website rank? How many of its searches sit on page one and further down, over time.",
       "chartTitle": "Keywords by position",
       "chartHint": "Stacked, best band at the bottom.",
       "columns": {
@@ -8568,7 +9035,7 @@
     },
     "newLost": {
       "title": "New and lost keywords",
-      "description": "How many searches this website newly ranks for, moved up or down on, or lost — DataForSEO's counts at each check, across everything it ranks for.",
+      "description": "Is this website gaining or losing searches? How many it newly ranks for, moved up or down on, or lost, at each check.",
       "chartTitle": "New, up, down and lost",
       "chartHint": "At each check. The arrows carry the direction.",
       "series": {
@@ -8589,13 +9056,13 @@
     },
     "marketMap": {
       "title": "Market map",
-      "description": "Every website in this one's market, by how many searches it ranks for and the traffic those bring.",
+      "description": "Where does this website sit in its market? Every website by how many searches it ranks for and the visits those bring.",
       "chartTitle": "Keywords against traffic",
       "chartHint": "Each shape is a website. Further right ranks for more searches; higher gets more visits.",
       "roles": {
         "YOU": "This website",
         "RIVAL": "Your competitors",
-        "FOUND": "Found by DataForSEO"
+        "FOUND": "Also ranking for your searches"
       },
       "axes": {
         "keywords": "Keywords",
@@ -8619,7 +9086,7 @@
     },
     "linkQuality": {
       "title": "Link quality",
-      "description": "How clean this website's links are: DataForSEO's spam score, links that point at broken pages, and broken pages here that others link to.",
+      "description": "Are this website's links healthy? A spam score, links that point at broken pages, and broken pages here that others link to.",
       "spamScore": "Spam score",
       "spamScale": "of 100 — lower is better",
       "brokenBacklinks": "Broken backlinks",
@@ -8635,7 +9102,7 @@
     },
     "linkSources": {
       "title": "Where links come from",
-      "description": "Where the links to this website come from: countries, domain endings, and the kinds of site and link.",
+      "description": "Where do this website's links come from? By country, domain ending, and the kind of site and link.",
       "breakdowns": {
         "countries": "By country",
         "tlds": "By domain ending",
@@ -8674,8 +9141,8 @@
     },
     "backlinksAll": {
       "title": "All backlinks",
-      "description": "Every website linking here, with its strongest link: the page it is on, the words used and whether search engines follow it.",
-      "descriptionEvery": "Every link to this site, from the strongest linking websites down, as many as its limit keeps: the page it is on, the words used and whether search engines follow it.",
+      "description": "Which websites link here, and how? Each one with its strongest link: the page it is on, the words used, and whether search engines follow it. Open one for all its links.",
+      "descriptionEvery": "Every link to this website, strongest linking website first, as many as its limit keeps: the page it is on, the words used, and whether search engines follow it.",
       "searchPlaceholder": "Find a website, page or anchor…",
       "sortRank": "Strongest website first",
       "sortNewest": "Newest first",
@@ -8698,7 +9165,7 @@
     },
     "backlinksDomains": {
       "title": "Referring domains",
-      "description": "Every website linking here: how strong it is, how many links it sends and when it first linked.",
+      "description": "Which websites link here? How strong each is, how many links it sends and when it started. Open one for all its links.",
       "searchPlaceholder": "Find a website…",
       "sortRank": "Strongest first",
       "sortBacklinks": "Most links first",
@@ -8716,11 +9183,11 @@
       },
       "empty": "No linking websites collected yet.",
       "noMatch": "No website matches that.",
-      "rankHint": "DataForSEO's rank for this website's links to yours, 0 to 1,000"
+      "rankHint": "How strong this website's links to yours are, from 0 to 1,000"
     },
     "backlinksAnchors": {
       "title": "Anchors",
-      "description": "The words other websites use when they link here, most-used first.",
+      "description": "What words do other websites use when they link here? Most used first. Open one to see its links.",
       "searchPlaceholder": "Find words…",
       "sortBacklinks": "Most links first",
       "sortDomains": "Most websites first",
@@ -8741,7 +9208,7 @@
     },
     "backlinksIps": {
       "title": "Referring IPs",
-      "description": "The servers links come from, and the networks they sit in. Many linking websites on one network can be a link network.",
+      "description": "Where are the linking websites hosted? The servers links come from and the networks they sit in: many linking websites on one network can be a link network.",
       "searchPlaceholder": "Find an address…",
       "subnetFilter": "Network",
       "anySubnet": "Every network",
@@ -8766,7 +9233,7 @@
     },
     "backlinksBroken": {
       "title": "Broken backlinks",
-      "description": "Links from other websites that land on a page here that no longer works. Each is worth mending: put the page back, or send its address somewhere that works.",
+      "description": "Which links from other websites land on a broken page here? Each is worth mending: put the page back, or send its address somewhere that works.",
       "searchPlaceholder": "Find a website, page or anchor…",
       "columns": {
         "from": "Linking page",
@@ -8782,7 +9249,7 @@
     },
     "backlinksNewLost": {
       "title": "New and lost links",
-      "description": "Links and linking websites gained and lost, in the dates chosen, from DataForSEO's weekly count.",
+      "description": "Is this website gaining or losing links? Links and linking websites gained and lost in the dates chosen, counted each week.",
       "chartTitle": "Links gained and lost",
       "chartHint": "Per step. The arrows carry the direction.",
       "series": {
@@ -8807,16 +9274,14 @@
     },
     "audit": {
       "problemPages": {
-        "loading": "Loading the pages…",
         "none": "No page detail for this crawl yet. It is fetched after each crawl, from the next one on.",
         "count": "{count, plural, one {# page} other {# pages}} in the newest crawl.",
-        "answer": "Answered {code}",
         "brokenTo": "Broken link to {to} (answered {code})"
       },
       "title": "Site audit",
-      "description": "What a crawl of up to a hundred of this website's pages found: pages that do not work, missing or duplicate titles, slow pages and more. Recrawled monthly.",
+      "description": "What is wrong with this website's pages? What the newest crawl found — pages that do not work, missing or repeated titles, slow pages — worst first. Open a problem to see its pages.",
       "score": "Technical score",
-      "scoreScale": "of 100, from DataForSEO",
+      "scoreScale": "of 100",
       "pages": "Pages crawled",
       "pagesOf": "of {max} asked for",
       "errors": "Errors",
@@ -8900,7 +9365,7 @@
     },
     "paid": {
       "title": "Paid search",
-      "description": "Whether this website buys Google adverts, on how many searches, and what the visits would cost — DataForSEO's estimate, from the rankings we already collect.",
+      "description": "Does this website pay for Google adverts? On how many searches, and what the visits would cost.",
       "keywords": "Searches with adverts",
       "traffic": "Visits a month from adverts",
       "spend": "Estimated spend a month",
@@ -8911,7 +9376,7 @@
     },
     "paidKeywords": {
       "title": "Paid keywords",
-      "description": "The searches this website shows Google adverts on, with where the advert sits and what the visits would cost.",
+      "description": "Which searches does this website buy adverts on? Where each advert sits and what its visits cost.",
       "searchPlaceholder": "Find a search or page…",
       "sortLabel": "Sort",
       "sortTraffic": "Most visits first",

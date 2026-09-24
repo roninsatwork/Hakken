@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowLeftRight } from "lucide-react";
@@ -15,7 +14,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const KEYS = ["newBacklinks", "lostBacklinks", "newReferringDomains", "lostReferringDomains"] as const;
@@ -33,7 +32,7 @@ export default function SiteLinksNewLostPage() {
   const range = useSiteRange();
   const points = useQuery(api.siteLinkLists.linkChanges, { siteId, from: range.from, to: range.to, step: range.step });
   const [measure, setMeasure] = useSiteParam<"backlinks" | "domains">("show", "backlinks", ["backlinks", "domains"]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
 
   const shownKeys = measure === "backlinks" ? (["newBacklinks", "lostBacklinks"] as const) : (["newReferringDomains", "lostReferringDomains"] as const);
   const newestFirst = [...(points ?? [])].reverse();

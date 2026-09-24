@@ -28,7 +28,24 @@ export type SitePage = {
     | "moves"
     | "suggestions"
     | "citedPages";
+  /**
+   * What the page cannot show anything without, set up by the team for the
+   * site: the questions asked of AI assistants, or the searches checked one
+   * by one on Google. Unmet, the page shows one note saying so instead of an
+   * empty screen, and the menu marks it (docs/plans/active/
+   * sites-ux-updates-plan.md §3, "an empty section says so once").
+   */
+  needs?: SiteSetup;
 };
+
+export type SiteSetup = "questions" | "trackedSearches";
+
+/** Whether a page's setup is in place, from the counts in the site's header. */
+export function setupMet(page: SitePage, counts: { questionsSetUp: boolean; trackedSearches: number }): boolean {
+  if (page.needs === "questions") return counts.questionsSetUp;
+  if (page.needs === "trackedSearches") return counts.trackedSearches > 0;
+  return true;
+}
 
 export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "keywords", "paid", "competitors", "backlinks"];
 
@@ -37,17 +54,19 @@ export const SITE_PAGES: SitePage[] = [
   { id: "calendar", group: "site", segment: "calendar", built: true },
   { id: "siteAudit", group: "site", segment: "audit", built: true },
 
-  { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed" },
-  { id: "aiShareOfVoice", group: "ai", segment: "ai/share-of-voice", built: true },
-  { id: "aiAnswers", group: "ai", segment: "ai/answers", built: true },
-  { id: "aiSources", group: "ai", segment: "ai/sources", built: true, count: "citedPages" },
-  { id: "aiSearched", group: "ai", segment: "ai/searched", built: true },
+  { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed", needs: "questions" },
+  { id: "aiShareOfVoice", group: "ai", segment: "ai/share-of-voice", built: true, needs: "questions" },
+  { id: "aiAnswers", group: "ai", segment: "ai/answers", built: true, needs: "questions" },
+  { id: "aiSources", group: "ai", segment: "ai/sources", built: true, count: "citedPages", needs: "questions" },
+  { id: "aiSearched", group: "ai", segment: "ai/searched", built: true, needs: "questions" },
 
-  { id: "googleSearches", group: "google", segment: "google/searches", built: true, count: "trackedSearches" },
+  // Wins and losses and Search features read every keyword the site ranks
+  // for as well, so they have something to show without tracked searches.
+  { id: "googleSearches", group: "google", segment: "google/searches", built: true, count: "trackedSearches", needs: "trackedSearches" },
   { id: "googleMoves", group: "google", segment: "google/moves", built: true, count: "moves" },
-  { id: "googleAbove", group: "google", segment: "google/above", built: true },
+  { id: "googleAbove", group: "google", segment: "google/above", built: true, needs: "trackedSearches" },
   { id: "googleFeatures", group: "google", segment: "google/features", built: true },
-  { id: "googleQuestions", group: "google", segment: "google/questions", built: true },
+  { id: "googleQuestions", group: "google", segment: "google/questions", built: true, needs: "trackedSearches" },
 
   { id: "keywordsAll", group: "keywords", segment: "keywords", built: true, count: "keywords" },
   { id: "keywordsPages", group: "keywords", segment: "keywords/pages", built: true, count: "pages" },
@@ -77,9 +96,31 @@ export const SITE_PAGES: SitePage[] = [
   { id: "backlinksNewLost", group: "backlinks", segment: "backlinks/new-lost", built: true },
 ];
 
-/** The page a path under the site opens, or the Overview. */
-export function sitePageForPath(pathname: string, siteId: string): SitePage {
+/** The part of a path after the site, without its slashes: "keywords/pages" for Top pages. */
+function restOf(pathname: string, siteId: string): string {
   const base = `/app/sites/${siteId}`;
-  const rest = pathname.startsWith(base) ? pathname.slice(base.length).replace(/^\//, "").replace(/\/$/, "") : "";
-  return SITE_PAGES.find((page) => page.segment === rest) ?? SITE_PAGES[0];
+  return pathname.startsWith(base) ? pathname.slice(base.length).replace(/^\//, "").replace(/\/$/, "") : "";
+}
+
+/**
+ * The page a path under the site opens, or the Overview.
+ *
+ * A record's own screen — a keyword, a page (docs/plans/active/
+ * sites-ux-updates-plan.md §3) — sits under the menu page it belongs to, so it
+ * answers that page: the longest page path it sits under.
+ */
+export function sitePageForPath(pathname: string, siteId: string): SitePage {
+  const rest = restOf(pathname, siteId);
+  const exact = SITE_PAGES.find((page) => page.segment === rest);
+  if (exact) return exact;
+  const under = SITE_PAGES
+    .filter((page) => page.segment !== "" && rest.startsWith(`${page.segment}/`))
+    .sort((left, right) => right.segment.length - left.segment.length);
+  return under[0] ?? SITE_PAGES[0];
+}
+
+/** Whether a path is one of the menu's own pages, rather than a record's screen under one. */
+export function isSiteMenuPath(pathname: string, siteId: string): boolean {
+  const rest = restOf(pathname, siteId);
+  return SITE_PAGES.some((page) => page.segment === rest);
 }

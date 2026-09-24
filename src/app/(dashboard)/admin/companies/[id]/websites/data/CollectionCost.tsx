@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { CostFigure } from "../CostFigure";
 
 /**
  * What this company costs to serve.
@@ -34,49 +35,23 @@ export function CollectionCost({ companyId }: { companyId: Id<"companies"> }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Figure
+        <CostFigure
           label={t("paid")}
           value={`$${spend.paidUsd.toFixed(2)}`}
           hint={t("paidHint", { pulls: spend.totalPulls })}
         />
-        <Figure
+        <CostFigure
           label={t("standalone")}
           value={`$${spend.standaloneUsd.toFixed(2)}`}
           hint={t("standaloneHint")}
           emphasis
         />
-        <Figure
+        <CostFigure
           label={t("saving")}
           value={`$${spend.reusedValueUsd.toFixed(2)}`}
           hint={t("savingHint")}
         />
       </div>
-    </div>
-  );
-}
-
-function Figure({
-  label,
-  value,
-  hint,
-  emphasis = false,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <div
-      className={`flex flex-col gap-1 rounded-[12px] border px-4 py-3 ${
-        // The standalone figure is the one a price has to clear, so it is the
-        // one the eye should land on.
-        emphasis ? "border-brand/40 bg-brand/5" : "border-border-dim bg-card/40"
-      }`}
-    >
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{label}</span>
-      <span className="font-mono text-[20px] leading-none text-foreground">{value}</span>
-      <span className="text-[11px] leading-relaxed text-muted">{hint}</span>
     </div>
   );
 }

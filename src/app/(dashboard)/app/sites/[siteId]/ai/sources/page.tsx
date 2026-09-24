@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Link2 } from "lucide-react";
@@ -7,11 +8,12 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell, PageCell } from "../../../_components/SiteCells";
+import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { formatNumber } from "../../../_components/siteFormat";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
+import { useSitePagedRows } from "../../../_components/useSitePagedTable";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 
@@ -28,7 +30,9 @@ export default function SiteSourcesPage() {
   const rows = useQuery(api.siteAi.listCitedPages, { siteId });
   const term = settled.trim().toLowerCase();
   const matching = (rows ?? []).filter((row) => !term || row.page.toLowerCase().includes(term));
-  const table = usePagedRows(matching, { canLoadMore: false, loadMore: () => undefined, resetKey: term });
+  const table = useSitePagedRows(matching, term);
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,7 +40,8 @@ export default function SiteSourcesPage() {
       <DataTable
         rows={rows === undefined ? undefined : table.pageRows}
         rowKey={(row) => row.page}
-        minWidthClassName="min-w-[760px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
+        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={<TableDownload siteId={siteId} kind="cited" />}
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}
@@ -50,7 +55,7 @@ export default function SiteSourcesPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "page", header: t("columns.page"), cell: (row) => <PageCell page={row.page} /> },
+          { key: "page", header: t("columns.page"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell> },
           {
             key: "engines",
             header: t("columns.engines"),
@@ -61,7 +66,6 @@ export default function SiteSourcesPage() {
             ),
           },
           { key: "times", header: t("columns.times"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.times)}</span> },
-          { key: "first", header: t("columns.firstCited"), cell: (row) => <CheckedCell day={row.firstDay} /> },
           { key: "last", header: t("columns.lastCited"), cell: (row) => <CheckedCell day={row.lastDay} /> },
         ]}
       />

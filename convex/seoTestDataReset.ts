@@ -31,6 +31,7 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "seoDataPulls", page: 16 },
   { table: "seoCycleLines", page: 500 },
   { table: "seoCollectionCycles", page: 200 },
+  { table: "seoRunReports", page: 200 },
   { table: "seoKeywordPositions", page: 500 },
   { table: "seoWebsiteMetrics", page: 200 },
   { table: "aiCitations", page: 500 },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Map as MapIcon } from "lucide-react";
@@ -12,12 +12,13 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const ROLES = ["YOU", "RIVAL", "FOUND"] as const;
@@ -39,7 +40,16 @@ export default function SiteMarketMapPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [role, setRole] = useSiteParam<Role | "">("who", "", ROLES);
   const [everything, setEverything] = useSiteParam<"" | "1">("all", "", ["1"]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  // A competitor the company tracks opens its comparison; this site and the
+  // websites only found have nothing more than their row.
+  const rivalHref = (row: { role: string; host: string }): string | null => {
+    if (row.role !== "RIVAL") return null;
+    const hold = site?.holds.find((entry) => entry.host === row.host);
+    return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
+  };
 
   // The market is the site, its competitors and the found sites judged to be
   // competitors (or not judged yet). Directories, publishers and the like —
@@ -76,7 +86,7 @@ export default function SiteMarketMapPage() {
           <Checkbox
             label={t("showEverything")}
             checked={everything === "1"}
-            onChange={(next) => { setEverything(next ? "1" : ""); setPage(1); }}
+            onChange={(next) => setEverything(next ? "1" : "")}
           />
         }
         csv={() => toCsv(
@@ -91,11 +101,13 @@ export default function SiteMarketMapPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => `${row.role}:${row.host}`}
-        minWidthClassName="min-w-[820px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => { const href = rivalHref(row); if (href) router.push(href); }}
+        rowClickable={(row) => rivalHref(row) !== null}
+        minWidthClassName="min-w-[720px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("roleFilter")} value={role} onChange={(value) => { setRole(value as Role | ""); setPage(1); }}>
+            <Select aria-label={t("roleFilter")} value={role} onChange={(value) => setRole(value as Role | "")}>
             <option value="">{t("anyRole")}</option>
             {ROLES.map((entry) => <option key={entry} value={entry}>{t(`roles.${entry}`)}</option>)}
           </Select>
@@ -113,7 +125,15 @@ export default function SiteMarketMapPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "website", header: t("columns.website"), cell: (row) => <span className={`text-[13px] ${row.role === "YOU" ? "font-medium text-foreground" : "text-foreground"}`}>{row.host}</span> },
+          {
+            key: "website",
+            header: t("columns.website"),
+            cell: (row) => {
+              const href = rivalHref(row);
+              const className = `text-[13px] ${row.role === "YOU" ? "font-medium text-foreground" : "text-foreground"}`;
+              return href ? <RecordLinkCell href={href} className={className}>{row.host}</RecordLinkCell> : <span className={className}>{row.host}</span>;
+            },
+          },
           { key: "role", header: t("columns.role"), cell: (row) => <StatusPill tone={ROLE_TONES[row.role]}>{t(`roles.${row.role}`)}</StatusPill> },
           {
             key: "kind",
@@ -123,7 +143,6 @@ export default function SiteMarketMapPage() {
           { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.keywords)}</span> },
           { key: "traffic", header: t("columns.traffic"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
           { key: "shared", header: t("columns.shared"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.sharedKeywords)}</span> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

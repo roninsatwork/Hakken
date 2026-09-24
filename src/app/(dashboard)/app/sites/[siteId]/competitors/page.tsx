@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Swords } from "lucide-react";
@@ -8,13 +9,14 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
-import { CheckedCell } from "../../_components/SiteCells";
+import { RecordLinkCell } from "../../_components/SiteCells";
+import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { useSitePagedRows } from "../../_components/useSitePagedTable";
 import { useSiteSearch } from "../../_components/useSiteParam";
 import { ListDownload } from "../../_components/SiteDownloads";
 
@@ -43,7 +45,15 @@ export default function SiteSideBySidePage() {
   const lower = settled.toLowerCase();
   const shownFigures = figures?.filter((row) => !lower || row.host.toLowerCase().includes(lower));
   // Fifteen rows a page, like every table, however many rivals a group holds.
-  const paged = usePagedRows(shownFigures ?? [], { canLoadMore: false, loadMore: () => undefined, resetKey: lower });
+  const paged = useSitePagedRows(shownFigures ?? [], lower);
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  // A competitor opens its own comparison with this site; this site is the one being read.
+  const rivalHref = (row: { host: string; isYou: boolean }): string | null => {
+    if (row.isYou) return null;
+    const hold = site?.holds.find((entry) => entry.host === row.host);
+    return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
+  };
   const rivals = useQuery(api.siteCompetitors.listRivals, { siteId });
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
 
@@ -78,7 +88,9 @@ export default function SiteSideBySidePage() {
       <DataTable
         rows={shownFigures === undefined ? undefined : paged.pageRows}
         rowKey={(row) => row.websiteId}
-        minWidthClassName="min-w-[1250px]"
+        onRowClick={(row) => { const href = rivalHref(row); if (href) router.push(href); }}
+        rowClickable={(row) => rivalHref(row) !== null}
+        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
 filters={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={shownFigures} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.linking"), value: (row) => row.referringDomains }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: tc("lastChecked"), value: (row) => row.day }]} />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}
@@ -92,12 +104,19 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={s
           onPageChange: paged.goToPage,
         }}
         columns={[
-          { key: "website", header: t("columns.website"), cell: (row) => <span className={`text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`}>{row.isYou ? tc("you", { host: row.host }) : row.host}</span> },
+          {
+            key: "website",
+            header: t("columns.website"),
+            cell: (row) => {
+              const href = rivalHref(row);
+              const className = `text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`;
+              const name = row.isYou ? tc("you", { host: row.host }) : row.host;
+              return href ? <RecordLinkCell href={href} className={className}>{name}</RecordLinkCell> : <span className={className}>{name}</span>;
+            },
+          },
           { key: "traffic", header: t("columns.traffic"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.estimatedTraffic)}</span> },
           { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.keywords)}</span> },
-          { key: "top3", header: t("columns.top3"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.top3)}</span> },
           { key: "linking", header: t("columns.linking"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.referringDomains)}</span> },
-          { key: "rank", header: t("columns.rank"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.domainRank)}</span> },
           {
             key: "beats",
             header: t("columns.beatsYou"),
@@ -115,7 +134,6 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={s
               return entry ? <StatusPill tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusPill> : <span className="text-muted">–</span>;
             },
           },
-          { key: "checked", header: tc("lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

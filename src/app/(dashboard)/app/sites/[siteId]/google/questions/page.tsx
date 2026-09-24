@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageCircleQuestion } from "lucide-react";
@@ -10,9 +11,10 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 type Kind = "QUESTION" | "RELATED";
@@ -29,7 +31,9 @@ export default function SiteQuestionsPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [kind, setKind] = useSiteParam<Kind | "">("kind", "", ["QUESTION", "RELATED"]);
   const [from, setFrom] = useSiteParam<string>("from-search", "");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const searches = [...new Set((rows ?? []).flatMap((row) => row.searches))].sort();
   const lower = term.toLowerCase();
@@ -46,16 +50,18 @@ export default function SiteQuestionsPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => `${row.kind}:${row.text}`}
-        minWidthClassName="min-w-[820px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        // A related search is a search of its own; a question opens the search it came up on.
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.kind === "RELATED" ? row.text : row.searches[0] }))}
+        minWidthClassName="min-w-[720px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("kindFilter")} value={kind} onChange={(value) => { setKind(value as Kind | ""); setPage(1); }}>
+            <Select aria-label={t("kindFilter")} value={kind} onChange={(value) => setKind(value as Kind | "")}>
               <option value="">{t("anyKind")}</option>
               <option value="QUESTION">{t("kinds.QUESTION")}</option>
               <option value="RELATED">{t("kinds.RELATED")}</option>
             </Select>
-            <Select aria-label={t("fromFilter")} value={from} onChange={(value) => { setFrom(value); setPage(1); }}>
+            <Select aria-label={t("fromFilter")} value={from} onChange={setFrom}>
               <option value="">{t("anySearch")}</option>
               {searches.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
             </Select>
@@ -73,10 +79,28 @@ export default function SiteQuestionsPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "text", header: t("columns.text"), cell: (row) => <span className="text-[13px] text-foreground">{row.text}</span> },
+          {
+            key: "text",
+            header: t("columns.text"),
+            cell: (row) => row.kind === "RELATED"
+              ? <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.text })}>{row.text}</RecordLinkCell>
+              : <span className="text-[13px] text-foreground">{row.text}</span>,
+          },
           { key: "kind", header: t("columns.kind"), cell: (row) => <StatusPill tone={row.kind === "QUESTION" ? "info" : "neutral"}>{t(`kinds.${row.kind}`)}</StatusPill> },
-          { key: "from", header: t("columns.from"), cell: (row) => <span className="text-[12px] text-secondary">{row.searches.join(", ")}</span> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
+          {
+            key: "from",
+            header: t("columns.from"),
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">
+                {row.searches.map((entry, index) => (
+                  <Fragment key={entry}>
+                    {index > 0 ? ", " : null}
+                    <RecordLinkCell href={recordHref({ kind: "keyword", keyword: entry })} className="text-[12px] text-info">{entry}</RecordLinkCell>
+                  </Fragment>
+                ))}
+              </span>
+            ),
+          },
         ]}
       />
     </div>

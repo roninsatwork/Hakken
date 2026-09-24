@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
@@ -8,12 +7,14 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
@@ -31,13 +32,17 @@ export default function SiteBandsPage() {
   const site = useSite();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const listHref = useSiteListHref(siteId);
 
   const points = (series?.[0]?.points ?? []).flatMap((point) => {
     const bands = point.allBands ?? point.bands;
     return bands ? [{ day: point.day, ...bands, total: BANDS.reduce((sum, band) => sum + bands[band], 0) }] : [];
   });
   const newestFirst = [...points].reverse();
+  // Only the newest check's keywords are kept one by one, so only its counts
+  // open the keywords behind them (docs/plans/active/sites-ux-updates-plan.md §4).
+  const newestDay = newestFirst[0]?.day ?? null;
   const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
   const shown = series === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
 
@@ -81,7 +86,9 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-position-bands`} rows=
             key: band,
             header: tb(band),
             align: "right" as const,
-            cell: (row: (typeof points)[number]) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row[band])}</span>,
+            cell: (row: (typeof points)[number]) => row.day === newestDay && row[band] > 0
+              ? <RecordLinkCell href={listHref("keywords", { band })} className="font-mono text-[12px] text-info">{formatNumber(row[band])}</RecordLinkCell>
+              : <span className="font-mono text-[12px] text-secondary">{formatNumber(row[band])}</span>,
           })),
           { key: "pageOne", header: t("columns.pageOne"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.p01_03 + row.p04_10)}</span> },
           { key: "total", header: t("columns.total"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.total)}</span> },

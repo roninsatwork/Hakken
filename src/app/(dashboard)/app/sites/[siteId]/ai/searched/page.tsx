@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Telescope } from "lucide-react";
@@ -11,10 +11,11 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell, IntentPill } from "../../../_components/SiteCells";
+import { IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
@@ -33,7 +34,9 @@ export default function SiteSearchedPage() {
   const [search, setSearch, settled] = useSiteSearch();
   const [intent, setIntent] = useSiteParam<string>("intent", "");
   const [tracked, setTracked] = useSiteParam<string>("tracked", "");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const rows = useQuery(api.siteAi.listSearched, { siteId });
 
   const term = settled.toLowerCase();
@@ -50,15 +53,16 @@ export default function SiteSearchedPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => `${row.prompt}::${row.query}`}
-        minWidthClassName="min-w-[960px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.query }))}
+        minWidthClassName="min-w-[720px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={tc("intentFilter")} value={intent} onChange={(value) => { setIntent(value); setPage(1); }}>
+            <Select aria-label={tc("intentFilter")} value={intent} onChange={setIntent}>
               <option value="">{tc("anyIntent")}</option>
               {INTENTS.map((entry) => <option key={entry} value={entry}>{tc(`intents.${entry}`)}</option>)}
             </Select>
-            <Select aria-label={t("trackedFilter")} value={tracked} onChange={(value) => { setTracked(value); setPage(1); }}>
+            <Select aria-label={t("trackedFilter")} value={tracked} onChange={setTracked}>
               <option value="">{t("anyTracked")}</option>
               <option value="yes">{t("onlyTracked")}</option>
               <option value="no">{t("onlyUntracked")}</option>
@@ -82,7 +86,7 @@ export default function SiteSearchedPage() {
             header: t("columns.search"),
             cell: (row) => (
               <span className="flex flex-col gap-0.5">
-                <span className="text-[13px] text-foreground">{row.queryText}</span>
+                <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.query })}>{row.queryText}</RecordLinkCell>
                 <span className="text-[11px] text-muted">{t("fromQuestion", { question: row.prompt })}</span>
               </span>
             ),
@@ -90,7 +94,6 @@ export default function SiteSearchedPage() {
           { key: "intent", header: t("columns.intent"), cell: (row) => <IntentPill intent={row.intent} /> },
           { key: "engines", header: t("columns.engines"), cell: (row) => <span className="text-[12px] text-secondary">{row.engines.map(engineLabel).join(", ")}</span> },
           { key: "times", header: t("columns.times"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.timesSeen)}</span> },
-          { key: "last", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.lastSeenDay} /> },
           { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusPill tone="success">{tc("yes")}</StatusPill> : <span className="text-muted">–</span>) },
         ]}
       />

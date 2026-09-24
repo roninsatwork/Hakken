@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
@@ -11,13 +11,14 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { ChangeCell, CheckedCell, PositionCell } from "../../../_components/SiteCells";
+import { ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const VERDICTS = ["TOP_THREE", "PAGE_ONE", "SLIPPING", "RANKING", "TOO_NEW", "NOT_FOUND", "NEVER_RANKED", "NOT_CHECKED"] as const;
@@ -46,7 +47,9 @@ export default function SiteSearchesPage() {
   const range = useSiteRange();
   const [search, setSearch, settled] = useSiteSearch();
   const [verdict, setVerdict] = useSiteParam<Verdict | "">("verdict", "", VERDICTS);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const rows = useQuery(api.siteGoogle.listSearches, { siteId });
   const charted = (rows ?? []).filter((row) => row.lastPosition !== null).slice(0, 5).map((row) => row.keyword);
@@ -92,11 +95,12 @@ export default function SiteSearchesPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.keyword}
-        minWidthClassName="min-w-[860px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[760px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("verdictFilter")} value={verdict} onChange={(value) => { setVerdict(value as Verdict | ""); setPage(1); }}>
+            <Select aria-label={t("verdictFilter")} value={verdict} onChange={(value) => setVerdict(value as Verdict | "")}>
             <option value="">{t("anyVerdict")}</option>
             {VERDICTS.map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
           </Select>
@@ -114,7 +118,7 @@ export default function SiteSearchesPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "search", header: t("columns.search"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
+          { key: "search", header: t("columns.search"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "position", header: t("columns.position"), align: "right", cell: (row) => (row.lastCheckedDay === null ? <span className="text-[12px] text-muted">{t("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
           {
             key: "change",

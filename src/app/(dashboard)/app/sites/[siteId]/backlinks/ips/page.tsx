@@ -7,11 +7,12 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { CheckedCell, LinkStatusPill } from "../../../_components/SiteCells";
+import { LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
-import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
+import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSitePagedTable } from "../../../_components/useSitePagedTable";
@@ -25,6 +26,8 @@ export default function SiteReferringIpsPage() {
   const t = useTranslations("sites.backlinksIps");
   const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
+  const listHref = useSiteListHref(siteId);
+  const networkHref = (network: string) => listHref("backlinks/ips", { network });
   const site = useSite();
   const subnets = useQuery(api.siteLinkLists.topSubnets, { siteId });
   const [search, setSearch, term] = useSiteSearch();
@@ -63,7 +66,7 @@ export default function SiteReferringIpsPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[900px]"
+        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -90,13 +93,17 @@ export default function SiteReferringIpsPage() {
         }}
         columns={[
           { key: "ip", header: t("columns.ip"), cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.ip}</span> },
-          { key: "subnet", header: t("columns.subnet"), cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.subnet}</span> },
+          {
+            key: "subnet",
+            header: t("columns.subnet"),
+            // The network's other servers: this list, narrowed to it.
+            cell: (row) => subnet === row.subnet
+              ? <span className="font-mono text-[12px] text-secondary">{row.subnet}</span>
+              : <RecordLinkCell href={networkHref(row.subnet)} className="font-mono text-[12px] text-info">{row.subnet}</RecordLinkCell>,
+          },
           { key: "domains", header: t("columns.domains"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.referringDomains)}</span> },
           { key: "backlinks", header: t("columns.backlinks"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.backlinks)}</span> },
-          { key: "rank", header: t("columns.rank"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.rank)}</span> },
-          { key: "firstSeen", header: t("columns.firstSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

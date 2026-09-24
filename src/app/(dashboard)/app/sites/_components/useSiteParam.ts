@@ -18,6 +18,14 @@ import useDebounce from "@/src/hooks/useDebounce";
 /** The keys every Sites page shares; everything else is one page's own. */
 export const SITE_SHARED_KEYS = ["from", "to", "step", "range", "compare"] as const;
 
+/**
+ * The table's page, kept in the address with the filters so that Back from a
+ * record's screen returns to the same page of the table (docs/plans/active/
+ * sites-ux-updates-plan.md §3). Any other change to the address — a filter, a
+ * search, the dates — is a different list, so it starts again at page one.
+ */
+export const TABLE_PAGE_KEY = "p";
+
 /** The shared part of a query string, with a leading "?" when there is any. */
 export function sharedSiteQuery(params: URLSearchParams): string {
   const shared = new URLSearchParams();
@@ -62,6 +70,7 @@ export function useSetSiteParams(): (changes: Record<string, string | null>) => 
       if (value) next.set(key, value);
       else next.delete(key);
     }
+    if (!(TABLE_PAGE_KEY in changes)) next.delete(TABLE_PAGE_KEY);
     const text = next.toString();
     recentWrites.push({ pathname, query: text, at: now });
     router.replace(`${pathname}${text ? `?${text}` : ""}`, { scroll: false });
@@ -124,4 +133,14 @@ export function useSiteSearch(key = "q"): [string, (next: string) => void, strin
   }, [settled, key]);
 
   return [text, setText, settled];
+}
+
+/** The table's page from the address — 1 when there is none — and a setter that writes it there. */
+export function useSiteTablePage(): [number, (next: number) => void] {
+  const params = useSearchParams();
+  const set = useSetSiteParams();
+  const raw = Number(params.get(TABLE_PAGE_KEY));
+  const page = Number.isInteger(raw) && raw > 1 ? raw : 1;
+  const setPage = useCallback((next: number) => set({ [TABLE_PAGE_KEY]: next > 1 ? String(next) : null }), [set]);
+  return [page, setPage];
 }

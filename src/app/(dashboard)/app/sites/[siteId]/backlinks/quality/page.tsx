@@ -14,21 +14,15 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatDay, formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { SiteFigure } from "../../../_components/SiteFigure";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const MEASURES = ["spamScore", "brokenBacklinks", "brokenPages"] as const;
 type Measure = (typeof MEASURES)[number];
 
-function Figure({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">
-      <div className="text-[12px] text-secondary">{label}</div>
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 text-[12px] text-muted">{hint}</div>
-    </div>
-  );
-}
 
 /**
  * Link quality: DataForSEO's spam score for the links, links pointing at
@@ -40,12 +34,13 @@ export default function SiteLinkQualityPage() {
   const tm = useTranslations("sites.measures");
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const range = useSiteRange();
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const [shown, setShown] = useState<Record<Measure, boolean>>({ spamScore: true, brokenBacklinks: true, brokenPages: true });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
 
   const points = (series?.[0]?.points ?? []).filter((point) => MEASURES.some((measure) => point[measure] !== undefined));
   const chosen = MEASURES.filter((measure) => shown[measure]);
@@ -66,10 +61,10 @@ export default function SiteLinkQualityPage() {
         <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("empty")}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Figure label={t("spamScore")} value={formatNumber(profile?.spamScore)} hint={t("spamScale")} />
-          <Figure label={t("brokenBacklinks")} value={formatNumber(profile?.brokenBacklinks)} hint={t("brokenBacklinksHint")} />
-          <Figure label={t("brokenPages")} value={formatNumber(profile?.brokenPages)} hint={t("brokenPagesHint")} />
-          <Figure label={t("nofollow")} value={formatNumber(profile?.nofollowReferringDomains)} hint={t("nofollowHint")} />
+          <SiteFigure label={t("spamScore")} value={formatNumber(profile?.spamScore)} detail={<span className="text-muted">{t("spamScale")}</span>} />
+          <SiteFigure label={t("brokenBacklinks")} value={formatNumber(profile?.brokenBacklinks)} detail={<span className="text-muted">{t("brokenBacklinksHint")}</span>} href={listHref("backlinks/broken")} />
+          <SiteFigure label={t("brokenPages")} value={formatNumber(profile?.brokenPages)} detail={<span className="text-muted">{t("brokenPagesHint")}</span>} href={listHref("backlinks/broken")} />
+          <SiteFigure label={t("nofollow")} value={formatNumber(profile?.nofollowReferringDomains)} detail={<span className="text-muted">{t("nofollowHint")}</span>} href={listHref("backlinks/all", { follow: "NOFOLLOW" })} />
         </div>
       )}
 

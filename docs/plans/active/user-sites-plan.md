@@ -769,8 +769,20 @@ collected with it yet — Anthony: "Until I am ready we are just building".
 - **Still not kept: page text.** Titles, descriptions and body copy of other
   people's pages are left out, as before.
 
-**Cost report** — after the first full run, from what each call actually
-cost, per company and per website.
+**Cost report — built 2026-09-24 as the Collection runs screens.** Korda's
+first full run cost $7.85 at DataForSEO (149 requests) and $0.33 of AI.
+Anthony: "it's really good intel and will help me a lot if I can view this
+kind of report on the screen." Admin → company → Websites → Collection runs
+lists every run for the client (a run is "when the agents run for a
+company"): its requests, what was already held, DataForSEO and AI cost and
+where it stands, with this month's spend, the last run, an estimate per month
+and the next run above; a run costing a quarter more than the one before is
+flagged. Each run opens in full: where the money went, what was bought and
+how often it repeats, every website with its limits and price per 1,000
+keywords, the AI judgements, what the client will cost from here, and the
+Collector runs that sent it — every line against the run before. Worked out
+in the background a minute after each request settles, and again after the
+run closes (`convex/seoRunReports.ts`).
 
 ## Open questions
 
@@ -854,3 +866,7 @@ Added 2026-09-23 (night), for Anthony in the morning:
   link, the site audit's page-by-page detail, tracked searches to position
   100, and the collection switch obeyed before anything is sent. See
   "Storing everything"; not yet collected, at Anthony's word.
+- 2026-09-24 (evening) — Korda's first full run ($7.85 + $0.33 AI); the
+  Collection runs screens built from its report. The side menu's groups
+  fold away — only Site, and the group of the page being read, start open —
+  at Anthony's word: "there are too many options on the screen".

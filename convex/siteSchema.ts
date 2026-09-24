@@ -10,6 +10,7 @@ import {
   rankIntentValidator,
   keywordFeatureValidator,
   rankStatusValidator,
+  runReportFields,
 } from "./utils/siteShapes";
 
 /** A number that may be unknown: DataForSEO leaves out what it does not have. */
@@ -427,6 +428,11 @@ export const siteTables = {
     .index("by_site_pass_status_rank", ["websiteId", "pass", "status", "domainRank"])
     .index("by_site_pass_follow_rank", ["websiteId", "pass", "dofollow", "domainRank"])
     .index("by_site_pass_day", ["websiteId", "pass", "day"])
+    // A page's own screen: the strongest links to it.
+    .index("by_site_pass_page_rank", ["websiteId", "pass", "pageTo", "domainRank"])
+    // A linking website's own screen, and an anchor's: their links here.
+    .index("by_site_pass_domain", ["websiteId", "pass", "domainFrom"])
+    .index("by_site_pass_anchor", ["websiteId", "pass", "anchor"])
     .index("by_pull", ["pullId"])
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "pass", "status", "dofollow"] }),
 
@@ -450,6 +456,8 @@ export const siteTables = {
     .index("by_site_backlinks", ["websiteId", "backlinks"])
     .index("by_site_first_seen", ["websiteId", "firstSeen"])
     .index("by_site_status_rank", ["websiteId", "status", "rank"])
+    // A linking website's own screen.
+    .index("by_site_domain", ["websiteId", "domain"])
     .index("by_pull", ["pullId"])
     .searchIndex("search_domain", { searchField: "domain", filterFields: ["websiteId", "status"] }),
 
@@ -471,6 +479,8 @@ export const siteTables = {
     .index("by_site_backlinks", ["websiteId", "backlinks"])
     .index("by_site_domains", ["websiteId", "referringDomains"])
     .index("by_site_status_backlinks", ["websiteId", "status", "backlinks"])
+    // An anchor's own screen.
+    .index("by_site_anchor", ["websiteId", "anchor"])
     .index("by_pull", ["pullId"])
     .searchIndex("search_anchor", { searchField: "anchor", filterFields: ["websiteId", "status"] }),
 
@@ -608,7 +618,9 @@ export const siteTables = {
     canonical: v.optional(v.string()),
   })
     .index("by_pull", ["pullId"])
-    .index("by_site", ["websiteId"]),
+    .index("by_site", ["websiteId"])
+    // A page's own screen: what the newest crawl found on it.
+    .index("by_site_page", ["websiteId", "page"]),
 
   /** The broken links a site crawl found, page by page: where each is and where it points. */
   siteCrawlLinks: defineTable({
@@ -709,4 +721,13 @@ export const siteTables = {
     pending: v.boolean(),
     requestedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  /**
+   * What one collection run for a company cost, and where the money went
+   * (`seoRunReports.ts`): worked out from its requests and the AI judgements
+   * they led to, a minute after each is sent or answered, and kept here so the
+   * Collection runs screens open at once. Anthony, 2026-09-24: "it's really
+   * good intel and will help me a lot if I can view this kind of report".
+   */
+  seoRunReports: defineTable(runReportFields).index("by_cycle", ["cycleId"]),
 };

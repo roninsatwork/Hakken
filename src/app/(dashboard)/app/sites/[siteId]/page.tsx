@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -12,6 +11,7 @@ import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SiteChartCard } from "../_components/SiteChartCard";
+import { SiteFigure } from "../_components/SiteFigure";
 import { SITE_SERIES_COLOURS, SiteLineChart, SiteStackedAreaChart } from "../_components/SiteCharts";
 import { useSiteRange } from "../_components/SiteDateRange";
 import { formatNumber, formatShortDay, movement, movementClass, toCsv } from "../_components/siteFormat";
@@ -43,19 +43,6 @@ function valueOf(point: Point | null | undefined, measure: Measure): number | nu
     default:
       return point[measure] ?? null;
   }
-}
-
-function Kpi({ label, value, change, href }: { label: string; value: string; change: ReactNode; href: string }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4 transition-colors hover:border-brand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
-    >
-      <div className="text-[12px] text-secondary">{label} →</div>
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 text-[12px]">{change}</div>
-    </Link>
-  );
 }
 
 function Change({ now, before }: { now: number | null; before: number | null }) {
@@ -225,25 +212,25 @@ export default function SiteOverviewPage() {
       <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Kpi
+        <SiteFigure
           href={link("ai/mentions")}
           label={t("aiMentions")}
           value={site?.counts.aiNamed === null || site?.counts.aiAsked === null || !site
             ? "–"
             : t("ofEngines", { named: site.counts.aiNamed, asked: site.counts.aiAsked })}
-          change={<Change now={enginesNamed(latest)} before={enginesNamed(before)} />}
+          detail={<Change now={enginesNamed(latest)} before={enginesNamed(before)} />}
         />
-        <Kpi
+        <SiteFigure
           href={link("keywords/pages")}
           label={t("estimatedTraffic")}
           value={formatNumber(valueOf(latest, "estimatedTraffic"))}
-          change={<Change now={valueOf(latest, "estimatedTraffic")} before={valueOf(before, "estimatedTraffic")} />}
+          detail={<Change now={valueOf(latest, "estimatedTraffic")} before={valueOf(before, "estimatedTraffic")} />}
         />
-        <Kpi
+        <SiteFigure
           href={link("keywords")}
           label={t("keywords")}
           value={formatNumber(valueOf(latest, "keywords"))}
-          change={
+          detail={
             <>
               <Change now={valueOf(latest, "keywords")} before={valueOf(before, "keywords")} />
               {(latest?.allBands ?? latest?.bands) ? (
@@ -252,11 +239,11 @@ export default function SiteOverviewPage() {
             </>
           }
         />
-        <Kpi
+        <SiteFigure
           href={link("backlinks")}
           label={t("linkingWebsites")}
           value={formatNumber(valueOf(latest, "referringDomains"))}
-          change={
+          detail={
             <>
               <Change now={valueOf(latest, "referringDomains")} before={valueOf(before, "referringDomains")} />
               {latest?.domainRank !== undefined ? <span className="text-muted"> · {t("rank", { rank: latest.domainRank })}</span> : null}

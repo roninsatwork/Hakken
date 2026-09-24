@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Stethoscope } from "lucide-react";
@@ -11,29 +11,21 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../_components/SiteCells";
+import { CheckedCell, RecordLinkCell } from "../../_components/SiteCells";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
+import { SiteFigure } from "../../_components/SiteFigure";
+import { useSiteRecordHref } from "../../_components/siteRecordLinks";
+import { sharedSiteQuery, useSiteParam, useSiteSearch, useSiteTablePage } from "../../_components/useSiteParam";
 import { ListDownload } from "../../_components/SiteDownloads";
-import { ProblemPages } from "./ProblemPages";
 
 type Severity = "ERROR" | "WARNING" | "NOTICE";
 const SEVERITIES: Severity[] = ["ERROR", "WARNING", "NOTICE"];
 const SEVERITY_TONES: Record<Severity, StatusTone> = { ERROR: "danger", WARNING: "warning", NOTICE: "neutral" };
 
-function Figure({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">
-      <div className="text-[12px] text-secondary">{label}</div>
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
-      {hint ? <div className="mt-1 text-[12px] text-muted">{hint}</div> : null}
-    </div>
-  );
-}
 
 /**
  * Site audit: what the newest crawl found — the technical score, pages
@@ -47,12 +39,16 @@ export default function SiteAuditPage() {
   const site = useSite();
   const range = useSiteRange();
   const audit = useQuery(api.siteCrawl.siteAudit, { siteId });
-  // The problem opened to see its pages.
-  const [openCheck, setOpenCheck] = useState<string | null>(null);
+  const router = useRouter();
+  const params = useSearchParams();
+  const recordHref = useSiteRecordHref(siteId);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const [search, setSearch, term] = useSiteSearch();
   const [severity, setSeverity] = useSiteParam<Severity | "">("severity", "", SEVERITIES);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  // A severity's figure narrows the table below to it, on this same page.
+  const shared = sharedSiteQuery(params);
+  const severityHref = (wanted: Severity) => `/app/sites/${siteId}/audit${shared ? `${shared}&` : "?"}severity=${wanted}`;
 
   const label = (check: string) => (t.has(`checks.${check}`) ? t(`checks.${check}`) : check.replace(/_/g, " "));
   const issues = audit?.issues ?? [];
@@ -82,15 +78,15 @@ export default function SiteAuditPage() {
         <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("empty")}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <Figure label={t("score")} value={formatNumber(audit?.onPageScore)} hint={t("scoreScale")} />
-          <Figure
+          <SiteFigure label={t("score")} value={formatNumber(audit?.onPageScore)} detail={<span className="text-muted">{t("scoreScale")}</span>} />
+          <SiteFigure
             label={t("pages")}
             value={formatNumber(audit?.pagesCrawled)}
-            {...(audit?.maxPages ? { hint: t("pagesOf", { max: formatNumber(audit.maxPages) }) } : {})}
+            detail={audit?.maxPages ? <span className="text-muted">{t("pagesOf", { max: formatNumber(audit.maxPages) })}</span> : undefined}
           />
-          <Figure label={t("errors")} value={audit ? String(count("ERROR")) : "–"} />
-          <Figure label={t("warnings")} value={audit ? String(count("WARNING")) : "–"} />
-          <Figure label={t("notices")} value={audit ? String(count("NOTICE")) : "–"} />
+          <SiteFigure label={t("errors")} value={audit ? String(count("ERROR")) : "–"} href={severityHref("ERROR")} />
+          <SiteFigure label={t("warnings")} value={audit ? String(count("WARNING")) : "–"} href={severityHref("WARNING")} />
+          <SiteFigure label={t("notices")} value={audit ? String(count("NOTICE")) : "–"} href={severityHref("NOTICE")} />
         </div>
       )}
 
@@ -113,12 +109,12 @@ export default function SiteAuditPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.check}
-        onRowClick={(row) => setOpenCheck(row.check)}
+        onRowClick={(row) => router.push(recordHref({ kind: "problem", check: row.check }))}
         minWidthClassName="min-w-[640px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("severityFilter")} value={severity} onChange={(value) => { setSeverity(value as Severity | ""); setPage(1); }}>
+            <Select aria-label={t("severityFilter")} value={severity} onChange={(value) => setSeverity(value as Severity | "")}>
             <option value="">{t("anySeverity")}</option>
             {SEVERITIES.map((entry) => <option key={entry} value={entry}>{t(`severities.${entry}`)}</option>)}
           </Select>
@@ -136,13 +132,12 @@ export default function SiteAuditPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "issue", header: t("columns.issue"), cell: (row) => <span className="text-[13px] text-foreground">{label(row.check)}</span> },
+          { key: "issue", header: t("columns.issue"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "problem", check: row.check })}>{label(row.check)}</RecordLinkCell> },
           { key: "severity", header: t("columns.severity"), cell: (row) => <StatusPill tone={SEVERITY_TONES[row.severity]}>{t(`severities.${row.severity}`)}</StatusPill> },
           { key: "pages", header: t("columns.pages"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.pages)}</span> },
           { key: "checked", header: t("columns.lastChecked"), cell: () => <CheckedCell day={audit?.day ?? null} /> },
         ]}
       />
-      <ProblemPages siteId={siteId} check={openCheck} label={openCheck ? label(openCheck) : ""} onClose={() => setOpenCheck(null)} />
     </div>
   );
 }

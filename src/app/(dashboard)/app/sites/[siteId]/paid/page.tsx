@@ -11,19 +11,13 @@ import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { SiteFigure } from "../../_components/SiteFigure";
+import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 
 const MEASURES = ["paidKeywords", "paidTraffic", "paidTrafficCost"] as const;
 type Measure = (typeof MEASURES)[number];
 
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">
-      <div className="text-[12px] text-secondary">{label}</div>
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
-    </div>
-  );
-}
 
 /**
  * Paid search: whether the site buys Google adverts, on how many searches,
@@ -34,6 +28,7 @@ export default function SitePaidPage() {
   const t = useTranslations("sites.paid");
   const tm = useTranslations("sites.measures");
   const siteId = useSiteId();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
@@ -58,9 +53,9 @@ export default function SitePaidPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Figure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} />
-        <Figure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} />
-        <Figure label={t("spend")} value={latest?.paidTrafficCost === undefined ? "–" : `$${formatNumber(latest.paidTrafficCost)}`} />
+        <SiteFigure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} href={listHref("paid/keywords")} />
+        <SiteFigure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} href={listHref("paid/keywords", { sort: "traffic" })} />
+        <SiteFigure label={t("spend")} value={latest?.paidTrafficCost === undefined ? "–" : `${formatNumber(latest.paidTrafficCost)}`} href={listHref("paid/keywords", { sort: "cost" })} />
       </div>
 
       <SiteChartCard

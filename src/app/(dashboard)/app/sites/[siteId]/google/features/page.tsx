@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
@@ -10,13 +10,15 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell, useFeatureLabel } from "../../../_components/SiteCells";
+import { RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteRange } from "../../../_components/SiteDateRange";
+import { SiteFigure } from "../../../_components/SiteFigure";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 /** Features that name websites, where "is this site in it" has an answer. */
@@ -42,7 +44,9 @@ export default function SiteFeaturesPage() {
   const across = [...(series?.[0]?.points ?? [])].reverse().find((point) => point.aiOverviewRefs !== undefined) ?? null;
   const [search, setSearch, term] = useSiteSearch();
   const [feature, setFeature] = useSiteParam<string>("feature", "");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const lower = term.toLowerCase();
   const matching = data?.searches.filter((row) =>
@@ -61,14 +65,15 @@ export default function SiteFeaturesPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
 
       {across ? (
-        <section aria-label={t("acrossAll")} className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">
-          <div className="text-[12px] text-secondary" title={t("acrossAllHint")}>{t("acrossAll")}</div>
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {([["inAiOverviews", across.aiOverviewRefs], ["inLocalPacks", across.localPacks], ["inSnippets", across.featuredSnippets]] as const).map(([key, value]) => (
-              <div key={key}>
-                <div className="text-[22px] font-semibold tabular-nums text-foreground">{formatNumber(value)}</div>
-                <div className="text-[12px] text-secondary">{t(key)}</div>
-              </div>
+        <section aria-label={t("acrossAll")} className="flex flex-col gap-2">
+          <h2 className="text-[12px] text-secondary" title={t("acrossAllHint")}>{t("acrossAll")}</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {([
+              ["inAiOverviews", across.aiOverviewRefs, "ai_overview_reference"],
+              ["inLocalPacks", across.localPacks, "local_pack"],
+              ["inSnippets", across.featuredSnippets, "featured_snippet"],
+            ] as const).map(([key, value, feature]) => (
+              <SiteFigure key={key} label={t(key)} value={formatNumber(value)} href={recordHref({ kind: "feature", feature })} />
             ))}
           </div>
         </section>
@@ -99,11 +104,12 @@ export default function SiteFeaturesPage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.keyword}
-        minWidthClassName="min-w-[960px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[780px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("featureFilter")} value={feature} onChange={(value) => { setFeature(value); setPage(1); }}>
+            <Select aria-label={t("featureFilter")} value={feature} onChange={setFeature}>
             <option value="">{t("anyFeature")}</option>
             {totals.map((row) => <option key={row.feature} value={row.feature}>{label(row.feature)}</option>)}
           </Select>
@@ -121,7 +127,7 @@ export default function SiteFeaturesPage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "search", header: t("columns.search"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
+          { key: "search", header: t("columns.search"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "features",
             header: t("columns.features"),
@@ -136,7 +142,6 @@ export default function SiteFeaturesPage() {
           { key: "aiOverview", header: t("columns.aiOverview"), cell: (row) => yesNo(row.features.includes("ai_overview"), row.inAiOverview) },
           { key: "localPack", header: t("columns.localPack"), cell: (row) => yesNo(row.features.includes("local_pack"), row.inLocalPack) },
           { key: "snippet", header: t("columns.snippet"), cell: (row) => yesNo(row.features.includes("featured_snippet"), row.hasFeaturedSnippet) },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
@@ -7,13 +8,12 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell, PageCell, PageTypePill } from "../../../_components/SiteCells";
+import { PageTypePill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -25,16 +25,15 @@ const PAGE_TYPES = [
 ] as const;
 type PageType = (typeof PAGE_TYPES)[number];
 
-/** Dollars, whole: DataForSEO prices traffic as the adverts it would replace. */
-function formatUsd(value: number | null): string {
-  return value === null ? "–" : `$${formatNumber(value)}`;
-}
-
 /**
  * Top pages (Organic keywords › Top pages): the site's pages by how many
- * searches each ranks for, with which AI engines cite each — the column Ahrefs
- * keeps behind a paywall and we already collect. Paged and searched on the
- * server; the chart is the number of ranking pages over the dates chosen.
+ * searches each ranks for. Paged and searched on the server; the chart is the
+ * number of ranking pages over the dates chosen.
+ *
+ * Six columns, the ones a reader decides on, so the table fits a 13-inch
+ * screen; each row opens the page's own screen — its searches, what the site
+ * audit found, the AI answers and the links pointing at it (docs/plans/
+ * active/sites-ux-updates-plan.md §3).
  */
 export default function SitePagesPage() {
   const t = useTranslations("sites.pages");
@@ -43,7 +42,8 @@ export default function SitePagesPage() {
   const range = useSiteRange();
   const tt = useTranslations("sites.common.pageTypes");
   const tm = useTranslations("sites.measures");
-  const engineLabel = useEngineLabel();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const [search, setSearch, term] = useSiteSearch();
   const [section, setSection] = useSiteParam<string>("section", "");
   const [pageType, setPageType] = useSiteParam<PageType | "">("type", "", PAGE_TYPES);
@@ -85,7 +85,8 @@ export default function SitePagesPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[1400px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
+        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -115,7 +116,11 @@ export default function SitePagesPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "page", header: t("columns.page"), cell: (row) => <PageCell page={row.page} /> },
+          {
+            key: "page",
+            header: t("columns.page"),
+            cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
+          },
           { key: "type", header: t("columns.type"), cell: (row) => <PageTypePill type={row.pageType} /> },
           {
             key: "traffic",
@@ -130,37 +135,14 @@ export default function SitePagesPage() {
               </span>
             ),
           },
-          { key: "value", header: t("columns.value"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatUsd(row.trafficValue)}</span> },
           { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[13px]">{formatNumber(row.keywords)}</span> },
-          { key: "top3", header: t("columns.top3"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.top3)}</span> },
           { key: "best", header: t("columns.best"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition}</span> },
-          { key: "topKeyword", header: t("columns.topKeyword"), cell: (row) => <span className="text-[12px] text-secondary">{row.topKeyword}</span> },
-          {
-            key: "pageRank",
-            header: <span title={t("pageRankHint")}>{t("columns.pageRank")}</span>,
-            align: "right",
-            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.pageRank)}</span>,
-          },
           {
             key: "linking",
             header: t("columns.linking"),
             align: "right",
-            cell: (row) => (
-              <span className="font-mono text-[12px] text-secondary" title={row.backlinks !== null ? t("backlinksTitle", { count: formatNumber(row.backlinks) }) : undefined}>
-                {formatNumber(row.referringDomains)}
-              </span>
-            ),
+            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.referringDomains)}</span>,
           },
-          {
-            key: "ai",
-            header: t("columns.ai"),
-            cell: (row) => row.aiEngines.length === 0 ? <span className="text-muted">–</span> : (
-              <div className="flex flex-wrap gap-1" title={t("citedBy", { times: row.aiTimes })}>
-                {row.aiEngines.map((engine) => <StatusPill key={engine} tone="info">{engineLabel(engine)}</StatusPill>)}
-              </div>
-            ),
-          },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

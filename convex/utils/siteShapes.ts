@@ -266,3 +266,52 @@ export const siteExportKindValidator = v.union(
   v.literal("links"), v.literal("broken"), v.literal("domains"), v.literal("anchors"), v.literal("ips"),
   v.literal("paid"), v.literal("answers"),
 );
+
+/**
+ * One collection run's report (`seoRunReports.ts`): its requests and what they
+ * cost, by kind, by website and by the Collector run that sent them, and the
+ * AI judgements they led to. Shared by the table and the functions that write
+ * and read it.
+ */
+export const runReportFields = {
+  cycleId: v.id("seoCollectionCycles"),
+  companyId: v.id("companies"),
+  builtAt: v.number(),
+  /** Nothing was still waiting to go or being answered when this was worked out. */
+  final: v.boolean(),
+  requests: v.number(),
+  costUsd: v.number(),
+  waiting: v.number(),
+  answering: v.number(),
+  filed: v.number(),
+  failed: v.number(),
+  aiJudgements: v.number(),
+  aiCostUsd: v.number(),
+  firstSentAt: v.optional(v.number()),
+  lastSentAt: v.optional(v.number()),
+  byOperation: v.array(v.object({
+    operationId: v.string(),
+    requests: v.number(),
+    costUsd: v.number(),
+    answering: v.number(),
+  })),
+  /** A website's requests; the ones asked about several websites at once have no website. */
+  bySite: v.array(v.object({
+    websiteId: v.optional(v.id("websites")),
+    host: v.string(),
+    requests: v.number(),
+    costUsd: v.number(),
+    /** What its keyword list cost, and how many keywords came back, for the price per thousand. */
+    keywordListCostUsd: v.number(),
+    keywords: v.number(),
+  })),
+  /** The Collector runs that sent them; no `runId` for a send nothing recorded. */
+  byCollectorRun: v.array(v.object({
+    runId: v.optional(v.id("agentRuns")),
+    requests: v.number(),
+    costUsd: v.number(),
+    startedAt: v.optional(v.number()),
+    stopped: v.optional(v.union(v.literal("SPEND_LIMIT"), v.literal("QUEUE_EMPTY"), v.literal("TIME_UP"))),
+  })),
+  ai: v.array(v.object({ decisionKey: v.string(), judgements: v.number(), costUsd: v.number() })),
+};

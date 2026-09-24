@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { KeyRound } from "lucide-react";
@@ -8,11 +9,12 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CompareControl } from "../../_components/CompareControl";
-import { ChangeCell, CheckedCell, FeaturesCell, IntentPill, PageCell, PositionCell, TrendCell } from "../../_components/SiteCells";
+import { ChangeCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { TableDownload } from "../../_components/SiteDownloads";
@@ -32,11 +34,6 @@ type Sort = (typeof SORTS)[number];
 
 const SORT_LABELS = { position: "sortPosition", volume: "sortVolume", traffic: "sortTraffic", cpc: "sortCpc" } as const;
 
-/** A cost per click, which DataForSEO gives in US dollars. */
-function formatCpc(value: number | null): string {
-  return value === null ? "–" : `$${value.toFixed(2)}`;
-}
-
 /**
  * Every search the site ranks for (Organic keywords › All keywords).
  *
@@ -44,6 +41,10 @@ function formatCpc(value: number | null): string {
  * of filter asks for one page of fifteen from the index that fits it. The
  * "compare with" column fetches the chosen day's position for the rows on
  * screen only. The chart above is the position bands over the dates chosen.
+ *
+ * Six columns, the ones a reader decides on, so the table fits a 13-inch
+ * screen; each row opens the keyword's own screen, with everything else we
+ * keep about it (docs/plans/active/sites-ux-updates-plan.md §3).
  */
 export default function SiteKeywordsPage() {
   const t = useTranslations("sites.keywords");
@@ -54,6 +55,8 @@ export default function SiteKeywordsPage() {
   const site = useSite();
   const range = useSiteRange();
   const compareDay = useCompareDay();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const [search, setSearch, term] = useSiteSearch();
   const [band, setBand] = useSiteParam<Band | "">("band", "", BANDS);
@@ -114,7 +117,8 @@ export default function SiteKeywordsPage() {
       <DataTable
         rows={table.isLoading ? undefined : table.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[1400px]"
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -152,31 +156,10 @@ export default function SiteKeywordsPage() {
           onPageChange: table.goToPage,
         }}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
-          { key: "intent", header: t("columns.intent"), cell: (row) => <IntentPill intent={row.intent} /> },
-          { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           {
-            key: "trend",
-            header: t("columns.trend"),
-            cell: (row) => <TrendCell trend={row.trend} label={`${t("trendHint")}: ${row.trend.join(", ")}`} />,
-          },
-          {
-            key: "kd",
-            header: <span title={t("kdHint")}>{t("columns.kd")}</span>,
-            align: "right",
-            cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.difficulty ?? "–"}</span>,
-          },
-          {
-            key: "cpc",
-            header: <span title={t("cpcHint")}>{t("columns.cpc")}</span>,
-            align: "right",
-            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span>,
-          },
-          {
-            key: "traffic",
-            header: <span title={t("trafficHint")}>{t("columns.traffic")}</span>,
-            align: "right",
-            cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.traffic === null ? "–" : formatNumber(row.traffic)}</span>,
+            key: "keyword",
+            header: t("columns.keyword"),
+            cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
           { key: "position", header: t("columns.position"), align: "right", cell: (row) => <PositionCell position={row.position} /> },
           ...(compareDay
@@ -193,9 +176,20 @@ export default function SiteKeywordsPage() {
               },
             }]
             : [{ key: "change", header: t("columns.change"), align: "right" as const, cell: (row: (typeof table.rows)[number]) => <ChangeCell change={row.change} /> }]),
-          { key: "page", header: t("columns.page"), cell: (row) => <PageCell page={row.page} was={row.previousPage} /> },
-          { key: "features", header: t("columns.features"), cell: (row) => <FeaturesCell features={row.serpFeatures} /> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
+          { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+          {
+            key: "traffic",
+            header: <span title={t("trafficHint")}>{t("columns.traffic")}</span>,
+            align: "right",
+            cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.traffic === null ? "–" : formatNumber(row.traffic)}</span>,
+          },
+          {
+            key: "page",
+            header: t("columns.page"),
+            cell: (row) => row.page
+              ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} />
+              : <span className="text-muted">–</span>,
+          },
         ]}
       />
     </div>

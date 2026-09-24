@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowUpWideNarrow } from "lucide-react";
@@ -10,12 +10,13 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell, PositionCell } from "../../../_components/SiteCells";
+import { PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const POSITIONS = ["top3", "pageOne", "notOnPage"] as const;
@@ -47,7 +48,9 @@ export default function SiteAbovePage() {
   const rows = useQuery(api.siteGoogleSerp.listAbove, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [position, setPosition] = useSiteParam<PositionFilter | "">("where", "", POSITIONS);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const lower = term.toLowerCase();
   const matching = rows?.filter((row) =>
@@ -90,11 +93,12 @@ export default function SiteAbovePage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.keyword}
-        minWidthClassName="min-w-[900px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        minWidthClassName="min-w-[760px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("positionFilter")} value={position} onChange={(value) => { setPosition(value as PositionFilter | ""); setPage(1); }}>
+            <Select aria-label={t("positionFilter")} value={position} onChange={(value) => setPosition(value as PositionFilter | "")}>
             <option value="">{t("anyPosition")}</option>
             {POSITIONS.map((entry) => <option key={entry} value={entry}>{t(`positions.${entry}`)}</option>)}
           </Select>
@@ -112,7 +116,7 @@ export default function SiteAbovePage() {
           onPageChange: setPage,
         }}
         columns={[
-          { key: "search", header: t("columns.search"), cell: (row) => <span className="text-[13px] text-foreground">{row.keyword}</span> },
+          { key: "search", header: t("columns.search"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "position",
             header: t("columns.position"),
@@ -144,7 +148,6 @@ export default function SiteAbovePage() {
             },
           },
           { key: "rivals", header: t("columns.rivals"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.day === null ? "–" : row.rivalsAbove}</span> },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

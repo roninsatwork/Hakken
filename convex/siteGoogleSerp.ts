@@ -23,12 +23,12 @@ type Reader = { db: QueryCtx["db"] };
 const MAX_PROMPTS = 2_000;
 
 /** The domain as a site is known: lower case, without `www.`. */
-function bare(domain: string): string {
+export function bare(domain: string): string {
   return domain.toLowerCase().replace(/^www\./, "");
 }
 
 /** Whether a domain on the page is this host or one of its subdomains. */
-function isHost(domain: string, host: string): boolean {
+export function isHost(domain: string, host: string): boolean {
   const name = bare(domain);
   return name === host || name.endsWith(`.${host}`);
 }

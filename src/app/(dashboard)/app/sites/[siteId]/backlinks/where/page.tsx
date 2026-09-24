@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Globe2 } from "lucide-react";
@@ -14,7 +13,7 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const BREAKDOWNS = ["countries", "tlds", "platforms", "linkTypes", "attributes"] as const;
@@ -37,7 +36,7 @@ export default function SiteLinkSourcesPage() {
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const [breakdown, setBreakdown] = useSiteParam<Breakdown>("by", "countries", BREAKDOWNS);
   const [search, setSearch, term] = useSiteSearch();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
 
   const regions = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale], { type: "region" }) : null;
   const nameOf = (key: string) => {
@@ -76,7 +75,7 @@ export default function SiteLinkSourcesPage() {
             hint={t("chartHint", { day: formatDay(profile?.day) })}
             controls={
               <div className="max-w-xs">
-                <Select aria-label={t("breakdownLabel")} value={breakdown} onChange={(value) => { setBreakdown(value as Breakdown); setPage(1); }}>
+                <Select aria-label={t("breakdownLabel")} value={breakdown} onChange={(value) => setBreakdown(value as Breakdown)}>
                   {BREAKDOWNS.map((entry) => <option key={entry} value={entry}>{t(`breakdowns.${entry}`)}</option>)}
                 </Select>
               </div>
@@ -97,7 +96,7 @@ export default function SiteLinkSourcesPage() {
             rows={shown}
             rowKey={(row) => row.key}
             minWidthClassName="min-w-[480px]"
-            search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+            search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
     filters={<ListDownload fileName={`${site?.host ?? "site"}-links-${breakdown}`} rows={matching} columns={[{ header: t("columns.group"), value: (row) => nameOf(row.key) }, { header: t("columns.links"), value: (row) => row.count }, { header: t("columns.share"), value: (row) => (total ? ((row.count / total) * 100).toFixed(1) : null) }]} />}
             empty={{ icon: <Globe2 className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
             footer={{

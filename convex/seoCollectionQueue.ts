@@ -9,6 +9,7 @@ import {
   seoBackoffMs,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
+import { requestRunReport, scheduleLateRunReports } from "./seoRunReports";
 import { recordOperationCost } from "./websiteTrackingStats";
 import { appendRunStep } from "./agentRunStepWriter";
 import type { MutationCtx } from "./_generated/server";
@@ -473,6 +474,8 @@ async function countSettled(
         totalCostUsd: cycle.totalCostUsd + costUsd,
       });
       await closeCycleIfSettled(ctx, cycle._id);
+      // Its Collection runs report, worked out again a minute after the burst.
+      await requestRunReport(ctx, cycle._id);
     }
   }
 
@@ -524,6 +527,7 @@ async function closeCycleIfSettled(ctx: MutationCtx, cycleId: Id<"seoCollectionC
   }
 
   await ctx.db.patch(cycleId, { status: "DONE", finishedAt: Date.now() });
+  await scheduleLateRunReports(ctx, cycleId);
   // Its moves are drawn a few minutes on, once the last answers are parsed.
   await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, { cycleId });
 }

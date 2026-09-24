@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Globe } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Globe, Search, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { BackRow, DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
@@ -12,6 +12,8 @@ import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../_components/SiteDateRange";
 import { formatDay } from "../_components/siteFormat";
 import { SiteMenu } from "../_components/SiteMenu";
+import { isSiteMenuPath, setupMet, sitePageForPath } from "../_components/sitePages";
+import { useListBack } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 import { sharedSiteQuery } from "../_components/useSiteParam";
 
@@ -26,10 +28,18 @@ import { sharedSiteQuery } from "../_components/useSiteParam";
  */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("sites.site");
+  const ts = useTranslations("sites.setup");
   const router = useRouter();
   const search = useSearchParams();
   const siteId = useSiteId();
   const site = useSite();
+  const pathname = usePathname();
+  // A menu page opened from a link on another page leads back to it; a
+  // record's screen draws its own back row in its header.
+  const listBack = useListBack();
+  const pageBack = listBack && isSiteMenuPath(pathname, siteId) ? listBack : null;
+  // A page with nothing set up for it says so once, in place of an empty screen.
+  const reading = sitePageForPath(pathname, siteId);
 
   // The dates travel with a switch; a page's own filters do not.
   const query = sharedSiteQuery(search);
@@ -111,7 +121,16 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <aside className="lg:sticky lg:top-4 lg:self-start">
             <SiteMenu siteId={siteId} counts={site.counts} />
           </aside>
-          <section className="min-w-0">{children}</section>
+          <section className="flex min-w-0 flex-col gap-3">
+            {pageBack ? <BackRow {...pageBack} /> : null}
+            {!setupMet(reading, site.counts) && reading.needs ? (
+              <HakkenEmptyState
+                icon={reading.needs === "questions" ? Sparkles : Search}
+                title={ts(`${reading.needs}.title`)}
+                description={ts(`${reading.needs}.body`)}
+              />
+            ) : children}
+          </section>
         </div>
       </div>
     </>

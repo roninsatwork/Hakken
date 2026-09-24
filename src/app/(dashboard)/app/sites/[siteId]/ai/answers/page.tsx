@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageSquareQuote } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -14,8 +13,9 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { useSiteRange } from "../../../_components/SiteDateRange";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -30,15 +30,6 @@ const STANCE_TONES: Record<Stance, StatusTone> = {
   WARNED_AGAINST: "danger",
   NOT_NAMED: "neutral",
 };
-
-/** Hostnames for the sources list: what a person recognises in a link. */
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 /**
  * Full answers (D9): what each engine said, word for word, to one of the
@@ -56,7 +47,8 @@ export default function SiteAnswersPage() {
   const [question, setQuestion] = useSiteParam<string>("question", "");
   const [engine, setEngine] = useSiteParam<Engine | "">("engine", "");
   const [search, setSearch, term] = useSiteSearch();
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
 
   const questions = catalogue?.questions ?? [];
   const chosen = questions.find((entry) => entry.prompt === question) ?? questions[0] ?? null;
@@ -74,12 +66,6 @@ export default function SiteAnswersPage() {
       }
       : "skip",
   );
-  const toggle = (id: string) => setOpen((current) => {
-    const next = new Set(current);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,7 +78,8 @@ export default function SiteAnswersPage() {
         <DataTable
           rows={catalogue === undefined || table.isLoading ? undefined : table.rows}
           rowKey={(row) => row._id}
-          minWidthClassName="min-w-[900px]"
+          onRowClick={(row) => router.push(recordHref({ kind: "answer", answerId: row._id }))}
+          minWidthClassName="min-w-[760px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           filters={
             <>
@@ -128,33 +115,18 @@ export default function SiteAnswersPage() {
             {
               key: "answer",
               header: t("columns.answer"),
-              cell: (row) => {
-                const expanded = open.has(row._id);
-                return (
-                  <div className="flex max-w-[64ch] flex-col gap-2 text-[13px] text-secondary">
-                    <div className={expanded ? "" : "max-h-36 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"}>
-                      <HakkenMarkdown content={row.text} highlight={catalogue?.names ?? []} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Button variant="ghost" onClick={() => toggle(row._id)} className="px-0 py-0 text-[12px] text-info hover:bg-transparent hover:underline">
-                        {expanded ? t("readLess") : t("readMore")}
-                      </Button>
-                      {expanded && row.sources.length > 0 ? (
-                        <span className="text-[12px] text-muted">{t("sourcesTitle")}:</span>
-                      ) : null}
-                    </div>
-                    {expanded && row.sources.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {row.sources.map((url) => (
-                          <li key={url} className="break-all text-[12px]">
-                            <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="text-info hover:underline">{hostOf(url)}</a>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
+              // The start of the answer; the whole of it, its sources and the
+              // engine's searches are on the answer's own screen.
+              cell: (row) => (
+                <div className="flex max-w-[64ch] flex-col gap-2 text-[13px] text-secondary">
+                  <div className="max-h-36 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]">
+                    <HakkenMarkdown content={row.text} highlight={catalogue?.names ?? []} />
                   </div>
-                );
-              },
+                  <RecordLinkCell href={recordHref({ kind: "answer", answerId: row._id })} className="self-start text-[12px] text-info">
+                    {t("readFull")} →
+                  </RecordLinkCell>
+                </div>
+              ),
             },
             {
               key: "sources",

@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
@@ -49,6 +51,17 @@ export function PageCell({ page, was }: { page: string; was?: string | null }) {
   return (
     <span className="flex flex-col">
       <span className="break-all text-[12px] text-info">{page || "/"}</span>
+      {was && was !== page ? <span className="break-all text-[11px] text-muted line-through">{t("wasPage", { page: was })}</span> : null}
+    </span>
+  );
+}
+
+/** A ranking page as a link to its own screen, with the page it ranked with before when that changed. */
+export function PageLinkCell({ href, page, was }: { href: string; page: string; was?: string | null }) {
+  const t = useTranslations("sites.keywords");
+  return (
+    <span className="flex flex-col">
+      <RecordLinkCell href={href} className="break-all text-[12px] text-info">{page || "/"}</RecordLinkCell>
       {was && was !== page ? <span className="break-all text-[11px] text-muted line-through">{t("wasPage", { page: was })}</span> : null}
     </span>
   );
@@ -127,5 +140,23 @@ export function ExternalUrlCell({ url, label }: { url: string; label?: string })
     <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="break-all text-[12px] text-info hover:underline">
       {label ?? url}
     </a>
+  );
+}
+
+/**
+ * The name of a row that opens its own screen, as a real link: it can be
+ * opened in a new tab, reached with the keyboard, and read out as a link. A
+ * click anywhere else on the row opens the same screen through the table's
+ * `onRowClick`; this one stops there so the screen is not opened twice.
+ */
+export function RecordLinkCell({ href, children, className = "text-[13px] text-foreground" }: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link href={href} onClick={(event) => event.stopPropagation()} className={`${className} hover:underline`}>
+      {children}
+    </Link>
   );
 }

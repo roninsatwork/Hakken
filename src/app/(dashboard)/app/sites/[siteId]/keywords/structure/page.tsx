@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { FolderTree } from "lucide-react";
@@ -8,12 +8,13 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { CheckedCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteSearch } from "../../../_components/useSiteParam";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
+import { useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 /**
@@ -28,7 +29,11 @@ export default function SiteStructurePage() {
   const site = useSite();
   const sections = useQuery(api.siteKeywords.listSections, { siteId });
   const [search, setSearch, term] = useSiteSearch();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSiteTablePage();
+  const router = useRouter();
+  const listHref = useSiteListHref(siteId);
+  // A folder opens its pages: Top pages narrowed to it.
+  const folderHref = (section: string) => listHref("keywords/pages", { section });
   const total = (sections ?? []).reduce((sum, row) => sum + row.keywords, 0);
   const label = (section: string) => (section === "/" ? t("home") : section);
 
@@ -66,8 +71,9 @@ export default function SiteStructurePage() {
       <DataTable
         rows={shown}
         rowKey={(row) => row.section}
-        minWidthClassName="min-w-[860px]"
-        search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: t("searchPlaceholder") }}
+        onRowClick={(row) => router.push(folderHref(row.section))}
+        minWidthClassName="min-w-[720px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
 filters={<ListDownload fileName={`${site?.host ?? "site"}-structure`} rows={matching} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />}
         empty={{ icon: <FolderTree className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={{
@@ -80,7 +86,7 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-structure`} rows={matc
           onPageChange: setPage,
         }}
         columns={[
-          { key: "section", header: t("columns.section"), cell: (row) => <span className="text-[13px] text-info">{label(row.section)}</span> },
+          { key: "section", header: t("columns.section"), cell: (row) => <RecordLinkCell href={folderHref(row.section)} className="text-[13px] text-info">{label(row.section)}</RecordLinkCell> },
           { key: "pages", header: t("columns.pages"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.pages)}</span> },
           { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.keywords)}</span> },
           { key: "top3", header: t("columns.top3"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.top3)}</span> },
@@ -98,7 +104,6 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-structure`} rows={matc
               );
             },
           },
-          { key: "checked", header: tc("lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
     </div>

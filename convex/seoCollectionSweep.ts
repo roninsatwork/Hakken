@@ -9,6 +9,7 @@ import {
   SEO_RESULT_TIMEOUT_MS,
 } from "./seoCollectionPolicy";
 import type { MutationCtx } from "./_generated/server";
+import { scheduleLateRunReports } from "./seoRunReports";
 
 /**
  * The hourly walk round the kitchen.
@@ -138,6 +139,7 @@ async function closeSettledCycles(ctx: MutationCtx, now: number) {
     }
 
     await ctx.db.patch(cycle._id, { status: "DONE", finishedAt: now });
+    await scheduleLateRunReports(ctx, cycle._id);
     await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, {
       cycleId: cycle._id,
     });
