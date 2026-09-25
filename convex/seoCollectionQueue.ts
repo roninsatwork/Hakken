@@ -12,7 +12,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requestRunReport, scheduleLateRunReports } from "./seoRunReports";
 import { recordOperationCost } from "./websiteTrackingStats";
 import { appendRunStep } from "./agentRunStepWriter";
-import type { MutationCtx } from "./_generated/server";
+import { storePullAnswer } from "./seoPullAnswers";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 /**
  * The transactional half of the queue: claiming, releasing and settling.
@@ -89,6 +90,7 @@ export const claimSeoBatch = internalMutation({
         continue;
       }
       await ctx.db.patch(row._id, { status: "FAILED", error: SWITCHED_OFF, completedAt: now });
+      await countSettled(ctx, row, "FAILED", 0, "SEND");
       dropped += 1;
     }
     // Everything this look found was dropped: say so, and look again straight away.
@@ -108,7 +110,10 @@ export const claimSeoBatch = internalMutation({
     // "You can set only one task at a time" — the first live run on 2026-09-23
     // lost three pulls that way. Only a queued endpoint takes a batch.
     const batchSize = due[0].mode === "LIVE" ? 1 : SEO_BATCH_SIZE;
-    const batch = due.filter((row) => row.operationId === operationId).slice(0, batchSize);
+    // Never a batch that spends past what is left of the run's limit — a
+    // hundred site crawls is about $15 — judged on what this call has cost.
+    const affordable = args.runId ? await affordableRows(ctx, args.runId, operationId, batchSize) : batchSize;
+    const batch = due.filter((row) => row.operationId === operationId).slice(0, affordable);
 
     const claimed: Array<typeof claimedPull.type> = [];
     for (const row of batch) {
@@ -180,6 +185,31 @@ const LINES_READ_FOR_SWITCH = 50;
  * carry a run a little past the line, because the check comes before a batch
  * and a live batch is one call.
  */
+/**
+ * How many requests of this call the run can still afford, from what the call
+ * has cost on average. At least one while any limit is left, so a run always
+ * moves; a call never priced yet goes as the batch it is.
+ */
+async function affordableRows(
+  ctx: MutationCtx,
+  runId: Id<"agentRuns">,
+  operationId: string,
+  wanted: number,
+): Promise<number> {
+  const run = await ctx.db.get(runId);
+  const agent = run ? await ctx.db.get(run.agentId) : null;
+  const cap = agent?.maxCostUsd;
+  if (typeof cap !== "number" || cap <= 0) return wanted;
+  const price = await ctx.db
+    .query("seoOperationCosts")
+    .withIndex("by_operation", (q) => q.eq("operationId", operationId))
+    .unique();
+  if (!price || price.charged <= 0 || price.totalUsd <= 0) return wanted;
+  const left = cap - (run?.costUsd ?? 0);
+  // A hair of tolerance: $1.00 less $0.90 is $0.0999… in floating point.
+  return Math.max(1, Math.min(wanted, Math.floor(left / (price.totalUsd / price.charged) + 1e-9)));
+}
+
 async function runHasSpentItsLimit(ctx: MutationCtx, runId: Id<"agentRuns">): Promise<boolean> {
   const run = await ctx.db.get(runId);
   if (!run) return false;
@@ -202,16 +232,23 @@ export const releaseSeoBatch = internalMutation({
     pullIds: v.array(v.id("seoDataPulls")),
     attempt: v.number(),
     reason: v.string(),
+    /**
+     * False when DataForSEO said "not now" — a rate limit, "unavailable", or a
+     * refused account. Nothing was taken, and counting a try then meant a few
+     * minutes of outage failed the whole queue (2026-09-25).
+     */
+    countAttempt: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
+    const counting = args.countAttempt !== false;
     for (const pullId of args.pullIds) {
       const row = await ctx.db.get(pullId);
       if (!row || row.status !== "CLAIMED") continue;
 
-      const attempts = (row.attempts ?? 0) + 1;
-      if (attempts >= SEO_MAX_ATTEMPTS) {
+      const attempts = (row.attempts ?? 0) + (counting ? 1 : 0);
+      if (counting && attempts >= SEO_MAX_ATTEMPTS) {
         await ctx.db.patch(pullId, {
           status: "FAILED",
           attempts,
@@ -219,8 +256,9 @@ export const releaseSeoBatch = internalMutation({
           completedAt: now,
           claimedBy: undefined,
           claimedAt: undefined,
+          postedAt: undefined,
         });
-        await countSettled(ctx, row, "FAILED", 0);
+        await countSettled(ctx, row, "FAILED", 0, "SEND");
         continue;
       }
 
@@ -230,11 +268,98 @@ export const releaseSeoBatch = internalMutation({
         dueAt: now + seoBackoffMs(args.attempt),
         claimedBy: undefined,
         claimedAt: undefined,
+        postedAt: undefined,
       });
     }
     return null;
   },
 });
+
+/**
+ * Mark a claimed batch as being sent, just before it goes. From here on
+ * DataForSEO may have it, so it is never put back in the queue: the hourly
+ * check returns only claims that never reached this point, and one that did
+ * but was never recorded is failed rather than bought again.
+ */
+export const markSeoPosting = internalMutation({
+  args: { pullIds: v.array(v.id("seoDataPulls")), workerId: v.string() },
+  returns: v.array(v.id("seoDataPulls")),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const marked: Id<"seoDataPulls">[] = [];
+    for (const pullId of args.pullIds) {
+      const row = await ctx.db.get(pullId);
+      if (!row || row.status !== "CLAIMED" || row.claimedBy !== args.workerId) continue;
+      await ctx.db.patch(pullId, { postedAt: now });
+      marked.push(pullId);
+    }
+    return marked;
+  },
+});
+
+/** The start of the reason a send is failed when we cannot know DataForSEO took it. */
+export const SEND_UNCERTAIN = "DataForSEO may have taken this request";
+
+/**
+ * Fail requests whose send we cannot know the outcome of — a timeout, a
+ * dropped connection, a gateway error, a task missing from the reply. They
+ * may have been charged, so they are never sent again: if DataForSEO did take
+ * one, its pingback finds it by its tag and its answer is still filed
+ * (`markSeoPinged`); if not, the next collection asks afresh.
+ */
+export const failUncertainSends = internalMutation({
+  args: {
+    pullIds: v.array(v.id("seoDataPulls")),
+    reason: v.string(),
+    runId: v.optional(v.id("agentRuns")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const pullId of args.pullIds) {
+      const row = await ctx.db.get(pullId);
+      if (!row || row.status !== "CLAIMED") continue;
+      await failUncertainSend(ctx, row, args.reason, args.runId);
+    }
+    return null;
+  },
+});
+
+export async function failUncertainSend(
+  ctx: MutationCtx,
+  row: Doc<"seoDataPulls">,
+  reason: string,
+  runId?: Id<"agentRuns">,
+): Promise<void> {
+  const error = `${SEND_UNCERTAIN} (${reason}). It is not sent again, so it is never paid for twice.`;
+  await ctx.db.patch(row._id, {
+    status: "FAILED",
+    error,
+    completedAt: Date.now(),
+    claimedBy: undefined,
+    claimedAt: undefined,
+  });
+  await countSettled(ctx, row, "FAILED", 0, "SEND");
+  if (runId) await recordCollectorCall(ctx, runId, row, "FAILED", 0, error);
+}
+
+/**
+ * An answer as the action kept it (`keepAnswer` in `seoCollectionActions.ts`):
+ * its parts, each no larger than a document may be; whether it was too large
+ * to keep at all; and how many rows were left off the end of a list.
+ */
+const keptAnswer = {
+  resultParts: v.optional(v.array(v.string())),
+  rawTruncated: v.optional(v.boolean()),
+  rowsLeftOff: v.optional(v.number()),
+};
+
+/** What the request says of its answer's keeping: nothing, unless something was lost. */
+function keptMarks(args: { rawTruncated?: boolean; rowsLeftOff?: number }) {
+  return {
+    ...(args.rawTruncated ? { rawTruncated: true } : {}),
+    ...(args.rowsLeftOff ? { rowsLeftOff: args.rowsLeftOff } : {}),
+  };
+}
 
 /**
  * Record what a send did, one row at a time.
@@ -243,6 +368,16 @@ export const releaseSeoBatch = internalMutation({
  * `READY` already. Either way the cost is written now, because it was charged
  * now — including for a task DataForSEO refused, which still costs money.
  */
+const sendResult = v.object({
+  pullId: v.id("seoDataPulls"),
+  taskId: v.optional(v.string()),
+  costUsd: v.number(),
+  error: v.optional(v.string()),
+  ...keptAnswer,
+  /** A live call answered in the same breath: the result is here. */
+  ready: v.boolean(),
+});
+
 export const settleSeoSend = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
@@ -252,40 +387,88 @@ export const settleSeoSend = internalMutation({
     costUsd: v.number(),
     sandbox: v.boolean(),
     error: v.optional(v.string()),
-    resultJson: v.optional(v.string()),
-    rawTruncated: v.optional(v.boolean()),
+    ...keptAnswer,
     ready: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const row = await ctx.db.get(args.pullId);
-    if (!row) return null;
-
-    const now = Date.now();
-    const status = args.error ? "FAILED" : args.ready ? "READY" : "SUBMITTED";
-
-    await ctx.db.patch(args.pullId, {
-      status,
-      ...(args.taskId ? { taskId: args.taskId } : {}),
-      costUsd: args.costUsd,
-      sandbox: args.sandbox,
-      ...(args.error ? { error: args.error } : {}),
-      ...(args.resultJson ? { resultJson: args.resultJson } : {}),
-      ...(args.rawTruncated ? { rawTruncated: true } : {}),
-      sentAt: now,
-      claimedBy: undefined,
-      claimedAt: undefined,
-      ...(status === "SUBMITTED" ? {} : { completedAt: now }),
-    });
-
-    await countSettled(ctx, row, status, args.costUsd);
-    // What this operation really costs, for the per-row prices on the Tracking
-    // screen. The sandbox charges nothing and says nothing about the price.
-    if (!args.sandbox) await recordOperationCost(ctx, row.operationId, args.costUsd);
-    if (args.runId) await recordCollectorCall(ctx, args.runId, row, status, args.costUsd, args.error);
+    const { runId, sandbox, ...result } = args;
+    await settleSend(ctx, result, sandbox, runId);
     return null;
   },
 });
+
+/**
+ * Record a whole batch's outcomes at once, right after the send. One
+ * transaction for the batch rather than one per request: recording them one
+ * by one inside the send's own error handling meant a single failed record
+ * put the rest of an accepted batch back in the queue, to be bought again
+ * (2026-09-25). The Collector retries this until it lands; it is safe to
+ * repeat, because a request already recorded is skipped.
+ */
+export const settleSeoSendBatch = internalMutation({
+  args: {
+    runId: v.optional(v.id("agentRuns")),
+    sandbox: v.boolean(),
+    results: v.array(sendResult),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const result of args.results) await settleSend(ctx, result, args.sandbox, args.runId);
+    return null;
+  },
+});
+
+async function settleSend(
+  ctx: MutationCtx,
+  args: typeof sendResult.type,
+  sandbox: boolean,
+  runId: Id<"agentRuns"> | undefined,
+): Promise<void> {
+  const row = await ctx.db.get(args.pullId);
+  // Already recorded — a retried record after the first one landed.
+  if (!row || (row.status !== "CLAIMED" && row.status !== "PENDING")) return;
+
+  const now = Date.now();
+  const status = args.error ? "FAILED" : args.ready ? "READY" : "SUBMITTED";
+
+  await ctx.db.patch(args.pullId, {
+    status,
+    ...(args.taskId ? { taskId: args.taskId } : {}),
+    costUsd: args.costUsd,
+    sandbox,
+    ...(args.error ? { error: args.error } : {}),
+    ...keptMarks(args),
+    sentAt: now,
+    claimedBy: undefined,
+    claimedAt: undefined,
+    ...(status === "SUBMITTED" ? {} : { completedAt: now }),
+  });
+  // Kept apart from the request, so reading requests never reads answers.
+  if (args.resultParts) await storePullAnswer(ctx, args.pullId, args.resultParts);
+
+  await countSettled(ctx, row, status, args.costUsd, "SEND");
+  // What this operation really costs, for the per-row prices on the Tracking
+  // screen. The sandbox charges nothing and says nothing about the price.
+  if (!sandbox) await recordOperationCost(ctx, row.operationId, args.costUsd);
+  if (runId) await recordCollectorCall(ctx, runId, row, status, args.costUsd, args.error);
+  // Filed from here, in the same transaction that records the answer: filed
+  // once, and never lost to a crash between recording and scheduling.
+  if (status === "READY" && args.resultParts) await scheduleFiling(ctx, row);
+}
+
+/**
+ * File an answer that has just been recorded. Only from the transaction that
+ * recorded it, so an answer is filed exactly once however many times it is
+ * fetched; a crawl's page-by-page detail — free for thirty days — is fetched
+ * alongside.
+ */
+async function scheduleFiling(ctx: MutationCtx, row: Doc<"seoDataPulls">): Promise<void> {
+  await ctx.scheduler.runAfter(0, internal.seoCollectionParse.parseSeoResult, { pullId: row._id });
+  if (row.operationId === "site_crawl") {
+    await ctx.scheduler.runAfter(0, internal.siteCrawlDetail.fetchCrawlDetail, { pullId: row._id });
+  }
+}
 
 /**
  * One DataForSEO call, on the Collector's run: its cost, a cost record and a
@@ -456,19 +639,28 @@ async function creditReusers(
 /** A pull answering more companies than this in one cycle is an outlier. */
 const REUSE_CREDIT_LIMIT = 100;
 
-async function countSettled(
+/**
+ * When a count is taken: at the send, or when a queued task's answer comes.
+ * A queued task is sent once and answered once; counting "sent" at both
+ * counted every one of them twice (2026-09-25, 160 sent of 147 planned).
+ */
+type CountPhase = "SEND" | "RESULT";
+
+export async function countSettled(
   ctx: MutationCtx,
   row: Doc<"seoDataPulls">,
   status: "SUBMITTED" | "READY" | "FAILED",
   costUsd: number,
+  phase: CountPhase,
 ) {
   const day = new Date().toISOString().slice(0, 10);
+  const sent = phase === "SEND" && (status === "SUBMITTED" || status === "READY") ? 1 : 0;
 
   if (row.cycleId) {
     const cycle = await ctx.db.get(row.cycleId);
     if (cycle) {
       await ctx.db.patch(cycle._id, {
-        sentCount: cycle.sentCount + (status === "SUBMITTED" || status === "READY" ? 1 : 0),
+        sentCount: cycle.sentCount + sent,
         readyCount: cycle.readyCount + (status === "READY" ? 1 : 0),
         failedCount: cycle.failedCount + (status === "FAILED" ? 1 : 0),
         totalCostUsd: cycle.totalCostUsd + costUsd,
@@ -479,8 +671,8 @@ async function countSettled(
     }
   }
 
-  await bumpRollup(ctx, "platform", day, status, costUsd);
-  if (row.companyId) await bumpRollup(ctx, `company:${row.companyId}`, day, status, costUsd);
+  await bumpRollup(ctx, "platform", day, status, costUsd, phase);
+  if (row.companyId) await bumpRollup(ctx, `company:${row.companyId}`, day, status, costUsd, phase);
 
   // Only once the answer exists is it worth anything to anyone else.
   if (status === "READY") await creditReusers(ctx, row, day, costUsd);
@@ -506,16 +698,8 @@ async function closeCycleIfSettled(ctx: MutationCtx, cycleId: Id<"seoCollectionC
   // said something more specific about why it stopped.
   if (cycle.status !== "SENDING" && cycle.status !== "COLLECTING") return;
 
-  const inFlight = await ctx.db
-    .query("seoDataPulls")
-    .withIndex("by_cycle", (q) => q.eq("cycleId", cycleId))
-    .filter((q) =>
-      q.or(
-        q.eq(q.field("status"), "PENDING"),
-        q.eq(q.field("status"), "CLAIMED"),
-        q.eq(q.field("status"), "SUBMITTED"),
-      ))
-    .first();
+  // Unsent first, so a cycle with anything still to send stays "Sending".
+  const inFlight = await cyclePullIn(ctx, cycleId, ["PENDING", "CLAIMED", "SUBMITTED"]);
 
   if (inFlight) {
     // Something is still out. Say so plainly rather than leaving the cycle
@@ -526,15 +710,59 @@ async function closeCycleIfSettled(ctx: MutationCtx, cycleId: Id<"seoCollectionC
     return;
   }
 
-  await ctx.db.patch(cycleId, { status: "DONE", finishedAt: Date.now() });
+  await finishSeoCycle(ctx, cycleId);
+}
+
+/**
+ * Finish a collection: done, its report built from what arrived, and its
+ * keyword moves drawn a few minutes on, once the last answers are parsed. The
+ * one way a collection is finished — when its last answer settles, when the
+ * hourly sweep finds nothing in flight, or when a person closes it by hand.
+ */
+export async function finishSeoCycle(
+  ctx: MutationCtx,
+  cycleId: Id<"seoCollectionCycles">,
+  byHand?: { userId: Id<"users">; unsent: number },
+): Promise<void> {
+  await ctx.db.patch(cycleId, {
+    status: "DONE",
+    finishedAt: Date.now(),
+    ...(byHand ? { closedBy: byHand.userId, closedUnsent: byHand.unsent } : {}),
+  });
+  // Within the minute — a run that sent nothing has no send to ask for one —
+  // and again later, for the AI its last answers lead to.
+  await requestRunReport(ctx, cycleId);
   await scheduleLateRunReports(ctx, cycleId);
-  // Its moves are drawn a few minutes on, once the last answers are parsed.
   await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, { cycleId });
 }
+
 
 /** A row still queued or claimed has not gone out yet; one submitted has. */
 function inFlightIsUnsent(row: Doc<"seoDataPulls">) {
   return row.status === "PENDING" || row.status === "CLAIMED";
+}
+
+type InFlightStatus = "PENDING" | "CLAIMED" | "SUBMITTED";
+
+/**
+ * A collection's first request in one of these states, looked for in the
+ * order given — or null. One indexed read per state, never the rest of the
+ * collection: a scan for it read every stored answer, and a collection's
+ * answers can come to more than a function may read.
+ */
+export async function cyclePullIn(
+  ctx: { db: QueryCtx["db"] },
+  cycleId: Id<"seoCollectionCycles">,
+  statuses: InFlightStatus[],
+): Promise<Doc<"seoDataPulls"> | null> {
+  for (const status of statuses) {
+    const row = await ctx.db
+      .query("seoDataPulls")
+      .withIndex("by_cycle_status", (q) => q.eq("cycleId", cycleId).eq("status", status))
+      .first();
+    if (row) return row;
+  }
+  return null;
 }
 
 export async function bumpRollup(
@@ -543,6 +771,7 @@ export async function bumpRollup(
   day: string,
   status: "SUBMITTED" | "READY" | "FAILED",
   costUsd: number,
+  phase: CountPhase,
 ) {
   const existing = await ctx.db
     .query("seoDayRollups")
@@ -550,9 +779,10 @@ export async function bumpRollup(
     .unique();
 
   const delta = {
-    pulls: 1,
+    // A request is one pull, counted when it is sent — not again when it is answered.
+    pulls: phase === "SEND" ? 1 : 0,
     reused: 0,
-    sent: status === "SUBMITTED" || status === "READY" ? 1 : 0,
+    sent: phase === "SEND" && (status === "SUBMITTED" || status === "READY") ? 1 : 0,
     ready: status === "READY" ? 1 : 0,
     failed: status === "FAILED" ? 1 : 0,
     costUsd,
@@ -615,8 +845,7 @@ export const getPullForFetch = internalQuery({
 export const settleSeoResult = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
-    resultJson: v.optional(v.string()),
-    rawTruncated: v.optional(v.boolean()),
+    ...keptAnswer,
     costUsd: v.optional(v.number()),
     error: v.optional(v.string()),
   },
@@ -634,17 +863,39 @@ export const settleSeoResult = internalMutation({
 
     await ctx.db.patch(args.pullId, {
       status,
-      ...(args.resultJson ? { resultJson: args.resultJson } : {}),
-      ...(args.rawTruncated ? { rawTruncated: true } : {}),
+      ...keptMarks(args),
       ...(args.error ? { error: args.error } : {}),
       ...(args.costUsd ? { costUsd: row.costUsd + args.costUsd } : {}),
       completedAt: now,
+      // Answered, or given a definite answer: the waiting is over.
+      lastFetch: undefined,
     });
+    if (args.resultParts) await storePullAnswer(ctx, args.pullId, args.resultParts);
 
-    await countSettled(ctx, row, status, args.costUsd ?? 0);
+    await countSettled(ctx, row, status, args.costUsd ?? 0, "RESULT");
+    if (status === "READY" && args.resultParts) await scheduleFiling(ctx, row);
     return null;
   },
 });
+
+/**
+ * Note a fetch of an answer that did not bring it, and what came back — so a
+ * request left waiting says why, rather than only "waiting" (reliability plan
+ * V1). Only while it is still out: an answer settled since is left alone.
+ */
+export const noteSeoFetch = internalMutation({
+  args: { pullId: v.id("seoDataPulls"), said: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.pullId);
+    if (row?.status !== "SUBMITTED") return null;
+    await ctx.db.patch(args.pullId, { lastFetch: { at: Date.now(), said: args.said.slice(0, FETCH_NOTE_CHARS) } });
+    return null;
+  },
+});
+
+/** A fetch note is a sentence, not a payload. */
+const FETCH_NOTE_CHARS = 300;
 
 /**
  * Note that DataForSEO says a task is ready.
@@ -654,7 +905,7 @@ export const settleSeoResult = internalMutation({
  * prove who sent it.
  */
 export const markSeoPinged = internalMutation({
-  args: { taskId: v.string() },
+  args: { taskId: v.string(), tag: v.optional(v.string()) },
   returns: v.union(v.null(), v.id("seoDataPulls")),
   handler: async (ctx, args) => {
     const row = await ctx.db
@@ -662,12 +913,47 @@ export const markSeoPinged = internalMutation({
       .withIndex("by_task", (q) => q.eq("taskId", args.taskId))
       .first();
 
+    if (row?.status === "SUBMITTED") {
+      await ctx.db.patch(row._id, { pingedAt: Date.now() });
+      return row._id;
+    }
+    // Given up after twelve hours, and ready after all: paid for, so fetched.
+    if (row?.status === "FAILED" && row.error === RESULT_GAVE_UP) {
+      await revive(ctx, row, args.taskId);
+      return row._id;
+    }
+    // A send we could not confirm, which DataForSEO did take: we never had its
+    // task id, but its tag — our own, echoed back — finds it.
+    if (!row && args.tag) {
+      const sent = await ctx.db
+        .query("seoDataPulls")
+        .withIndex("by_tag", (q) => q.eq("tag", args.tag!))
+        .first();
+      if (sent?.status === "FAILED" && !sent.taskId && sent.error?.startsWith(SEND_UNCERTAIN)) {
+        await revive(ctx, sent, args.taskId);
+        return sent._id;
+      }
+    }
     // An id we never sent, or a row that is already settled. Either way there
     // is nothing to do, and saying so cheaply is what stops a flood of forged
     // ids turning into a flood of our own outbound fetches.
-    if (!row || row.status !== "SUBMITTED") return null;
-
-    await ctx.db.patch(row._id, { pingedAt: Date.now() });
-    return row._id;
+    return null;
   },
 });
+
+/** Why a request was given up: no answer within `SEO_RESULT_TIMEOUT_MS`. */
+export const RESULT_GAVE_UP = "DataForSEO never returned a result for this task.";
+
+/** A request failed too early, back to waiting for its answer, which is then fetched. */
+async function revive(ctx: MutationCtx, row: Doc<"seoDataPulls">, taskId: string): Promise<void> {
+  await ctx.db.patch(row._id, {
+    status: "SUBMITTED",
+    taskId,
+    pingedAt: Date.now(),
+    error: undefined,
+    completedAt: undefined,
+  });
+  // It was counted failed; its answer will count it ready.
+  const cycle = row.cycleId ? await ctx.db.get(row.cycleId) : null;
+  if (cycle && cycle.failedCount > 0) await ctx.db.patch(cycle._id, { failedCount: cycle.failedCount - 1 });
+}

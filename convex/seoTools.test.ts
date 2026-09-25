@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -232,7 +233,8 @@ describe("asking for one website now", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("seoDataPulls", {
         operationId: "backlinks_list", family: "Backlinks", mode: "LIVE", target: "ourshop.com", websiteId: website,
-        taskArgsJson: "{}", status: "READY", tag: "bought", costUsd: 0.043, sandbox: false,
+        taskArgsJson: JSON.stringify(seoSiteOperationParams(findSeoOperation("backlinks_list")!, "ourshop.com")),
+        status: "READY", tag: "bought", costUsd: 0.043, sandbox: false,
         submittedAt: threeDaysAgo, completedAt: threeDaysAgo,
       });
     });

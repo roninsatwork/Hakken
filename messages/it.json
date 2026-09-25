@@ -861,7 +861,13 @@
       "newCompany": "Attiva Tenant",
       "searchPlaceholder": "Cerca per nome workspace...",
       "tenantName": "Identità Workspace",
-      "provisionedDate": "Attivato il",
+      "collection": "Raccolta",
+      "collectionOn": "Attiva",
+      "collectionOff": "Disattivata",
+      "lastCollection": "Ultima raccolta",
+      "nextCollection": "Prossima raccolta",
+      "neverCollected": "Mai",
+      "notScheduled": "Non pianificata",
       "assignedUsers": "Utenti",
       "actions": "Azioni",
       "emptyState": "Nessun workspace attivo trovato nel protocollo.",
@@ -1685,6 +1691,22 @@
       }
     },
     "companyDataCollection": {
+      "collectNow": {
+        "button": "Raccogli ora",
+        "working": "Avvio…",
+        "off": "Attiva la raccolta e salva prima.",
+        "noPlanner": "Crea prima l'agente DataForSEO Planner.",
+        "noCollector": "Crea prima l'agente DataForSEO Collector.",
+        "agentOff": "{name} è spento. Attivalo prima in Agenti.",
+        "failed": "Impossibile avviare la raccolta. Riprova.",
+        "follow": "Segui la raccolta",
+        "outcomes": {
+          "QUEUED": "Raccolta di {company} messa in coda. Il Collector parte appena la lista di lavoro è pronta.",
+          "BEING_QUEUED": "La raccolta di {company} è in corso di accodamento. Il Collector parte appena è pronta.",
+          "SENDING": "La raccolta di {company} era già in coda, quindi nulla è stato accodato due volte. Il Collector ha iniziato a inviarla.",
+          "ALREADY_SENDING": "La raccolta di {company} è già in coda e il Collector la sta inviando."
+        }
+      },
       "title": "Programma di raccolta",
       "subtitle": "Con quale frequenza vengono scaricati i dati SEO dei siti web di questa azienda. Ogni sito web segue questa impostazione salvo diversa indicazione.",
       "settingsTitle": "Pianificazione",
@@ -1693,13 +1715,9 @@
       "save": "Salva",
       "saved": "Salvato",
       "errors": {
-        "saveFailed": "Impossibile salvare queste impostazioni. Riprova.",
-        "createAgentFailed": "Non è stato possibile creare l'agente di raccolta."
+        "saveFailed": "Impossibile salvare queste impostazioni. Riprova."
       },
       "scheduleName": "Dati SEO — {company}",
-      "createAgent": "Crea l'agente di raccolta",
-      "noAgentTitle": "Nessun agente di raccolta",
-      "noAgentBody": "La pianificazione esegue un agente chiamato “DataForSEO Agent”. Crealo qui, poi imposta una pianificazione. Arriva disattivato, quindi non viene raccolto nulla finché non lo attivi.",
       "cadence": {
         "daily": "Giornaliero",
         "weekly": "Settimanale",
@@ -1792,13 +1810,24 @@
       "workingOut": "Calcolo in corso",
       "empty": "Nessuna raccolta è ancora stata eseguita per questo cliente.",
       "detail": {
+        "close": {
+          "button": "Chiudi questa raccolta",
+          "title": "Chiudere questa raccolta?",
+          "body": "Le richieste non ancora inviate escono dalla coda, quindi per questa raccolta non si compra altro. Le risposte già pagate vengono comunque archiviate quando arrivano. La raccolta viene poi segnata come conclusa, a tuo nome.",
+          "confirm": "Chiudi raccolta",
+          "cancel": "Annulla",
+          "failed": "Impossibile chiudere la raccolta. Riprova.",
+          "closedByHand": "Chiusa a mano{count, plural, =0 {} one { · # richiesta non inviata tolta dalla coda} other { · # richieste non inviate tolte dalla coda}}",
+          "closedBy": "Chiusa da {name}{count, plural, =0 {} one { · # richiesta non inviata tolta dalla coda} other { · # richieste non inviate tolte dalla coda}}"
+        },
         "back": "Esecuzioni della raccolta",
         "title": "Esecuzione del {when}",
         "description": "Messa in coda dal Planner per {websites, plural, one {# sito} other {# siti}} di {company}, e inviata dal Collector in {runs, plural, one {# esecuzione} other {# esecuzioni}} tra le {from} e le {to}.",
         "descriptionUnsent": "Messa in coda dal Planner per {company}. Non è ancora stato inviato nulla.",
+        "descriptionReused": "Messa in coda dal Planner per {company}. Non è stato necessario acquistare nulla: {reused, plural, one {# richiesta ha avuto risposta} other {# richieste hanno avuto risposta}} da dati già disponibili.",
         "filed": "{filed} di {requests} archiviate",
         "workedOut": "Calcolato alle {time}.",
-        "notReady": "Il resoconto di questa esecuzione è ancora in calcolo. Compare circa un minuto dopo l'invio della prima richiesta.",
+        "notReady": "Il resoconto di questa esecuzione è ancora in calcolo. Compare circa un minuto dopo l'invio della prima richiesta, o dopo la sua chiusura.",
         "notFound": "Impossibile trovare questa esecuzione.",
         "figures": {
           "total": "Totale",
@@ -1905,7 +1934,32 @@
           },
           "unknown": "–",
           "none": "Nessuna esecuzione del Collector ne ha ancora inviato una parte."
+        },
+        "attention": {
+          "title": "Da controllare",
+          "subtitle": "{count, plural, one {# richiesta} other {# richieste}} di questa esecuzione non è andata come doveva.",
+          "more": "Ne vedi {shown} su {total}.",
+          "lastTry": "Ultimo tentativo: {said}",
+          "columns": {
+            "what": "Richiesta",
+            "why": "Cosa è successo",
+            "when": "Quando"
+          },
+          "kinds": {
+            "OUT_LONG": "Inviata {hours, plural, one {# ora} other {# ore}} fa e non ancora risposta",
+            "FAILED": "Non riuscita",
+            "NOT_FILED": "Risposta arrivata, ma non archiviata",
+            "TOO_LARGE": "Risposta troppo grande da conservare: non è stato archiviato nulla",
+            "ROWS_LEFT_OFF": "{rows, plural, one {# riga lasciata} other {# righe lasciate}} fuori dalla fine dell’elenco per farlo stare"
+          }
         }
+      },
+      "hourlyCheck": {
+        "title": "Controllo orario",
+        "ok": "Ultima esecuzione alle {time}. Le risposte vengono recuperate e archiviate, e le esecuzioni finite chiuse, come devono.",
+        "failed": "Ultima esecuzione alle {time}, non riuscita{count, plural, =1 {} other {, # volte di fila}}: {error}",
+        "overdue": "Non viene eseguito dalle {time}. Dovrebbe girare ogni ora.",
+        "never": "Non è ancora stato eseguito."
       }
     },
     "websites": {
@@ -5630,7 +5684,12 @@
         "search": "Filtra stati...",
         "noMatches": "Nessuno stato corrisponde."
       },
-      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata"
+      "manySites": "{count, plural, one {# sito} other {# siti}} in una sola chiamata",
+      "notFiled": "Non archiviata",
+      "outLong": "Fuori da {hours, plural, one {# ora} other {# ore}}, non ancora risposta",
+      "lastTry": "Ultimo tentativo: {said}",
+      "tooLarge": "Troppo grande da conservare: non è stato archiviato nulla",
+      "rowsLeftOff": "{count, plural, one {# riga lasciata} other {# righe lasciate}} fuori per farla stare"
     },
     "seoCosts": {
       "title": "Costo del servizio",
@@ -8090,8 +8149,7 @@
         "siteAudit": "Controllo del sito",
         "paidSummary": "Riepilogo",
         "paidKeywords": "Parole chiave a pagamento"
-      },
-      "notSetUp": "Non impostato"
+      }
     },
     "range": {
       "label": "Date",
@@ -8214,13 +8272,6 @@
     "overview": {
       "title": "Panoramica",
       "description": "Come sta andando questo sito? I numeri principali per le date scelte, e cosa è cambiato rispetto al giorno prima.",
-      "aiMentions": "Menzioni AI",
-      "ofEngines": "{named} su {asked} motori",
-      "estimatedTraffic": "Traffico stimato",
-      "keywords": "Parole chiave",
-      "inTop3": "{count} nelle prime 3",
-      "linkingWebsites": "Siti che linkano",
-      "rank": "rank del dominio {rank}",
       "noComparison": "Ancora niente da confrontare",
       "unchanged": "Invariato",
       "performance": "Andamento",
@@ -8245,6 +8296,106 @@
         "p11_20": "11–20",
         "p21_50": "21–50",
         "p51_up": "51+"
+      },
+      "panels": {
+        "ofThousand": "su 1.000",
+        "search": {
+          "title": "Ricerca",
+          "keywords": "Parole chiave",
+          "top3": "Prime 3 · {count}",
+          "visits": "Visite al mese",
+          "worth": "Valgono {value}",
+          "paidSearches": "Ricerche a pagamento",
+          "paidVisits": "Visite a pagamento",
+          "cost": "Costo {value}"
+        },
+        "links": {
+          "title": "Profilo dei backlink",
+          "websiteStrength": "Forza del sito",
+          "homeStrength": "Forza della home page",
+          "links": "Link",
+          "broken": "Non funzionanti · {count}",
+          "linkingWebsites": "Siti che rimandano",
+          "mainWebsites": "Siti principali · {count}"
+        },
+        "ai": {
+          "title": "Risposte AI",
+          "overviews": "Nelle panoramiche AI di Google",
+          "searches": "{count} ricerche",
+          "pagesLinked": "Pagine citate · {count}",
+          "assistant": "Assistente",
+          "naming": "Ti citano",
+          "pages": "Pagine",
+          "namedOf": "{named} su {asked}",
+          "addQuestions": "Aggiungi le domande che fanno i tuoi clienti e questi quattro si riempiono."
+        }
+      },
+      "readout": {
+        "pages": "{count, plural, one {pagina} other {pagine}} ({share})",
+        "visits": "visite al mese ({share})",
+        "searches": "{count, plural, one {ricerca} other {ricerche}}"
+      },
+      "pageKinds": {
+        "title": "Pagine per tipo",
+        "hint": "Tutte le {count} pagine posizionate, ognuna classificata per tipo: la sua quota di pagine e di visite.",
+        "pages": "Pagine",
+        "visits": "Visite",
+        "kind": "Tipo",
+        "pagesShare": "Quota di pagine",
+        "visitsShare": "Quota di visite",
+        "row": "{count, plural, one {# pagina} other {# pagine}} ({pagesShare}) · {visitsShare} delle visite",
+        "capped": "Contate sulle {count} pagine posizionate per più ricerche."
+      },
+      "pageVisits": {
+        "title": "Pagine per visite",
+        "hint": "Le pagine posizionate raggruppate per le visite al mese che portano, e quanta parte di tutte le visite porta ogni gruppo.",
+        "percentage": "Percentuale",
+        "number": "Numero",
+        "pages": "Pagine",
+        "visits": "Visite",
+        "pagesShare": "Quota di pagine",
+        "visitsShare": "Quota di visite",
+        "group": "Visite al mese",
+        "bands": {
+          "none": "Nessuna",
+          "to100": "1–100",
+          "to1000": "101–1.000",
+          "to10000": "1.001–10.000",
+          "over10000": "Oltre 10.000"
+        }
+      },
+      "branded": {
+        "title": "Ricerche di marca e altre",
+        "hint": "Da dove arrivano le {visits} visite al mese: ricerche che nominano il tuo marchio, ricerche pronte all'acquisto, persone che si informano e il resto.",
+        "groups": {
+          "branded": "Nominano il tuo marchio",
+          "buying": "Pronte all'acquisto",
+          "researching": "Si informano",
+          "other": "Altre"
+        },
+        "row": "{visits} visite · {searches} ricerche",
+        "group": "Ricerche",
+        "searches": "Ricerche",
+        "visits": "Visite al mese",
+        "share": "Quota di visite"
+      },
+      "competitors": {
+        "title": "Concorrenti",
+        "hint": "{count, plural, one {Un sito} other {# siti}} con cui questa azienda confronta {host}. Più a destra si posiziona su più ricerche; più in alto riceve più visite.",
+        "sharedUnknown": "Un trattino sotto Ricerche in comune significa che quel sito non è tra quelli trovati sulle tue ricerche, quindi non si sa quante ricerche condividete.",
+        "you": "{host} (tu)",
+        "xAxis": "Ricerche per cui si posiziona",
+        "yAxis": "Visite al mese",
+        "columns": {
+          "website": "Sito",
+          "overlap": "Sovrapposizione",
+          "shared": "Ricerche in comune",
+          "ofYours": "Delle tue",
+          "theirSearches": "Le loro ricerche",
+          "theirVisits": "Le loro visite"
+        },
+        "found": "{count} concorrenti trovati sulle tue ricerche",
+        "seeAll": "Vedili tutti"
       }
     },
     "calendar": {
@@ -9058,7 +9209,7 @@
       "title": "Mappa del mercato",
       "description": "Dove si trova questo sito nel suo mercato? Ogni sito per numero di ricerche per cui si posiziona e le visite che portano.",
       "chartTitle": "Parole chiave e traffico",
-      "chartHint": "Ogni forma è un sito. Più a destra si posiziona per più ricerche; più in alto riceve più visite.",
+      "chartHint": "Ogni punto è un sito. Più a destra si posiziona per più ricerche; più in alto riceve più visite.",
       "roles": {
         "YOU": "Questo sito",
         "RIVAL": "I tuoi concorrenti",

@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
+import { detachCompanySchedules } from "./scheduler";
 import schema from "./schema";
 
 // Error text standardised to "Unauthorized" when these moved to the shared
@@ -586,5 +587,127 @@ describe("Scheduler Authorization", () => {
     // The row says it needs acting on rather than merely reading.
     expect(halted?.awaitingApprovalNodeId).toBe("approval");
     expect(finished?.awaitingApprovalNodeId).toBeUndefined();
+  });
+});
+
+/**
+ * A company's Collection schedule is a setting the DataForSEO Planner reads,
+ * not an alarm. Two agents, two agent schedules (Anthony, 2026-09-25): until
+ * then each company's row named the Collector and the dispatcher woke it per
+ * company, which sent a queue nothing had filled.
+ */
+describe("a company's Collection schedule", () => {
+  const MONTHLY = JSON.stringify({
+    version: 2, kind: "recurring", cadence: "monthly", dayOfMonth: 1, timeLocal: "02:10", timezone: "Europe/Madrid",
+  });
+  const DAILY = JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: "01:00", timezone: "Europe/Madrid" });
+
+  async function setup() {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const ids = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Super Admin", email: "super@example.com", role: "SUPER_ADMIN", createdAt: Date.now(),
+      });
+      const collectorId = await ctx.db.insert("agents", {
+        name: "DataForSEO Agent Collector", modelId: "safe-model", thinkingMode: false, isActive: true,
+        systemKey: "DATAFORSEO_COLLECTOR", createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      const companyId = await ctx.db.insert("companies", { name: "Korda", createdAt: Date.now() });
+      return { superAdminId, collectorId, companyId };
+    });
+    return { t, ...ids, admin: t.withIdentity({ subject: ids.superAdminId }) };
+  }
+
+  test("is saved with no agent and no next run, and is not listed among the schedules", async () => {
+    const { t, admin, companyId } = await setup();
+
+    const scheduleId = await admin.mutation(api.scheduler.saveCompanySchedule, {
+      companyId, name: "SEO data — Korda", intervalStr: MONTHLY, isActive: true,
+    });
+
+    const saved = await t.run(async (ctx) => await ctx.db.get(scheduleId));
+    expect(saved).toMatchObject({ companyId, intervalStr: MONTHLY, isActive: true });
+    expect(saved?.agentId).toBeUndefined();
+    expect(saved?.nextRunAt).toBeUndefined();
+    // Its own screen still finds it; the Schedules list does not.
+    expect(await admin.query(api.scheduler.getCompanySchedule, { companyId })).toMatchObject({ _id: scheduleId });
+    expect(await admin.query(api.scheduler.getSchedules, {})).toEqual([]);
+  });
+
+  test("saving one left over from the Collector takes the Collector off and keeps what was chosen", async () => {
+    const { t, admin, companyId, collectorId, superAdminId } = await setup();
+    const scheduleId = await t.run(async (ctx) => await ctx.db.insert("schedules", {
+      name: "SEO data — Korda", agentId: collectorId, companyId, intervalStr: DAILY, isActive: true,
+      nextRunAt: Date.now() + 60_000, createdAt: Date.now(), createdBy: superAdminId,
+    }));
+
+    await expect(admin.mutation(api.scheduler.saveCompanySchedule, {
+      companyId, name: "ignored for an existing row", intervalStr: MONTHLY, isActive: false,
+    })).resolves.toBe(scheduleId);
+
+    const saved = await t.run(async (ctx) => await ctx.db.get(scheduleId));
+    expect(saved).toMatchObject({ name: "SEO data — Korda", companyId, intervalStr: MONTHLY, isActive: false });
+    expect(saved?.agentId).toBeUndefined();
+    expect(saved?.nextRunAt).toBeUndefined();
+    expect(await t.run(async (ctx) => await ctx.db.query("schedules").collect())).toHaveLength(1);
+  });
+
+  test("refuses a cadence a collection may not run at", async () => {
+    const { admin, companyId } = await setup();
+
+    await expect(admin.mutation(api.scheduler.saveCompanySchedule, {
+      companyId,
+      name: "SEO data — Korda",
+      intervalStr: JSON.stringify({ version: 2, kind: "recurring", cadence: "hourly", timeLocal: "00:00", timezone: "UTC" }),
+      isActive: true,
+    })).rejects.toThrow("daily, weekly, fortnightly or monthly");
+  });
+
+  test("wakes nothing, even one left over naming the Collector, while an agent's own schedule beside it runs", async () => {
+    const { t, companyId, collectorId, superAdminId } = await setup();
+    const { companyRowId, collectorScheduleId } = await t.run(async (ctx) => ({
+      companyRowId: await ctx.db.insert("schedules", {
+        name: "SEO data — Korda", agentId: collectorId, companyId, intervalStr: DAILY, isActive: true,
+        nextRunAt: Date.now() - 60_000, createdAt: Date.now() - 120_000, createdBy: superAdminId,
+      }),
+      collectorScheduleId: await ctx.db.insert("schedules", {
+        name: "Collector — daily", agentId: collectorId, intervalStr: DAILY, isActive: true,
+        nextRunAt: Date.now() - 60_000, createdAt: Date.now() - 120_000, createdBy: superAdminId,
+      }),
+    }));
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ agentId: collectorId, scheduleId: collectorScheduleId, triggerType: "SCHEDULE" });
+    const companyRow = await t.run(async (ctx) => await ctx.db.get(companyRowId));
+    expect(companyRow?.lastRunTs).toBeUndefined();
+  });
+
+  test("the one-off tidy-up takes the Collector off companies' rows and nothing else", async () => {
+    const { t, companyId, collectorId, superAdminId } = await setup();
+    const { companyRowId, collectorScheduleId } = await t.run(async (ctx) => ({
+      companyRowId: await ctx.db.insert("schedules", {
+        name: "SEO data — Korda", agentId: collectorId, companyId, intervalStr: MONTHLY, isActive: true,
+        lastRunTs: Date.now() - 86_400_000, nextRunAt: Date.now() + 60_000, createdAt: Date.now(), createdBy: superAdminId,
+      }),
+      collectorScheduleId: await ctx.db.insert("schedules", {
+        name: "Collector — daily", agentId: collectorId, intervalStr: DAILY, isActive: true,
+        nextRunAt: Date.now() + 60_000, createdAt: Date.now(), createdBy: superAdminId,
+      }),
+    }));
+
+    const first = await t.run(async (ctx) => await detachCompanySchedules(ctx, null, 100));
+    const again = await t.run(async (ctx) => await detachCompanySchedules(ctx, null, 100));
+
+    expect(first).toMatchObject({ isDone: true, processed: 2, updated: 1 });
+    expect(again).toMatchObject({ isDone: true, updated: 0 });
+    const companyRow = await t.run(async (ctx) => await ctx.db.get(companyRowId));
+    expect(companyRow).toMatchObject({ companyId, intervalStr: MONTHLY, isActive: true, lastRunTs: expect.any(Number) });
+    expect(companyRow?.agentId).toBeUndefined();
+    expect(companyRow?.nextRunAt).toBeUndefined();
+    expect(await t.run(async (ctx) => await ctx.db.get(collectorScheduleId)))
+      .toMatchObject({ agentId: collectorId, nextRunAt: expect.any(Number) });
   });
 });

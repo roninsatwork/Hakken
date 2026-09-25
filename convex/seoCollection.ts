@@ -6,8 +6,6 @@ import {
   SEO_KEYWORD_CHECK_OPERATION,
   findSeoOperation,
   seoAiCitationParams,
-  seoBulkOperationParams,
-  seoBulkOperations,
   seoKeywordCheckParams,
   seoSiteOperationParams,
   seoSiteOperations,
@@ -17,10 +15,14 @@ import { aiCitationOperationId } from "./seoAiEngines";
 import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
+import { finishSeoCycle } from "./seoCollectionQueue";
+import { collectsEveryRun, everyDaysOf } from "./seoRunReports";
 import { readSiteDataLimits } from "./companyDataLimits";
 import { LIST_COUNT_DAYS, listPages, pagedListOf, pagedListParams } from "./sitePagedLists";
-import { isWebsiteDue, resolveWebsiteSchedule } from "./seoScheduleService";
-import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
+import { isWebsiteDue } from "./seoScheduleService";
+import { collectedOnItsOwn, dueByCadence } from "./seoCollectionDue";
+import { countingReads } from "./utils/countingReads";
+import { isTrackedHold } from "./utils/websitePairing";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -28,8 +30,6 @@ import {
   SEO_KEYWORD_CHECKS_PER_WEBSITE,
   SEO_MANUAL_FRESH_MS,
   SEO_MAX_SENDS_PER_CYCLE,
-  SEO_MOVES_DELAY_MS,
-  SEO_PAGE_LINE_BUDGET,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -37,7 +37,7 @@ import type { MutationCtx } from "./_generated/server";
 /**
  * Writing the work list.
  *
- * A schedule fires, the collecting agent opens a cycle and stops, and this is
+ * The Planner opens a cycle for a company that is due and stops, and this is
  * what happens next: the company's websites are walked a page at a time and
  * every question worth asking becomes a row in the queue. Nothing here sends
  * anything. Sending is the workers' job in `seoCollectionActions.ts`, and the
@@ -49,7 +49,10 @@ import type { MutationCtx } from "./_generated/server";
  * **Chunk, because a mutation is a transaction.** A company with thousands of
  * websites cannot be expanded in one mutation, so each page writes what it can,
  * remembers where it stopped, and reschedules itself. This is not an
- * optimisation; the single-transaction version simply fails at scale.
+ * optimisation; the single-transaction version simply fails at scale. A page
+ * counts its reads and stops well inside what one transaction may make
+ * (`PAGE_READ_BUDGET`), between two steps of a website if need be: one website
+ * with a hundred rivals is more than one transaction can plan.
  *
  * **Reuse before buying.** One host is stored once and fetched once, so before
  * planning a send we ask whether somebody already holds a fresh enough answer.
@@ -67,6 +70,8 @@ type ExpansionOutcome = {
   lastCursor: Id<"companyWebsites"> | null;
   /** The last website's creation time, which is where the next page starts. */
   lastCreatedAt: number | null;
+  /** Steps of the website after the cursor already written: where the next page picks it up. */
+  step: number;
   exhausted: boolean;
   cappedPlan: boolean;
 };
@@ -81,6 +86,8 @@ export const expandSeoCycle = internalMutation({
      * own row is read for it.
      */
     cursorCreatedAt: v.optional(v.number()),
+    /** Steps of the website after the cursor that an earlier page already wrote. */
+    step: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -94,7 +101,7 @@ export const expandSeoCycle = internalMutation({
 
     const after = args.cursorCreatedAt
       ?? (args.cursor ? (await ctx.db.get(args.cursor))?._creationTime : undefined);
-    const outcome = await expandPage(ctx, cycle, schedule, args.cursor, after);
+    const outcome = await expandPage(ctx, cycle, schedule, args.cursor, after, args.step ?? 0);
 
     const plannedCount = cycle.plannedCount + outcome.planned;
     const reusedCount = cycle.reusedCount + outcome.reused;
@@ -113,48 +120,51 @@ export const expandSeoCycle = internalMutation({
       return null;
     }
 
-    if (!outcome.exhausted && outcome.lastCursor) {
+    if (!outcome.exhausted) {
       await ctx.db.patch(args.cycleId, {
         plannedCount,
         reusedCount,
-        cursor: outcome.lastCursor,
+        ...(outcome.lastCursor ? { cursor: outcome.lastCursor } : {}),
+        // Where to pick up, and when it last moved: an expansion whose next
+        // page never runs is restarted from here by the hourly check.
+        ...(outcome.lastCreatedAt !== null ? { cursorCreatedAt: outcome.lastCreatedAt } : {}),
+        cursorStep: outcome.step,
+        expandedAt: Date.now(),
       });
       await ctx.scheduler.runAfter(0, internal.seoCollection.expandSeoCycle, {
         cycleId: args.cycleId,
-        cursor: outcome.lastCursor,
+        ...(outcome.lastCursor ? { cursor: outcome.lastCursor } : {}),
         ...(outcome.lastCreatedAt !== null ? { cursorCreatedAt: outcome.lastCreatedAt } : {}),
+        ...(outcome.step > 0 ? { step: outcome.step } : {}),
       });
       return null;
     }
 
     await ctx.db.patch(args.cycleId, {
-      status: plannedCount > 0 ? "SENDING" : "DONE",
+      ...(plannedCount > 0 ? { status: "SENDING" as const } : {}),
       plannedCount,
       reusedCount,
       cursor: outcome.lastCursor ?? cycle.cursor,
-      finishedAt: plannedCount > 0 ? undefined : Date.now(),
     });
-    // A cycle served entirely by reuse closes here, and still has moves to
-    // draw from what it was served.
-    if (plannedCount === 0) {
-      await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, {
-        cycleId: args.cycleId,
-      });
-    }
+    // A cycle served entirely by reuse closes here, finished the one way a
+    // collection is: its report built — it had none, sending nothing
+    // (reliability plan 2.5) — and its moves drawn from what it was served.
+    if (plannedCount === 0) await finishSeoCycle(ctx, args.cycleId);
     return null;
   },
 });
 
 
 async function expandPage(
-  ctx: MutationCtx,
+  txn: MutationCtx,
   cycle: Doc<"seoCollectionCycles">,
   schedule: Doc<"schedules"> | null,
   cursor: Id<"companyWebsites"> | undefined,
   cursorCreatedAt: number | undefined,
+  startStep: number,
 ): Promise<ExpansionOutcome> {
+  const { ctx, reads } = countingReads(txn);
   const now = new Date(cycle.startedAt);
-  const operations = seoSiteOperations();
 
   /*
     Read from where the last page stopped, in the index itself.
@@ -176,164 +186,158 @@ async function expandPage(
 
   let planned = 0;
   let reused = 0;
+  // The last website finished: the next page starts after it.
   let lastCursor: Id<"companyWebsites"> | null = cursor ?? null;
   let lastCreatedAt: number | null = cursorCreatedAt ?? null;
-  let stoppedEarly = false;
   let sendIndex = cycle.plannedCount;
+  const stopped = (step: number, cappedPlan = false): ExpansionOutcome =>
+    ({ planned, reused, lastCursor, lastCreatedAt, step, exhausted: false, cappedPlan });
 
-  // Every website this page touched, for the bulk operations below. Collected
-  // as it goes rather than re-read afterwards, because the same walk already
-  // resolves each site's schedule and its competitors.
-  const batch: Array<{ websiteId: Id<"websites">; host: string }> = [];
+  for (const [index, companyWebsite] of websites.entries()) {
+    // An earlier page stopped inside this website: carry on from the step it reached.
+    const resumeAt = index === 0 ? startStep : 0;
+    if (resumeAt === 0 && reads() >= PAGE_READ_BUDGET) return stopped(0);
 
-  for (const companyWebsite of websites) {
-    // Stop between websites, never inside one, so a site's lines are always
-    // written by the same page.
-    if (planned + reused >= SEO_PAGE_LINE_BUDGET) {
-      stoppedEarly = true;
-      break;
+    const steps = await websiteSteps(ctx, cycle, schedule, companyWebsite, now, resumeAt > 0);
+    for (let at = resumeAt; at < steps.length; at += 1) {
+      // Stop between two steps rather than past what a transaction may read;
+      // the next page begins this website again at this step.
+      if (reads() >= PAGE_READ_BUDGET) return stopped(at);
+      const room = SEO_MAX_SENDS_PER_CYCLE - cycle.plannedCount - planned;
+      if (room <= 0) return stopped(at, true);
+      const done = await steps[at](sendIndex, room);
+      planned += done.planned;
+      reused += done.reused;
+      sendIndex += done.planned;
+      if (done.capped) return stopped(at, true);
     }
     lastCursor = companyWebsite._id;
     lastCreatedAt = companyWebsite._creationTime;
-
-    /*
-      A tracked site paired with one of the company's own is reached below, as
-      a target of that site — which is what makes the two land on the same day
-      — so walking it here as well would plan it twice.
-
-      A tracked site with no pair is collected here, on its own settings, like
-      any hold. It was skipped outright for a while, which meant a company could
-      choose to watch a site and have it never collected at all, with nothing on
-      screen to say so.
-    */
-    if (isTrackedHold(companyWebsite) && await pairedOwnedHold(ctx, companyWebsite)) continue;
-
-    const resolved = resolveWebsiteSchedule(schedule, companyWebsite, now);
-    if (!resolved.active) continue;
-
-    // A website with its own slower schedule is not collected just because its
-    // company's turn came round. Absence of an override is what makes a site
-    // follow the company; presence is what makes it stop.
-    const lastLine = await ctx.db
-      .query("seoCycleLines")
-      .withIndex("by_company_website", (q) =>
-        q.eq("companyId", cycle.companyId).eq("websiteId", companyWebsite.websiteId))
-      .order("desc")
-      .first();
-    //
-    // Unless the Planner opened it as a manual collection: that is a request for today's
-    // numbers, and a manual run that quietly skipped every site not yet due
-    // planned nothing at all — the first live run on 2026-09-23 did exactly that.
-    if (cycle.trigger !== "MANUAL" && lastLine && !isWebsiteDue(schedule, companyWebsite, lastLine.createdAt, now)) continue;
-
-    /*
-      What this company has chosen to watch against this site, and nothing else.
-
-      It read the host's competition graph for one commit on 2026-09-22, which
-      meant a rivalry another company asserted decided what this one bought.
-      That was wrong: who competes with whom is a fact about a market, and it is
-      on the host for everyone to read; *what I watch* is my own list and it is
-      the only thing that may spend my money. Anthony: *"If someone else adds
-      ronins as competitor I don't care about that, that's up to them in their
-      own company."*
-
-      Bounded rather than collected: a website with more rivals than this is a
-      plan question, not something one transaction should discover the hard way
-      at the moment it runs out of room.
-    */
-    const tracked = isTrackedHold(companyWebsite)
-      ? []
-      : (await ctx.db
-        .query("companyWebsites")
-        .withIndex("by_company_against", (q) =>
-          q.eq("companyId", cycle.companyId).eq("againstWebsiteId", companyWebsite.websiteId))
-        .take(SEO_COMPETITORS_PER_WEBSITE))
-        .filter(isTrackedHold);
-
-    // A tracked site is collected at the rate of the one it is measured
-    // against. Numbers from different weeks are not a comparison.
-    const targets = [companyWebsite.websiteId, ...tracked.map((row) => row.websiteId)];
-    // Each target's own hold, for the limits it may set for itself.
-    const holdOf = new Map<Id<"websites">, Doc<"companyWebsites">>([
-      [companyWebsite.websiteId, companyWebsite],
-      ...tracked.map((row) => [row.websiteId, row] as [Id<"websites">, Doc<"companyWebsites">]),
-    ]);
-
-    // The questions this website asks the AI engines. Planned once per
-    // website, not per target: a competitor is named *in* the answer, it is
-    // not asked its own question.
-    const citations = await planCitationPulls(ctx, cycle, companyWebsite, sendIndex);
-    planned += citations.planned;
-    reused += citations.reused;
-    sendIndex += citations.planned;
-
-    // The searches on this website's record, checked from this watcher's
-    // place. One page per search per place, shared by everyone who tracks it,
-    // and it files a position for every known site on it — which is how a
-    // rival's ranking for the same search arrives without a pull of its own.
-    const checks = await planKeywordChecks(
-      ctx,
-      cycle,
-      companyWebsite,
-      sendIndex,
-      SEO_MAX_SENDS_PER_CYCLE - cycle.plannedCount - planned,
-    );
-    planned += checks.planned;
-    reused += checks.reused;
-    sendIndex += checks.planned;
-    if (checks.capped) {
-      return { planned, reused, lastCursor, lastCreatedAt, exhausted: false, cappedPlan: true };
-    }
-
-    for (const websiteId of targets) {
-      const target = await ctx.db.get(websiteId);
-      if (target) batch.push({ websiteId, host: target.host });
-
-      for (const operation of operations) {
-        if (planned + cycle.plannedCount >= SEO_MAX_SENDS_PER_CYCLE) {
-          return { planned, reused, lastCursor, lastCreatedAt, exhausted: false, cappedPlan: true };
-        }
-
-        // Every keyword and every link are as many requests as the
-        // website's limit allows, not one (`sitePagedLists.ts`).
-        if (pagedListOf(operation.id)) {
-          const list = await planPagedList(ctx, { cycle, companyWebsite, hold: holdOf.get(websiteId) ?? companyWebsite, websiteId, operation, sendIndex, now });
-          planned += list.planned;
-          reused += list.reused;
-          sendIndex += list.planned;
-          continue;
-        }
-
-        const result = await planPull(ctx, {
-          cycle,
-          schedule,
-          companyWebsite,
-          websiteId,
-          operationId: operation.id,
-          sendIndex,
-          now,
-        });
-        if (result === "REUSED") reused += 1;
-        if (result === "PLANNED") {
-          planned += 1;
-          sendIndex += 1;
-        }
-      }
-    }
   }
 
-  const bulkPlanned = await planBulkPulls(ctx, cycle, batch, sendIndex);
-
+  // The bulk calls (`bulk_ranks`, `bulk_backlinks`, `bulk_referring_domains`)
+  // are no longer bought: nothing had filed them since 2026-09-22, and the
+  // screens take the same figures from `backlinks_summary`. Stopped at
+  // Anthony's word, 2026-09-25 (collection reliability plan, 1.10).
   return {
-    planned: planned + bulkPlanned.planned,
-    reused: reused + bulkPlanned.reused,
+    planned,
+    reused,
     lastCursor,
     lastCreatedAt,
-    exhausted: !stoppedEarly && page.length <= SEO_EXPANSION_PAGE,
+    step: 0,
+    exhausted: page.length <= SEO_EXPANSION_PAGE,
     cappedPlan: false,
   };
 }
 
+/**
+ * Reads one page of expansion makes at most, counted as they happen — each
+ * get and each query run. Convex allows 4,096 a transaction; a page budgeted
+ * on lines written instead made one read or four for each, and a company with
+ * a few large websites passed the limit, failed every page and never finished
+ * its work list (reliability plan 3.2). A step is checked for before it runs,
+ * so the page ends a step past this at most — a paged list of a hundred pages
+ * is the largest, well inside the room left.
+ */
+const PAGE_READ_BUDGET = 2_500;
+
+/** One step of planning a website: what it planned and reused, and whether the cycle's ceiling stopped it. */
+type PlanStep = (sendIndex: number, room: number) => Promise<{ planned: number; reused: number; capped?: boolean }>;
+
+/**
+ * A website's planning as steps, in the order they are always taken — its
+ * questions, one step a question; its searches, one a search; then each of
+ * its targets' calls, one a call — so a page can stop between any two and the
+ * next pick up where it stopped. None when the website is not collected today.
+ * `resuming` is a website an earlier page began: it was due then, and its own
+ * lines from that page must not now make it look collected.
+ */
+async function websiteSteps(
+  ctx: MutationCtx,
+  cycle: Doc<"seoCollectionCycles">,
+  schedule: Doc<"schedules"> | null,
+  companyWebsite: Doc<"companyWebsites">,
+  now: Date,
+  resuming: boolean,
+): Promise<PlanStep[]> {
+  const resolved = await collectedOnItsOwn(ctx, schedule, companyWebsite, now);
+  if (!resolved) return [];
+  // How far apart this website's runs come: a call with its own cadence is
+  // bought on the run nearest it (`heldByOwnCadence`).
+  const runDays = everyDaysOf(resolved.intervalStr ?? undefined);
+
+  // A website with its own slower schedule is not collected just because its
+  // company's turn came round. Absence of an override is what makes a site
+  // follow the company; presence is what makes it stop.
+  //
+  // Unless the Planner opened it as a manual collection: that is a request for today's
+  // numbers, and a manual run that quietly skipped every site not yet due
+  // planned nothing at all — the first live run on 2026-09-23 did exactly that.
+  if (cycle.trigger !== "MANUAL" && !resuming
+    && !await dueByCadence(ctx, cycle.companyId, schedule, companyWebsite, now)) return [];
+
+  /*
+    What this company has chosen to watch against this site, and nothing else.
+
+    It read the host's competition graph for one commit on 2026-09-22, which
+    meant a rivalry another company asserted decided what this one bought.
+    That was wrong: who competes with whom is a fact about a market, and it is
+    on the host for everyone to read; *what I watch* is my own list and it is
+    the only thing that may spend my money. Anthony: *"If someone else adds
+    ronins as competitor I don't care about that, that's up to them in their
+    own company."*
+
+    Bounded rather than collected: a website with more rivals than this is a
+    plan question, not something one transaction should discover the hard way
+    at the moment it runs out of room.
+  */
+  const tracked = isTrackedHold(companyWebsite)
+    ? []
+    : (await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_company_against", (q) =>
+        q.eq("companyId", cycle.companyId).eq("againstWebsiteId", companyWebsite.websiteId))
+      .take(SEO_COMPETITORS_PER_WEBSITE))
+      .filter(isTrackedHold);
+
+  // A tracked site is collected at the rate of the one it is measured
+  // against. Numbers from different weeks are not a comparison.
+  const targets = [companyWebsite.websiteId, ...tracked.map((row) => row.websiteId)];
+  // Each target's own hold, for the limits it may set for itself.
+  const holdOf = new Map<Id<"websites">, Doc<"companyWebsites">>([
+    [companyWebsite.websiteId, companyWebsite],
+    ...tracked.map((row) => [row.websiteId, row] as [Id<"websites">, Doc<"companyWebsites">]),
+  ]);
+
+  const steps: PlanStep[] = [
+    // The questions this website asks the AI engines. Planned once per
+    // website, not per target: a competitor is named *in* the answer, it is
+    // not asked its own question.
+    ...await questionSteps(ctx, cycle, companyWebsite),
+    // The searches on this website's record, checked from this watcher's
+    // place. One page per search per place, shared by everyone who tracks it,
+    // and it files a position for every known site on it — which is how a
+    // rival's ranking for the same search arrives without a pull of its own.
+    ...await searchSteps(ctx, cycle, companyWebsite),
+  ];
+  for (const websiteId of targets) {
+    for (const operation of seoSiteOperations()) {
+      // Every keyword and every link are as many requests as the
+      // website's limit allows, not one (`sitePagedLists.ts`).
+      if (pagedListOf(operation.id)) {
+        steps.push(async (sendIndex) => await planPagedList(ctx, {
+          cycle, schedule, companyWebsite, hold: holdOf.get(websiteId) ?? companyWebsite, websiteId, operation, sendIndex, now, runDays,
+        }));
+        continue;
+      }
+      steps.push(async (sendIndex) => {
+        const result = await planPull(ctx, { cycle, schedule, companyWebsite, websiteId, operationId: operation.id, sendIndex, now, runDays });
+        return { planned: result === "PLANNED" ? 1 : 0, reused: result === "REUSED" ? 1 : 0 };
+      });
+    }
+  }
+  return steps;
+}
 
 /**
  * A pull with this key that can still be used, re-opening one that was refused.
@@ -378,7 +382,7 @@ async function reusableByKey(
 }
 
 /**
- * One paid call per question per engine, for one website.
+ * One paid call per question per engine, for one website — one step a question.
  *
  * The fourth cost shape, and the one the plan allowance meters. What makes it
  * affordable is the same trick as one row per host: the key is the question,
@@ -389,13 +393,15 @@ async function reusableByKey(
  * Reuse here is by exact key only, never by freshness. A ranking is a fact
  * about a site that changes slowly; an AI answer is a fact about a day, and
  * yesterday's answer to "who is the best plumber" is not today's.
+ *
+ * Held to the cycle's ceiling like every other call: questions were the one
+ * kind planned past it (reliability plan 3.2).
  */
-async function planCitationPulls(
+async function questionSteps(
   ctx: MutationCtx,
   cycle: Doc<"seoCollectionCycles">,
   companyWebsite: Doc<"companyWebsites">,
-  startIndex: number,
-): Promise<{ planned: number; reused: number }> {
+): Promise<PlanStep[]> {
   /*
     Read from the host, not from this company's copy of the list.
 
@@ -414,46 +420,39 @@ async function planCitationPulls(
     .withIndex("by_website_active", (q) =>
       q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
     .take(MAX_PROMPTS_PER_WEBSITE);
-  if (prompts.length === 0) return { planned: 0, reused: 0 };
 
   const place = companyWebsite.locationCode !== undefined
     ? findSeoLocation(companyWebsite.locationCode)
     : null;
   const location = place ? { countryIso: place.countryIso, city: place.city } : null;
 
-  let planned = 0;
-  let reused = 0;
-  let sendIndex = startIndex;
-
-  for (const prompt of prompts) {
+  return prompts.map((prompt) => async (startIndex: number, room: number) => {
+    let planned = 0;
+    let reused = 0;
     for (const engine of prompt.engines) {
       const operation = findSeoOperation(aiCitationOperationId(engine));
       if (!operation) continue;
+      if (planned >= room) return { planned, reused, capped: true };
 
-      const params = seoAiCitationParams(engine, prompt.prompt, location);
       const outcome = await planSharedPull(ctx, cycle, {
         operation,
-        params,
+        params: seoAiCitationParams(engine, prompt.prompt, location),
         // A question has no website of its own — the same question from two
         // companies is one purchase. The params carry the text and the place.
         sentinel: "prompt",
         websiteId: companyWebsite.websiteId,
-        sendIndex,
+        sendIndex: startIndex + planned,
       });
-
       if (outcome === "REUSED") reused += 1;
-      else {
-        planned += 1;
-        sendIndex += 1;
-      }
+      else planned += 1;
     }
-  }
-
-  return { planned, reused };
+    return { planned, reused };
+  });
 }
 
 /**
- * Check where every site ranks for the searches on this website's record.
+ * Check where every site ranks for the searches on this website's record —
+ * one step a search.
  *
  * The host's list, not the client's: a search added once to `ourshop.com` is
  * checked for every company holding it, and asked once between them when they
@@ -461,18 +460,16 @@ async function planCitationPulls(
  * website, so two hosts tracking the same phrase in the same town share the
  * page too — and the parse files a position for every known site on it.
  *
- * Paused searches are not asked. `room` is what is left of the cycle's
- * ceiling; running out of it stops here and says so, like every other planner.
+ * Paused searches are not asked. Running out of the cycle's ceiling stops
+ * here and says so, like every other planner.
  */
-async function planKeywordChecks(
+async function searchSteps(
   ctx: MutationCtx,
   cycle: Doc<"seoCollectionCycles">,
   companyWebsite: Doc<"companyWebsites">,
-  startIndex: number,
-  room: number,
-): Promise<{ planned: number; reused: number; capped: boolean }> {
+): Promise<PlanStep[]> {
   const operation = findSeoOperation(SEO_KEYWORD_CHECK_OPERATION);
-  if (!operation) return { planned: 0, reused: 0, capped: false };
+  if (!operation) return [];
 
   const searches = await ctx.db
     .query("websiteKeywords")
@@ -480,13 +477,7 @@ async function planKeywordChecks(
       q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
     .take(SEO_KEYWORD_CHECKS_PER_WEBSITE);
 
-  let planned = 0;
-  let reused = 0;
-  let sendIndex = startIndex;
-
-  for (const search of searches) {
-    if (planned >= room) return { planned, reused, capped: true };
-
+  return searches.map((search) => async (sendIndex: number) => {
     const outcome = await planSharedPull(ctx, cycle, {
       operation,
       params: seoKeywordCheckParams(search.keyword, { locationCode: companyWebsite.locationCode }),
@@ -494,14 +485,8 @@ async function planKeywordChecks(
       websiteId: companyWebsite.websiteId,
       sendIndex,
     });
-    if (outcome === "REUSED") reused += 1;
-    else {
-      planned += 1;
-      sendIndex += 1;
-    }
-  }
-
-  return { planned, reused, capped: false };
+    return outcome === "REUSED" ? { planned: 0, reused: 1 } : { planned: 1, reused: 0 };
+  });
 }
 
 /**
@@ -564,107 +549,6 @@ async function planSharedPull(
 }
 
 /**
- * One paid call about every website on this page.
- *
- * DataForSEO's bulk endpoints take up to a thousand targets for a single
- * charge, so a thousand tracked sites costs one call rather than a thousand.
- * This is the cheapest thing the pipeline does by a wide margin.
- *
- * **Batched per page rather than per cycle**, which is a deliberate trade. A
- * cycle-wide batch would be one call for a thousand sites instead of ten, but
- * expansion is chunked and accumulating hosts across pages would mean holding
- * them somewhere between mutations. Ten calls instead of a thousand is already
- * ninety-nine per cent of the saving, for none of the complexity. The page size
- * is well inside every endpoint's cap, so a batch is never refused for length.
- *
- * One pull, many lines. Each website gets its own line so its history is
- * complete, and all but the first are marked as not having paid — because they
- * did not. One charge happened, and the counts have to say so.
- */
-async function planBulkPulls(
-  ctx: MutationCtx,
-  cycle: Doc<"seoCollectionCycles">,
-  batch: Array<{ websiteId: Id<"websites">; host: string }>,
-  startIndex: number,
-): Promise<{ planned: number; reused: number }> {
-  if (batch.length === 0) return { planned: 0, reused: 0 };
-
-  // The same host can arrive twice on one page — a competitor of two sites, or
-  // a site somebody also tracks as a rival. It is one target either way.
-  const unique = new Map<string, { websiteId: Id<"websites">; host: string }>();
-  for (const entry of batch) unique.set(entry.host, entry);
-  const hosts = [...unique.values()];
-
-  let planned = 0;
-  let reused = 0;
-  let sendIndex = startIndex;
-
-  for (const operation of seoBulkOperations()) {
-    let params: Record<string, unknown>;
-    try {
-      params = seoBulkOperationParams(operation, hosts.map((entry) => entry.host));
-    } catch {
-      // A batch the registry refuses is a bug in the page size, not in the
-      // data. Skipping is better than failing a cycle over it.
-      continue;
-    }
-
-    const idempotencyKey = buildSeoIdempotencyKey({
-      operationId: operation.id,
-      // A batch has no single website, so the key is keyed on the batch itself.
-      // The params hash covers every host in it, so two pages with the same
-      // sites in the same order are one question and two different pages are
-      // two.
-      websiteId: `batch:${hosts.length}`,
-      params,
-      cycleStartedAt: cycle.startedAt,
-    });
-
-    const existing = await reusableByKey(ctx, idempotencyKey);
-
-    const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
-      operationId: operation.id,
-      family: operation.family,
-      mode: operation.mode,
-      companyId: cycle.companyId,
-      taskArgsJson: JSON.stringify(params),
-      status: "PENDING",
-      tag: idempotencyKey,
-      idempotencyKey,
-      cycleId: cycle._id,
-      dueAt: cycle.startedAt + sendIndex * SEO_DUE_SPACING_MS,
-      attempts: 0,
-      costUsd: 0,
-      sandbox: false,
-      ...(cycle.agentRunId ? { agentRunId: cycle.agentRunId } : {}),
-      submittedAt: Date.now(),
-    });
-
-    if (!existing) {
-      planned += 1;
-      sendIndex += 1;
-    }
-
-    for (const [index, entry] of hosts.entries()) {
-      await ctx.db.insert("seoCycleLines", {
-        cycleId: cycle._id,
-        companyId: cycle.companyId,
-        websiteId: entry.websiteId,
-        operationId: operation.id,
-        pullId,
-        // One charge covered all of them, so only one line can claim to have
-        // paid for it. The rest are true reuse.
-        reused: Boolean(existing) || index > 0,
-        createdAt: Date.now(),
-      });
-      if (existing || index > 0) reused += 1;
-    }
-  }
-
-  return { planned, reused };
-}
-
-/**
  * Read one more row than the page needs, so "is there another page" is known
  * without a second query.
  */
@@ -695,6 +579,8 @@ async function planPull(
     operationId: string;
     sendIndex: number;
     now: Date;
+    /** How far apart this website's runs come, in days. */
+    runDays: number;
   },
 ): Promise<"REUSED" | "PLANNED" | "SKIPPED"> {
   const operation = findSeoOperation(args.operationId);
@@ -706,18 +592,18 @@ async function planPull(
   // Asked from the watcher's place. For a rival that is the place of the site
   // it is compared with, which is the hold being walked — the same place on
   // the same day, or the two are not a comparison.
+  const params = seoSiteOperationParams(operation, website.host, {
+    locationCode: args.companyWebsite.locationCode,
+  });
   // A call with its own cadence — a weekly or monthly link list — is held for
   // that long whatever this cycle's own cadence, a manual one included: a
-  // week-old list is this week's list.
-  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now);
+  // week-old list is this week's list. The same call, asked the same way.
+  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), args.runDays);
   if (held) {
     await writeLine(ctx, args, held, true);
     return "REUSED";
   }
 
-  const params = seoSiteOperationParams(operation, website.host, {
-    locationCode: args.companyWebsite.locationCode,
-  });
   const idempotencyKey = buildSeoIdempotencyKey({
     operationId: operation.id,
     websiteId: args.websiteId,
@@ -784,6 +670,7 @@ async function planPagedList(
   ctx: MutationCtx,
   args: {
     cycle: Doc<"seoCollectionCycles">;
+    schedule: Doc<"schedules"> | null;
     /** The hold being walked, whose place a rival is asked from. */
     companyWebsite: Doc<"companyWebsites">;
     /** The target's own hold, whose limit it keeps — the walked hold, or a rival's. */
@@ -792,6 +679,8 @@ async function planPagedList(
     operation: SeoOperation;
     sendIndex: number;
     now: Date;
+    /** How far apart this website's runs come, in days. */
+    runDays: number;
   },
 ): Promise<{ planned: number; reused: number }> {
   const { operation } = args;
@@ -802,12 +691,6 @@ async function planPagedList(
   if (limit <= list.coveredUpTo) return { planned: 0, reused: 0 };
 
   const lineArgs = { cycle: args.cycle, websiteId: args.websiteId, operationId: operation.id };
-  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now);
-  if (held) {
-    await writeLine(ctx, lineArgs, held, true);
-    return { planned: 0, reused: 1 };
-  }
-
   const place = args.companyWebsite.locationCode ?? DEFAULT_LOCATION_CODE;
   const counted = (await ctx.db
     .query("siteDaySummaries")
@@ -818,6 +701,7 @@ async function planPagedList(
     .find((count): count is number => typeof count === "number") ?? null;
 
   let planned = 0;
+  let reused = 0;
   for (const page of listPages(limit, counted)) {
     const params = pagedListParams(operation.id, website.host, args.companyWebsite.locationCode, page);
     if (!params) break;
@@ -827,20 +711,19 @@ async function planPagedList(
       params,
       cycleStartedAt: args.cycle.startedAt,
     });
-    // Today's same request already on its way is shared, as `planPull`
-    // shares one. A finished answer was the hold's to find above — and a
-    // sandbox answer or a failure is never served.
-    const inFlight = await ctx.db
-      .query("seoDataPulls")
-      .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
-      .filter((q) => q.or(
-        q.eq(q.field("status"), "PENDING"),
-        q.eq(q.field("status"), "CLAIMED"),
-        q.eq(q.field("status"), "SUBMITTED"),
-      ))
-      .first();
-    if (inFlight) {
-      await writeLine(ctx, lineArgs, inFlight._id, true);
+    // Each page is held on its own: this page, from this place, answered or on
+    // its way inside the list's cadence. Held for the whole list, any page
+    // bought by anyone stood for every page — another place's, or a company
+    // with a smaller limit's — for a week (reliability plan 3.6). A sandbox
+    // answer or a failure is never served.
+    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), args.runDays)
+      // Bought every run by this company, a page still fresh by its cadence —
+      // today's, for another company; the last hour's, for a second press — is
+      // shared as a single call's answer is (`findFreshPull`).
+      ?? (await findFreshPull(ctx, { ...args, operationId: operation.id, taskArgsJson: JSON.stringify(params) }))?._id;
+    if (held) {
+      await writeLine(ctx, lineArgs, held, true);
+      reused += 1;
       continue;
     }
     const pullId = await ctx.db.insert("seoDataPulls", {
@@ -865,7 +748,7 @@ async function planPagedList(
     await writeLine(ctx, lineArgs, pullId, false);
     planned += 1;
   }
-  return { planned, reused: 0 };
+  return { planned, reused };
 }
 
 /**
@@ -878,15 +761,32 @@ async function planPagedList(
  *
  * Also the ad hoc door's check (`requestSeoPull` in `seoTools.ts`), so an
  * agent cannot buy a weekly list daily.
+ *
+ * `taskArgsJson`, when given, is what would be sent: only the same call asked
+ * the same way holds — from the same place, for the same page of a list.
+ *
+ * `runDays`, when given, is how far apart the asker's runs come. A company
+ * that collects about as seldom as the call, or more seldom, buys it every run
+ * (`collectsEveryRun`) — a monthly company's run is the full scan, however
+ * soon after another it comes. Otherwise the answer holds only until it is
+ * within half a run of due, so the call is bought on the run nearest its own
+ * cadence (`repeatDays` in `seoRunReports.ts`). Held for its whole cadence, a weekly list was bought
+ * every other week on a weekly schedule — the last one a few minutes short of
+ * seven days old — and a monthly company's run skipped the crawl after every
+ * month of thirty days or fewer (2026-09-25).
  */
 export async function heldByOwnCadence(
   ctx: MutationCtx,
   operation: SeoOperation,
   websiteId: Id<"websites">,
   now: Date,
+  taskArgsJson?: string,
+  runDays?: number,
 ): Promise<Id<"seoDataPulls"> | null> {
   if (!operation.refresh) return null;
-  const window = operation.refresh.everyDays * DAY_MS;
+  // Bought every run: no answer holds, but one still on its way is shared.
+  const everyRun = runDays !== undefined && collectsEveryRun(operation.refresh.everyDays, runDays);
+  const window = (operation.refresh.everyDays - (runDays ?? 0) / 2) * DAY_MS;
   const recent = await ctx.db
     .query("seoDataPulls")
     .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", operation.id))
@@ -894,12 +794,13 @@ export async function heldByOwnCadence(
     .take(PULLS_READ_FOR_HOLD);
   for (const pull of recent) {
     if (pull.sandbox === true || pull.status === "FAILED") continue;
+    if (taskArgsJson !== undefined && pull.taskArgsJson !== taskArgsJson) continue;
     if (pull.status === "READY") {
-      if (pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return pull._id;
+      if (!everyRun && pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return pull._id;
       continue;
     }
     // Planned, claimed or sent, and not answered yet: on its way.
-    if (now.getTime() - pull.submittedAt < window) return pull._id;
+    if (everyRun || now.getTime() - pull.submittedAt < window) return pull._id;
   }
   return null;
 }

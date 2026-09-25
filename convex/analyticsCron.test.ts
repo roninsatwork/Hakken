@@ -781,6 +781,29 @@ describe("analytics cron snapshots", () => {
         createdAt: now - 3 * 24 * 60 * 60 * 1000,
         createdBy: userId,
       });
+      // Companies' Collection schedules start nothing, so neither is overdue
+      // or missing a next run — not one left over from when such a row named
+      // the Collector and carried a next run it has passed, nor one as saved now.
+      const kordaId = await ctx.db.insert("companies", { name: "Korda", createdAt: now });
+      await ctx.db.insert("schedules", {
+        name: "SEO data — Korda",
+        agentId,
+        companyId: kordaId,
+        intervalStr: "daily",
+        isActive: true,
+        nextRunAt: now - 60 * 60 * 1000,
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
+        createdBy: userId,
+      });
+      const roninsId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: now });
+      await ctx.db.insert("schedules", {
+        name: "SEO data — Ronins Agency",
+        companyId: roninsId,
+        intervalStr: "daily",
+        isActive: true,
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
+        createdBy: userId,
+      });
 
       return { missingNextRunScheduleId, overdueScheduleId };
     });

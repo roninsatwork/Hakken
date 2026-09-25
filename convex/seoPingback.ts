@@ -24,10 +24,16 @@ import { internal } from "./_generated/api";
  *    volume that makes it matter.
  */
 export const handleSeoPingback = httpAction(async (ctx, request) => {
-  const taskId = new URL(request.url).searchParams.get("id");
+  const params = new URL(request.url).searchParams;
+  const taskId = params.get("id");
+  // Our own tag, echoed back: how a send we could not confirm is found again.
+  const tag = params.get("tag");
 
   if (taskId && taskId.length <= MAX_TASK_ID) {
-    const pullId = await ctx.runMutation(internal.seoCollectionQueue.markSeoPinged, { taskId });
+    const pullId = await ctx.runMutation(internal.seoCollectionQueue.markSeoPinged, {
+      taskId,
+      ...(tag && tag.length <= MAX_TAG ? { tag } : {}),
+    });
     if (pullId) {
       await ctx.scheduler.runAfter(0, internal.seoCollectionActions.fetchSeoResult, { pullId });
     }
@@ -43,3 +49,6 @@ export const handleSeoPingback = httpAction(async (ctx, request) => {
  * caller cannot make us index a megabyte of query string.
  */
 const MAX_TASK_ID = 128;
+
+/** Our tags are idempotency keys, a few hundred characters at most. */
+const MAX_TAG = 512;

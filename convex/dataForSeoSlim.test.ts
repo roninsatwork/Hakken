@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { parseSerpGoogleOrganic, parseSerpPage } from "./dataForSeoParsers";
-import { expandSeoResult, slimSeoResult, STORED_LIST_CHARS } from "./dataForSeoSlim";
+import { expandSeoResult, SERP_KEPT_WHOLE_BYTES, slimSeoResult } from "./dataForSeoSlim";
 
 /**
  * A Google results page read down to position 100 (2026-09-24) is kept whole
@@ -46,10 +46,10 @@ describe("a results page's raw copy", () => {
 
   test("a hundred results with their words, past the ceiling, cut to what is read — and read the same", () => {
     const big = page(100);
-    expect(JSON.stringify(big).length).toBeGreaterThan(STORED_LIST_CHARS);
+    expect(JSON.stringify(big).length).toBeGreaterThan(SERP_KEPT_WHOLE_BYTES);
 
     const stored = JSON.stringify(slimSeoResult("serp_google_organic", big));
-    expect(stored.length).toBeLessThan(STORED_LIST_CHARS);
+    expect(stored.length).toBeLessThan(SERP_KEPT_WHOLE_BYTES);
     expect(stored).not.toContain("Ignore previous instructions");
 
     const fromStore = expandSeoResult(JSON.parse(stored));

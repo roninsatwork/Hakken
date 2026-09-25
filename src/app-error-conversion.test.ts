@@ -109,6 +109,14 @@ describe("appError conversion holds and spreads", () => {
       "convex/seoCollectionActions.ts catches it at the one call site and turns it into a queue release — the batch goes back to PENDING with a later due time. It never leaves the worker chain, and no screen is waiting on the action that throws it.",
     ],
     [
+      "DataForSeoAccountError",
+      "caught at every call site: convex/seoCollectionActions.ts turns it into a release that counts no try and stops the Collector's run with its reason written into the run; convex/siteCrawlDetail.ts records it on the request. No screen waits on the action that throws it.",
+    ],
+    [
+      "DataForSeoUncertain",
+      "caught at every call site: convex/seoCollectionActions.ts fails the batch it was sending as an unknown outcome (never re-sent) or leaves a fetched answer waiting; convex/siteCrawlDetail.ts records it on the request. No screen waits on the action that throws it.",
+    ],
+    [
       "ProviderRuntimeError",
       "carries provider status and retry metadata for `withProviderRetry` to branch on. It escapes to callers, so its message must stay safe — `safeProviderMessage` is what it is built from — but it is deliberately not a ConvexError: the agent runtime catches it and writes the failure into the run record rather than throwing at a screen.",
     ],

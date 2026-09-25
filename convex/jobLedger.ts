@@ -43,7 +43,7 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "governance-rollup-rebuild": (ctx) =>
     ctx.runMutation(internal.governanceRollups.rebuildGovernanceRollups, {}),
   "seo-collection-sweep": (ctx) =>
-    ctx.runMutation(internal.seoCollectionSweep.sweepSeoCollection, {}),
+    ctx.runAction(internal.seoCollectionSweep.sweepSeoCollection, {}),
   "company-memory-suggestion-sweep": (ctx) =>
     ctx.runAction(internal.companyMemorySuggestionActions.sweepDispatcher, {}),
   "user-memory-suggestion-sweep": (ctx) =>

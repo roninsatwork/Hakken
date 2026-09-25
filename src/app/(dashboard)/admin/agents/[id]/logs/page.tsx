@@ -10,7 +10,7 @@ import { useTranslations } from "next-intl";
 import { ArrowRight, ChevronDown, FileText, Loader2 } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
-import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { useNow } from "@/src/hooks/useNow";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 
 const AgentLogsResults = dynamic(

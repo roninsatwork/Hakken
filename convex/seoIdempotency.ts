@@ -28,9 +28,14 @@
  * hashed as "undefined", because omitting a parameter and passing nothing are
  * the same request to DataForSEO.
  *
- * FNV-1a rather than a crypto hash: this is a collision-avoidance key inside
- * our own table, not a security boundary, and it has to run identically in a
- * Convex mutation, in Node and in a browser test without importing anything.
+ * Not a crypto hash: this is a collision-avoidance key inside our own table,
+ * not a security boundary, and it has to run identically in a Convex
+ * mutation, in Node and in a browser test without importing anything. But 64
+ * bits, not 32: every search checked on a day shares its operation, its
+ * placeholder website and its date, so only this tells them apart — and at
+ * ten thousand a day, 32 bits let two collide about one day in a hundred, one
+ * search then served the other's results page (reliability plan 3.5). At 64,
+ * about once in some thirty billion days.
  */
 export function hashSeoParams(params: Record<string, unknown>): string {
   const entries = Object.entries(params)
@@ -38,7 +43,7 @@ export function hashSeoParams(params: Record<string, unknown>): string {
     .map(([key, value]) => [key, normaliseValue(value)] as const)
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
-  return fnv1a(JSON.stringify(entries));
+  return hash64(JSON.stringify(entries));
 }
 
 /**
@@ -59,13 +64,24 @@ function normaliseValue(value: unknown): unknown {
   return value;
 }
 
-function fnv1a(input: string): string {
-  let hash = 0x811c9dc5;
+/**
+ * A 64-bit digest as sixteen hex characters: two 32-bit lanes, each character
+ * mixed into both by different multipliers, then each lane's bits spread into
+ * the other (the mixing of bryc's public-domain cyrb53, kept whole at 64 bits).
+ */
+function hash64(input: string): string {
+  let high = 0xdeadbeef;
+  let low = 0x41c6ce57;
   for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
+    const unit = input.charCodeAt(index);
+    high = Math.imul(high ^ unit, 2654435761);
+    low = Math.imul(low ^ unit, 1597334677);
   }
-  return hash.toString(16).padStart(8, "0");
+  high = Math.imul(high ^ (high >>> 16), 2246822507);
+  high ^= Math.imul(low ^ (low >>> 13), 3266489909);
+  low = Math.imul(low ^ (low >>> 16), 2246822507);
+  low ^= Math.imul(high ^ (high >>> 13), 3266489909);
+  return (high >>> 0).toString(16).padStart(8, "0") + (low >>> 0).toString(16).padStart(8, "0");
 }
 
 /** A timestamp as the `YYYY-MM-DD` a cycle is collected for, in UTC. */

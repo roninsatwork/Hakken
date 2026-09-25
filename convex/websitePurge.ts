@@ -1,9 +1,10 @@
 import { v } from "convex/values";
+import { deletePullAnswers } from "./seoPullAnswers";
 
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { purgeHoldDataLimits } from "./companyDataLimits";
-import { recountCitedPages } from "./siteRankings";
+import { citedPageOf, recountCitedPages, type CitedPage } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
 import type { Id } from "./_generated/dataModel";
 
@@ -121,7 +122,8 @@ async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"comp
  * for it. It used to take the record, its lists and everyone's holds, and
  * leave its rankings, metrics, summaries, AI mentions and DataForSEO answers
  * behind, pointing at a website that no longer existed. A stored answer can be
- * half a megabyte, so pulls go a few at a time; everything else in batches.
+ * several rows of most of a megabyte, so pulls go a few at a time and stop
+ * when a pass has read enough answers; everything else in batches.
  */
 export const purgeWebsiteCollectedDataInternal = internalMutation({
   args: { websiteId: v.id("websites") },
@@ -133,7 +135,12 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .query("seoDataPulls")
       .withIndex("by_website_submitted", (q) => q.eq("websiteId", args.websiteId))
       .take(PULL_PURGE_BATCH);
+    let answerRows = 0;
     for (const pull of pulls) {
+      if (answerRows >= ANSWER_ROWS_PER_PASS) {
+        more = true;
+        break;
+      }
       const lines = await ctx.db
         .query("seoCycleLines")
         .withIndex("by_pull", (q) => q.eq("pullId", pull._id))
@@ -157,6 +164,8 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
         await ctx.db.delete(row._id);
       }
+      // Its stored answer, kept apart from it since 2026-09-25.
+      answerRows += await deletePullAnswers(ctx, pull._id);
       await ctx.db.delete(pull._id);
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
@@ -241,8 +250,15 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
   },
 });
 
-/** DataForSEO calls removed per pass: a stored answer can be half a megabyte. */
-const PULL_PURGE_BATCH = 16;
+/** DataForSEO calls removed per pass. */
+const PULL_PURGE_BATCH = 8;
+
+/**
+ * Answer rows a pass reads to delete before it takes no more calls. Each is
+ * up to 900 KB and an answer up to four of them (`seoPullAnswers.ts`), so a
+ * pass stops by eleven — well inside the sixteen megabytes a function may read.
+ */
+const ANSWER_ROWS_PER_PASS = 8;
 
 /**
  * The host's own lists, cleared when the host goes.
@@ -329,7 +345,7 @@ export const purgeQuestionAnswersInternal = internalMutation({
     if (asked) return null;
 
     let more = false;
-    const cited: Array<{ websiteId: Id<"websites">; url: string }> = [];
+    const cited: CitedPage[] = [];
     const answers = await ctx.db
       .query("aiAnswers")
       .withIndex("by_question", (q) => q.eq("prompt", args.prompt))
@@ -403,11 +419,12 @@ export const purgeSearchResultsInternal = internalMutation({
 async function purgePurchase(
   ctx: MutationCtx,
   pullId: Id<"seoDataPulls">,
-  cited: Array<{ websiteId: Id<"websites">; url: string }>,
+  cited: CitedPage[],
 ): Promise<boolean> {
   const citations = await ctx.db.query("aiCitations").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
   for (const row of citations) {
-    if (row.kind === "SOURCE" && row.mentionedWebsiteId && row.url) cited.push({ websiteId: row.mentionedWebsiteId, url: row.url });
+    const page = citedPageOf(row);
+    if (page) cited.push(page);
     await ctx.db.delete(row._id);
   }
   const texts = await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);

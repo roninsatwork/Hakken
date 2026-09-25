@@ -16,8 +16,13 @@ import {
   XAxis,
   YAxis,
   ZAxis,
+  useActiveTooltipDataPoints,
+  usePlotArea,
+  useXAxisScale,
+  useYAxisScale,
 } from "recharts";
-import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
+import type { ReactNode } from "react";
+import { CHART_ACTIVE_BAR, CHART_CROSSHAIR, CHART_CURSOR, ChartTooltip, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import {
   CHART_SERIES_AMBER,
   CHART_SERIES_BLUE,
@@ -183,6 +188,8 @@ export function SiteBarChart({
   height = 220,
   stacked = false,
   horizontal = false,
+  formatValue,
+  seriesLabel,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
@@ -191,6 +198,10 @@ export function SiteBarChart({
   stacked?: boolean;
   /** Bars along, one per row — for comparing named things (sites, countries). */
   horizontal?: boolean;
+  /** How the hover readout's numbers read, when a grouped whole number is not enough (a share, a count beside it). */
+  formatValue?: (value: number, entry: ChartTooltipEntry) => ReactNode;
+  /** What each readout line is called, when more than the series name. */
+  seriesLabel?: (entry: ChartTooltipEntry) => ReactNode;
 }) {
   return (
     <ResponsiveContainer width="100%" height={height} debounce={50}>
@@ -211,7 +222,7 @@ export function SiteBarChart({
             <YAxis width={48} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
           </>
         )}
-        <Tooltip cursor={CHART_CURSOR} content={<ChartTooltip />} />
+        <Tooltip cursor={CHART_CURSOR} content={<ChartTooltip formatValue={formatValue} seriesLabel={seriesLabel} />} />
         {series.length > 1 ? <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} /> : null}
         {series.map((entry) => (
           <Bar
@@ -252,14 +263,112 @@ export type SiteScatterGroup = {
   key: string;
   name: string;
   colour: string;
-  /** Each group its own shape too, so the groups part without colour. */
-  shape: "star" | "circle" | "triangle" | "diamond" | "square";
+  /** Write each point's name beside its dot, on the chart itself: the Overview's competitors. */
+  labelled?: boolean;
   points: Array<{ x: number; y: number; label: string }>;
 };
 
+/** A dot's radius: every point is the same plain circle, area 90 (the ZAxis below). */
+const DOT_RADIUS = 5.5;
+
+/**
+ * The ring round the dot under the pointer, as a hovered bar wears
+ * `CHART_ACTIVE_BAR`. Drawn here from the point the tooltip is showing rather
+ * than with each Scatter's `activeShape`: recharts 3.8 matches that by the
+ * point's place in its own group, so hovering one website ringed the first,
+ * second… of every other group too.
+ */
+function ScatterActiveRing() {
+  const active = useActiveTooltipDataPoints<{ x?: unknown; y?: unknown }>();
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  const point = active?.[0];
+  if (!point || !xScale || !yScale) return null;
+  const cx = xScale(point.x);
+  const cy = yScale(point.y);
+  if (cx === undefined || cy === undefined) return null;
+  return (
+    <circle cx={cx} cy={cy} r={DOT_RADIUS + 2} fill="none" stroke="currentColor" strokeWidth={2} className="text-foreground" pointerEvents="none" />
+  );
+}
+
+/** Roughly how wide one character of an 11px name is — enough to keep names apart, not to typeset them. */
+const LABEL_CHAR_WIDTH = 6.4;
+const LABEL_HEIGHT = 13;
+const LABEL_GAP = 6;
+
+type Box = { left: number; right: number; top: number; bottom: number };
+type LabelAnchor = "start" | "middle" | "end";
+
+function overlaps(one: Box, other: Box): boolean {
+  return one.left < other.right && other.left < one.right && one.top < other.bottom && other.top < one.bottom;
+}
+
+/**
+ * Each labelled point's name beside its dot, on whichever side is clear of
+ * the other dots and names — right, left, above, below, then the corners — so
+ * two websites close together both stay readable. Drawn inside the chart from
+ * its own scales, since only the chart knows where each dot landed.
+ *
+ * Names rather than a legend of colours or shapes: the owner cannot tell red
+ * from green, and did not like a shape per website (Anthony, 2026-09-25: "not
+ * really a fan of the design of the icons on the graphs").
+ */
+function ScatterLabels({ points }: { points: Array<{ x: number; y: number; label: string }> }) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  const area = usePlotArea();
+  if (!xScale || !yScale || !area) return null;
+  const dots = points.flatMap((point) => {
+    const cx = xScale(point.x);
+    const cy = yScale(point.y);
+    return cx === undefined || cy === undefined ? [] : [{ label: point.label, cx, cy }];
+  });
+  const taken: Box[] = dots.map((dot) => ({
+    left: dot.cx - DOT_RADIUS, right: dot.cx + DOT_RADIUS, top: dot.cy - DOT_RADIUS, bottom: dot.cy + DOT_RADIUS,
+  }));
+  const inside = (box: Box) =>
+    box.left >= area.x && box.right <= area.x + area.width && box.top >= area.y && box.bottom <= area.y + area.height;
+  const placed = dots.map((dot) => {
+    const width = dot.label.length * LABEL_CHAR_WIDTH;
+    const away = DOT_RADIUS + LABEL_GAP;
+    const sides: Array<{ anchor: LabelAnchor; x: number; y: number }> = [
+      { anchor: "start", x: dot.cx + away, y: dot.cy },
+      { anchor: "end", x: dot.cx - away, y: dot.cy },
+      { anchor: "middle", x: dot.cx, y: dot.cy - away - LABEL_HEIGHT / 2 },
+      { anchor: "middle", x: dot.cx, y: dot.cy + away + LABEL_HEIGHT / 2 },
+      { anchor: "start", x: dot.cx + DOT_RADIUS, y: dot.cy - away - LABEL_HEIGHT / 2 },
+      { anchor: "start", x: dot.cx + DOT_RADIUS, y: dot.cy + away + LABEL_HEIGHT / 2 },
+      { anchor: "end", x: dot.cx - DOT_RADIUS, y: dot.cy - away - LABEL_HEIGHT / 2 },
+      { anchor: "end", x: dot.cx - DOT_RADIUS, y: dot.cy + away + LABEL_HEIGHT / 2 },
+    ];
+    const boxOf = (side: (typeof sides)[number]): Box => {
+      const left = side.anchor === "start" ? side.x : side.anchor === "end" ? side.x - width : side.x - width / 2;
+      return { left, right: left + width, top: side.y - LABEL_HEIGHT / 2, bottom: side.y + LABEL_HEIGHT / 2 };
+    };
+    // The first clear side; failing that the first on the chart; failing that the right.
+    const side = sides.find((entry) => inside(boxOf(entry)) && !taken.some((box) => overlaps(boxOf(entry), box)))
+      ?? sides.find((entry) => inside(boxOf(entry)))
+      ?? sides[0];
+    taken.push(boxOf(side));
+    return { ...side, label: dot.label };
+  });
+  return (
+    <g className="text-secondary" pointerEvents="none">
+      {placed.map((entry) => (
+        <text key={entry.label} x={entry.x} y={entry.y} textAnchor={entry.anchor} dominantBaseline="central" fontSize={11} fill="currentColor">
+          {entry.label}
+        </text>
+      ))}
+    </g>
+  );
+}
+
 /**
  * Websites as points: how many searches each ranks for across, and the
- * traffic they bring up.
+ * traffic they bring up. Every point is the same plain dot in its group's
+ * colour; a labelled group names each of its dots, and a chart whose every
+ * group is labelled needs no legend.
  *
  * Both scales are logarithmic — each step along an axis is ten times the one
  * before — because a market holds a local agency and a national directory a
@@ -278,9 +387,12 @@ export function SiteScatterChart({
   yLabel: string;
   height?: number;
 }) {
-  const placed = groups.flatMap((group) => group.points).filter((point) => point.x > 0 && point.y > 0);
+  const onChart = (point: { x: number; y: number }) => point.x > 0 && point.y > 0;
+  const placed = groups.flatMap((group) => group.points).filter(onChart);
   const xAxis = logAxis(placed.map((point) => point.x));
   const yAxis = logAxis(placed.map((point) => point.y));
+  const named = groups.filter((group) => group.labelled).flatMap((group) => group.points).filter(onChart);
+  const legend = groups.some((group) => !group.labelled);
   return (
     <ResponsiveContainer width="100%" height={height} debounce={50}>
       <ScatterChart margin={{ top: 8, right: 16, bottom: 16, left: 0 }}>
@@ -292,17 +404,20 @@ export function SiteScatterChart({
         <ZAxis range={[90, 90]} />
         {/* The website leads the readout: the axes already say what the numbers are. */}
         <Tooltip cursor={CHART_CROSSHAIR} content={<ChartTooltip title={(_, entries) => String(entries[0]?.payload?.label ?? "")} />} />
-        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} itemSorter={(item) => groups.findIndex((group) => group.name === item.value)} />
+        {legend ? (
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} itemSorter={(item) => groups.findIndex((group) => group.name === item.value)} />
+        ) : null}
         {groups.map((group) => (
           <Scatter
             key={group.key}
             name={group.name}
-            data={group.points.filter((point) => point.x > 0 && point.y > 0).map((point) => ({ ...point, name: point.label }))}
+            data={group.points.filter(onChart).map((point) => ({ ...point, name: point.label }))}
             fill={group.colour}
-            shape={group.shape}
             isAnimationActive={false}
           />
         ))}
+        {named.length > 0 ? <ScatterLabels points={named} /> : null}
+        <ScatterActiveRing />
       </ScatterChart>
     </ResponsiveContainer>
   );

@@ -75,6 +75,25 @@ export function ChartTooltipSurface({ heading, children }: { heading?: ReactNode
   );
 }
 
+/**
+ * One line of a readout: the series' stroke, the number, what it counts.
+ * Every chart's hover draws its lines with this, and so do bars drawn by hand
+ * (the Sites Overview's), so the two read as one.
+ */
+export function ChartTooltipRow({ colour, value, label }: { colour?: string; value: ReactNode; label: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        aria-hidden
+        className="h-[2px] w-3 shrink-0 rounded-full"
+        style={{ backgroundColor: colour ?? "var(--color-muted)" }}
+      />
+      <span className="text-[13px] font-semibold tabular-nums text-foreground">{value}</span>
+      <span className="truncate text-[12px] text-secondary">{label}</span>
+    </div>
+  );
+}
+
 function defaultLabel(entry: ChartTooltipEntry): string {
   return String(entry.name ?? entry.dataKey ?? "");
 }
@@ -104,19 +123,12 @@ export function ChartTooltip({
         const value = Number(entry.value ?? 0);
 
         return (
-          <div key={String(entry.dataKey ?? entry.name ?? index)} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="h-[2px] w-3 shrink-0 rounded-full"
-              style={{ backgroundColor: swatch ?? "var(--color-muted)" }}
-            />
-            <span className="text-[13px] font-semibold tabular-nums text-foreground">
-              {formatValue ? formatValue(value, entry) : value.toLocaleString()}
-            </span>
-            <span className="truncate text-[12px] text-secondary">
-              {seriesLabel ? seriesLabel(entry) : defaultLabel(entry)}
-            </span>
-          </div>
+          <ChartTooltipRow
+            key={String(entry.dataKey ?? entry.name ?? index)}
+            colour={swatch}
+            value={formatValue ? formatValue(value, entry) : value.toLocaleString()}
+            label={seriesLabel ? seriesLabel(entry) : defaultLabel(entry)}
+          />
         );
       })}
     </ChartTooltipSurface>

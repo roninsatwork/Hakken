@@ -15,6 +15,7 @@ import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import useDebounce from "@/src/hooks/useDebounce";
+import { useNow } from "@/src/hooks/useNow";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -32,6 +33,8 @@ import { formatDateTime } from "@/src/lib/dates";
  * something that does not exist. And every figure here is Hakken's own spend,
  * which no customer may ever see.
  */
+
+const HOUR_MS = 60 * 60 * 1000;
 
 /** The stages a pull passes through, in the order it passes through them. */
 const STATES = ["PENDING", "CLAIMED", "SUBMITTED", "READY", "FAILED"] as const;
@@ -54,6 +57,7 @@ export default function SeoCollectionPage() {
   const debouncedSearch = useDebounce(searchTerm, 400);
 
   const counts = useQuery(api.seoCollectionReports.readSeoQueueCounts, {});
+  const now = useNow();
   const pulls = useServerPagedTable(
     api.seoCollectionReports.listSeoPulls,
     {
@@ -164,22 +168,37 @@ export default function SeoCollectionPage() {
           {
             key: "state",
             header: t("stateColumn"),
-            cell: (row) => (
-              <div className="flex flex-col gap-1">
-                <StatusPill tone={TONES[row.status] ?? "neutral"}>
-                  {t(`pull.${row.status}`)}
-                </StatusPill>
-                {row.error ? (
-                  <span className="max-w-sm text-[11px] leading-relaxed text-warning">
-                    {row.error}
-                  </span>
-                ) : row.attempts > 0 ? (
-                  <span className="text-[11px] text-warning">
-                    {t("attempts", { count: row.attempts })}
-                  </span>
-                ) : null}
-              </div>
-            ),
+            cell: (row) => {
+              // Out over an hour unanswered: its pingback is late (V2).
+              const outHours = row.status === "SUBMITTED" && row.sentAt !== null
+                ? Math.floor((now - row.sentAt) / HOUR_MS)
+                : 0;
+              return (
+                <div className="flex flex-col gap-1">
+                  {/* Answered but not filed reads as a problem, not as collected (V1). */}
+                  <StatusPill tone={row.notFiled ? "warning" : TONES[row.status] ?? "neutral"}>
+                    {row.notFiled ? t("notFiled") : t(`pull.${row.status}`)}
+                  </StatusPill>
+                  {outHours > 0 ? <span className="text-[11px] text-warning">{t("outLong", { hours: outHours })}</span> : null}
+                  {row.lastFetch ? (
+                    <span className="max-w-sm text-[11px] leading-relaxed text-secondary">
+                      {t("lastTry", { said: row.lastFetch.said })}
+                    </span>
+                  ) : null}
+                  {row.tooLarge ? <span className="text-[11px] text-warning">{t("tooLarge")}</span> : null}
+                  {row.rowsLeftOff > 0 ? <span className="text-[11px] text-warning">{t("rowsLeftOff", { count: row.rowsLeftOff })}</span> : null}
+                  {row.error ? (
+                    <span className="max-w-sm text-[11px] leading-relaxed text-warning">
+                      {row.error}
+                    </span>
+                  ) : row.attempts > 0 ? (
+                    <span className="text-[11px] text-warning">
+                      {t("attempts", { count: row.attempts })}
+                    </span>
+                  ) : null}
+                </div>
+              );
+            },
           },
           {
             key: "when",

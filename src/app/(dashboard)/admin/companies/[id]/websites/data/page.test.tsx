@@ -11,11 +11,12 @@ import CompanyDataCollectionPage from "./page";
 /**
  * A company's data-collection schedule.
  *
- * The thing worth holding is that this is the *ordinary* schedule system seen
- * from the company: it writes a `schedules` row through the same mutations the
- * Schedules screens use, so the existing dispatcher wakes it and the run shows
- * up in the agent's runs and logs. The first version of this screen wrote its
- * own settings that nothing read, which looked identical and did nothing.
+ * The thing worth holding is that this is a *setting the Planner reads*, in
+ * the platform's own schedule format: it names no agent and wakes nothing
+ * itself. The DataForSEO Planner and Collector each run on their own agent
+ * schedule. The first version of this screen wrote its own settings that
+ * nothing read; the second named the Collector, so every company's row woke
+ * it and nothing woke the Planner.
  */
 
 const render = (ui: ReactElement) =>
@@ -46,8 +47,8 @@ function convexPath(reference: unknown) {
 const collectorAgent = { _id: "agent_1", name: "DataForSEO Agent Collector", systemKey: "DATAFORSEO_COLLECTOR" };
 
 describe("CompanyDataCollectionPage", () => {
-  const createSchedule = vi.fn();
-  const updateSchedule = vi.fn();
+  const saveCompanySchedule = vi.fn();
+  const collectNow = vi.fn();
 
   function mockQueries({
     schedule = null as unknown,
@@ -64,13 +65,12 @@ describe("CompanyDataCollectionPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    createSchedule.mockResolvedValue("schedule_1");
-    updateSchedule.mockResolvedValue(true);
+    saveCompanySchedule.mockResolvedValue("schedule_1");
 
     vi.mocked(useMutation).mockImplementation((reference: unknown) => {
       const path = convexPath(reference);
-      if (path.includes("createSchedule")) return createSchedule as never;
-      if (path.includes("updateSchedule")) return updateSchedule as never;
+      if (path.includes("saveCompanySchedule")) return saveCompanySchedule as never;
+      if (path.includes("collectNow")) return collectNow as never;
       return vi.fn() as never;
     });
 
@@ -86,7 +86,7 @@ describe("CompanyDataCollectionPage", () => {
 
   it("reflects a schedule the company already has", async () => {
     mockQueries({
-      schedule: { _id: "schedule_1", intervalStr: "daily", isActive: true, agentId: "agent_1" },
+      schedule: { _id: "schedule_1", intervalStr: "daily", isActive: true, companyId: "company_1" },
     });
     render(<CompanyDataCollectionPage />);
 
@@ -94,75 +94,54 @@ describe("CompanyDataCollectionPage", () => {
       .toHaveAttribute("aria-checked", "true");
   });
 
-  it("creates a schedule row against this company and the collecting agent", async () => {
-    // The whole point of the rework: this writes a real schedule the existing
-    // dispatcher will wake, not a private setting nothing reads.
+  it("saves the company's setting and names no agent", async () => {
+    // A row naming the Collector was woken by the dispatcher for each company,
+    // which sent a queue nothing had filled. The Planner reads this instead.
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(createSchedule).toHaveBeenCalledWith(
-        expect.objectContaining({ agentId: "agent_1", companyId: "company_1", isActive: true }),
-      );
+      expect(saveCompanySchedule).toHaveBeenCalledWith({
+        companyId: "company_1",
+        name: "scheduleName:Ronins Agency",
+        intervalStr: expect.any(String),
+        isActive: true,
+      });
     });
-    expect(updateSchedule).not.toHaveBeenCalled();
   });
 
-  it("updates the existing row rather than creating a second one", async () => {
+  it("saves a schedule the company already has the same way, switch and all", async () => {
     mockQueries({
-      schedule: { _id: "schedule_1", name: "SEO", intervalStr: "daily", isActive: true, agentId: "agent_1" },
+      schedule: { _id: "schedule_1", name: "SEO", intervalStr: "daily", isActive: true, companyId: "company_1" },
     });
-    render(<CompanyDataCollectionPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(updateSchedule).toHaveBeenCalledWith(
-        expect.objectContaining({ scheduleId: "schedule_1", companyId: "company_1" }),
-      );
-    });
-    expect(createSchedule).not.toHaveBeenCalled();
-  });
-
-  it("finds the collecting agent by its role, not by what it is called", async () => {
-    // Renamed agents broke this once: a company with no schedule could not be
-    // switched on while the Collector was called anything but its old name.
-    mockQueries({ agents: [{ _id: "agent_9", name: "DataForSEO Agent" }, collectorAgent] });
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(createSchedule).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent_1" }));
+      expect(saveCompanySchedule).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: "company_1", isActive: false }),
+      );
     });
-    expect(screen.queryByText("noAgentTitle")).not.toBeInTheDocument();
   });
 
-  it("says so when there is no agent to run the schedule", async () => {
-    // A schedule pointing at nothing would look configured and never run.
+  it("saves with no DataForSEO agent at all, because the setting starts nothing itself", async () => {
     mockQueries({ agents: [] });
     render(<CompanyDataCollectionPage />);
 
-    expect(await screen.findByText("noAgentTitle")).toBeInTheDocument();
-  });
-
-  it("refuses to save without an agent rather than writing a schedule that cannot run", async () => {
-    mockQueries({ agents: [] });
-    render(<CompanyDataCollectionPage />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /save/i }));
+    fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(screen.getAllByText("noAgentBody").length).toBeGreaterThan(0);
+      expect(saveCompanySchedule).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
     });
-    expect(createSchedule).not.toHaveBeenCalled();
   });
 
   it("surfaces a failed save rather than looking successful", async () => {
-    createSchedule.mockRejectedValue(new Error("Unauthorized"));
+    saveCompanySchedule.mockRejectedValue(new Error("Unauthorized"));
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
@@ -172,5 +151,52 @@ describe("CompanyDataCollectionPage", () => {
       expect(screen.getByText(/Unauthorized|errors\.saveFailed/)).toBeInTheDocument();
     });
     expect(screen.queryByText("saved")).not.toBeInTheDocument();
+  });
+
+  describe("Collect now", () => {
+    // A one-off outside the schedule (Anthony, 2026-09-25): the Planner queues
+    // the company's collection, then the Collector sends it.
+    const plannerAgent = { _id: "agent_2", name: "Queue Planner", systemKey: "DATAFORSEO_PLANNER", isActive: true };
+    const collecting = { _id: "schedule_1", name: "SEO data — Ronins Agency", companyId: "company_1", intervalStr: "weekly", isActive: true };
+
+    it("waits for collection to be switched on and saved, and says so beside the button", async () => {
+      mockQueries({ schedule: { ...collecting, isActive: false }, agents: [collectorAgent, plannerAgent] });
+      render(<CompanyDataCollectionPage />);
+
+      expect(await screen.findByRole("button", { name: "button" })).toBeDisabled();
+      expect(screen.getByText("off")).toBeInTheDocument();
+    });
+
+    it("names an agent that is switched off rather than failing on press", async () => {
+      mockQueries({ schedule: collecting, agents: [collectorAgent, { ...plannerAgent, isActive: false }] });
+      render(<CompanyDataCollectionPage />);
+
+      expect(await screen.findByRole("button", { name: "button" })).toBeDisabled();
+      expect(screen.getByText("agentOff:Queue Planner")).toBeInTheDocument();
+    });
+
+    it("starts the company's collection once, says what happened, and opens its run", async () => {
+      collectNow.mockResolvedValue({ outcome: "QUEUED", cycleId: "cycle_1" });
+      mockQueries({ schedule: collecting, agents: [collectorAgent, plannerAgent] });
+      render(<CompanyDataCollectionPage />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "button" }));
+
+      expect(await screen.findByText(/outcomes\.QUEUED:Ronins Agency/)).toBeInTheDocument();
+      expect(collectNow).toHaveBeenCalledWith({ companyId: "company_1" });
+      expect(screen.getByRole("link", { name: /follow/ })).toHaveAttribute("href", "/admin/companies/company_1/websites/runs/cycle_1");
+      // The schedule itself is left exactly as it is.
+      expect(saveCompanySchedule).not.toHaveBeenCalled();
+    });
+
+    it("shows why it could not start", async () => {
+      collectNow.mockRejectedValue(new Error("Collection is switched off for Ronins Agency. Switch it on and save first."));
+      mockQueries({ schedule: collecting, agents: [collectorAgent, plannerAgent] });
+      render(<CompanyDataCollectionPage />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "button" }));
+
+      expect(await screen.findByText(/Collection is switched off for Ronins Agency/)).toBeInTheDocument();
+    });
   });
 });

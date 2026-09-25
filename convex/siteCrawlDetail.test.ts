@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { parseBrokenLinks, parseCrawlPages } from "./siteCrawlDetail";
 
@@ -70,5 +70,86 @@ describe("the crawl's page detail", () => {
     }]);
     await expect(t.withIdentity({ subject: otherUserId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "no_title" }))
       .rejects.toThrow(/not one your company holds/);
+  });
+});
+
+/**
+ * Fetching a crawl's detail (reliability plan 3.6): nothing is replaced until
+ * the whole detail is in hand — a refusal on the first request used to clear
+ * the older crawl's and leave the Site audit empty — and a second fetch never
+ * doubles the rows.
+ */
+describe("fetching a crawl's detail", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.stubEnv("DATAFORSEO_LOGIN", "login");
+    vi.stubEnv("DATAFORSEO_PASSWORD", "password");
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
+
+  async function crawls(t: ReturnType<typeof harness>) {
+    return await t.run(async (ctx) => {
+      const websiteId = await ctx.db.insert("websites", { host: "ronins.co.uk", displayHost: "ronins.co.uk", firstSeenAt: Date.now() });
+      const crawl = (taskId: string) => ctx.db.insert("seoDataPulls", {
+        operationId: "site_crawl", family: "On-Page", mode: "QUEUED", websiteId, taskArgsJson: "{}", status: "READY",
+        tag: taskId, costUsd: 0.15, sandbox: false, submittedAt: Date.now(), completedAt: Date.now(), taskId,
+      });
+      const older = await crawl("task-old");
+      for (let index = 0; index < 3; index += 1) {
+        await ctx.db.insert("siteCrawlPages", {
+          websiteId, pullId: older, day: "2026-08-23", url: `https://ronins.co.uk/${index}/`, page: `/${index}/`, problems: [],
+        });
+      }
+      return { websiteId, older, newer: await crawl("task-new") };
+    });
+  }
+  const rowsOf = (t: ReturnType<typeof harness>) => t.run(async (ctx) => ({
+    pages: await ctx.db.query("siteCrawlPages").collect(),
+    links: await ctx.db.query("siteCrawlLinks").collect(),
+  }));
+
+  test("a refusal changes nothing — the older crawl's detail stays — and it is tried again later", async () => {
+    const t = harness();
+    const { older, newer } = await crawls(t);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      status_code: 20000, tasks: [{ id: "task-new", status_code: 40501, status_message: "Invalid Field: 'filters'." }],
+    })));
+
+    await t.action(internal.siteCrawlDetail.fetchCrawlDetail, { pullId: newer });
+
+    const rows = await rowsOf(t);
+    expect(rows.pages.map((row) => row.pullId)).toEqual([older, older, older]);
+    const again = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+      .filter((job) => job.name.includes("fetchCrawlDetail")));
+    expect(again.map((job) => job.args[0])).toEqual([{ pullId: newer, attempt: 1 }]);
+    // Not yet given up: nothing on the crawl says it failed.
+    expect((await t.run(async (ctx) => await ctx.db.get(newer)))?.error).toBeUndefined();
+  });
+
+  test("a whole detail replaces the older crawl's, and fetched twice is never doubled", async () => {
+    const t = harness();
+    const { newer } = await crawls(t);
+    const links = Array.from({ length: 1_500 }, (_, index) => ({
+      link_from: `https://ronins.co.uk/${index}/`, link_to: `https://ronins.co.uk/gone-${index}/`, page_to_status_code: 404,
+    }));
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: { body: string }) => {
+      const [task] = JSON.parse(init.body) as Array<{ offset: number; filters?: unknown }>;
+      const result = task.filters
+        ? [{ items: links.slice(task.offset, task.offset + 1_000) }]
+        : [{ items: task.offset === 0 ? [{ url: "https://ronins.co.uk/", status_code: 200, checks: {} }] : [] }];
+      return Response.json({ status_code: 20000, tasks: [{ id: "task-new", status_code: 20000, result }] });
+    }));
+
+    await t.action(internal.siteCrawlDetail.fetchCrawlDetail, { pullId: newer });
+    await t.action(internal.siteCrawlDetail.fetchCrawlDetail, { pullId: newer });
+
+    const rows = await rowsOf(t);
+    expect(rows.pages.map((row) => row.pullId)).toEqual([newer]);
+    expect(rows.links).toHaveLength(1_500);
+    expect(new Set(rows.links.map((row) => row.to)).size).toBe(1_500);
   });
 });

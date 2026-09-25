@@ -538,7 +538,7 @@ Set once, in `convex/seoCollectionPolicy.ts`, with a comment on each saying why.
 | `SEO_BATCH_SIZE` | 100 | DataForSEO's per-request cap on the endpoints checked; confirm per endpoint |
 | `SEO_DUE_SPACING_MS` | 250 | a 5,000-task tenant spreads over ~20 min; a 20-task tenant is instant |
 | `SEO_CLAIM_TIMEOUT_MS` | 10 min | a claim older than this belongs to a dead chain |
-| `SEO_RESULT_TIMEOUT_MS` | 24 h | DataForSEO's queued results are usually minutes; a day means it is not coming |
+| `SEO_RESULT_TIMEOUT_MS` | 12 h (24 h until 2026-09-25) | DataForSEO's queued results are usually minutes; twelve hours means it is not coming. Shortened at Anthony's word when one late site crawl held Korda's collection open |
 | `SEO_MAX_ATTEMPTS` | 3 | same as the knowledge queue |
 | `SEO_RAW_RETENTION_DAYS` | 30 | long enough to re-parse after a parser bug |
 | `SEO_CYCLE_RETENTION_DAYS` | 90 | one quarter of history on the collection screen |

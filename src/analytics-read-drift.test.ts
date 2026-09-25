@@ -86,8 +86,11 @@ const UNTRIAGED_READ_THRESHOLD = 1000;
  * read-then-filter counts and the platform overview's caps moved to the
  * read-one-past pattern. Eight units of slack in a ratchet is eight reads that
  * could appear without anything noticing.
+ *
+ * Lowered to 115 on 2026-09-25, when the collection reliability work cleared
+ * crawl detail in batches of five hundred and paged what had read in one go.
  */
-const MID_SIZED_READ_CEILING = 118;
+const MID_SIZED_READ_CEILING = 115;
 
 const numericConstants = (() => {
   const constants = new Map<string, number>();

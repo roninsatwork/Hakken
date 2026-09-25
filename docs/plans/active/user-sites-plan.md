@@ -731,8 +731,9 @@ of this exercise in the first place." Built the same day; nothing has been
 collected with it yet — Anthony: "Until I am ready we are just building".
 
 - **Limits, per company and per website** (`convex/companyDataLimits.ts`).
-  How many keywords and how many backlinks are kept per website: 100, 1,000,
-  2,000, 5,000 or 10,000, default 1,000. Set per company on its Data
+  How many keywords and how many backlinks are kept per website: 100, 250,
+  500, 750, 1,000, 2,500, 5,000, 7,500 or 10,000 (the finer steps since
+  2026-09-25; 100, 1,000, 2,000, 5,000 or 10,000 before), default 1,000. Set per company on its Data
   collection screen, and per website — owned or competitor — in a "Data
   limits for this website" section on the website's own page, where
   "Follow the company" keeps no setting of its own. Anthony: "I think we
@@ -870,3 +871,56 @@ Added 2026-09-23 (night), for Anthony in the morning:
   Collection runs screens built from its report. The side menu's groups
   fold away — only Site, and the group of the page being read, start open —
   at Anthony's word: "there are too many options on the screen".
+- 2026-09-25 — **Collect now**, at Anthony's word ("an override as a one off
+  from the company schedule"): a button on a company's Collection schedule
+  screen that tells the agents to run once for that company — a Planner run
+  queuing everything for its websites and competitors, then a Collector run
+  sending it, the Collector's spend cap applying (`seoAgentRuns.collectNow`).
+  It starts the agents as their Run buttons do; no paid call goes round them,
+  so "never a button" above still holds. The schedule is left as it is,
+  nothing is queued twice, and it is refused while collection is switched off.
+- 2026-09-25 — At Anthony's word ("set the timeout for 12 hours and yes fix
+  the rest"): an answer that never comes is given up after twelve hours, not
+  a day (`SEO_RESULT_TIMEOUT_MS`); and only a collection with requests still
+  to send holds up a new one (`openSeoCycleOf`). One that has sent everything
+  and only waits for answers no longer does — a single late site crawl had
+  kept Korda's collection open, so Collect now would have queued nothing.
+  The Planner follows the same rule.
+- 2026-09-25 — Every collection run is a full run (Anthony: "each run should be
+  a full run always"): the keyword and link lists and the site crawl are bought
+  in every run, no longer held for a week or a month, and no earlier answer is
+  reused. The Overview's headline shows the newest value held for each figure
+  rather than a dash (it showed a dash for AI Overviews after a run that did
+  not buy the keyword list).
+- 2026-09-25 — Full runs reverted the same day (Anthony: "put it back to how it
+  was with different collections … the data set always looks complete and we
+  build on it with incremental"). Runs are incremental again — daily items
+  every run, the keyword and link lists weekly, the crawl, anchors and
+  referring IPs monthly — and every screen shows the newest data held for
+  what a run did not collect.
+- 2026-09-25 — Each call with its own cadence is bought on the run nearest
+  that cadence, and every run by a company that collects about as seldom as
+  the call (`collectsEveryRun`, `repeatDays`): a monthly company's run is the
+  full scan; weekly and fortnightly runs buy the lists every run and the
+  crawl, anchors and referring IPs every fourth and every other run; a daily
+  one buys the lists weekly and the crawl monthly. Held for its whole cadence
+  before, a weekly list — bought a few minutes short of seven days earlier —
+  was bought every other week on a weekly schedule, and a monthly company
+  skipped the crawl after every month of 30 days or fewer. Paged lists reuse a
+  still-fresh page as single calls do, so a second press or a second company
+  on the same day does not buy one twice.
+- 2026-09-25 — The limit choices are 100, 250, 500, 750, 1,000, 2,500, 5,000,
+  7,500 and 10,000 (Anthony), finer below a thousand for cutting a
+  competitor's links down; 2,000 is no longer offered and nothing had it.
+- 2026-09-25 — **Two agents, two agent schedules** (Anthony: "we have two
+  agents already and all we need … is two agent schedules"). A company's
+  Collection schedule is now a setting the Planner reads, never an alarm: its
+  row names no agent and has no next run, so it no longer wakes the Collector
+  for each company — which had sent a queue nothing had filled, because
+  nothing woke the Planner. The Planner and the Collector each run on their own
+  agent schedule (Admin → Workflows → Schedules); in Live mode a Planner run
+  opens a collection only for a company with something due, and names the
+  others in its summary. The companies' rows no longer appear on the Schedules
+  list or on Health, and the company screen's "No collecting agent yet" box is
+  gone. Korda's and Ronins' switch and cadence were kept as set
+  (`2026-09-25-company-schedules-wake-nothing`).

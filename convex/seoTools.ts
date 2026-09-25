@@ -9,10 +9,11 @@ import {
   seoSiteOperationParams,
 } from "./dataForSeoRegistry";
 import { heldByOwnCadence } from "./seoCollection";
+import { cyclePullIn } from "./seoCollectionQueue";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { WEBSITE_IDENTITY_MESSAGES, readWebsiteHost } from "./websiteIdentity";
 import { appError } from "./utils/appError";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
 /**
@@ -140,16 +141,12 @@ export async function openSeoCycle(
       .withIndex("by_company_agent", (q) => q.eq("companyId", args.companyId))
       .first();
 
-    const running = await ctx.db
-      .query("seoCollectionCycles")
-      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .first();
+    const running = await openSeoCycleOf(ctx, args.companyId);
 
-    // One open cycle per company. A second would plan the same work, and the
-    // only thing standing between that and a doubled bill would be the
-    // idempotency key — which is a safety net, not a plan.
-    if (running && !TERMINAL.includes(running.status)) {
+    // One collection with work still to send per company. A second would plan
+    // the same work, and the only thing standing between that and a doubled
+    // bill would be the idempotency key — which is a safety net, not a plan.
+    if (running) {
       return {
         ok: false,
         cycleId: running._id,
@@ -182,7 +179,35 @@ export async function openSeoCycle(
   }
 }
 
-const TERMINAL = ["DONE", "FAILED", "CAPPED_PLAN", "CAPPED_SPEND"];
+/**
+ * The company's collection that still has requests to send — its work list
+ * still being written, or requests waiting or being sent — if there is one.
+ *
+ * Only that holds up a new collection. One that has sent everything and only
+ * waits for answers does not (Anthony, 2026-09-25): one late answer — a site
+ * crawl, given up after `SEO_RESULT_TIMEOUT_MS` — kept Korda from collecting
+ * at all, and answers still land on their own collection when they come.
+ * Only the newest collection is read: a new one opens only once the one
+ * before has nothing left to send, and nothing adds work to it after that.
+ */
+export async function openSeoCycleOf(
+  ctx: { db: QueryCtx["db"] },
+  companyId: Id<"companies">,
+): Promise<Doc<"seoCollectionCycles"> | null> {
+  const latest = await ctx.db
+    .query("seoCollectionCycles")
+    .withIndex("by_company_started", (q) => q.eq("companyId", companyId))
+    .order("desc")
+    .first();
+  if (!latest) return null;
+  if (latest.status === "EXPANDING") return latest;
+  // Whatever its status — sending, collecting, capped at its plan limit
+  // (which stops the planning, not the sending), or failed part-way — it is
+  // open while any of its own requests are still to go. A capped one read as
+  // finished let the next day's collection plan and buy the same calls again
+  // (2026-09-25).
+  return (await cyclePullIn(ctx, latest._id, ["PENDING", "CLAIMED"])) ? latest : null;
+}
 
 /**
  * Ask for one operation on one host, off-schedule.
@@ -219,7 +244,7 @@ export const requestSeoPull = internalMutation({
 
     // A call with its own cadence — a weekly or monthly link list, the monthly
     // crawl — is held for it here too, exactly as a scheduled cycle holds it.
-    if (operation.refresh && await heldByOwnCadence(ctx, operation, websiteId, new Date(startedAt))) {
+    if (operation.refresh && await heldByOwnCadence(ctx, operation, websiteId, new Date(startedAt), JSON.stringify(params))) {
       return {
         ok: true,
         reused: true,

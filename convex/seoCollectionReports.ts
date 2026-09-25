@@ -8,6 +8,7 @@ import {
   paginateItems,
 } from "./adminQueryService";
 import type { Doc, Id } from "./_generated/dataModel";
+import { PARSE_FAILED } from "./seoFiling";
 
 /**
  * What the collection screens read.
@@ -80,6 +81,15 @@ export const listSeoPulls = superAdminQuery({
     /** When this happens or happened, whichever the row's stage makes true. */
     at: v.union(v.number(), v.null()),
     cycleId: v.union(v.id("seoCollectionCycles"), v.null()),
+    /** When it went to DataForSEO: a request out long unanswered is flagged (V2). */
+    sentAt: v.union(v.number(), v.null()),
+    /** The last fetch of its answer that did not bring it, and why (V1). */
+    lastFetch: v.union(v.null(), v.object({ at: v.number(), said: v.string() })),
+    /** Answered, and not filed: its error says why (V1). */
+    notFiled: v.boolean(),
+    /** Too large to keep at all, or rows left off a list to fit (2.4). */
+    tooLarge: v.boolean(),
+    rowsLeftOff: v.number(),
   })),
   handler: async (ctx, args) => {
     // Waiting rows read in the order they will go out; everything else reads
@@ -143,6 +153,11 @@ export const listSeoPulls = superAdminQuery({
         // when a waiting row goes out, and when a settled one finished.
         at: pull.completedAt ?? pull.sentAt ?? pull.dueAt ?? null,
         cycleId: pull.cycleId ?? null,
+        sentAt: pull.sentAt ?? null,
+        lastFetch: pull.lastFetch ?? null,
+        notFiled: pull.status === "READY" && (pull.error?.startsWith(PARSE_FAILED) ?? false),
+        tooLarge: pull.rawTruncated === true,
+        rowsLeftOff: pull.rowsLeftOff ?? 0,
       };
     }));
 
@@ -466,9 +481,12 @@ export const listCompanyCosts = superAdminQuery({
       .toISOString()
       .slice(0, 10);
 
+    // The window's days, every scope's: read from the table's start instead,
+    // the oldest days of the first companies filled the ceiling, and a busy
+    // year left the window's own days out (reliability plan 3.4).
     const rows = await ctx.db
       .query("seoDayRollups")
-      .withIndex("by_scope_day")
+      .withIndex("by_day", (q) => q.gte("day", since))
       .take(MAX_ROLLUP_ROWS);
 
     const byCompany = new Map<string, {
@@ -476,7 +494,6 @@ export const listCompanyCosts = superAdminQuery({
     }>();
 
     for (const row of rows) {
-      if (row.day < since) continue;
       if (!row.scopeKey.startsWith("company:")) continue;
       const companyId = row.scopeKey.slice("company:".length);
       const entry = byCompany.get(companyId)
@@ -512,8 +529,10 @@ export const listCompanyCosts = superAdminQuery({
 
 /**
  * One row per scope per day, so this is thirty days times the number of
- * companies plus one. Generous, and bounded rather than collected, because a
- * query with no ceiling is the one that works until the day it does not.
+ * companies plus one — five thousand is some hundred and sixty companies.
+ * Bounded rather than collected, because a query with no ceiling is the one
+ * that works until the day it does not; past it the screen says its totals
+ * are partial (`isCapped`).
  */
 const MAX_ROLLUP_ROWS = 5_000;
 

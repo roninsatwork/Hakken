@@ -36,7 +36,7 @@ const MAX_DETAIL_REQUESTS = 10;
 const ROWS_PER_WRITE = 250;
 
 /** An older crawl's rows cleared per pass. */
-const OLD_ROWS_CLEARED = 1_000;
+const OLD_ROWS_CLEARED = 500;
 
 type Unknown = Record<string, unknown>;
 
@@ -146,52 +146,90 @@ export const crawlOf = internalQuery({
  * Fetch a finished crawl's pages and broken links, free, and keep them. Run
  * once the crawl's summary is in; safe to run again — each run replaces the
  * pull's rows.
+ *
+ * **Nothing is replaced until the whole detail is in hand.** A refusal on the
+ * first request used to end the fetch as if the crawl had no pages, and the
+ * older crawl's detail was then cleared: the Site audit was left empty
+ * (reliability plan 3.6). Now a refusal or a failure changes nothing, and the
+ * fetch is tried again later — the detail is kept free for thirty days — a
+ * few times before the crawl says why it has none. Old rows are cleared
+ * whole, not a thousand at a time, so a fetch run twice never doubles them.
  */
 export const fetchCrawlDetail = internalAction({
-  args: { pullId: v.id("seoDataPulls") },
+  args: {
+    pullId: v.id("seoDataPulls"),
+    /** Tries so far; the first is none. */
+    attempt: v.optional(v.number()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const crawl: { taskId: string; websiteId: Id<"websites">; day: string } | null =
       await ctx.runQuery(internal.siteCrawlDetail.crawlOf, { pullId: args.pullId });
     if (!crawl) return null;
+    let failure: string | null = null;
     try {
       const credentials = readDataForSeoCredentials();
-      const collect = async <Row>(path: string, extra: Record<string, unknown>, parse: (result: unknown) => Row[]) => {
+      // Every row of one list, or why it could not all be read.
+      const collect = async <Row>(
+        path: string,
+        extra: Record<string, unknown>,
+        parse: (result: unknown) => Row[],
+      ): Promise<{ rows: Row[] } | { failure: string }> => {
         const rows: Row[] = [];
         for (let request = 0; request < MAX_DETAIL_REQUESTS; request += 1) {
           const envelope = await postDataForSeoTask(path, { id: crawl.taskId, limit: DETAIL_PAGE, offset: request * DETAIL_PAGE, ...extra }, credentials);
           const task = envelope.tasks?.[0];
-          if (!task || (task.status_code !== undefined && task.status_code >= 40000)) break;
+          if (!task) return { failure: "DataForSEO's reply had no task in it." };
+          if (task.status_code !== undefined && task.status_code >= 40000) {
+            return { failure: task.status_message ?? `DataForSEO answered ${task.status_code}.` };
+          }
           const page = parse(task.result);
           rows.push(...page);
           if (page.length < DETAIL_PAGE) break;
         }
-        return rows;
+        return { rows };
       };
       const pages = await collect("/v3/on_page/pages", {}, parseCrawlPages);
-      const links = await collect("/v3/on_page/links", { filters: [["is_broken", "=", true]] }, parseBrokenLinks);
-
-      await ctx.runMutation(internal.siteCrawlDetail.clearCrawlDetail, { pullId: args.pullId });
-      for (let start = 0; start < pages.length; start += ROWS_PER_WRITE) {
-        await ctx.runMutation(internal.siteCrawlDetail.writeCrawlPages, {
-          websiteId: crawl.websiteId, pullId: args.pullId, day: crawl.day, rows: pages.slice(start, start + ROWS_PER_WRITE),
-        });
+      const links = "failure" in pages ? pages : await collect("/v3/on_page/links", { filters: [["is_broken", "=", true]] }, parseBrokenLinks);
+      if ("failure" in pages) failure = pages.failure;
+      else if ("failure" in links) failure = links.failure;
+      else {
+        for (let more = true; more;) more = (await ctx.runMutation(internal.siteCrawlDetail.clearCrawlDetail, { pullId: args.pullId })).more;
+        for (let start = 0; start < pages.rows.length; start += ROWS_PER_WRITE) {
+          await ctx.runMutation(internal.siteCrawlDetail.writeCrawlPages, {
+            websiteId: crawl.websiteId, pullId: args.pullId, day: crawl.day, rows: pages.rows.slice(start, start + ROWS_PER_WRITE),
+          });
+        }
+        for (let start = 0; start < links.rows.length; start += ROWS_PER_WRITE) {
+          await ctx.runMutation(internal.siteCrawlDetail.writeCrawlLinks, {
+            websiteId: crawl.websiteId, pullId: args.pullId, day: crawl.day, rows: links.rows.slice(start, start + ROWS_PER_WRITE),
+          });
+        }
+        for (let more = true; more;) {
+          more = (await ctx.runMutation(internal.siteCrawlDetail.clearOlderCrawlDetail, { websiteId: crawl.websiteId, pullId: args.pullId })).more;
+        }
       }
-      for (let start = 0; start < links.length; start += ROWS_PER_WRITE) {
-        await ctx.runMutation(internal.siteCrawlDetail.writeCrawlLinks, {
-          websiteId: crawl.websiteId, pullId: args.pullId, day: crawl.day, rows: links.slice(start, start + ROWS_PER_WRITE),
-        });
-      }
-      await ctx.runMutation(internal.siteCrawlDetail.clearOlderCrawlDetail, { websiteId: crawl.websiteId, pullId: args.pullId });
     } catch (error) {
-      await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
-        pullId: args.pullId,
-        error: `The crawl's page detail could not be fetched: ${getErrorMessage(error)}`,
-      });
+      failure = getErrorMessage(error);
     }
+    if (failure === null) return null;
+
+    const attempt = (args.attempt ?? 0) + 1;
+    if (attempt < DETAIL_TRIES) {
+      await ctx.scheduler.runAfter(DETAIL_RETRY_MS, internal.siteCrawlDetail.fetchCrawlDetail, { pullId: args.pullId, attempt });
+      return null;
+    }
+    await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
+      pullId: args.pullId,
+      error: `The crawl's page detail could not be fetched: ${failure}`,
+    });
     return null;
   },
 });
+
+/** Tries at a crawl's detail before it is left saying why, each a quarter of an hour after the last. */
+const DETAIL_TRIES = 3;
+const DETAIL_RETRY_MS = 15 * 60 * 1000;
 
 const pageRowValidator = v.object({
   url: v.string(),
@@ -222,18 +260,16 @@ const linkRowValidator = v.object({
   dofollow: v.optional(v.boolean()),
 });
 
-/** Clear what an earlier fetch of this crawl kept, so a second fetch replaces it. */
+/** Clear a batch of what an earlier fetch of this crawl kept, so a second fetch replaces it; `more` while any is left. */
 export const clearCrawlDetail = internalMutation({
   args: { pullId: v.id("seoDataPulls") },
-  returns: v.null(),
+  returns: v.object({ more: v.boolean() }),
   handler: async (ctx, args) => {
-    for (const row of await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(OLD_ROWS_CLEARED)) {
-      await ctx.db.delete(row._id);
-    }
-    for (const row of await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(OLD_ROWS_CLEARED)) {
-      await ctx.db.delete(row._id);
-    }
-    return null;
+    const pages = await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(OLD_ROWS_CLEARED);
+    for (const row of pages) await ctx.db.delete(row._id);
+    const links = await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(OLD_ROWS_CLEARED);
+    for (const row of links) await ctx.db.delete(row._id);
+    return { more: pages.length === OLD_ROWS_CLEARED || links.length === OLD_ROWS_CLEARED };
   },
 });
 
@@ -255,18 +291,26 @@ export const writeCrawlLinks = internalMutation({
   },
 });
 
-/** An older crawl's pages and links, cleared once the newest crawl's are in. A batch per pass; the rest go next time. */
+/**
+ * A batch of an older crawl's pages and links, cleared once the newest
+ * crawl's are in; `more` while any may be left. Oldest first — the index
+ * keeps a site's rows in the order they were written — so a batch that finds
+ * only the newest crawl's rows has cleared everything older.
+ */
 export const clearOlderCrawlDetail = internalMutation({
   args: { websiteId: v.id("websites"), pullId: v.id("seoDataPulls") },
-  returns: v.null(),
+  returns: v.object({ more: v.boolean() }),
   handler: async (ctx, args) => {
-    for (const row of await ctx.db.query("siteCrawlPages").withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(OLD_ROWS_CLEARED * 2)) {
-      if (row.pullId !== args.pullId) await ctx.db.delete(row._id);
-    }
-    for (const row of await ctx.db.query("siteCrawlLinks").withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(OLD_ROWS_CLEARED * 2)) {
-      if (row.pullId !== args.pullId) await ctx.db.delete(row._id);
-    }
-    return null;
+    let more = false;
+    const pages = await ctx.db.query("siteCrawlPages").withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(OLD_ROWS_CLEARED);
+    const oldPages = pages.filter((row) => row.pullId !== args.pullId);
+    for (const row of oldPages) await ctx.db.delete(row._id);
+    if (oldPages.length > 0 && pages.length === OLD_ROWS_CLEARED) more = true;
+    const links = await ctx.db.query("siteCrawlLinks").withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(OLD_ROWS_CLEARED);
+    const oldLinks = links.filter((row) => row.pullId !== args.pullId);
+    for (const row of oldLinks) await ctx.db.delete(row._id);
+    if (oldLinks.length > 0 && links.length === OLD_ROWS_CLEARED) more = true;
+    return { more };
   },
 });
 

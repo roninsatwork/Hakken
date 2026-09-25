@@ -16,7 +16,7 @@ vi.mock("next/navigation", async () => ({
 
 const counts: MenuCounts = {
   keywords: 2545, pages: 529, top3: 18, referringDomains: 505, brokenBacklinks: 2, aiNamed: 1, aiAsked: 4,
-  trackedSearches: 5, questionsSetUp: true, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1,
+  trackedSearches: 5, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1,
 };
 
 const menu = () => screen.getByRole("navigation", { name: "sites.menu.label" });
@@ -71,15 +71,13 @@ describe("the Sites side menu", () => {
     search.current = "";
   });
 
-  it("says a group with nothing set up is not set up, once, on its heading", () => {
+  // Anthony, 2026-09-25, of a "Not set up" pill on a group: "not on a menu never".
+  it("puts no marks on the menu, whatever is set up", () => {
     pathname.current = "/app/sites/site_1/keywords";
-    renderWithProviders(<SiteMenu siteId="site_1" counts={{ ...counts, questionsSetUp: false, trackedSearches: 0 }} />);
+    renderWithProviders(<SiteMenu siteId="site_1" counts={counts} />);
 
-    expect(screen.getByRole("button", { name: /sites\.menu\.groups\.ai.*sites\.menu\.notSetUp/ })).toBeInTheDocument();
-    // Google results still has pages with something to show, so its pages say it one by one.
-    fireEvent.click(screen.getByRole("button", { name: /sites\.menu\.groups\.google/ }));
-    expect(page("googleSearches")).toHaveTextContent("sites.menu.notSetUp");
-    expect(page("googleMoves")).not.toHaveTextContent("sites.menu.notSetUp");
+    expect(menu()).not.toHaveTextContent("sites.menu.notSetUp");
+    expect(group("ai")).toBeInTheDocument();
   });
 
   it("shows every match while a page is being looked for, open or not", () => {

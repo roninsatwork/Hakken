@@ -113,7 +113,7 @@ describe("the Overview", () => {
       "companyDataLimits:getSiteDataLimits": {
         own: { keywordsPerSite: null, backlinksPerSite: 5000 },
         company: { keywordsPerSite: 10000, backlinksPerSite: 1000 },
-        choices: [100, 1000, 2000, 5000, 10000],
+        choices: [100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000],
       },
     }));
     renderWithProviders(<CompanySiteOverviewPage />);
@@ -122,11 +122,11 @@ describe("the Overview", () => {
     expect(keywords).toHaveValue("");
     expect(screen.getByRole("combobox", { name: "admin.companyWebsiteDetail.limits.backlinksLabel" })).toHaveValue("5000");
 
-    fireEvent.change(keywords, { target: { value: "2000" } });
+    fireEvent.change(keywords, { target: { value: "2500" } });
     fireEvent.click(screen.getByRole("button", { name: "admin.companyWebsiteDetail.limits.save" }));
     await waitFor(() => expect(saveLimits).toHaveBeenCalledWith({
       companyWebsiteId: "companyWebsite_1",
-      keywordsPerSite: 2000,
+      keywordsPerSite: 2500,
       backlinksPerSite: 5000,
     }));
   });
@@ -138,7 +138,7 @@ describe("the Overview", () => {
       "companyDataLimits:getSiteDataLimits": {
         own: { keywordsPerSite: null, backlinksPerSite: null },
         company: { keywordsPerSite: 1000, backlinksPerSite: 1000 },
-        choices: [100, 1000, 2000, 5000, 10000],
+        choices: [100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000],
       },
     }));
     renderWithProviders(<CompanySiteOverviewPage />);

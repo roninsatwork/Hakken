@@ -1,14 +1,14 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { isAssignableAgentRole, type AssignableAgentRole } from "./utils/agentRoles";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import * as schedulerShapes from "./utils/schedulerShapes";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
+import { assertSeoInterval, companyCollectionSchedule, startsRuns } from "./seoScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
-import { WIKI_STAFF } from "./wikiStaff";
+import { startAgentRun } from "./agentRunStartService";
 import { appError } from "./utils/appError";
 import { rowShape } from "./utils/rowShape";
 
@@ -25,6 +25,9 @@ export const getSchedules = superAdminQuery({
       .query("schedules")
       .withIndex("by_createdAt")
       .order("desc")
+      // Not the companies' Collection schedules: those start nothing, and are
+      // shown on each company's own screen.
+      .filter(startsRuns)
       .take(SCHEDULE_LIST_LIMIT);
     
     // Enrich with workflow or agent names
@@ -59,15 +62,13 @@ export const createSchedule = superAdminMutation({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
-    /** Set when this schedule runs for one client, as the SEO fetcher does. */
-    companyId: v.optional(v.id("companies")),
     intervalStr: v.string(), // e.g. "daily", "weekly"
     isActive: v.boolean(),
   },
   returns: v.id("schedules"),
   handler: async (ctx, args) => {
     const { userId } = ctx;
-    
+
     if (!args.workflowId && !args.agentId) {
       throw appError("INVALID_INPUT", "Must select a target payload (Workflow or Agent).");
     }
@@ -76,7 +77,6 @@ export const createSchedule = superAdminMutation({
       name: args.name,
       workflowId: args.workflowId,
       agentId: args.agentId,
-      companyId: args.companyId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
       nextRunAt: args.isActive
@@ -102,7 +102,6 @@ export const updateSchedule = superAdminMutation({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
-    companyId: v.optional(v.id("companies")),
     intervalStr: v.string(),
     isActive: v.boolean(),
   },
@@ -116,7 +115,6 @@ export const updateSchedule = superAdminMutation({
       name: args.name,
       workflowId: args.workflowId,
       agentId: args.agentId,
-      companyId: args.companyId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
       nextRunAt: args.isActive
@@ -130,20 +128,84 @@ export const updateSchedule = superAdminMutation({
 /**
  * The schedule one company's data collection runs on, if it has one.
  *
- * An ordinary `schedules` row found by company — the same table, dispatcher and
- * helpers every other schedule uses. There is no separate cadence store for
- * SEO, deliberately: the company screen is a view onto this row.
+ * An ordinary `schedules` row found by company — the same table, interval
+ * format and helpers every other schedule uses. There is no separate cadence
+ * store for SEO, deliberately: the company screen is a view onto this row.
  */
 export const getCompanySchedule = superAdminQuery({
   args: { companyId: v.id("companies") },
   returns: v.union(rowShape.schedules, v.null()),
+  handler: async (ctx, args) => await companyCollectionSchedule(ctx, args.companyId),
+});
+
+/**
+ * Save one company's Collection schedule: whether it collects, and how often.
+ *
+ * A setting, not an alarm. The row names no agent and carries no next run, so
+ * nothing wakes for it (`startsRuns`): the DataForSEO Planner reads it on each
+ * of its own runs and queues the company's work once its time has come, and
+ * the Collector sends it on its. Saving an older row takes off the Collector
+ * it used to name, which is what made it wake the Collector itself.
+ */
+export const saveCompanySchedule = superAdminMutation({
+  args: {
+    companyId: v.id("companies"),
+    /** The row's name, used when it is first created. */
+    name: v.string(),
+    intervalStr: v.string(),
+    isActive: v.boolean(),
+  },
+  returns: v.id("schedules"),
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("schedules")
-      .withIndex("by_company_agent", (q) => q.eq("companyId", args.companyId))
-      .first();
+    if (!(await ctx.db.get(args.companyId))) throw appError("NOT_FOUND", "Company not found.");
+    assertSeoInterval(args.intervalStr);
+
+    const existing = await companyCollectionSchedule(ctx, args.companyId);
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        intervalStr: args.intervalStr,
+        isActive: args.isActive,
+        agentId: undefined,
+        nextRunAt: undefined,
+      });
+      return existing._id;
+    }
+    return await ctx.db.insert("schedules", {
+      name: args.name,
+      companyId: args.companyId,
+      intervalStr: args.intervalStr,
+      isActive: args.isActive,
+      createdAt: Date.now(),
+      createdBy: ctx.userId,
+    });
   },
 });
+
+/**
+ * Takes the Collector off every company's Collection schedule, and the next
+ * run it was due to wake it at (`2026-09-25-company-schedules-wake-nothing`).
+ * Whether each company collects, and how often, are left exactly as they are.
+ */
+export async function detachCompanySchedules(
+  ctx: MutationCtx,
+  cursor: string | null,
+  batchSize: number,
+): Promise<{ cursor: string | null; isDone: boolean; processed: number; updated: number }> {
+  const page = await ctx.db.query("schedules").paginate({ numItems: batchSize, cursor });
+  let updated = 0;
+  for (const schedule of page.page) {
+    if (!schedule.companyId) continue;
+    if (schedule.agentId === undefined && schedule.nextRunAt === undefined) continue;
+    await ctx.db.patch(schedule._id, { agentId: undefined, nextRunAt: undefined });
+    updated += 1;
+  }
+  return {
+    cursor: page.isDone ? null : page.continueCursor,
+    isDone: page.isDone,
+    processed: page.page.length,
+    updated,
+  };
+}
 
 export const toggleSchedule = superAdminMutation({
   args: {
@@ -216,13 +278,10 @@ export const manualRunSchedule = superAdminMutation({
     const runCompanyId = ctx.companyId ?? user?.companyId;
     let agentRunId: Id<"agentRuns"> | undefined;
     let standingObjective = "";
-    /** Set when the agent is one of the wiki staff, whose Run is a sweep. */
-    let wikiStaffKey: string | undefined;
-    /** Set when the agent holds a DataForSEO role, whose Run is that role's job. */
-    let seoRole: AssignableAgentRole | undefined;
+    let agent: Doc<"agents"> | null = null;
 
     if (args.agentId) {
-      const agent = await ctx.db.get(args.agentId);
+      agent = await ctx.db.get(args.agentId);
       if (!agent || agent.isActive === false) throw appError("NOT_FOUND", "Agent not found or inactive.");
 
       // What the caller asked for wins, then the agent's own standing job,
@@ -234,10 +293,6 @@ export const manualRunSchedule = superAdminMutation({
         standingObjective: agent.standingObjective,
         description: agent.description,
       });
-      wikiStaffKey = WIKI_STAFF.some((member) => member.systemKey === agent.systemKey)
-        ? agent.systemKey
-        : undefined;
-      seoRole = isAssignableAgentRole(agent.systemKey) ? agent.systemKey : undefined;
 
       agentRunId = await ctx.db.insert("agentRuns", {
         agentId: args.agentId,
@@ -265,42 +320,17 @@ export const manualRunSchedule = superAdminMutation({
     // In a real execution environment, we would queue the workflow runtime here:
     // await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNodeGraph, { workflowId: args.workflowId, executionId });
 
-    if (args.agentId && wikiStaffKey) {
-       /**
-        * A wiki agent's Run does its round, not a model call about its
-        * round. The staff's work is a sweep over every wiki on the platform
-        * — see wikiStaffRunActions — and putting them on the ordinary agent
-        * loop produced a paragraph of text and changed nothing, which is why
-        * they read as agents that never work.
-        */
-       await ctx.scheduler.runAfter(0, internal.wikiStaffRunActions.runStaffNow, {
-           systemKey: wikiStaffKey,
-           runId: agentRunId as Id<"agentRuns">,
-           workflowExecutionId: executionId,
-       });
-       return executionId;
-    }
-
-    if (args.agentId && seoRole) {
-       // A DataForSEO agent's Run does its role's fixed job, with no model
-       // call — see convex/seoAgentRuns.ts.
-       await ctx.scheduler.runAfter(0, internal.seoAgentRuns.runSeoRoleNow, {
-           role: seoRole,
-           runId: agentRunId as Id<"agentRuns">,
-           workflowExecutionId: executionId,
-       });
-       return executionId;
-    }
-
-    if (args.agentId) {
-       await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
-           agentId: args.agentId,
-           // Set above, in the same `if (args.agentId)` branch that refuses
-           // to start an agent without one.
-           objective: standingObjective,
-           triggerType: "MANUAL",
+    if (agent && agentRunId) {
+       // Started through the one helper a schedule uses too
+       // (`agentRunStartService.ts`), so the button and the clock cannot
+       // drift apart again: a wiki agent does its round, a DataForSEO agent
+       // its role's job, every other agent its objective on the model loop.
+       await startAgentRun(ctx, {
+           agent,
            runId: agentRunId,
            workflowExecutionId: executionId,
+           objective: standingObjective,
+           triggerType: "MANUAL",
            companyId: runCompanyId,
            userId,
        });

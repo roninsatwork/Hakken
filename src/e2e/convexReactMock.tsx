@@ -1485,7 +1485,12 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   }
   if (path === "companies:getPaginatedCompanies") {
     return {
-      results: [{ ...companyFixture, userCount: 2, userCountIsCapped: false }],
+      results: [{
+        ...companyFixture,
+        userCount: 2,
+        userCountIsCapped: false,
+        collection: { isActive: false, intervalStr: null, last: null, nextAt: null, nextWhy: "OFF" },
+      }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,

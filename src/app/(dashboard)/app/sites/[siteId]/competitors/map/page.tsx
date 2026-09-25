@@ -28,8 +28,10 @@ const ROLE_TONES: Record<Role, StatusTone> = { YOU: "info", RIVAL: "warning", FO
 /**
  * Market map: every website in this one's market by how many searches it
  * ranks for and the traffic those bring — the site, its competitors, and the
- * sites DataForSEO found ranking for the same searches. Each group has its own
- * shape as well as colour, so the map reads without colour.
+ * sites DataForSEO found ranking for the same searches. Every website is the
+ * same plain dot; the groups part by colour — orange, blue and grey, none of
+ * them the red and green the owner cannot tell apart — and a dot names itself
+ * on hover.
  */
 export default function SiteMarketMapPage() {
   const t = useTranslations("sites.marketMap");
@@ -63,13 +65,11 @@ export default function SiteMarketMapPage() {
   const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
 
   const plotted = (rows ?? []).filter((row) => inMarket(row) && row.keywords !== null && row.traffic !== null);
-  const shapes: Record<Role, SiteScatterGroup["shape"]> = { YOU: "star", RIVAL: "diamond", FOUND: "circle" };
   const colours: Record<Role, string> = { YOU: SITE_SERIES_COLOURS[0], RIVAL: SITE_SERIES_COLOURS[1], FOUND: SITE_SERIES_COLOURS[5] };
   const groups: SiteScatterGroup[] = ROLES.map((entry) => ({
     key: entry,
     name: t(`roles.${entry}`),
     colour: colours[entry],
-    shape: shapes[entry],
     points: plotted.filter((row) => row.role === entry).map((row) => ({ x: row.keywords!, y: row.traffic!, label: row.host })),
   })).filter((group) => group.points.length > 0);
 

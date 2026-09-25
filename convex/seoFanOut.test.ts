@@ -110,6 +110,36 @@ describe("fan-out searches", () => {
     expect(dated.map((row) => row.day).sort()).toEqual(["2026-09-22", "2026-09-29"]);
   });
 
+  test("an older answer filed again is not counted again, and never moves 'last seen' back", async () => {
+    // Only a re-read of the newest answer was known; filing an older one again
+    // — the hourly re-file, or a parser fix run over stored answers — counted
+    // it a second time (reliability plan 3.6).
+    const t = harness();
+    const first = await pullId(t);
+    const second = await pullId(t);
+    const common = { prompt: "who is the best plumber in leeds", engine: "chatgpt" as const, place: "GB/Leeds", queries: ["best emergency plumber leeds"] };
+
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, { ...common, pullId: first, day: "2026-09-22" });
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, { ...common, pullId: second, day: "2026-09-29" });
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, { ...common, pullId: first, day: "2026-09-22" });
+
+    const rows = await t.run(async (ctx) => await ctx.db.query("promptFanOutQueries").collect());
+    expect(rows[0]).toMatchObject({ timesSeen: 2, lastSeenDay: "2026-09-29", lastPullId: second });
+  });
+
+  test("an older answer filed late adds its appearance without moving 'last seen' back", async () => {
+    const t = harness();
+    const newer = await pullId(t);
+    const older = await pullId(t);
+    const common = { prompt: "who is the best plumber in leeds", engine: "chatgpt" as const, place: "GB/Leeds", queries: ["best emergency plumber leeds"] };
+
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, { ...common, pullId: newer, day: "2026-09-29" });
+    await t.mutation(internal.seoCollectionParse.writeFanOutQueries, { ...common, pullId: older, day: "2026-09-22" });
+
+    const rows = await t.run(async (ctx) => await ctx.db.query("promptFanOutQueries").collect());
+    expect(rows[0]).toMatchObject({ timesSeen: 2, lastSeenDay: "2026-09-29", lastPullId: newer });
+  });
+
   test("keeps two places apart, because a fan-out is not the same in both", async () => {
     const t = harness();
     const pull = await pullId(t);

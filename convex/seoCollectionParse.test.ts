@@ -33,7 +33,7 @@ describe("a filing that lost a clash", () => {
     const t = harness();
     const pullId = await pullWith(t, CLASHED);
 
-    await t.mutation(internal.seoCollectionParse.refileIfClashed, { pullId, retry: 0 });
+    await t.mutation(internal.seoFiling.finishFiling, { pullId, retry: 0 });
 
     const [again] = await refiles(t);
     expect(again.args).toMatchObject({ pullId, retry: 1 });
@@ -43,10 +43,22 @@ describe("a filing that lost a clash", () => {
 
   test("gives up after three tries, and never retries any other failure or a filing that went in", async () => {
     const t = harness();
-    await t.mutation(internal.seoCollectionParse.refileIfClashed, { pullId: await pullWith(t, CLASHED), retry: 3 });
-    await t.mutation(internal.seoCollectionParse.refileIfClashed, { pullId: await pullWith(t, "Parse failed: no items"), retry: 0 });
-    await t.mutation(internal.seoCollectionParse.refileIfClashed, { pullId: await pullWith(t, undefined), retry: 0 });
+    await t.mutation(internal.seoFiling.finishFiling, { pullId: await pullWith(t, CLASHED), retry: 3 });
+    await t.mutation(internal.seoFiling.finishFiling, { pullId: await pullWith(t, "Parse failed: no items"), retry: 0 });
+    await t.mutation(internal.seoFiling.finishFiling, { pullId: await pullWith(t, undefined), retry: 0 });
 
     expect(await refiles(t)).toEqual([]);
+  });
+
+  test("a filing that went in is marked filed; one that failed is not", async () => {
+    const t = harness();
+    const filed = await pullWith(t, undefined);
+    const failed = await pullWith(t, "Parse failed: no items");
+
+    await t.mutation(internal.seoFiling.finishFiling, { pullId: filed, retry: 0 });
+    await t.mutation(internal.seoFiling.finishFiling, { pullId: failed, retry: 0 });
+
+    expect((await t.run(async (ctx) => await ctx.db.get(filed)))?.filedAt).toEqual(expect.any(Number));
+    expect((await t.run(async (ctx) => await ctx.db.get(failed)))?.filedAt).toBeUndefined();
   });
 });

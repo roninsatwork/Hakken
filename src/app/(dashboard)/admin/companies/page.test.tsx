@@ -23,6 +23,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en-GB",
   useTranslations: () => {
     const t = (key: string, values?: Record<string, unknown>) => {
       const labels: Record<string, string> = {
@@ -45,7 +46,15 @@ vi.mock("next-intl", () => ({
         promptOptional: "Optional",
         promptPlaceholder: "Prompt",
         provisionTenant: "Provision Tenant",
-        provisionedDate: "Provisioned",
+        collection: "Collection",
+        collectionOff: "Off",
+        collectionOn: "On",
+        lastCollection: "Last collection",
+        neverCollected: "Never",
+        nextCollection: "Next collection",
+        notScheduled: "Not scheduled",
+        "status.COLLECTING": "Waiting for answers",
+        "status.DONE": "Done",
         searchPlaceholder: "Search companies",
         showing: "Showing",
         showingLoaded: `Showing ${values?.count ?? 0} companies`,
@@ -96,9 +105,21 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
+const DAILY = JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: "01:00", timezone: "Europe/Madrid" });
+
 const companies = [
-  { _id: "company_1", _creationTime: 1, name: "Acme", createdAt: Date.UTC(2026, 5, 1), userCount: 3 },
-  { _id: "company_2", _creationTime: 1, name: "Beta", createdAt: Date.UTC(2026, 5, 2), userCount: 1 },
+  {
+    _id: "company_1", _creationTime: 1, name: "Acme", createdAt: Date.UTC(2026, 5, 1), userCount: 3,
+    collection: {
+      isActive: true, intervalStr: DAILY,
+      last: { startedAt: Date.UTC(2026, 8, 23, 12, 58), status: "DONE" },
+      nextAt: Date.UTC(2026, 8, 26, 2, 0), nextWhy: null,
+    },
+  },
+  {
+    _id: "company_2", _creationTime: 1, name: "Beta", createdAt: Date.UTC(2026, 5, 2), userCount: 1,
+    collection: { isActive: false, intervalStr: null, last: null, nextAt: null, nextWhy: "OFF" },
+  },
 ];
 const activePlans = [{ _id: "plan_1", name: "Growth", messageLimit: 1000, priceGBP: 49, isActive: true }];
 
@@ -171,6 +192,46 @@ describe("CompaniesPage", () => {
 
     fireEvent.click(screen.getByText("Beta"));
     expect(pushMock).toHaveBeenCalledWith("/admin/companies/company_2");
+  });
+
+  it("shows each company's collection: its switch and schedule, its last collection and its next", () => {
+    vi.mocked(usePaginatedQuery).mockImplementation(() => ({
+      results: [
+        ...companies,
+        {
+          _id: "company_3", _creationTime: 1, name: "Gamma", createdAt: Date.UTC(2026, 5, 3), userCount: 0,
+          // Switched on, but the Planner or the Collector has no schedule to send it.
+          collection: {
+            isActive: true, intervalStr: DAILY,
+            last: { startedAt: Date.UTC(2026, 8, 25, 12, 28), status: "COLLECTING" },
+            nextAt: null, nextWhy: "NOT_SCHEDULED",
+          },
+        },
+      ],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+    }) as unknown as ReturnType<typeof usePaginatedQuery>);
+    render(<CompaniesPage />);
+
+    for (const header of ["Collection", "Last collection", "Next collection"]) {
+      expect(screen.getByRole("columnheader", { name: header })).toBeInTheDocument();
+    }
+    // The date a company was added is no longer shown.
+    expect(screen.queryByRole("columnheader", { name: "Provisioned" })).not.toBeInTheDocument();
+
+    const acme = screen.getByText("Acme").closest("tr")!;
+    expect(acme).toHaveTextContent("On");
+    expect(acme).toHaveTextContent("scheduleSummary.daily");
+    expect(acme).toHaveTextContent("Done");
+
+    const beta = screen.getByText("Beta").closest("tr")!;
+    expect(beta).toHaveTextContent("Off");
+    expect(beta).toHaveTextContent("Never");
+    expect(beta).not.toHaveTextContent("scheduleSummary");
+
+    const gamma = screen.getByText("Gamma").closest("tr")!;
+    expect(gamma).toHaveTextContent("Waiting for answers");
+    expect(gamma).toHaveTextContent("Not scheduled");
   });
 
 

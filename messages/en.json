@@ -861,7 +861,13 @@
       "newCompany": "Add Company",
       "searchPlaceholder": "Search by company name...",
       "tenantName": "Company",
-      "provisionedDate": "Added",
+      "collection": "Collection",
+      "collectionOn": "On",
+      "collectionOff": "Off",
+      "lastCollection": "Last collection",
+      "nextCollection": "Next collection",
+      "neverCollected": "Never",
+      "notScheduled": "Not scheduled",
       "assignedUsers": "Users",
       "actions": "Actions",
       "emptyState": "No active workspaces found in protocol.",
@@ -1685,6 +1691,22 @@
       }
     },
     "companyDataCollection": {
+      "collectNow": {
+        "button": "Collect now",
+        "working": "Starting…",
+        "off": "Switch collection on and save first.",
+        "noPlanner": "Create the DataForSEO Planner agent first.",
+        "noCollector": "Create the DataForSEO Collector agent first.",
+        "agentOff": "{name} is switched off. Switch it on in Agents first.",
+        "failed": "Collect now could not start. Try again.",
+        "follow": "Follow the run",
+        "outcomes": {
+          "QUEUED": "Queued {company}'s collection. The Collector starts as soon as the work list is written.",
+          "BEING_QUEUED": "{company}'s collection is being queued now. The Collector starts as soon as it is written.",
+          "SENDING": "{company}'s collection was already queued, so nothing was queued twice. The Collector has started sending it.",
+          "ALREADY_SENDING": "{company}'s collection is already queued and the Collector is sending it."
+        }
+      },
       "title": "Collection schedule",
       "subtitle": "How often SEO data is pulled for this company's websites. Each website follows this unless it is set differently.",
       "settingsTitle": "Schedule",
@@ -1693,13 +1715,9 @@
       "save": "Save",
       "saved": "Saved",
       "errors": {
-        "saveFailed": "Could not save these settings. Try again.",
-        "createAgentFailed": "The collecting agent could not be created."
+        "saveFailed": "Could not save these settings. Try again."
       },
       "scheduleName": "SEO data — {company}",
-      "createAgent": "Create the collecting agent",
-      "noAgentTitle": "No collecting agent yet",
-      "noAgentBody": "The schedule runs an agent called “DataForSEO Agent”. Create it here, then set a schedule. It arrives switched off, so nothing is collected until you turn it on.",
       "cadence": {
         "daily": "Daily",
         "weekly": "Weekly",
@@ -1792,13 +1810,24 @@
       "workingOut": "Adding it up",
       "empty": "No collection has run for this client yet.",
       "detail": {
+        "close": {
+          "button": "Close this run",
+          "title": "Close this run?",
+          "body": "Requests not yet sent come off the queue, so nothing more is bought for this run. Answers already paid for are still filed when they arrive. The run is then marked done, with your name on it.",
+          "confirm": "Close run",
+          "cancel": "Cancel",
+          "failed": "The run could not be closed. Try again.",
+          "closedByHand": "Closed by hand{count, plural, =0 {} one { · # unsent request taken off the queue} other { · # unsent requests taken off the queue}}",
+          "closedBy": "Closed by {name}{count, plural, =0 {} one { · # unsent request taken off the queue} other { · # unsent requests taken off the queue}}"
+        },
         "back": "Collection runs",
         "title": "Run of {when}",
         "description": "Queued by the Planner for {company}'s {websites, plural, one {# website} other {# websites}}, and sent by the Collector in {runs, plural, one {# run} other {# runs}} between {from} and {to}.",
         "descriptionUnsent": "Queued by the Planner for {company}. Nothing has been sent yet.",
+        "descriptionReused": "Queued by the Planner for {company}. Nothing needed buying: {reused, plural, one {# request was} other {# requests were}} answered from data already held.",
         "filed": "{filed} of {requests} filed",
         "workedOut": "Worked out at {time}.",
-        "notReady": "This run's report is still being worked out. It appears about a minute after its first request is sent.",
+        "notReady": "This run's report is still being worked out. It appears about a minute after its first request is sent, or after it closes.",
         "notFound": "That run could not be found.",
         "figures": {
           "total": "Total",
@@ -1905,7 +1934,32 @@
           },
           "unknown": "–",
           "none": "No Collector run has sent any of it yet."
+        },
+        "attention": {
+          "title": "Needs a look",
+          "subtitle": "{count, plural, one {# request} other {# requests}} of this run did not go as it should.",
+          "more": "Showing {shown} of {total}.",
+          "lastTry": "Last try: {said}",
+          "columns": {
+            "what": "Request",
+            "why": "What happened",
+            "when": "When"
+          },
+          "kinds": {
+            "OUT_LONG": "Sent {hours, plural, one {# hour} other {# hours}} ago and not answered yet",
+            "FAILED": "Failed",
+            "NOT_FILED": "Answered, but could not be filed",
+            "TOO_LARGE": "Answered, but too large to keep, so nothing was filed",
+            "ROWS_LEFT_OFF": "{rows, plural, one {# row} other {# rows}} left off the end of the list to fit"
+          }
         }
+      },
+      "hourlyCheck": {
+        "title": "Hourly check",
+        "ok": "Last ran at {time}. Answers are being fetched and filed, and finished runs closed, as they should be.",
+        "failed": "Last ran at {time} and failed{count, plural, =1 {} other {, # times in a row}}: {error}",
+        "overdue": "Has not run since {time}. It should run every hour.",
+        "never": "Has not run yet."
       }
     },
     "websites": {
@@ -5630,7 +5684,12 @@
         "search": "Filter states...",
         "noMatches": "No state matches that."
       },
-      "manySites": "{count, plural, one {# website} other {# websites}} in one call"
+      "manySites": "{count, plural, one {# website} other {# websites}} in one call",
+      "notFiled": "Not filed",
+      "outLong": "Out for {hours, plural, one {# hour} other {# hours}}, not answered yet",
+      "lastTry": "Last try: {said}",
+      "tooLarge": "Too large to keep, so nothing was filed",
+      "rowsLeftOff": "{count, plural, one {# row} other {# rows}} left off to fit"
     },
     "seoCosts": {
       "title": "Cost to serve",
@@ -8090,8 +8149,7 @@
         "siteAudit": "Site audit",
         "paidSummary": "Summary",
         "paidKeywords": "Paid keywords"
-      },
-      "notSetUp": "Not set up"
+      }
     },
     "range": {
       "label": "Dates",
@@ -8214,13 +8272,6 @@
     "overview": {
       "title": "Overview",
       "description": "How is this website doing? The headline numbers for the dates chosen, and what changed since the day before them.",
-      "aiMentions": "AI mentions",
-      "ofEngines": "{named} of {asked} engines",
-      "estimatedTraffic": "Estimated traffic",
-      "keywords": "Keywords",
-      "inTop3": "{count} in top 3",
-      "linkingWebsites": "Linking websites",
-      "rank": "rank {rank}",
       "noComparison": "Nothing to compare yet",
       "unchanged": "Unchanged",
       "performance": "Performance",
@@ -8245,6 +8296,106 @@
         "p11_20": "11–20",
         "p21_50": "21–50",
         "p51_up": "51+"
+      },
+      "panels": {
+        "ofThousand": "of 1,000",
+        "search": {
+          "title": "Search",
+          "keywords": "Keywords",
+          "top3": "Top 3 · {count}",
+          "visits": "Visits a month",
+          "worth": "Worth {value}",
+          "paidSearches": "Paid searches",
+          "paidVisits": "Paid visits",
+          "cost": "Cost {value}"
+        },
+        "links": {
+          "title": "Backlink profile",
+          "websiteStrength": "Website strength",
+          "homeStrength": "Home page strength",
+          "links": "Links",
+          "broken": "Broken · {count}",
+          "linkingWebsites": "Linking websites",
+          "mainWebsites": "Main websites · {count}"
+        },
+        "ai": {
+          "title": "AI answers",
+          "overviews": "In Google's AI Overviews",
+          "searches": "{count} searches",
+          "pagesLinked": "Pages linked · {count}",
+          "assistant": "Assistant",
+          "naming": "Naming you",
+          "pages": "Pages",
+          "namedOf": "{named} of {asked}",
+          "addQuestions": "Add the questions your customers ask, and these four fill in."
+        }
+      },
+      "readout": {
+        "pages": "{count, plural, one {page} other {pages}} ({share})",
+        "visits": "visits a month ({share})",
+        "searches": "{count, plural, one {search} other {searches}}"
+      },
+      "pageKinds": {
+        "title": "Pages by kind",
+        "hint": "All {count} ranking pages, each sorted into a kind: its share of the pages, and of the visits.",
+        "pages": "Pages",
+        "visits": "Visits",
+        "kind": "Kind",
+        "pagesShare": "Share of pages",
+        "visitsShare": "Share of visits",
+        "row": "{count, plural, one {# page} other {# pages}} ({pagesShare}) · {visitsShare} of visits",
+        "capped": "Counted over the {count} pages ranking for the most searches."
+      },
+      "pageVisits": {
+        "title": "Pages by visits",
+        "hint": "Ranking pages grouped by the visits a month each brings, and how much of all the visits each group carries.",
+        "percentage": "Percentage",
+        "number": "Number",
+        "pages": "Pages",
+        "visits": "Visits",
+        "pagesShare": "Share of pages",
+        "visitsShare": "Share of visits",
+        "group": "Visits a month",
+        "bands": {
+          "none": "None",
+          "to100": "1–100",
+          "to1000": "101–1,000",
+          "to10000": "1,001–10,000",
+          "over10000": "10,001+"
+        }
+      },
+      "branded": {
+        "title": "Branded and other searches",
+        "hint": "Where the {visits} visits a month come from: searches naming your brand, searches ready to buy, people researching, and the rest.",
+        "groups": {
+          "branded": "Naming your brand",
+          "buying": "Ready to buy",
+          "researching": "Researching",
+          "other": "Other"
+        },
+        "row": "{visits} visits · {searches} searches",
+        "group": "Searches",
+        "searches": "Searches",
+        "visits": "Visits a month",
+        "share": "Share of visits"
+      },
+      "competitors": {
+        "title": "Competitors",
+        "hint": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with. Further right ranks for more searches; higher gets more visits.",
+        "sharedUnknown": "A dash under Shared searches means that website is not among those found ranking for your searches, so how many searches you share is not known.",
+        "you": "{host} (you)",
+        "xAxis": "Searches it ranks for",
+        "yAxis": "Visits a month",
+        "columns": {
+          "website": "Website",
+          "overlap": "Overlap",
+          "shared": "Shared searches",
+          "ofYours": "Of yours",
+          "theirSearches": "Their searches",
+          "theirVisits": "Their visits"
+        },
+        "found": "{count} competitors found ranking for your searches",
+        "seeAll": "See them all"
       }
     },
     "calendar": {
@@ -9058,7 +9209,7 @@
       "title": "Market map",
       "description": "Where does this website sit in its market? Every website by how many searches it ranks for and the visits those bring.",
       "chartTitle": "Keywords against traffic",
-      "chartHint": "Each shape is a website. Further right ranks for more searches; higher gets more visits.",
+      "chartHint": "Each dot is a website. Further right ranks for more searches; higher gets more visits.",
       "roles": {
         "YOU": "This website",
         "RIVAL": "Your competitors",

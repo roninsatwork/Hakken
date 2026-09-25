@@ -27,7 +27,7 @@ import {
   type ReplayMode,
   type RunStatus,
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
-import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { useNow } from "@/src/hooks/useNow";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";

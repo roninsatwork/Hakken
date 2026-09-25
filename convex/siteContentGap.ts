@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { gapRebuildKey } from "./siteRankings";
+import { REBUILD_WAIT_MS } from "./siteSummaries";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { GAP_KEYWORDS_PER_RIVAL, rankIntentValidator, type RankIntent } from "./utils/siteShapes";
@@ -50,74 +51,88 @@ export const rebuildGap = internalAction({
   args: { companyWebsiteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await ctx.runMutation(internal.siteSummaries.releaseRequest, { key: gapRebuildKey(args.companyWebsiteId) });
-
-    const context: { websiteId: Id<"websites">; locationCode: number; rivals: Id<"websites">[] } | null =
-      await ctx.runQuery(internal.siteContentGap.gapContext, { companyWebsiteId: args.companyWebsiteId });
-    if (!context) return null;
-
-    const gaps = new Map<string, GapRow>();
-    for (const rivalId of context.rivals) {
-      let cursor: string | null = null;
-      let read = 0;
-      while (read < KEYWORDS_PER_RIVAL) {
-        const page: { rows: Array<Pick<Doc<"siteKeywordRanks">, "keyword" | "position" | "volume" | "volumeKnown" | "intent">>; cursor: string; isDone: boolean } =
-          await ctx.runQuery(internal.siteContentGap.rivalKeywords, {
-            websiteId: rivalId,
-            locationCode: context.locationCode,
-            cursor,
-          });
-        read += page.rows.length;
-        const ranking = page.rows.filter((row) => row.position !== undefined);
-        const ours: string[] = await ctx.runQuery(internal.siteContentGap.keywordsSiteRanksFor, {
-          websiteId: context.websiteId,
-          locationCode: context.locationCode,
-          keywords: ranking.map((row) => row.keyword),
-        });
-        const held = new Set(ours);
-        for (const row of ranking) {
-          if (held.has(row.keyword)) continue;
-          const gap = gaps.get(row.keyword) ?? {
-            keyword: row.keyword,
-            volume: row.volume,
-            volumeKnown: row.volumeKnown,
-            intent: row.intent,
-            rivals: [],
-          };
-          gap.rivals.push({ websiteId: rivalId, position: row.position as number });
-          if (row.volumeKnown && row.volume > gap.volume) {
-            gap.volume = row.volume;
-            gap.volumeKnown = true;
-          }
-          gaps.set(row.keyword, gap);
-        }
-        if (page.isDone) break;
-        cursor = page.cursor;
-      }
+    const key = gapRebuildKey(args.companyWebsiteId);
+    // One gap rebuild per hold at a time: it runs for minutes, every site
+    // rebuild in the group asks for it again, and two at once each deleted
+    // what the other wrote (collection reliability plan, 2.3).
+    if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
+      await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteContentGap.rebuildGap, args);
+      return null;
     }
-
-    const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const rows = [...gaps.values()];
-    for (let start = 0; start < rows.length; start += WRITE_BATCH) {
-      await ctx.runMutation(internal.siteContentGap.writeGaps, {
-        companyWebsiteId: args.companyWebsiteId,
-        rebuildId,
-        rows: rows.slice(start, start + WRITE_BATCH),
-      });
+    try {
+      return await rebuildGapNow(ctx, args);
+    } finally {
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key });
     }
-    let cursor: string | null = null;
-    for (;;) {
-      const result: { cursor: string; isDone: boolean } = await ctx.runMutation(internal.siteContentGap.removeStaleGaps, {
-        companyWebsiteId: args.companyWebsiteId,
-        rebuildId,
-        cursor,
-      });
-      if (result.isDone) break;
-      cursor = result.cursor;
-    }
-    return null;
   },
 });
+
+async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"companyWebsites"> }): Promise<null> {
+  const context: { websiteId: Id<"websites">; locationCode: number; rivals: Id<"websites">[] } | null =
+    await ctx.runQuery(internal.siteContentGap.gapContext, { companyWebsiteId: args.companyWebsiteId });
+  if (!context) return null;
+
+  const gaps = new Map<string, GapRow>();
+  for (const rivalId of context.rivals) {
+    let cursor: string | null = null;
+    let read = 0;
+    while (read < KEYWORDS_PER_RIVAL) {
+      const page: { rows: Array<Pick<Doc<"siteKeywordRanks">, "keyword" | "position" | "volume" | "volumeKnown" | "intent">>; cursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.siteContentGap.rivalKeywords, {
+          websiteId: rivalId,
+          locationCode: context.locationCode,
+          cursor,
+        });
+      read += page.rows.length;
+      const ranking = page.rows.filter((row) => row.position !== undefined);
+      const ours: string[] = await ctx.runQuery(internal.siteContentGap.keywordsSiteRanksFor, {
+        websiteId: context.websiteId,
+        locationCode: context.locationCode,
+        keywords: ranking.map((row) => row.keyword),
+      });
+      const held = new Set(ours);
+      for (const row of ranking) {
+        if (held.has(row.keyword)) continue;
+        const gap = gaps.get(row.keyword) ?? {
+          keyword: row.keyword,
+          volume: row.volume,
+          volumeKnown: row.volumeKnown,
+          intent: row.intent,
+          rivals: [],
+        };
+        gap.rivals.push({ websiteId: rivalId, position: row.position as number });
+        if (row.volumeKnown && row.volume > gap.volume) {
+          gap.volume = row.volume;
+          gap.volumeKnown = true;
+        }
+        gaps.set(row.keyword, gap);
+      }
+      if (page.isDone) break;
+      cursor = page.cursor;
+    }
+  }
+
+  const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const rows = [...gaps.values()];
+  for (let start = 0; start < rows.length; start += WRITE_BATCH) {
+    await ctx.runMutation(internal.siteContentGap.writeGaps, {
+      companyWebsiteId: args.companyWebsiteId,
+      rebuildId,
+      rows: rows.slice(start, start + WRITE_BATCH),
+    });
+  }
+  let cursor: string | null = null;
+  for (;;) {
+    const result: { cursor: string; isDone: boolean } = await ctx.runMutation(internal.siteContentGap.removeStaleGaps, {
+      companyWebsiteId: args.companyWebsiteId,
+      rebuildId,
+      cursor,
+    });
+    if (result.isDone) break;
+    cursor = result.cursor;
+  }
+  return null;
+}
 
 /**
  * The site, the place its group is read from, and the rest of its group: the

@@ -33,7 +33,7 @@ import {
   summariseWaterfall,
   type WaterfallRow,
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
-import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { useNow } from "@/src/hooks/useNow";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { FAILED_HATCH } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityStyles";

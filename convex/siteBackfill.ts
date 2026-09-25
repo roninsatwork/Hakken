@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { fileKeywordRank, recountCitedPages } from "./siteRankings";
+import { citedPageOf, fileKeywordRank, recountCitedPages } from "./siteRankings";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 
@@ -21,8 +21,8 @@ import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 /** Rankings replayed per mutation. */
 const REPLAY_PAGE = 500;
 
-/** Citations read per page when finding the pages to recount. */
-const CITATION_PAGE = 1_000;
+/** Citations read a step: each distinct page and question is a recount job, and a step schedules a thousand at most. */
+const CITATION_PAGE = 500;
 
 export const backfillSites = internalAction({
   args: {},
@@ -115,8 +115,7 @@ export const recountCitations = internalMutation({
   returns: v.object({ recounted: v.number(), cursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
     const result = await ctx.db.query("aiCitations").paginate({ cursor: args.cursor, numItems: CITATION_PAGE });
-    const cited = result.page.flatMap((row) =>
-      row.kind === "SOURCE" && row.mentionedWebsiteId && row.url ? [{ websiteId: row.mentionedWebsiteId, url: row.url }] : []);
+    const cited = result.page.flatMap((row) => citedPageOf(row) ?? []);
     await recountCitedPages(ctx, cited);
     return { recounted: new Set(cited.map((row) => `${row.websiteId} ${row.url}`)).size, cursor: result.continueCursor, isDone: result.isDone };
   },

@@ -2,12 +2,11 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type ActionCtx, type MutationCtx } from "./_generated/server";
-import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
+import { KEYWORD_LIST_OPERATION_ID, KEYWORD_LIST_PAGE } from "./dataForSeoKeywordListOperations";
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult } from "./dataForSeoSlim";
-import { judgeNewKeywords } from "./seoJudgments";
 import { replaceSameDayPosition } from "./seoKeywordChecks";
-import { sentOffset } from "./sitePagedLists";
+import { sentLimit, sentOffset } from "./sitePagedLists";
 import { fileKeywordRank, requestSiteRebuild, type RankExtras } from "./siteRankings";
 import { getErrorMessage } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
@@ -127,14 +126,19 @@ export async function fileRankedPositions(
   }
 }
 
-/** One page's figures and its first keywords — replacing what an earlier parse of this pull filed. */
+/**
+ * One page's first keywords — replacing what an earlier parse of this pull
+ * filed. Its figures come last (`finishListPage`), once every keyword on the
+ * page is filed: until then the page does not count towards the list being
+ * whole, so a page half-filed can never mark the rest of the list lost
+ * (collection reliability plan, 2.2).
+ */
 export const writeListPage = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
     websiteId: v.id("websites"),
     day: v.string(),
     locationCode: v.number(),
-    metricsJson: v.string(),
     positions: v.array(rankedPositionValidator),
     features: v.array(featurePositionValidator),
   },
@@ -150,15 +154,6 @@ export const writeListPage = internalMutation({
       await ctx.db.delete(row._id);
     }
     await ctx.db.patch(args.pullId, { error: undefined });
-    await ctx.db.insert("seoWebsiteMetrics", {
-      websiteId: args.websiteId,
-      day: args.day,
-      operationId: KEYWORD_LIST_OPERATION_ID,
-      pullId: args.pullId,
-      metricsJson: args.metricsJson,
-      locationCode: args.locationCode,
-      createdAt: Date.now(),
-    });
 
     // Where the site shows in AI Overviews, answer boxes and map packs: this
     // list's, with an older list's cleared a batch at a time.
@@ -182,10 +177,59 @@ export const writeListPage = internalMutation({
     }
 
     await fileRankedPositions(ctx, args);
+    return null;
+  },
+});
+
+/**
+ * A page's figures, once every keyword on it is filed: now it counts towards
+ * the list being whole, and the site's summaries are rebuilt from it.
+ */
+export const finishListPage = internalMutation({
+  args: {
+    pullId: v.id("seoDataPulls"),
+    websiteId: v.id("websites"),
+    day: v.string(),
+    locationCode: v.number(),
+    metricsJson: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.insert("seoWebsiteMetrics", {
+      websiteId: args.websiteId,
+      day: args.day,
+      operationId: KEYWORD_LIST_OPERATION_ID,
+      pullId: args.pullId,
+      metricsJson: args.metricsJson,
+      locationCode: args.locationCode,
+      createdAt: Date.now(),
+    });
     await requestSiteRebuild(ctx, args.websiteId, args.locationCode);
     return null;
   },
 });
+
+/**
+ * What one page says about the whole list, read from its answer as stored:
+ * DataForSEO's total across every row kind asked for, the rows the page
+ * brought, and any the stored copy had to drop to fit. The parsed keywords
+ * alone cannot say it — they are the organic rows only (collection
+ * reliability plan, 2.1).
+ */
+function listPageFacts(raw: unknown): { total: number | null; items: number; dropped: number } {
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  const record = first !== null && typeof first === "object" ? (first as Record<string, unknown>) : {};
+  const packed = record.packedRanked !== null && typeof record.packedRanked === "object"
+    ? (record.packedRanked as { rows?: unknown; dropped?: unknown })
+    : null;
+  const dropped = typeof packed?.dropped === "number" ? packed.dropped : 0;
+  const kept = Array.isArray(packed?.rows) ? packed.rows.length : Array.isArray(record.items) ? record.items.length : 0;
+  return {
+    total: typeof record.total_count === "number" ? record.total_count : null,
+    items: typeof record.items_count === "number" ? record.items_count : kept + dropped,
+    dropped,
+  };
+}
 
 /** More of a page's keywords, after its first write. */
 export const writeListPositions = internalMutation({
@@ -218,7 +262,9 @@ export async function fileKeywordListPull(
   if (!pull.resultJson || !pull.websiteId) return null;
   const websiteId = pull.websiteId;
   try {
-    const parsed = parseDomainRankedKeywords(expandSeoResult(JSON.parse(pull.resultJson) as unknown));
+    const raw = JSON.parse(pull.resultJson) as unknown;
+    const facts = listPageFacts(raw);
+    const parsed = parseDomainRankedKeywords(expandSeoResult(raw));
     const offset = sentOffset(pull.taskArgsJson);
     const locationCode = readSentLocationCode(pull.taskArgsJson ?? undefined) ?? DEFAULT_LOCATION_CODE;
     const listPage: { day: string; companyId: Id<"companies"> | null } | null =
@@ -226,9 +272,19 @@ export async function fileKeywordListPull(
     if (!listPage) return null;
 
     const positions = parsed.positions ?? [];
-    const total = typeof parsed.metrics.rankedKeywords === "number" ? parsed.metrics.rankedKeywords : null;
-    // The running count, so the list's last page can say the list is whole.
-    const metrics = { ...parsed.metrics, returnedKeywords: offset + positions.length, listOffset: offset };
+    // Every row kind asked for, not the organic count: the pages are counted
+    // in rows, and paging by the organic count left a list's tail unbought.
+    const total = facts.total ?? (typeof parsed.metrics.rankedKeywords === "number" ? parsed.metrics.rankedKeywords : null);
+    // What decides whether the list is whole (`listDayComplete` in `siteSummaries.ts`).
+    const metrics = {
+      ...parsed.metrics,
+      returnedKeywords: offset + positions.length,
+      listOffset: offset,
+      listLimit: sentLimit(pull.taskArgsJson) ?? KEYWORD_LIST_PAGE,
+      listItems: facts.items,
+      listDropped: facts.dropped,
+      ...(facts.total !== null ? { listTotal: facts.total } : {}),
+    };
     const chunks: RankedPosition[][] = [];
     for (let start = 0; start < positions.length; start += POSITIONS_PER_WRITE) {
       chunks.push(positions.slice(start, start + POSITIONS_PER_WRITE));
@@ -238,7 +294,6 @@ export async function fileKeywordListPull(
       websiteId,
       day: listPage.day,
       locationCode,
-      metricsJson: JSON.stringify(metrics),
       positions: chunks[0] ?? [],
       features: parsed.featurePositions ?? [],
     });
@@ -247,15 +302,20 @@ export async function fileKeywordListPull(
         pullId, websiteId, day: listPage.day, locationCode, positions: chunk,
       });
     }
+    await ctx.runMutation(internal.siteKeywordList.finishListPage, {
+      pullId, websiteId, day: listPage.day, locationCode, metricsJson: JSON.stringify(metrics),
+    });
 
     if (offset === 0 && total !== null) {
       await ctx.runMutation(internal.sitePagedLists.queueListPages, { pullId, total });
     }
-    await judgeNewKeywords(ctx, {
+    // Judged after the filing, on its own (`judgeKeywordsLater`): a judging
+    // failure no longer marks a correctly filed list as failed.
+    await ctx.scheduler.runAfter(0, internal.seoFiling.judgeKeywordsLater, {
       ...(listPage.companyId ? { companyId: listPage.companyId } : {}),
       pullId,
       host: pull.target ?? "",
-      business: await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, { websiteId }),
+      websiteId,
       keywords: positions.map((entry) => entry.keyword),
     });
   } catch (error) {

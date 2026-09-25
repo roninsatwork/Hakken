@@ -182,6 +182,11 @@ describe("OWASP: Broken Access Control - Companies", () => {
     expect(firstPage.isDone).toBe(false);
     expect(searchPage.page).toHaveLength(1);
     expect(searchPage.page[0]).toMatchObject({ _id: companyAId, name: "Acme Searchable", userCount: 1 });
+    // Each row carries its data collection for the table; a company never set
+    // up to collect is off, never collected, and has nothing coming.
+    expect(searchPage.page[0].collection).toEqual({
+      isActive: false, intervalStr: null, last: null, nextAt: null, nextWhy: "OFF",
+    });
   });
 
   test("SUPER_ADMIN can read bounded company options for selectors", async () => {

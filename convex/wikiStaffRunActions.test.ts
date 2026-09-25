@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test, vi } from "vitest";
-import { internal } from "./_generated/api";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { WIKI_STAFF } from "./wikiStaff";
 import { isWikiStaffKey } from "./wikiStaffRunActions";
 
 /**
@@ -131,5 +132,63 @@ describe("pressing Run on a staff agent", () => {
     expect(run?.finalOutput).toContain("fell over mid-sweep");
     expect(run?.finalOutput).not.toMatch(/\s{2}/);
     expect(run?.error).toBe(run?.finalOutput);
+  });
+});
+
+describe("starting a staff agent, from the button or the clock", () => {
+  // Held still, so a round is seen being started without a sweep running over
+  // the test deployment behind it.
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** A staff agent as seeded, and a super admin to start it. */
+  async function staffAgent(t: Tester, systemKey: string) {
+    await t.mutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    return await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        name: "Super", email: "su@test.com", role: "SUPER_ADMIN" as const, createdAt: Date.now(),
+      });
+      const agent = (await ctx.db.query("agents").collect()).find((candidate) => candidate.systemKey === systemKey)!;
+      return { userId, agentId: agent._id };
+    });
+  }
+
+  const scheduledJobs = (t: Tester) =>
+    t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect());
+
+  test("Run on a staff agent starts its round, not a model", async () => {
+    const t = makeTest();
+    const { userId, agentId } = await staffAgent(t, "WIKI_TIDIER");
+
+    await t.withIdentity({ subject: userId }).mutation(api.scheduler.manualRunSchedule, { agentId });
+
+    const jobs = await scheduledJobs(t);
+    expect(jobs.find((job) => job.name.includes("runStaffNow"))?.args[0]).toMatchObject({ systemKey: "WIKI_TIDIER" });
+    expect(jobs.some((job) => job.name.includes("runTriggeredAgentObjective"))).toBe(false);
+  });
+
+  test.each(WIKI_STAFF.map((member) => member.systemKey))("a schedule starts the %s's round too, not a model", async (systemKey) => {
+    // Found on 2026-09-25, before any staff agent had a schedule: the Run
+    // button did the round, and a schedule would have asked a model to write
+    // about it and changed nothing — the gap the Collector's schedule fell
+    // into on 2026-09-24.
+    const t = makeTest();
+    const { userId, agentId } = await staffAgent(t, systemKey);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("schedules", {
+        name: "Nightly wiki round", agentId, intervalStr: "daily", isActive: true,
+        nextRunAt: Date.now() - 1000, createdAt: Date.now() - 2000, createdBy: userId,
+      });
+    });
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const jobs = await scheduledJobs(t);
+    const round = jobs.find((job) => job.name.includes("runStaffNow"));
+    expect(jobs.some((job) => job.name.includes("runTriggeredAgentObjective"))).toBe(false);
+    // The schedule's run is on the record, and the round is the one to close it.
+    const run = await t.run(async (ctx) => await ctx.db.query("agentRuns").first());
+    expect(run).toMatchObject({ agentId, triggerType: "SCHEDULE", status: "QUEUED" });
+    expect(round?.args[0]).toMatchObject({ systemKey, runId: run?._id });
   });
 });

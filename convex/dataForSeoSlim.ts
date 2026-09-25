@@ -1,31 +1,39 @@
+import { MAX_ANSWER_BYTES, utf8Length } from "./seoPullAnswers";
+
 /**
  * Trimming a DataForSEO answer to the fields we read, before it is stored.
  *
  * A pull keeps its raw answer so a parser bug can be fixed and re-run rather
- * than re-bought — but only up to a ceiling (`MAX_RAW_CHARS` in
- * `seoCollectionActions.ts`), past which the answer is dropped and nothing is
- * filed. A thousand-row link list with every field DataForSEO sends is well
- * past it: each link carries the text around it, the linking page's title and
- * forty other fields — and the page text that would be dropped anyway should
- * never land at all.
+ * than re-bought — in parts, up to a ceiling (`MAX_ANSWER_BYTES` in
+ * `seoPullAnswers.ts`), past which nothing is kept and nothing is filed. A
+ * thousand-row link list with every field DataForSEO sends carries, per link,
+ * the text around it, the linking page's title and forty other fields — and
+ * the page text that would be dropped anyway should never land at all.
  *
  * So a list keeps only the fields its parser reads, and keeps them as a
  * table: the field names once, then one row of values per item. Measured on
  * 2026-09-23, a thousand links kept as objects came to about half a million
- * characters, right at the ceiling — past it for a site linked from long
- * addresses, which would then be paid for every week and never filed. As a
- * table they take about half that. And if a list is still too big, the rows
- * at its end are left off until it fits: the lists come strongest first, so a
- * pull always files, and what is lost is the weakest links.
+ * characters; as a table they take about half that, one part. And if a list
+ * is still too big for the ceiling, the rows at its end are left off until it
+ * fits — the lists come strongest first, so what is lost is the weakest — and
+ * counted (`rowsLeftOffIn`), so the request says so.
  *
  * Only the calls added for the Sites link pages are trimmed
  * (`dataForSeoLinkOperations.ts`); everything else is stored as it came —
  * except a Google results page too big to keep whole (`fitSerpResult`).
  * `expandSeoResult` lays a table back out as the items the parsers read.
+ * Every size here is in bytes, as a document's ceiling is counted.
  */
 
-/** What a list may take of the raw copy's 512,000 characters, leaving room for the rest of the answer. */
-export const STORED_LIST_CHARS = 480_000;
+/** What a list may take of the stored answer, leaving room for the rest of it. */
+export const STORED_LIST_BYTES = MAX_ANSWER_BYTES - 400_000;
+
+/**
+ * A results page past this is cut to what the parsers read. Not the list
+ * ceiling: what is cut is only the words around each result, which nothing
+ * reads, and a check is bought thousands of times a day.
+ */
+export const SERP_KEPT_WHOLE_BYTES = 480_000;
 
 const LINK_FIELDS = [
   "domain_from", "url_from", "url_to", "anchor", "dofollow", "is_new", "is_lost", "is_broken",
@@ -104,13 +112,25 @@ function keptValue(field: string, value: unknown): unknown {
   return value;
 }
 
+/** How many of a list's rows, from the top, fit in `room` bytes. */
+function rowsThatFit(rows: readonly unknown[][], room: number): number {
+  let left = room;
+  let fit = 0;
+  for (const row of rows) {
+    left -= utf8Length(JSON.stringify(row)) + 1;
+    if (left < 0) break;
+    fit += 1;
+  }
+  return fit;
+}
+
 /**
  * A list's items as a table — `packedItems: { fields, rows, dropped }` — with
  * the rows past the budget left off and counted.
  */
 function packResult(result: unknown, fields: readonly string[]): unknown {
   if (!Array.isArray(result)) return result;
-  const budget = Math.floor(STORED_LIST_CHARS / Math.max(result.length, 1));
+  const budget = Math.floor(STORED_LIST_BYTES / Math.max(result.length, 1));
   return result.map((entry) => {
     const record = asRecord(entry);
     if (!record) return entry;
@@ -120,13 +140,7 @@ function packResult(result: unknown, fields: readonly string[]): unknown {
       const kept = asRecord(item);
       return kept ? [fields.map((field) => keptValue(field, kept[field]))] : [];
     });
-    let room = budget - JSON.stringify(top).length - JSON.stringify(fields).length - 100;
-    let fit = 0;
-    for (const row of rows) {
-      room -= JSON.stringify(row).length + 1;
-      if (room < 0) break;
-      fit += 1;
-    }
+    const fit = rowsThatFit(rows, budget - utf8Length(JSON.stringify(top)) - utf8Length(JSON.stringify(fields)) - 100);
     return { ...top, packedItems: { fields: [...fields], rows: rows.slice(0, fit), dropped: rows.length - fit } };
   });
 }
@@ -225,20 +239,14 @@ function rankedRow(item: Unknown): unknown[] {
 /** A ranked-keywords answer with its items as `packedRanked` rows, its metrics kept whole. */
 function packRankedResult(result: unknown): unknown {
   if (!Array.isArray(result)) return result;
-  const budget = Math.floor(STORED_LIST_CHARS / Math.max(result.length, 1));
+  const budget = Math.floor(STORED_LIST_BYTES / Math.max(result.length, 1));
   return result.map((entry) => {
     const record = asRecord(entry);
     if (!record) return entry;
     const top = { ...topLevel(record), ...(asRecord(record.metrics) ? { metrics: record.metrics } : {}) };
     const items = Array.isArray(record.items) ? record.items : [];
     const rows = items.flatMap((item) => (asRecord(item) ? [rankedRow(asRecord(item)!)] : []));
-    let room = budget - JSON.stringify(top).length - JSON.stringify(RANKED_FIELDS).length - 100;
-    let fit = 0;
-    for (const row of rows) {
-      room -= JSON.stringify(row).length + 1;
-      if (room < 0) break;
-      fit += 1;
-    }
+    const fit = rowsThatFit(rows, budget - utf8Length(JSON.stringify(top)) - utf8Length(JSON.stringify(RANKED_FIELDS)) - 100);
     return { ...top, packedRanked: { fields: [...RANKED_FIELDS], rows: rows.slice(0, fit), dropped: rows.length - fit } };
   });
 }
@@ -337,14 +345,14 @@ function serpItem(item: Unknown): Unknown {
 }
 
 /**
- * A Google results page, whole when it fits the raw copy, and otherwise cut
- * to what the parsers read. A check reads a hundred results (2026-09-24), and
- * a hundred with their titles, snippets and sitelinks — beside an AI Overview
- * and "People also ask" answers — can pass the ceiling, when the copy would be
- * dropped and a paid check filed nothing at all.
+ * A Google results page, whole when it is under `SERP_KEPT_WHOLE_BYTES`, and
+ * otherwise cut to what the parsers read. A check reads a hundred results
+ * (2026-09-24), and a hundred with their titles, snippets and sitelinks —
+ * beside an AI Overview and "People also ask" answers — run to half a
+ * megabyte, for a check bought thousands of times a day; cut, it files the same.
  */
 function fitSerpResult(result: unknown): unknown {
-  if (!Array.isArray(result) || JSON.stringify(result).length <= STORED_LIST_CHARS) return result;
+  if (!Array.isArray(result) || utf8Length(JSON.stringify(result)) <= SERP_KEPT_WHOLE_BYTES) return result;
   return result.map((entry) => {
     const record = asRecord(entry);
     if (!record) return entry;
@@ -356,6 +364,23 @@ function fitSerpResult(result: unknown): unknown {
       trimmed: true,
     };
   });
+}
+
+/**
+ * Rows left off the end of a stored list to keep it inside the ceiling, over
+ * every result in the answer: nothing, for an answer that is not a list or
+ * kept every row.
+ */
+export function rowsLeftOffIn(stored: unknown): number {
+  if (!Array.isArray(stored)) return 0;
+  let left = 0;
+  for (const entry of stored) {
+    const record = asRecord(entry);
+    for (const packed of [asRecord(record?.packedItems), asRecord(record?.packedRanked)]) {
+      if (typeof packed?.dropped === "number") left += packed.dropped;
+    }
+  }
+  return left;
 }
 
 /** The answer as it should be stored for this operation. */

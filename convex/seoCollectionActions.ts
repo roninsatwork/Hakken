@@ -3,16 +3,22 @@ import { v } from "convex/values";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
+  DataForSeoAccountError,
   DataForSeoBackoff,
+  DataForSeoUncertain,
+  dataForSeoCodeKind,
   getDataForSeo,
+  LIVE_REQUEST_TIMEOUT_MS,
   postDataForSeoTasks,
   readDataForSeoBatch,
   readDataForSeoCredentials,
   type DataForSeoCredentials,
+  type DataForSeoEnvelope,
 } from "./dataForSeoRest";
 import { findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
-import { slimSeoResult } from "./dataForSeoSlim";
+import { rowsLeftOffIn, slimSeoResult } from "./dataForSeoSlim";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
+import { splitAnswer } from "./seoPullAnswers";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
 
@@ -33,13 +39,29 @@ import type { Id } from "./_generated/dataModel";
  * **A rate limit is not a failure.** DataForSEO refusing a batch means nothing
  * was accepted and nothing was charged, so the rows go back to the queue with
  * a later due time rather than burning their attempts.
+ *
+ * **What DataForSEO may have taken is never sent again** (2026-09-25). A batch
+ * is marked as being sent just before it goes; after that, a timeout, a
+ * dropped connection or a gateway error fails it rather than re-queueing it,
+ * and its outcomes are recorded in one transaction that is retried until it
+ * lands. Before, one failed record — or a slow live answer — put an accepted
+ * batch back in the queue to be bought again.
  */
 
 /** What one call of `sendNextBatch` did, so the Collector knows whether to go on. */
 export type SendOutcome =
   | { kind: "SENT"; count: number }
   | { kind: "EMPTY"; nextDueAt: number | null }
-  | { kind: "CAPPED" };
+  | { kind: "CAPPED" }
+  /** DataForSEO said "not now" — a rate limit or "unavailable". Nothing was taken or counted. */
+  | { kind: "REFUSED"; reason: string }
+  /** DataForSEO refused the account, or it is not set up. Nothing was taken; nothing will be until a person fixes it. */
+  | { kind: "ACCOUNT"; reason: string };
+
+/** Tries at recording a batch's outcomes. It is safe to repeat, and DataForSEO already has the batch. */
+const RECORD_TRIES = 5;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Claim the next batch and send it — one step of the Collector's run.
@@ -54,102 +76,171 @@ export async function sendNextBatch(
   ctx: ActionCtx,
   args: { workerId: string; runId: Id<"agentRuns"> },
 ): Promise<SendOutcome> {
-    const claim = await ctx.runMutation(internal.seoCollectionQueue.claimSeoBatch, {
-      workerId: args.workerId,
+  const claim = await ctx.runMutation(internal.seoCollectionQueue.claimSeoBatch, {
+    workerId: args.workerId,
+    runId: args.runId,
+  });
+
+  if (claim.capped) return { kind: "CAPPED" };
+  if (claim.pulls.length === 0) return { kind: "EMPTY", nextDueAt: claim.nextDueAt };
+  const claimedIds = claim.pulls.map((pull) => pull.pullId);
+  const release = async (pullIds: Id<"seoDataPulls">[], reason: string, countAttempt: boolean) => {
+    if (pullIds.length === 0) return;
+    await ctx.runMutation(internal.seoCollectionQueue.releaseSeoBatch, {
+      pullIds,
+      attempt: claim.pulls[0].attempts,
+      reason,
+      countAttempt,
+    });
+  };
+
+  const operation = findSeoOperation(claim.pulls[0].operationId);
+  if (!operation) {
+    await release(claimedIds, `No registered operation called '${claim.pulls[0].operationId}'.`, true);
+    return { kind: "SENT", count: 0 };
+  }
+
+  let credentials: DataForSeoCredentials;
+  try {
+    credentials = readDataForSeoCredentials();
+  } catch (error) {
+    // Checked before the run starts as well; taken back without a try.
+    await release(claimedIds, getErrorMessage(error), false);
+    return { kind: "ACCOUNT", reason: getErrorMessage(error) };
+  }
+
+  // Only what is still ours goes: marked as being sent, from here on it is
+  // never put back in the queue.
+  const marked = await ctx.runMutation(internal.seoCollectionQueue.markSeoPosting, {
+    pullIds: claimedIds,
+    workerId: args.workerId,
+  });
+  const sending = claim.pulls.filter((pull) => marked.includes(pull.pullId));
+  if (sending.length === 0) return { kind: "SENT", count: 0 };
+  const sendingIds = sending.map((pull) => pull.pullId);
+
+  const pingbackUrl = seoPingbackUrl();
+  const tasks = sending.map((pull) => ({
+    ...JSON.parse(pull.taskArgsJson) as Record<string, unknown>,
+    // Our own pull id, echoed back in the task's data. It is how a result
+    // finds its row, and it is what the pingback is checked against.
+    tag: pull.tag,
+    ...(operation.mode === "QUEUED" && pingbackUrl
+      ? { pingback_url: pingbackUrl }
+      : {}),
+  }));
+
+  let envelope: DataForSeoEnvelope;
+  try {
+    envelope = await postDataForSeoTasks(
+      operation.path,
+      tasks,
+      credentials,
+      operation.mode === "LIVE" ? { timeoutMs: LIVE_REQUEST_TIMEOUT_MS } : {},
+    );
+  } catch (error) {
+    if (error instanceof DataForSeoBackoff) {
+      await release(sendingIds, error.message, false);
+      return { kind: "REFUSED", reason: error.message };
+    }
+    if (error instanceof DataForSeoAccountError) {
+      await release(sendingIds, error.message, false);
+      return { kind: "ACCOUNT", reason: error.message };
+    }
+    if (error instanceof DataForSeoUncertain) {
+      await ctx.runMutation(internal.seoCollectionQueue.failUncertainSends, {
+        pullIds: sendingIds,
+        reason: error.message,
+        runId: args.runId,
+      });
+      return { kind: "SENT", count: 0 };
+    }
+    // A plain refusal of the whole request: nothing was taken, and it may be tried again.
+    await release(sendingIds, getErrorMessage(error), true);
+    return { kind: "SENT", count: 0 };
+  }
+
+  const outcomes = readDataForSeoBatch(envelope);
+  const results: Array<{
+    pullId: Id<"seoDataPulls">;
+    taskId?: string;
+    costUsd: number;
+    error?: string;
+    resultParts?: string[];
+    rawTruncated?: boolean;
+    rowsLeftOff?: number;
+    ready: boolean;
+  }> = [];
+  const unmentioned: Id<"seoDataPulls">[] = [];
+  const notTaken: Id<"seoDataPulls">[] = [];
+  let accountReason: string | null = null;
+  let refusedReason: string | null = null;
+
+  for (const pull of sending) {
+    const outcome = outcomes.get(pull.tag);
+    if (!outcome) {
+      unmentioned.push(pull.pullId);
+      continue;
+    }
+    // A task refused for the account or the rate was not taken: back to the queue, no try counted.
+    const kind = dataForSeoCodeKind(outcome.statusCode);
+    if (kind === "ACCOUNT" || kind === "RATE_LIMITED") {
+      notTaken.push(pull.pullId);
+      if (kind === "ACCOUNT") accountReason ??= outcome.error ?? "the account was refused";
+      else refusedReason ??= outcome.error ?? "the rate limit was reached";
+      continue;
+    }
+    const isLive = operation.mode === "LIVE";
+    const kept = isLive && outcome.result !== undefined ? keepAnswer(operation.id, outcome.result) : {};
+    results.push({
+      pullId: pull.pullId,
+      ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
+      costUsd: credentials.sandbox ? 0 : outcome.costUsd,
+      ...(outcome.error ? { error: outcome.error } : {}),
+      ...kept,
+      ready: isLive && !outcome.error,
+    });
+  }
+
+  // Recorded first, before anything else can fail: DataForSEO has these.
+  if (results.length > 0) {
+    await recordSends(ctx, { runId: args.runId, sandbox: credentials.sandbox, results });
+  }
+  if (unmentioned.length > 0) {
+    // An answer that says nothing of a task may still have charged for it.
+    await ctx.runMutation(internal.seoCollectionQueue.failUncertainSends, {
+      pullIds: unmentioned,
+      reason: "DataForSEO's reply did not mention it",
       runId: args.runId,
     });
+  }
+  await release(notTaken, accountReason ?? refusedReason ?? "not taken", false);
 
-    if (claim.capped) return { kind: "CAPPED" };
-    if (claim.pulls.length === 0) return { kind: "EMPTY", nextDueAt: claim.nextDueAt };
+  if (accountReason) return { kind: "ACCOUNT", reason: accountReason };
+  if (refusedReason && results.length === 0) return { kind: "REFUSED", reason: refusedReason };
+  return { kind: "SENT", count: results.length };
+}
 
-    const operation = findSeoOperation(claim.pulls[0].operationId);
-    if (!operation) {
-      await ctx.runMutation(internal.seoCollectionQueue.releaseSeoBatch, {
-        pullIds: claim.pulls.map((pull) => pull.pullId),
-        attempt: 0,
-        reason: `No registered operation called '${claim.pulls[0].operationId}'.`,
-      });
-      return { kind: "SENT", count: 0 };
-    }
-
-    let credentials: DataForSeoCredentials;
+/**
+ * Record a sent batch's outcomes, retrying until it lands. Safe to repeat —
+ * a request already recorded is skipped — and never given up for a release:
+ * if it cannot be recorded at all, the requests stay marked as being sent, the
+ * hourly check fails them rather than buying them again, and a pingback still
+ * finds each one by its tag.
+ */
+async function recordSends(
+  ctx: ActionCtx,
+  args: { runId: Id<"agentRuns">; sandbox: boolean; results: Array<Record<string, unknown> & { pullId: Id<"seoDataPulls">; costUsd: number; ready: boolean }> },
+): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
     try {
-      credentials = readDataForSeoCredentials();
+      await ctx.runMutation(internal.seoCollectionQueue.settleSeoSendBatch, args as never);
+      return;
     } catch (error) {
-      await ctx.runMutation(internal.seoCollectionQueue.releaseSeoBatch, {
-        pullIds: claim.pulls.map((pull) => pull.pullId),
-        attempt: 0,
-        reason: getErrorMessage(error),
-      });
-      return { kind: "SENT", count: 0 };
+      if (attempt >= RECORD_TRIES) throw error;
+      await sleep(500 * 2 ** (attempt - 1));
     }
-
-    const pingbackUrl = seoPingbackUrl();
-    const tasks = claim.pulls.map((pull) => ({
-      ...JSON.parse(pull.taskArgsJson) as Record<string, unknown>,
-      // Our own pull id, echoed back in the task's data. It is how a result
-      // finds its row, and it is what the pingback is checked against.
-      tag: pull.tag,
-      ...(operation.mode === "QUEUED" && pingbackUrl
-        ? { pingback_url: pingbackUrl }
-        : {}),
-    }));
-
-    try {
-      const envelope = await postDataForSeoTasks(operation.path, tasks, credentials);
-      const outcomes = readDataForSeoBatch(envelope);
-
-      for (const pull of claim.pulls) {
-        const outcome = outcomes.get(pull.tag);
-        if (!outcome) {
-          // DataForSEO answered, but said nothing about this task. Treat it as
-          // unsent rather than assume: an unmatched task may or may not have
-          // been charged, and the sweep will find it either way.
-          await ctx.runMutation(internal.seoCollectionQueue.releaseSeoBatch, {
-            pullIds: [pull.pullId],
-            attempt: pull.attempts,
-            reason: "DataForSEO's reply did not mention this task.",
-          });
-          continue;
-        }
-
-        const isLive = operation.mode === "LIVE";
-        // Trimmed to what the parsers read first, for the calls whose full
-        // answer would not fit the raw copy (`dataForSeoSlim.ts`).
-        const raw = isLive && outcome.result !== undefined
-          ? packRaw(slimSeoResult(operation.id, outcome.result))
-          : null;
-
-        await ctx.runMutation(internal.seoCollectionQueue.settleSeoSend, {
-          pullId: pull.pullId,
-          runId: args.runId,
-          ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
-          costUsd: credentials.sandbox ? 0 : outcome.costUsd,
-          sandbox: credentials.sandbox,
-          ...(outcome.error ? { error: outcome.error } : {}),
-          ...(raw?.json ? { resultJson: raw.json } : {}),
-          ...(raw?.truncated ? { rawTruncated: true } : {}),
-          ready: isLive && !outcome.error,
-        });
-
-        if (raw?.json && !outcome.error) {
-          await ctx.scheduler.runAfter(0, internal.seoCollectionParse.parseSeoResult, {
-            pullId: pull.pullId,
-          });
-        }
-      }
-    } catch (error) {
-      const backoff = error instanceof DataForSeoBackoff;
-      await ctx.runMutation(internal.seoCollectionQueue.releaseSeoBatch, {
-        pullIds: claim.pulls.map((pull) => pull.pullId),
-        attempt: claim.pulls[0].attempts,
-        reason: backoff
-          ? `DataForSEO replied ${error.status}; the batch was not accepted.`
-          : getErrorMessage(error),
-      });
-    }
-
-    return { kind: "SENT", count: claim.pulls.length };
+  }
 }
 
 /**
@@ -174,70 +265,82 @@ export const fetchSeoResult = internalAction({
     const path = operation ? seoResultPath(operation, pull.taskId) : null;
     if (!path) return null;
 
+    // Each fetch that does not bring the answer says why, on the request.
+    const waiting = async (said: string) => {
+      await ctx.runMutation(internal.seoCollectionQueue.noteSeoFetch, { pullId: args.pullId, said });
+      return null;
+    };
+
+    let envelope: DataForSeoEnvelope;
     try {
-      const credentials = readDataForSeoCredentials();
-      const envelope = await getDataForSeo(path, credentials);
-      const task = envelope.tasks?.[0];
-
-      // A crawl's summary can be asked for while the crawl is still running.
-      // That is not the answer yet: leave the task to be asked again.
-      if (task && isCrawlUnfinished(pull.operationId, task.result)) return null;
-
-      if (!task || (task.status_code !== undefined && task.status_code >= 40000)) {
-        await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
-          pullId: args.pullId,
-          error: task?.status_message ?? "DataForSEO had no result for this task.",
-        });
-        return null;
-      }
-
-      const raw = packRaw(slimSeoResult(pull.operationId, task.result ?? null));
-      await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
-        pullId: args.pullId,
-        ...(raw.json ? { resultJson: raw.json } : {}),
-        ...(raw.truncated ? { rawTruncated: true } : {}),
-        // Collecting is free, so this does not move the cost. What the task
-        // cost was recorded when it was set, which is when it was charged.
-        costUsd: 0,
-      });
-      await ctx.scheduler.runAfter(0, internal.seoCollectionParse.parseSeoResult, {
-        pullId: args.pullId,
-      });
-      // A finished crawl's page-by-page detail is free for thirty days: fetch it now.
-      if (pull.operationId === "site_crawl") {
-        await ctx.scheduler.runAfter(0, internal.siteCrawlDetail.fetchCrawlDetail, { pullId: args.pullId });
-      }
+      envelope = await getDataForSeo(path, readDataForSeoCredentials());
     } catch (error) {
-      if (error instanceof DataForSeoBackoff) return null;
+      // Not reached, not now, or the account refused: the answer is paid for
+      // and waits. The hourly check asks again until `SEO_RESULT_TIMEOUT_MS`,
+      // and only that gives up — a failed fetch never did (2026-09-25).
+      return await waiting(`The fetch did not get through: ${getErrorMessage(error)}`);
+    }
+    const task = envelope.tasks?.[0];
+    if (!task) return await waiting("DataForSEO's reply had no task in it.");
+
+    // A crawl's summary can be asked for while the crawl is still running.
+    // That is not the answer yet: leave the task to be asked again.
+    if (isCrawlUnfinished(pull.operationId, task.result)) return await waiting("The crawl is still running.");
+
+    // Still running (40601, 40602), refused for the moment, or a fault on
+    // their side: asked again later. Only a definite task error fails it.
+    const kind = dataForSeoCodeKind(task.status_code);
+    const said = task.status_message ?? `status ${task.status_code ?? "unknown"}`;
+    if (kind === "IN_PROGRESS") return await waiting(`DataForSEO is still working on it (${said}).`);
+    if (kind === "RATE_LIMITED") return await waiting(`DataForSEO said not now: ${said}`);
+    if (kind === "ACCOUNT") return await waiting(`DataForSEO refused the account: ${said}`);
+    if (task.status_code !== undefined && task.status_code >= 50000) return await waiting(`A fault on DataForSEO's side: ${said}`);
+    if (kind === "REFUSED") {
       await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
         pullId: args.pullId,
-        error: getErrorMessage(error),
+        error: task.status_message ?? `DataForSEO returned status ${task.status_code ?? "unknown"}.`,
       });
+      return null;
     }
+
+    // Recorded, and filed from inside the record — once, however many times
+    // it is fetched. A record that fails leaves it waiting, never failed.
+    await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
+      pullId: args.pullId,
+      ...keepAnswer(pull.operationId, task.result ?? null),
+      // Collecting is free, so this does not move the cost. What the task
+      // cost was recorded when it was set, which is when it was charged.
+      costUsd: 0,
+    });
     return null;
   },
 });
 
 /**
- * The raw response, if it is small enough to be worth keeping.
+ * An answer as it is kept: trimmed to what the parsers read
+ * (`dataForSeoSlim.ts`), then cut into parts no larger than a document may
+ * be (`seoPullAnswers.ts`) — passed to the mutation that records it as those
+ * parts, so no single value is ever larger than that. Kept so a parser bug can
+ * be fixed and re-run rather than re-bought, and cleared by the sweep after
+ * its retention window.
  *
- * Kept so a parser bug can be fixed and re-run rather than re-bought, and
- * cleared by the sweep after its retention window. A response over the ceiling
- * is dropped and flagged: a document has a hard size limit, and a write that
- * fails is worse than a payload we cannot re-read.
+ * Nothing is left off without saying so: rows left off the end of a list are
+ * counted on the request (`rowsLeftOff`), and an answer too large to keep at
+ * all is marked (`rawTruncated`) — before 2026-09-25 it was dropped, and a
+ * paid answer filed nothing, without a word.
  */
-function packRaw(result: unknown): { json: string | null; truncated: boolean } {
-  const json = JSON.stringify(result ?? null);
-  if (json.length > MAX_RAW_CHARS) return { json: null, truncated: true };
-  return { json, truncated: false };
+function keepAnswer(
+  operationId: string,
+  result: unknown,
+): { resultParts?: string[]; rawTruncated?: boolean; rowsLeftOff?: number } {
+  const stored = slimSeoResult(operationId, result);
+  const rowsLeftOff = rowsLeftOffIn(stored);
+  const parts = splitAnswer(JSON.stringify(stored ?? null));
+  return {
+    ...(parts ? { resultParts: parts } : { rawTruncated: true }),
+    ...(rowsLeftOff > 0 ? { rowsLeftOff } : {}),
+  };
 }
-
-/**
- * Comfortably inside Convex's document ceiling with the rest of the row, and
- * large enough for every response the registry's four operations return at
- * their default limits.
- */
-const MAX_RAW_CHARS = 512_000;
 
 /**
  * Where DataForSEO should ping when a task is ready.

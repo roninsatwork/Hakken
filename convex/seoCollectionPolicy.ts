@@ -25,10 +25,11 @@ export const SEO_EXPANSION_PAGE = 100;
  * How long one Collector run keeps sending before it hands back.
  *
  * Under Convex's ten-minute ceiling for an action, with room to finish the
- * batch in hand and record the run. Whatever is left waits in the queue for
- * the Collector's next run.
+ * batch in hand — a live call is waited for up to 130 seconds
+ * (`LIVE_REQUEST_TIMEOUT_MS`) — and record the run. Whatever is left waits in
+ * the queue for the Collector's next run.
  */
-export const SEO_COLLECTOR_RUN_MS = 8 * 60 * 1000;
+export const SEO_COLLECTOR_RUN_MS = 7 * 60 * 1000;
 
 /**
  * Tasks in one `task_post` request.
@@ -65,12 +66,13 @@ export const SEO_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 /**
  * When a submitted task is given up on.
  *
- * DataForSEO's queued results normally arrive in minutes. A day means the
- * pingback was lost *and* the task never appeared in `tasks_ready`, which is
- * not a wait any more. The row is marked failed; it is never re-posted,
- * because it was already paid for.
+ * DataForSEO's queued results normally arrive in minutes. Twelve hours means
+ * the pingback was lost *and* the task never appeared in `tasks_ready`, which
+ * is not a wait any more. The row is marked failed; it is never re-posted,
+ * because it was already paid for. A day until 2026-09-25, when Anthony set
+ * twelve hours: one site crawl answered late kept Korda's collection open.
  */
-export const SEO_RESULT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+export const SEO_RESULT_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 
 /** Sends tried before a row is failed. The knowledge queue uses three. */
 export const SEO_MAX_ATTEMPTS = 3;
@@ -126,28 +128,18 @@ export const SEO_MAX_SENDS_PER_CYCLE = 25_000;
 export const SEO_COMPETITORS_PER_WEBSITE = 100;
 
 /**
- * Searches checked for one website in a cycle.
+ * Searches checked for one website in a cycle: every one it may track
+ * (`MAX_CANONICAL_ROWS` in `websiteCanonical.ts`) — the two must move
+ * together. It was 200 while a website could track 1,000, and the rest were
+ * never checked, with nothing to say so (reliability plan 3.6).
  *
  * Each is one paid Google results page per place — but one page serves every
  * host and every company that tracks the same phrase from the same place, and
- * files a position for every known site that appears on it. So this bounds
- * what one website can add to a cycle, not what the platform pays per client.
- * A host with more searches than this is a plan conversation.
+ * files a position for every known site that appears on it. A page of the
+ * work list stops between two searches when it has read its fill, so a
+ * thousand is no strain on a transaction.
  */
-export const SEO_KEYWORD_CHECKS_PER_WEBSITE = 200;
-
-/**
- * Lines one expansion mutation may write before it stops and carries on in
- * the next.
- *
- * `SEO_EXPANSION_PAGE` bounds websites, not what each one fans out to: a
- * hundred sites with two hundred searches and a dozen questions each is tens
- * of thousands of writes, far past what one transaction may hold. So a page
- * also stops once it has written this many lines, and the cursor carries on
- * from the last website it finished — never mid-website, so a site's lines
- * are always written together.
- */
-export const SEO_PAGE_LINE_BUDGET = 2_000;
+export const SEO_KEYWORD_CHECKS_PER_WEBSITE = 1_000;
 
 /**
  * How long after a cycle closes its moves are drawn.

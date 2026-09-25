@@ -1,11 +1,12 @@
+import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
-import type { AiEngine } from "./seoAiEngines";
+import { internalMutation, type MutationCtx } from "./_generated/server";
+import { aiEngineValidator, type AiEngine } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
-import { bandForPosition, kdBandFor, pagePath, statusFor, type RankIntent } from "./utils/siteShapes";
+import { bandForPosition, kdBandFor, pagePath, rankIntentValidator, statusFor, type RankIntent } from "./utils/siteShapes";
 
 /**
  * Keeping the Sites tables current as results are filed.
@@ -171,7 +172,10 @@ export async function fileKeywordRank(
  * Carry a search's meaning onto every ranking and gap that holds the search.
  *
  * The meaning is judged after the rankings are filed, so a new ranking arrives
- * `UNJUDGED` and is brought up to date here when the judgment lands.
+ * `UNJUDGED` and is brought up to date here when the judgment lands. The first
+ * `INTENT_PATCH_LIMIT` of each here; the rest by `carryKeywordIntent`, a page
+ * at a time — rows past the first five hundred were left unjudged for good,
+ * the meaning being judged once (reliability plan 3.6).
  */
 export async function patchKeywordIntent(ctx: MutationCtx, keyword: string, intent: RankIntent): Promise<void> {
   const ranks = await ctx.db
@@ -185,75 +189,133 @@ export async function patchKeywordIntent(ctx: MutationCtx, keyword: string, inte
     .withIndex("by_keyword", (q) => q.eq("keyword", keyword))
     .take(INTENT_PATCH_LIMIT);
   for (const row of gaps) if (row.intent !== intent) await ctx.db.patch(row._id, { intent });
+
+  for (const [table, read] of [["siteKeywordRanks", ranks.length], ["siteContentGaps", gaps.length]] as const) {
+    if (read === INTENT_PATCH_LIMIT) {
+      await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { table, keyword, intent, cursor: null });
+    }
+  }
 }
 
-/** Citations of one page read when recounting it. */
+/** A page of the rankings or gaps holding a search, given its meaning; the next page carries on. */
+export const carryKeywordIntent = internalMutation({
+  args: {
+    table: v.union(v.literal("siteKeywordRanks"), v.literal("siteContentGaps")),
+    keyword: v.string(),
+    intent: rankIntentValidator,
+    cursor: v.union(v.string(), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query(args.table)
+      .withIndex("by_keyword", (q) => q.eq("keyword", args.keyword))
+      .paginate({ cursor: args.cursor, numItems: INTENT_PATCH_LIMIT });
+    for (const row of page.page) if (row.intent !== args.intent) await ctx.db.patch(row._id, { intent: args.intent });
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { ...args, cursor: page.continueCursor });
+    }
+    return null;
+  },
+});
+
+/** Citations of one page under one question read when recounting it: a day each, years of them. */
 const CITATIONS_READ = 2_000;
 
+/** A page of a website an AI answer cited, and the question, engine and place it was cited under. */
+export type CitedPage = { websiteId: Id<"websites">; url: string; prompt: string; engine: AiEngine; locationCode: number };
+
+/** A citation row as the page, question, engine and place a recount counts it under. */
+export function citedPageOf(row: Doc<"aiCitations">): CitedPage | null {
+  if (row.kind !== "SOURCE" || !row.mentionedWebsiteId || !row.url) return null;
+  return {
+    websiteId: row.mentionedWebsiteId,
+    url: row.url,
+    prompt: row.prompt,
+    engine: row.engine,
+    // An engine asked no place answered from the default one.
+    locationCode: row.locationCode ?? DEFAULT_LOCATION_CODE,
+  };
+}
+
 /**
- * Recount how often AI answers linked to each of these pages of a website —
- * per question, engine and place, because a count across every question would
- * carry other companies' questions onto this one's screen (D17).
+ * Ask for cited pages to be recounted — each under its own question, engine
+ * and place, one small job a page. Recounted inside the filing, every
+ * question's citations of every page came with it, and an answer citing
+ * forty well-cited pages read past what one transaction may (reliability plan
+ * 3.4). At most a few hundred a call: a transaction schedules a thousand jobs.
+ */
+export async function recountCitedPages(ctx: MutationCtx, cited: ReadonlyArray<CitedPage>): Promise<void> {
+  const seen = new Set<string>();
+  for (const page of cited) {
+    const key = `${page.websiteId} ${page.url} ${citedGroupKey(page.prompt, page.engine, page.locationCode)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await ctx.scheduler.runAfter(0, internal.siteRankings.recountCitedPage, page);
+  }
+}
+
+/**
+ * Recount how often AI answers to one question, on one engine, from one
+ * place, linked to one page of a website — per question, because a count
+ * across every question would carry other companies' questions onto this
+ * one's screen (D17).
  *
  * Recounted from `aiCitations` rather than added to, because a re-parse
  * replaces a pull's citations: a count kept by adding would double every time
  * a corrected parser ran over stored answers.
  */
-export async function recountCitedPages(
-  ctx: MutationCtx,
-  cited: ReadonlyArray<{ websiteId: Id<"websites">; url: string }>,
-): Promise<void> {
-  const seen = new Set<string>();
-  for (const { websiteId, url } of cited) {
-    const key = `${websiteId} ${url}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    const rows = (await ctx.db
+export const recountCitedPage = internalMutation({
+  args: {
+    websiteId: v.id("websites"),
+    url: v.string(),
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    locationCode: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const days = (await ctx.db
       .query("aiCitations")
-      .withIndex("by_website_url", (q) => q.eq("mentionedWebsiteId", websiteId).eq("url", url))
+      .withIndex("by_website_url_question", (q) => q.eq("mentionedWebsiteId", args.websiteId).eq("url", args.url)
+        .eq("prompt", args.prompt).eq("engine", args.engine))
       .take(CITATIONS_READ))
-      .filter((row) => row.kind === "SOURCE");
-    const groups = new Map<string, { prompt: string; engine: AiEngine; locationCode: number; days: string[] }>();
-    for (const row of rows) {
       // Where the engine answered from, as the answers are kept: an engine
       // asked no place answered from the default one.
-      const locationCode = row.locationCode ?? DEFAULT_LOCATION_CODE;
-      const group = citedGroupKey(row.prompt, row.engine, locationCode);
-      const held = groups.get(group) ?? { prompt: row.prompt, engine: row.engine, locationCode, days: [] };
-      held.days.push(row.day);
-      groups.set(group, held);
-    }
+      .filter((row) => row.kind === "SOURCE" && (row.locationCode ?? DEFAULT_LOCATION_CODE) === args.locationCode)
+      .map((row) => row.day)
+      .sort();
 
-    const standing = await ctx.db
+    const standing = (await ctx.db
       .query("siteCitedPages")
-      .withIndex("by_site_url", (q) => q.eq("websiteId", websiteId).eq("url", url))
-      .take(CITED_GROUPS_READ);
-    const unclaimed = new Map(standing.map((row) => [citedGroupKey(row.prompt, row.engine, row.locationCode), row]));
-    for (const [group, held] of groups) {
-      const days = held.days.sort();
-      const fields = {
-        websiteId,
-        url,
-        page: pagePath(url),
-        prompt: held.prompt,
-        engine: held.engine,
-        locationCode: held.locationCode,
-        times: days.length,
-        firstDay: days[0],
-        lastDay: days[days.length - 1],
-        updatedAt: Date.now(),
-      };
-      const row = unclaimed.get(group);
-      unclaimed.delete(group);
-      if (row) await ctx.db.replace(row._id, fields);
-      else await ctx.db.insert("siteCitedPages", fields);
+      .withIndex("by_site_url", (q) => q.eq("websiteId", args.websiteId).eq("url", args.url))
+      .take(CITED_GROUPS_READ))
+      .filter((row) => citedGroupKey(row.prompt, row.engine, row.locationCode)
+        === citedGroupKey(args.prompt, args.engine, args.locationCode));
+    const [row, ...extra] = standing;
+    for (const duplicate of extra) await ctx.db.delete(duplicate._id);
+    // A question that no longer cites the page goes.
+    if (days.length === 0) {
+      if (row) await ctx.db.delete(row._id);
+      return null;
     }
-    // A question that no longer cites the page — and a row counted the old
-    // way, across every question — goes.
-    for (const row of unclaimed.values()) await ctx.db.delete(row._id);
-  }
-}
+    const fields = {
+      websiteId: args.websiteId,
+      url: args.url,
+      page: pagePath(args.url),
+      prompt: args.prompt,
+      engine: args.engine,
+      locationCode: args.locationCode,
+      times: days.length,
+      firstDay: days[0],
+      lastDay: days[days.length - 1],
+      updatedAt: Date.now(),
+    };
+    if (row) await ctx.db.replace(row._id, fields);
+    else await ctx.db.insert("siteCitedPages", fields);
+    return null;
+  },
+});
 
 /** The questions, engines and places one page address was cited under, read to recount it. */
 const CITED_GROUPS_READ = 1_000;

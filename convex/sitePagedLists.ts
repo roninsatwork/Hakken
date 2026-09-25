@@ -87,6 +87,16 @@ export function pagedListParams(
   return { ...seoSiteOperationParams(operation, host, { locationCode }), limit: page.limit, offset: page.offset };
 }
 
+/** How many rows a page asked for, as it was sent, or null when it did not say. */
+export function sentLimit(taskArgsJson: string | null | undefined): number | null {
+  try {
+    const sent = JSON.parse(taskArgsJson ?? "{}") as Record<string, unknown>;
+    return typeof sent.limit === "number" ? sent.limit : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Where a page starts in its list, as it was sent. */
 export function sentOffset(taskArgsJson: string | null | undefined): number {
   try {

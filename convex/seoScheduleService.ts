@@ -1,6 +1,39 @@
+import type { Expression, FilterBuilder, NamedTableInfo } from "convex/server";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
 import { appError } from "./utils/appError";
-import type { Doc } from "./_generated/dataModel";
+import type { DataModel, Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+
+/**
+ * A company's collection schedule: the `schedules` row behind its Collection
+ * schedule screen, whose switch says whether the company collects at all.
+ * Shared rather than looked up afresh by each caller — it was, four times over.
+ */
+export async function companyCollectionSchedule(
+  ctx: { db: QueryCtx["db"] },
+  companyId: Id<"companies">,
+): Promise<Doc<"schedules"> | null> {
+  return await ctx.db.query("schedules").withIndex("by_company_agent", (q) => q.eq("companyId", companyId)).first();
+}
+
+/**
+ * Whether a `schedules` row starts runs — an agent's or a workflow's — rather
+ * than holding one company's Collection schedule.
+ *
+ * A row with a company is that company's setting: whether it collects, and
+ * how often. It wakes nothing. The DataForSEO Planner reads it on each of its
+ * own runs and queues what has come due, and the Planner and the Collector
+ * each run on their own agent schedule — two agents, two agent schedules
+ * (Anthony, 2026-09-25). So the dispatcher, the Schedules list and the health
+ * checks leave these rows out.
+ *
+ * Until then each row also named the Collector, a leftover of the first,
+ * one-agent design, and the dispatcher woke the Collector for it — which sent
+ * a queue nothing had filled, because nothing woke the Planner.
+ */
+export function startsRuns(q: FilterBuilder<NamedTableInfo<DataModel, "schedules">>): Expression<boolean> {
+  return q.eq(q.field("companyId"), undefined);
+}
 
 /**
  * The cadences an SEO pull may run at.
@@ -167,4 +200,111 @@ export function soonestPull<T>(
   }
 
   return best;
+}
+
+/** Schedules read for one DataForSEO agent; there is one each in practice. */
+const AGENT_SCHEDULES_READ = 20;
+
+type AgentRun = Pick<Doc<"schedules">, "intervalStr" | "nextRunAt">;
+
+/**
+ * The two DataForSEO agents' own schedules, as the dispatcher will run them —
+ * what decides when any company's work is actually planned and sent. An agent
+ * missing or switched off has none: the dispatcher skips it.
+ */
+export type CollectionTimetable = {
+  /** Live queues only what each company's schedule says is due; Test queues everything, every run. */
+  plannerLive: boolean;
+  planner: AgentRun[];
+  collector: AgentRun[];
+};
+
+export async function collectionTimetable(ctx: { db: QueryCtx["db"] }): Promise<CollectionTimetable> {
+  const runsOf = async (role: "DATAFORSEO_PLANNER" | "DATAFORSEO_COLLECTOR") => {
+    const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
+    if (!agent || agent.isActive === false) return { agent, runs: [] as AgentRun[] };
+    const rows = await ctx.db
+      .query("schedules")
+      .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+      .take(AGENT_SCHEDULES_READ);
+    return { agent, runs: rows.filter((row) => row.isActive && row.companyId === undefined) };
+  };
+  const planner = await runsOf("DATAFORSEO_PLANNER");
+  const collector = await runsOf("DATAFORSEO_COLLECTOR");
+  return { plannerLive: planner.agent?.plannerMode === "LIVE", planner: planner.runs, collector: collector.runs };
+}
+
+/** When a company's work is next sent, or why nothing will send it. */
+export type NextCollection = { at: number } | { at: null; why: "OFF" | "NOT_SCHEDULED" };
+
+/**
+ * When a company's work is next sent to DataForSEO.
+ *
+ * Three times in a row, because since 2026-09-25 a company's own schedule
+ * wakes nothing: the company falls due by its schedule; the Planner's first
+ * run at or after that queues its work; the Collector's first run after that
+ * sends it. A Collector run in the same minute as the Planner's finds nothing
+ * written yet, which is why it is the one after that counts. In Test mode the
+ * Planner queues everything on every run, so the company counts as due now.
+ *
+ * Judged from the company's own schedule: a website set to its own faster
+ * schedule can be collected sooner. Nothing is due while collection is off,
+ * and nothing is sent while either agent has no schedule.
+ */
+export function nextCollection(
+  timetable: CollectionTimetable,
+  companySchedule: Pick<Doc<"schedules">, "intervalStr" | "isActive"> | null,
+  lastCollectedAt: number | undefined,
+  now: Date,
+): NextCollection {
+  if (!companySchedule?.isActive) return { at: null, why: "OFF" };
+  const nowMs = now.getTime();
+  const dueAt = !timetable.plannerLive
+    || shouldRunWorkflowSchedule({ intervalStr: companySchedule.intervalStr, lastRunTs: lastCollectedAt, now })
+    ? nowMs
+    : getNextWorkflowScheduleRunAt({ intervalStr: companySchedule.intervalStr, now });
+  if (dueAt === undefined) return { at: null, why: "NOT_SCHEDULED" };
+
+  const plannedAt = soonest(timetable.planner.map((run) => runFrom(run, dueAt, nowMs)));
+  if (plannedAt === null) return { at: null, why: "NOT_SCHEDULED" };
+  const sentAt = soonest(timetable.collector.map((run) =>
+    getNextWorkflowScheduleRunAt({ intervalStr: run.intervalStr, now: new Date(plannedAt) }) ?? null));
+  return sentAt === null ? { at: null, why: "NOT_SCHEDULED" } : { at: sentAt };
+}
+
+/**
+ * An agent schedule's first run at or after a time: from now, the run the
+ * dispatcher has written down; from later, its timetable's own.
+ */
+function runFrom(run: AgentRun, fromMs: number, nowMs: number): number | null {
+  if (fromMs <= nowMs && run.nextRunAt !== undefined) return Math.max(run.nextRunAt, nowMs);
+  return getNextWorkflowScheduleRunAt({ intervalStr: run.intervalStr, now: new Date(Math.max(fromMs, nowMs) - 1) }) ?? null;
+}
+
+function soonest(times: ReadonlyArray<number | null>): number | null {
+  let best: number | null = null;
+  for (const at of times) if (at !== null && (best === null || at < best)) best = at;
+  return best;
+}
+
+/**
+ * A company's collection as the admin screens show it: its schedule, its
+ * newest collection, and when its work is next sent (`nextCollection`).
+ */
+export async function companyCollectionState(
+  ctx: { db: QueryCtx["db"] },
+  companyId: Id<"companies">,
+  timetable: CollectionTimetable,
+  now: Date,
+): Promise<{ schedule: Doc<"schedules"> | null; latest: Doc<"seoCollectionCycles"> | null; next: NextCollection }> {
+  const schedule = await companyCollectionSchedule(ctx, companyId);
+  const latest = await ctx.db
+    .query("seoCollectionCycles")
+    .withIndex("by_company_started", (q) => q.eq("companyId", companyId))
+    .order("desc")
+    .first();
+  // A collection that failed outright collected nothing, so the company is due
+  // again — the Planner's own rule for a website (`seoCollectionDue.ts`).
+  const lastCollectedAt = latest && latest.status !== "FAILED" ? latest.startedAt : undefined;
+  return { schedule, latest, next: nextCollection(timetable, schedule, lastCollectedAt, now) };
 }

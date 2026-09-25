@@ -27,7 +27,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
-import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { useNow } from "@/src/hooks/useNow";
 import { FAILED_HATCH } from "../../_lib/observabilityStyles";
 
 /** How many jobs the "latest" list shows before sending the reader to Activity. */

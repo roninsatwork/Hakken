@@ -1,20 +1,13 @@
 import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { answerPlace, type AiEngine } from "./seoAiEngines";
 import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
-import {
-  bandCountsValidator,
-  emptyBandCounts,
-  pageTypeByAddress,
-  sectionOf,
-  type BandCounts,
-  type EngineDay,
-} from "./utils/siteShapes";
+import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, type EngineDay, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
 
 /**
  * Rebuilding a site's summaries from its latest rankings.
@@ -113,176 +106,252 @@ export const rebuildSite = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    // Released first, so a filing that lands while this runs asks for another.
-    await ctx.runMutation(internal.siteSummaries.releaseRequest, {
-      key: siteRebuildKey(args.websiteId, args.locationCode),
+    const key = siteRebuildKey(args.websiteId, args.locationCode);
+    // One rebuild of a site at a time. The request is released as this one
+    // begins, so a filing that lands while it runs asks for another — which
+    // waits its turn rather than running alongside and deleting what this one
+    // writes (collection reliability plan, 2.3).
+    if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
+      await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteSummaries.rebuildSite, args);
+      return null;
+    }
+    try {
+      return await rebuildSiteNow(ctx, args);
+    } finally {
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key });
+    }
+  },
+});
+
+async function rebuildSiteNow(
+  ctx: ActionCtx,
+  args: { websiteId: Id<"websites">; locationCode: number; fullSync?: boolean },
+): Promise<null> {
+  const completeDay: string | null = await ctx.runQuery(internal.siteSummaries.completeRankedDay, {
+    websiteId: args.websiteId,
+    locationCode: args.locationCode,
+  });
+
+  // One pass over the latest rankings: the headline counts, the pages and
+  // the rows a complete pull shows the site no longer ranks for.
+  const bands = emptyBandCounts();
+  const intents = { buying: 0, researching: 0, branded: 0 };
+  const split: IntentSplit = {
+    branded: { searches: 0, visits: 0 },
+    buying: { searches: 0, visits: 0 },
+    researching: { searches: 0, visits: 0 },
+    other: { searches: 0, visits: 0 },
+  };
+  let keywords = 0;
+  let rankingDay = "";
+  const lost: Id<"siteKeywordRanks">[] = [];
+  const pages = new Map<string, PageAggregate>();
+  const statusRows: Array<{ status: Doc<"siteKeywordRanks">["status"]; day: string }> = [];
+
+  let cursor: string | null = null;
+  for (;;) {
+    const page: { rows: Doc<"siteKeywordRanks">[]; cursor: string; isDone: boolean } = await ctx.runQuery(
+      internal.siteSummaries.keywordPage,
+      { websiteId: args.websiteId, locationCode: args.locationCode, cursor },
+    );
+    for (const row of page.rows) {
+      if (row.day > rankingDay) rankingDay = row.day;
+      const isLost = row.position === undefined || (completeDay !== null && row.day < completeDay);
+      if (isLost) {
+        if (row.position !== undefined) lost.push(row._id);
+        statusRows.push({ status: "LOST", day: row.position !== undefined && completeDay ? completeDay : row.day });
+        continue;
+      }
+      const position = row.position as number;
+      statusRows.push({ status: row.status, day: row.day });
+      keywords += 1;
+      if (row.band !== "zz_none") bands[row.band] += 1;
+      if (row.intent === "BUYING") intents.buying += 1;
+      if (row.intent === "RESEARCHING") intents.researching += 1;
+      if (row.intent === "BRANDED") intents.branded += 1;
+      const group = row.intent === "BRANDED" ? split.branded
+        : row.intent === "BUYING" ? split.buying
+          : row.intent === "RESEARCHING" ? split.researching
+            : split.other;
+      group.searches += 1;
+      group.visits += row.traffic ?? 0;
+
+      if (!row.page) continue;
+      const held = pages.get(row.page);
+      if (!held) {
+        const fresh: PageAggregate = {
+          page: row.page,
+          url: row.url ?? row.page,
+          section: sectionOf(row.page),
+          keywords: 1,
+          bestPosition: position,
+          top3: position <= 3 ? 1 : 0,
+          volumeSum: row.volume,
+          topKeyword: row.keyword,
+          topKeywordVolume: row.volume,
+          firstSeenDay: row.firstSeenDay,
+          day: row.day,
+        };
+        addPageFacts(fresh, row);
+        pages.set(row.page, fresh);
+      } else {
+        addPageFacts(held, row);
+        held.keywords += 1;
+        held.bestPosition = Math.min(held.bestPosition, position);
+        held.top3 += position <= 3 ? 1 : 0;
+        held.volumeSum += row.volume;
+        if (row.volume > held.topKeywordVolume) {
+          held.topKeyword = row.keyword;
+          held.topKeywordVolume = row.volume;
+        }
+        if (row.firstSeenDay < held.firstSeenDay) held.firstSeenDay = row.firstSeenDay;
+        if (row.day > held.day) held.day = row.day;
+      }
+    }
+    if (page.isDone) break;
+    cursor = page.cursor;
+  }
+  if (completeDay && completeDay > rankingDay) rankingDay = completeDay;
+
+  for (const ids of chunks(lost, WRITE_BATCH)) {
+    await ctx.runMutation(internal.siteSummaries.markLost, { ids, day: completeDay ?? rankingDay });
+  }
+
+  // Pages and folders, written under this rebuild's id; whatever an older
+  // rebuild wrote and this one did not is a page the site no longer ranks with.
+  const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const pageRows = [...pages.values()];
+  for (const rows of chunks(pageRows, WRITE_BATCH)) {
+    await ctx.runMutation(internal.siteSummaries.writePages, {
+      websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, rows,
     });
-
-    const completeDay: string | null = await ctx.runQuery(internal.siteSummaries.completeRankedDay, {
-      websiteId: args.websiteId,
-      locationCode: args.locationCode,
+  }
+  const sections = new Map<string, Infer<typeof sectionRowValidator>>();
+  for (const row of pageRows) {
+    const held = sections.get(row.section) ?? { section: row.section, pages: 0, keywords: 0, top3: 0, volumeSum: 0 };
+    held.pages += 1;
+    held.keywords += row.keywords;
+    held.top3 += row.top3;
+    held.volumeSum += row.volumeSum;
+    if (row.traffic !== undefined) held.traffic = (held.traffic ?? 0) + row.traffic;
+    if (!held.day || row.day > held.day) held.day = row.day;
+    sections.set(row.section, held);
+  }
+  for (const rows of chunks([...sections.values()], WRITE_BATCH)) {
+    await ctx.runMutation(internal.siteSummaries.writeSections, {
+      websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, rows,
     });
-
-    // One pass over the latest rankings: the headline counts, the pages and
-    // the rows a complete pull shows the site no longer ranks for.
-    const bands = emptyBandCounts();
-    const intents = { buying: 0, researching: 0, branded: 0 };
-    let keywords = 0;
-    let rankingDay = "";
-    const lost: Id<"siteKeywordRanks">[] = [];
-    const pages = new Map<string, PageAggregate>();
-    const statusRows: Array<{ status: Doc<"siteKeywordRanks">["status"]; day: string }> = [];
-
-    let cursor: string | null = null;
+  }
+  for (const table of ["sitePageRanks", "siteSections"] as const) {
+    let staleCursor: string | null = null;
     for (;;) {
-      const page: { rows: Doc<"siteKeywordRanks">[]; cursor: string; isDone: boolean } = await ctx.runQuery(
-        internal.siteSummaries.keywordPage,
-        { websiteId: args.websiteId, locationCode: args.locationCode, cursor },
+      const result: { cursor: string; isDone: boolean } = await ctx.runMutation(
+        internal.siteSummaries.removeStale,
+        { table, websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, cursor: staleCursor },
       );
-      for (const row of page.rows) {
-        if (row.day > rankingDay) rankingDay = row.day;
-        const isLost = row.position === undefined || (completeDay !== null && row.day < completeDay);
-        if (isLost) {
-          if (row.position !== undefined) lost.push(row._id);
-          statusRows.push({ status: "LOST", day: row.position !== undefined && completeDay ? completeDay : row.day });
-          continue;
-        }
-        const position = row.position as number;
-        statusRows.push({ status: row.status, day: row.day });
-        keywords += 1;
-        if (row.band !== "zz_none") bands[row.band] += 1;
-        if (row.intent === "BUYING") intents.buying += 1;
-        if (row.intent === "RESEARCHING") intents.researching += 1;
-        if (row.intent === "BRANDED") intents.branded += 1;
+      if (result.isDone) break;
+      staleCursor = result.cursor;
+    }
+  }
 
-        if (!row.page) continue;
-        const held = pages.get(row.page);
-        if (!held) {
-          const fresh: PageAggregate = {
-            page: row.page,
-            url: row.url ?? row.page,
-            section: sectionOf(row.page),
-            keywords: 1,
-            bestPosition: position,
-            top3: position <= 3 ? 1 : 0,
-            volumeSum: row.volume,
-            topKeyword: row.keyword,
-            topKeywordVolume: row.volume,
-            firstSeenDay: row.firstSeenDay,
-            day: row.day,
-          };
-          addPageFacts(fresh, row);
-          pages.set(row.page, fresh);
-        } else {
-          addPageFacts(held, row);
-          held.keywords += 1;
-          held.bestPosition = Math.min(held.bestPosition, position);
-          held.top3 += position <= 3 ? 1 : 0;
-          held.volumeSum += row.volume;
-          if (row.volume > held.topKeywordVolume) {
-            held.topKeyword = row.keyword;
-            held.topKeywordVolume = row.volume;
-          }
-          if (row.firstSeenDay < held.firstSeenDay) held.firstSeenDay = row.firstSeenDay;
-          if (row.day > held.day) held.day = row.day;
-        }
-      }
-      if (page.isDone) break;
-      cursor = page.cursor;
-    }
-    if (completeDay && completeDay > rankingDay) rankingDay = completeDay;
+  // What moved at the last check: the statuses of rows checked that day.
+  const moved = { up: 0, down: 0, fresh: 0, lost: 0 };
+  for (const row of statusRows) {
+    if (row.day !== rankingDay) continue;
+    if (row.status === "UP") moved.up += 1;
+    if (row.status === "DOWN") moved.down += 1;
+    if (row.status === "NEW") moved.fresh += 1;
+    if (row.status === "LOST") moved.lost += 1;
+  }
 
-    for (const ids of chunks(lost, WRITE_BATCH)) {
-      await ctx.runMutation(internal.siteSummaries.markLost, { ids, day: completeDay ?? rankingDay });
-    }
-
-    // Pages and folders, written under this rebuild's id; whatever an older
-    // rebuild wrote and this one did not is a page the site no longer ranks with.
-    const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const pageRows = [...pages.values()];
-    for (const rows of chunks(pageRows, WRITE_BATCH)) {
-      await ctx.runMutation(internal.siteSummaries.writePages, {
-        websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, rows,
-      });
-    }
-    const sections = new Map<string, Infer<typeof sectionRowValidator>>();
-    for (const row of pageRows) {
-      const held = sections.get(row.section) ?? { section: row.section, pages: 0, keywords: 0, top3: 0, volumeSum: 0 };
-      held.pages += 1;
-      held.keywords += row.keywords;
-      held.top3 += row.top3;
-      held.volumeSum += row.volumeSum;
-      if (row.traffic !== undefined) held.traffic = (held.traffic ?? 0) + row.traffic;
-      if (!held.day || row.day > held.day) held.day = row.day;
-      sections.set(row.section, held);
-    }
-    for (const rows of chunks([...sections.values()], WRITE_BATCH)) {
-      await ctx.runMutation(internal.siteSummaries.writeSections, {
-        websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, rows,
-      });
-    }
-    for (const table of ["sitePageRanks", "siteSections"] as const) {
-      let staleCursor: string | null = null;
-      for (;;) {
-        const result: { cursor: string; isDone: boolean } = await ctx.runMutation(
-          internal.siteSummaries.removeStale,
-          { table, websiteId: args.websiteId, locationCode: args.locationCode, rebuildId, cursor: staleCursor },
-        );
-        if (result.isDone) break;
-        staleCursor = result.cursor;
-      }
-    }
-
-    // What moved at the last check: the statuses of rows checked that day.
-    const moved = { up: 0, down: 0, fresh: 0, lost: 0 };
-    for (const row of statusRows) {
-      if (row.day !== rankingDay) continue;
-      if (row.status === "UP") moved.up += 1;
-      if (row.status === "DOWN") moved.down += 1;
-      if (row.status === "NEW") moved.fresh += 1;
-      if (row.status === "LOST") moved.lost += 1;
-    }
-
-    if (rankingDay) {
-      await ctx.runMutation(internal.siteSummaries.writeRankingDay, {
-        websiteId: args.websiteId,
-        locationCode: args.locationCode,
-        day: rankingDay,
-        keywords,
-        bands,
-        pages: pageRows.length,
-        rankedUp: moved.up,
-        rankedDown: moved.down,
-        rankedNew: moved.fresh,
-        rankedLost: moved.lost,
-        ...intents,
-      });
-    }
-
-    // The website's own figures and its questions' answers, copied into the
-    // day rows: the last fortnight normally, everything on a backfill.
-    const today = new Date().toISOString().slice(0, 10);
-    const firstDay: string | null = args.fullSync
-      ? await ctx.runQuery(internal.siteSummaries.firstRecordedDay, { websiteId: args.websiteId })
-      : shiftDay(today, -SYNC_DAYS);
-    for (let from = firstDay ?? today; from <= today; from = shiftDay(from, 31)) {
-      await ctx.runMutation(internal.siteSummaries.syncDays, {
-        websiteId: args.websiteId,
-        locationCode: args.locationCode,
-        fromDay: from,
-        toDay: shiftDay(from, 30),
-      });
-    }
-
-    await ctx.runMutation(internal.siteSummaries.requestGapsFor, {
+  if (rankingDay) {
+    await ctx.runMutation(internal.siteSummaries.writeRankingDay, {
       websiteId: args.websiteId,
       locationCode: args.locationCode,
+      day: rankingDay,
+      keywords,
+      bands,
+      pages: pageRows.length,
+      rankedUp: moved.up,
+      rankedDown: moved.down,
+      rankedNew: moved.fresh,
+      rankedLost: moved.lost,
+      ...intents,
+      intentSplit: split,
     });
-    // Pages the address could not place are asked about, a few at a time.
-    await ctx.scheduler.runAfter(0, internal.sitePageTypes.judgePageTypes, {
+  }
+
+  // The website's own figures and its questions' answers, copied into the
+  // day rows: the last fortnight normally, everything on a backfill.
+  const today = new Date().toISOString().slice(0, 10);
+  const firstDay: string | null = args.fullSync
+    ? await ctx.runQuery(internal.siteSummaries.firstRecordedDay, { websiteId: args.websiteId })
+    : shiftDay(today, -SYNC_DAYS);
+  for (let from = firstDay ?? today; from <= today; from = shiftDay(from, 31)) {
+    await ctx.runMutation(internal.siteSummaries.syncDays, {
       websiteId: args.websiteId,
       locationCode: args.locationCode,
+      fromDay: from,
+      toDay: shiftDay(from, 30),
     });
+  }
+
+  // A few holds a step: a website watched by many companies, each with its
+  // rivals, is more gap rebuilds than one transaction may ask for.
+  for (let cursor: string | null = null; ;) {
+    const asked: { cursor: string; isDone: boolean } = await ctx.runMutation(internal.siteSummaries.requestGapsFor, {
+      websiteId: args.websiteId,
+      locationCode: args.locationCode,
+      cursor,
+    });
+    if (asked.isDone) break;
+    cursor = asked.cursor;
+  }
+  // Pages the address could not place are asked about, a few at a time.
+  await ctx.scheduler.runAfter(0, internal.sitePageTypes.judgePageTypes, {
+    websiteId: args.websiteId,
+    locationCode: args.locationCode,
+  });
+  return null;
+}
+
+/** How long a rebuild may hold its turn before another may take it: past an action's own ten minutes. */
+const REBUILD_TURN_MS = 11 * 60 * 1000;
+
+/** How long a rebuild that found another running waits before it tries again. */
+export const REBUILD_WAIT_MS = 60 * 1000;
+
+/**
+ * Take this key's turn to rebuild, or say another rebuild holds it. Taking it
+ * releases the request, so a filing that lands while this one runs asks for
+ * another.
+ */
+export const beginRebuild = internalMutation({
+  args: { key: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const row = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (row?.runningSince !== undefined && now - row.runningSince < REBUILD_TURN_MS) return false;
+    if (row) await ctx.db.patch(row._id, { pending: false, runningSince: now });
+    else await ctx.db.insert("siteSummaryRequests", { key: args.key, pending: false, requestedAt: now, runningSince: now });
+    return true;
+  },
+});
+
+/** Give the turn back, however the rebuild ended. */
+export const endRebuild = internalMutation({
+  args: { key: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (row) await ctx.db.patch(row._id, { runningSince: undefined });
     return null;
   },
 });
@@ -316,21 +385,24 @@ export const completeRankedDay = internalQuery({
     // that is complete decides.
     let newestComplete: string | null = null;
     for (const operationId of ["domain_ranked_keywords", KEYWORD_LIST_OPERATION_ID]) {
+      const list = operationId === KEYWORD_LIST_OPERATION_ID;
       const rows = (await ctx.db
         .query("seoWebsiteMetrics")
         .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", operationId))
         .order("desc")
-        .take(PLACES_READ_FOR_COMPLETE_DAY))
+        .take(list ? LIST_PAGES_READ_FOR_COMPLETE_DAY : PLACES_READ_FOR_COMPLETE_DAY))
         .filter((row) => isThisPlace(row, args.locationCode));
-      // The everyday call speaks for itself only at its newest; a list's day is
-      // complete if any of its pages says so.
-      const candidates = operationId === KEYWORD_LIST_OPERATION_ID ? rows : rows.slice(0, 1);
-      const complete = candidates.find((row) => {
-        const metrics = JSON.parse(row.metricsJson) as { rankedKeywords?: number; returnedKeywords?: number };
-        const ranked = metrics.rankedKeywords ?? 0;
-        return ranked > 0 && (metrics.returnedKeywords ?? 0) >= ranked;
-      });
-      if (complete && (newestComplete === null || complete.day > newestComplete)) newestComplete = complete.day;
+      // The everyday call speaks for itself, at its newest. A list's day is
+      // complete only when its pages, taken together, cover it
+      // (`listDayComplete`) — no longer when any one page said so.
+      const complete = list
+        ? newestCompleteListDay(rows)
+        : rows.slice(0, 1).find((row) => {
+          const metrics = JSON.parse(row.metricsJson) as { rankedKeywords?: number; returnedKeywords?: number };
+          const ranked = metrics.rankedKeywords ?? 0;
+          return ranked > 0 && (metrics.returnedKeywords ?? 0) >= ranked;
+        })?.day ?? null;
+      if (complete && (newestComplete === null || complete > newestComplete)) newestComplete = complete;
     }
     return newestComplete;
   },
@@ -367,6 +439,8 @@ export const markLost = internalMutation({
     for (const id of args.ids) {
       const row = await ctx.db.get(id);
       if (!row || row.position === undefined) continue;
+      // Seen again since the rebuild read it: not lost (collection reliability plan, 2.2).
+      if (row.day >= args.day) continue;
       // Written out rather than spread, so the position it no longer holds —
       // and the traffic and page figures that came with it — cannot ride
       // along from the old row. The search's own facts stay: they still hold.
@@ -518,6 +592,7 @@ export const writeRankingDay = internalMutation({
     buying: v.number(),
     researching: v.number(),
     branded: v.number(),
+    intentSplit: intentSplitValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -686,6 +761,56 @@ function isThisPlace(row: Doc<"seoWebsiteMetrics">, locationCode: number): boole
 /** A site's newest ranked-keywords totals read to find this place's: enough for every place watching it. */
 const PLACES_READ_FOR_COMPLETE_DAY = 50;
 
+/** A list's newest page figures read: a list is up to a few dozen pages a day, from each place. */
+const LIST_PAGES_READ_FOR_COMPLETE_DAY = 200;
+
+/** What a list page recorded about the whole list, for `listDayComplete`. */
+type ListPageFigures = { listOffset: number; listLimit: number; listItems: number; listDropped: number; listTotal?: number };
+
+/**
+ * Whether one day's pages of a full keyword list cover the whole of it: from
+ * the start with no gap, each page bringing every row it should have — a full
+ * page, or the rest of the list — with nothing dropped to fit, up to
+ * DataForSEO's total across every row kind. Only then can a search missing
+ * from it be called lost (collection reliability plan, 2.1 and 2.2). A list
+ * held to a limit below the site's total is never whole, so it never calls
+ * anything lost, as before.
+ */
+export function listDayComplete(pages: ListPageFigures[]): boolean {
+  const total = Math.max(0, ...pages.map((page) => page.listTotal ?? 0));
+  if (total <= 0) return false;
+  const byOffset = new Map(pages.map((page) => [page.listOffset, page]));
+  for (let offset = 0; offset < total;) {
+    const page = byOffset.get(offset);
+    if (!page || page.listDropped > 0 || page.listLimit <= 0) return false;
+    if (page.listItems < Math.min(page.listLimit, total - offset)) return false;
+    offset += page.listLimit;
+  }
+  return true;
+}
+
+/** The newest day whose list pages cover the whole list, or null. Pages filed before they recorded their figures never count. */
+function newestCompleteListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null {
+  const byDay = new Map<string, ListPageFigures[]>();
+  for (const row of rows) {
+    const figures = JSON.parse(row.metricsJson) as Partial<ListPageFigures>;
+    if (typeof figures.listOffset !== "number" || typeof figures.listLimit !== "number" || typeof figures.listItems !== "number") continue;
+    const pages = byDay.get(row.day) ?? [];
+    pages.push({
+      listOffset: figures.listOffset,
+      listLimit: figures.listLimit,
+      listItems: figures.listItems,
+      listDropped: figures.listDropped ?? 0,
+      ...(typeof figures.listTotal === "number" ? { listTotal: figures.listTotal } : {}),
+    });
+    byDay.set(row.day, pages);
+  }
+  for (const day of [...byDay.keys()].sort().reverse()) {
+    if (listDayComplete(byDay.get(day) ?? [])) return day;
+  }
+  return null;
+}
+
 /**
  * DataForSEO's own position bands for everything a site ranks for, grouped
  * into ours, from a ranked-keywords metrics row — or null for a row filed
@@ -707,16 +832,21 @@ function bandsFrom(figures: Record<string, number | null | undefined>): BandCoun
  * After a site is rebuilt, every content gap it takes part in: the gap of each
  * hold in each group the site belongs to, since every hold is a Site (D17) and
  * each one's gap is read against the rest of its group.
+ *
+ * A page of `GAP_HOLDS_PER_STEP` holds at a time. All at once, a website
+ * watched by two hundred companies with their rivals was tens of thousands of
+ * requests in one transaction — past the thousand jobs one may schedule, so
+ * the rebuild that asked failed (reliability plan 3.4).
  */
 export const requestGapsFor = internalMutation({
-  args: { websiteId: v.id("websites"), locationCode: v.number() },
-  returns: v.null(),
+  args: { websiteId: v.id("websites"), locationCode: v.number(), cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.object({ cursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
-    const holds = await ctx.db
+    const page = await ctx.db
       .query("companyWebsites")
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(200);
-    for (const hold of holds) {
+      .paginate({ cursor: args.cursor ?? null, numItems: GAP_HOLDS_PER_STEP });
+    for (const hold of page.page) {
       const owner = isTrackedHold(hold) ? await pairedOwnedHold(ctx, hold) : hold;
       if (!owner) continue;
       if ((owner.locationCode ?? DEFAULT_LOCATION_CODE) !== args.locationCode) continue;
@@ -727,6 +857,9 @@ export const requestGapsFor = internalMutation({
         .filter(isTrackedHold);
       for (const member of [owner, ...competitors]) await requestGapRebuild(ctx, member._id);
     }
-    return null;
+    return { cursor: page.continueCursor, isDone: page.isDone };
   },
 });
+
+/** Holds a step of `requestGapsFor` asks for: each is its group of up to two hundred, inside a transaction's thousand jobs. */
+const GAP_HOLDS_PER_STEP = 4;

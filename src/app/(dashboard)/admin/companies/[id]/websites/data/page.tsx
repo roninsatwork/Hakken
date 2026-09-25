@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Clock, Info } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingSwitch, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -22,23 +21,27 @@ import {
   type ScheduleDraft,
 } from "@/src/app/(dashboard)/admin/_lib/scheduleConfig";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
+import { CollectNow } from "./CollectNow";
 import { CollectionCost } from "./CollectionCost";
 import { CollectionLimits } from "./CollectionLimits";
 
 /**
  * When this company's SEO data gets collected.
  *
- * **This is the ordinary schedule system, looked at from the company.** The row
- * behind it is a `schedules` row like any other: the same dispatcher wakes it,
- * the same `intervalStr` format describes it, the same `ScheduleBuilder` edits
- * it, and the run it starts appears in the agent's runs, logs and costs
- * alongside every other run.
+ * **A setting the DataForSEO Planner reads, not an alarm.** The row behind it
+ * is a `schedules` row in the platform's own format — the same `intervalStr`,
+ * the same helpers — but it names no agent and wakes nothing. The Planner and
+ * the Collector each run on their own agent schedule; on each of its runs the
+ * Planner reads every company's row here and queues what has come due, and the
+ * Collector sends it on its next run. Two agents, two agent schedules (Anthony,
+ * 2026-09-25).
  *
- * It did not begin that way. The first version invented a cadence enum, an
- * active flag and a next-run calculation of its own, none of which any
- * dispatcher read — a settings form that nothing acted on. Anthony, 2026-09-21:
- * *"why does this not work like the agent schedules — I did say re-use, don't
- * build new."* The parallel machinery was deleted rather than wired up.
+ * It began as a cadence enum, an active flag and a next-run calculation of its
+ * own, none of which any dispatcher read — a settings form that nothing acted
+ * on. Anthony, 2026-09-21: *"why does this not work like the agent schedules —
+ * I did say re-use, don't build new."* Then, until 2026-09-25, each company's
+ * row named the Collector and the dispatcher woke it per company, which sent a
+ * queue nothing had filled.
  */
 export default function CompanyDataCollectionPage() {
   const t = useTranslations("admin.companyDataCollection");
@@ -50,9 +53,7 @@ export default function CompanyDataCollectionPage() {
   const schedule = useQuery(api.scheduler.getCompanySchedule, { companyId });
   const agents = useQuery(api.agents.list);
   const scheduleSummary = useScheduleSummary();
-  const createSchedule = useMutation(api.scheduler.createSchedule);
-  const updateSchedule = useMutation(api.scheduler.updateSchedule);
-  const createAgentFromTemplate = useMutation(api.agents.createAgentFromTemplate);
+  const saveCompanySchedule = useMutation(api.scheduler.saveCompanySchedule);
   const action = useAdminAction({ scope: "admin-company-data" });
 
   const [draft, setDraft] = useState<ScheduleDraft>(createDefaultScheduleDraft());
@@ -73,37 +74,6 @@ export default function CompanyDataCollectionPage() {
     setIsActive(schedule?.isActive ?? false);
   }
 
-  // The Collector, found by its role (`systemKey`), never its name: looking it
-  // up by name broke this screen once the agent was renamed "DataForSEO Agent
-  // Collector", and a company with no schedule yet could not be switched on
-  // (`convex/utils/agentRoles.ts`).
-  const collectorAgent = agents?.find((agent) => agent.systemKey === "DATAFORSEO_COLLECTOR");
-  const canSchedule = Boolean(schedule || collectorAgent);
-
-  /**
-   * Create the collecting agent from its template.
-   *
-   * It arrives inactive, like every agent created from a template, so nothing
-   * starts spending the moment this is pressed. The schedule below is what
-   * turns collection on, and it is a separate deliberate act.
-   */
-  const handleCreateAgent = async () => {
-    setError("");
-
-    const outcome = await action.run(
-      async () => {
-        await createAgentFromTemplate({ templateId: "dataforseo-agent" });
-      },
-      {
-        key: "create-agent",
-        suppressErrorToast: true,
-        fallbackMessage: t("errors.createAgentFailed"),
-      },
-    );
-
-    if (!outcome.ok) setError(outcome.message);
-  };
-
   const handleSave = async () => {
     setError("");
     setSaved(false);
@@ -113,30 +83,13 @@ export default function CompanyDataCollectionPage() {
       setError(problem);
       return;
     }
-    if (!schedule && !collectorAgent) {
-      setError(t("noAgentBody"));
-      return;
-    }
 
-    const intervalStr = serializeScheduleDraft(draft);
     const outcome = await action.run(
       async () => {
-        if (schedule) {
-          await updateSchedule({
-            scheduleId: schedule._id,
-            name: schedule.name,
-            agentId: schedule.agentId,
-            companyId,
-            intervalStr,
-            isActive,
-          });
-          return;
-        }
-        await createSchedule({
-          name: t("scheduleName", { company: company?.name ?? "" }),
-          agentId: collectorAgent!._id,
+        await saveCompanySchedule({
           companyId,
-          intervalStr,
+          name: t("scheduleName", { company: company?.name ?? "" }),
+          intervalStr: serializeScheduleDraft(draft),
           isActive,
         });
       },
@@ -153,34 +106,15 @@ export default function CompanyDataCollectionPage() {
         icon={<Clock className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
+        action={
+          <CollectNow
+            companyId={companyId}
+            companyName={company?.name ?? ""}
+            collecting={schedule?.isActive === true}
+            agents={agents}
+          />
+        }
       />
-
-      {/*
-        The banner used to end at "create one from its template in the Agents
-        section", which was an instruction nobody could follow: the template
-        picker was taken off the new-agent screen, so no screen created an
-        agent from a template at all. The button is here rather than a link
-        because there is exactly one template this screen can mean, and asking
-        someone to go and find it is asking them to do the lookup the screen
-        has already done.
-      */}
-      {!canSchedule ? (
-        <div className="flex flex-wrap items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div className="flex min-w-[16rem] flex-1 flex-col gap-1">
-            <span className="text-[13px] font-medium text-foreground">{t("noAgentTitle")}</span>
-            <span className="max-w-2xl text-[12px] leading-relaxed text-muted">{t("noAgentBody")}</span>
-          </div>
-          <Button
-            variant="accent"
-            className="ml-auto shrink-0 px-3 py-1.5 text-[12px]"
-            onClick={handleCreateAgent}
-            disabled={action.isBusy("create-agent")}
-          >
-            {t("createAgent")}
-          </Button>
-        </div>
-      ) : null}
 
       <SettingsCard title={t("settingsTitle")}>
         <SettingSwitch

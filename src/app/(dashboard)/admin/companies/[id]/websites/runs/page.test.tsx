@@ -76,6 +76,21 @@ describe("Collection runs", () => {
     expect(screen.getByText("admin.collectionRuns.status.complete")).toBeInTheDocument();
   });
 
+  it("says how the hourly check last went, and plainly when it is failing", async () => {
+    // It was on Admin → Health alone (reliability plan V3).
+    showRuns([run()]);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "seoRunReports:readHourlyCheck": {
+        lastRanAt: Date.parse("2026-09-25T09:00:00Z"), ok: false, error: "Too many bytes read in a single function execution",
+        lastSucceededAt: null, failuresInARow: 3, overdue: false,
+      },
+    }));
+    renderWithProviders(<CompanyCollectionRunsPage />);
+
+    expect(await screen.findByText("admin.collectionRuns.hourlyCheck.title")).toBeInTheDocument();
+    expect(screen.getByText("admin.collectionRuns.hourlyCheck.failed")).toBeInTheDocument();
+  });
+
   it("says the AI is still being added up for a run too new to have a report", async () => {
     showRuns([run({ aiCostUsd: null, websites: null, collectorRuns: null })]);
     renderWithProviders(<CompanyCollectionRunsPage />);

@@ -42,6 +42,7 @@ const TONE_BY_STATUS: Record<string, StatusTone> = {
   HEALTHY: "success",
   CONNECTED: "success",
   LOW: "success",
+  DONE: "success",
   // Finished badly
   FAILED: "danger",
   FAIL: "danger",
@@ -62,11 +63,18 @@ const TONE_BY_STATUS: Record<string, StatusTone> = {
   STALE: "warning",
   DEGRADED: "warning",
   MEDIUM: "warning",
+  // A collection stopped at a limit: it kept what it had, and wants a look.
+  CAPPED_PLAN: "warning",
+  CAPPED_SPEND: "warning",
   // In motion
   RUNNING: "info",
   IN_PROGRESS: "info",
   QUEUED: "info",
   STREAMING: "info",
+  // A collection on its way: its list being written, sent, or awaiting answers.
+  EXPANDING: "info",
+  SENDING: "info",
+  COLLECTING: "info",
   // Stopped without verdict
   CANCELLED: "neutral",
   SKIPPED: "neutral",

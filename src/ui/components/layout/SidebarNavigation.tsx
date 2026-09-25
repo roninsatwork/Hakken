@@ -9,6 +9,7 @@ import {
   Sidebar,
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "./navStyles";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,7 +47,7 @@ export function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit
       {isActive && (
         <motion.div
           layoutId="active-pill"
-          className="absolute inset-0 bg-foreground/10 border border-border-dim rounded-[8px] z-0 shadow-sm"
+          className={cn("absolute inset-0 rounded-[8px] z-0", NAV_ACTIVE_PILL)}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
         />
       )}
@@ -66,7 +67,7 @@ export function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit
 
   const className = cn(
     "py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full",
-    isActive ? "text-foreground font-medium" : "text-secondary hover:text-foreground"
+    isActive ? NAV_ACTIVE_TEXT : NAV_IDLE_TEXT
   );
 
   if (href) {
@@ -92,7 +93,7 @@ export function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onTo
       {isActive && (
         <motion.div
           layoutId="active-pill"
-          className="absolute inset-0 bg-foreground/10 border border-border-dim rounded-[10px] z-0 shadow-sm"
+          className={cn("absolute inset-0 rounded-[10px] z-0", NAV_ACTIVE_PILL)}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
         />
       )}

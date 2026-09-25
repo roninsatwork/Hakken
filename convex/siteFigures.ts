@@ -2,7 +2,7 @@ import { v, type Infer } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { answerPlace, type AiEngine } from "./seoAiEngines";
-import { bandCountsValidator, engineDayValidator, type EngineDay } from "./utils/siteShapes";
+import { bandCountsValidator, engineDayValidator, type EngineDay, intentSplitValidator } from "./utils/siteShapes";
 
 /**
  * Reading a site's day summaries (`siteDaySummaries`): its newest figures, and
@@ -114,6 +114,8 @@ export const pointValidator = v.object({
   aiOverviewRefs: optionalNumber,
   crawledPages: optionalNumber,
   onPageScore: optionalNumber,
+  // The searches by what they are for, with their visits (`intentSplit`).
+  intentSplit: v.optional(intentSplitValidator),
   // Flows: added up over the step.
   rankedUp: v.number(),
   rankedDown: v.number(),
@@ -144,7 +146,7 @@ const LEVELS = [
   "allBands", "trafficValue", "keywordsNew", "keywordsUp", "keywordsDown", "keywordsLost",
   "spamScore", "brokenPages", "referringMainDomains",
   "paidKeywords", "paidTraffic", "paidTrafficCost", "featuredSnippets", "localPacks", "aiOverviewRefs",
-  "crawledPages", "onPageScore",
+  "crawledPages", "onPageScore", "intentSplit",
 ] as const;
 
 /**

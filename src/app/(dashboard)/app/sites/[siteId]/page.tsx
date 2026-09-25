@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { LayoutDashboard } from "lucide-react";
@@ -11,13 +10,14 @@ import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SiteChartCard } from "../_components/SiteChartCard";
-import { SiteFigure } from "../_components/SiteFigure";
 import { SITE_SERIES_COLOURS, SiteLineChart, SiteStackedAreaChart } from "../_components/SiteCharts";
 import { useSiteRange } from "../_components/SiteDateRange";
-import { formatNumber, formatShortDay, movement, movementClass, toCsv } from "../_components/siteFormat";
+import { formatShortDay, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
-import { sharedSiteQuery } from "../_components/useSiteParam";
+import { newestOfEach } from "./newestOfEach";
+import { OverviewPanels } from "./OverviewPanels";
+import { OverviewSections } from "./OverviewSections";
 
 type Measure = "estimatedTraffic" | "trafficValue" | "keywords" | "pages" | "referringDomains" | "backlinks" | "domainRank" | "aiNamed" | "crawledPages";
 type Tab = "metrics" | "competitors" | "years";
@@ -45,26 +45,24 @@ function valueOf(point: Point | null | undefined, measure: Measure): number | nu
   }
 }
 
-function Change({ now, before }: { now: number | null; before: number | null }) {
-  const t = useTranslations("sites.overview");
-  if (now === null || before === null) return <span className="text-muted">{t("noComparison")}</span>;
-  const moved = movement(Math.round(now - before));
-  return <span className={movementClass(moved.tone)}>{moved.tone === "none" ? t("unchanged") : moved.text}</span>;
-}
-
 /**
- * Overview: the headline numbers for the dates chosen and what changed since
- * the day before them; the performance chart with tick boxes, and tabs to lay
- * the competitors over it or set this year against last (D11); the position
- * bands under it. Every figure is a day summary; nothing here counts.
+ * Overview, laid out as Ahrefs lays out a site's dashboard (drawn on the
+ * "Hakken Sites Overview Drawing" canvas and agreed, Anthony, 2026-09-25):
+ * three headline panels — Search, Backlink profile, AI answers — with what
+ * changed since the day before the dates chosen; the performance chart with
+ * tick boxes, and tabs to lay the competitors over it or set this year
+ * against last (D11); the position bands; then pages by kind and by visits,
+ * the searches by what they are for, and the top competitors, each chart on
+ * a row of its own. The figures are day summaries; the splits come from
+ * `overviewExtras`, one bounded read each.
  */
 export default function SiteOverviewPage() {
   const t = useTranslations("sites.overview");
   const tm = useTranslations("sites.measures");
   const siteId = useSiteId();
   const site = useSite();
-  const params = useSearchParams();
   const range = useSiteRange();
+  const extras = useQuery(api.siteOverview.overviewExtras, { siteId });
   const [tab, setTab] = useState<Tab>("metrics");
   const [shown, setShown] = useState<Record<Measure, boolean>>({
     estimatedTraffic: true,
@@ -83,16 +81,13 @@ export default function SiteOverviewPage() {
   const everyone = useSeries(range.from, range.to, range.step, true, tab !== "competitors");
   const twoYears = useSeries(shiftDay(range.to, -729), range.to, "month", false, tab !== "years");
 
-  // The dates travel with a link; the Overview's own tab and measures do not.
-  const query = sharedSiteQuery(params);
-  const link = (segment: string) => `/app/sites/${siteId}${segment ? `/${segment}` : ""}${query}`;
   const exportBase = `${site?.host ?? "site"}-${range.from}-to-${range.to}`;
 
   if (own === undefined) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true">
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-sidebar/30" />)}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {[0, 1, 2].map((index) => <div key={index} className="h-64 animate-pulse rounded-2xl bg-sidebar/30" />)}
         </div>
         <div className="h-72 animate-pulse rounded-2xl bg-sidebar/30" />
       </div>
@@ -101,9 +96,8 @@ export default function SiteOverviewPage() {
 
   const line = own[0];
   const points = line?.points ?? [];
-  const latest = points.length > 0 ? points[points.length - 1] : null;
+  const latest = newestOfEach(points);
   const before = line?.before ?? null;
-  const enginesNamed = (point: Point | null) => (point && point.ai.length > 0 ? point.ai.filter((engine) => engine.named > 0).length : null);
 
   const metricRows = points.map((point) => ({
     label: formatShortDay(point.day),
@@ -211,46 +205,7 @@ export default function SiteOverviewPage() {
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <SiteFigure
-          href={link("ai/mentions")}
-          label={t("aiMentions")}
-          value={site?.counts.aiNamed === null || site?.counts.aiAsked === null || !site
-            ? "–"
-            : t("ofEngines", { named: site.counts.aiNamed, asked: site.counts.aiAsked })}
-          detail={<Change now={enginesNamed(latest)} before={enginesNamed(before)} />}
-        />
-        <SiteFigure
-          href={link("keywords/pages")}
-          label={t("estimatedTraffic")}
-          value={formatNumber(valueOf(latest, "estimatedTraffic"))}
-          detail={<Change now={valueOf(latest, "estimatedTraffic")} before={valueOf(before, "estimatedTraffic")} />}
-        />
-        <SiteFigure
-          href={link("keywords")}
-          label={t("keywords")}
-          value={formatNumber(valueOf(latest, "keywords"))}
-          detail={
-            <>
-              <Change now={valueOf(latest, "keywords")} before={valueOf(before, "keywords")} />
-              {(latest?.allBands ?? latest?.bands) ? (
-                <span className="text-muted"> · {t("inTop3", { count: (latest?.allBands ?? latest?.bands)!.p01_03 })}</span>
-              ) : null}
-            </>
-          }
-        />
-        <SiteFigure
-          href={link("backlinks")}
-          label={t("linkingWebsites")}
-          value={formatNumber(valueOf(latest, "referringDomains"))}
-          detail={
-            <>
-              <Change now={valueOf(latest, "referringDomains")} before={valueOf(before, "referringDomains")} />
-              {latest?.domainRank !== undefined ? <span className="text-muted"> · {t("rank", { rank: latest.domainRank })}</span> : null}
-            </>
-          }
-        />
-      </div>
+      <OverviewPanels latest={latest} before={before} extras={extras} />
 
       <div id="performance">
         <SiteChartCard
@@ -296,6 +251,8 @@ export default function SiteOverviewPage() {
           series={BANDS.map((band, index) => ({ key: band, name: t(`bands.${band}`), colour: SITE_SERIES_COLOURS[index] }))}
         />
       </SiteChartCard>
+
+      <OverviewSections latest={latest} extras={extras} />
     </div>
   );
 }

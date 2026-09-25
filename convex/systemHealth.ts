@@ -17,6 +17,7 @@ import * as healthShapes from "./utils/healthShapes";
 import { listDisabledPurgePipelines } from "./purgeScheduleService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import { getDecisionHealth } from "./decisionHealth";
+import { startsRuns } from "./seoScheduleService";
 import {
   type AlertRuleStatus,
   type AnalyticsHealthReport,
@@ -617,10 +618,13 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     }))
   );
 
+  // Companies' Collection schedules start nothing and have no next run, so
+  // they are neither overdue nor missing one (`startsRuns`).
   const overdueScheduleCandidates = await ctx.db
     .query("schedules")
     .withIndex("by_active_next_run", (q) => q.eq("isActive", true).lte("nextRunAt", overdueScheduleCutoffTs))
     .order("asc")
+    .filter(startsRuns)
     .take(HEALTH_COLLECTION_LIMIT);
   const scopedOverdueScheduleCandidates = isPlatformScope(scope)
     ? overdueScheduleCandidates
@@ -641,6 +645,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     .query("schedules")
     .withIndex("by_createdAt")
     .order("desc")
+    .filter(startsRuns)
     .take(HEALTH_COLLECTION_LIMIT);
   const scopedActiveScheduleRows = isPlatformScope(scope)
     ? activeScheduleRows

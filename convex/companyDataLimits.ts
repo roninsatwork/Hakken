@@ -20,10 +20,14 @@ import { appError } from "./utils/appError";
  *   first, every link rather than one per linking website.
  *
  * Absent means the defaults. The screen offers the choices below; anything
- * else is refused, so a typo cannot buy a million rows.
+ * else is refused, so a typo cannot buy a million rows. Finer steps below a
+ * thousand since 2026-09-25, where a competitor's links are cut down (Anthony:
+ * "100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000"). A list asks a
+ * thousand rows a request and its last page only what is left of the limit
+ * (`listPages` in `sitePagedLists.ts`), so any of these is bought exactly.
  */
 
-export const DATA_LIMIT_CHOICES = [100, 1_000, 2_000, 5_000, 10_000] as const;
+export const DATA_LIMIT_CHOICES = [100, 250, 500, 750, 1_000, 2_500, 5_000, 7_500, 10_000] as const;
 
 /** Where a company starts: a small business's whole keyword list, and its links. */
 export const DEFAULT_DATA_LIMIT = 1_000;

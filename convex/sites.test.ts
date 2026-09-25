@@ -148,6 +148,7 @@ describe("one company never sees another's websites", () => {
       () => asRonins.query(api.siteCompetitors.listContentGap, { siteId, paginationOpts: page }),
       () => asRonins.query(api.siteCompetitors.listSuggested, { siteId }),
       () => asRonins.query(api.siteCompetitors.marketMap, { siteId }),
+      () => asRonins.query(api.siteOverview.overviewExtras, { siteId }),
       () => asRonins.query(api.siteAnswers.answerQuestions, { siteId }),
       () => asRonins.query(api.siteAnswers.listAnswers, { siteId, paginationOpts: page, prompt: "best agencies in leeds", ...range }),
       () => asRonins.query(api.siteGoogleSerp.listAbove, { siteId }),
@@ -649,6 +650,9 @@ describe("pages the engines cite (D17)", () => {
     await answer(own.websiteId, surrey, ["https://ronins.co.uk/web-design/"]);
     await answer(theirs.websiteId, leeds, ["https://www.ronins.co.uk/web-design/", "https://ronins.co.uk/about/"]);
     await answer(theirs.websiteId, leeds, ["https://ronins.co.uk/about/"]);
+    // Each cited page is recounted in its own job, a moment after the filing.
+    vi.advanceTimersByTime(1);
+    await t.finishInProgressScheduledFunctions();
 
     const pages = async (as: Awaited<ReturnType<typeof member>>, siteId: Id<"companyWebsites">) =>
       (await as.query(api.siteAi.listCitedPages, { siteId })).map((row) => [row.page, row.times]);
@@ -718,9 +722,100 @@ describe("links and the market", () => {
     const organic = await asRonins.query(api.siteCompetitors.listOrganicCompetitors, { siteId: own.holdId });
     expect(organic.find((row) => row.host === "found.co.uk")).toMatchObject({ domainKeywords: 4757, domainTraffic: 1163.4, day: DAY });
   });
+
+  test("the Overview lists every competitor set up, with the searches shared from either side's found list", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
+    const listed = await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
+    const theirList = await hold(t, ronins, "pixelfield.co.uk", "TRACKED", own.websiteId);
+    const neither = await hold(t, ronins, "quiet.co.uk", "TRACKED", own.websiteId);
+    await summary(t, own.websiteId, DAY, { rankedKeywordsTotal: 807, estimatedTraffic: 1937 });
+    await summary(t, listed.websiteId, DAY, { rankedKeywordsTotal: 754, estimatedTraffic: 2158 });
+    await summary(t, theirList.websiteId, DAY, { rankedKeywordsTotal: 3100, estimatedTraffic: 9000 });
+    await summary(t, neither.websiteId, DAY, { rankedKeywordsTotal: 90, estimatedTraffic: 40 });
+    await t.run(async (ctx) => {
+      const found = (companyWebsiteId: Id<"companyWebsites">, host: string, intersections: number, kind: "COMPETITOR" | "DIRECTORY") =>
+        ctx.db.insert("discoveredCompetitors", { companyWebsiteId, companyId: ronins, host, intersections, kind, discoveredAt: Date.now() });
+      // Found for the site: one competitor it tracks, one it does not, and a directory.
+      await found(own.holdId, "lightflows.co.uk", 120, "COMPETITOR");
+      await found(own.holdId, "found.co.uk", 300, "COMPETITOR");
+      await found(own.holdId, "yell.com", 500, "DIRECTORY");
+      // Not in the site's list, but the site is in this competitor's own.
+      await found(theirList.holdId, "ronins.co.uk", 45, "COMPETITOR");
+    });
+
+    const extras = await (await member(t, ronins)).query(api.siteOverview.overviewExtras, { siteId: own.holdId });
+    expect(extras.competitors.you).toEqual({ keywords: 807, visits: 1937 });
+    // Every one set up — not only the found — most searches shared first, and a
+    // competitor neither list holds says it is not known rather than nought.
+    expect(extras.competitors.rivals.map((row) => [row.host, row.keywords, row.visits, row.shared])).toEqual([
+      ["lightflows.co.uk", 754, 2158, 120],
+      ["pixelfield.co.uk", 3100, 9000, 45],
+      ["quiet.co.uk", 90, 40, null],
+    ]);
+    expect(extras.competitors.rivals.map((row) => row.siteId)).toEqual([listed.holdId, theirList.holdId, neither.holdId]);
+    // What Organic competitors lists as competitors: the directory is not one.
+    expect(extras.competitors.found).toBe(2);
+  });
+});
+
+describe("a website watched by many companies", () => {
+  test("asks for every content gap it takes part in, a few holds a step", async () => {
+    // All at once, a website watched by two hundred companies with their
+    // rivals was more requests than one transaction may schedule, and the
+    // rebuild that asked failed (reliability plan 3.4).
+    const t = harness();
+    const rivals: Array<Awaited<ReturnType<typeof hold>>> = [];
+    let watched: Id<"websites"> | null = null;
+    for (let index = 0; index < 12; index += 1) {
+      const companyId = await company(t, `Company ${index}`);
+      const own = await hold(t, companyId, `own-${index}.co.uk`, "OWNED");
+      const big = await hold(t, companyId, "bigrival.co.uk", "TRACKED", own.websiteId);
+      watched = big.websiteId;
+      rivals.push(await hold(t, companyId, `small-${index}.co.uk`, "TRACKED", own.websiteId));
+    }
+
+    let steps = 0;
+    for (let cursor: string | null = null; ;) {
+      const asked: { cursor: string; isDone: boolean } =
+        await t.mutation(internal.siteSummaries.requestGapsFor, { websiteId: watched!, locationCode: UK, cursor });
+      steps += 1;
+      if (asked.isDone) break;
+      cursor = asked.cursor;
+    }
+
+    expect(steps).toBeGreaterThan(1);
+    const gaps = await t.run(async (ctx) => (await ctx.db.query("siteSummaryRequests").collect())
+      .filter((row) => row.key.startsWith("gap:")));
+    // Each company's group: its own site, the big rival and its small one.
+    expect(gaps).toHaveLength(12 * 3);
+    expect(gaps.map((row) => row.key)).toEqual(expect.arrayContaining(rivals.map((row) => `gap:${row.holdId}`)));
+  });
 });
 
 describe("reading stored results again (free)", () => {
+  test("a run stopped for time carries on from where it got to, with what it had counted", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
+    await fileRanks(t, own.websiteId, DAY, [{ keyword: "ai agency", position: 2, url: "https://ronins.co.uk/ai-agency/", searchVolume: 700 }]);
+    const pullId = (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))[0]._id;
+    await t.run(async (ctx) => await ctx.db.patch(pullId, {
+      completedAt: Date.parse(`${DAY}T12:00:00Z`),
+      resultJson: JSON.stringify([{ total_count: 1, items: [] }]),
+    } as never));
+
+    // The ranked-keywords results were read by the run before: this one starts after them.
+    const counted = { results: 7, keywords: 3, pages: 0, answers: 0, competitors: 0, metrics: 2 };
+    const read = await t.action(internal.siteBackfillRaw.readStoredResults, {
+      resume: { operation: 1, cursor: null, site: 0 },
+      counts: counted,
+    });
+
+    expect(read).toMatchObject({ ...counted, continued: false });
+  });
+
   test("fills the new fields from a stored ranked-keywords result without judging anything again", async () => {
     const t = harness();
     const ronins = await company(t, "Ronins");

@@ -17,8 +17,8 @@ import type { TableNames } from "./_generated/dataModel";
  *
  * Refuses to run unless the deployment says it may: `SEO_TEST_DATA_RESET` must
  * be `allowed`, which is set on dev and never on a live deployment. Without
- * the confirm word it only counts. Deletes in small pages — a stored answer
- * can be half a megabyte — and continues itself until every table is empty.
+ * the confirm word it only counts. Deletes in small pages — a stored answer's
+ * row can be most of a megabyte — and continues itself until every table is empty.
  *
  *   npx convex run seoTestDataReset:clearCollectedSeoData
  *   npx convex run seoTestDataReset:clearCollectedSeoData '{"confirm":"DELETE_SEO_DATA"}'
@@ -29,6 +29,9 @@ const CONFIRM_WORD = "DELETE_SEO_DATA";
 /** Every table holding what DataForSEO returned, or what was worked out from it. Page sizes suit each row's size. */
 const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "seoDataPulls", page: 16 },
+  // The answers, kept apart from the requests since 2026-09-25. Small pages:
+  // a row, whole answer or one part of one, can be most of a megabyte.
+  { table: "seoPullAnswers", page: 8 },
   { table: "seoCycleLines", page: 500 },
   { table: "seoCollectionCycles", page: 200 },
   { table: "seoRunReports", page: 200 },

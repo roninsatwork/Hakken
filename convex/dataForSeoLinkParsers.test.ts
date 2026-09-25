@@ -11,7 +11,8 @@ import {
   parseReferringIps,
   subnetOf,
 } from "./dataForSeoLinkParsers";
-import { expandSeoResult, slimSeoResult, STORED_LIST_CHARS } from "./dataForSeoSlim";
+import { expandSeoResult, rowsLeftOffIn, slimSeoResult, STORED_LIST_BYTES } from "./dataForSeoSlim";
+import { ANSWER_PART_BYTES, utf8Length } from "./seoPullAnswers";
 import { buildSeoTask, findSeoOperation, seoSiteOperationParams, seoSiteOperations } from "./dataForSeoRegistry";
 
 /**
@@ -78,7 +79,7 @@ describe("trimming an answer before it is stored", () => {
     expect(expandSeoResult(answer)).toEqual(answer);
   });
 
-  test("a thousand links from long addresses fit, and a list too big for the copy files its strongest rows", () => {
+  test("a thousand links from long addresses are kept whole, and a list too big even in parts files its strongest rows", () => {
     const links = (count: number, urlLength: number) => [{
       target: "big.co.uk", total_count: 50_000,
       items: Array.from({ length: count }, (_, index) => ({
@@ -89,14 +90,20 @@ describe("trimming an answer before it is stored", () => {
         rank: 5, attributes: ["noopener"], links_count: 1, page_from_title: "A title", text_pre: "words around it",
       })),
     }];
-    // Addresses of 90 characters were past the ceiling kept as objects.
+    // Addresses of 90 characters were past the ceiling kept as objects; as a table, one row of storage.
     const fits = JSON.stringify(slimSeoResult("backlinks_list", links(1_000, 90)));
-    expect(fits.length).toBeLessThan(STORED_LIST_CHARS);
+    expect(utf8Length(fits)).toBeLessThan(ANSWER_PART_BYTES);
     expect(parseBacklinkList(expandSeoResult(JSON.parse(fits))).rows).toHaveLength(1_000);
 
-    const huge = slimSeoResult("backlinks_list", links(1_000, 1_500)) as Array<{ packedItems: { rows: unknown[]; dropped: number } }>;
-    expect(JSON.stringify(huge).length).toBeLessThanOrEqual(STORED_LIST_CHARS);
+    // Addresses of 1,500 characters lost rows before answers were kept in parts (2026-09-25); now none.
+    const long = slimSeoResult("backlinks_list", links(1_000, 1_500));
+    expect(rowsLeftOffIn(long)).toBe(0);
+    expect(parseBacklinkList(expandSeoResult(long)).rows).toHaveLength(1_000);
+
+    const huge = slimSeoResult("backlinks_list", links(1_000, 4_000)) as Array<{ packedItems: { rows: unknown[]; dropped: number } }>;
+    expect(utf8Length(JSON.stringify(huge))).toBeLessThanOrEqual(STORED_LIST_BYTES);
     expect(huge[0].packedItems.dropped).toBeGreaterThan(0);
+    expect(rowsLeftOffIn(huge)).toBe(huge[0].packedItems.dropped);
     const kept = parseBacklinkList(expandSeoResult(huge)).rows;
     expect(kept.length + huge[0].packedItems.dropped).toBe(1_000);
     // The lists come strongest first, so what is left off is the weakest.

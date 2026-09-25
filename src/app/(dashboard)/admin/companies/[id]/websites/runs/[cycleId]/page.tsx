@@ -25,6 +25,8 @@ import {
 import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
 import { CostFigure, dollars } from "../../CostFigure";
 import { RunStatus } from "../RunStatus";
+import { CloseRun } from "./CloseRun";
+import { RunAttention } from "./RunAttention";
 import { sharePercent, useRunFormat } from "../runFormat";
 
 /** The "where the money went" bar's order and colours, one per kind of spend. */
@@ -94,15 +96,21 @@ export default function CollectionRunPage() {
       : <span className="font-mono text-[12px] text-success">−{dollars(-change.usd)}</span>;
   };
 
-  const description = !report || report.byCollectorRun.length === 0
-    ? tDetail("descriptionUnsent", { company: data.companyName })
-    : tDetail("description", {
+  const describe = () => {
+    // Closed with nothing bought: every request was served from data already held.
+    if (report && report.requests === 0 && !data.open && data.reused > 0) {
+      return tDetail("descriptionReused", { company: data.companyName, reused: data.reused });
+    }
+    if (!report || report.byCollectorRun.length === 0) return tDetail("descriptionUnsent", { company: data.companyName });
+    return tDetail("description", {
       company: data.companyName,
       websites,
       runs: report.byCollectorRun.length,
       from: clock(report.byCollectorRun[0]?.startedAt ?? report.firstSentAt ?? data.startedAt),
       to: clock(report.lastSentAt ?? data.startedAt),
     });
+  };
+  const description = describe();
 
   const header = (
     <DetailHeader
@@ -121,24 +129,36 @@ export default function CollectionRunPage() {
             failed={report.failed}
             final={report.final}
           />
+          {data.closedByHand ? (
+            <StatusPill tone="neutral">
+              {data.closedByHand.name
+                ? tDetail("close.closedBy", { name: data.closedByHand.name, count: data.closedByHand.unsent })
+                : tDetail("close.closedByHand", { count: data.closedByHand.unsent })}
+            </StatusPill>
+          ) : null}
         </>
       ) : null}
-      action={report ? (
-        <ListDownload
-          fileName={`${data.companyName}-run-${new Date(data.startedAt).toISOString().slice(0, 10)}`}
-          rows={[
-            ...report.byOperation.map((row) => ({ section: tDetail("bought.title"), name: tOperation(row.operationId), requests: row.requests, costUsd: row.costUsd })),
-            ...report.bySite.map((row) => ({ section: tDetail("sites.title"), name: row.host || tDetail("sites.shared"), requests: row.requests, costUsd: row.costUsd })),
-            ...report.ai.map((row) => ({ section: tDetail("ai.title"), name: row.decisionKey, requests: row.judgements, costUsd: row.costUsd })),
-          ]}
-          columns={[
-            { header: "section", value: (row) => row.section },
-            { header: "name", value: (row) => row.name },
-            { header: "requests", value: (row) => row.requests },
-            { header: "cost_usd", value: (row) => Math.round(row.costUsd * 10_000) / 10_000 },
-          ]}
-        />
-      ) : null}
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          <CloseRun cycleId={cycleId} open={data.open} />
+          {report ? (
+            <ListDownload
+              fileName={`${data.companyName}-run-${new Date(data.startedAt).toISOString().slice(0, 10)}`}
+              rows={[
+                ...report.byOperation.map((row) => ({ section: tDetail("bought.title"), name: tOperation(row.operationId), requests: row.requests, costUsd: row.costUsd })),
+                ...report.bySite.map((row) => ({ section: tDetail("sites.title"), name: row.host || tDetail("sites.shared"), requests: row.requests, costUsd: row.costUsd })),
+                ...report.ai.map((row) => ({ section: tDetail("ai.title"), name: row.decisionKey, requests: row.judgements, costUsd: row.costUsd })),
+              ]}
+              columns={[
+                { header: "section", value: (row) => row.section },
+                { header: "name", value: (row) => row.name },
+                { header: "requests", value: (row) => row.requests },
+                { header: "cost_usd", value: (row) => Math.round(row.costUsd * 10_000) / 10_000 },
+              ]}
+            />
+          ) : null}
+        </div>
+      }
     />
   );
 
@@ -146,6 +166,7 @@ export default function CollectionRunPage() {
     return (
       <div className="flex w-full flex-col gap-6 pb-12">
         {header}
+        <RunAttention attention={[]} attentionTotal={0} waitingLong={data.waitingLong} />
         <p className="text-[13px] text-secondary">{tDetail("notReady")}</p>
       </div>
     );
@@ -193,6 +214,8 @@ export default function CollectionRunPage() {
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       {header}
+
+      <RunAttention attention={report.attention ?? []} attentionTotal={report.attentionTotal ?? 0} waitingLong={data.waitingLong} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CostFigure

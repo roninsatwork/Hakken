@@ -214,3 +214,35 @@ describe("what a website ranks for", () => {
     ]);
   });
 });
+
+describe("a meaning carried onto what holds the search", () => {
+  test("reaches every ranking, not only the first five hundred", async () => {
+    // Judged once, carried onto the first 500 rankings and 500 gaps: the rest
+    // stayed unjudged for good (reliability plan 3.6).
+    vi.useFakeTimers();
+    try {
+      const t = harness();
+      await t.run(async (ctx) => {
+        for (let index = 0; index < 1_200; index += 1) {
+          const websiteId = await ctx.db.insert("websites", { host: `site-${index}.co.uk`, displayHost: `site-${index}.co.uk`, firstSeenAt: Date.now() });
+          await ctx.db.insert("siteKeywordRanks", {
+            websiteId, locationCode: 2826, keyword: "carp bait", band: "p04_10", page: "/", volume: 0, volumeKnown: false,
+            intent: "UNJUDGED", status: "SAME", change: 0, day: "2026-09-25", firstSeenDay: "2026-09-25", searchText: "carp bait /", updatedAt: Date.now(),
+          } as never);
+        }
+      });
+
+      await t.mutation(internal.seoCollectionParse.writeKeywordIntents, { judged: [{ keyword: "carp bait", intent: "BUYING" }] });
+      for (let round = 0; round < 5; round += 1) {
+        vi.advanceTimersByTime(1);
+        await t.finishInProgressScheduledFunctions();
+      }
+
+      const intents = await t.run(async (ctx) => (await ctx.db.query("siteKeywordRanks").collect()).map((row) => row.intent));
+      expect(intents).toHaveLength(1_200);
+      expect(intents.every((intent) => intent === "BUYING")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

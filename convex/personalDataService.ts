@@ -131,6 +131,14 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
       + "accounting record and has to survive a person leaving; who asked for a particular "
       + "pull does not, so the row stays and the name comes off.",
   },
+  {
+    table: "seoCollectionCycles",
+    fields: ["closedBy"],
+    treatment: "DISSOCIATE",
+    reason:
+      "A collection run, which the run and cost screens are built from and which has to survive "
+      + "a person leaving. Who closed it by hand does not, so the run stays and the name comes off.",
+  },
 
   {
     table: "tasks",

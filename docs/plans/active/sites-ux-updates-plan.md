@@ -248,10 +248,12 @@ double check everything in Chrome":
 3. The columns each table keeps — chosen by the rule in §3 (the ones a reader
    decides on, about six, the rest on the row's own screen) and listed in §6.
    Any column can come back; say which.
-4. Empty groups: one "not set up" note in place of the screen, and the menu
-   marks it — the whole AI answers group, and the three Google results
-   screens that need tracked searches (Wins and losses and Search features
-   read every keyword, so they have something to show without them).
+4. Empty groups: one "not set up" note in place of the screen, for the whole
+   AI answers group and the three Google results screens that need tracked
+   searches (Wins and losses and Search features read every keyword, so they
+   have something to show without them). Never a mark on the menu: Anthony,
+   2026-09-25, of a "Not set up" pill on the AI answers group, "not on a menu
+   never" — taken off the same day.
 5. The order in §3.
 
 ## 6. What was built — 2026-09-24
@@ -335,9 +337,10 @@ server was in use.
 
 ## Progress
 
-Overall: 95% built. Step 1 (wording): 100%. Steps 2–6: 100%, bar the
-Overview and Calendar day screens, left for real weekly data. Step 7 (charts):
-unchanged, as planned.
+Overall: 97% built. Step 1 (wording): 100%. Steps 2–6: 100%, bar the
+Calendar day screens, left for real weekly data. The Overview, redrawn and
+agreed on 2026-09-25, is built and on screen for Korda; it waits on Anthony's
+review. Step 7 (charts): unchanged, as planned.
 
 ## Change log
 
@@ -353,3 +356,27 @@ unchanged, as planned.
   left; every table fitting a 13-inch screen; figures opening their records;
   one "not set up" note for empty sections; every screen's line rewritten as
   the question it answers. Not committed.
+- 2026-09-25 — The Sites menu marks the page being read with the main menu's
+  own highlight (`navStyles.ts`), not an orange edge: "not consistent with
+  the rest of platform". The "Not set up" marks taken off the menu: "not on a
+  menu never". The note on the screens stays.
+- 2026-09-25 — The Overview rebuilt as drawn on the "Hakken Sites Overview
+  Drawing" canvas ("ok lets build this"): three headline panels (Search,
+  Backlink profile, AI answers) in place of the figure cards, and under the
+  charts, each on its own row, Pages by kind, Pages by visits, Branded and
+  other searches, and Competitors (`convex/siteOverview.ts`,
+  `OverviewPanels.tsx`, `OverviewSections.tsx`). The day summary now keeps
+  the searches and visits by what they are for (`intentSplit`).
+- 2026-09-25 — After Anthony's first look: Competitors lists every
+  competitor the company set up — all 11 of Korda's, not the five found
+  sharing most searches ("why all the competitors korda tackle has are not
+  listed here"), with the searches shared taken from either website's found
+  list and a dash where neither holds the other. The scatter charts (here and
+  Market map) draw every website as the same plain dot — no star, triangle or
+  diamond ("not really a fan of the design of the icons") — and the
+  Overview's names each dot on the chart instead of a colour legend.
+  Deeper bars on Pages by kind and Branded ("weedy and thin"), and every bar
+  and dot answers the pointer with its numbers ("we need hover states"): the
+  hand-drawn bars through `HoverReadout.tsx`, on the same readout as every
+  chart (`ChartTooltipRow`). The Overview's page and AI Overview counts read
+  under a thousand rows and say so when a larger site reaches that.

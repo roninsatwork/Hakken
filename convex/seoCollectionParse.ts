@@ -1,10 +1,12 @@
 import { v } from "convex/values";
+import { PARSE_FAILED } from "./seoFiling";
+import { readPullAnswerParts } from "./seoPullAnswers";
 
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { judgeCompetitors, judgeNewKeywords, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
+import { judgeCompetitors, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
 import {
-  patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild,
+  citedPageOf, patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild, type CitedPage,
 } from "./siteRankings";
 import { fileAnswerText } from "./siteAnswers";
 import { fileSiteLinkPull, isSiteLinkOperation } from "./siteLinkFiling";
@@ -50,55 +52,22 @@ import { readLocationCode, readSentLocationCode } from "./utils/seoSentPlace";
 export const parseSeoResult = internalAction({
   args: {
     pullId: v.id("seoDataPulls"),
-    /** How many times this filing has been tried again after a clash (`refileIfClashed`). */
+    /** How many times this filing has been tried again after a clash (`seoFiling.finishFiling`). */
     retry: v.optional(v.number()),
   },
   returns: v.null(),
   // Stated, not inferred: inferred, it reads `internal`, which reads this.
   handler: async (ctx, args): Promise<null> => {
+    await ctx.runMutation(internal.seoFiling.startFiling, { pullId: args.pullId });
     await fileSeoResult(ctx, args);
-    await ctx.runMutation(internal.seoCollectionParse.refileIfClashed, { pullId: args.pullId, retry: args.retry ?? 0 });
-    return null;
-  },
-});
-
-/**
- * A filing's clash, as Convex words it: another write changed the same rows
- * while this one ran, on every retry it made. Nothing is wrong with the answer
- * or the parser — the other write simply got there first.
- */
-const CLASH = /changed while this mutation was being run|OptimisticConcurrencyControlFailure/;
-
-/** Times a clashed filing is tried again, each a random 20 to 60 seconds after the last. */
-const REFILE_TRIES = 3;
-
-/**
- * File again, a little later, a filing that lost a clash.
- *
- * On Korda's first full run (2026-09-24) seven of 138 answers did not file:
- * competitors' keyword lists, the meanings of their searches and the owned
- * site's content gap were all being written at once, over the same rows.
- * Filed again one at a time from the saved answers, every one went in. This
- * does that by itself: the saved answer is read again, so it costs nothing,
- * and the random wait lets the other writes finish first.
- */
-export const refileIfClashed = internalMutation({
-  args: { pullId: v.id("seoDataPulls"), retry: v.number() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const pull = await ctx.db.get(args.pullId);
-    if (!pull?.error || !CLASH.test(pull.error) || args.retry >= REFILE_TRIES) return null;
-    const wait = 20_000 + Math.floor(Math.random() * 40_000);
-    await ctx.scheduler.runAfter(wait, internal.seoCollectionParse.parseSeoResult, { pullId: args.pullId, retry: args.retry + 1 });
+    await ctx.runMutation(internal.seoFiling.finishFiling, { pullId: args.pullId, retry: args.retry ?? 0 });
     return null;
   },
 });
 
 /** File one bought answer into the tables the screens read. Failures are recorded on the pull. */
 async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> }): Promise<null> {
-  const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, {
-    pullId: args.pullId,
-  });
+  const pull = await readPullForParse(ctx, args.pullId);
   if (!pull?.resultJson) return null;
   // The Sites link lists and histories file on their own (`siteLinkFiling.ts`).
   if (isSiteLinkOperation(pull.operationId)) return await fileSiteLinkPull(ctx, args.pullId, pull);
@@ -203,7 +172,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         // A fan-out search is a search: judged once per phrase and shared
         // with every other client who meets it, which is why adding this
         // costs almost nothing beyond the first time a phrase appears.
-        await judgeNewKeywords(ctx, {
+        await ctx.scheduler.runAfter(0, internal.seoFiling.judgeKeywordsLater, {
           ...(pull.companyId ? { companyId: pull.companyId } : {}),
           pullId: args.pullId,
           keywords: parsed.fanOutQueries,
@@ -296,7 +265,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         serp: serpSnapshotOf(page),
       });
 
-      await judgeNewKeywords(ctx, {
+      await ctx.scheduler.runAfter(0, internal.seoFiling.judgeKeywordsLater, {
         ...(pull.companyId ? { companyId: pull.companyId } : {}),
         pullId: args.pullId,
         keywords: [keyword],
@@ -333,13 +302,11 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
       ...(parsed.paidPositions ? { paidPositions: parsed.paidPositions.slice(0, MAX_POSITION_ROWS) } : {}),
     });
 
-    await judgeNewKeywords(ctx, {
+    await ctx.scheduler.runAfter(0, internal.seoFiling.judgeKeywordsLater, {
       ...(pull.companyId ? { companyId: pull.companyId } : {}),
       pullId: args.pullId,
       host: pull.target ?? "",
-      business: await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
-        websiteId: pull.websiteId as Id<"websites">,
-      }),
+      websiteId: pull.websiteId as Id<"websites">,
       keywords: positions.map((entry) => entry.keyword),
     });
   } catch (error) {
@@ -381,13 +348,35 @@ const MAX_BULK_ROWS = 1_200;
 const REPLACE_LIMIT = MAX_POSITION_ROWS + 100;
 
 
+export type PullForParse = {
+  operationId: string;
+  websiteId: Id<"websites"> | null;
+  target: string | null;
+  resultJson: string | null;
+  taskArgsJson: string | null;
+  completedAt: number | null;
+  companyId: Id<"companies"> | null;
+};
+
+/**
+ * A request as filing reads it, its answer joined from the parts it is kept
+ * in. Joined here, in the action: passed between functions, an answer is only
+ * ever its parts, none larger than a document may be (`seoPullAnswers.ts`).
+ */
+export async function readPullForParse(ctx: ActionCtx, pullId: Id<"seoDataPulls">): Promise<PullForParse | null> {
+  const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, { pullId });
+  if (!pull) return null;
+  const { resultParts, ...rest } = pull;
+  return { ...rest, resultJson: resultParts ? resultParts.join("") : null };
+}
+
 export const getPullForParse = internalQuery({
   args: { pullId: v.id("seoDataPulls") },
   returns: v.union(v.null(), v.object({
     operationId: v.string(),
     websiteId: v.union(v.id("websites"), v.null()),
     target: v.union(v.string(), v.null()),
-    resultJson: v.union(v.string(), v.null()),
+    resultParts: v.union(v.array(v.string()), v.null()),
     taskArgsJson: v.union(v.string(), v.null()),
     completedAt: v.union(v.number(), v.null()),
     /** Whose cadence caused this, so a Decision is asked in their name. */
@@ -400,7 +389,7 @@ export const getPullForParse = internalQuery({
       operationId: row.operationId,
       websiteId: row.websiteId ?? null,
       target: row.target ?? null,
-      resultJson: row.resultJson ?? null,
+      resultParts: await readPullAnswerParts(ctx, row),
       taskArgsJson: row.taskArgsJson ?? null,
       completedAt: row.completedAt ?? null,
       companyId: row.companyId ?? null,
@@ -575,15 +564,16 @@ export const writeFanOutQueries = internalMutation({
         continue;
       }
 
-      // The same answer read twice is still one appearance.
-      if (existing.lastPullId === args.pullId) continue;
+      // The same answer read twice is still one appearance — any answer, not
+      // only the newest: known by its dated record, which is kept once per
+      // answer. Re-filing an older one counted it again (reliability plan 3.6).
+      if (alreadyDated || existing.lastPullId === args.pullId) continue;
 
+      // An older answer filed late adds its appearance, never moves "last seen" back.
+      const newest = args.day >= existing.lastSeenDay;
       await ctx.db.patch(existing._id, {
-        queryText,
         timesSeen: existing.timesSeen + 1,
-        lastSeenAt: now,
-        lastSeenDay: args.day,
-        lastPullId: args.pullId,
+        ...(newest ? { queryText, lastSeenAt: now, lastSeenDay: args.day, lastPullId: args.pullId } : {}),
       });
     }
     return null;
@@ -637,8 +627,7 @@ export const writeAiCitations = internalMutation({
     for (const row of existing) await ctx.db.delete(row._id);
     // Pages this answer cited before and after this parse, recounted below, so
     // a page a corrected parse no longer finds loses the citation.
-    const citedPages: Array<{ websiteId: Id<"websites">; url: string }> = existing.flatMap((row) =>
-      row.kind === "SOURCE" && row.mentionedWebsiteId && row.url ? [{ websiteId: row.mentionedWebsiteId, url: row.url }] : []);
+    const citedPages: CitedPage[] = existing.flatMap((row) => citedPageOf(row) ?? []);
 
     // A parse that now succeeds clears what an earlier attempt left behind,
     // or the row would carry "Parse failed" forever after the fix that fixed it.
@@ -692,7 +681,11 @@ export const writeAiCitations = internalMutation({
         position: sourcePosition,
         createdAt: now,
       });
-      if (websiteId) citedPages.push({ websiteId, url: source.url });
+      if (websiteId) {
+        citedPages.push({
+          websiteId, url: source.url, prompt: args.prompt, engine: args.engine, locationCode: locationCode ?? DEFAULT_LOCATION_CODE,
+        });
+      }
     }
     await recountCitedPages(ctx, citedPages);
 
@@ -964,7 +957,7 @@ export const recordParseFailure = internalMutation({
   args: { pullId: v.id("seoDataPulls"), error: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.pullId, { error: `Parse failed: ${args.error}` });
+    await ctx.db.patch(args.pullId, { error: `${PARSE_FAILED} ${args.error}` });
     return null;
   },
 });

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
-import { cadenceOf, estimateMonthly, spendCategoryOf, stoppedOf } from "./seoRunReports";
+import { attentionOf, cadenceOf, collectsEveryRun, estimateMonthly, repeatDays, spendCategoryOf, stoppedOf } from "./seoRunReports";
 
 /**
  * The Collection runs screens (Anthony, 2026-09-24): what each run for a
@@ -37,12 +37,25 @@ async function seed(t: Harness) {
     await ctx.db.insert("companyWebsites", { companyId: korda, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: NOW });
     await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 1_000, backlinksPerSite: 100, updatedAt: NOW });
     await ctx.db.insert("websiteDataLimits", { companyWebsiteId: ownHold, companyId: korda, keywordsPerSite: 10_000, updatedAt: NOW });
+    // The company's setting: weekly, Mondays at 09:00. It wakes nothing; the
+    // two agents' own schedules decide when its work is sent.
     await ctx.db.insert("schedules", {
-      name: "SEO data — Korda", companyId: korda, intervalStr: WEEKLY, isActive: true, nextRunAt: NOW + 4 * 24 * 60 * MINUTE, createdAt: NOW,
+      name: "SEO data — Korda", companyId: korda, intervalStr: WEEKLY, isActive: true, createdAt: NOW,
+    } as never);
+    const planner = await ctx.db.insert("agents", {
+      name: "Data for SEO Queue Planner", modelId: "none", thinkingMode: false, isActive: true, systemKey: "DATAFORSEO_PLANNER",
+      plannerMode: "LIVE", createdAt: NOW, updatedAt: NOW,
     } as never);
     const collector = await ctx.db.insert("agents", {
       name: "DataForSEO Agent Collector", modelId: "none", thinkingMode: false, isActive: true, systemKey: "DATAFORSEO_COLLECTOR",
       createdAt: NOW, updatedAt: NOW,
+    });
+    const daily = (time: string) => JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: time, timezone: "UTC" });
+    await ctx.db.insert("schedules", {
+      name: "Planner", agentId: planner, intervalStr: daily("10:00"), isActive: true, nextRunAt: Date.parse("2026-09-25T10:00:00Z"), createdAt: NOW,
+    });
+    await ctx.db.insert("schedules", {
+      name: "Collector", agentId: collector, intervalStr: daily("10:30"), isActive: true, nextRunAt: Date.parse("2026-09-25T10:30:00Z"), createdAt: NOW,
     });
     const cycle = (startedAt: number, status: "COLLECTING" | "DONE") => ctx.db.insert("seoCollectionCycles", {
       companyId: korda, trigger: "MANUAL", status, plannedCount: 6, reusedCount: 3, sentCount: 6, readyCount: 5, failedCount: 0,
@@ -160,6 +173,34 @@ describe("a collection run's report", () => {
     expect(report!.aiCostUsd).toBeCloseTo(0.00033, 8);
   });
 
+  test("a page's type judged while two runs hold its website is counted once, in the run whose request led to it", async () => {
+    const t = harness();
+    const s = await seed(t);
+    const at = (minutesAgo: number) => NOW - minutesAgo * MINUTE;
+    // Another company watching Korda's own website, its run asking about it at 44 minutes ago.
+    const otherRun = await t.run(async (ctx) => await ctx.db.insert("seoCollectionCycles", {
+      companyId: s.other, trigger: "MANUAL", status: "COLLECTING", plannedCount: 1, reusedCount: 0, sentCount: 1,
+      readyCount: 1, failedCount: 0, totalCostUsd: 0, startedAt: at(45),
+    }));
+    await pull(t, s, { operationId: "site_crawl", websiteId: s.own, target: "kordatackle.com", status: "READY", costUsd: 0.15, sentAt: at(55) });
+    await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId: "site_crawl", family: "DataForSEO", mode: "LIVE", companyId: s.other, cycleId: otherRun, taskArgsJson: "{}",
+      tag: "t-other", attempts: 1, sandbox: false, submittedAt: at(44), websiteId: s.own, target: "kordatackle.com",
+      status: "READY", costUsd: 0.15, sentAt: at(44), completedAt: at(43),
+    }));
+    // Before the other run asked: Korda's. After it: the other run's.
+    await judgement(t, { decisionKey: "seo.page-type", subjectKind: "seo-pages", subjectId: s.own, costUsd: 0.001, createdAt: at(50) });
+    await judgement(t, { decisionKey: "seo.page-type", subjectKind: "seo-pages", subjectId: s.own, costUsd: 0.002, createdAt: at(30) });
+
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: otherRun });
+    const reportOf = (cycleId: Id<"seoCollectionCycles">) =>
+      t.run(async (ctx) => await ctx.db.query("seoRunReports").withIndex("by_cycle", (q) => q.eq("cycleId", cycleId)).unique());
+
+    expect((await reportOf(s.run))!.aiCostUsd).toBeCloseTo(0.001, 8);
+    expect((await reportOf(otherRun))!.aiCostUsd).toBeCloseTo(0.002, 8);
+  });
+
   test("the list, the figures above it and the run in full — each against the run before", async () => {
     const t = harness();
     const s = await seed(t);
@@ -191,7 +232,9 @@ describe("a collection run's report", () => {
     expect(summary.monthUsd).toBeCloseTo(10.18, 6);
     expect(summary.monthRuns).toBe(2);
     expect(summary.lastRun).toMatchObject({ cycleId: s.run, totalUsd: 8.18 });
-    expect(summary.nextRun).toMatchObject({ cadence: "weekly" });
+    // Collected an hour ago, so next due Monday 09:00; the Planner's next run
+    // after that is 10:00, and the Collector sends it at 10:30.
+    expect(summary.nextRun).toEqual({ at: Date.parse("2026-09-28T10:30:00Z"), cadence: "weekly" });
     expect(summary.estimate?.perMonthUsd).toBeCloseTo(estimateMonthly([
       { operationId: "site_crawl", costUsd: 1.8 },
       { operationId: "domain_ranked_keywords_list", costUsd: 1.77 },
@@ -203,7 +246,8 @@ describe("a collection run's report", () => {
     expect(full?.previous).toMatchObject({ totalUsd: 2 });
     expect(full?.previous?.byOperation).toEqual([{ operationId: "site_crawl", costUsd: 1.8 }, { operationId: "backlinks_list", costUsd: 0.1 }]);
     expect(full?.sites).toEqual([{ websiteId: s.own, relationship: "OWNED", keywordsPerSite: 10_000, backlinksPerSite: 100 }]);
-    expect(full?.operations.find((row) => row.operationId === "site_crawl")).toEqual({ operationId: "site_crawl", category: "SITE_AUDIT", everyDays: 30 });
+    // Korda collects weekly: the monthly crawl comes every fourth run.
+    expect(full?.operations.find((row) => row.operationId === "site_crawl")).toEqual({ operationId: "site_crawl", category: "SITE_AUDIT", everyDays: 28 });
     expect(full?.decisions).toEqual([{ decisionKey: "seo.keyword-intent", copyKey: "seoKeywordIntent" }]);
 
     // Another company's admin view is the super admin's alone.
@@ -241,11 +285,29 @@ describe("the arithmetic", () => {
     ], "weekly");
     expect(weekly.lines.map((line) => line.every)).toEqual(["WEEK", "MONTH"]);
     expect(weekly.lines[0].costUsd).toBeCloseTo(2.06, 6);
-    expect(weekly.perMonthUsd).toBeCloseTo((2.06 * 30.44) / 7 + (1.8 * 30.44) / 30, 6);
+    // The crawl every fourth weekly run: every 28 days.
+    expect(weekly.perMonthUsd).toBeCloseTo((2.06 * 30.44) / 7 + (1.8 * 30.44) / 28, 6);
     // Collected monthly, a weekly list is bought monthly too.
     expect(estimateMonthly([{ operationId: "domain_ranked_keywords_list", costUsd: 1 }], "monthly").lines).toEqual([
       { every: "MONTH", costUsd: 1, perMonthUsd: 1 },
     ]);
+  });
+
+  test("a call with its own cadence comes round on the run nearest it, and every run when the company collects no more often", () => {
+    // Daily: weekly every 7th run, monthly every 30th.
+    expect(repeatDays(7, 1)).toBe(7);
+    expect(repeatDays(30, 1)).toBe(30);
+    // Weekly: weekly every run, monthly every 4th.
+    expect(repeatDays(7, 7)).toBeNull();
+    expect(repeatDays(30, 7)).toBe(28);
+    // Fortnightly: weekly every run, monthly every other.
+    expect(repeatDays(7, 14)).toBeNull();
+    expect(repeatDays(30, 14)).toBe(28);
+    // Monthly: everything every run — the full scan, however soon after another run.
+    expect(repeatDays(7, 30.44)).toBeNull();
+    expect(repeatDays(30, 30.44)).toBeNull();
+    expect(collectsEveryRun(30, 30.44)).toBe(true);
+    expect(collectsEveryRun(30, 14)).toBe(false);
   });
 
   test("names for what was bought, how often the company collects, and why a Collector run stopped", () => {
@@ -259,5 +321,79 @@ describe("the arithmetic", () => {
     expect(cadenceOf(undefined)).toBe("weekly");
     expect(stoppedOf("Stopped because this run's time was up; the rest waits.")).toBe("TIME_UP");
     expect(stoppedOf(undefined)).toBeUndefined();
+  });
+});
+
+/**
+ * What needs a look in a run (reliability plan V1–V3): its requests that
+ * failed, were answered and not filed, were too large to keep or cut to fit;
+ * those out over an hour unanswered, read as the page is; and how the hourly
+ * check last went.
+ */
+describe("what needs a look", () => {
+  test("a run's failed, unfiled, too large and cut requests — worst first — and nothing for the rest", () => {
+    const row = (fields: Record<string, unknown>) => ({
+      pullId: `pull_${Math.random()}` as Id<"seoDataPulls">, operationId: "site_crawl", status: "READY" as const, costUsd: 0.1, ...fields,
+    });
+    const { attention, total } = attentionOf([
+      row({ target: "fine.co.uk" }),
+      row({ target: "cut.co.uk", rowsLeftOff: 60, completedAt: 3 }),
+      row({ target: "unfiled.co.uk", error: "Parse failed: Too many bytes read", completedAt: 2 }),
+      row({ status: "FAILED", asked: "carp bait", error: "Invalid Field: 'keyword'.", completedAt: 1 }),
+      row({ target: "huge.co.uk", rawTruncated: true, completedAt: 4 }),
+      row({ status: "SUBMITTED", target: "waiting.co.uk" }),
+    ]);
+
+    expect(total).toBe(4);
+    expect(attention.map((entry) => [entry.kind, entry.about, entry.detail ?? entry.rows ?? null])).toEqual([
+      ["FAILED", "carp bait", "Invalid Field: 'keyword'."],
+      ["NOT_FILED", "unfiled.co.uk", "Too many bytes read"],
+      ["TOO_LARGE", "huge.co.uk", null],
+      ["ROWS_LEFT_OFF", "cut.co.uk", 60],
+    ]);
+  });
+
+  test("a run's report keeps them, and the run page reads those out over an hour live", async () => {
+    const t = harness();
+    const s = await seed(t);
+    const admin = t.withIdentity({ subject: s.adminId });
+    await pull(t, s, { operationId: "site_crawl", websiteId: s.own, target: "kordatackle.com", status: "FAILED", costUsd: 0, sentAt: NOW - 50 * MINUTE });
+    await t.run(async (ctx) => {
+      // Sent two hours ago, the last try saying DataForSEO is still at it; and one sent ten minutes ago.
+      for (const [minutesAgo, tag] of [[120, "long"], [10, "recent"]] as const) {
+        await ctx.db.insert("seoDataPulls", {
+          operationId: "serp_google_organic", family: "SERP", mode: "QUEUED", companyId: s.korda, cycleId: s.run,
+          taskArgsJson: JSON.stringify({ keyword: `carp bait ${tag}` }), status: "SUBMITTED", tag, attempts: 1, costUsd: 0.002,
+          sandbox: false, submittedAt: NOW - minutesAgo * MINUTE, sentAt: NOW - minutesAgo * MINUTE,
+          ...(tag === "long" ? { lastFetch: { at: NOW - 5 * MINUTE, said: "DataForSEO is still working on it." } } : {}),
+        });
+      }
+    });
+
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    const page = await admin.query(api.seoRunReports.getRunReport, { cycleId: s.run });
+
+    expect(page?.report?.attention?.map((entry) => entry.kind)).toEqual(["FAILED"]);
+    expect(page?.report?.attentionTotal).toBe(1);
+    expect(page?.waitingLong.total).toBe(1);
+    expect(page?.waitingLong.rows[0]).toMatchObject({
+      operationId: "serp_google_organic", about: "carp bait long", lastFetch: { said: "DataForSEO is still working on it." },
+    });
+  });
+
+  test("the hourly check's last result, overdue when it has not run for three hours", async () => {
+    const t = harness();
+    const s = await seed(t);
+    const admin = t.withIdentity({ subject: s.adminId });
+    expect(await admin.query(api.seoRunReports.readHourlyCheck, {})).toBeNull();
+
+    await t.run(async (ctx) => await ctx.db.insert("jobRuns", {
+      job: "seo-collection-sweep", lastRanAt: NOW - 4 * 60 * MINUTE, lastOk: false, lastDurationMs: 900,
+      lastError: "Too many bytes read in a single function execution", consecutiveFailures: 3,
+    }));
+
+    expect(await admin.query(api.seoRunReports.readHourlyCheck, {})).toMatchObject({
+      ok: false, error: "Too many bytes read in a single function execution", failuresInARow: 3, overdue: true,
+    });
   });
 });

@@ -1,8 +1,10 @@
 import { v } from "convex/values";
+import { hasPullAnswer } from "./seoPullAnswers";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { parseDomainCompetitors, parseLlmResponse, parseSeoResultFor, parseSerpPage } from "./dataForSeoParsers";
+import { readPullForParse } from "./seoCollectionParse";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { AI_ENGINES, aiCitationOperationId, engineForOperationId } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
@@ -26,10 +28,12 @@ import { kdBandFor, pagePath, rankedPositionValidator } from "./utils/siteShapes
  *
  *   npx convex run siteBackfillRaw:readStoredResults
  *
- * Safe to run again: every write replaces what the last run wrote.
+ * Safe to run again: every write replaces what the last run wrote. A run that
+ * reaches five minutes hands on to another from where it stopped, and says
+ * so (`continued`); the last one logs the totals.
  */
 
-/** Stored results read per page. One can be most of a megabyte. */
+/** Requests looked at per page: each has one part of its answer read, to see it has one. */
 const PULLS_PER_PAGE = 4;
 
 /** Keywords patched per mutation. */
@@ -48,8 +52,29 @@ const OPERATIONS = [
 
 type Counts = { results: number; keywords: number; pages: number; answers: number; competitors: number; metrics: number };
 
+const countsValidator = v.object({
+  results: v.number(),
+  keywords: v.number(),
+  pages: v.number(),
+  answers: v.number(),
+  competitors: v.number(),
+  metrics: v.number(),
+});
+
+/**
+ * How long one run reads before it hands on to the next. An action is
+ * stopped at ten minutes, and a run stopped there started again from the
+ * first answer (reliability plan 3.4); this leaves room for a site's rebuild.
+ */
+const RUN_MS = 5 * 60 * 1000;
+
 export const readStoredResults = internalAction({
-  args: { operationId: v.optional(v.string()) },
+  args: {
+    operationId: v.optional(v.string()),
+    /** Where the run before this one stopped, and what it had counted. */
+    resume: v.optional(v.object({ operation: v.number(), cursor: v.union(v.string(), v.null()), site: v.number() })),
+    counts: v.optional(countsValidator),
+  },
   returns: v.object({
     results: v.number(),
     keywords: v.number(),
@@ -58,33 +83,50 @@ export const readStoredResults = internalAction({
     competitors: v.number(),
     metrics: v.number(),
     sites: v.number(),
+    /** Stopped for time and carried on in the background: the totals so far. */
+    continued: v.boolean(),
   }),
-  handler: async (ctx, args): Promise<Counts & { sites: number }> => {
-    const counts: Counts = { results: 0, keywords: 0, pages: 0, answers: 0, competitors: 0, metrics: 0 };
-    for (const operationId of args.operationId ? [args.operationId] : OPERATIONS) {
-      let cursor: string | null = null;
+  handler: async (ctx, args): Promise<Counts & { sites: number; continued: boolean }> => {
+    const started = Date.now();
+    const counts: Counts = args.counts ?? { results: 0, keywords: 0, pages: 0, answers: 0, competitors: 0, metrics: 0 };
+    const operations = args.operationId ? [args.operationId] : OPERATIONS;
+    const carryOn = async (resume: { operation: number; cursor: string | null; site: number }) => {
+      await ctx.scheduler.runAfter(0, internal.siteBackfillRaw.readStoredResults, {
+        ...(args.operationId ? { operationId: args.operationId } : {}),
+        resume,
+        counts,
+      });
+      return { ...counts, sites: resume.site, continued: true };
+    };
+
+    let cursor: string | null = args.resume?.cursor ?? null;
+    for (let at = args.resume?.operation ?? 0; at < operations.length; at += 1) {
       for (;;) {
+        if (Date.now() - started > RUN_MS) return await carryOn({ operation: at, cursor, site: 0 });
         const page: { pullIds: Id<"seoDataPulls">[]; cursor: string; isDone: boolean } = await ctx.runQuery(
           internal.siteBackfillRaw.storedPulls,
-          { operationId, cursor },
+          { operationId: operations[at], cursor },
         );
         for (const pullId of page.pullIds) await readOne(ctx, pullId, counts);
         if (page.isDone) break;
         cursor = page.cursor;
       }
+      cursor = null;
     }
 
     const sites: Array<{ websiteId: Id<"websites">; locationCode: number }> =
       await ctx.runQuery(internal.siteBackfill.watchedSites, {});
-    for (const site of sites) {
-      await ctx.runAction(internal.siteSummaries.rebuildSite, { ...site, fullSync: true });
+    for (let site = args.resume?.site ?? 0; site < sites.length; site += 1) {
+      if (Date.now() - started > RUN_MS) return await carryOn({ operation: operations.length, cursor: null, site });
+      await ctx.runAction(internal.siteSummaries.rebuildSite, { ...sites[site], fullSync: true });
     }
-    return { ...counts, sites: sites.length };
+    console.log("Stored results read again:", JSON.stringify({ ...counts, sites: sites.length }));
+    return { ...counts, sites: sites.length, continued: false };
   },
 });
 
 async function readOne(ctx: ActionCtx, pullId: Id<"seoDataPulls">, counts: Counts): Promise<void> {
-  const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, { pullId });
+  const pull = await readPullForParse(ctx, pullId);
   if (!pull?.resultJson) return;
   let result: unknown;
   try {
@@ -171,11 +213,11 @@ export const storedPulls = internalQuery({
       .query("seoDataPulls")
       .withIndex("by_operation_submitted", (q) => q.eq("operationId", args.operationId))
       .paginate({ cursor: args.cursor, numItems: PULLS_PER_PAGE });
-    return {
-      pullIds: result.page.filter((pull) => pull.resultJson).map((pull) => pull._id),
-      cursor: result.continueCursor,
-      isDone: result.isDone,
-    };
+    const pullIds: Id<"seoDataPulls">[] = [];
+    for (const pull of result.page) {
+      if (await hasPullAnswer(ctx, pull)) pullIds.push(pull._id);
+    }
+    return { pullIds, cursor: result.continueCursor, isDone: result.isDone };
   },
 });
 

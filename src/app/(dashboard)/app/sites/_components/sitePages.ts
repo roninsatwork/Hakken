@@ -32,8 +32,9 @@ export type SitePage = {
    * What the page cannot show anything without, set up by the team for the
    * site: the questions asked of AI assistants, or the searches checked one
    * by one on Google. Unmet, the page shows one note saying so instead of an
-   * empty screen, and the menu marks it (docs/plans/active/
-   * sites-ux-updates-plan.md §3, "an empty section says so once").
+   * empty screen (docs/plans/active/sites-ux-updates-plan.md §3, "an empty
+   * section says so once"). Never a mark on the menu: Anthony, 2026-09-25,
+   * "not on a menu never".
    */
   needs?: SiteSetup;
 };

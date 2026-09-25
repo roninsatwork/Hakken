@@ -20,10 +20,13 @@ import {
 } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import {
   TABLE_PAGE_SIZE,
 } from "@/src/ui/components/screens/pagination";
-import { formatDate } from "@/src/lib/dates";
+import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
+import { useRunFormat } from "@/src/app/(dashboard)/admin/companies/[id]/websites/runs/runFormat";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
@@ -32,7 +35,21 @@ const CompanyDialogs = lazy(() =>
   loadCompanyDialogs().then((module) => ({ default: module.CompanyDialogs })),
 );
 
-type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean };
+/**
+ * A company's data collection, from `companies.getPaginatedCompanies`: its
+ * switch and schedule, its newest collection, and when its work is next sent
+ * — after the Planner's run and then the Collector's, not at the company's own
+ * time, since that wakes nothing (2026-09-25).
+ */
+type CompanyCollection = {
+  isActive: boolean;
+  intervalStr: string | null;
+  last: { startedAt: number; status: string } | null;
+  nextAt: number | null;
+  nextWhy: "OFF" | "NOT_SCHEDULED" | null;
+};
+
+type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean; collection: CompanyCollection };
 type CompanyFormData = {
   name: string;
   systemPrompt: string;
@@ -43,6 +60,10 @@ type CompanyFormData = {
 export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
+  // A collection's status in the words its own Collection runs screens use.
+  const tCollection = useTranslations("admin.seoCollection");
+  const scheduleSummary = useScheduleSummary();
+  const { when } = useRunFormat();
   const action = useAdminAction({ scope: "admin-companies" });
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
@@ -168,7 +189,6 @@ export default function CompaniesPage() {
       <DataTable
         rows={isLoading ? undefined : paginatedCompanies}
         rowKey={(company) => company._id}
-        minWidthClassName="min-w-[800px]"
         search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
         onRowClick={(company) => router.push(`/admin/companies/${company._id}`)}
         empty={{ icon: <Building2 className="w-8 h-8 text-muted/30" />, label: t('emptyState') }}
@@ -198,10 +218,42 @@ export default function CompaniesPage() {
             ),
           },
           {
-            key: "created",
-            header: t('provisionedDate'),
+            key: "collection",
+            header: t('collection'),
             cell: (company) => (
-              <span className="text-[12px] text-secondary">{formatDate(company.createdAt)}</span>
+              <span className="flex flex-col gap-1.5">
+                <StatusPill tone={company.collection.isActive ? "success" : "neutral"}>
+                  {company.collection.isActive ? t('collectionOn') : t('collectionOff')}
+                </StatusPill>
+                {company.collection.intervalStr ? (
+                  <span className="text-[12px] text-secondary">{scheduleSummary(company.collection.intervalStr)}</span>
+                ) : null}
+              </span>
+            ),
+          },
+          {
+            key: "lastCollection",
+            header: t('lastCollection'),
+            cell: (company) => company.collection.last ? (
+              <span className="flex flex-col gap-1.5">
+                <span className="text-[12px] text-foreground">{when(company.collection.last.startedAt)}</span>
+                <StatusPill tone={toneForStatus(company.collection.last.status)}>
+                  {tCollection(`status.${company.collection.last.status}`)}
+                </StatusPill>
+              </span>
+            ) : (
+              <span className="text-[12px] text-secondary">{t('neverCollected')}</span>
+            ),
+          },
+          {
+            key: "nextCollection",
+            header: t('nextCollection'),
+            cell: (company) => company.collection.nextAt !== null ? (
+              <span className="text-[12px] text-foreground">{when(company.collection.nextAt)}</span>
+            ) : (
+              <span className="text-[12px] text-secondary">
+                {company.collection.nextWhy === "NOT_SCHEDULED" ? t('notScheduled') : t('collectionOff')}
+              </span>
             ),
           },
           {

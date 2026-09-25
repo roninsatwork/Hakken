@@ -260,11 +260,11 @@ describe("A company's own websites", () => {
 
     await admin.mutation(api.companyDataLimits.setCompanyDataLimits, { companyId: company, keywordsPerSite: 10_000, backlinksPerSite: 1_000 });
     const rivalHold = await t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect()).find((row) => row._id !== site)!._id);
-    await admin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: rivalHold, keywordsPerSite: 2_000, backlinksPerSite: null });
+    await admin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: rivalHold, keywordsPerSite: 2_500, backlinksPerSite: null });
 
     const limits = await limitsOf();
     expect(limits["ours.com"]).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 1_000, keywordsOwn: false, backlinksOwn: false });
-    expect(limits["rival.com"]).toEqual({ keywordsPerSite: 2_000, backlinksPerSite: 1_000, keywordsOwn: true, backlinksOwn: false });
+    expect(limits["rival.com"]).toEqual({ keywordsPerSite: 2_500, backlinksPerSite: 1_000, keywordsOwn: true, backlinksOwn: false });
   });
 
   test("the list shows only that company's websites", async () => {

@@ -503,6 +503,15 @@ export default defineSchema({
     error: v.optional(v.string()),
     startedAt: v.number(),
     finishedAt: v.optional(v.number()),
+    /** Who closed it by hand, and how many unsent requests that took off the queue. */
+    closedBy: v.optional(v.id("users")),
+    closedUnsent: v.optional(v.number()),
+    /** Expansion's last progress, where to resume it, and how often the sweep has restarted it. */
+    expandedAt: v.optional(v.number()),
+    cursorCreatedAt: v.optional(v.number()),
+    /** Steps of the website after the cursor already written, when a page stopped inside it. */
+    cursorStep: v.optional(v.number()),
+    expandRestarts: v.optional(v.number()),
   })
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_status", ["status"]),
@@ -641,7 +650,9 @@ export default defineSchema({
      */
     reusedValueUsd: v.optional(v.number()),
     updatedAt: v.number(),
-  }).index("by_scope_day", ["scopeKey", "day"]),
+  }).index("by_scope_day", ["scopeKey", "day"])
+    /** Every scope's days from a date: the company costs screen's window, whatever the table holds. */
+    .index("by_day", ["day"]),
 
   /**
    * Every pull Hakken has asked DataForSEO for, and what it cost us.
@@ -729,16 +740,24 @@ export default defineSchema({
     /** The worker chain holding this row, and when it took it. */
     claimedBy: v.optional(v.string()),
     claimedAt: v.optional(v.number()),
+    /** Set just before the send: from then on DataForSEO may have it, so it is never sent again. */
+    postedAt: v.optional(v.number()),
+    /** When its answer was filed into the Sites tables, and how often filing has been tried. */
+    filedAt: v.optional(v.number()),
+    fileAttempts: v.optional(v.number()),
     /** Sends tried. At `SEO_MAX_ATTEMPTS` the row is FAILED rather than retried. */
     attempts: v.optional(v.number()),
     /** When DataForSEO's pingback told us this was ready. */
     pingedAt: v.optional(v.number()),
+    /** Its answer's last fetch that did not bring it, and what came back (reliability plan V1). */
+    lastFetch: v.optional(v.object({ at: v.number(), said: v.string() })),
     /**
-     * True when the response was too large to keep and only its numbers
-     * survive. Such a pull cannot be re-parsed after a parser bug; it would
-     * have to be bought again, which is why the ceiling is generous.
+     * True when the answer was too large to keep even in parts
+     * (`MAX_ANSWER_BYTES`): paid for, and nothing could be filed from it.
      */
     rawTruncated: v.optional(v.boolean()),
+    /** Rows left off the end of a list answer to keep it inside that ceiling: counted, so it is said. */
+    rowsLeftOff: v.optional(v.number()),
     /** DataForSEO's task id, once they have given us one. */
     taskId: v.optional(v.string()),
     /** What DataForSEO charged, in USD, as reported by DataForSEO. */
@@ -746,17 +765,13 @@ export default defineSchema({
     /** True when this went to the free sandbox and cost nothing. */
     sandbox: v.boolean(),
     /**
-     * The raw response, kept only long enough to re-parse after a parser bug
-     * and then cleared by the sweep. Raw payloads kept forever would dominate
-     * storage cost; kept nowhere, a parser mistake would mean buying a month
-     * of data again.
-     *
-     * Deliberately *not* in file storage. Convex file storage on this platform
-     * is swept of anything without an upload reservation, because the upload
-     * gateway is the registry for browser-uploaded files — a raw payload
-     * parked there would be deleted within the day, and threading internal
-     * payloads through a gateway built for user uploads with tokens and quotas
-     * would be the wrong shape entirely.
+     * **Moved out: answers are kept in `seoPullAnswers`.** Kept here, every
+     * read of requests carried every answer with it, and a company's answers
+     * came to more than one function may read (16 MB, 2026-09-25). A row
+     * stored before then keeps its answer until
+     * `2026-09-25-answers-off-requests` moves it; `readPullAnswerParts` reads
+     * either. Why answers are kept at all, and not in file storage, is on
+     * `seoPullAnswers`.
      */
     resultJson: v.optional(v.string()),
     error: v.optional(v.string()),
@@ -782,6 +797,16 @@ export default defineSchema({
     /** The pingback's read: one task id to one row, or nothing at all. */
     .index("by_task", ["taskId"])
     .index("by_cycle", ["cycleId"])
+    /**
+     * Whether a collection still has a request in one state, without reading
+     * the rest. Scanning `by_cycle` for it read every answer in the
+     * collection, and Korda's 149 came to more than a function may read
+     * (16 MB) — so its last answer could never be filed, and nothing could
+     * close it (2026-09-25).
+     */
+    .index("by_cycle_status", ["cycleId", "status"])
+    /** Answers recorded but never filed, for the hourly re-file (reliability plan 1.11). */
+    .index("by_status_filed_completed", ["status", "filedAt", "completedAt"])
     .index("by_submitted", ["submittedAt"])
     .index("by_operation_submitted", ["operationId", "submittedAt"])
     .index("by_company_submitted", ["companyId", "submittedAt"])
@@ -789,6 +814,27 @@ export default defineSchema({
     /** A site's newest pulls of one operation: what the reuse ladder asks. */
     .index("by_website_operation_submitted", ["websiteId", "operationId", "submittedAt"])
     .index("by_run", ["agentRunId"]),
+
+  /**
+   * DataForSEO's answers, kept apart from the requests (`seoDataPulls`) so a
+   * request row stays a few hundred bytes (`seoPullAnswers.ts`).
+   *
+   * Kept so a parser bug can be fixed and the answers filed again rather than
+   * bought again; for `SEO_RAW_RETENTION_DAYS`, then cleared by the hourly
+   * sweep. Not in file storage: that is swept of anything without an upload
+   * reservation, and a raw answer parked there would be gone within the day.
+   */
+  seoPullAnswers: defineTable({
+    pullId: v.id("seoDataPulls"),
+    /** The answer as stored (`dataForSeoSlim.ts`), or one part of it. */
+    resultJson: v.string(),
+    storedAt: v.number(),
+    /** Which part this is, from 0, and of how many — absent on an answer kept whole in one row. */
+    part: v.optional(v.number()),
+    parts: v.optional(v.number()),
+  })
+    .index("by_pull", ["pullId"])
+    .index("by_stored", ["storedAt"]),
 
   /**
    * What somebody means when they type one search.
@@ -1026,6 +1072,8 @@ export default defineSchema({
   })
     .index("by_website_day", ["mentionedWebsiteId", "day"])
     .index("by_website_url", ["mentionedWebsiteId", "url"])
+    /** One page's citations under one question on one engine: what a recount reads (`recountCitedPage`). */
+    .index("by_website_url_question", ["mentionedWebsiteId", "url", "prompt", "engine"])
     .index("by_pull", ["pullId"]),
 
   /**
@@ -2163,7 +2211,9 @@ export default defineSchema({
     .index("by_run_step", ["runId", "stepIndex"])
     .index("by_run_status_step", ["runId", "status", "stepIndex"])
     .index("by_agent_started", ["agentId", "startedAt"])
-    .index("by_company_started", ["companyId", "startedAt"]),
+    .index("by_company_started", ["companyId", "startedAt"])
+    /** One agent's steps for one company: a collection run's calls in the Collector's log. */
+    .index("by_agent_company_started", ["agentId", "companyId", "startedAt"]),
 
   agentToolCalls: defineTable({
     runId: v.id("agentRuns"),
@@ -3885,14 +3935,15 @@ export default defineSchema({
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
     /**
-     * The company this schedule runs for, when it runs for one.
+     * Set on one kind of row only: a company's Collection schedule — whether
+     * it collects DataForSEO data, and how often ("pull Ronins weekly, Acme
+     * monthly"). Such a row names no agent and wakes nothing: the DataForSEO
+     * Planner reads it on each of its own runs (`seoScheduleService.startsRuns`,
+     * 2026-09-25). Written only by `scheduler.saveCompanySchedule`.
      *
-     * Added 2026-09-21 for the DataForSEO fetcher, which needs one schedule per
-     * client — "pull Ronins weekly, Acme monthly". Before this the dispatcher
-     * took a run's company from `createdBy`'s own company, which is empty for a
-     * super admin, so every super-admin schedule produced runs belonging to
-     * nobody. Absent still means exactly that, and the old behaviour is
-     * unchanged for schedules that do not set it.
+     * Added 2026-09-21, when each such row also named the collecting agent and
+     * the dispatcher woke it per company. Absent on every schedule that starts
+     * runs.
      */
     companyId: v.optional(v.id("companies")),
     intervalStr: v.string(), // "daily", "weekly"

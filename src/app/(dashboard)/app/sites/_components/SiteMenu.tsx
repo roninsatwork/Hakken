@@ -6,11 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "@/src/ui/components/layout/navStyles";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Select } from "@/src/ui/components/screens/Select";
 import { formatNumber } from "./siteFormat";
-import { SITE_PAGES, SITE_PAGE_GROUPS, isSiteMenuPath, setupMet, sitePageForPath, type SitePage, type SitePageGroup } from "./sitePages";
+import { SITE_PAGES, SITE_PAGE_GROUPS, isSiteMenuPath, sitePageForPath, type SitePage, type SitePageGroup } from "./sitePages";
 import { BACK_KEY, isThisSitesAddress } from "./siteRecordLinks";
 import { sharedSiteQuery } from "./useSiteParam";
 
@@ -23,7 +24,6 @@ export type MenuCounts = {
   aiNamed: number | null;
   aiAsked: number | null;
   trackedSearches: number;
-  questionsSetUp: boolean;
   rankedUp: number | null;
   rankedDown: number | null;
   suggestions: number;
@@ -134,8 +134,6 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
           if (pages.length === 0) return null;
           const isOpen = term !== "" || open.has(group);
           const panelId = `site-menu-${group}`;
-          // A group with nothing set up says so on its heading, not five times over.
-          const groupNotSetUp = pages.every((page) => !setupMet(page, counts));
           return (
             <div key={group} className="flex flex-col gap-0.5">
               <Button
@@ -145,10 +143,7 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
                 onClick={() => toggle(group)}
                 className="flex w-full items-center justify-between rounded-lg px-3 pt-4 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted hover:bg-transparent hover:text-foreground"
               >
-                <span className="flex items-center gap-2">
-                  {t(`groups.${group}`)}
-                  {groupNotSetUp ? <span className="rounded-full border border-border-dim px-1.5 py-px text-[9.5px] tracking-[0.08em] text-muted">{t("notSetUp")}</span> : null}
-                </span>
+                <span>{t(`groups.${group}`)}</span>
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
               </Button>
               {isOpen ? (
@@ -156,14 +151,13 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
                   {pages.map((page) => {
                     const isCurrent = page.id === current.id;
                     const count = countFor(page);
-                    const notSetUp = !groupNotSetUp && !setupMet(page, counts);
                     const label = t(`pages.${page.id}`);
                     if (!page.built) {
                       return (
                         <span
                           key={page.id}
                           aria-disabled="true"
-                          className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-muted/70"
+                          className="flex items-center justify-between gap-2 rounded-[8px] border border-transparent px-3 py-1.5 tracking-wide text-muted/70"
                         >
                           <span>{label}</span>
                           <span className="text-[10px] uppercase tracking-wider">{t("comingSoon")}</span>
@@ -176,16 +170,14 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
                         href={hrefFor(page)}
                         aria-current={isCurrent ? "page" : undefined}
                         className={cn(
-                          "flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 transition-colors",
-                          isCurrent
-                            ? "bg-hover text-foreground shadow-[inset_2px_0_0_var(--brand)]"
-                            : "text-secondary hover:bg-hover hover:text-foreground",
+                          // The page being read wears the sidebar's own pill (`navStyles.ts`);
+                          // the rest keep a clear border so nothing shifts when it moves.
+                          "flex items-center justify-between gap-2 rounded-[8px] border px-3 py-1.5 tracking-wide transition-colors",
+                          isCurrent ? cn(NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT) : cn("border-transparent", NAV_IDLE_TEXT),
                         )}
                       >
                         <span>{label}</span>
-                        {notSetUp
-                          ? <span className="text-[10px] uppercase tracking-wider text-muted">{t("notSetUp")}</span>
-                          : count !== null && <span className="text-[11px] tabular-nums text-muted">{count}</span>}
+                        {count !== null && <span className="text-[11px] tabular-nums text-muted">{count}</span>}
                       </Link>
                     );
                   })}

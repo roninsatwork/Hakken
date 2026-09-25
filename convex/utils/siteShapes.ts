@@ -90,6 +90,23 @@ export const engineDayValidator = v.object({
 });
 export type EngineDay = Infer<typeof engineDayValidator>;
 
+/** One group of a site's searches: how many, and the visits a month they bring. */
+const intentShareValidator = v.object({ searches: v.number(), visits: v.number() });
+
+/**
+ * The site's searches by what they are for, with the visits each group
+ * brings — searches naming the brand, ready to buy, researching, and the
+ * rest — worked out at each ranking rebuild, so the Overview's "Branded and
+ * other searches" reads one row and keeps a history.
+ */
+export const intentSplitValidator = v.object({
+  branded: intentShareValidator,
+  buying: intentShareValidator,
+  researching: intentShareValidator,
+  other: intentShareValidator,
+});
+export type IntentSplit = Infer<typeof intentSplitValidator>;
+
 /** How many keywords sit in each band, by band code. `zz_none` is never counted. */
 export const bandCountsValidator = v.object({
   p01_03: v.number(),
@@ -273,6 +290,20 @@ export const siteExportKindValidator = v.union(
  * AI judgements they led to. Shared by the table and the functions that write
  * and read it.
  */
+/** A request of a run that needs a look, and why (reliability plan V1). */
+export const attentionRow = v.object({
+  pullId: v.id("seoDataPulls"),
+  operationId: v.string(),
+  /** The website, question or search it asked about. */
+  about: v.string(),
+  kind: v.union(v.literal("FAILED"), v.literal("NOT_FILED"), v.literal("TOO_LARGE"), v.literal("ROWS_LEFT_OFF")),
+  /** Why, in DataForSEO's or the filing's own words. */
+  detail: v.optional(v.string()),
+  /** Rows left off a list to fit. */
+  rows: v.optional(v.number()),
+  at: v.optional(v.number()),
+});
+
 export const runReportFields = {
   cycleId: v.id("seoCollectionCycles"),
   companyId: v.id("companies"),
@@ -314,4 +345,11 @@ export const runReportFields = {
     stopped: v.optional(v.union(v.literal("SPEND_LIMIT"), v.literal("QUEUE_EMPTY"), v.literal("TIME_UP"))),
   })),
   ai: v.array(v.object({ decisionKey: v.string(), judgements: v.number(), costUsd: v.number() })),
+  /**
+   * Its requests that need a look — failed, answered but not filed, too large
+   * to keep, or rows left off to fit — the first fifty, and how many in all.
+   * Absent from a report worked out before 2026-09-25.
+   */
+  attention: v.optional(v.array(attentionRow)),
+  attentionTotal: v.optional(v.number()),
 };

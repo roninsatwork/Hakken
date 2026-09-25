@@ -47,6 +47,35 @@ describe("hashSeoParams", () => {
   });
 });
 
+describe("hashSeoParams at a day's scale", () => {
+  it("is 64 bits, and a hundred thousand searches never share one", () => {
+    // Every search checked on a day shares its operation, placeholder and
+    // date, so this alone tells them apart. At 32 bits, ten thousand a day
+    // collided about one day in a hundred (reliability plan 3.5).
+    const seen = new Set<string>();
+    for (let index = 0; index < 100_000; index += 1) {
+      const hash = hashSeoParams({ keyword: `carp fishing bait ${index}`, location_code: 2826, language_code: "en", depth: 100 });
+      expect(hash).toMatch(/^[0-9a-f]{16}$/);
+      seen.add(hash);
+    }
+    expect(seen.size).toBe(100_000);
+  });
+
+  it("tells apart searches the 32-bit key took for one another", () => {
+    // Each pair shared one 32-bit key: the second search would have been
+    // served the first one's results page.
+    const clashed = [
+      ["net bait 923 line 7", "tackle rod 7635 rod 16"],
+      ["bucket pva 1788 spod 10", "boilies spod 3821 pva 19"],
+      ["tackle rod 1773 rod 10", "pva hook 3709 fishing 20"],
+    ];
+    for (const [first, second] of clashed) {
+      expect(hashSeoParams({ keyword: first, language_code: "en", location_code: 2826 }))
+        .not.toBe(hashSeoParams({ keyword: second, language_code: "en", location_code: 2826 }));
+    }
+  });
+});
+
 describe("seoCycleDate", () => {
   it("is a UTC day, so a cycle and its catch-up agree", () => {
     // A cycle that starts at 09:00 and a sweep that catches up at 23:00 are

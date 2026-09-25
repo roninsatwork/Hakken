@@ -8,6 +8,7 @@ import {
   pageTypeValidator,
   rankBandValidator,
   rankIntentValidator,
+  intentSplitValidator,
   keywordFeatureValidator,
   rankStatusValidator,
   runReportFields,
@@ -208,6 +209,8 @@ export const siteTables = {
     buying: v.optional(v.number()),
     researching: v.optional(v.number()),
     branded: v.optional(v.number()),
+    /** The same groups with the visits each brings, and a fourth for the rest. */
+    intentSplit: v.optional(intentSplitValidator),
     // DataForSEO's own figures for the site, from `seoWebsiteMetrics`.
     rankedKeywordsTotal: v.optional(v.number()),
     estimatedTraffic: v.optional(v.number()),
@@ -720,6 +723,12 @@ export const siteTables = {
     key: v.string(),
     pending: v.boolean(),
     requestedAt: v.number(),
+    /**
+     * When the rebuild now running began: one at a time per key, because two
+     * at once each deleted what the other wrote (collection reliability plan,
+     * 2.3). Cleared when it ends; one that died frees it after `REBUILD_TURN_MS`.
+     */
+    runningSince: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
   /**

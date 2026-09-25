@@ -11,14 +11,16 @@ const FIGURE_CLASSES = "rounded-2xl border border-border-dim bg-card/40 px-5 py-
  *
  * With `href` the figure opens the records behind it, and says so with an
  * arrow (docs/plans/active/sites-ux-updates-plan.md §3, "every number opens
- * the records behind it"); without one it is only read. The Overview's four
- * cards and every record's screen draw their figures with this.
+ * the records behind it"); without one it is only read. Every record's
+ * screen draws its figures with this; the Overview's panels draw theirs
+ * `framed={false}`, since the panel around them is already the card.
  */
-export function SiteFigure({ label, value, detail, href }: {
+export function SiteFigure({ label, value, detail, href, framed = true }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
   href?: string;
+  framed?: boolean;
 }) {
   const body = (
     <>
@@ -27,11 +29,12 @@ export function SiteFigure({ label, value, detail, href }: {
       {detail !== undefined ? <div className="mt-1 text-[12px]">{detail}</div> : null}
     </>
   );
-  if (!href) return <div className={FIGURE_CLASSES}>{body}</div>;
+  const frame = framed ? FIGURE_CLASSES : "rounded-lg";
+  if (!href) return <div className={frame}>{body}</div>;
   return (
     <Link
       href={href}
-      className={`${FIGURE_CLASSES} transition-colors hover:border-brand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand`}
+      className={`${frame} transition-colors ${framed ? "hover:border-brand/40" : "hover:opacity-90"} focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand`}
     >
       {body}
     </Link>

@@ -24,6 +24,8 @@ import {
   markExistingHoldsOwned,
 } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
+import { moveAnswersOffRequests } from "./seoPullAnswers";
+import { detachCompanySchedules } from "./scheduler";
 import { backfillBrandedFlag } from "./websites";
 import {
   rebuildAnswerSummaries,
@@ -142,6 +144,24 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * be read by place through an index rather than filtered after a read.
    */
   "2026-09-22-position-places": backfillPositionPlaces,
+
+  /**
+   * Takes every stored DataForSEO answer off its request and into
+   * `seoPullAnswers` (`convex/seoPullAnswers.ts`). Kept on the requests, the
+   * answers made every read of requests read them too, and one company's came
+   * to more than a function may read. Four requests a batch, whatever size is
+   * asked for: each can still carry a megabyte.
+   */
+  "2026-09-25-answers-off-requests": moveAnswersOffRequests,
+
+  /**
+   * Takes the Collector off each company's Collection schedule, and the next
+   * run it was due to wake it at. The rows are the companies' settings, read
+   * by the DataForSEO Planner on its own runs; naming the Collector made the
+   * dispatcher wake it for each company (`seoScheduleService.startsRuns`).
+   * Whether a company collects, and how often, are left as they are.
+   */
+  "2026-09-25-company-schedules-wake-nothing": detachCompanySchedules,
 
   /**
    * Fill the tracking summaries from results parsed before they existed:

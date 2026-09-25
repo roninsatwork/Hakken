@@ -10,8 +10,9 @@ import {
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import { startsRuns } from "./seoScheduleService";
 import { resolveRunObjective } from "./agentObjectiveService";
-import { isAssignableAgentRole } from "./utils/agentRoles";
+import { startAgentRun } from "./agentRunStartService";
 import {
   APPROVAL_EXPIRY_CONFIG_KEY,
   getApprovalExpiredMessage,
@@ -895,6 +896,10 @@ export const scheduleDispatcher = internalMutation({
     const activeSchedules = await ctx.db
       .query("schedules")
       .withIndex("by_active_next_run", (q) => q.eq("isActive", true).lte("nextRunAt", now))
+      // A company's Collection schedule wakes nothing: the DataForSEO Planner
+      // reads it on its own runs. Left out in the query, not the loop, so rows
+      // that never advance cannot fill this batch and crowd out real schedules.
+      .filter(startsRuns)
       .take(ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT);
     for (const schedule of activeSchedules) {
         if (!schedule.workflowId && !schedule.agentId) continue;
@@ -953,29 +958,21 @@ export const scheduleDispatcher = internalMutation({
                   startedBy: schedule.createdBy,
                 });
 
-                // A DataForSEO role does its fixed job, exactly as its Run
-                // button does (`seoAgentRuns.ts`). Sent down the model path, a
-                // company's collection schedule woke the Collector at 09:00 on
-                // 2026-09-24 to ask a model that was not there, and it
-                // collected nothing.
-                if (isAssignableAgentRole(agent.systemKey)) {
-                  await ctx.scheduler.runAfter(0, internal.seoAgentRuns.runSeoRoleNow, {
-                    role: agent.systemKey,
-                    runId: agentRunId,
-                    workflowExecutionId: executionId,
-                  });
-                } else {
-                  await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
-                    agentId: schedule.agentId,
-                    objective,
-                    triggerType: "SCHEDULE",
-                    runId: agentRunId,
-                    scheduleId: schedule._id,
-                    workflowExecutionId: executionId,
-                    companyId: creator?.companyId,
-                    userId: schedule.createdBy,
-                  });
-                }
+                // Started exactly as its Run button starts it, through the one
+                // helper both paths share (`agentRunStartService.ts`): a wiki
+                // agent does its round and a DataForSEO agent its role's job,
+                // neither on the model. Only this path sent them to the model,
+                // and a collection schedule collected nothing because of it.
+                await startAgentRun(ctx, {
+                  agent,
+                  runId: agentRunId,
+                  workflowExecutionId: executionId,
+                  objective,
+                  triggerType: "SCHEDULE",
+                  scheduleId: schedule._id,
+                  companyId: creator?.companyId,
+                  userId: schedule.createdBy,
+                });
 
                 await ctx.db.patch(schedule._id, {
                   lastRunTs: now,

@@ -14,6 +14,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { CostFigure, dollars } from "../CostFigure";
+import { HourlyCheckNote } from "./HourlyCheckNote";
 import { RunStatus } from "./RunStatus";
 import { useRunFormat } from "./runFormat";
 
@@ -83,6 +84,8 @@ export default function CompanyCollectionRunsPage() {
             : ""}
         />
       </div>
+
+      <HourlyCheckNote />
 
       <DataTable
         rows={runs.isLoading ? undefined : runs.rows}

@@ -21,6 +21,7 @@ import {
 import { normalizeEnabledModules } from "./utils/companyModules";
 import { appError } from "./utils/appError";
 import * as companyShapes from "./utils/companyShapes";
+import { collectionTimetable, companyCollectionState } from "./seoScheduleService";
 import { rowShape } from "./utils/rowShape";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
@@ -71,16 +72,29 @@ export const getPaginatedCompanies = superAdminQuery({
         .paginate(args.paginationOpts)
       : await ctx.db.query("companies").order("desc").paginate(args.paginationOpts);
 
+    // Read once for the page: the Planner's and the Collector's own schedules
+    // decide when every company's work is actually sent.
+    const now = new Date();
+    const timetable = await collectionTimetable(ctx);
+
     const page = await Promise.all(
       companiesPage.page.map(async (company) => {
         const users = await ctx.db
           .query("users")
           .withIndex("by_company", (q) => q.eq("companyId", company._id))
           .take(COMPANY_INVENTORY_USER_COUNT_LIMIT + 1);
+        const { schedule, latest, next } = await companyCollectionState(ctx, company._id, timetable, now);
 
         return {
           ...withCompanyUserCount(company, Math.min(users.length, COMPANY_INVENTORY_USER_COUNT_LIMIT)),
           userCountIsCapped: users.length > COMPANY_INVENTORY_USER_COUNT_LIMIT,
+          collection: {
+            isActive: schedule?.isActive ?? false,
+            intervalStr: schedule?.intervalStr ?? null,
+            last: latest ? { startedAt: latest.startedAt, status: latest.status } : null,
+            nextAt: next.at,
+            nextWhy: next.at === null ? next.why : null,
+          },
         };
       })
     );

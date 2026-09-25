@@ -27,9 +27,23 @@ export const companyOptionListShape = v.array(v.object({
 
 export const companyListShape = v.union(companyOptionListShape, v.array(companyWithUserCount));
 
+/**
+ * A company's data collection, as the Manage Companies table shows it: whether
+ * it collects and how often, its newest collection, and when its work is next
+ * sent (`seoScheduleService.nextCollection`) — or why nothing will send it.
+ */
+export const companyCollectionShape = v.object({
+  isActive: v.boolean(),
+  intervalStr: v.union(v.string(), v.null()),
+  last: v.union(v.null(), v.object({ startedAt: v.number(), status: v.string() })),
+  nextAt: v.union(v.number(), v.null()),
+  nextWhy: v.union(v.literal("OFF"), v.literal("NOT_SCHEDULED"), v.null()),
+});
+
 export const companyPageShape = paginationResultValidator(v.object({
   ...companyWithUserCount.fields,
   userCountIsCapped: v.boolean(),
+  collection: companyCollectionShape,
 }));
 
 export const workspaceModulesShape = v.object({
