@@ -140,6 +140,13 @@ npm run build
 git diff --check
 ```
 
+**Two tests run only here, never on GitHub** (Anthony, 2026-09-25): the Sites
+speed test (`convex/sitesLoad.test.ts`) and the whole-company planning test in
+`convex/seoCollection.test.ts`. Both failed pushes on timing alone — GitHub's
+runner is small, busy and slowed by coverage — so they skip when
+`GITHUB_ACTIONS` is set. The local `npm run check` above is therefore the only
+place they run: never push without it. Every other test still runs on GitHub.
+
 Two different things run on GitHub, and it matters which one you are about to
 trigger.
 

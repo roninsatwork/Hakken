@@ -21,8 +21,16 @@ import { RANK_BANDS, RANK_INTENTS, RANK_STATUSES, KD_BANDS, PAGE_TYPES } from ".
  * parallel, and one run caught behind a busy moment once took 1.5 seconds for
  * a read that takes 55ms alone. A query that really scans is slow every time,
  * so its fastest run still fails; a busy moment is not slow every time.
+ *
+ * **Run here, not on GitHub.** GitHub's runner times the app's code under
+ * coverage on a small, busy machine, and failed a query that takes 17% of a
+ * scan here at 50.2% (2026-09-25). Anthony, the same day: "We need tests on
+ * dev still just remove these new ones that are causing failures in GitHub".
+ * It runs in every local run before a push (`npm run check`).
  */
 const UK = 2826;
+/** On GitHub's runner, where this test's timings mean nothing. */
+const ON_GITHUB = process.env.GITHUB_ACTIONS === "true";
 /** A query may take at most this share of one full scan of the keywords. */
 const SHARE_OF_A_SCAN = 0.5;
 /** Runs per query; the fastest counts. */
@@ -41,7 +49,7 @@ async function fastest<T>(run: () => Promise<T>, times: number): Promise<{ took:
 }
 
 describe("a very large site", () => {
-  test("every Sites query answers within the target on 50,000 keywords, 5,000 pages, 20,000 links and two years", async () => {
+  test.skipIf(ON_GITHUB)("every Sites query answers within the target on 50,000 keywords, 5,000 pages, 20,000 links and two years", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { holdId, userId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });

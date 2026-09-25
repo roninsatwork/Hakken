@@ -940,8 +940,13 @@ describe("chunking", () => {
 // whole-map simulations were given room for.
 const WHOLE_COMPANY_TIMEOUT_MS = 120_000;
 
+// Run here, not on GitHub, where its time limit failed a push without a
+// planning fault (Anthony, 2026-09-25: "just remove these new ones that are
+// causing failures in GitHub"). It runs in every local run before a push.
+const ON_GITHUB = process.env.GITHUB_ACTIONS === "true";
+
 describe("a company too big for one page", () => {
-  test("every website is reached, page after page", async () => {
+  test.skipIf(ON_GITHUB)("every website is reached, page after page", async () => {
     // Each page used to read the company's *first* rows and slice after the
     // cursor in memory. Past the first page the cursor was no longer among the
     // rows read, and every website after roughly the hundred and second was
