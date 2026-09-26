@@ -5,7 +5,6 @@ import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { recomputeSearchStats } from "./websiteTrackingStats";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { fileKeywordRank, requestSiteRebuild } from "./siteRankings";
 import { fileSerpPage, serpSnapshotValidator } from "./siteSerp";
 
 /**
@@ -109,6 +108,10 @@ export const writeKeywordCheck = internalMutation({
       rows.set(entry.websiteId, { position: entry.position, ...(entry.url ? { url: entry.url } : {}) });
     }
 
+    // Every website any company tracks this for, once each: a site missing
+    // from the page gets a row saying it was checked and not found. Read
+    // across companies because the rows are facts about the website; each
+    // company reads them only for the searches on its own list.
     const trackers = await ctx.db
       .query("websiteKeywords")
       .withIndex("by_keyword", (q) => q.eq("keyword", args.keyword))
@@ -141,19 +144,12 @@ export const writeKeywordCheck = internalMutation({
         keyword: args.keyword,
         locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
       });
-      // The Sites screens' latest ranking. Only a sighting is filed: not being
-      // on this page says nothing about the positions below it.
-      if (entry.position !== undefined) {
-        await fileKeywordRank(ctx, {
-          websiteId,
-          locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
-          keyword: args.keyword,
-          day: args.day,
-          position: entry.position,
-          ...(entry.url ? { url: entry.url } : {}),
-        });
-        await requestSiteRebuild(ctx, websiteId, args.locationCode ?? DEFAULT_LOCATION_CODE);
-      }
+      // Nothing goes into a website's keyword list from here: a tracked search
+      // is one company's own, and a row on the list of every site on the page
+      // would show it to every company watching them. All keywords is what
+      // DataForSEO says a site ranks for; a tracked search's positions are
+      // read through the list that tracks it
+      // (docs/plans/active/private-tracking-lists-plan.md, V5).
     }
     return null;
   },

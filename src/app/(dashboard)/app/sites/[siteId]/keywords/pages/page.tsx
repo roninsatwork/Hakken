@@ -9,6 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { PageTypePill, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -17,7 +18,15 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
+
+/**
+ * The columns that sort, over every page (docs/plans/active/
+ * sites-table-sorting-plan.md): the address A to Z, the best position from
+ * the top, and the most visits, keywords and linking websites first.
+ */
+const SORTS = { page: "asc", traffic: "desc", keywords: "desc", best: "asc", linking: "desc" } as const;
 
 const PAGE_TYPES = [
   "HOME", "SERVICE", "PRODUCT", "CATEGORY", "ARTICLE", "CASE_STUDY",
@@ -26,7 +35,7 @@ const PAGE_TYPES = [
 type PageType = (typeof PAGE_TYPES)[number];
 
 /**
- * Top pages (Organic keywords › Top pages): the site's pages by how many
+ * Top pages (Organic search › Top pages): the site's pages by how many
  * searches each ranks for. Paged and searched on the server; the chart is the
  * number of ranking pages over the dates chosen.
  *
@@ -47,16 +56,17 @@ export default function SitePagesPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [section, setSection] = useSiteParam<string>("section", "");
   const [pageType, setPageType] = useSiteParam<PageType | "">("type", "", PAGE_TYPES);
-  const [sort, setSort] = useSiteParam<"keywords" | "traffic">("sort", "keywords", ["keywords", "traffic"]);
+  const order = useSiteSort(SORTS, "keywords");
 
   const sections = useQuery(api.siteKeywords.listSections, { siteId });
-  const table = useSitePagedTable(api.siteKeywords.listPages, {
+  const table = useSiteListPage(api.siteKeywords.listPages, {
     siteId,
     ...(term ? { search: term } : {}),
     ...(section ? { section } : {}),
     ...(pageType ? { pageType } : {}),
-    sort,
-  });
+    sort: order.key,
+    direction: order.direction,
+  }, [{ siteId, list: "pages" }]);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const points = (series?.[0]?.points ?? []).filter((point) => point.pages !== undefined || point.estimatedTraffic !== undefined);
   // The whole site's traffic at its newest check, for each page's share of it.
@@ -83,42 +93,32 @@ export default function SitePagesPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
         minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("sectionFilter")} value={section} onChange={setSection}>
+            <Select chip={{ label: t("sectionFilter"), choice: section || null }} className="max-w-[320px]" value={section} onChange={setSection}>
               <option value="">{t("allSections")}</option>
               {(sections ?? []).map((entry) => <option key={entry.section} value={entry.section}>{entry.section}</option>)}
             </Select>
-            <Select aria-label={t("typeFilter")} value={pageType} onChange={(value) => setPageType(value as PageType | "")}>
+            <Select chip={{ label: t("typeFilter"), choice: pageType ? tt(pageType) : null }} value={pageType} onChange={(value) => setPageType(value as PageType | "")}>
               <option value="">{t("anyType")}</option>
               {PAGE_TYPES.map((entry) => <option key={entry} value={entry}>{tt(entry)}</option>)}
             </Select>
-            <Select aria-label={t("sortLabel")} value={sort} onChange={(value) => setSort(value as "keywords" | "traffic")}>
-              <option value="keywords">{t("sortKeywords")}</option>
-              <option value="traffic">{t("sortTraffic")}</option>
-            </Select>
-            <TableDownload siteId={siteId} kind="pages" />
           </>
         }
+        cardHeader={<SiteTableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="pages" sort={order.tableSort} />} />}
         empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: term || section || pageType ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
           {
             key: "page",
             header: t("columns.page"),
+            sortable: true,
             cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
           },
           { key: "type", header: t("columns.type"), cell: (row) => <PageTypePill type={row.pageType} /> },
@@ -126,6 +126,7 @@ export default function SitePagesPage() {
             key: "traffic",
             header: t("columns.traffic"),
             align: "right",
+            sortable: true,
             cell: (row) => (
               <span className="flex flex-col items-end">
                 <span className="font-mono text-[13px] text-foreground">{formatNumber(row.traffic)}</span>
@@ -135,12 +136,13 @@ export default function SitePagesPage() {
               </span>
             ),
           },
-          { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[13px]">{formatNumber(row.keywords)}</span> },
-          { key: "best", header: t("columns.best"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition}</span> },
+          { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px]">{formatNumber(row.keywords)}</span> },
+          { key: "best", header: t("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition}</span> },
           {
             key: "linking",
             header: t("columns.linking"),
             align: "right",
+            sortable: true,
             cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.referringDomains)}</span>,
           },
         ]}

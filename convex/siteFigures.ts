@@ -2,11 +2,14 @@ import { v, type Infer } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { answerPlace, type AiEngine } from "./seoAiEngines";
+import { holdQuestions } from "./holdLists";
 import { bandCountsValidator, engineDayValidator, type EngineDay, intentSplitValidator } from "./utils/siteShapes";
 
 /**
  * Reading a site's day summaries (`siteDaySummaries`): its newest figures, and
- * its figures over a stretch of time in days, weeks or months.
+ * its figures over a stretch of time in days, weeks or months — and, apart,
+ * what the answers to a company's own questions said (`siteListAiDays`), which
+ * are that company's alone (docs/plans/active/private-tracking-lists-plan.md).
  *
  * Shared by the Sites queries so "the latest backlinks" or "traffic by week"
  * mean the same thing on every screen.
@@ -30,8 +33,8 @@ export const QUESTIONS_FOR_CITED_PAGES = 100;
 /** Pages of one site cited in the answers to one question, read at most. */
 const CITED_PAGES_PER_QUESTION = 200;
 
-/** A watched site's days of mentions read for one chart: as many as the day rows. */
-const RIVAL_DAYS_READ = SERIES_DAYS;
+/** A list's days of one website's AI line read for one chart: as many as the day rows. */
+const LIST_AI_DAYS_READ = SERIES_DAYS;
 
 /** The newest day row carrying each kind of figure, from the last few weeks. */
 export async function latestFigures(ctx: Reader, websiteId: Id<"websites">, locationCode: number) {
@@ -43,12 +46,31 @@ export async function latestFigures(ctx: Reader, websiteId: Id<"websites">, loca
   const ranking = recent.find((row) => row.keywords !== undefined) ?? null;
   const metrics = recent.find((row) => row.estimatedTraffic !== undefined) ?? null;
   const links = recent.find((row) => row.referringDomains !== undefined || row.backlinks !== undefined) ?? null;
-  const answers = recent.find((row) => (row.ai?.length ?? 0) > 0) ?? null;
-  return { ranking, metrics, links, answers, lastDay: recent[0]?.day ?? null };
+  return { ranking, metrics, links, lastDay: recent[0]?.day ?? null };
+}
+
+/**
+ * A list's newest AI line about one website: the answers to the company's own
+ * questions on the newest day they came back, per engine. Null for no list or
+ * no answers yet.
+ */
+export async function latestListAi(
+  ctx: Reader,
+  holdId: Id<"companyWebsites"> | null,
+  place: number,
+  websiteId: Id<"websites">,
+): Promise<Doc<"siteListAiDays"> | null> {
+  if (!holdId) return null;
+  return await ctx.db
+    .query("siteListAiDays")
+    .withIndex("by_hold_site_day", (q) =>
+      q.eq("companyWebsiteId", holdId).eq("locationCode", place).eq("websiteId", websiteId))
+    .order("desc")
+    .first();
 }
 
 /** Everything the engines said about the site on one day, added up. */
-export function aiTotals(row: Pick<Summary, "ai"> | null): { named: number; asked: number; recommended: number } {
+export function aiTotals(row: { ai?: EngineDay[] } | null): { named: number; asked: number; recommended: number } {
   let named = 0;
   let asked = 0;
   let recommended = 0;
@@ -195,16 +217,8 @@ function addInto(point: Point, row: Summary): Point {
   point.rankedDown += row.rankedDown ?? 0;
   point.rankedNew += row.rankedNew ?? 0;
   point.rankedLost += row.rankedLost ?? 0;
-  for (const engine of row.ai ?? []) {
-    const held = point.ai.find((entry) => entry.engine === engine.engine);
-    if (held) {
-      held.asked += engine.asked;
-      held.named += engine.named;
-      held.recommended += engine.recommended;
-    } else {
-      point.ai.push({ ...engine });
-    }
-  }
+  // A day row carries no answers: they are a company's own, and are laid on
+  // from its list (`overlayListAi`).
   return point;
 }
 
@@ -212,35 +226,32 @@ function addInto(point: Point, row: Summary): Point {
  * A watched site's AI figures, from the answers to the questions it is
  * measured on.
  *
- * A competitor asks nothing, so the day summaries hold no answers for it. Its
- * figures are read from the answers to the owned site's questions — **this
- * company's questions only**: a mention in an answer to another client's
- * question never reaches this company's screen.
+ * A competitor asks nothing, so its figures are read from the answers to the
+ * owned site's questions — **this company's questions only**, through its own
+ * list: a mention in an answer to another company's question never reaches
+ * this company's screen.
  */
 export async function newestAnswerEngines(
   ctx: Reader,
-  askerId: Id<"websites">,
+  holdId: Id<"companyWebsites"> | null,
   websiteId: Id<"websites">,
   place: number,
 ): Promise<{ named: number; asked: number } | null> {
-  return enginesNamedIn(await newestAnswers(ctx, askerId, place), websiteId);
+  return enginesNamedIn(await newestAnswers(ctx, holdId, place), websiteId);
 }
 
 /**
- * The newest answer to each of a site's questions, per engine, from where
+ * The newest answer to each of a company's questions, per engine, from where
  * that engine answers for this place — read once and shared by every watched
  * site measured on those questions (the Sites list reads it once per owned
  * site, not once per competitor).
  */
 export async function newestAnswers(
   ctx: Reader,
-  askerId: Id<"websites">,
+  holdId: Id<"companyWebsites"> | null,
   place: number,
 ): Promise<Array<{ engine: AiEngine; named: Id<"websites">[] }>> {
-  const questions = await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website", (q) => q.eq("websiteId", askerId))
-    .take(QUESTIONS_FOR_FIGURES);
+  const questions = await holdQuestions(ctx, holdId, QUESTIONS_FOR_FIGURES);
   const answers: Array<{ engine: AiEngine; named: Id<"websites">[] }> = [];
   for (const question of questions) {
     for (const engine of question.engines) {
@@ -278,20 +289,18 @@ export type CitedPage = {
 };
 
 /**
- * The questions a site is measured on, as the cited-page rows are keyed: each
- * question, per engine, at the place that engine answers from for this site.
- * Bounded by `cap`, like every read of a site's questions.
+ * The questions a site is measured on — the company's own list — as the
+ * cited-page rows are keyed: each question, per engine, at the place that
+ * engine answers from for this site. Bounded by `cap`, like every read of a
+ * list.
  */
 export async function askedQuestions(
   ctx: Reader,
-  askerId: Id<"websites">,
+  holdId: Id<"companyWebsites"> | null,
   place: number,
   cap: number,
 ): Promise<Array<{ prompt: string; engine: AiEngine; locationCode: number }>> {
-  const questions = await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website", (q) => q.eq("websiteId", askerId))
-    .take(cap);
+  const questions = await holdQuestions(ctx, holdId, cap);
   return questions.flatMap((question) =>
     question.engines.map((engine) => ({ prompt: question.prompt, engine, locationCode: answerPlace(engine, place) })));
 }
@@ -307,17 +316,31 @@ export async function askedQuestions(
 export async function citedPagesOf(
   ctx: Reader,
   websiteId: Id<"websites">,
-  askerId: Id<"websites">,
+  /** The list the site is measured on (`listHold` in `siteAccess.ts`). */
+  holdId: Id<"companyWebsites"> | null,
   place: number,
   questionCap: number,
+  /**
+   * Set when a read stopped short — more questions than `questionCap`, or a
+   * question citing more of the site's pages than are read for one — so a
+   * screen listing the pages can say the list is longer (docs/plans/active/
+   * sites-table-pages-plan.md, T11). Figures that only count do not ask.
+   */
+  coverage?: { cut: boolean },
 ): Promise<CitedPage[]> {
   const byPage = new Map<string, CitedPage>();
-  for (const asked of await askedQuestions(ctx, askerId, place, questionCap)) {
-    const rows = await ctx.db
+  if (coverage) {
+    const questions = await holdQuestions(ctx, holdId, questionCap + 1);
+    if (questions.length > questionCap) coverage.cut = true;
+  }
+  for (const asked of await askedQuestions(ctx, holdId, place, questionCap)) {
+    const read = await ctx.db
       .query("siteCitedPages")
       .withIndex("by_site_question", (q) =>
         q.eq("websiteId", websiteId).eq("prompt", asked.prompt).eq("engine", asked.engine).eq("locationCode", asked.locationCode))
-      .take(CITED_PAGES_PER_QUESTION);
+      .take(CITED_PAGES_PER_QUESTION + 1);
+    if (read.length > CITED_PAGES_PER_QUESTION && coverage) coverage.cut = true;
+    const rows = read.slice(0, CITED_PAGES_PER_QUESTION);
     for (const row of rows) {
       const held = byPage.get(row.page);
       if (!held) {
@@ -336,28 +359,31 @@ export async function citedPagesOf(
 }
 
 /**
- * A watched site's mentions per engine per step, from the answers to this
- * company's own questions asked from this place — worked out with the asking
- * site's day summaries (`siteRivalAiDays`) — laid onto its points. "Asked" is
- * left at nought: the questions were the owned site's, and what a chart of a
- * competitor shows is how often it was named.
+ * One website's AI line per engine per step, from the answers to this
+ * company's own questions asked from this place (`siteListAiDays`), laid onto
+ * its points: the owned site's own line — asked, named, recommended — or how
+ * often a competitor was named, where "asked" stays at nought because the
+ * questions were the owned site's. Nothing but the company's own list is
+ * read, so another company's questions never reach the chart.
  */
-export async function overlayMentions(
+export async function overlayListAi(
   ctx: Reader,
   points: Point[],
-  askerId: Id<"websites">,
+  holdId: Id<"companyWebsites"> | null,
   websiteId: Id<"websites">,
   place: number,
   from: string,
   to: string,
   step: Step,
 ): Promise<Point[]> {
-  const days = await ctx.db
-    .query("siteRivalAiDays")
-    .withIndex("by_asker_site_day", (q) =>
-      q.eq("askerWebsiteId", askerId).eq("locationCode", place).eq("websiteId", websiteId)
-        .gte("day", from).lte("day", to))
-    .take(RIVAL_DAYS_READ);
+  const days = holdId
+    ? await ctx.db
+      .query("siteListAiDays")
+      .withIndex("by_hold_site_day", (q) =>
+        q.eq("companyWebsiteId", holdId).eq("locationCode", place).eq("websiteId", websiteId)
+          .gte("day", from).lte("day", to))
+      .take(LIST_AI_DAYS_READ)
+    : [];
   const byStep = new Map<string, Map<AiEngine, EngineDay>>();
   for (const row of days) {
     const key = bucketOf(row.day, step);
@@ -365,6 +391,7 @@ export async function overlayMentions(
     byStep.set(key, engines);
     for (const entry of row.ai) {
       const held = engines.get(entry.engine) ?? { engine: entry.engine, asked: 0, named: 0, recommended: 0 };
+      held.asked += entry.asked;
       held.named += entry.named;
       held.recommended += entry.recommended;
       engines.set(entry.engine, held);

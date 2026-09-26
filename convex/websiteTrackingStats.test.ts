@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * The summaries the Tracking screen reads, kept as results are filed.
@@ -68,7 +69,7 @@ describe("question summaries", () => {
     const rival = await seedWebsite(t, "rival.co.uk");
     const prompt = "who is the best branding agency in Leeds";
     await t.run(async (ctx) => await ctx.db.insert("websiteQuestions", {
-      websiteId: ronins, prompt, engines: ["chatgpt", "claude"], isActive: true, createdAt: Date.now(),
+      websiteId: ronins, companyWebsiteId: await listOwnerOf(ctx, ronins), prompt, engines: ["chatgpt", "claude"], isActive: true, createdAt: Date.now(),
     }));
 
     await answer(t, prompt, "2026-09-01", [{ websiteId: ronins, stance: "RECOMMENDED" }, { websiteId: rival }]);
@@ -97,7 +98,7 @@ describe("question summaries", () => {
     const ronins = await seedWebsite(t, "ronins.co.uk");
     const prompt = "who is the best branding agency in Leeds";
     await t.run(async (ctx) => await ctx.db.insert("websiteQuestions", {
-      websiteId: ronins, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+      websiteId: ronins, companyWebsiteId: await listOwnerOf(ctx, ronins), prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
     }));
     const pullId = await answer(t, prompt, "2026-09-01", [{ websiteId: ronins }]);
 
@@ -118,7 +119,7 @@ describe("question summaries", () => {
     const ronins = await seedWebsite(t, "ronins.co.uk");
     const prompt = "who is the best branding agency in Leeds";
     await t.run(async (ctx) => await ctx.db.insert("websiteQuestions", {
-      websiteId: ronins, prompt, engines: ["claude"], isActive: true, createdAt: Date.now(),
+      websiteId: ronins, companyWebsiteId: await listOwnerOf(ctx, ronins), prompt, engines: ["claude"], isActive: true, createdAt: Date.now(),
     }));
 
     await answer(t, prompt, "2026-09-01", [{ websiteId: ronins }]);
@@ -137,7 +138,7 @@ describe("search summaries", () => {
     const t = harness();
     const ronins = await seedWebsite(t, "ronins.co.uk");
     await t.run(async (ctx) => await ctx.db.insert("websiteKeywords", {
-      websiteId: ronins, keyword: "branding agency leeds", isActive: true, createdAt: Date.now(),
+      websiteId: ronins, companyWebsiteId: await listOwnerOf(ctx, ronins), keyword: "branding agency leeds", isActive: true, createdAt: Date.now(),
     }));
 
     await check(t, "branding agency leeds", "2026-09-01", LEEDS, [{ websiteId: ronins, position: 4 }]);
@@ -163,7 +164,7 @@ describe("search summaries", () => {
     const t = harness();
     const ronins = await seedWebsite(t, "ronins.co.uk");
     await t.run(async (ctx) => await ctx.db.insert("websiteKeywords", {
-      websiteId: ronins, keyword: "branding agency leeds", isActive: true, createdAt: Date.now(),
+      websiteId: ronins, companyWebsiteId: await listOwnerOf(ctx, ronins), keyword: "branding agency leeds", isActive: true, createdAt: Date.now(),
     }));
 
     await check(t, "branding agency leeds", "2026-09-01", LEEDS, [{ websiteId: ronins, position: 4 }]);

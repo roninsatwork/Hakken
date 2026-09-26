@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { aiEngineValidator, AI_ENGINES } from "./seoAiEngines";
-import { listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { listHold, myRivals, requireMySite } from "./siteAccess";
 import { citedPagesOf, latestFigures, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { pageTypeValidator } from "./utils/siteShapes";
 
@@ -80,6 +80,13 @@ export const overviewExtras = tenantQuery({
         visits: nullableNumber,
         /** Searches both rank for, when either one's found list holds the other; null when neither does. */
         shared: nullableNumber,
+        /**
+         * The visits a month it gets from those searches, as this site's own
+         * found list has them; null when that list does not hold it. The
+         * competitor's own list holds this site's visits on them instead — not
+         * the same figure — so it is not borrowed the way `shared` is.
+         */
+        sharedVisits: nullableNumber,
       })),
     }),
   }),
@@ -103,7 +110,7 @@ export const overviewExtras = tenantQuery({
         .withIndex("by_site_feature_keyword", (q) =>
           q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", "ai_overview_reference"))
         .take(FEATURE_ROWS_READ),
-      citedPagesOf(ctx, websiteId, listWebsiteId(site), place, QUESTIONS_FOR_CITED_PAGES),
+      citedPagesOf(ctx, websiteId, listHold(site), place, QUESTIONS_FOR_CITED_PAGES),
       ctx.db
         .query("discoveredCompetitors")
         .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
@@ -132,12 +139,14 @@ export const overviewExtras = tenantQuery({
     // Every competitor beside the site, from its own collected figures, as the
     // Market map reads them. The searches both rank for come from what
     // discovery found: this site's list first, then the competitor's own list,
-    // since the count is the same either way round.
-    const sharedWith = new Map(found.map((row) => [row.host, row.intersections]));
+    // since the count is the same either way round. The visits it gets from
+    // them come from this site's list only (the Competitors card's Traffic view).
+    const foundHere = new Map(found.map((row) => [row.host, row]));
     const rivalRows = await Promise.all(rivals.map(async (rival) => {
+      const mine = foundHere.get(rival.website.host);
       const [latest, theirs] = await Promise.all([
         latestFigures(ctx, rival.website._id, place),
-        sharedWith.has(rival.website.host)
+        mine
           ? null
           : ctx.db
             .query("discoveredCompetitors")
@@ -149,7 +158,8 @@ export const overviewExtras = tenantQuery({
         host: rival.website.displayHost,
         keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
         visits: latest.metrics?.estimatedTraffic ?? null,
-        shared: sharedWith.get(rival.website.host) ?? theirs?.intersections ?? null,
+        shared: mine?.intersections ?? theirs?.intersections ?? null,
+        sharedVisits: mine?.estimatedTraffic ?? null,
       };
     }));
 

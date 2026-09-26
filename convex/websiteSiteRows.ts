@@ -4,7 +4,8 @@ import { resolveWebsiteSchedule, type ResolvedWebsiteSchedule } from "./seoSched
 import { SEO_COMPETITORS_PER_WEBSITE } from "./seoCollectionPolicy";
 import { appError } from "./utils/appError";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
-import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
+import { isTrackedHold, listOwnerHold, pairedOwnedHold } from "./utils/websitePairing";
+import { holdQuestions, holdSearches } from "./holdLists";
 import {
   pullsPerMonth,
   questionVerdict,
@@ -168,11 +169,13 @@ export type SearchRow = {
   monthlyUsd: number | null;
 };
 
+/**
+ * The company's own searches the site is measured on
+ * (docs/plans/active/private-tracking-lists-plan.md), with where the site
+ * stands on each.
+ */
 export async function loadSearchRows(ctx: Reader, site: Site, costs: Map<string, number>): Promise<SearchRow[]> {
-  const searches = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website", (q) => q.eq("websiteId", site.website._id))
-    .take(MAX_LIST);
+  const searches = await holdSearches(ctx, listOwnerHold(site.hold, site.pair)?._id ?? null, MAX_LIST);
   const unit = costs.get(SEO_KEYWORD_CHECK_OPERATION);
 
   return await Promise.all(searches.map(async (search) => {
@@ -213,11 +216,13 @@ export type QuestionRow = {
   others: Map<Id<"websites">, { times: number; lastDay: string }>;
 };
 
+/**
+ * The company's own questions the site is measured on, with how their
+ * answers treated `site.website` — the owned site's, for a caller asking on a
+ * competitor's behalf.
+ */
 export async function loadQuestionRows(ctx: Reader, site: Site, costs: Map<string, number>): Promise<QuestionRow[]> {
-  const questions = await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website", (q) => q.eq("websiteId", site.website._id))
-    .take(MAX_LIST);
+  const questions = await holdQuestions(ctx, listOwnerHold(site.hold, site.pair)?._id ?? null, MAX_LIST);
 
   return await Promise.all(questions.map(async (question) => {
     // Each engine's answers from where they are filed: an engine that takes no

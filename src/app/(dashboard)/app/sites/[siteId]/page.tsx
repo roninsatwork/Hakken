@@ -5,7 +5,6 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { LayoutDashboard } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -15,6 +14,7 @@ import { useSiteRange } from "../_components/SiteDateRange";
 import { formatShortDay, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
+import { SiteViewSwitch } from "../_components/SiteViewSwitch";
 import { newestOfEach } from "./newestOfEach";
 import { OverviewPanels } from "./OverviewPanels";
 import { OverviewSections } from "./OverviewSections";
@@ -112,22 +112,14 @@ export default function SiteOverviewPage() {
 
   const tabs = (
     <div className="flex flex-wrap items-center gap-3">
-      <div role="tablist" aria-label={t("chartView")} className="inline-flex overflow-hidden rounded-lg border border-border-dim">
-        {(["metrics", "competitors", "years"] as const).map((entry) => (
-          <Button
-            key={entry}
-            variant="ghost"
-            role="tab"
-            aria-selected={tab === entry}
-            onClick={() => setTab(entry)}
-            className={`rounded-none px-3 py-1.5 text-[12px] ${tab === entry ? "bg-brand/15 text-brand hover:bg-brand/15" : "text-secondary hover:text-foreground"}`}
-          >
-            {t(`tabs.${entry}`)}
-          </Button>
-        ))}
-      </div>
+      <SiteViewSwitch
+        label={t("chartView")}
+        options={(["metrics", "competitors", "years"] as const).map((entry) => ({ value: entry, label: t(`tabs.${entry}`) }))}
+        value={tab}
+        onChange={setTab}
+      />
       {tab !== "metrics" ? (
-        <Select aria-label={t("measure")} value={compared} onChange={(value) => setCompared(value as Measure)}>
+        <Select chip={{ label: `${t("measure")}: ${tm(compared)}` }} aria-label={t("measure")} value={compared} onChange={(value) => setCompared(value as Measure)}>
           {MEASURES.map((measure) => <option key={measure} value={measure}>{tm(measure)}</option>)}
         </Select>
       ) : null}

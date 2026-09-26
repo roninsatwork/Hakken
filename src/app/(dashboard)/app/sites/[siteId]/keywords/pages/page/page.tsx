@@ -20,13 +20,15 @@ import {
   PositionCell,
   RecordLinkCell,
 } from "../../../../_components/SiteCells";
+import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { SiteFigure } from "../../../../_components/SiteFigure";
-import { RecordTableTitle, SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
+import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { sharedSiteQuery } from "../../../../_components/useSiteParam";
 import { useSiteId } from "../../../../_components/useSite";
-import { useSitePagedTable } from "../../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../../_components/useSiteSort";
 
 /** Dollars, whole: what visits would cost as adverts. */
 function formatUsd(value: number | null): string {
@@ -34,7 +36,14 @@ function formatUsd(value: number | null): string {
 }
 
 /**
- * One page's own screen (Organic keywords › Top pages › a page): the searches
+ * The page's keywords sort as Keywords does (docs/plans/active/
+ * sites-table-sorting-plan.md): the keyword A to Z, position from the top,
+ * the biggest rise, and the most searched and most visits first.
+ */
+const KEYWORD_SORTS = { keyword: "asc", position: "asc", change: "desc", volume: "desc", traffic: "desc" } as const;
+
+/**
+ * One page's own screen (Organic search › Top pages › a page): the searches
  * it ranks for, the visits they bring, what the newest crawl found on it,
  * which AI answers link to it, and the strongest links to it.
  *
@@ -58,7 +67,12 @@ export default function SitePageRecordPage() {
   const asked = useRecordKey("page");
 
   const record = useQuery(api.siteRecords.pageRecord, asked ? { siteId, page: asked } : "skip");
-  const table = useSitePagedTable(api.siteKeywords.listKeywords, asked ? { siteId, page: asked } : "skip");
+  const order = useSiteSort(KEYWORD_SORTS, "position");
+  const table = useSiteListPage(
+    api.siteKeywords.listKeywords,
+    asked ? { siteId, path: asked, sort: order.key, direction: order.direction } : "skip",
+    [{ siteId, list: "keywords" }],
+  );
 
   if (!asked) {
     return <DetailHeader back={back} icon={<FileText className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -183,30 +197,24 @@ export default function SitePageRecordPage() {
 
           {rank ? (
             <DataTable
-              rows={table.isLoading ? undefined : table.rows}
+              sort={order.tableSort}
+              rows={table.pageRows}
               rowKey={(row) => row._id}
-              cardHeader={<RecordTableTitle title={t("keywordsTitle")} />}
               onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+              cardHeader={<SiteTableBar footer={table.footer} noun="keywords" title={t("keywordsTitle")} />}
               empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: t("notRanking") }}
-              footer={{
-                mode: "paged",
-                page: table.page,
-                totalPages: table.totalPages,
-                totalCount: table.loadedCount,
-                pageSize: table.pageSize,
-                isLoading: table.isBusy,
-                onPageChange: table.goToPage,
-              }}
+              footer={table.footer}
               columns={[
                 {
                   key: "keyword",
                   header: tk("columns.keyword"),
+                  sortable: true,
                   cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
                 },
-                { key: "position", header: tk("columns.position"), align: "right", cell: (row) => <PositionCell position={row.position} /> },
-                { key: "change", header: tk("columns.change"), align: "right", cell: (row) => <ChangeCell change={row.change} /> },
-                { key: "volume", header: tk("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
-                { key: "traffic", header: tk("columns.traffic"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
+                { key: "position", header: tk("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
+                { key: "change", header: tk("columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },
+                { key: "volume", header: tk("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+                { key: "traffic", header: tk("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
               ]}
             />
           ) : null}

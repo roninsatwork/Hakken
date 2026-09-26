@@ -8,8 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -17,11 +17,15 @@ import { formatDay, formatNumber, formatShortDay, toCsv } from "../../../_compon
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const MEASURES = ["spamScore", "brokenBacklinks", "brokenPages"] as const;
 type Measure = (typeof MEASURES)[number];
+
+/** The columns that sort: the day, newest first, and each measure, the most first. */
+const SORTS = dayTableSorts<{ day: string } & Partial<Record<Measure, number>>, Measure>(MEASURES, (row, measure) => row[measure]);
 
 
 /**
@@ -40,13 +44,12 @@ export default function SiteLinkQualityPage() {
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const [shown, setShown] = useState<Record<Measure, boolean>>({ spamScore: true, brokenBacklinks: true, brokenPages: true });
-  const [page, setPage] = useSiteTablePage();
 
   const points = (series?.[0]?.points ?? []).filter((point) => MEASURES.some((measure) => point[measure] !== undefined));
   const chosen = MEASURES.filter((measure) => shown[measure]);
   const newestFirst = [...points].reverse();
-  const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
-  const rows = series === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const { rows: sorted, tableSort } = useSiteSortedList(newestFirst, SORTS, { opening: "day", name: dayOf });
+  const pager = useSitePager(sorted, { isLoading: series === undefined });
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,26 +97,20 @@ export default function SiteLinkQualityPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={rows}
+        rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[560px]"
-filters={<ListDownload fileName={`${site?.host ?? "site"}-link-quality`} rows={newestFirst} columns={[{ header: tc("lastChecked"), value: (row) => row.day }, ...MEASURES.map((measure) => ({ header: tm(measure), value: (row: (typeof points)[number]) => row[measure] }))]} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="checks" actions={<ListDownload fileName={`${site?.host ?? "site"}-link-quality`} rows={sorted} columns={[{ header: tc("lastChecked"), value: (row) => row.day }, ...MEASURES.map((measure) => ({ header: tm(measure), value: (row: (typeof points)[number]) => row[measure] }))]} />} />}
         empty={{ icon: <ShieldCheck className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: newestFirst.length,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: series === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "day", header: tc("lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
+          { key: "day", header: tc("lastChecked"), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
           ...MEASURES.map((measure) => ({
             key: measure,
             header: tm(measure),
             align: "right" as const,
+            sortable: true,
             cell: (row: (typeof points)[number]) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row[measure])}</span>,
           })),
         ]}

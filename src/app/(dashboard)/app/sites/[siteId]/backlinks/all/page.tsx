@@ -9,15 +9,24 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
 
 type Status = "LIVE" | "NEW" | "LOST";
 type Follow = "FOLLOW" | "NOFOLLOW";
+
+/**
+ * The columns that sort, over every link (docs/plans/active/
+ * sites-table-sorting-plan.md): the linking website A to Z, the strongest
+ * first, the newest first.
+ */
+const SORTS = { from: "asc", domainRank: "desc", firstSeen: "desc" } as const;
 
 /**
  * All backlinks: every website linking here with its strongest link — one
@@ -34,17 +43,18 @@ export default function SiteAllBacklinksPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<Status | "">("status", "", ["LIVE", "NEW", "LOST"]);
   const [follow, setFollow] = useSiteParam<Follow | "">("follow", "", ["FOLLOW", "NOFOLLOW"]);
-  const [sort, setSort] = useSiteParam<"rank" | "newest">("sort", "rank", ["rank", "newest"]);
+  const order = useSiteSort(SORTS, "domainRank");
   const [links, setLinks] = useSiteParam<"one" | "every">("links", "one", ["one", "every"]);
   const every = links === "every";
-  const table = useSitePagedTable(api.siteLinkLists.listBacklinks, {
+  const table = useSiteListPage(api.siteLinkLists.listBacklinks, {
     siteId,
     ...(every ? { every } : {}),
     ...(term ? { search: term } : {}),
     ...(status ? { status } : {}),
     ...(follow ? { follow } : {}),
-    sort,
-  });
+    sort: order.key,
+    direction: order.direction,
+  }, every ? [{ siteId, list: "links" }] : []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,47 +64,37 @@ export default function SiteAllBacklinksPage() {
         description={every ? t("descriptionEvery") : t("description")}
       />
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "domain", domain: row.domainFrom }))}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("showLabel")} value={links} onChange={(value) => setLinks(value as "one" | "every")}>
+            <Select chip={{ label: every ? t("showEvery") : t("showOne") }} aria-label={t("showLabel")} value={links} onChange={(value) => setLinks(value as "one" | "every")}>
               <option value="one">{t("showOne")}</option>
               <option value="every">{t("showEvery")}</option>
             </Select>
-            <Select aria-label={tl("statusFilter")} value={status} onChange={(value) => setStatus(value as Status | "")}>
+            <Select chip={{ label: tl("statusFilter"), choice: status ? tl(`statuses.${status}`) : null }} value={status} onChange={(value) => setStatus(value as Status | "")}>
               <option value="">{tl("anyStatus")}</option>
               {(["LIVE", "NEW", "LOST"] as const).map((entry) => <option key={entry} value={entry}>{tl(`statuses.${entry}`)}</option>)}
             </Select>
-            <Select aria-label={tl("followFilter")} value={follow} onChange={(value) => setFollow(value as Follow | "")}>
+            <Select chip={{ label: tl("followFilter"), choice: follow === "FOLLOW" ? tl("follow") : follow === "NOFOLLOW" ? tl("nofollow") : null }} value={follow} onChange={(value) => setFollow(value as Follow | "")}>
               <option value="">{tl("anyFollow")}</option>
               <option value="FOLLOW">{tl("follow")}</option>
               <option value="NOFOLLOW">{tl("nofollow")}</option>
             </Select>
-            <Select aria-label={tl("sortLabel")} value={sort} onChange={(value) => setSort(value as "rank" | "newest")}>
-              <option value="rank">{t("sortRank")}</option>
-              <option value="newest">{t("sortNewest")}</option>
-            </Select>
-            <TableDownload siteId={siteId} kind={every ? "links" : "backlinks"} />
           </>
         }
+        cardHeader={<SiteTableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind={every ? "links" : "backlinks"} sort={order.tableSort} />} />}
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: term || status || follow ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
           {
             key: "from",
             header: t("columns.from"),
+            sortable: true,
             cell: (row) => (
               <span className="flex max-w-[34ch] flex-col gap-0.5">
                 <RecordLinkCell href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
@@ -117,8 +117,8 @@ export default function SiteAllBacklinksPage() {
             header: t("columns.follow"),
             cell: (row) => <StatusPill tone={row.dofollow ? "success" : "neutral"}>{row.dofollow ? tl("follow") : tl("nofollow")}</StatusPill>,
           },
-          { key: "domainRank", header: t("columns.domainRank"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainRank)}</span> },
-          { key: "firstSeen", header: t("columns.firstSeen"), cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
+          { key: "domainRank", header: t("columns.domainRank"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainRank)}</span> },
+          { key: "firstSeen", header: t("columns.firstSeen"), sortable: true, cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
         ]}
       />

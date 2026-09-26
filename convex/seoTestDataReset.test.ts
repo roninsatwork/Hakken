@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * Clearing collected DataForSEO data from a test database.
@@ -16,7 +17,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 async function seed(t: ReturnType<typeof harness>) {
   return await t.run(async (ctx) => {
     const websiteId = await ctx.db.insert("websites", { host: "ronins.co.uk", displayHost: "ronins.co.uk", firstSeenAt: Date.now() });
-    await ctx.db.insert("websiteKeywords", { websiteId, keyword: "ai agency", isActive: true, createdAt: Date.now() });
+    await ctx.db.insert("websiteKeywords", { websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), keyword: "ai agency", isActive: true, createdAt: Date.now() });
     for (let index = 0; index < 20; index += 1) {
       await ctx.db.insert("seoDataPulls", {
         operationId: "serp_google_organic", family: "SERP", mode: "QUEUED", taskArgsJson: "{}",

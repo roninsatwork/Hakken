@@ -73,9 +73,11 @@ export async function fileRankedPositions(
   },
 ): Promise<void> {
   const now = Date.now();
-  // The searches on this host's own record, so the ones a ranked-keywords
-  // pull happens to cover bring their summaries up to date too. Only those:
-  // a large site ranks for thousands of phrases nobody is tracking.
+  // The searches any company tracks for this host, so the ones a
+  // ranked-keywords pull happens to cover bring their summaries up to date
+  // too. Only those: a large site ranks for thousands of phrases nobody is
+  // tracking. Read across companies because the summaries are facts about
+  // the website; each company reads them only for its own list.
   const tracked = new Set((await ctx.db
     .query("websiteKeywords")
     .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))

@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, requireMySite } from "./siteAccess";
+import { listHold, requireMySite } from "./siteAccess";
+import { holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 
@@ -12,7 +13,9 @@ import { MAX_LIST, type Site } from "./websiteSiteRows";
  *
  * The searches are the list the company measures the site on — its own for an
  * owned site, the owned site's for a competitor (D17) — set in admin (D1) and
- * capped on the record, so the list is read whole by index. The positions
+ * capped on the record, so the list is read whole by index. The list is the
+ * company's own (docs/plans/active/private-tracking-lists-plan.md), read
+ * through its hold. The positions
  * behind a chart are read per search and per day from the place index.
  */
 
@@ -30,12 +33,9 @@ export type SearchStanding = {
   stats: Doc<"websiteSearchStats"> | null;
 };
 
-/** The site's standing on each search in the list it is measured on. */
+/** The site's standing on each search in the list it is measured on: this company's own. */
 export async function searchStandings(ctx: Reader, site: Site): Promise<SearchStanding[]> {
-  const searches = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website", (q) => q.eq("websiteId", listWebsiteId(site)))
-    .take(MAX_LIST);
+  const searches = await holdSearches(ctx, listHold(site), MAX_LIST);
   return await Promise.all(searches.map(async (search) => ({
     keyword: search.keyword,
     isActive: search.isActive,
@@ -89,7 +89,15 @@ export const searchPositions = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    return await Promise.all(args.keywords.slice(0, MAX_CHARTED).map(async (keyword) => {
+    // Only searches on this company's own list: a "checked, not found" row
+    // exists only because somebody tracks the search, so answering for any
+    // other would say that someone does.
+    const holdId = listHold(site);
+    const mine = [];
+    for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
+      if (await holdSearch(ctx, holdId, keyword)) mine.push(keyword);
+    }
+    return await Promise.all(mine.map(async (keyword) => {
       const rows = await ctx.db
         .query("seoKeywordPositions")
         .withIndex("by_website_keyword_place_day", (q) =>

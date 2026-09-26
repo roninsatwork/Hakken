@@ -90,8 +90,8 @@ describe("paid search", () => {
     await t.action(internal.seoCollectionParse.parseSeoResult, { pullId: older });
 
     const asAcme = await member(t, acme);
-    const list = await asAcme.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, paginationOpts: { numItems: 15, cursor: null } });
-    expect(list.page.map((row) => [row.keyword, row.page, row.trafficCost, row.day])).toEqual([["new advert", "/offer", 140, "2026-09-08"]]);
+    const list = await asAcme.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25 });
+    expect(list.rows.map((row) => [row.keyword, row.page, row.trafficCost, row.day])).toEqual([["new advert", "/offer", 140, "2026-09-08"]]);
     // The organic search is a ranking, and only a ranking.
     const ranks = await t.run(async (ctx) => await ctx.db.query("siteKeywordRanks").collect());
     expect(ranks.map((row) => row.keyword)).toEqual(["organic search"]);
@@ -107,8 +107,8 @@ describe("paid search, when the adverts stop", () => {
     await file(t, own.websiteId, "domain_ranked_keywords", [{ items: [ranked("organic search", "organic")] }], "2026-09-08");
     await t.action(internal.seoCollectionParse.parseSeoResult, { pullId: older });
 
-    const list = await (await member(t, acme)).query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, paginationOpts: { numItems: 15, cursor: null } });
-    expect(list.page).toEqual([]);
+    const list = await (await member(t, acme)).query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25 });
+    expect(list.rows).toEqual([]);
   });
 });
 
@@ -169,7 +169,7 @@ describe("the site crawl", () => {
     const theirs = await hold(t, other, "theirs.co.uk");
     const asAcme = await member(t, acme);
     await expect(asAcme.query(api.siteCrawl.siteAudit, { siteId: theirs.holdId })).rejects.toThrow(/not one your company holds/);
-    await expect(asAcme.query(api.sitePaid.listPaidKeywords, { siteId: theirs.holdId, paginationOpts: { numItems: 15, cursor: null } }))
+    await expect(asAcme.query(api.sitePaid.listPaidKeywords, { siteId: theirs.holdId, page: 1, rows: 25 }))
       .rejects.toThrow(/not one your company holds/);
   });
 });

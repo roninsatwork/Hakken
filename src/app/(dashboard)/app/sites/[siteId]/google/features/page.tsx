@@ -9,8 +9,8 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -18,11 +18,27 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 /** Features that name websites, where "is this site in it" has an answer. */
 const NAMING = new Set(["ai_overview", "local_pack", "featured_snippet"]);
+
+type Featured = { keyword: string; features: readonly string[] };
+
+/**
+ * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
+ * search A to Z, and the most features on its page — the order it opens on.
+ * The three yes-or-no columns do not; the feature filter narrows to them.
+ */
+const SORTS: SiteSortColumns<Featured, "search" | "features"> = {
+  search: { value: (row) => row.keyword, first: "asc" },
+  features: { value: (row) => row.features.length, first: "desc" },
+};
+const keywordOf = (row: Featured) => row.keyword;
 
 /**
  * Search features: what Google shows on each of the site's searches besides
@@ -44,15 +60,14 @@ export default function SiteFeaturesPage() {
   const across = [...(series?.[0]?.points ?? [])].reverse().find((point) => point.aiOverviewRefs !== undefined) ?? null;
   const [search, setSearch, term] = useSiteSearch();
   const [feature, setFeature] = useSiteParam<string>("feature", "");
-  const [page, setPage] = useSiteTablePage();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
 
-  const lower = term.toLowerCase();
+  const matches = wordStartMatcher(term);
   const matching = data?.searches.filter((row) =>
-    (!lower || row.keyword.includes(lower)) && (!feature || row.features.includes(feature)));
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+    (!matches || matches(row.keyword)) && (!feature || row.features.includes(feature)));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "features", name: keywordOf });
+  const pager = useSitePager(sorted, { isLoading: data === undefined });
   const totals = data?.totals ?? [];
 
   const yesNo = (present: boolean, inIt: boolean) => {
@@ -102,35 +117,30 @@ export default function SiteFeaturesPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[780px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("featureFilter")} value={feature} onChange={setFeature}>
+            <Select chip={{ label: t("featureFilter"), choice: feature ? label(feature) : null }} value={feature} onChange={setFeature}>
             <option value="">{t("anyFeature")}</option>
             {totals.map((row) => <option key={row.feature} value={row.feature}>{label(row.feature)}</option>)}
           </Select>
-            <ListDownload fileName={`${site?.host ?? "site"}-search-features`} rows={matching} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.features"), value: (row) => row.features.map(label).join("; ") }, { header: t("columns.aiOverview"), value: (row) => (row.inAiOverview ? tc("yes") : "") }, { header: t("columns.localPack"), value: (row) => (row.inLocalPack ? tc("yes") : "") }, { header: t("columns.snippet"), value: (row) => (row.hasFeaturedSnippet ? tc("yes") : "") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />
           </>
         }
+        cardHeader={<SiteTableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-search-features`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.features"), value: (row) => row.features.map(label).join("; ") }, { header: t("columns.aiOverview"), value: (row) => (row.inAiOverview ? tc("yes") : "") }, { header: t("columns.localPack"), value: (row) => (row.inLocalPack ? tc("yes") : "") }, { header: t("columns.snippet"), value: (row) => (row.hasFeaturedSnippet ? tc("yes") : "") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || feature ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: data === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "search", header: t("columns.search"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "search", header: t("columns.search"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "features",
             header: t("columns.features"),
+            // By how many features the page shows.
+            sortable: true,
             cell: (row) => (
               <span className="flex flex-wrap gap-1">
                 {row.features.map((entry) => (

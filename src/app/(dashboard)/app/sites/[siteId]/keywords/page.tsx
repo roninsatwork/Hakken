@@ -10,41 +10,59 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CompareControl } from "../../_components/CompareControl";
 import { ChangeCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
+import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { formatCpc, formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
+import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../_components/useSitePagedTable";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
-const STATUSES = ["NEW", "UP", "DOWN", "SAME", "LOST"] as const;
+/** The movements, and the searches still held from an older check (T9): "OLDER" is not a movement, and asks for those. */
+const STATUSES = ["NEW", "UP", "DOWN", "SAME", "LOST", "OLDER"] as const;
 const KD_BANDS = ["kd00_10", "kd11_30", "kd31_70", "kd71_100"] as const;
-const SORTS = ["position", "volume", "traffic", "cpc"] as const;
+/**
+ * The columns whose headings order the list — the whole list, on the server
+ * (docs/plans/active/sites-table-sorting-plan.md) — each with its first
+ * press: the keyword A to Z, position from the top, the biggest rise, most
+ * searched, dearest clicks, most visits. Change gives way to "On {day}" when
+ * a day is compared, which is fetched for the rows on screen only and so
+ * cannot order the list; Last seen is only in the view that shows it.
+ */
+const SORTS = { keyword: "asc", position: "asc", change: "desc", volume: "desc", cpc: "desc", traffic: "desc" } as const;
+const SORTS_COMPARED = { keyword: "asc", position: "asc", volume: "desc", cpc: "desc", traffic: "desc" } as const;
+const SORTS_OLDER = { ...SORTS, lastSeen: "desc" } as const;
 
 type Band = (typeof BANDS)[number];
 type Intent = (typeof INTENTS)[number];
 type Status = (typeof STATUSES)[number];
 type KdBand = (typeof KD_BANDS)[number];
-type Sort = (typeof SORTS)[number];
-
-const SORT_LABELS = { position: "sortPosition", volume: "sortVolume", traffic: "sortTraffic", cpc: "sortCpc" } as const;
 
 /**
- * Every search the site ranks for (Organic keywords › All keywords).
+ * Every search the site ranks for (Organic search › Keywords).
  *
- * Searched, filtered, sorted and paged on the server (D14, D15): each change
- * of filter asks for one page of fifteen from the index that fits it. The
- * "compare with" column fetches the chosen day's position for the rows on
- * screen only. The chart above is the position bands over the dates chosen.
+ * Searched, filtered, sorted and counted on the server (D14, D15), from the
+ * site's compact keyword copy (docs/plans/active/sites-table-pages-plan.md
+ * §5.2): the footer shows the exact total and opens any page. The searches
+ * the latest check found, unless "Not in the latest check" asks for those
+ * still held from an older one (T9). The "compare with" column fetches the
+ * chosen day's position for the rows on screen only. The chart above is the
+ * position bands over the dates chosen.
  *
- * Six columns, the ones a reader decides on, so the table fits a 13-inch
+ * Seven columns, the ones a reader decides on, so the table fits a 13-inch
  * screen; each row opens the keyword's own screen, with everything else we
  * keep about it (docs/plans/active/sites-ux-updates-plan.md §3).
+ *
+ * Laid out like Ahrefs' Organic keywords (Anthony, 2026-09-26): the search
+ * box and four compact filters on one row; the count, the comparison and the
+ * download in the table's own top bar; and the order chosen by pressing a
+ * heading — its best first, then the other way — in place of a sort dropdown.
  */
 export default function SiteKeywordsPage() {
   const t = useTranslations("sites.keywords");
@@ -63,20 +81,22 @@ export default function SiteKeywordsPage() {
   const [intent, setIntent] = useSiteParam<Intent | "">("intent", "", INTENTS);
   const [status, setStatus] = useSiteParam<Status | "">("status", "", STATUSES);
   const [kdBand, setKdBand] = useSiteParam<KdBand | "">("kd", "", KD_BANDS);
-  const [sort, setSort] = useSiteParam<Sort>("sort", "position", SORTS);
+  const order = useSiteSort<keyof typeof SORTS_OLDER>(status === "OLDER" ? SORTS_OLDER : compareDay ? SORTS_COMPARED : SORTS, "position");
 
-  const table = useSitePagedTable(api.siteKeywords.listKeywords, {
+  const table = useSiteListPage(api.siteKeywords.listKeywords, {
     siteId,
     ...(term ? { search: term } : {}),
     ...(band ? { band } : {}),
     ...(intent ? { intent } : {}),
-    ...(status ? { status } : {}),
+    ...(status === "OLDER" ? { older: true } : status ? { status } : {}),
     ...(kdBand ? { kdBand } : {}),
-    sort,
-  });
+    sort: order.key,
+    direction: order.direction,
+  }, [{ siteId, list: "keywords" }]);
+  const shownRows = table.pageRows ?? [];
   const compared = useQuery(
     api.siteKeywords.keywordsOnDay,
-    compareDay && table.rows.length > 0 ? { siteId, day: compareDay, keywords: table.rows.map((row) => row.keyword) } : "skip",
+    compareDay && shownRows.length > 0 ? { siteId, day: compareDay, keywords: shownRows.map((row) => row.keyword) } : "skip",
   );
   const onDay = new Map((compared ?? []).map((row) => [row.keyword, row.position]));
 
@@ -115,59 +135,57 @@ export default function SiteKeywordsPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[720px]"
+        minWidthClassName="min-w-[800px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("bandFilter")} value={band} onChange={(value) => setBand(value as Band | "")}>
+            <Select chip={{ label: t("bandFilter"), choice: band ? tb(band) : null }} value={band} onChange={(value) => setBand(value as Band | "")}>
               <option value="">{t("anyBand")}</option>
               {BANDS.map((entry) => <option key={entry} value={entry}>{tb(entry)}</option>)}
             </Select>
-            <Select aria-label={tc("intentFilter")} value={intent} onChange={(value) => setIntent(value as Intent | "")}>
+            <Select chip={{ label: tc("intentFilter"), choice: intent ? tc(`intents.${intent}`) : null }} value={intent} onChange={(value) => setIntent(value as Intent | "")}>
               <option value="">{tc("anyIntent")}</option>
               {INTENTS.map((entry) => <option key={entry} value={entry}>{tc(`intents.${entry}`)}</option>)}
             </Select>
-            <Select aria-label={t("statusFilter")} value={status} onChange={(value) => setStatus(value as Status | "")}>
+            <Select chip={{ label: t("statusFilter"), choice: status ? t(`statuses.${status}`) : null }} value={status} onChange={(value) => setStatus(value as Status | "")}>
               <option value="">{t("anyStatus")}</option>
               {STATUSES.map((entry) => <option key={entry} value={entry}>{t(`statuses.${entry}`)}</option>)}
             </Select>
-            <Select aria-label={t("kdFilter")} value={kdBand} onChange={(value) => setKdBand(value as KdBand | "")}>
+            <Select chip={{ label: t("kdFilter"), choice: kdBand ? t(`kdBands.${kdBand}`) : null }} value={kdBand} onChange={(value) => setKdBand(value as KdBand | "")}>
               <option value="">{t("anyKd")}</option>
               {KD_BANDS.map((entry) => <option key={entry} value={entry}>{t(`kdBands.${entry}`)}</option>)}
             </Select>
-            <Select aria-label={t("sortLabel")} value={sort} onChange={(value) => setSort(value as Sort)}>
-              {SORTS.map((entry) => <option key={entry} value={entry}>{t(SORT_LABELS[entry])}</option>)}
-            </Select>
-            <CompareControl days={site?.checkDays ?? []} />
-            <TableDownload siteId={siteId} kind="keywords" />
           </>
         }
+        cardHeader={
+          <SiteTableBar
+            footer={table.footer}
+            noun="keywords"
+            actions={<TableDownload siteId={siteId} kind="keywords" sort={order.tableSort} />}
+          >
+            <CompareControl days={site?.checkDays ?? []} />
+          </SiteTableBar>
+        }
+        sort={order.tableSort}
         empty={{ icon: <KeyRound className="h-8 w-8 text-muted/30" />, label: filtered ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
         columns={[
           {
             key: "keyword",
             header: t("columns.keyword"),
+            sortable: true,
             cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
-          { key: "position", header: t("columns.position"), align: "right", cell: (row) => <PositionCell position={row.position} /> },
+          { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
           ...(compareDay
             ? [{
               key: "compared",
               header: t("columns.compared", { day: formatDay(compareDay) }),
               align: "right" as const,
-              cell: (row: (typeof table.rows)[number]) => {
+              cell: (row: (typeof shownRows)[number]) => {
                 const then = onDay.get(row.keyword);
                 if (compared === undefined) return <span className="text-muted">…</span>;
                 return then === undefined || then === null
@@ -175,14 +193,30 @@ export default function SiteKeywordsPage() {
                   : <span className="font-mono text-[12px] text-secondary">{then}{row.position !== null ? <ChangeCell change={then - row.position} /> : null}</span>;
               },
             }]
-            : [{ key: "change", header: t("columns.change"), align: "right" as const, cell: (row: (typeof table.rows)[number]) => <ChangeCell change={row.change} /> }]),
-          { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+            : [{ key: "change", header: t("columns.change"), align: "right" as const, sortable: true, cell: (row: (typeof shownRows)[number]) => <ChangeCell change={row.change} /> }]),
+          { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+          {
+            key: "cpc",
+            header: <span title={t("cpcHint")}>{t("columns.cpc")}</span>,
+            align: "right",
+            sortable: true,
+            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span>,
+          },
           {
             key: "traffic",
             header: <span title={t("trafficHint")}>{t("columns.traffic")}</span>,
             align: "right",
+            sortable: true,
             cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.traffic === null ? "–" : formatNumber(row.traffic)}</span>,
           },
+          ...(status === "OLDER"
+            ? [{
+              key: "lastSeen",
+              header: t("columns.lastSeen"),
+              sortable: true,
+              cell: (row: (typeof shownRows)[number]) => <span className="text-[12px] text-secondary">{formatDay(row.day)}</span>,
+            }]
+            : []),
           {
             key: "page",
             header: t("columns.page"),

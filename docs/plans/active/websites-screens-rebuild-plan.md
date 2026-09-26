@@ -620,6 +620,14 @@ No schema change. This is the density fix.
 
 ### Stage 4 — Website-first — **built second**
 
+> **2026-09-26 — reversed in part.** The searches and questions are each
+> company's own again, on Anthony's word of 2026-09-25: "If I track a keyword
+> that's related to the company, other people should not see what I am
+> tracking." The website record keeps its profile, brand names and known
+> competitors; the lists moved to the company's own screen for the site, and
+> buying stays shared. See [private searches and questions](private-tracking-lists-plan.md).
+> `websiteCanonicalMigration.ts`, named below, ran and was removed on 2026-09-22.
+
 Anthony, 2026-09-22: *"so we are goign into the gloval website section first and
 attach to copanies then"*, and on sharing: *"another agency may also want to see
 my keywrods and what i do to mak etheir website better. Thats a valid use case."*

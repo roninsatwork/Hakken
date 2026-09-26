@@ -243,6 +243,20 @@ npm run convex:dev
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.
+  The client's Sites tables (`/app/sites`) are that requirement (Anthony,
+  2026-09-25): numbered pages like Ahrefs', a choice of 25, 50, 75 or 100 rows
+  opening at 25 and remembered per page, and an exact total on every table.
+  Build a Sites table on `useSitePager` (a list sent whole) or the Sites
+  server pager, never on `TABLE_PAGE_SIZE`. See
+  `docs/plans/active/sites-table-pages-plan.md`; `src/pagination-drift.test.ts`
+  holds both rules.
+- Every Sites table sorts by its headings, the same way (Anthony,
+  2026-09-26): the best first, again for the other way, over the whole list,
+  blanks last. Never a sort dropdown, never only the rows on screen. Server
+  lists take `sort` and `direction` (`listOrder`), screens use `useSiteSort` or
+  `useSiteSortedList`, and the one rule is `convex/utils/sortOrder.ts`. See
+  `docs/plans/active/sites-table-sorting-plan.md`;
+  `src/pagination-drift.test.ts` fails a table that drifts.
 - Read `docs/developer/screen-kit.md` before building or restyling any screen,
   and copy an existing screen that already does it — Subscription Plans and
   Manage Companies are the reference list screens. Do not infer a layout from
@@ -284,6 +298,11 @@ npm run convex:dev
   and that line, and the build refuses both. Full detail in
   `docs/developer/screen-kit.md` under "Headers".
 - Preserve tenant isolation in Convex queries and mutations. Scope non-super-admin access by company.
+- A company's tracked Google searches and AI questions are its own
+  (Anthony, 2026-09-25; `docs/plans/active/private-tracking-lists-plan.md`).
+  Read them only through `convex/holdLists.ts`, by the company's hold, never
+  by website, search or question; buying stays shared.
+  `convex/websiteTenancyGuard.test.ts` fails a read that goes round it.
 - Mutations that manage users must prevent privilege escalation. Admins must not create, edit, or delete super-admin privileges.
 - Resolve AI model choices from stored configuration instead of hardcoding model literals in runtime paths.
 - Never hardcode colours in dashboard UI. No raw Tailwind palette classes

@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { answerPlace } from "./seoAiEngines";
@@ -136,14 +136,32 @@ describe("a competitor's own screen", () => {
     await rank(t, rival.websiteId, "bait boats", { position: 8, traffic: 40 });
     await rank(t, rival.websiteId, "bivvies", { position: 4, traffic: 30 });
 
+    // Both sides are matched from their keyword copies, which the site rebuild writes.
+    for (const websiteId of [own.websiteId, rival.websiteId]) {
+      await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
+    }
     const asKorda = await member(t, korda);
-    const first = { numItems: 15, cursor: null };
     const shared = async (lead?: "THEM" | "YOU") =>
-      (await asKorda.query(api.siteRecords.sharedSearches, { siteId: own.holdId, rivalId: rival.holdId, paginationOpts: first, ...(lead ? { lead } : {}) }))
-        .page.map((row) => [row.keyword, row.theirPosition, row.yourPosition]);
+      (await asKorda.query(api.siteRecords.sharedSearches, { siteId: own.holdId, rivalId: rival.holdId, page: 1, rows: 25, ...(lead ? { lead } : {}) }))
+        .rows.map((row) => [row.keyword, row.theirPosition, row.yourPosition]);
     expect(await shared()).toEqual([["carp rods", 1, 3], ["bait boats", 8, 2]]);
     expect(await shared("THEM")).toEqual([["carp rods", 1, 3]]);
     expect(await shared("YOU")).toEqual([["bait boats", 8, 2]]);
+
+    // It opens on the competitor's most visits, now a column; any other
+    // heading orders the whole list either way (docs/plans/active/
+    // sites-table-sorting-plan.md).
+    const order = async (args: Record<string, unknown>) =>
+      (await asKorda.query(api.siteRecords.sharedSearches, { siteId: own.holdId, rivalId: rival.holdId, page: 1, rows: 25, ...args }))
+        .rows.map((row) => [row.keyword, row.theirTraffic]);
+    expect(await order({})).toEqual([["carp rods", 50], ["bait boats", 40]]);
+    expect(await order({ direction: "asc" })).toEqual([["bait boats", 40], ["carp rods", 50]]);
+    const keywords = async (args: Record<string, unknown>) => (await order(args)).map(([keyword]) => keyword);
+    expect(await keywords({ sort: "theirs", direction: "desc" })).toEqual(["bait boats", "carp rods"]);
+    expect(await keywords({ sort: "yours" })).toEqual(["bait boats", "carp rods"]);
+    // Six places between the two on bait boats, two on carp rods.
+    expect(await keywords({ sort: "gap" })).toEqual(["bait boats", "carp rods"]);
+    expect(await keywords({ sort: "keyword" })).toEqual(["bait boats", "carp rods"]);
   });
 
   test("refuses a website that is not beside this one", async () => {
@@ -154,7 +172,7 @@ describe("a competitor's own screen", () => {
     const theirs = await hold(t, other, "elsewhere.com");
     const asKorda = await member(t, korda);
     await expect(asKorda.query(api.siteRecords.sharedSearches, {
-      siteId: own.holdId, rivalId: theirs.holdId, paginationOpts: { numItems: 15, cursor: null },
+      siteId: own.holdId, rivalId: theirs.holdId, page: 1, rows: 25,
     })).rejects.toThrow(/not one beside this one/);
   });
 });
@@ -200,7 +218,7 @@ describe("an answer's own screen", () => {
     const pullId = await pull(t, own.websiteId);
     const place = answerPlace("chatgpt", UK);
     const [ours, notOurs] = await t.run(async (ctx) => {
-      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, prompt: "best carp rods", engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, companyWebsiteId: own.holdId, prompt: "best carp rods", engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
       await ctx.db.insert("aiAnswers", {
         prompt: "best carp rods", engine: "chatgpt", locationCode: place, day: DAY, pullId,
         named: [own.websiteId], recommended: [own.websiteId], warnedAgainst: [], createdAt: Date.now(),

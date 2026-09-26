@@ -5,7 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import { superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
-import { pairedOwnedHold } from "./utils/websitePairing";
+import { listOwnerHold, pairedOwnedHold } from "./utils/websitePairing";
+import { holdQuestions, holdSearch } from "./holdLists";
 import { AI_ENGINES, fanOutPlace } from "./seoAiEngines";
 
 /**
@@ -61,19 +62,16 @@ export const listWebsiteFanOutQueries = superAdminQuery({
     // What this watcher's engines were sent, which is what the rows are keyed
     // on — another client watching the same site from another town has rows
     // of their own, and they are not this one's.
-    const watcherPlace = (await pairedOwnedHold(ctx, companyWebsite) ?? companyWebsite).locationCode;
+    const pair = await pairedOwnedHold(ctx, companyWebsite);
+    const watcherPlace = (pair ?? companyWebsite).locationCode;
 
     /*
-      The host's questions, not this company's copy of them.
-
-      Still read through the company's own hold — the id came in scoped, and
-      `companyWebsite.websiteId` is the entitlement — so nothing starts from a
-      shared record and walks outward to find who is watching.
+      This company's own questions, read through its own hold — the owned
+      site's, for a competitor — and never another company's
+      (docs/plans/active/private-tracking-lists-plan.md).
     */
-    const prompts = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", companyWebsite.websiteId))
-      .take(MAX_PROMPTS);
+    const listHoldId = listOwnerHold(companyWebsite, pair)?._id ?? null;
+    const prompts = await holdQuestions(ctx, listHoldId, MAX_PROMPTS);
 
     // One row per search, however many engines produced it: a reader wants the
     // searches, and which engines reached them is a fact about each row rather
@@ -139,10 +137,7 @@ export const listWebsiteFanOutQueries = superAdminQuery({
     const judged = await Promise.all(matching.map(async (row) => {
       const [intent, tracked] = await Promise.all([
         ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", row.query)).unique(),
-        ctx.db
-          .query("websiteKeywords")
-          .withIndex("by_website_keyword", (q) => q.eq("websiteId", companyWebsite.websiteId).eq("keyword", row.query))
-          .first(),
+        holdSearch(ctx, listHoldId, row.query),
       ]);
       return {
         _id: row._id,

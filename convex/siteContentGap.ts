@@ -131,6 +131,8 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
     if (result.isDone) break;
     cursor = result.cursor;
   }
+  // The Content gap page counts from the gap's compact copy: rebuilt from what was just written.
+  await ctx.runMutation(internal.siteListCopies.requestCopies, { requests: [{ kind: "gap", key: `${args.companyWebsiteId}` }] });
   return null;
 }
 

@@ -32,8 +32,9 @@ describe("the site's frame", () => {
     expect(screen.getByRole("link", { name: /admin.siteView.tabs.competitors/ })).toHaveAttribute("href", `${base}/competitors`);
     expect(screen.getByRole("link", { name: /admin.siteView.tabs.results/ })).toHaveAttribute("href", `${base}/searches`);
     expect(screen.getByRole("button", { name: /admin.siteView.settings/ })).toBeInTheDocument();
-    // The website's own lists are edited on its record, not here.
-    expect(screen.getByRole("link", { name: /admin.siteView.recordEdit/ })).toHaveAttribute("href", "/admin/websites/website_9");
+    // The website record is one link away; the searches and questions are
+    // this company's own and are set here, under Results.
+    expect(screen.getByRole("link", { name: /admin.siteView.record/ })).toHaveAttribute("href", "/admin/websites/website_9");
     expect(screen.getByText("tab body")).toBeInTheDocument();
   });
 

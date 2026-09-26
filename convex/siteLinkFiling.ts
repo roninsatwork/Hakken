@@ -125,6 +125,8 @@ export async function fileSiteLinkPull(ctx: ActionCtx, pullId: Id<"seoDataPulls"
           await ctx.runMutation(internal.siteLinkFiling.writeBacklinks, { websiteId, pullId, pass: "ALL", day: listPage.day, rows });
         }
         await clearLinkListBefore(ctx, websiteId, listPage.day);
+        // All backlinks counts every link from its compact copy: rebuilt once this burst of pages is in.
+        await ctx.runMutation(internal.siteListCopies.requestCopies, { requests: [{ kind: "links", key: `${websiteId}` }] });
         if (sentOffset(pull.taskArgsJson) === 0 && total !== undefined) {
           await ctx.runMutation(internal.sitePagedLists.queueListPages, { pullId, total });
         }

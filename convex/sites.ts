@@ -2,15 +2,17 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { companyHolds, findMySite, listWebsiteId, myRivals, placeName, type HoldSummary } from "./siteAccess";
+import { companyHolds, findMySite, listHold, myRivals, placeName, type HoldSummary } from "./siteAccess";
 import {
   citedPagesOf,
   enginesNamedIn,
   latestFigures,
+  latestListAi,
   newestAnswerEngines,
   newestAnswers,
   QUESTIONS_FOR_CITED_PAGES,
 } from "./siteFigures";
+import { holdQuestions, holdSearches } from "./holdLists";
 import type { EngineDay } from "./utils/siteShapes";
 import { isTrackedHold } from "./utils/websitePairing";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
@@ -100,25 +102,29 @@ export const listMySites = tenantQuery({
     if (!companyId) return [];
     const holds = await companyHolds(ctx, companyId);
     // Each owned site's newest answers, read once however many competitors
-    // are measured on its questions.
+    // are measured on its questions — this company's own questions only.
     const answersOf = new Map<string, ReturnType<typeof newestAnswers>>();
-    const answersFor = (askerId: Id<"websites">, place: number) => {
-      const key = `${askerId}|${place}`;
-      const held = answersOf.get(key) ?? newestAnswers(ctx, askerId, place);
+    const answersFor = (holdId: Id<"companyWebsites">, place: number) => {
+      const key = `${holdId}|${place}`;
+      const held = answersOf.get(key) ?? newestAnswers(ctx, holdId, place);
       answersOf.set(key, held);
       return held;
     };
     return await Promise.all(holds.map(async ({ hold, website, summary }) => {
       const site = await loadSite(ctx, hold._id);
       const place = site?.place ?? 0;
-      const askerId = site ? listWebsiteId(site) : website._id;
-      const [latest, collectedAt, moves, watchedAi] = await Promise.all([
+      // The list the site is measured on: its own, the owned site's for a
+      // competitor, none for a competitor watched against nothing.
+      const holdId = site ? listHold(site) : null;
+      const isAsker = holdId === hold._id;
+      const [latest, collectedAt, moves, ownAi, watchedAi] = await Promise.all([
         latestFigures(ctx, website._id, place),
         lastCollectedAt(ctx, companyId, website._id),
         openMoves(ctx, hold),
-        askerId === website._id ? Promise.resolve(null) : answersFor(askerId, place).then((answers) => enginesNamedIn(answers, website._id)),
+        isAsker ? latestListAi(ctx, holdId, place, website._id) : Promise.resolve(null),
+        !isAsker && holdId ? answersFor(holdId, place).then((answers) => enginesNamedIn(answers, website._id)) : Promise.resolve(null),
       ]);
-      const ai = askerId === website._id ? enginesNamed(latest.answers?.ai) : watchedAi;
+      const ai = isAsker ? enginesNamed(ownAi?.ai) : watchedAi;
       // DataForSEO's bands over everything the site ranks for, where read out
       // (Phase 2); the stored keywords' own bands before that.
       const bands = latest.metrics?.allBands ?? latest.ranking?.bands;
@@ -188,8 +194,10 @@ export const getMySite = tenantQuery({
     const companyId = site.hold.companyId;
     const websiteId = site.website._id;
 
-    const askerId = listWebsiteId(site);
-    const [holds, rivals, latest, collectedAt, days, searches, suggestions, cited, watchedAi, questions] = await Promise.all([
+    // The list the site is measured on — this company's own (see `listHold`).
+    const holdId = listHold(site);
+    const isAsker = holdId === site.hold._id;
+    const [holds, rivals, latest, collectedAt, days, searches, suggestions, cited, ownAi, watchedAi, questions] = await Promise.all([
       companyHolds(ctx, companyId),
       myRivals(ctx, site),
       latestFigures(ctx, websiteId, site.place),
@@ -199,20 +207,15 @@ export const getMySite = tenantQuery({
         .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place))
         .order("desc")
         .take(CHECK_DAYS),
-      ctx.db
-        .query("websiteKeywords")
-        .withIndex("by_website", (q) => q.eq("websiteId", site.pair?.websiteId ?? websiteId))
-        .take(MAX_LIST),
+      holdSearches(ctx, holdId, MAX_LIST),
       ctx.db
         .query("discoveredCompetitors")
         .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
         .take(COUNT_CEILING),
-      citedPagesOf(ctx, websiteId, askerId, site.place, QUESTIONS_FOR_CITED_PAGES),
-      askerId === websiteId ? Promise.resolve(null) : newestAnswerEngines(ctx, askerId, websiteId, site.place),
-      ctx.db
-        .query("websiteQuestions")
-        .withIndex("by_website_active", (q) => q.eq("websiteId", askerId).eq("isActive", true))
-        .first(),
+      citedPagesOf(ctx, websiteId, holdId, site.place, QUESTIONS_FOR_CITED_PAGES),
+      isAsker ? latestListAi(ctx, holdId, site.place, websiteId) : Promise.resolve(null),
+      isAsker || !holdId ? Promise.resolve(null) : newestAnswerEngines(ctx, holdId, websiteId, site.place),
+      holdQuestions(ctx, holdId, 1, { activeOnly: true }),
     ]);
 
     const me: HoldSummary = holds.find((entry) => entry.hold._id === args.siteId)?.summary ?? {
@@ -222,7 +225,7 @@ export const getMySite = tenantQuery({
       ofHost: site.pairHost,
     };
     const watched = new Set([site.website.host, ...holds.map((entry) => entry.website.host)]);
-    const ai = askerId === websiteId ? enginesNamed(latest.answers?.ai) : watchedAi;
+    const ai = isAsker ? enginesNamed(ownAi?.ai) : watchedAi;
     const bands = latest.metrics?.allBands ?? latest.ranking?.bands;
     return {
       ...me,
@@ -248,7 +251,7 @@ export const getMySite = tenantQuery({
         aiNamed: ai?.named ?? null,
         aiAsked: ai?.asked ?? null,
         trackedSearches: searches.filter((row) => row.isActive).length,
-        questionsSetUp: questions !== null,
+        questionsSetUp: questions.length > 0,
         rankedUp: latest.ranking?.rankedUp ?? null,
         rankedDown: latest.ranking?.rankedDown ?? null,
         // What the Suggested page shows: not decided, and not already held.

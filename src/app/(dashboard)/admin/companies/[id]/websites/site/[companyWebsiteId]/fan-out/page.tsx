@@ -47,9 +47,6 @@ export default function WebsiteFanOutPage() {
   const [buyingUntracked, setBuyingUntracked] = useState(false);
   const [error, setError] = useState("");
   const [untracking, setUntracking] = useState<SearchToRemove | null>(null);
-  // The header's query, shared with the layout that already holds it, for the
-  // website whose list "track it" adds to.
-  const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
   const queries = useQuery(api.seoFanOutReports.listWebsiteFanOutQueries, {
     companyWebsiteId,
     searchTerm: debouncedSearch,
@@ -62,10 +59,10 @@ export default function WebsiteFanOutPage() {
   const action = useAdminAction({ scope: "admin-site-fan-out" });
 
   const track = async (keyword: string) => {
-    if (!header) return;
     setError("");
     const outcome = await action.run(
-      () => addKeyword({ websiteId: header.websiteId, keyword }),
+      // Onto this company's own list (docs/plans/active/private-tracking-lists-plan.md).
+      () => addKeyword({ companyWebsiteId, keyword }),
       { key: keyword, suppressErrorToast: true, fallbackMessage: t("errors.trackFailed") },
     );
     if (!outcome.ok) setError(outcome.message);
@@ -202,7 +199,7 @@ export default function WebsiteFanOutPage() {
                   <Button
                     variant="accent"
                     className="px-2 py-1 text-[11px]"
-                    disabled={!header || action.isBusy(row.queryText)}
+                    disabled={action.isBusy(row.queryText)}
                     onClick={() => void track(row.queryText)}
                   >
                     {t("track")}

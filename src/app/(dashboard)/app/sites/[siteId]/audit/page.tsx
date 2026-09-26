@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -10,8 +11,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell, RecordLinkCell } from "../../_components/SiteCells";
+import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
@@ -19,12 +20,19 @@ import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_component
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteFigure } from "../../_components/SiteFigure";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
-import { sharedSiteQuery, useSiteParam, useSiteSearch, useSiteTablePage } from "../../_components/useSiteParam";
+import { sharedSiteQuery, useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
+import { useSitePager } from "../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { ListDownload } from "../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 type Severity = "ERROR" | "WARNING" | "NOTICE";
 const SEVERITIES: Severity[] = ["ERROR", "WARNING", "NOTICE"];
 const SEVERITY_TONES: Record<Severity, StatusTone> = { ERROR: "danger", WARNING: "warning", NOTICE: "neutral" };
+/** How serious, as a number to sort by: the worst the most. */
+const SEVERITY_WEIGHTS: Record<Severity, number> = { ERROR: 3, WARNING: 2, NOTICE: 1 };
+type Issue = { check: string; severity: Severity; pages: number };
+const pagesOf = (row: Issue) => row.pages;
 
 
 /**
@@ -45,19 +53,27 @@ export default function SiteAuditPage() {
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const [search, setSearch, term] = useSiteSearch();
   const [severity, setSeverity] = useSiteParam<Severity | "">("severity", "", SEVERITIES);
-  const [page, setPage] = useSiteTablePage();
   // A severity's figure narrows the table below to it, on this same page.
   const shared = sharedSiteQuery(params);
   const severityHref = (wanted: Severity) => `/app/sites/${siteId}/audit${shared ? `${shared}&` : "?"}severity=${wanted}`;
 
-  const label = (check: string) => (t.has(`checks.${check}`) ? t(`checks.${check}`) : check.replace(/_/g, " "));
+  const label = useCallback((check: string) => (t.has(`checks.${check}`) ? t(`checks.${check}`) : check.replace(/_/g, " ")), [t]);
   const issues = audit?.issues ?? [];
-  const lower = term.toLowerCase();
+  const matches = wordStartMatcher(term);
   const matching = audit === undefined ? undefined : issues
-    .filter((issue) => (!severity || issue.severity === severity) && (!lower || label(issue.check).toLowerCase().includes(lower)))
-    .sort((left, right) => SEVERITIES.indexOf(left.severity) - SEVERITIES.indexOf(right.severity) || right.pages - left.pages);
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+    .filter((issue) => (!severity || issue.severity === severity) && (!matches || matches(label(issue.check))));
+  // The columns that sort (docs/plans/active/sites-table-sorting-plan.md):
+  // the problem A to Z as it reads, how serious — the worst first, then the
+  // most pages, the order it opens on — and the most pages first. Last
+  // checked is the same day on every row, and does not.
+  const columns = useMemo<SiteSortColumns<Issue, "issue" | "severity" | "pages">>(() => ({
+    issue: { value: (row) => label(row.check), first: "asc" },
+    severity: { value: (row) => SEVERITY_WEIGHTS[row.severity] * 1_000_000 + row.pages, first: "desc" },
+    pages: { value: pagesOf, first: "desc" },
+  }), [label]);
+  const nameOf = useCallback((row: Issue) => label(row.check), [label]);
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, columns, { opening: "severity", name: nameOf });
+  const pager = useSitePager(sorted, { isLoading: audit === undefined });
   const count = (wanted: Severity) => issues.filter((issue) => issue.severity === wanted).length;
   const points = (series?.[0]?.points ?? []).filter((point) => point.crawledPages !== undefined);
 
@@ -107,34 +123,27 @@ export default function SiteAuditPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.check}
         onRowClick={(row) => router.push(recordHref({ kind: "problem", check: row.check }))}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("severityFilter")} value={severity} onChange={(value) => setSeverity(value as Severity | "")}>
+            <Select chip={{ label: t("severityFilter"), choice: severity ? t(`severities.${severity}`) : null }} value={severity} onChange={(value) => setSeverity(value as Severity | "")}>
             <option value="">{t("anySeverity")}</option>
             {SEVERITIES.map((entry) => <option key={entry} value={entry}>{t(`severities.${entry}`)}</option>)}
           </Select>
-            <ListDownload fileName={`${site?.host ?? "site"}-site-audit`} rows={matching} columns={[{ header: t("columns.issue"), value: (row) => label(row.check) }, { header: t("columns.severity"), value: (row) => t(`severities.${row.severity}`) }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.lastChecked"), value: () => audit?.day ?? null }]} />
           </>
         }
+        cardHeader={<SiteTableBar footer={pager.footer} noun="problems" actions={<ListDownload fileName={`${site?.host ?? "site"}-site-audit`} rows={sorted} columns={[{ header: t("columns.issue"), value: (row) => label(row.check) }, { header: t("columns.severity"), value: (row) => t(`severities.${row.severity}`) }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.lastChecked"), value: () => audit?.day ?? null }]} />} />}
         empty={{ icon: <Stethoscope className="h-8 w-8 text-muted/30" />, label: audit === null ? t("empty") : term || severity ? t("noMatch") : t("noIssues") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: audit === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "issue", header: t("columns.issue"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "problem", check: row.check })}>{label(row.check)}</RecordLinkCell> },
-          { key: "severity", header: t("columns.severity"), cell: (row) => <StatusPill tone={SEVERITY_TONES[row.severity]}>{t(`severities.${row.severity}`)}</StatusPill> },
-          { key: "pages", header: t("columns.pages"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.pages)}</span> },
+          { key: "issue", header: t("columns.issue"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "problem", check: row.check })}>{label(row.check)}</RecordLinkCell> },
+          { key: "severity", header: t("columns.severity"), sortable: true, cell: (row) => <StatusPill tone={SEVERITY_TONES[row.severity]}>{t(`severities.${row.severity}`)}</StatusPill> },
+          { key: "pages", header: t("columns.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.pages)}</span> },
           { key: "checked", header: t("columns.lastChecked"), cell: () => <CheckedCell day={audit?.day ?? null} /> },
         ]}
       />

@@ -152,16 +152,13 @@ export const websitePreviewShape = v.union(
     displayHost: v.string(),
     alreadyKnown: v.boolean(),
     /**
-     * What a company attaching to a known host inherits on the day it does.
-     *
-     * The whole argument for putting the lists on the host: a client attached
-     * to a site Hakken already tracks sees its history, its searches and its
-     * questions immediately, rather than waiting a month for anything worth
-     * showing. Absent when the host is new, because there is nothing to inherit.
+     * What a company attaching to a known host inherits on the day it does:
+     * the history already collected, so it sees something worth showing at
+     * once rather than a month later. Not the searches and questions — those
+     * are each company's own (docs/plans/active/private-tracking-lists-plan.md).
+     * Absent when the host is new, because there is nothing to inherit.
      */
     inherits: v.optional(v.object({
-      keywords: v.number(),
-      questions: v.number(),
       rivals: v.number(),
       weeksOfHistory: v.number(),
     })),

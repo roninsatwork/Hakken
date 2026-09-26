@@ -5,6 +5,8 @@ import { internalAction, internalMutation, internalQuery, type ActionCtx, type M
 import { answerPlace, type AiEngine } from "./seoAiEngines";
 import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
+import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
+import { dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, type EngineDay, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
@@ -33,7 +35,7 @@ const WRITE_BATCH = 400;
 /** Days of metrics and answers copied into the day summaries on an ordinary rebuild. */
 const SYNC_DAYS = 14;
 
-/** A site's questions read when counting its answers. */
+/** Every company's questions about a site read when counting their answers, each list apart. */
 const QUESTIONS_READ = 200;
 
 /** Answers read per question and engine for one window of days. */
@@ -127,13 +129,30 @@ async function rebuildSiteNow(
   ctx: ActionCtx,
   args: { websiteId: Id<"websites">; locationCode: number; fullSync?: boolean },
 ): Promise<null> {
+  // A rebuild asked for before the website was deleted can run after it:
+  // there is nothing left to summarise, and its lists' copies go with it.
+  const copyKey = keywordsCopyKey(args.websiteId, args.locationCode);
+  if (!(await ctx.runQuery(internal.siteListCopies.copyOwnerExists, { kind: "keywords", key: copyKey }))) {
+    await dropCopyOf(ctx, "keywords", copyKey);
+    await dropCopyOf(ctx, "pages", copyKey);
+    return null;
+  }
   const completeDay: string | null = await ctx.runQuery(internal.siteSummaries.completeRankedDay, {
     websiteId: args.websiteId,
     locationCode: args.locationCode,
   });
+  // A search last seen before the latest keyword check still held is counted
+  // nowhere and listed under its own filter (docs/plans/active/
+  // sites-table-pages-plan.md, T9): "every search it ranks for" means those
+  // the latest check found.
+  const latestCheckDay: string | null = await ctx.runQuery(internal.siteSummaries.latestKeywordCheck, {
+    websiteId: args.websiteId,
+    locationCode: args.locationCode,
+  });
 
-  // One pass over the latest rankings: the headline counts, the pages and
-  // the rows a complete pull shows the site no longer ranks for.
+  // One pass over the latest rankings: the headline counts, the pages, the
+  // rows a complete pull shows the site no longer ranks for, and the compact
+  // copy the keyword tables are counted and paged from (§5.2).
   const bands = emptyBandCounts();
   const intents = { buying: 0, researching: 0, branded: 0 };
   const split: IntentSplit = {
@@ -147,6 +166,7 @@ async function rebuildSiteNow(
   const lost: Id<"siteKeywordRanks">[] = [];
   const pages = new Map<string, PageAggregate>();
   const statusRows: Array<{ status: Doc<"siteKeywordRanks">["status"]; day: string }> = [];
+  const copyRows: unknown[][] = [];
 
   let cursor: string | null = null;
   for (;;) {
@@ -158,12 +178,18 @@ async function rebuildSiteNow(
       if (row.day > rankingDay) rankingDay = row.day;
       const isLost = row.position === undefined || (completeDay !== null && row.day < completeDay);
       if (isLost) {
+        // Copied as it will stand once marked lost below, on the day it was lost.
+        const lostNow = row.position !== undefined && completeDay !== null;
+        copyRows.push(lostNow ? keywordCopyTuple(row, completeDay) : keywordCopyTuple(row));
         if (row.position !== undefined) lost.push(row._id);
         statusRows.push({ status: "LOST", day: row.position !== undefined && completeDay ? completeDay : row.day });
         continue;
       }
+      copyRows.push(keywordCopyTuple(row));
       const position = row.position as number;
       statusRows.push({ status: row.status, day: row.day });
+      // Not seen at the latest check (T9): listed under its own filter, counted nowhere.
+      if (latestCheckDay !== null && row.day < latestCheckDay) continue;
       keywords += 1;
       if (row.band !== "zz_none") bands[row.band] += 1;
       if (row.intent === "BUYING") intents.buying += 1;
@@ -217,6 +243,14 @@ async function rebuildSiteNow(
     await ctx.runMutation(internal.siteSummaries.markLost, { ids, day: completeDay ?? rankingDay });
   }
 
+  await writeListCopy(ctx, {
+    kind: "keywords",
+    key: keywordsCopyKey(args.websiteId, args.locationCode),
+    fields: KEYWORD_COPY_FIELDS,
+    rows: copyRows,
+    meta: { rankingDay: rankingDay || null, latestCheckDay },
+  });
+
   // Pages and folders, written under this rebuild's id; whatever an older
   // rebuild wrote and this one did not is a page the site no longer ranks with.
   const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -253,6 +287,10 @@ async function rebuildSiteNow(
       staleCursor = result.cursor;
     }
   }
+  // Top pages' copy, from the pages just written, with their judged types.
+  await ctx.runMutation(internal.siteListCopies.requestCopies, {
+    requests: [{ kind: "pages", key: pagesCopyKey(args.websiteId, args.locationCode) }],
+  });
 
   // What moved at the last check: the statuses of rows checked that day.
   const moved = { up: 0, down: 0, fresh: 0, lost: 0 };
@@ -405,6 +443,61 @@ export const completeRankedDay = internalQuery({
       if (complete && (newestComplete === null || complete > newestComplete)) newestComplete = complete;
     }
     return newestComplete;
+  },
+});
+
+/** A site's newest list requests read to find those still out: a list is up to ten pages, from each place. */
+const LIST_PULLS_READ = 100;
+
+/** A list page still out after this long is stuck, and no longer holds its list back. */
+const LIST_PAGE_STUCK_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * The day of the latest keyword check that has fully arrived, from this
+ * place (docs/plans/active/sites-table-pages-plan.md, T9): the newest full
+ * keyword list with no page still out — while this week's pages are still
+ * landing, last week's list is the latest — or, for a site with no full list,
+ * its newest everyday check. Null when neither has been filed.
+ *
+ * A search last seen before this day is not in the latest check: the list
+ * that day did not hold it. When the list covered everything the site ranks
+ * for, `completeRankedDay` has it marked lost already; when the list was held
+ * to the site's limit, it may still rank below that limit, and is kept aside
+ * rather than called lost.
+ */
+export const latestKeywordCheck = internalQuery({
+  args: { websiteId: v.id("websites"), locationCode: v.number() },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const pulls = await ctx.db
+      .query("seoDataPulls")
+      .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", args.websiteId).eq("operationId", KEYWORD_LIST_OPERATION_ID))
+      .order("desc")
+      .take(LIST_PULLS_READ);
+    // The days whose list still has a page out: that list has not finished arriving.
+    const unfinished = new Set<string>();
+    for (const pull of pulls) {
+      if (pull.status === "READY" || pull.status === "FAILED" || now - pull.submittedAt > LIST_PAGE_STUCK_MS) continue;
+      const cycle = pull.cycleId ? await ctx.db.get(pull.cycleId) : null;
+      unfinished.add(new Date(cycle?.startedAt ?? pull.submittedAt).toISOString().slice(0, 10));
+    }
+    const listDays = (await ctx.db
+      .query("seoWebsiteMetrics")
+      .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", KEYWORD_LIST_OPERATION_ID))
+      .order("desc")
+      .take(LIST_PAGES_READ_FOR_COMPLETE_DAY))
+      .filter((row) => isThisPlace(row, args.locationCode))
+      .map((row) => row.day);
+    const landed = listDays.find((day) => !unfinished.has(day));
+    if (landed) return landed;
+    const everyday = (await ctx.db
+      .query("seoWebsiteMetrics")
+      .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", "domain_ranked_keywords"))
+      .order("desc")
+      .take(PLACES_READ_FOR_COMPLETE_DAY))
+      .find((row) => isThisPlace(row, args.locationCode));
+    return everyday?.day ?? null;
   },
 });
 
@@ -604,8 +697,8 @@ export const writeRankingDay = internalMutation({
 });
 
 /**
- * Copy the website's figures and its questions' answers for a window of days
- * into the day rows of one place.
+ * Copy the website's figures for a window of days into the day rows of one
+ * place, and each company's AI lines about it into its own (`syncListAiDays`).
  */
 export const syncDays = internalMutation({
   args: { websiteId: v.id("websites"), locationCode: v.number(), fromDay: v.string(), toDay: v.string() },
@@ -670,88 +763,126 @@ export const syncDays = internalMutation({
       }
     }
 
-    // The site's own questions, asked of each engine from where that engine
-    // answers for this place.
-    const questions = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(QUESTIONS_READ);
-    const ai = new Map<string, Map<AiEngine, EngineDay>>();
-    // Every other website those answers named, by day: the competitor lines
-    // on this site's charts read these, and nothing else (D17).
-    const rivals = new Map<string, { day: string; websiteId: Id<"websites">; engines: Map<AiEngine, EngineDay> }>();
-    for (const question of questions) {
-      for (const engine of question.engines) {
-        const answers = await ctx.db
-          .query("aiAnswers")
-          .withIndex("by_question", (q) =>
-            q.eq("prompt", question.prompt).eq("engine", engine)
-              .eq("locationCode", answerPlace(engine, args.locationCode))
-              .gte("day", args.fromDay).lte("day", args.toDay))
-          .take(ANSWERS_PER_WINDOW);
-        for (const answer of answers) {
-          const day = ai.get(answer.day) ?? new Map<AiEngine, EngineDay>();
-          ai.set(answer.day, day);
-          const held = day.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
-          held.asked += 1;
-          if (answer.named.includes(args.websiteId)) held.named += 1;
-          if (answer.recommended.includes(args.websiteId)) held.recommended += 1;
-          day.set(engine, held);
-
-          for (const named of new Set(answer.named)) {
-            if (named === args.websiteId) continue;
-            const key = `${answer.day}|${named}`;
-            const rival = rivals.get(key) ?? { day: answer.day, websiteId: named, engines: new Map<AiEngine, EngineDay>() };
-            rivals.set(key, rival);
-            // "Asked" stays at nought: the questions were this site's, not the rival's.
-            const counts = rival.engines.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
-            counts.named += 1;
-            if (answer.recommended.includes(named)) counts.recommended += 1;
-            rival.engines.set(engine, counts);
-          }
-        }
-      }
-    }
-    for (const [day, engines] of ai) touch(day).ai = [...engines.values()];
-
     const now = Date.now();
     for (const [day, fields] of perDay) {
       const row = await daySummary(ctx, args.websiteId, args.locationCode, day);
       await ctx.db.patch(row._id, { ...fields, updatedAt: now });
     }
 
-    // The window's rival rows made to match what the answers say now: a row
-    // an answer no longer supports goes, and an unchanged one is left alone.
-    const standing = await ctx.db
-      .query("siteRivalAiDays")
-      .withIndex("by_asker_day", (q) =>
-        q.eq("askerWebsiteId", args.websiteId).eq("locationCode", args.locationCode)
-          .gte("day", args.fromDay).lte("day", args.toDay))
-      .take(RIVAL_ROWS_PER_WINDOW);
-    const unclaimed = new Map(standing.map((row) => [`${row.day}|${row.websiteId}`, row]));
-    for (const [key, rival] of rivals) {
-      const ai = [...rival.engines.values()];
-      const row = unclaimed.get(key);
-      unclaimed.delete(key);
-      if (row && JSON.stringify(row.ai) === JSON.stringify(ai)) continue;
-      const fields = {
-        askerWebsiteId: args.websiteId,
-        locationCode: args.locationCode,
-        websiteId: rival.websiteId,
-        day: rival.day,
-        ai,
-        updatedAt: now,
-      };
-      if (row) await ctx.db.replace(row._id, fields);
-      else await ctx.db.insert("siteRivalAiDays", fields);
-    }
-    for (const row of unclaimed.values()) await ctx.db.delete(row._id);
+    await syncListAiDays(ctx, { ...args, now });
     return null;
   },
 });
 
-/** A window's rival rows: a month of days, each naming a few dozen websites at most. */
-const RIVAL_ROWS_PER_WINDOW = 4_000;
+/**
+ * Each company's AI lines about this website for a window of days
+ * (docs/plans/active/private-tracking-lists-plan.md, §4.4): per list, per day,
+ * per engine, how many answers to its questions came back and how often they
+ * named the site, and a line for every other website they named. One
+ * company's questions never count towards another's lines; an answer asked by
+ * two lists is read once and credited to both.
+ *
+ * Only the lists watched from this place: the same question asked from
+ * another place is another answer, and that place's own sync counts it.
+ */
+async function syncListAiDays(
+  ctx: MutationCtx,
+  args: { websiteId: Id<"websites">; locationCode: number; fromDay: string; toDay: string; now: number },
+): Promise<void> {
+  const questions = await ctx.db
+    .query("websiteQuestions")
+    .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
+    .take(QUESTIONS_READ);
+  const lists = new Map<Id<"companyWebsites">, Array<{ prompt: string; engines: AiEngine[] }>>();
+  for (const holdId of new Set(questions.map((question) => question.companyWebsiteId))) {
+    const hold = await ctx.db.get(holdId);
+    if (!hold || (hold.locationCode ?? DEFAULT_LOCATION_CODE) !== args.locationCode) continue;
+    lists.set(holdId, questions.filter((question) => question.companyWebsiteId === holdId));
+  }
+
+  // Each question and engine read once, however many lists ask it.
+  const answersOf = new Map<string, Doc<"aiAnswers">[]>();
+  for (const list of lists.values()) {
+    for (const question of list) {
+      for (const engine of question.engines) {
+        const key = `${question.prompt}\u0000${engine}`;
+        if (answersOf.has(key)) continue;
+        answersOf.set(key, await ctx.db
+          .query("aiAnswers")
+          .withIndex("by_question", (q) =>
+            q.eq("prompt", question.prompt).eq("engine", engine)
+              .eq("locationCode", answerPlace(engine, args.locationCode))
+              .gte("day", args.fromDay).lte("day", args.toDay))
+          .take(ANSWERS_PER_WINDOW));
+      }
+    }
+  }
+
+  // The window's lines, per list: the site's own, and every other site named.
+  const lines = new Map<string, { holdId: Id<"companyWebsites">; websiteId: Id<"websites">; day: string; engines: Map<AiEngine, EngineDay> }>();
+  const lineOf = (holdId: Id<"companyWebsites">, websiteId: Id<"websites">, day: string) => {
+    const key = `${holdId}|${day}|${websiteId}`;
+    const line = lines.get(key) ?? { holdId, websiteId, day, engines: new Map<AiEngine, EngineDay>() };
+    lines.set(key, line);
+    return line;
+  };
+  for (const [holdId, list] of lists) {
+    for (const question of list) {
+      for (const engine of question.engines) {
+        for (const answer of answersOf.get(`${question.prompt}\u0000${engine}`) ?? []) {
+          const own = lineOf(holdId, args.websiteId, answer.day);
+          const counts = own.engines.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
+          counts.asked += 1;
+          if (answer.named.includes(args.websiteId)) counts.named += 1;
+          if (answer.recommended.includes(args.websiteId)) counts.recommended += 1;
+          own.engines.set(engine, counts);
+
+          for (const named of new Set(answer.named)) {
+            if (named === args.websiteId) continue;
+            const rival = lineOf(holdId, named, answer.day);
+            // "Asked" stays at nought: the questions were this site's, not the rival's.
+            const rivalCounts = rival.engines.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
+            rivalCounts.named += 1;
+            if (answer.recommended.includes(named)) rivalCounts.recommended += 1;
+            rival.engines.set(engine, rivalCounts);
+          }
+        }
+      }
+    }
+  }
+
+  // The window's rows made to match what the answers say now: a row no list
+  // supports any more goes — a question removed, a hold gone — and an
+  // unchanged one is left alone.
+  const standing = await ctx.db
+    .query("siteListAiDays")
+    .withIndex("by_asker_day", (q) =>
+      q.eq("askerWebsiteId", args.websiteId).eq("locationCode", args.locationCode)
+        .gte("day", args.fromDay).lte("day", args.toDay))
+    .take(LIST_AI_ROWS_PER_WINDOW);
+  const unclaimed = new Map(standing.map((row) => [`${row.companyWebsiteId}|${row.day}|${row.websiteId}`, row]));
+  for (const [key, line] of lines) {
+    const ai = [...line.engines.values()];
+    const row = unclaimed.get(key);
+    unclaimed.delete(key);
+    if (row && JSON.stringify(row.ai) === JSON.stringify(ai)) continue;
+    const fields = {
+      companyWebsiteId: line.holdId,
+      askerWebsiteId: args.websiteId,
+      locationCode: args.locationCode,
+      websiteId: line.websiteId,
+      day: line.day,
+      ai,
+      updatedAt: args.now,
+    };
+    if (row) await ctx.db.replace(row._id, fields);
+    else await ctx.db.insert("siteListAiDays", fields);
+  }
+  for (const row of unclaimed.values()) await ctx.db.delete(row._id);
+}
+
+/** A window's AI lines: a month of days, each naming a few dozen websites at most, for the lists asking. */
+const LIST_AI_ROWS_PER_WINDOW = 4_000;
 
 /** Whether a metrics row speaks for this place: a site-wide figure, or an older row, speaks for every place. */
 function isThisPlace(row: Doc<"seoWebsiteMetrics">, locationCode: number): boolean {

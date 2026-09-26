@@ -16,14 +16,9 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { SiteFacts, type SiteFact } from "../../../_components/SiteRecordParts";
-import { formatDay, formatNumber, formatShortDay, movement, movementClass, toCsv } from "../../../_components/siteFormat";
+import { formatCpc, formatDay, formatNumber, formatShortDay, movement, movementClass, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-
-/** A cost per click, which comes in US dollars. */
-function formatCpc(value: number | null): string {
-  return value === null ? "–" : `$${value.toFixed(2)}`;
-}
 
 /** Results shown before "Show all": Google's first page. */
 const PAGE_ONE = 10;
@@ -34,7 +29,7 @@ function formatUsd(value: number | null): string {
 }
 
 /**
- * One search's own screen (Organic keywords › All keywords › a keyword): where
+ * One search's own screen (Organic search › Keywords › a keyword): where
  * the site ranks for it and how that has moved, what the search is worth, the
  * page that ranks, where else the site shows on Google's page for it, and how
  * its competitors do on the same search.

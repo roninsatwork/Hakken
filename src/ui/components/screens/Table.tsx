@@ -4,8 +4,12 @@ import { createContext, useContext } from "react";
 import type { KeyboardEventHandler, ReactNode, Ref } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT } from "@/src/ui/components/layout/navStyles";
 import { Button } from "@/src/ui/components/screens/Button";
+import { cn } from "@/src/ui/lib/utils";
 import { useCanWriteHere } from "./AccessLevel";
+import { pageSlots } from "./pagination";
+import { Select } from "./Select";
 
 type AdminSearchBarProps = {
   value: string;
@@ -208,13 +212,16 @@ type AdminTableHeaderCellProps = {
   children: ReactNode;
   align?: "left" | "right";
   className?: string;
+  /** The order a sortable column's rows are in, for screen readers (`DataTable`'s `sort`). */
+  ariaSort?: "ascending" | "descending" | "none";
 };
 
-export function TableHeaderCell({ children, align = "left", className = "" }: AdminTableHeaderCellProps) {
+export function TableHeaderCell({ children, align = "left", className = "", ariaSort }: AdminTableHeaderCellProps) {
   const variant = useContext(TableHeaderVariantContext);
 
   return (
     <th
+      aria-sort={ariaSort}
       className={`${HEADER_CELL_CLASSES[variant]} ${align === "right" ? "text-right" : ""} ${className}`}
     >
       {children}
@@ -382,15 +389,26 @@ function FooterCount({
   );
 }
 
-/** A step-a-page button, so all three footers step alike. */
+/**
+ * A step-a-page button, so all three footers step alike — and each page
+ * number in the numbered one, which is the same control pointed at a page.
+ */
 function FooterStepButton({
   onClick,
   disabled,
   children,
+  label,
+  current = false,
+  className,
 }: {
   onClick: () => void;
   disabled: boolean;
   children: ReactNode;
+  /** What a screen reader calls a button that shows only an arrow or a number. */
+  label?: string;
+  /** The page being read: lit as a navigation list lights "you are here", never in brand orange. */
+  current?: boolean;
+  className?: string;
 }) {
   return (
     // Raw on purpose: pagination chrome — borderless until hovered, dims to 30%
@@ -399,12 +417,26 @@ function FooterStepButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
+      aria-label={label}
+      aria-current={current ? "page" : undefined}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim",
+        current && NAV_ACTIVE_PILL,
+        current && NAV_ACTIVE_TEXT,
+        className,
+      )}
     >
       {children}
     </button>
   );
 }
+
+/** A table's rows-per-page choice: what it offers, what is chosen, and where a new choice goes. */
+export type RowsChoice = {
+  choices: readonly number[];
+  value: number;
+  onChange: (rows: number) => void;
+};
 
 type AdminPaginationFooterProps = {
   page: number;
@@ -420,9 +452,23 @@ type AdminPaginationFooterProps = {
     page?: (page: number, totalPages: number) => string;
     showing?: (start: number, end: number, total: number) => string;
   };
+  /**
+   * Numbered pages in place of "Page X of Y", with the count and the rows
+   * choice on the right — the Sites tables (docs/plans/active/
+   * sites-table-pages-plan.md §2). Every other table keeps Previous, Page X of
+   * Y, Next, so nothing outside Sites changes by this existing.
+   */
+  numbered?: boolean;
+  /** How many rows a page shows, chosen beside the count. Only with `numbered`. */
+  rowsChoice?: RowsChoice;
 };
 
-export function PaginationFooter({
+export function PaginationFooter(props: AdminPaginationFooterProps) {
+  if (props.numbered) return <NumberedPaginationFooter {...props} />;
+  return <SteppedPaginationFooter {...props} />;
+}
+
+function SteppedPaginationFooter({
   page,
   totalPages,
   totalCount,
@@ -466,6 +512,98 @@ export function PaginationFooter({
           {labels?.next ?? t("next")}
           <ChevronRight className="w-4 h-4" />
         </FooterStepButton>
+      </div>
+    </FooterBar>
+  );
+}
+
+/**
+ * The Ahrefs-style footer Anthony asked for on the Sites tables, 2026-09-25
+ * ("I love the way Ahrefs do theirs"): `‹ 1 2 3 4 5 … 31 ›` on the left, any
+ * page one click away, and on the right the count and how many rows a page
+ * shows. The numbers appear only when there is more than one page, and the
+ * rows choice only when there are more rows than its smallest choice — a
+ * control that can change nothing is clutter.
+ */
+function NumberedPaginationFooter({
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  isLoading,
+  onPageChange,
+  labels,
+  rowsChoice,
+}: AdminPaginationFooterProps) {
+  const t = useTranslations("ui.table");
+  const safeTotalPages = Math.max(totalPages, 1);
+  const safePage = Math.min(Math.max(page, 1), safeTotalPages);
+  const start = (safePage - 1) * pageSize + 1;
+  const end = Math.min(safePage * pageSize, totalCount);
+  const showRows = rowsChoice !== undefined && totalCount > Math.min(...rowsChoice.choices);
+
+  return (
+    <FooterBar>
+      {safeTotalPages > 1 && (
+        <nav aria-label={t("pages")} className="flex items-center gap-1">
+          <FooterStepButton
+            onClick={() => onPageChange(safePage - 1)}
+            disabled={safePage === 1 || isLoading}
+            label={labels?.previous ?? t("previous")}
+            className="px-1.5"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </FooterStepButton>
+          {pageSlots(safePage, safeTotalPages).map((slot, index) =>
+            slot === "gap" ? (
+              <span key={`gap-${index}`} aria-hidden="true" className="px-1 text-[12px] text-muted">
+                …
+              </span>
+            ) : (
+              <FooterStepButton
+                key={slot}
+                onClick={() => onPageChange(slot)}
+                disabled={isLoading && slot !== safePage}
+                current={slot === safePage}
+                label={t("goToPage", { page: slot })}
+                className="min-w-[28px] justify-center px-1.5 tabular-nums"
+              >
+                {slot}
+              </FooterStepButton>
+            ),
+          )}
+          <FooterStepButton
+            onClick={() => onPageChange(safePage + 1)}
+            disabled={safePage >= safeTotalPages || isLoading}
+            label={labels?.next ?? t("next")}
+            className="px-1.5"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </FooterStepButton>
+        </nav>
+      )}
+
+      <div className="flex items-center gap-3 sm:ml-auto">
+        <FooterCount
+          isLoading={isLoading}
+          hasRows={totalCount > 0}
+          showing={() => labels?.showing?.(start, end, totalCount) ?? t("showingRange", { start, end, total: totalCount })}
+          empty={labels?.empty}
+        />
+        {showRows && (
+          <Select
+            aria-label={t("rowsPerPage")}
+            value={rowsChoice.value}
+            onChange={(value) => rowsChoice.onChange(Number(value))}
+            selectClassName="h-[32px] text-[12px]"
+          >
+            {rowsChoice.choices.map((choice) => (
+              <option key={choice} value={choice}>
+                {t("rowsOption", { count: choice })}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
     </FooterBar>
   );

@@ -332,9 +332,12 @@ describe("expanding a cycle", () => {
 describe("checking the searches on a website's record", () => {
   const LEEDS = 1006925;
 
-  async function trackSearch(t: Harness, websiteId: Id<"websites">, keyword: string, isActive = true) {
-    await t.run(async (ctx) =>
-      await ctx.db.insert("websiteKeywords", { websiteId, keyword, isActive, createdAt: Date.now() }));
+  /** A search on one company's own list for its website. */
+  async function trackSearch(t: Harness, holdId: Id<"companyWebsites">, keyword: string, isActive = true) {
+    await t.run(async (ctx) => {
+      const hold = await ctx.db.get(holdId);
+      await ctx.db.insert("websiteKeywords", { websiteId: hold!.websiteId, companyWebsiteId: holdId, keyword, isActive, createdAt: Date.now() });
+    });
   }
 
   const checks = async (t: Harness) =>
@@ -345,13 +348,13 @@ describe("checking the searches on a website's record", () => {
     const company = await seedCompany(t, "Ronins Agency");
     await seedSchedule(t, company, DAILY);
     const website = await seedWebsite(t, "ronins.co.uk");
-    await t.run(async (ctx) =>
+    const hold = await t.run(async (ctx) =>
       await ctx.db.insert("companyWebsites", {
         companyId: company, websiteId: website, locationCode: LEEDS, locationLabel: "Leeds, England", createdAt: Date.now(),
       }));
-    await trackSearch(t, website, "branding agency leeds");
-    await trackSearch(t, website, "rebrand consultancy");
-    await trackSearch(t, website, "old campaign phrase", false);
+    await trackSearch(t, hold, "branding agency leeds");
+    await trackSearch(t, hold, "rebrand consultancy");
+    await trackSearch(t, hold, "old campaign phrase", false);
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company) });
 
@@ -370,9 +373,9 @@ describe("checking the searches on a website's record", () => {
     await seedSchedule(t, ronins, DAILY);
     await seedSchedule(t, acme, DAILY);
     const shared = await seedWebsite(t, "shared.co.uk");
-    await seedCompanyWebsite(t, ronins, shared);
-    await seedCompanyWebsite(t, acme, shared);
-    await trackSearch(t, shared, "branding agency leeds");
+    // Each company's own list holds it; the page is still bought once.
+    await trackSearch(t, await seedCompanyWebsite(t, ronins, shared), "branding agency leeds");
+    await trackSearch(t, await seedCompanyWebsite(t, acme, shared), "branding agency leeds");
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, ronins) });
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, acme) });
@@ -388,10 +391,8 @@ describe("checking the searches on a website's record", () => {
     await seedSchedule(t, company, DAILY);
     const one = await seedWebsite(t, "one.co.uk");
     const two = await seedWebsite(t, "two.co.uk");
-    await seedCompanyWebsite(t, company, one);
-    await seedCompanyWebsite(t, company, two);
-    await trackSearch(t, one, "branding agency leeds");
-    await trackSearch(t, two, "branding agency leeds");
+    await trackSearch(t, await seedCompanyWebsite(t, company, one), "branding agency leeds");
+    await trackSearch(t, await seedCompanyWebsite(t, company, two), "branding agency leeds");
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company) });
 
@@ -405,12 +406,12 @@ describe("checking the searches on a website's record", () => {
     await seedSchedule(t, ronins, DAILY);
     await seedSchedule(t, acme, DAILY);
     const shared = await seedWebsite(t, "shared.co.uk");
-    await seedCompanyWebsite(t, ronins, shared);
-    await t.run(async (ctx) =>
+    await trackSearch(t, await seedCompanyWebsite(t, ronins, shared), "branding agency leeds");
+    const acmeHold = await t.run(async (ctx) =>
       await ctx.db.insert("companyWebsites", {
         companyId: acme, websiteId: shared, locationCode: LEEDS, locationLabel: "Leeds, England", createdAt: Date.now(),
       }));
-    await trackSearch(t, shared, "branding agency leeds");
+    await trackSearch(t, acmeHold, "branding agency leeds");
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, ronins) });
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, acme) });
@@ -988,7 +989,7 @@ describe("one website too big for one page", () => {
     const company = await seedCompany(t, "Big Agency");
     await seedSchedule(t, company, DAILY);
     const own = await seedWebsite(t, "ourshop.com");
-    await seedCompanyWebsite(t, company, own);
+    const ownHold = await seedCompanyWebsite(t, company, own);
     const rivals = 60;
     // Past the 200 a website's searches were once cut to (reliability plan 3.6).
     const searches = 250;
@@ -1002,7 +1003,7 @@ describe("one website too big for one page", () => {
         });
       }
       for (let index = 0; index < searches; index += 1) {
-        await ctx.db.insert("websiteKeywords", { websiteId: own, keyword: `carp bait ${index}`, isActive: true, createdAt: Date.now() });
+        await ctx.db.insert("websiteKeywords", { websiteId: own, companyWebsiteId: ownHold, keyword: `carp bait ${index}`, isActive: true, createdAt: Date.now() });
       }
     });
     const cycleId = await openCycle(t, company);
@@ -1040,15 +1041,15 @@ describe("one website too big for one page", () => {
 
 describe("asking the AI engines", () => {
   /*
-    Seeded on the website, not on a company's hold on it. A question belongs to
-    the site, so three clients watching one host share one row and buy one
-    answer between them rather than three identical ones.
+    Seeded on a company's own list for its website
+    (docs/plans/active/private-tracking-lists-plan.md). Two companies asking
+    the same thing hold a row each and still buy one answer between them.
   */
   async function seedPrompt(t: Harness, companyWebsiteId: Id<"companyWebsites">, engines: Array<"chatgpt" | "gemini">) {
     await t.run(async (ctx) => {
       const hold = await ctx.db.get(companyWebsiteId);
       await ctx.db.insert("websiteQuestions", {
-        websiteId: hold!.websiteId,
+        websiteId: hold!.websiteId, companyWebsiteId,
         prompt: "best plumber in Leeds", engines, isActive: true, createdAt: Date.now(),
       });
     });
@@ -1118,7 +1119,7 @@ describe("asking the AI engines", () => {
     expect(citationLines.filter((line) => line.reused)).toHaveLength(1);
   });
 
-  test("one question on a host is asked for every company holding it", async () => {
+  test("a question is asked only for the company whose list holds it", async () => {
     const t = harness();
     const site = await seedWebsite(t, "shared.com");
 
@@ -1130,14 +1131,14 @@ describe("asking the AI engines", () => {
     await seedSchedule(t, second, DAILY);
     await seedCompanyWebsite(t, second, site);
 
-    // Added once, against the website. Before this, the second company saw
-    // nothing until somebody typed the same question again on their own hold.
+    // On the first company's list only: it is that company's own, and only
+    // its own list may spend its money (reversing 2026-09-22's shared list).
     await seedPrompt(t, firstHold, ["chatgpt"]);
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, second) });
 
     const citation = (await pulls(t)).filter((row) => row.operationId.startsWith("ai_citation_"));
-    expect(citation).toHaveLength(1);
+    expect(citation).toHaveLength(0);
   });
 
   test("two companies on one host buy one answer between them", async () => {
@@ -1149,8 +1150,9 @@ describe("asking the AI engines", () => {
     const firstHold = await seedCompanyWebsite(t, first, site);
     const second = await seedCompany(t, "Northbrook Ltd");
     await seedSchedule(t, second, DAILY);
-    await seedCompanyWebsite(t, second, site);
+    // The same question on each company's own list.
     await seedPrompt(t, firstHold, ["chatgpt"]);
+    await seedPrompt(t, await seedCompanyWebsite(t, second, site), ["chatgpt"]);
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, first) });
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, second) });
@@ -1169,7 +1171,7 @@ describe("asking the AI engines", () => {
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
       await ctx.db.insert("websiteQuestions", {
-        websiteId: row!.websiteId,
+        websiteId: row!.websiteId, companyWebsiteId: hold,
         prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: false, createdAt: Date.now(),
       });
     });
@@ -1189,7 +1191,7 @@ describe("a refused pull", () => {
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
       await ctx.db.insert("websiteQuestions", {
-        websiteId: row!.websiteId,
+        websiteId: row!.websiteId, companyWebsiteId: hold,
         prompt: "best plumber in Leeds", engines: ["gemini"], isActive: true, createdAt: Date.now(),
       });
     });
@@ -1224,7 +1226,7 @@ describe("a refused pull", () => {
     await t.run(async (ctx) => {
       const row = await ctx.db.get(hold);
       await ctx.db.insert("websiteQuestions", {
-        websiteId: row!.websiteId,
+        websiteId: row!.websiteId, companyWebsiteId: hold,
         prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       });
     });

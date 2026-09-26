@@ -9,16 +9,34 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 const KINDS = ["COMPETITOR", "DIRECTORY", "PUBLISHER", "SUPPLIER", "OTHER"] as const;
 type Kind = (typeof KINDS)[number];
+
+type Organic = { host: string; intersections: number; averagePosition: number | null; domainTraffic: number | null };
+
+/**
+ * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
+ * website A to Z; the most shared keywords — the order it opens on; the best
+ * average position from the top; the most traffic in all first.
+ */
+const SORTS: SiteSortColumns<Organic, "website" | "shared" | "position" | "domainTraffic"> = {
+  website: { value: (row) => row.host, first: "asc" },
+  shared: { value: (row) => row.intersections, first: "desc" },
+  position: { value: (row) => row.averagePosition, first: "asc" },
+  domainTraffic: { value: (row) => row.domainTraffic, first: "desc" },
+};
+const hostOf = (row: Organic) => row.host;
 
 /**
  * Organic competitors: every website DataForSEO found ranking for the same
@@ -32,7 +50,6 @@ export default function SiteOrganicCompetitorsPage() {
   const rows = useQuery(api.siteCompetitors.listOrganicCompetitors, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [kind, setKind] = useSiteParam<Kind | "">("kind", "", KINDS);
-  const [page, setPage] = useSiteTablePage();
   const router = useRouter();
   const site = useSite();
   const recordHref = useSiteRecordHref(siteId);
@@ -43,16 +60,16 @@ export default function SiteOrganicCompetitorsPage() {
     return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
   };
 
-  const lower = term.toLowerCase();
-  const matching = rows?.filter((row) => (!lower || row.host.includes(lower)) && (!kind || (row.kind ?? "OTHER") === kind));
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const matches = wordStartMatcher(term);
+  const matching = rows?.filter((row) => (!matches || matches(row.host)) && (!kind || (row.kind ?? "OTHER") === kind));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "shared", name: hostOf });
+  const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Radar className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.host}
         onRowClick={(row) => { const href = rivalHref(row.host); if (href) router.push(href); }}
         rowClickable={(row) => rivalHref(row.host) !== null}
@@ -60,27 +77,21 @@ export default function SiteOrganicCompetitorsPage() {
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("kindFilter")} value={kind} onChange={(value) => setKind(value as Kind | "")}>
+            <Select chip={{ label: t("kindFilter"), choice: kind ? t(`kinds.${kind}`) : null }} value={kind} onChange={(value) => setKind(value as Kind | "")}>
             <option value="">{t("anyKind")}</option>
             {KINDS.map((entry) => <option key={entry} value={entry}>{t(`kinds.${entry}`)}</option>)}
           </Select>
-            <ListDownload fileName={"organic-competitors"} rows={matching} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind ?? "OTHER"}`) }, { header: t("columns.shared"), value: (row) => row.intersections }, { header: t("columns.position"), value: (row) => row.averagePosition }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.domainKeywords"), value: (row) => row.domainKeywords }, { header: t("columns.domainTraffic"), value: (row) => (row.domainTraffic === null ? null : Math.round(row.domainTraffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />
           </>
         }
+        cardHeader={<SiteTableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"organic-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind ?? "OTHER"}`) }, { header: t("columns.shared"), value: (row) => row.intersections }, { header: t("columns.position"), value: (row) => row.averagePosition }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.domainKeywords"), value: (row) => row.domainKeywords }, { header: t("columns.domainTraffic"), value: (row) => (row.domainTraffic === null ? null : Math.round(row.domainTraffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Radar className="h-8 w-8 text-muted/30" />, label: term || kind ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: rows === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
           {
             key: "website",
             header: t("columns.website"),
+            sortable: true,
             cell: (row) => {
               const href = rivalHref(row.host);
               return href ? <RecordLinkCell href={href}>{row.host}</RecordLinkCell> : <span className="text-[13px] text-foreground">{row.host}</span>;
@@ -91,9 +102,9 @@ export default function SiteOrganicCompetitorsPage() {
             header: t("columns.kind"),
             cell: (row) => <StatusPill tone={row.kind === "COMPETITOR" ? "warning" : "neutral"}>{t(`kinds.${row.kind ?? "OTHER"}`)}</StatusPill>,
           },
-          { key: "shared", header: t("columns.shared"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.intersections)}</span> },
-          { key: "position", header: t("columns.position"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.averagePosition === null ? "–" : row.averagePosition.toFixed(1)}</span> },
-          { key: "domainTraffic", header: t("columns.domainTraffic"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainTraffic)}</span> },
+          { key: "shared", header: t("columns.shared"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.intersections)}</span> },
+          { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.averagePosition === null ? "–" : row.averagePosition.toFixed(1)}</span> },
+          { key: "domainTraffic", header: t("columns.domainTraffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainTraffic)}</span> },
           { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusPill tone="success">{tc("yes")}</StatusPill> : <span className="text-muted">–</span>) },
         ]}
       />

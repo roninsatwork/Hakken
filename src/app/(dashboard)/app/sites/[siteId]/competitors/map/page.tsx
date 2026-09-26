@@ -11,19 +11,37 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
-import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 const ROLES = ["YOU", "RIVAL", "FOUND"] as const;
 type Role = (typeof ROLES)[number];
 const ROLE_TONES: Record<Role, StatusTone> = { YOU: "info", RIVAL: "warning", FOUND: "neutral" };
+
+type Market = { host: string; keywords: number | null; traffic: number | null; sharedKeywords: number | null };
+
+/**
+ * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
+ * website A to Z, and the most keywords, visits — the order it opens on — and
+ * shared keywords first.
+ */
+const SORTS: SiteSortColumns<Market, "website" | "keywords" | "traffic" | "shared"> = {
+  website: { value: (row) => row.host, first: "asc" },
+  keywords: { value: (row) => row.keywords, first: "desc" },
+  traffic: { value: (row) => row.traffic, first: "desc" },
+  shared: { value: (row) => row.sharedKeywords, first: "desc" },
+};
+const hostOf = (row: Market) => row.host;
 
 /**
  * Market map: every website in this one's market by how many searches it
@@ -42,7 +60,6 @@ export default function SiteMarketMapPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [role, setRole] = useSiteParam<Role | "">("who", "", ROLES);
   const [everything, setEverything] = useSiteParam<"" | "1">("all", "", ["1"]);
-  const [page, setPage] = useSiteTablePage();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   // A competitor the company tracks opens its comparison; this site and the
@@ -58,11 +75,10 @@ export default function SiteMarketMapPage() {
   // Wikipedia outranks everyone — join only when asked for.
   const inMarket = (row: NonNullable<typeof rows>[number]) =>
     row.role !== "FOUND" || everything === "1" || row.kind === null || row.kind === "COMPETITOR";
-  const lower = term.toLowerCase();
-  const matching = rows?.filter((row) => inMarket(row) && (!lower || row.host.toLowerCase().includes(lower)) && (!role || row.role === role))
-    .sort((left, right) => (right.traffic ?? -1) - (left.traffic ?? -1));
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const matches = wordStartMatcher(term);
+  const matching = rows?.filter((row) => inMarket(row) && (!matches || matches(row.host)) && (!role || row.role === role));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "traffic", name: hostOf });
+  const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   const plotted = (rows ?? []).filter((row) => inMarket(row) && row.keywords !== null && row.traffic !== null);
   const colours: Record<Role, string> = { YOU: SITE_SERIES_COLOURS[0], RIVAL: SITE_SERIES_COLOURS[1], FOUND: SITE_SERIES_COLOURS[5] };
@@ -99,7 +115,7 @@ export default function SiteMarketMapPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => `${row.role}:${row.host}`}
         onRowClick={(row) => { const href = rivalHref(row); if (href) router.push(href); }}
         rowClickable={(row) => rivalHref(row) !== null}
@@ -107,27 +123,21 @@ export default function SiteMarketMapPage() {
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("roleFilter")} value={role} onChange={(value) => setRole(value as Role | "")}>
+            <Select chip={{ label: t("columns.role"), choice: role ? t(`roles.${role}`) : null }} value={role} onChange={(value) => setRole(value as Role | "")}>
             <option value="">{t("anyRole")}</option>
             {ROLES.map((entry) => <option key={entry} value={entry}>{t(`roles.${entry}`)}</option>)}
           </Select>
-            <ListDownload fileName={`${site?.host ?? "site"}-market`} rows={matching} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.role"), value: (row) => t(`roles.${row.role}`) }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.traffic"), value: (row) => row.traffic }, { header: t("columns.shared"), value: (row) => row.sharedKeywords }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />
           </>
         }
+        cardHeader={<SiteTableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-market`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.role"), value: (row) => t(`roles.${row.role}`) }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.traffic"), value: (row) => row.traffic }, { header: t("columns.shared"), value: (row) => row.sharedKeywords }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <MapIcon className="h-8 w-8 text-muted/30" />, label: term || role ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: rows === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
           {
             key: "website",
             header: t("columns.website"),
+            sortable: true,
             cell: (row) => {
               const href = rivalHref(row);
               const className = `text-[13px] ${row.role === "YOU" ? "font-medium text-foreground" : "text-foreground"}`;
@@ -140,9 +150,9 @@ export default function SiteMarketMapPage() {
             header: t("columns.kind"),
             cell: (row) => (row.role === "FOUND" && row.kind ? <span className="text-[12px] text-secondary">{tk(row.kind)}</span> : <span className="text-muted">–</span>),
           },
-          { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.keywords)}</span> },
-          { key: "traffic", header: t("columns.traffic"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
-          { key: "shared", header: t("columns.shared"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.sharedKeywords)}</span> },
+          { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.keywords)}</span> },
+          { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
+          { key: "shared", header: t("columns.shared"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.sharedKeywords)}</span> },
         ]}
       />
     </div>

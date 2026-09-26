@@ -31,17 +31,10 @@ export function usePagedRows<Row>(
     /** Resets to page one when it changes — a new search, a new filter. */
     resetKey?: string;
     pageSize?: number;
-    /**
-     * The page to open on, and where to report a change of page — for a
-     * screen that keeps its page in the address, so that coming back to it
-     * opens the page that was left (the client's Sites tables).
-     */
-    initialPage?: number;
-    onPageChange?: (page: number) => void;
   }
 ) {
   const pageSize = options.pageSize ?? TABLE_PAGE_SIZE;
-  const [page, setPage] = useState(options.initialPage ?? 1);
+  const [page, setPage] = useState(1);
 
   // A new search starts at the beginning; staying on page 4 of a list that just
   // became one page long shows an empty table. Adjusted during render rather
@@ -64,7 +57,6 @@ export function usePagedRows<Row>(
     // Fetch only when the reader walks past what is already in hand.
     if (wanted * pageSize > loadedCount && options.canLoadMore) loadMoreOnce(options, pageSize);
     setPage(wanted);
-    options.onPageChange?.(wanted);
   };
 
   return {

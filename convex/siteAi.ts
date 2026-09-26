@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { askedPlace, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { holdQuestions, holdSearch } from "./holdLists";
 import { AI_ENGINES, aiEngineValidator, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { MAX_LIST } from "./websiteSiteRows";
+import { listWithCut } from "./siteListPages";
 
 /**
  * What the AI engines say about a site, for the client's Sites screens.
@@ -14,9 +16,11 @@ import { MAX_LIST } from "./websiteSiteRows";
  * and nowhere as a list of who else an answer named.
  *
  * The questions are the list the company measures the site on — its own for
- * an owned site, the owned site's for a competitor (D17). They are a bounded
- * list, capped at `MAX_LIST` on the record, so reading them whole by index is
- * a read of the site's own list, not a scan of anyone else's.
+ * an owned site, the owned site's for a competitor (D17) — and the company's
+ * alone, read through its hold (docs/plans/active/private-tracking-lists-plan.md).
+ * They are a bounded list, capped at `MAX_LIST` on the record, so reading them
+ * whole by index is a read of the company's own list, not a scan of anyone
+ * else's.
  */
 
 /** A competitor's answers read per question and engine: about a month of daily asking. */
@@ -52,10 +56,7 @@ export const listMentions = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const askerId = listWebsiteId(site);
-    const questions = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", askerId))
-      .take(MAX_LIST);
+    const questions = await holdQuestions(ctx, listHold(site), MAX_LIST);
 
     const rows = await Promise.all(questions.flatMap((question) => question.engines.map(async (engine) => {
       const place = answerPlace(engine, site.place);
@@ -128,10 +129,7 @@ export const shareOfVoice = tenantQuery({
     // questions gives the whole group's share — whichever member is open.
     const askerId = listWebsiteId(site);
     const rivals = await myRivals(ctx, site);
-    const questions = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", askerId))
-      .take(MAX_LIST);
+    const questions = await holdQuestions(ctx, listHold(site), MAX_LIST);
 
     const perEngine = new Map<AiEngine, { asked: number; lastDay: string | null; named: Map<Id<"websites">, number> }>();
     for (const question of questions) {
@@ -179,7 +177,7 @@ export const shareOfVoice = tenantQuery({
  */
 export const listCitedPages = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.array(v.object({
+  returns: listWithCut(v.object({
     url: v.string(),
     page: v.string(),
     engines: v.array(aiEngineValidator),
@@ -189,7 +187,9 @@ export const listCitedPages = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    return await citedPagesOf(ctx, site.website._id, listWebsiteId(site), site.place, QUESTIONS_FOR_CITED_PAGES);
+    const coverage = { cut: false };
+    const rows = await citedPagesOf(ctx, site.website._id, listHold(site), site.place, QUESTIONS_FOR_CITED_PAGES, coverage);
+    return { rows, cut: coverage.cut ? rows.length : null };
   },
 });
 
@@ -200,7 +200,7 @@ export const listCitedPages = tenantQuery({
  */
 export const listSearched = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.array(v.object({
+  returns: listWithCut(v.object({
     query: v.string(),
     queryText: v.string(),
     prompt: v.string(),
@@ -212,11 +212,8 @@ export const listSearched = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = listWebsiteId(site);
-    const questions = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
-      .take(MAX_LIST);
+    const holdId = listHold(site);
+    const questions = await holdQuestions(ctx, holdId, MAX_LIST);
 
     const merged = new Map<string, {
       query: string; queryText: string; prompt: string; engines: Set<string>; timesSeen: number; lastSeenDay: string;
@@ -225,13 +222,18 @@ export const listSearched = tenantQuery({
     // persistent searches first: a budget spent in the order the questions
     // were added would leave the later ones out once the searches pile up.
     const share = Math.max(MIN_FAN_OUT_SHARE, Math.floor(MAX_FAN_OUT_ROWS / Math.max(1, questions.length * AI_ENGINES.length)));
+    // Whether any read stopped short: a question and engine with more
+    // searches than its share, or more searches in all than are shown (T11).
+    let cut = false;
     for (const question of questions) for (const engine of AI_ENGINES) {
-      const rows = await ctx.db
+      const read = await ctx.db
         .query("promptFanOutQueries")
         .withIndex("by_prompt_engine_place_seen", (q) =>
-          q.eq("prompt", question.prompt).eq("engine", engine).eq("place", fanOutPlace(engine, site.place)))
+          q.eq("prompt", question.prompt).eq("engine", engine).eq("place", fanOutPlace(engine, askedPlace(site))))
         .order("desc")
-        .take(share);
+        .take(share + 1);
+      if (read.length > share) cut = true;
+      const rows = read.slice(0, share);
       for (const row of rows) {
         const key = `${question.prompt}::${row.query}`;
         const held = merged.get(key);
@@ -254,16 +256,15 @@ export const listSearched = tenantQuery({
 
     // The most persistent searches are the ones judged and shown; the rest
     // of a long tail is not worth a lookup each.
-    const kept = [...merged.values()]
-      .sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay))
-      .slice(0, MAX_SHOWN);
+    const sorted = [...merged.values()]
+      .sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay));
+    if (sorted.length > MAX_SHOWN) cut = true;
+    const kept = sorted.slice(0, MAX_SHOWN);
     const rows = await Promise.all(kept.map(async (row) => {
       const [intent, tracked] = await Promise.all([
         ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", row.query)).unique(),
-        ctx.db
-          .query("websiteKeywords")
-          .withIndex("by_website_keyword", (q) => q.eq("websiteId", websiteId).eq("keyword", row.query))
-          .first(),
+        // Tracked on this company's own list — never another company's.
+        holdSearch(ctx, holdId, row.query),
       ]);
       return {
         query: row.query,
@@ -276,6 +277,9 @@ export const listSearched = tenantQuery({
         tracked: Boolean(tracked),
       };
     }));
-    return rows.sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay));
+    return {
+      rows: rows.sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay)),
+      cut: cut ? rows.length : null,
+    };
   },
 });

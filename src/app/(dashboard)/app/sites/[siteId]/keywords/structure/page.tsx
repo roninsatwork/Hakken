@@ -7,15 +7,36 @@ import { FolderTree } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
-import { useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteSearch } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+
+type Section = { section: string; pages: number; keywords: number; top3: number; traffic: number | null };
+
+/**
+ * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
+ * folder A to Z (the home page's "/" first), and the most pages, keywords —
+ * the order it opens on — top-3 places, visits and share of keywords first.
+ */
+const SORTS: SiteSortColumns<Section, "section" | "pages" | "keywords" | "top3" | "traffic" | "share"> = {
+  section: { value: (row) => row.section, first: "asc" },
+  pages: { value: (row) => row.pages, first: "desc" },
+  keywords: { value: (row) => row.keywords, first: "desc" },
+  top3: { value: (row) => row.top3, first: "desc" },
+  traffic: { value: (row) => row.traffic, first: "desc" },
+  // A share of the same total for every folder: its keywords' order.
+  share: { value: (row) => row.keywords, first: "desc" },
+};
+const sectionOf = (row: Section) => row.section;
 
 /**
  * Site structure: keywords, traffic and pages by folder of the site, from the
@@ -29,7 +50,6 @@ export default function SiteStructurePage() {
   const site = useSite();
   const sections = useQuery(api.siteKeywords.listSections, { siteId });
   const [search, setSearch, term] = useSiteSearch();
-  const [page, setPage] = useSiteTablePage();
   const router = useRouter();
   const listHref = useSiteListHref(siteId);
   // A folder opens its pages: Top pages narrowed to it.
@@ -37,10 +57,10 @@ export default function SiteStructurePage() {
   const total = (sections ?? []).reduce((sum, row) => sum + row.keywords, 0);
   const label = (section: string) => (section === "/" ? t("home") : section);
 
-  const lower = term.toLowerCase();
-  const matching = sections?.filter((row) => !lower || label(row.section).toLowerCase().includes(lower));
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const matches = wordStartMatcher(term);
+  const matching = sections?.filter((row) => !matches || matches(label(row.section)));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "keywords", name: sectionOf });
+  const pager = useSitePager(sorted, { isLoading: sections === undefined });
   const charted = (sections ?? []).slice(0, 15);
 
   return (
@@ -69,31 +89,25 @@ export default function SiteStructurePage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.section}
         onRowClick={(row) => router.push(folderHref(row.section))}
         minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-filters={<ListDownload fileName={`${site?.host ?? "site"}-structure`} rows={matching} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="sections" actions={<ListDownload fileName={`${site?.host ?? "site"}-structure`} rows={sorted} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <FolderTree className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: sections === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "section", header: t("columns.section"), cell: (row) => <RecordLinkCell href={folderHref(row.section)} className="text-[13px] text-info">{label(row.section)}</RecordLinkCell> },
-          { key: "pages", header: t("columns.pages"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.pages)}</span> },
-          { key: "keywords", header: t("columns.keywords"), align: "right", cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.keywords)}</span> },
-          { key: "top3", header: t("columns.top3"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.top3)}</span> },
-          { key: "traffic", header: t("columns.traffic"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
+          { key: "section", header: t("columns.section"), sortable: true, cell: (row) => <RecordLinkCell href={folderHref(row.section)} className="text-[13px] text-info">{label(row.section)}</RecordLinkCell> },
+          { key: "pages", header: t("columns.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.pages)}</span> },
+          { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.keywords)}</span> },
+          { key: "top3", header: t("columns.top3"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.top3)}</span> },
+          { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
           {
             key: "share",
             header: t("columns.share"),
+            sortable: true,
             cell: (row) => {
               const share = total > 0 ? Math.round((row.keywords / total) * 100) : 0;
               return (

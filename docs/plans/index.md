@@ -7,6 +7,26 @@ completed work.
 
 ## Active Plans
 
+- [Sites — every table sorts the same way, by its headings](./active/sites-table-sorting-plan.md) —
+  all 36 Sites tables sort like Keywords: press a heading for its best first,
+  again for the other way, over the whole list; the six sort dropdowns go.
+  **Built 2026-09-26, all five phases; committed and pushed to dev.** Its §9 records what
+  was built and how it was checked.
+
+- [Private searches and questions — each company's own lists](./active/private-tracking-lists-plan.md) —
+  the Google searches and AI questions tracked for a company, and everything
+  worked out from them, seen by that company only; still bought once when two
+  companies track the same thing. Reverses the 2026-09-22 shared-list
+  decision. **Built 2026-09-26, all six phases; committed and pushed to dev.** Its §9
+  records what was built and how it was checked.
+
+- [Sites — numbered table pages with exact totals](./active/sites-table-pages-plan.md) —
+  an Ahrefs-style footer on every Sites table (numbered pages, the last page,
+  25/50/75/100 rows, opening at 25, remembered per page), and exact totals with
+  any page opened at once on the big lists, through a compact copy of each.
+  Sites only; admin keeps its footer. **Built 2026-09-25, all five phases;
+  committed and pushed to dev.** Its §9 records what was built and how it was checked.
+
 - [Sites — what a client sees for each website they track](./active/user-sites-plan.md) —
   the user front end for the SEO data, Semrush-style: a Sites list, then one
   site with a side menu of one sub menu per kind of data we collect (AI

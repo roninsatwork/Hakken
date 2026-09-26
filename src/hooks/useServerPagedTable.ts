@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -23,27 +23,8 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
   query: Query,
   args: Parameters<typeof usePaginatedQuery<Query>>[1],
   pageSize: number = TABLE_PAGE_SIZE,
-  options: {
-    /**
-     * Top up a page the server sent back short. A query that narrows its
-     * read with `maximumRowsRead` may answer with fewer rows than asked while
-     * more remain, and page two would then start past rows nobody saw — or
-     * show nothing at all. The Sites tables opt in (`useSitePagedTable`);
-     * every other screen behaves exactly as it always has.
-     */
-    fillShortPages?: boolean;
-    /**
-     * The page to open on, and where to report a change of page — for a
-     * screen that keeps its page in the address, so that coming back to it
-     * opens the page that was left (the Sites tables, `useSitePagedTable`).
-     * The pages before it are fetched first; until they are, the table shows
-     * its loading row rather than an earlier page.
-     */
-    initialPage?: number;
-    onPageChange?: (page: number) => void;
-  } = {},
 ) {
-  const [page, setPage] = useState(options.initialPage ?? 1);
+  const [page, setPage] = useState(1);
   const paginated = usePaginatedQuery(query, args, { initialNumItems: pageSize });
   const { results, status, loadMore } = paginated;
 
@@ -66,21 +47,11 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
   const safePage = Math.min(page, totalPages);
   const rows = results.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const short = options.fillShortPages === true && canLoadMore && loadedCount < safePage * pageSize;
-  // The page asked for is not in hand yet: the pages before it are still
-  // being fetched, one at a time, or it came back short and is being topped
-  // up. Either way none of what is in hand is the page to show.
-  const restoring = options.fillShortPages === true && canLoadMore && loadedCount < page * pageSize;
-  useEffect(() => {
-    if (short) loadMore(pageSize);
-  }, [short, loadedCount, loadMore, pageSize]);
-
   const goToPage = (next: number) => {
     const wanted = Math.max(1, next);
     // Fetch only when the reader walks past what is already in hand.
     if (wanted * pageSize > loadedCount && canLoadMore) loadMore(pageSize);
     setPage(wanted);
-    options.onPageChange?.(wanted);
   };
 
   return {
@@ -91,7 +62,7 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
     /** What has been fetched so far — never a total nobody has counted. */
     loadedCount,
     hasMore: canLoadMore,
-    isLoading: status === "LoadingFirstPage" || restoring,
+    isLoading: status === "LoadingFirstPage",
     isLoadingMore: status === "LoadingMore",
     /**
      * Waiting on the server for any reason — what the footer wants.
@@ -102,7 +73,7 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
      * spinner. Both states want the same thing from the footer, so they are
      * said once here rather than combined by hand fifteen times.
      */
-    isBusy: status === "LoadingFirstPage" || status === "LoadingMore" || restoring,
+    isBusy: status === "LoadingFirstPage" || status === "LoadingMore",
     goToPage,
   };
 }

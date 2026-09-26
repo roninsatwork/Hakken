@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { runDecisions, type DecisionResult } from "./decisionActions";
 import { pageTypeValidator, type PageType } from "./utils/siteShapes";
+import { pagesCopyKey, requestListCopy } from "./siteListCopies";
 
 /**
  * What kind of page each ranking page is, for the Sites Top pages report
@@ -188,6 +189,8 @@ export const writePageTypes = internalMutation({
         .unique();
       if (ranked && ranked.pageType === "UNJUDGED") await ctx.db.patch(ranked._id, { pageType: row.pageType });
     }
+    // Top pages is filtered by type from its compact copy: rebuilt once the types land.
+    if (args.judged.length > 0) await requestListCopy(ctx, "pages", pagesCopyKey(args.websiteId, args.locationCode));
     return null;
   },
 });

@@ -7,17 +7,23 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteParam } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const KEYS = ["newBacklinks", "lostBacklinks", "newReferringDomains", "lostReferringDomains"] as const;
+type Key = (typeof KEYS)[number];
+
+/** The columns that sort: the week, newest first, and each count, the most first. */
+const SORTS = dayTableSorts<{ day: string } & Record<Key, number | null>, Key>(KEYS, (row, key) => row[key]);
 
 /**
  * New and lost links: links and linking websites gained and lost in the
@@ -32,12 +38,11 @@ export default function SiteLinksNewLostPage() {
   const range = useSiteRange();
   const points = useQuery(api.siteLinkLists.linkChanges, { siteId, from: range.from, to: range.to, step: range.step });
   const [measure, setMeasure] = useSiteParam<"backlinks" | "domains">("show", "backlinks", ["backlinks", "domains"]);
-  const [page, setPage] = useSiteTablePage();
 
   const shownKeys = measure === "backlinks" ? (["newBacklinks", "lostBacklinks"] as const) : (["newReferringDomains", "lostReferringDomains"] as const);
   const newestFirst = [...(points ?? [])].reverse();
-  const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
-  const rows = points === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const { rows: sorted, tableSort } = useSiteSortedList(newestFirst, SORTS, { opening: "day", name: dayOf });
+  const pager = useSitePager(sorted, { isLoading: points === undefined });
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +53,7 @@ export default function SiteLinksNewLostPage() {
         hint={t("chartHint")}
         controls={
           <div className="max-w-xs">
-            <Select aria-label={t("measureLabel")} value={measure} onChange={(value) => setMeasure(value as "backlinks" | "domains")}>
+            <Select chip={{ label: `${t("measureLabel")}: ${t(`measures.${measure}`)}` }} aria-label={t("measureLabel")} value={measure} onChange={(value) => setMeasure(value as "backlinks" | "domains")}>
               <option value="backlinks">{t("measures.backlinks")}</option>
               <option value="domains">{t("measures.domains")}</option>
             </Select>
@@ -66,26 +71,20 @@ export default function SiteLinksNewLostPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={rows}
+        rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[720px]"
-filters={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={newestFirst} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="weeks" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
         empty={{ icon: <ArrowLeftRight className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: newestFirst.length,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: points === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "day", header: t("columns.day"), cell: (row) => <CheckedCell day={row.day} /> },
+          { key: "day", header: t("columns.day"), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
           ...KEYS.map((key) => ({
             key,
             header: t(`columns.${key}`),
             align: "right" as const,
+            sortable: true,
             cell: (row: NonNullable<typeof points>[number]) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row[key])}</span>,
           })),
         ]}

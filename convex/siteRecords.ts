@@ -1,11 +1,13 @@
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
-import { listWebsiteId, myRivals, requireMySite, sitePage } from "./siteAccess";
+import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { holdSearch } from "./holdLists";
+import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
+import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { bare, isHost } from "./siteGoogleSerp";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import {
@@ -46,8 +48,11 @@ const LINKS_SHOWN = 10;
 /** Results kept per results page: Google's hundred. */
 const SERP_RESULTS = 100;
 
-/** How far one page of shared searches may look through a rival's rankings. */
-const SHARED_ROWS_READ = 1_000;
+/**
+ * A feature's rows read whole: at most the newest full keyword list, whose
+ * limit is 10,000, with room for an older list's rows not yet cleared.
+ */
+const FEATURE_LIST_READ = 15_000;
 
 /** A keyword no longer than any search anybody types. */
 const MAX_KEYWORD = 200;
@@ -196,10 +201,8 @@ export const keywordRecord = tenantQuery({
         .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
         .take(20),
       myRivals(ctx, site),
-      ctx.db
-        .query("websiteKeywords")
-        .withIndex("by_website_keyword", (q) => q.eq("websiteId", listWebsiteId(site)).eq("keyword", keyword))
-        .first(),
+      // On this company's own list, or not: never another company's.
+      holdSearch(ctx, listHold(site), keyword),
       ctx.db
         .query("websiteSearchStats")
         .withIndex("by_key", (q) => q.eq("websiteId", websiteId).eq("keyword", keyword).eq("locationCode", place))
@@ -256,6 +259,10 @@ export const keywordRecord = tenantQuery({
         day: row.day,
       })),
       rivals: rivalRows.sort((left, right) => (left.position ?? 999) - (right.position ?? 999) || left.host.localeCompare(right.host)),
+      // The tracked facts and the results page exist because somebody tracks
+      // the search, so they are shown only when this company does — they
+      // would otherwise say that someone else tracks it
+      // (docs/plans/active/private-tracking-lists-plan.md).
       tracked: listed
         ? {
           isActive: listed.isActive,
@@ -265,7 +272,7 @@ export const keywordRecord = tenantQuery({
           lastCheckedDay: stats?.lastCheckedDay ?? null,
         }
         : null,
-      serp: serp
+      serp: serp && listed
         ? {
           day: serp.day,
           results: serp.results.slice(0, SERP_RESULTS).map((result) => {
@@ -373,7 +380,7 @@ export const pageRecord = tenantQuery({
         .query("siteCitedPages")
         .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", page))
         .take(CITED_ROWS),
-      askedQuestions(ctx, listWebsiteId(site), place, QUESTIONS_FOR_CITED_PAGES),
+      askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES),
       // The strongest links first, from the list of every link kept.
       ctx.db
         .query("siteBacklinks")
@@ -461,17 +468,34 @@ export const pageRecord = tenantQuery({
 /**
  * The searches behind one of Search features' figures — every search where
  * this site shows in an AI Overview, holds the answer box, or sits in the map
- * of local businesses — from the newest keyword list's feature rows, a page at
- * a time. Each with where the site ranks in the ordinary results, so the
- * reader can see the feature beside the ranking.
+ * of local businesses — from the newest keyword list's feature rows. Each with
+ * where the site ranks in the ordinary results and how often it is searched,
+ * from the site's keyword copy read once, so every row has both before the
+ * order is chosen and any column sorts the whole list (docs/plans/active/
+ * sites-table-sorting-plan.md §4.6). Most searched first unless a heading
+ * asks otherwise.
  */
+/**
+ * A feature's searches' columns that sort: the search A to Z, its place in
+ * the feature and its ordinary ranking from the top, and the most searched
+ * first.
+ */
+const FEATURE_SORTS: ListSorts<{ keyword: string; position: number | null; organicPosition: number | null; volume: number | null }, "keyword" | "position" | "organic" | "volume"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  position: { value: (row) => row.position, first: "asc" },
+  organic: { value: (row) => row.organicPosition, first: "asc" },
+  volume: { value: (row) => row.volume, first: "desc" },
+};
+
 export const featureKeywords = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
     feature: keywordFeatureValidator,
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
+    sort: v.optional(v.union(v.literal("keyword"), v.literal("position"), v.literal("organic"), v.literal("volume"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteKeywordFeatures"),
     keyword: v.string(),
     position: nullableNumber,
@@ -484,27 +508,35 @@ export const featureKeywords = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const place = site.place;
-    const result = await ctx.db
+    // Read whole — a feature is a share of one keyword list — and counted
+    // exactly (docs/plans/active/sites-table-pages-plan.md §5.1). An older
+    // list's row for a search this one also holds is not counted twice.
+    const read = await ctx.db
       .query("siteKeywordFeatures")
       .withIndex("by_site_feature_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", args.feature))
-      .paginate(sitePage(args.paginationOpts));
-    // One point read per row on screen, for its ordinary ranking beside the feature.
-    const page = await Promise.all(result.page.map(async (row) => {
-      const rank = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", row.keyword))
-        .first();
+      .take(FEATURE_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, FEATURE_LIST_READ);
+    const newest = new Map<string, Doc<"siteKeywordFeatures">>();
+    for (const row of held) {
+      const kept = newest.get(row.keyword);
+      if (!kept || row.day > kept.day) newest.set(row.keyword, row);
+    }
+    const copy = await readKeywordCopy(ctx, websiteId, place);
+    if (!copy) return preparingPage(args.rows);
+    const ranks = new Map(copy.rows.map((row) => [row.keyword, row]));
+    const list = [...newest.values()].map((row) => {
+      const rank = ranks.get(row.keyword);
       return {
         _id: row._id,
         keyword: row.keyword,
         position: row.position ?? null,
         page: row.page ?? null,
         day: row.day,
-        organicPosition: rank && rank.status !== "LOST" ? rank.position ?? null : null,
-        volume: rank?.volumeKnown ? rank.volume : null,
+        organicPosition: rank && rank.status !== "LOST" ? rank.position : null,
+        volume: rank?.volume ?? null,
       };
-    }));
-    return { ...result, page };
+    }).sort(listOrder(FEATURE_SORTS, args.sort ?? "volume", args.direction, (row) => row.keyword));
+    return pageOfList(list, args.page, args.rows, cut);
   },
 });
 
@@ -519,14 +551,32 @@ export const featureKeywords = tenantQuery({
  * beside this site's for the same search from the same place; a page with
  * few shared searches comes back short, and the table tops it up.
  */
+/**
+ * A competitor's shared searches' columns that sort: the search A to Z, both
+ * positions from the top, the most places between the two first, and the
+ * most searched and the competitor's most visits first — its opening order.
+ */
+const SHARED_SORTS: ListSorts<{ keyword: string; theirPosition: number; yourPosition: number; volume: number | null; theirTraffic: number | null }, "keyword" | "theirs" | "yours" | "gap" | "volume" | "theirVisits"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  theirs: { value: (row) => row.theirPosition, first: "asc" },
+  yours: { value: (row) => row.yourPosition, first: "asc" },
+  gap: { value: (row) => Math.abs(row.theirPosition - row.yourPosition), first: "desc" },
+  volume: { value: (row) => row.volume, first: "desc" },
+  theirVisits: { value: (row) => row.theirTraffic, first: "desc" },
+};
+
 export const sharedSearches = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
     rivalId: v.id("companyWebsites"),
     lead: v.optional(v.union(v.literal("THEM"), v.literal("YOU"))),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
+    sort: v.optional(v.union(
+      v.literal("keyword"), v.literal("theirs"), v.literal("yours"), v.literal("gap"), v.literal("volume"), v.literal("theirVisits"),
+    )),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteKeywordRanks"),
     keyword: v.string(),
     theirPosition: v.number(),
@@ -539,31 +589,29 @@ export const sharedSearches = tenantQuery({
     const rival = (await myRivals(ctx, site)).find((entry) => entry.hold._id === args.rivalId);
     if (!rival) throw appError("NOT_FOUND", "That website is not one beside this one.");
     const place = site.place;
-    const result = await ctx.db
-      .query("siteKeywordRanks")
-      .withIndex("by_site_traffic", (q) => q.eq("websiteId", rival.website._id).eq("locationCode", place))
-      .order("desc")
-      .filter((q) => q.neq(q.field("band"), "zz_none"))
-      .paginate({ ...sitePage(args.paginationOpts), maximumRowsRead: SHARED_ROWS_READ });
-    const rows = await Promise.all(result.page.map(async (row) => {
-      const ours = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", place).eq("keyword", row.keyword))
-        .first();
-      const yours = ours && ours.status !== "LOST" ? ours.position ?? null : null;
-      const theirs = row.position ?? null;
-      if (yours === null || theirs === null) return null;
-      if (args.lead === "THEM" && !(theirs < yours)) return null;
-      if (args.lead === "YOU" && !(yours < theirs)) return null;
-      return {
-        _id: row._id,
-        keyword: row.keyword,
-        theirPosition: theirs,
-        yourPosition: yours,
-        volume: row.volumeKnown ? row.volume : null,
-        theirTraffic: row.traffic ?? null,
-      };
-    }));
-    return { ...result, page: rows.filter((row) => row !== null) };
+    // Both sides from their compact copies, matched in memory: the total is
+    // every search both rank for at the latest check, not a page's worth of
+    // the competitor's list with the misses dropped (§5.2).
+    const [theirs, ours] = await Promise.all([
+      readKeywordCopy(ctx, rival.website._id, place),
+      readKeywordCopy(ctx, site.website._id, place),
+    ]);
+    if (!theirs || !ours) return preparingPage(args.rows);
+    const yours = new Map(ours.rows
+      .filter((row) => keywordStanding(row, ours.latestCheckDay) === "current")
+      .map((row) => [row.keyword, row.position as number]));
+    const shared = theirs.rows.flatMap((row) => {
+      if (keywordStanding(row, theirs.latestCheckDay) !== "current") return [];
+      const yourPosition = yours.get(row.keyword);
+      const theirPosition = row.position as number;
+      if (yourPosition === undefined) return [];
+      if (args.lead === "THEM" && !(theirPosition < yourPosition)) return [];
+      if (args.lead === "YOU" && !(yourPosition < theirPosition)) return [];
+      return [{ id: row.id, keyword: row.keyword, theirPosition, yourPosition, volume: row.volume, theirTraffic: row.traffic }];
+    }).sort(listOrder(SHARED_SORTS, args.sort ?? "theirVisits", args.direction, (row) => row.keyword));
+    const shown = pageOfList(shared, args.page, args.rows);
+    // Read in full by id, to be sure each row on screen is still there.
+    const rows = await Promise.all(shown.rows.map(async ({ id, ...row }) => ((await ctx.db.get(id)) ? { _id: id, ...row } : null)));
+    return { ...shown, rows: rows.filter((row) => row !== null) };
   },
 });

@@ -1,9 +1,12 @@
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, requireMySite, sitePage } from "./siteAccess";
+import { listHold, requireMySite, SITE_PAGE_MAX } from "./siteAccess";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
+import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
+import { pagesCopyKey, readListCopy } from "./siteListCopies";
+import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import {
   kdBandValidator,
   pageTypeValidator,
@@ -11,24 +14,29 @@ import {
   rankIntentValidator,
   rankStatusValidator,
 } from "./utils/siteShapes";
+import { wordStartMatcher } from "./utils/wordStarts";
 
 /**
  * What a site ranks for on Google: every keyword, every page, every folder, and
  * what moved — read from the latest-rankings tables (`siteSchema.ts`).
  *
- * **One page at a time, from an index.** Each query picks the index that
- * matches its filter and sort, and reads only the rows on screen. A second
- * filter with no index of its own narrows that read, and `maximumRowsRead`
- * caps how far it may look before handing back a short page — so a rare
- * filter on a huge site returns quickly with fewer rows, rather than scanning
- * the site. See docs/plans/active/user-sites-plan.md, "Speed".
+ * **Counted exactly, any page at once.** The keyword and page tables are
+ * searched, filtered, sorted and counted from their compact copies
+ * (`siteKeywordCopy.ts`, `siteListCopies.ts`; docs/plans/active/
+ * sites-table-pages-plan.md §5.2) — a few records however large the site —
+ * and only the rows on screen are then read in full. The numbered footer
+ * gets the list's true total and can open its last page in one request.
  */
 
-/** How far a narrowed read may look for one page of matches. */
-const MAX_ROWS_READ = 1_000;
+/** Keywords looked up at once for the "compare with" column: a page's worth at the largest page size. */
+const COMPARE_LIMIT = SITE_PAGE_MAX;
 
-/** Keywords looked up at once for the "compare with" column. */
-const COMPARE_LIMIT = 50;
+/**
+ * The Top pages copy's layout (`siteListCopyBuilders.ts` writes it). The id
+ * leads, so the pages on screen are read by id; a rebuild replaces each
+ * page's row in place (`writePages`), so the id holds from one to the next.
+ */
+export const PAGE_COPY_FIELDS = ["id", "page", "section", "pageType", "keywords", "traffic", "topKeyword", "bestPosition", "referringDomains"] as const;
 
 /**
  * One page's citation rows read for its AI columns: a row per form of its
@@ -118,157 +126,90 @@ function keywordRow(row: Rank) {
   };
 }
 
+/** The rows of one page of a keyword table, read in full: one read by id per row on screen. */
+async function fullKeywordRows(ctx: QueryCtx, shown: readonly KeywordCopyRow[]) {
+  const rows = await Promise.all(shown.map((row) => ctx.db.get(row.id)));
+  // A row removed since the copy was built (a purge) is simply not shown.
+  return rows.flatMap((row) => (row ? [keywordRow(row)] : []));
+}
+
+const byKeyword = (row: KeywordCopyRow) => row.keyword;
+
 /**
- * Every keyword the site ranks for, best first, or most-searched first.
+ * The columns a keyword table sorts by (docs/plans/active/
+ * sites-table-sorting-plan.md), each read from the compact copy, so the order
+ * is the whole list's: the keyword A to Z, position from the top, the day it
+ * was last seen newest first, and every other figure the most first. A
+ * heading pressed again reverses it.
+ */
+const KEYWORD_SORTS: ListSorts<KeywordCopyRow, "keyword" | "position" | "change" | "volume" | "cpc" | "traffic" | "lastSeen"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  position: { value: (row) => row.position, first: "asc" },
+  change: { value: (row) => row.change, first: "desc" },
+  volume: { value: (row) => row.volume, first: "desc" },
+  cpc: { value: (row) => row.cpc, first: "desc" },
+  traffic: { value: (row) => row.traffic, first: "desc" },
+  lastSeen: { value: (row) => row.day, first: "desc" },
+};
+
+/**
+ * Every keyword the site ranks for, best first, most-searched, most visits or
+ * dearest clicks first — or those on one page, in one band, of one intent,
+ * movement or difficulty, or matching a search (word starts, T8).
  *
- * Lost keywords are left out unless asked for by status: a list of what a
- * site ranks for should not end in everything it used to.
+ * The searches the latest check found (T9): lost keywords only when asked for
+ * by status, and those still held from an older check only with `older` — a
+ * list of what a site ranks for should not end in everything it used to.
  */
 export const listKeywords = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
     band: v.optional(rankBandValidator),
     intent: v.optional(rankIntentValidator),
     status: v.optional(rankStatusValidator),
-    page: v.optional(v.string()),
+    /** Only the searches still held from a check before the latest (T9). */
+    older: v.optional(v.boolean()),
+    /** Only the searches one of the site's pages ranks with: its path. (`page` is the page of the table.) */
+    path: v.optional(v.string()),
     /** How hard the search is, as a band of DataForSEO's difficulty. */
     kdBand: v.optional(kdBandValidator),
-    sort: v.optional(v.union(v.literal("position"), v.literal("volume"), v.literal("traffic"), v.literal("cpc"))),
+    sort: v.optional(v.union(
+      v.literal("keyword"), v.literal("position"), v.literal("change"), v.literal("volume"),
+      v.literal("cpc"), v.literal("traffic"), v.literal("lastSeen"),
+    )),
+    /**
+     * Which way: each column's own first — the keyword A to Z, top position,
+     * the biggest rise, most searched, dearest clicks, most visits, the newest
+     * seen — unless a heading pressed again asks for the other. Always over
+     * the whole list, before the page is cut.
+     */
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(keywordRowValidator),
+  returns: listPageResult(keywordRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const place = site.place;
-    const narrowed = { ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ };
-    const { band, intent, status, page, kdBand } = args;
-    const term = args.search?.trim();
-    const shape = <Result extends { page: Rank[] }>(result: Result) => ({ ...result, page: result.page.map(keywordRow) });
-
-    // A search reads the search index, most relevant first; the filters it
-    // can take ride along as equality filters on the same index.
-    if (term) {
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withSearchIndex("search_text", (q) => {
-          let search = q.search("searchText", term).eq("websiteId", websiteId).eq("locationCode", place);
-          if (band) search = search.eq("band", band);
-          if (intent) search = search.eq("intent", intent);
-          if (status) search = search.eq("status", status);
-          if (kdBand) search = search.eq("kdBand", kdBand);
-          return search;
-        })
-        .filter((q) => q.and(
-          page === undefined ? true : q.eq(q.field("page"), page),
-          // Lost keywords only when asked for, as on every other path.
-          band || status ? true : q.neq(q.field("band"), "zz_none"),
-        ))
-        .paginate(sitePage(args.paginationOpts));
-      return shape(result);
-    }
-
-    // Most traffic, or the dearest clicks, first. Every filter narrows the read.
-    if (args.sort === "traffic" || args.sort === "cpc") {
-      const index = args.sort === "traffic" ? "by_site_traffic" : "by_site_cpc";
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex(index, (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
-        .order("desc")
-        .filter((q) => q.and(
-          band ? q.eq(q.field("band"), band) : status === "LOST" ? true : q.neq(q.field("band"), "zz_none"),
-          intent ? q.eq(q.field("intent"), intent) : true,
-          status ? q.eq(q.field("status"), status) : true,
-          page !== undefined ? q.eq(q.field("page"), page) : true,
-          kdBand ? q.eq(q.field("kdBand"), kdBand) : true,
-        ))
-        .paginate(narrowed);
-      return shape(result);
-    }
-
-    if (args.sort === "volume") {
-      const result = await (intent
-        ? ctx.db
-          .query("siteKeywordRanks")
-          .withIndex("by_site_intent_volume", (q) =>
-            q.eq("websiteId", websiteId).eq("locationCode", place).eq("intent", intent))
-        : ctx.db
-          .query("siteKeywordRanks")
-          .withIndex("by_site_volume", (q) => q.eq("websiteId", websiteId).eq("locationCode", place)))
-        .order("desc")
-        .filter((q) => q.and(
-          band ? q.eq(q.field("band"), band) : status === "LOST" ? true : q.neq(q.field("band"), "zz_none"),
-          status ? q.eq(q.field("status"), status) : true,
-          page !== undefined ? q.eq(q.field("page"), page) : true,
-          kdBand ? q.eq(q.field("kdBand"), kdBand) : true,
-        ))
-        .paginate(narrowed);
-      return shape(result);
-    }
-
-    // Best position first. The band leads each index after the site, and bands
-    // sort as the positions they cover, so one range reads in position order
-    // and a band filter is the same range made shorter.
-    const live = status !== "LOST";
-    if (page !== undefined) {
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_page_band_position", (q) => {
-          const base = q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", page);
-          return band ? base.eq("band", band) : live ? base.lt("band", "zz_none") : base;
-        })
-        .filter((q) => q.and(
-          intent ? q.eq(q.field("intent"), intent) : true,
-          status ? q.eq(q.field("status"), status) : true,
-          kdBand ? q.eq(q.field("kdBand"), kdBand) : true,
-        ))
-        .paginate(narrowed);
-      return shape(result);
-    }
-    if (status) {
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_status_band_position", (q) => {
-          const base = q.eq("websiteId", websiteId).eq("locationCode", place).eq("status", status);
-          return band ? base.eq("band", band) : base;
-        })
-        .filter((q) => q.and(
-          intent ? q.eq(q.field("intent"), intent) : true,
-          kdBand ? q.eq(q.field("kdBand"), kdBand) : true,
-        ))
-        .paginate(narrowed);
-      return shape(result);
-    }
-    if (intent) {
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_intent_band_position", (q) => {
-          const base = q.eq("websiteId", websiteId).eq("locationCode", place).eq("intent", intent);
-          return band ? base.eq("band", band) : base.lt("band", "zz_none");
-        })
-        .filter((q) => (kdBand ? q.eq(q.field("kdBand"), kdBand) : true))
-        .paginate(narrowed);
-      return shape(result);
-    }
-    if (kdBand) {
-      const result = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_kd_band_position", (q) => {
-          const base = q.eq("websiteId", websiteId).eq("locationCode", place).eq("kdBand", kdBand);
-          return band ? base.eq("band", band) : base.lt("band", "zz_none");
-        })
-        .paginate(sitePage(args.paginationOpts));
-      return shape(result);
-    }
-    const result = await ctx.db
-      .query("siteKeywordRanks")
-      .withIndex("by_site_band_position", (q) => {
-        const base = q.eq("websiteId", websiteId).eq("locationCode", place);
-        return band ? base.eq("band", band) : base.lt("band", "zz_none");
-      })
-      .paginate(sitePage(args.paginationOpts));
-    return shape(result);
+    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+    if (!copy) return preparingPage(args.rows);
+    const matches = wordStartMatcher(args.search);
+    const list = copy.rows.filter((row) => {
+      const standing = keywordStanding(row, copy.latestCheckDay);
+      if (args.status === "LOST") {
+        if (standing !== "lost") return false;
+      } else if (args.older) {
+        if (standing !== "older" || (args.status && row.status !== args.status)) return false;
+      } else if (standing !== "current" || (args.status && row.status !== args.status)) {
+        return false;
+      }
+      return (!args.band || row.band === args.band)
+        && (!args.intent || row.intent === args.intent)
+        && (args.path === undefined || row.page === args.path)
+        && (!args.kdBand || row.kdBand === args.kdBand)
+        && (!matches || matches(row.keyword, row.page));
+    }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
+    const page = pageOfList(list, args.page, args.rows);
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
   },
 });
 
@@ -288,6 +229,15 @@ export const keywordsOnDay = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const found = await Promise.all(args.keywords.slice(0, COMPARE_LIMIT).map(async (keyword) => {
+      // Only a search on the site's own keyword list — the rows this column
+      // sits beside. Asked of any other, a position could exist only because
+      // a company tracks that search (docs/plans/active/
+      // private-tracking-lists-plan.md), and would say so.
+      const listed = await ctx.db
+        .query("siteKeywordRanks")
+        .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
+        .first();
+      if (!listed) return { keyword, position: null, url: null };
       const row = await ctx.db
         .query("seoKeywordPositions")
         .withIndex("by_website_keyword_place_day", (q) =>
@@ -299,101 +249,125 @@ export const keywordsOnDay = tenantQuery({
   },
 });
 
-/** Wins and losses: keywords by how they moved at their last check, biggest move first. */
+/**
+ * Wins and losses' columns that sort: the keyword A to Z; "From → to" by
+ * where it stands now, from the top (a lost search stands nowhere, so last);
+ * and the change by the size of the move, the biggest first, a rise or a
+ * drop alike.
+ */
+const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  fromTo: { value: (row) => row.position, first: "asc" },
+  change: { value: (row) => Math.abs(row.change), first: "desc" },
+};
+
+/**
+ * Wins and losses: the searches that moved at the latest check — the same
+ * moves the side menu counts (T10), for both are read from the site
+ * rebuild's ranking day. A search that last moved at an older check has not
+ * moved since, and is not listed as moving now. Wins and losses open on the
+ * biggest move first; new and lost searches, which have no move to measure,
+ * A to Z, as they always have.
+ */
 export const listMoves = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     status: v.union(v.literal("UP"), v.literal("DOWN"), v.literal("NEW"), v.literal("LOST")),
     search: v.optional(v.string()),
+    sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(keywordRowValidator),
+  returns: listPageResult(keywordRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const term = args.search?.trim();
-    // A search reads the search index, most relevant first, within the move chosen.
-    const result = term
-      ? await ctx.db
-        .query("siteKeywordRanks")
-        .withSearchIndex("search_text", (q) =>
-          q.search("searchText", term).eq("websiteId", site.website._id).eq("locationCode", site.place).eq("status", args.status))
-        .paginate(sitePage(args.paginationOpts))
-      // Up is a positive change, so the biggest win is the largest; down is
-      // negative, so the biggest drop is the smallest.
-      : await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_status_change", (q) =>
-          q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("status", args.status))
-        .order(args.status === "UP" ? "desc" : "asc")
-        .paginate(sitePage(args.paginationOpts));
-    return { ...result, page: result.page.map(keywordRow) };
+    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+    if (!copy) return preparingPage(args.rows);
+    const matches = wordStartMatcher(args.search);
+    const opening = args.status === "UP" || args.status === "DOWN" ? "change" : "keyword";
+    const list = copy.rows
+      .filter((row) => row.status === args.status && row.day === copy.rankingDay && (!matches || matches(row.keyword, row.page)))
+      .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
+    const page = pageOfList(list, args.page, args.rows);
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
   },
 });
 
-/** The pages the site ranks with, most keywords first, with which AI engines cite each. */
+/** A page as Top pages' compact copy holds it: every column the table sorts by. */
+type PageCopyRow = {
+  id: Id<"sitePageRanks">;
+  path: string;
+  section: string;
+  pageType: string;
+  keywords: number;
+  traffic: number | null;
+  topKeyword: string;
+  bestPosition: number | null;
+  referringDomains: number | null;
+};
+
+/**
+ * Top pages' columns that sort, all held in the copy for every page: the
+ * address A to Z, the best position from the top, the rest the most first.
+ */
+const PAGE_SORTS: ListSorts<PageCopyRow, "page" | "traffic" | "keywords" | "best" | "linking"> = {
+  page: { value: (row) => row.path, first: "asc" },
+  traffic: { value: (row) => row.traffic, first: "desc" },
+  keywords: { value: (row) => row.keywords, first: "desc" },
+  best: { value: (row) => row.bestPosition, first: "asc" },
+  linking: { value: (row) => row.referringDomains, first: "desc" },
+};
+
+/**
+ * The pages the site ranks with, most keywords first unless a heading asks
+ * otherwise — in one folder, of one type, or matching a search (word starts,
+ * T8) — with which AI engines cite each. Counted from Top pages' compact
+ * copy, so the total is exact and any page opens at once.
+ */
 export const listPages = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
     section: v.optional(v.string()),
     pageType: v.optional(pageTypeValidator),
-    sort: v.optional(v.union(v.literal("keywords"), v.literal("traffic"))),
+    sort: v.optional(v.union(v.literal("page"), v.literal("traffic"), v.literal("keywords"), v.literal("best"), v.literal("linking"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(pageRowValidator),
+  returns: listPageResult(pageRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const place = site.place;
-    const term = args.search?.trim();
-    const { section, pageType } = args;
-    const narrowed = { ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ };
-
-    const result = term
-      ? await ctx.db
-        .query("sitePageRanks")
-        .withSearchIndex("search_text", (q) => {
-          let search = q.search("searchText", term).eq("websiteId", websiteId).eq("locationCode", place);
-          if (section) search = search.eq("section", section);
-          if (pageType) search = search.eq("pageType", pageType);
-          return search;
-        })
-        .paginate(sitePage(args.paginationOpts))
-      : args.sort === "traffic"
-        ? await ctx.db
-          .query("sitePageRanks")
-          .withIndex("by_site_traffic", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
-          .order("desc")
-          .filter((q) => q.and(
-            section ? q.eq(q.field("section"), section) : true,
-            pageType ? q.eq(q.field("pageType"), pageType) : true,
-          ))
-          .paginate(narrowed)
-        : section
-          ? await ctx.db
-            .query("sitePageRanks")
-            .withIndex("by_site_section_keywords", (q) =>
-              q.eq("websiteId", websiteId).eq("locationCode", place).eq("section", section))
-            .order("desc")
-            .filter((q) => (pageType ? q.eq(q.field("pageType"), pageType) : true))
-            .paginate(narrowed)
-          : pageType
-            ? await ctx.db
-              .query("sitePageRanks")
-              .withIndex("by_site_type_keywords", (q) =>
-                q.eq("websiteId", websiteId).eq("locationCode", place).eq("pageType", pageType))
-              .order("desc")
-              .paginate(sitePage(args.paginationOpts))
-            : await ctx.db
-              .query("sitePageRanks")
-              .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
-              .order("desc")
-              .paginate(sitePage(args.paginationOpts));
+    const copy = await readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS);
+    if (!copy) return preparingPage(args.rows);
+    const matches = wordStartMatcher(args.search);
+    const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, topKeyword, bestPosition, referringDomains]) => ({
+      id: id as Id<"sitePageRanks">,
+      path: path as string,
+      section: section as string,
+      pageType: pageType as string,
+      keywords: keywords as number,
+      traffic: traffic as number | null,
+      topKeyword: topKeyword as string,
+      bestPosition: bestPosition as number | null,
+      referringDomains: referringDomains as number | null,
+    }));
+    const name = (row: PageCopyRow) => row.path;
+    const list = pagesHeld
+      .filter((row) => (!args.section || row.section === args.section)
+        && (!args.pageType || row.pageType === args.pageType)
+        && (!matches || matches(row.path, row.topKeyword)))
+      .sort(listOrder(PAGE_SORTS, args.sort ?? "keywords", args.direction, name));
+    const shown = pageOfList(list, args.page, args.rows);
+    const result = {
+      page: (await Promise.all(shown.rows.map((row) => ctx.db.get(row.id)))).flatMap((row) => (row ? [row] : [])),
+    };
 
     // Which engines cite each page on screen, by its path so every form of
     // its address counts: one short read per row, counting only the answers
     // to the questions this site is measured on (D17).
-    const asked = new Set((await askedQuestions(ctx, listWebsiteId(site), place, QUESTIONS_FOR_CITED_PAGES))
+    const asked = new Set((await askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES))
       .map((entry) => `${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
     const page = await Promise.all(result.page.map(async (row) => {
       const citedRows = (await ctx.db
@@ -428,7 +402,7 @@ export const listPages = tenantQuery({
         pageType: row.pageType ?? "UNJUDGED",
       };
     }));
-    return { ...result, page };
+    return { ...shown, rows: page };
   },
 });
 

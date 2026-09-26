@@ -1,7 +1,8 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, myRivals, requireMySite } from "./siteAccess";
-import { aiTotals, dayBefore, latestFigures, overlayMentions, pointValidator, seriesFor, stepValidator } from "./siteFigures";
+import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { aiTotals, dayBefore, latestFigures, overlayListAi, pointValidator, seriesFor, stepValidator } from "./siteFigures";
 
 /**
  * The figures behind the Sites charts: a site over time, its rivals beside it,
@@ -9,7 +10,10 @@ import { aiTotals, dayBefore, latestFigures, overlayMentions, pointValidator, se
  *
  * Read from the day summaries only (`siteDaySummaries`), never from the rows
  * they summarise — a chart of two years is at most a few hundred small reads
- * per line. See docs/plans/active/user-sites-plan.md, "Charts".
+ * per line — and the AI lines from the company's own list (`siteListAiDays`),
+ * so its questions reach no other company's chart. See
+ * docs/plans/active/user-sites-plan.md, "Charts", and
+ * docs/plans/active/private-tracking-lists-plan.md.
  */
 
 /** Rivals drawn as extra lines at once. More would be a chart nobody can read. */
@@ -39,14 +43,13 @@ export const siteSeries = tenantQuery({
   returns: v.array(lineValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    // Whose questions the AI figures come from: the owned site's. A website
-    // that is not the asker gets its mentions from those answers (D17).
-    const askerId = listWebsiteId(site);
-    const pointsFor = async (websiteId: typeof askerId) => {
+    // Whose questions the AI figures come from: this company's own list for
+    // the owned site. The owned site's line is its answers; every other
+    // website's is how often those answers named it (D17).
+    const holdId = listHold(site);
+    const pointsFor = async (websiteId: typeof site.website._id) => {
       const points = await seriesFor(ctx, websiteId, site.place, args.from, args.to, args.step);
-      return websiteId === askerId
-        ? points
-        : await overlayMentions(ctx, points, askerId, websiteId, site.place, args.from, args.to, args.step);
+      return await overlayListAi(ctx, points, holdId, websiteId, site.place, args.from, args.to, args.step);
     };
     const lines = [{
       websiteId: site.website._id,
@@ -104,22 +107,40 @@ export const siteCalendar = tenantQuery({
         q.eq("websiteId", site.website._id).eq("locationCode", site.place).gte("day", first).lte("day", last))
       .take(CALENDAR_DAYS);
 
+    // The AI answers of each day, from this company's own list: the site's
+    // own line, or — for a competitor — how often the list's answers named it.
+    const holdId = listHold(site);
+    const aiDays = holdId
+      ? await ctx.db
+        .query("siteListAiDays")
+        .withIndex("by_hold_site_day", (q) =>
+          q.eq("companyWebsiteId", holdId).eq("locationCode", site.place).eq("websiteId", site.website._id)
+            .gte("day", first).lte("day", last))
+        .take(CALENDAR_DAYS)
+      : [];
+    const aiOf = new Map(aiDays.map((row) => [row.day, row]));
+    // A day with answers and no other figures is a day of the month too.
+    const days = [...new Set([...rows.map((row) => row.day), ...aiOf.keys()])].sort();
+    const rowOf = new Map(rows.map((row) => [row.day, row]));
+
     let referringDomains = before?.referringDomains;
     let backlinks = before?.backlinks;
-    return rows.map((row) => {
-      const ai = aiTotals(row);
-      const referringDomainsChange = row.referringDomains !== undefined && referringDomains !== undefined
-        ? row.referringDomains - referringDomains
+    return days.map((day) => {
+      const row = rowOf.get(day) ?? { day };
+      const ai = aiTotals(aiOf.get(day) ?? null);
+      const figures: Partial<Doc<"siteDaySummaries">> = row;
+      const referringDomainsChange = figures.referringDomains !== undefined && referringDomains !== undefined
+        ? figures.referringDomains - referringDomains
         : null;
-      const backlinksChange = row.backlinks !== undefined && backlinks !== undefined ? row.backlinks - backlinks : null;
-      if (row.referringDomains !== undefined) referringDomains = row.referringDomains;
-      if (row.backlinks !== undefined) backlinks = row.backlinks;
+      const backlinksChange = figures.backlinks !== undefined && backlinks !== undefined ? figures.backlinks - backlinks : null;
+      if (figures.referringDomains !== undefined) referringDomains = figures.referringDomains;
+      if (figures.backlinks !== undefined) backlinks = figures.backlinks;
       return {
-        day: row.day,
-        rankedUp: row.rankedUp ?? 0,
-        rankedDown: row.rankedDown ?? 0,
-        rankedNew: row.rankedNew ?? 0,
-        rankedLost: row.rankedLost ?? 0,
+        day,
+        rankedUp: figures.rankedUp ?? 0,
+        rankedDown: figures.rankedDown ?? 0,
+        rankedNew: figures.rankedNew ?? 0,
+        rankedLost: figures.rankedLost ?? 0,
         aiNamed: ai.named,
         aiAsked: ai.asked,
         referringDomainsChange,
@@ -140,8 +161,6 @@ const figuresValidator = v.object({
   backlinks: v.union(v.number(), v.null()),
   referringDomains: v.union(v.number(), v.null()),
   domainRank: v.union(v.number(), v.null()),
-  aiNamed: v.number(),
-  aiAsked: v.number(),
 });
 
 /** The site and each tracked rival, side by side, as each stood at its newest check. */
@@ -156,7 +175,6 @@ export const siteAndRivals = tenantQuery({
     ];
     return await Promise.all(everyone.map(async ({ website, isYou }) => {
       const latest = await latestFigures(ctx, website._id, site.place);
-      const ai = aiTotals(latest.answers);
       return {
         websiteId: website._id,
         host: website.displayHost,
@@ -168,8 +186,6 @@ export const siteAndRivals = tenantQuery({
         backlinks: latest.links?.backlinks ?? null,
         referringDomains: latest.links?.referringDomains ?? null,
         domainRank: latest.links?.domainRank ?? null,
-        aiNamed: ai.named,
-        aiAsked: ai.asked,
       };
     }));
   },

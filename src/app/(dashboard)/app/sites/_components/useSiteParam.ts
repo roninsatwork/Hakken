@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useDebounce from "@/src/hooks/useDebounce";
+import {
+  SITE_DEFAULT_ROWS,
+  isSiteRows,
+  pageKeepingPlace,
+  readRememberedRows,
+  rememberRows,
+  siteRowsFromText,
+  siteRowsPageKey,
+  type SiteRows,
+} from "./siteTableRows";
 
 /**
  * A table's search, filters and sort, kept in the address (D14: "Search and
@@ -143,4 +153,56 @@ export function useSiteTablePage(): [number, (next: number) => void] {
   const page = Number.isInteger(raw) && raw > 1 ? raw : 1;
   const setPage = useCallback((next: number) => set({ [TABLE_PAGE_KEY]: next > 1 ? String(next) : null }), [set]);
   return [page, setPage];
+}
+
+/** The table's rows per page, in the address beside its page (docs/plans/active/sites-table-pages-plan.md, T4). */
+export const TABLE_ROWS_KEY = "rows";
+
+/**
+ * A Sites table's page and rows per page. Both live in the address, so Back
+ * from a record's screen opens the same page at the same size; the rows are
+ * also remembered for this page in this browser, so it opens as it was left
+ * (T4, "One per page"). What the address says wins over what the browser
+ * remembers, so a shared or bookmarked link shows what it says.
+ *
+ * The rows are not one of the shared keys: the side menu carries only the
+ * dates and "compare with" (`sharedSiteQuery`), so each page keeps its own.
+ * Changing them keeps the first row being read on screen.
+ */
+export function useSiteTablePaging(): {
+  page: number;
+  setPage: (next: number) => void;
+  rows: SiteRows;
+  setRows: (next: number) => void;
+} {
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const set = useSetSiteParams();
+  const [page, setPage] = useSiteTablePage();
+  const pageKey = siteRowsPageKey(pathname);
+
+  // Restored after mount so the server and the first client render agree,
+  // as the composer restores its thinking level.
+  const [remembered, setRemembered] = useState<{ pageKey: string; rows: SiteRows | null }>({ pageKey, rows: null });
+  useEffect(() => {
+    const restore = setTimeout(() => setRemembered({ pageKey, rows: readRememberedRows(pageKey) }), 0);
+    return () => clearTimeout(restore);
+  }, [pageKey]);
+
+  const rows = siteRowsFromText(params.get(TABLE_ROWS_KEY))
+    ?? (remembered.pageKey === pageKey ? remembered.rows : null)
+    ?? SITE_DEFAULT_ROWS;
+
+  const setRows = useCallback((next: number) => {
+    if (!isSiteRows(next) || next === rows) return;
+    rememberRows(pageKey, next);
+    setRemembered({ pageKey, rows: next });
+    const nextPage = pageKeepingPlace(page, rows, next);
+    set({
+      [TABLE_ROWS_KEY]: next === SITE_DEFAULT_ROWS ? null : String(next),
+      [TABLE_PAGE_KEY]: nextPage > 1 ? String(nextPage) : null,
+    });
+  }, [page, pageKey, rows, set]);
+
+  return { page, setPage, rows, setRows };
 }

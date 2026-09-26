@@ -14,6 +14,7 @@ import { addWebsiteKeywordCore } from "./websiteCanonical";
 import { loadQuestionRows, loadSearchRows, loadSite, untrackedNamed } from "./websiteSiteRows";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { holdQuestions, holdSearch } from "./holdLists";
 
 /**
  * The moves: what is worth doing next for one of a company's sites.
@@ -153,7 +154,7 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
   }
 
   const watcherPlace = (site.pair ?? site.hold).locationCode;
-  for (const search of await untrackedBuyingSearches(ctx, site.website._id, watcherPlace, new Set(searches.map((row) => row.keyword)))) {
+  for (const search of await untrackedBuyingSearches(ctx, site.hold._id, watcherPlace, new Set(searches.map((row) => row.keyword)))) {
     candidates.push({ kind: "UNTRACKED_SEARCH", subject: search.query, evidence: search });
   }
 
@@ -170,15 +171,12 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
  */
 async function untrackedBuyingSearches(
   ctx: QueryCtx | MutationCtx,
-  websiteId: Id<"websites">,
+  /** The hold whose questions — this company's own — the engines were asked. */
+  holdId: Id<"companyWebsites">,
   watcherPlace: number | undefined,
   tracked: ReadonlySet<string>,
 ) {
-  const questions = (await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
-    .take(QUESTIONS_READ))
-    .filter((question) => question.isActive);
+  const questions = await holdQuestions(ctx, holdId, QUESTIONS_READ, { activeOnly: true });
 
   const merged = new Map<string, { query: string; timesSeen: number; prompt: string }>();
   let read = 0;
@@ -526,15 +524,17 @@ async function takeMove(
   }
 
   if (move.kind === "DEAD_QUESTION") {
+    // Stops this company asking it: the question is on its own list alone
+    // (docs/plans/active/private-tracking-lists-plan.md).
     const question = await ctx.db.get(evidence.questionId as Id<"websiteQuestions">);
-    if (question && question.websiteId === hold.websiteId && question.isActive) {
+    if (question && question.companyWebsiteId === hold._id && question.isActive) {
       await ctx.db.patch(question._id, { isActive: false });
       await ctx.db.insert("auditLogs", {
         actorId: userId,
         actionType: "PAUSE_WEBSITE_QUESTION",
         entityId: question._id,
         entityType: "websiteQuestions",
-        metadata: JSON.stringify({ prompt: question.prompt }),
+        metadata: JSON.stringify({ prompt: question.prompt, companyId: hold.companyId }),
         timestamp: Date.now(),
       });
     }
@@ -542,16 +542,25 @@ async function takeMove(
   }
 
   if (move.kind === "UNTRACKED_SEARCH") {
+    // Onto this company's own list; a search it paused comes back, with the
+    // same audit entry the screen's Resume writes.
     const keyword = normaliseKeyword(String(evidence.query));
-    const existing = await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website_keyword", (q) => q.eq("websiteId", hold.websiteId).eq("keyword", keyword))
-      .first();
+    const existing = await holdSearch(ctx, hold._id, keyword);
     if (existing) {
-      if (!existing.isActive) await ctx.db.patch(existing._id, { isActive: true });
+      if (!existing.isActive) {
+        await ctx.db.patch(existing._id, { isActive: true });
+        await ctx.db.insert("auditLogs", {
+          actorId: userId,
+          actionType: "RESUME_WEBSITE_KEYWORD",
+          entityId: existing._id,
+          entityType: "websiteKeywords",
+          metadata: JSON.stringify({ keyword, companyId: hold.companyId }),
+          timestamp: Date.now(),
+        });
+      }
       return;
     }
-    await addWebsiteKeywordCore(ctx, { websiteId: hold.websiteId, keyword, userId });
+    await addWebsiteKeywordCore(ctx, { companyWebsiteId: hold._id, keyword, userId });
   }
   // A slipping search has nothing to take but a look; handling it is the act.
 }

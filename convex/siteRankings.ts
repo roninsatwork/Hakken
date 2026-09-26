@@ -182,18 +182,43 @@ export async function patchKeywordIntent(ctx: MutationCtx, keyword: string, inte
     .query("siteKeywordRanks")
     .withIndex("by_keyword", (q) => q.eq("keyword", keyword))
     .take(INTENT_PATCH_LIMIT);
-  for (const row of ranks) if (row.intent !== intent) await ctx.db.patch(row._id, { intent });
+  const patchedRanks = ranks.filter((row) => row.intent !== intent);
+  for (const row of patchedRanks) await ctx.db.patch(row._id, { intent });
 
   const gaps = await ctx.db
     .query("siteContentGaps")
     .withIndex("by_keyword", (q) => q.eq("keyword", keyword))
     .take(INTENT_PATCH_LIMIT);
-  for (const row of gaps) if (row.intent !== intent) await ctx.db.patch(row._id, { intent });
+  const patchedGaps = gaps.filter((row) => row.intent !== intent);
+  for (const row of patchedGaps) await ctx.db.patch(row._id, { intent });
+  await recountAfterIntents(ctx, patchedRanks, patchedGaps);
 
   for (const [table, read] of [["siteKeywordRanks", ranks.length], ["siteContentGaps", gaps.length]] as const) {
     if (read === INTENT_PATCH_LIMIT) {
       await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { table, keyword, intent, cursor: null });
     }
+  }
+}
+
+/**
+ * A judged intent changes what the counts by intent and the Sites lists'
+ * copies hold, so each site whose keywords it changed is rebuilt — once,
+ * shortly, however many judgments land — and each content gap it changed has
+ * its copy rebuilt (docs/plans/active/sites-table-pages-plan.md §5.2). Before
+ * this, the counts by intent trailed the rows until the next filing.
+ */
+async function recountAfterIntents(
+  ctx: MutationCtx,
+  ranks: ReadonlyArray<Pick<Doc<"siteKeywordRanks">, "websiteId" | "locationCode">>,
+  gaps: ReadonlyArray<Pick<Doc<"siteContentGaps">, "companyWebsiteId">>,
+): Promise<void> {
+  const sites = new Map(ranks.map((row) => [siteRebuildKey(row.websiteId, row.locationCode), row]));
+  for (const row of sites.values()) await requestSiteRebuild(ctx, row.websiteId, row.locationCode);
+  const holds = [...new Set(gaps.map((row) => row.companyWebsiteId))];
+  if (holds.length > 0) {
+    await ctx.scheduler.runAfter(0, internal.siteListCopies.requestCopies, {
+      requests: holds.map((holdId) => ({ kind: "gap" as const, key: `${holdId}` })),
+    });
   }
 }
 
@@ -211,7 +236,10 @@ export const carryKeywordIntent = internalMutation({
       .query(args.table)
       .withIndex("by_keyword", (q) => q.eq("keyword", args.keyword))
       .paginate({ cursor: args.cursor, numItems: INTENT_PATCH_LIMIT });
-    for (const row of page.page) if (row.intent !== args.intent) await ctx.db.patch(row._id, { intent: args.intent });
+    const patched = page.page.filter((row) => row.intent !== args.intent);
+    for (const row of patched) await ctx.db.patch(row._id, { intent: args.intent });
+    if (args.table === "siteKeywordRanks") await recountAfterIntents(ctx, patched as Doc<"siteKeywordRanks">[], []);
+    else await recountAfterIntents(ctx, [], patched as Doc<"siteContentGaps">[]);
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { ...args, cursor: page.continueCursor });
     }

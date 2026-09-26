@@ -33,7 +33,7 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/DetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
 - `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
 - `src/ui/components/screens/PageHeader.tsx`: list-page title/description/action header and primary action button.
-- `src/ui/components/screens/Select.tsx`: styled select control.
+- `src/ui/components/screens/Select.tsx`: styled select control; with `chip`, a compact filter that names itself ("Position", then "Position: 1–3" in the brand tint) and is as wide as its words.
 - `src/ui/components/screens/Field.tsx`: labelled field wrapper for typed form controls that must carry an accessible label.
 - `src/ui/components/screens/Checkbox.tsx`: shared checkbox/tick-box control, including hidden-label table-cell use.
 - `src/ui/components/screens/Leaderboard.tsx`: ranked or unranked compact lists for repeated "who used the most" panels.
@@ -77,11 +77,35 @@ Use:
 
 `RowIconButton` stops propagation before calling its action, so it can sit inside clickable table rows without also triggering row navigation. It supports `tone="danger"` for destructive row actions.
 
+**Headings that sort.** Give `DataTable` a `sort` — the key of the column the list is ordered by, its direction, and `onSort` — and mark the columns that can order it `sortable: true`. Their headings become buttons with an arrow: up or down on the column in charge, a faint two-way arrow on the others, and `aria-sort` on each for a screen reader. The table only draws the order and reports which heading was pressed; the screen decides what that means, and orders the **whole** list on the server, never the rows on screen. The Sites Keywords page is the example (Anthony, 2026-09-26, from Ahrefs): a heading's best first — top position, most searched — then the other way when pressed again, kept in the address, back to page one. A table with no `sort` draws every heading as words, as before.
+
+**Every Sites table sorts this way** (Anthony, 2026-09-26: "it's really key we have consistency across all reporting tables"; `docs/plans/active/sites-table-sorting-plan.md`). The rule is one file, `convex/utils/sortOrder.ts`, shared by the server and the browser as the word search is: blanks last whichever way, ties by the row's name. What sorts is every number and date, a list column by how many it holds, and the name column A to Z; labels with a filter, yes-or-no columns and long text do not. The first press is the best first — a Google position top first, a date newest first, a name A to Z, any other number largest first — and the second turns it round. A table opens on one order, shown by its arrow, and keeps any other in the address (`sort`, `dir`) for links and Back.
+
+- A list paged on the server takes `sort` and `direction` and orders the whole list before `pageOfList` cuts it: its columns are a `ListSorts` beside the query and `listOrder` builds the comparator (`convex/siteListPages.ts`). A column only filled in for the rows on screen cannot sort; hold it in the list's compact copy first, as Top pages holds its best position.
+- A screen asks through `useSiteSort` (`src/app/(dashboard)/app/sites/_components/useSiteSort.ts`), which gives the order to ask for and the table's `sort`. A list a page holds whole goes through `useSiteSortedList`, which sorts every row before `useSitePager` cuts the page — hand the sorted rows to the download too — and a day-by-day table's columns come from `dayTableSorts`.
+- `src/pagination-drift.test.ts` fails a Sites `DataTable` without `sort`, a sort dropdown, and a right-aligned figure column that does not sort, unless it is named there with why; that list may shrink, never grow.
+
+**Filters on the search row.** A list with several filters gives each one `Select`'s `chip` rather than a full-width dropdown, so the search box and the filters share one line; the list's own count, comparison or download go in the card's top bar (`cardHeader`) rather than on that row. The native select is laid invisibly over the chip, so the keyboard, a screen reader and a phone's own picker behave as any dropdown does. A chip that narrows the list (`choice`) turns the brand tint once one is chosen; a chip that only picks a view — which question, which breakdown, every link or one per website — stays quiet and says what it shows. A long choice is cut short with "…" when the chip is given a width to keep to.
+
+**Every Sites table does both** (Anthony, 2026-09-26, "yes please to both"): its filters are chips, and its card opens with `SiteTableBar` (`src/app/(dashboard)/app/sites/_components/SiteTableBar.tsx`) — the list's exact total from its own footer, in the table's words (`sites.tableCounts`: "807 keywords", "531 linking websites"), anything it is compared with, and its download on the right. A table on a record's screen keeps its title there, with the count beside it. `src/pagination-drift.test.ts` fails a Sites table without the bar, a full-width dropdown on one, and a download on the filter row.
+
 When building new tables, prefer table semantics instead of div grids for dense admin records. Keep row actions labelled with `aria-label` or `title` and route destructive actions through confirmation modals.
 
 ## Pagination
 
 `TABLE_PAGE_SIZE` is `15`. Administrative tables and feeds should use this default unless a specific product requirement says otherwise.
+
+**The client's Sites tables are that requirement** (Anthony, 2026-09-25;
+`docs/plans/active/sites-table-pages-plan.md`). They wear the numbered footer
+— `‹ 1 2 3 4 5 … 31 ›`, the count, and a choice of 25, 50, 75 or 100 rows
+opening at 25 — switched on through `DataTable`'s paged footer with
+`numbered: true` and a `rowsChoice`. Nothing outside Sites sets either, so
+every other table keeps Previous, Page X of Y, Next. `pageSlots` in
+`pagination.ts` decides which numbers show. A Sites list sent whole is paged by
+`useSitePager` (`src/app/(dashboard)/app/sites/_components/useSitePagedTable.ts`),
+which keeps the page and rows in the address and remembers the rows per page in
+the browser; build a Sites table on it, or on the Sites server pager, never on
+`TABLE_PAGE_SIZE`.
 
 `paginateItems` safely clamps page values and returns:
 
@@ -219,7 +243,7 @@ When all properties are removed or blank, it emits an empty string. When propert
 When adding a new screen, under `/admin` or `/app`:
 
 1. Build a list screen in the order set out in [Anatomy Of A List Screen](#anatomy-of-a-list-screen) — header, explanation, search, table, footer, save. The build enforces the header; the rest is the standard the reference screens follow.
-2. Use `TABLE_PAGE_SIZE` for tables and feeds.
+2. Use `TABLE_PAGE_SIZE` for tables and feeds — except a Sites table, which pages through `useSitePager` or the Sites server pager (see [Pagination](#pagination)).
 3. Use shared table components for searchable/paginated records.
 4. Use `HakkenModal` or `ConfirmationModal` instead of native dialogs.
 5. Surface backend errors with `SaveError`, `ModalFormError`, or `SaveFeedback`.

@@ -29,6 +29,7 @@ import {
   unitCosts,
   untrackedNamed,
 } from "./websiteSiteRows";
+import { holdQuestions, holdSearches } from "./holdLists";
 
 /**
  * A company's view of one of its websites: what it tracks, what that is
@@ -46,9 +47,11 @@ import {
  * header is a separate, cheaper query than any tab, because every tab draws
  * it.
  *
- * Read through the company's own hold, like every tenant read here: the lists
- * and summaries are the host's and shared by design, and which rivals it is
- * compared with is this company's own choice.
+ * Read through the company's own hold, like every tenant read here: the
+ * searches and questions are the company's own
+ * (docs/plans/active/private-tracking-lists-plan.md), the summaries of what was
+ * collected are the host's, and which rivals it is compared with is this
+ * company's own choice.
  */
 
 // ---------------------------------------------------------------------------
@@ -100,8 +103,10 @@ export const getSiteHeader = superAdminQuery({
     const tracked = isTrackedHold(site.hold);
 
     const [searches, questions, rivals, lastLine] = await Promise.all([
-      ctx.db.query("websiteKeywords").withIndex("by_website", (q) => q.eq("websiteId", site.website._id)).take(MAX_LIST),
-      ctx.db.query("websiteQuestions").withIndex("by_website", (q) => q.eq("websiteId", site.website._id)).take(MAX_LIST),
+      // This company's own lists for its own website; a competitor has none
+      // (docs/plans/active/private-tracking-lists-plan.md, V8).
+      tracked ? Promise.resolve([]) : holdSearches(ctx, site.hold._id, MAX_LIST),
+      tracked ? Promise.resolve([]) : holdQuestions(ctx, site.hold._id, MAX_LIST),
       tracked ? Promise.resolve([]) : loadRivalHolds(ctx, site),
       ctx.db
         .query("seoCycleLines")

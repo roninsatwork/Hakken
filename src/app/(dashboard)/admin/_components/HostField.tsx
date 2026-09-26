@@ -18,8 +18,6 @@ type HostFieldProps = {
     newWebsite: string;
     /** What attaching to a host Hakken already tracks brings with it. */
     inherits: (counts: {
-      keywords: number;
-      questions: number;
       rivals: number;
       weeks: number;
     }) => string;
@@ -82,18 +80,13 @@ export function HostField({ label, placeholder, value, onChange, labels }: HostF
             </p>
             {/*
               Only when there is something to inherit. A host that is known but
-              has nothing on it yet would otherwise announce four zeroes, which
-              reads as a fault rather than as "new".
+              has nothing on it yet would otherwise announce zeroes, which reads
+              as a fault rather than as "new".
             */}
-            {preview.inherits && (
-              preview.inherits.keywords + preview.inherits.questions
-              + preview.inherits.rivals + preview.inherits.weeksOfHistory > 0
-            ) ? (
+            {preview.inherits && preview.inherits.rivals + preview.inherits.weeksOfHistory > 0 ? (
               <p className="flex items-start gap-1.5 text-[11px] text-success">
                 <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
                 {labels.inherits({
-                  keywords: preview.inherits.keywords,
-                  questions: preview.inherits.questions,
                   rivals: preview.inherits.rivals,
                   weeks: preview.inherits.weeksOfHistory,
                 })}

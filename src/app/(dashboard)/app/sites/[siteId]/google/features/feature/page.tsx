@@ -7,14 +7,24 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
+import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
-import { useSitePagedTable } from "../../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../../_components/useSiteSort";
 
 /** The features a site can be found in, beside its ordinary ranking. */
 const FEATURES = ["ai_overview_reference", "featured_snippet", "local_pack"] as const;
 type Feature = (typeof FEATURES)[number];
+
+/**
+ * The columns that sort, over every search in the feature (docs/plans/active/
+ * sites-table-sorting-plan.md): the search A to Z, its place in the feature
+ * and its ordinary ranking from the top, and the most searched first — the
+ * order it opens on.
+ */
+const SORTS = { keyword: "asc", position: "asc", organic: "asc", volume: "desc" } as const;
 
 /**
  * The searches behind one of Search features' figures (Google results ›
@@ -34,7 +44,13 @@ export default function SiteFeatureKeywordsPage() {
   const recordHref = useSiteRecordHref(siteId);
   const asked = useRecordKey("feature");
   const feature = (FEATURES as readonly string[]).includes(asked) ? (asked as Feature) : null;
-  const table = useSitePagedTable(api.siteRecords.featureKeywords, feature ? { siteId, feature } : "skip");
+  const order = useSiteSort(SORTS, "volume");
+  // Each search's ranking and volume come from the site's keyword copy.
+  const table = useSiteListPage(
+    api.siteRecords.featureKeywords,
+    feature ? { siteId, feature, sort: order.key, direction: order.direction } : "skip",
+    [{ siteId, list: "keywords" }],
+  );
 
   if (!feature) {
     return <DetailHeader back={back} icon={<Sparkles className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -45,28 +61,23 @@ export default function SiteFeatureKeywordsPage() {
       <DetailHeader back={back} icon={<Sparkles className="h-6 w-6 text-brand" />} title={t(`titles.${feature}`)} description={t("description")} />
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
+        cardHeader={<SiteTableBar footer={table.footer} noun="searches" />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
           {
             key: "keyword",
             header: t("columns.keyword"),
+            sortable: true,
             cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
-          { key: "position", header: t("columns.position"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
-          { key: "organic", header: t("columns.organic"), align: "right", cell: (row) => <PositionCell position={row.organicPosition} /> },
-          { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+          { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
+          { key: "organic", header: t("columns.organic"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.organicPosition} /> },
+          { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           {
             key: "page",
             header: t("columns.page"),

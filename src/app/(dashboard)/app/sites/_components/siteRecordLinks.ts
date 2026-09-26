@@ -145,7 +145,7 @@ export function useSiteBackHref(siteId: string, kind: SiteRecord["kind"]): strin
  * The back row of a record's screen, for its `DetailHeader` (the record-level
  * header, docs/developer/screen-kit.md "Headers"): where Back leads
  * (`useSiteBackHref`), and what it says. It names the page it leads to when
- * that is one of the menu's pages — "Back to All keywords" — and from one
+ * that is one of the menu's pages — "Back to Keywords" — and from one
  * record to another just says "Back", since a record is not a page with a name.
  */
 export function useRecordBack(kind: SiteRecord["kind"]): { label: string; href: string } {
@@ -155,7 +155,7 @@ export function useRecordBack(kind: SiteRecord["kind"]): { label: string; href: 
   return { label, href };
 }
 
-/** What a back row says for where it leads: "Back to All keywords" for a menu page of any site, "Back" for a record. */
+/** What a back row says for where it leads: "Back to Keywords" for a menu page of any site, "Back" for a record. */
 function useBackLabel(): (href: string) => string {
   const t = useTranslations("sites.record");
   const tm = useTranslations("sites.menu.pages");

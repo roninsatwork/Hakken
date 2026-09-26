@@ -38,6 +38,95 @@ describe("PaginationFooter", () => {
   });
 });
 
+/**
+ * The Sites tables' footer (docs/plans/active/sites-table-pages-plan.md §2):
+ * numbered pages, the count, and the rows choice, switched on per table.
+ */
+describe("PaginationFooter, numbered", () => {
+  const rowsChoice = (onChange = vi.fn()) => ({ choices: [25, 50, 75, 100] as const, value: 25, onChange });
+
+  it("numbers the pages around the current one and marks it as the page being read", () => {
+    const onPageChange = vi.fn();
+    render(
+      <PaginationFooter page={10} totalPages={31} totalCount={775} pageSize={25} isLoading={false} onPageChange={onPageChange} numbered rowsChoice={rowsChoice()} />
+    );
+
+    const pages = screen.getByRole("navigation", { name: "Pages" });
+    const labels = Array.from(pages.querySelectorAll("button")).map((button) => button.getAttribute("aria-label"));
+    expect(labels).toEqual(["Previous", "Page 1", "Page 9", "Page 10", "Page 11", "Page 31", "Next"]);
+    expect(screen.getByRole("button", { name: "Page 10" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Page 9" })).not.toHaveAttribute("aria-current");
+    expect(screen.getAllByText("…")).toHaveLength(2);
+    expect(screen.getByText("Showing 226-250 of 775")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Page 31" }));
+    expect(onPageChange).toHaveBeenLastCalledWith(31);
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    expect(onPageChange).toHaveBeenLastCalledWith(9);
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(onPageChange).toHaveBeenLastCalledWith(11);
+  });
+
+  it("cannot step past either end", () => {
+    const { unmount } = render(
+      <PaginationFooter page={1} totalPages={3} totalCount={60} pageSize={25} isLoading={false} onPageChange={vi.fn()} numbered />
+    );
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    unmount();
+
+    render(<PaginationFooter page={3} totalPages={3} totalCount={60} pageSize={25} isLoading={false} onPageChange={vi.fn()} numbered />);
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  it("offers the rows choice and hands back a number", () => {
+    const onChange = vi.fn();
+    render(
+      <PaginationFooter page={1} totalPages={2} totalCount={40} pageSize={25} isLoading={false} onPageChange={vi.fn()} numbered rowsChoice={rowsChoice(onChange)} />
+    );
+
+    const select = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(Array.from((select as HTMLSelectElement).options).map((option) => option.textContent)).toEqual([
+      "25 rows per page", "50 rows per page", "75 rows per page", "100 rows per page",
+    ]);
+    fireEvent.change(select, { target: { value: "75" } });
+    expect(onChange).toHaveBeenCalledWith(75);
+  });
+
+  it("draws no numbers for one page, and no rows choice that could change nothing", () => {
+    render(
+      <PaginationFooter page={1} totalPages={1} totalCount={12} pageSize={25} isLoading={false} onPageChange={vi.fn()} numbered rowsChoice={rowsChoice()} />
+    );
+
+    expect(screen.queryByRole("navigation", { name: "Pages" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Rows per page" })).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 1-12 of 12")).toBeInTheDocument();
+  });
+
+  it("keeps a long list's rows choice even when the chosen size fits it on one page", () => {
+    render(
+      <PaginationFooter page={1} totalPages={1} totalCount={40} pageSize={50} isLoading={false} onPageChange={vi.fn()} numbered rowsChoice={{ ...rowsChoice(), value: 50 }} />
+    );
+
+    expect(screen.queryByRole("navigation", { name: "Pages" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Rows per page" })).toHaveValue("50");
+  });
+
+  it("says nothing while the list is still loading", () => {
+    render(<PaginationFooter page={1} totalPages={1} totalCount={0} pageSize={25} isLoading onPageChange={vi.fn()} numbered rowsChoice={rowsChoice()} />);
+
+    expect(screen.queryByText("No entries found")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Pages" })).not.toBeInTheDocument();
+  });
+
+  it("leaves every other table's footer as it was", () => {
+    render(<PaginationFooter page={2} totalPages={31} totalCount={775} pageSize={25} isLoading={false} onPageChange={vi.fn()} />);
+
+    expect(screen.getByText("Page 2 of 31")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Pages" })).not.toBeInTheDocument();
+  });
+});
+
 describe("CursorFooter", () => {
   const base = {
     page: 2,

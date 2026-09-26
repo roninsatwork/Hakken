@@ -40,6 +40,21 @@ export function isTrackedHold(hold: Pick<Doc<"companyWebsites">, "relationship">
 }
 
 /**
+ * The hold whose searches and questions a hold is measured on
+ * (docs/plans/active/private-tracking-lists-plan.md): its own, for one of a
+ * company's own websites; for a competitor, the owned hold it is watched
+ * against (`pair`); none for a competitor watched against nothing (V8). The
+ * one place the rule lives — `listHold` in `siteAccess.ts` and the admin row
+ * loaders in `websiteSiteRows.ts` both ask it.
+ */
+export function listOwnerHold(
+  hold: Doc<"companyWebsites">,
+  pair: Doc<"companyWebsites"> | null,
+): Doc<"companyWebsites"> | null {
+  return isTrackedHold(hold) ? pair : hold;
+}
+
+/**
  * Refuse a setting that a pairing overrides.
  *
  * A paired tracked site has no schedule or place of its own — it is collected

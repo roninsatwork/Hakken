@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -9,14 +10,19 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { toCsv } from "../../../_components/siteFormat";
 import { RecordLinkCell } from "../../../_components/SiteCells";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSitePagedRows } from "../../../_components/useSitePagedTable";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+
+const hostOf = (row: { host: string }) => row.host;
 
 /**
  * Share of voice: how often each engine names this site against the others in
@@ -34,9 +40,34 @@ export default function SiteShareOfVoicePage() {
   const sites = engines?.[0]?.sites ?? [];
   const [search, setSearch, settled] = useSiteSearch();
   const lower = settled.toLowerCase();
-  const shownSites = sites.filter((entry) => !lower || entry.host.toLowerCase().includes(lower));
-  // Fifteen rows a page, like every table, however many rivals a group holds.
-  const paged = useSitePagedRows(shownSites, lower);
+  const matches = wordStartMatcher(lower);
+  const shownSites = sites.filter((entry) => !matches || matches(entry.host));
+  // The columns that sort (docs/plans/active/sites-table-sorting-plan.md):
+  // the website A to Z, each engine's share and all engines' the most first —
+  // the order it opens on — this site sorted in with the rest, still marked.
+  // By the shares themselves, not the rounded percentages shown.
+  const columns = useMemo(() => {
+    const everyone = (engine: NonNullable<typeof engines>[number]) => engine.sites.reduce((sum, entry) => sum + entry.named, 0);
+    const namedBy = (engine: NonNullable<typeof engines>[number], websiteId: string) => engine.sites.find((entry) => entry.websiteId === websiteId)?.named ?? 0;
+    const spec: SiteSortColumns<(typeof sites)[number], string> = {
+      website: { value: (row) => row.host, first: "asc" },
+      all: {
+        value: (row) => {
+          const total = (engines ?? []).reduce((sum, engine) => sum + everyone(engine), 0);
+          return total === 0 ? 0 : (engines ?? []).reduce((sum, engine) => sum + namedBy(engine, row.websiteId), 0) / total;
+        },
+        first: "desc",
+      },
+      ...Object.fromEntries((engines ?? []).map((engine) => [engine.engine, {
+        value: (row: (typeof sites)[number]) => (everyone(engine) === 0 ? 0 : namedBy(engine, row.websiteId) / everyone(engine)),
+        first: "desc" as const,
+      }])),
+    };
+    return spec;
+  }, [engines]);
+  const { rows: sorted, tableSort } = useSiteSortedList(shownSites, columns, { opening: "all", name: hostOf });
+  // Paged like every table, however many rivals a group holds.
+  const paged = useSitePager(sorted, { isLoading: engines === undefined });
   const router = useRouter();
   const listHref = useSiteListHref(siteId);
   // Each of the company's own websites opens its Mentions: how the engines
@@ -82,27 +113,21 @@ export default function SiteShareOfVoicePage() {
       </SiteChartCard>
 
       <DataTable
-        rows={engines === undefined ? undefined : paged.pageRows}
+        rows={paged.pageRows}
         rowKey={(row) => row.websiteId}
         onRowClick={(row) => { const href = mentionsHref(row.host); if (href) router.push(href); }}
         rowClickable={(row) => mentionsHref(row.host) !== null}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
-filters={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows={shownSites} columns={[{ header: t("columns.website"), value: (row) => row.host }, ...(engines ?? []).map((engine) => ({ header: engineLabel(engine.engine), value: (row: (typeof sites)[number]) => share(engine, row.websiteId) })), { header: t("columns.all"), value: (row) => overall(row.websiteId) }]} />}
+        cardHeader={<SiteTableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, ...(engines ?? []).map((engine) => ({ header: engineLabel(engine.engine), value: (row: (typeof sites)[number]) => share(engine, row.websiteId) })), { header: t("columns.all"), value: (row) => overall(row.websiteId) }]} />} />}
         empty={{ icon: <PieChart className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: paged.page,
-          totalPages: paged.totalPages,
-          totalCount: paged.loadedCount,
-          pageSize: paged.pageSize,
-          isLoading: engines === undefined,
-          onPageChange: paged.goToPage,
-        }}
+        footer={paged.footer}
+        sort={tableSort}
         columns={[
           {
             key: "website",
             header: t("columns.website"),
+            sortable: true,
             cell: (row) => {
               const href = mentionsHref(row.host);
               const className = `text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`;
@@ -113,13 +138,14 @@ filters={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows=
             key: engine.engine,
             header: engineLabel(engine.engine),
             align: "right" as const,
+            sortable: true,
             cell: (row: (typeof sites)[number]) => (
               <span className="font-mono text-[12px]" title={t("namedOf", { named: engine.sites.find((entry) => entry.websiteId === row.websiteId)?.named ?? 0, asked: engine.asked })}>
                 {t("share", { share: share(engine, row.websiteId) })}
               </span>
             ),
           })),
-          { key: "all", header: t("columns.all"), align: "right", cell: (row) => <span className="font-mono text-[12px] font-medium">{t("share", { share: overall(row.websiteId) })}</span> },
+          { key: "all", header: t("columns.all"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] font-medium">{t("share", { share: overall(row.websiteId) })}</span> },
         ]}
       />
     </div>

@@ -25,6 +25,8 @@ import {
 } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
+import { backfillAnswerIndex } from "./siteAnswers";
+import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
 import { detachCompanySchedules } from "./scheduler";
 import { backfillBrandedFlag } from "./websites";
 import {
@@ -119,6 +121,10 @@ type MigrationRunner = (
  * The same was done on 2026-09-23 with `2026-09-23-clear-seo-prefer-live`,
  * which emptied `companies.seoPreferLive` on dev before the field left the
  * schema. There is no production deployment yet, so no other copy carries it.
+ * And on 2026-09-26 with the four that made each company's lists its own
+ * (listed in `privateListsMigration.ts`): recovering a deployment that still
+ * has list rows without a hold, `siteDaySummaries.ai` or `siteRivalAiDays`
+ * means the commit before their removal, then those four, then forward.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,
@@ -153,6 +159,16 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * asked for: each can still carry a megabyte.
    */
   "2026-09-25-answers-off-requests": moveAnswersOffRequests,
+
+  /**
+   * Lists every stored AI answer in the light index the Full answers page
+   * counts and pages by (`aiAnswerIndex`, docs/plans/active/
+   * sites-table-pages-plan.md §5), so answers filed before it are counted too.
+   */
+  "2026-09-25-answer-index": backfillAnswerIndex,
+
+  /** Tracked searches' check-only rows out of All keywords (`privateListsMigration.ts`). */
+  "2026-09-26-check-only-keyword-rows": dropCheckOnlyKeywordRows,
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next

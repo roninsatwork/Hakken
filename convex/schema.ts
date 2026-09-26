@@ -156,43 +156,28 @@ export default defineSchema({
     .searchIndex("search_host", { searchField: "displayHost" }),
 
   /*
-    The three lists below are the host's own, and none of them carries a
-    company.
-
-    That is the point, and it is a reversal. The rule was that anything
-    company-specific lives on the join row; the rule these follow is that
-    anything *true of the website* lives here, and a company attached to the
-    host reads the whole list. Anthony, 2026-09-22, on being asked whether a
-    rival agency seeing a client's searches was acceptable: *"another agency may
-    also want to see my keywrods and what i do to mak etheir website better.
-    Thats a valid use case."* He is right, and it is what Ahrefs and SEMrush
-    sell: what a site is found for is observable by anyone who looks.
-
-    So the tenancy rule changes shape rather than going away. It was "nothing
-    may read a website and walk out to its watchers". It becomes **nothing
-    stored on a host may name who is watching it** — no `companyId`, no
-    `createdBy` company, nothing that would let one client's portfolio be read
-    off another's. Who watches whom stays on `companyWebsites`, which is the
-    only secret in the model.
-
-    Subscription is total and implicit: attach to a host and you get its list.
-    A per-item subscription was designed and dropped — it needs three join
-    tables and an allowance model to go with them, and the canonical list is
-    Hakken's judgment of what is worth asking about that business, which does
-    not differ by who is asking. If a client ever needs less, that is a feature
-    on top, not a shape underneath.
+    The two lists below — the searches and the questions — are each company's
+    own: every row names the hold it belongs to (`companyWebsiteId`). Anthony,
+    2026-09-25: *"If I track a keyword that's related to the company, other
+    people should not see what I am tracking"* — reversing 2026-09-22, when one
+    list sat on the host for every company watching it. A company's lists are
+    read only through its own hold (`holdLists.ts`, `listHold` in
+    `siteAccess.ts`), and nothing worked out from them reaches another company;
+    `websiteTenancyGuard.test.ts` holds it. Buying stays shared: a purchase is
+    keyed on the search or question, the place and the day, never on a list.
+    Only the writers that find everyone who asked read across companies
+    (`by_keyword`, `by_prompt`, `by_website`). The competition graph and the
+    brand names stay the host's. docs/plans/active/private-tracking-lists-plan.md.
   */
 
   /**
-   * A question put to the AI engines about one host.
-   *
-   * Replaces the per-client `trackedPrompts`, whose own docstring already said
-   * the right thing and then stored the opposite: "a question belongs to a
-   * site, not to a client". Three clients watching one host bought three
-   * identical answers; now one list is asked once and every watcher reads it.
+   * A question put to the AI engines about one host, for one company. The same
+   * question from two companies is two rows and one purchase.
    */
   websiteQuestions: defineTable({
     websiteId: v.id("websites"),
+    /** The hold whose list this is (see the note above). */
+    companyWebsiteId: v.id("companyWebsites"),
     /** What is actually sent, verbatim. Bounded in length at save. */
     prompt: v.string(),
     /** Which engines to ask. Empty is never stored; absent engines are not asked. */
@@ -200,35 +185,37 @@ export default defineSchema({
     isActive: v.boolean(),
     createdAt: v.number(),
   })
+    /** Every company's rows, and everyone asking one question: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
     .index("by_website_active", ["websiteId", "isActive"])
-    /** Every host asking one question, so one answer can be filed for them all. */
-    .index("by_prompt", ["prompt"]),
+    .index("by_prompt", ["prompt"])
+    /** A company's own list: how every screen and the planner read it. */
+    .index("by_hold", ["companyWebsiteId"])
+    .index("by_hold_active", ["companyWebsiteId", "isActive"])
+    .index("by_hold_prompt", ["companyWebsiteId", "prompt"]),
 
   /**
-   * A search this host should be checked against.
-   *
-   * New: position tracking has written `seoKeywordPositions` since it shipped
-   * and nothing has ever been able to say which searches to check. This is that
-   * list. It is charged one paid task per keyword per cycle *per distinct place
-   * its watchers use* — not per watcher, which is where the saving comes from.
-   *
-   * Stored lowercased and space-collapsed, the same normalisation
-   * `seoKeywordIntents` uses, so one phrase is one row and a judgment made for
-   * one host is reused for the next.
+   * A search this host should be checked against, for one company: one paid
+   * task per keyword per cycle *per distinct place*, not per company. Stored
+   * lowercased and space-collapsed, the normalisation `seoKeywordIntents` uses.
    */
   websiteKeywords: defineTable({
     websiteId: v.id("websites"),
+    /** The hold whose list this is (see the note above). */
+    companyWebsiteId: v.id("companyWebsites"),
     keyword: v.string(),
     isActive: v.boolean(),
     createdAt: v.number(),
   })
+    /** Every company's rows, and everyone tracking one phrase: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
     .index("by_website_keyword", ["websiteId", "keyword"])
-    /** What a cycle checks, without a paused search cutting a live one off. */
     .index("by_website_active", ["websiteId", "isActive"])
-    /** Every host tracking a phrase, so one checked page can answer them all. */
-    .index("by_keyword", ["keyword"]),
+    .index("by_keyword", ["keyword"])
+    /** A company's own list: how every screen and the planner read it. */
+    .index("by_hold", ["companyWebsiteId"])
+    .index("by_hold_active", ["companyWebsiteId", "isActive"])
+    .index("by_hold_keyword", ["companyWebsiteId", "keyword"]),
 
   /**
    * An edge in the competition graph: this host competes with that one.

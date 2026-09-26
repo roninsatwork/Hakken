@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * A company's view of one of its websites.
@@ -70,10 +71,13 @@ async function searchStats(
   }));
 }
 
+/** A search on the company's own list for the website: its one owned hold in these worlds. */
 async function track(t: Harness, websiteId: Id<"websites">, keyword: string) {
-  await t.run(async (ctx) => await ctx.db.insert("websiteKeywords", {
-    websiteId, keyword, isActive: true, createdAt: Date.now(),
-  }));
+  await t.run(async (ctx) => {
+    await ctx.db.insert("websiteKeywords", {
+      websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), keyword, isActive: true, createdAt: Date.now(),
+    });
+  });
 }
 
 async function price(t: Harness, operationId: string, usd: number) {
@@ -195,7 +199,7 @@ describe("the competitors list", () => {
         companyId, websiteId: held, relationship: "TRACKED", againstWebsiteId: websiteId, createdAt: Date.now(),
       });
       const prompt = "who is the best branding agency in Leeds";
-      await ctx.db.insert("websiteQuestions", { websiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteQuestions", { websiteId, companyWebsiteId: holdId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
       await ctx.db.insert("websiteQuestionStats", {
         websiteId, prompt, engine: "chatgpt", locationCode: UK, asked: 6, named: 2, recommended: 0, warnedAgainst: 0,
         firstAskedDay: daysAgo(40), lastAskedDay: today(), lastNamed: true,

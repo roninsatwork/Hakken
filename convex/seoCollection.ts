@@ -23,6 +23,7 @@ import { isWebsiteDue } from "./seoScheduleService";
 import { collectedOnItsOwn, dueByCadence } from "./seoCollectionDue";
 import { countingReads } from "./utils/countingReads";
 import { isTrackedHold } from "./utils/websitePairing";
+import { holdQuestions, holdSearches } from "./holdLists";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -309,15 +310,19 @@ async function websiteSteps(
     ...tracked.map((row) => [row.websiteId, row] as [Id<"websites">, Doc<"companyWebsites">]),
   ]);
 
-  const steps: PlanStep[] = [
-    // The questions this website asks the AI engines. Planned once per
-    // website, not per target: a competitor is named *in* the answer, it is
-    // not asked its own question.
+  // A company's own lists, for its own website only: a competitor has none
+  // of its own (docs/plans/active/private-tracking-lists-plan.md, V8) — it is
+  // named in the answers to the owned site's questions and found on the pages
+  // of its searches.
+  const steps: PlanStep[] = isTrackedHold(companyWebsite) ? [] : [
+    // The questions this company asks the AI engines about its website.
+    // Planned once per website, not per target: a competitor is named *in*
+    // the answer, it is not asked its own question.
     ...await questionSteps(ctx, cycle, companyWebsite),
-    // The searches on this website's record, checked from this watcher's
-    // place. One page per search per place, shared by everyone who tracks it,
-    // and it files a position for every known site on it — which is how a
-    // rival's ranking for the same search arrives without a pull of its own.
+    // The searches on this company's list, checked from this watcher's place.
+    // One page per search per place, shared by everyone who tracks it, and it
+    // files a position for every known site on it — which is how a rival's
+    // position for the same search arrives without a pull of its own.
     ...await searchSteps(ctx, cycle, companyWebsite),
   ];
   for (const websiteId of targets) {
@@ -403,23 +408,16 @@ async function questionSteps(
   companyWebsite: Doc<"companyWebsites">,
 ): Promise<PlanStep[]> {
   /*
-    Read from the host, not from this company's copy of the list.
+    This company's own questions (docs/plans/active/private-tracking-lists-plan.md):
+    the list is the company's, and only its own list may spend its money. Two
+    companies asking the same question still buy one answer — the key below
+    carries the question and the place, never the list.
 
-    `trackedPrompts` held one row per client per question, so three clients
-    watching one host planned three identical purchases and the idempotency key
-    was the only thing collapsing them. The question belongs to the site — which
-    that table's own docstring said while storing the opposite — so the list is
-    the host's and every watcher reads it.
-
-    It still plans per company website rather than per host, because the *place*
-    is the watcher's: the same question asked for Leeds and for London is two
-    different purchases, and that is what the key below carries.
+    It plans per company website rather than per host, because the *place* is
+    the watcher's: the same question asked for Leeds and for London is two
+    different purchases, and that is what the key carries.
   */
-  const prompts = await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website_active", (q) =>
-      q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
-    .take(MAX_PROMPTS_PER_WEBSITE);
+  const prompts = await holdQuestions(ctx, companyWebsite._id, MAX_PROMPTS_PER_WEBSITE, { activeOnly: true });
 
   const place = companyWebsite.locationCode !== undefined
     ? findSeoLocation(companyWebsite.locationCode)
@@ -451,14 +449,14 @@ async function questionSteps(
 }
 
 /**
- * Check where every site ranks for the searches on this website's record —
- * one step a search.
+ * Check where every site ranks for the searches on this company's list for
+ * the website — one step a search.
  *
- * The host's list, not the client's: a search added once to `ourshop.com` is
- * checked for every company holding it, and asked once between them when they
- * watch from the same place. It is keyed on the search and the place and on no
- * website, so two hosts tracking the same phrase in the same town share the
- * page too — and the parse files a position for every known site on it.
+ * The company's own list (docs/plans/active/private-tracking-lists-plan.md),
+ * asked once between everyone tracking the same phrase from the same place:
+ * the key carries the search and the place and no website or list, so two
+ * companies — or two hosts — tracking one phrase in one town share the page,
+ * and the parse files a position for every known site on it.
  *
  * Paused searches are not asked. Running out of the cycle's ceiling stops
  * here and says so, like every other planner.
@@ -471,11 +469,7 @@ async function searchSteps(
   const operation = findSeoOperation(SEO_KEYWORD_CHECK_OPERATION);
   if (!operation) return [];
 
-  const searches = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website_active", (q) =>
-      q.eq("websiteId", companyWebsite.websiteId).eq("isActive", true))
-    .take(SEO_KEYWORD_CHECKS_PER_WEBSITE);
+  const searches = await holdSearches(ctx, companyWebsite._id, SEO_KEYWORD_CHECKS_PER_WEBSITE, { activeOnly: true });
 
   return searches.map((search) => async (sendIndex: number) => {
     const outcome = await planSharedPull(ctx, cycle, {

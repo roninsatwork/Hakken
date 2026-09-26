@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * One checked search, filed against every site it answers for.
@@ -26,7 +27,7 @@ async function seedWebsite(t: Harness, host: string) {
 
 async function track(t: Harness, websiteId: Id<"websites">, keyword: string, isActive = true) {
   await t.run(async (ctx) =>
-    await ctx.db.insert("websiteKeywords", { websiteId, keyword, isActive, createdAt: Date.now() }));
+    await ctx.db.insert("websiteKeywords", { websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), keyword, isActive, createdAt: Date.now() }));
 }
 
 async function seedCheck(t: Harness, keyword: string, locationCode: number, items: unknown[]) {

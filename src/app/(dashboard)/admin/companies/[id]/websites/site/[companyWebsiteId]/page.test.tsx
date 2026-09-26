@@ -18,8 +18,8 @@ const base = "/admin/companies/company_1/websites/site/companyWebsite_1";
  * The Overview: how the site is doing, and what to do next.
  *
  * What it holds is that **every card opens the results behind it**, that the
- * shared lists are edited in one place — the website record — and that no
- * price appears on it. A tracked site gets its pairing instead. Both keep
+ * searches and questions are this company's own and edited here, under
+ * Results, and that no price appears on it. A tracked site gets its pairing instead. Both keep
  * limits of their own on how much is collected about them.
  */
 describe("the Overview", () => {
@@ -47,11 +47,13 @@ describe("the Overview", () => {
       .toHaveAttribute("href", `${base}/competitors`);
   });
 
-  it("sends editing of the shared lists to the website record", async () => {
+  it("says the lists are this company's own, and edits them here", async () => {
     renderWithProviders(<CompanySiteOverviewPage />);
 
-    expect((await screen.findByText("admin.siteView.overview.editLists")).closest("a"))
-      .toHaveAttribute("href", "/admin/websites/website_9");
+    // docs/plans/active/private-tracking-lists-plan.md: no other company sees them.
+    expect(await screen.findByText(/admin.siteView.overview.ownLists/)).toBeInTheDocument();
+    expect(screen.getByText("admin.siteView.overview.editLists").closest("a"))
+      .toHaveAttribute("href", "/admin/companies/company_1/websites/site/companyWebsite_1/searches");
   });
 
   it("says what to add on day one, in the card it would fill", async () => {
@@ -96,9 +98,9 @@ describe("the Overview", () => {
     renderWithProviders(<CompanySiteOverviewPage />);
 
     expect(await screen.findByText("admin.siteView.moves.rival.title")).toBeInTheDocument();
-    // Questions are the website's, so rewording one happens on its record.
+    // Rewording a question happens on this company's own list.
     expect(screen.getByText("admin.siteView.moves.dead.rewrite").closest("a"))
-      .toHaveAttribute("href", "/admin/websites/website_9/questions");
+      .toHaveAttribute("href", "/admin/companies/company_1/websites/site/companyWebsite_1/questions");
 
     fireEvent.click(screen.getByRole("button", { name: "admin.siteView.moves.rival.take" }));
     expect(actOnMove).toHaveBeenCalledWith({ moveId: "move_1", action: "TAKE" });

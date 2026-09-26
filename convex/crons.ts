@@ -294,4 +294,14 @@ crons.monthly(
   { job: "wiki-exam-growth" }
 );
 
+// The Sites lists' compact copies (docs/plans/active/sites-table-pages-plan.md
+// §5.2): each is rebuilt when its rows change; this catches any that missed
+// its rebuild, so no table counts from a copy more than a day old.
+crons.daily(
+  "sites-list-copy-refresh",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.jobLedger.runJob,
+  { job: "sites-list-copy-refresh" }
+);
+
 export default crons;

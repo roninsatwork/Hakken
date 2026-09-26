@@ -170,7 +170,7 @@ describe("fan-out searches", () => {
         companyId, websiteId, locationCode: 1006925, locationLabel: "Leeds, England", createdAt: Date.now(),
       } as never);
       await ctx.db.insert("websiteQuestions", {
-        websiteId, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
+        websiteId, companyWebsiteId, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
       } as never);
       return { companyWebsiteId: companyWebsiteId as Id<"companyWebsites"> };
     });
@@ -205,9 +205,9 @@ describe("fan-out searches", () => {
       const companyWebsiteId = await ctx.db.insert("companyWebsites", {
         companyId, websiteId, createdAt: Date.now(),
       } as never);
-      // The question is the host's; this company reads it through its hold.
+      // The question is this company's own, read through its hold.
       await ctx.db.insert("websiteQuestions", {
-        websiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+        websiteId, companyWebsiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       } as never);
       await ctx.db.insert("seoKeywordIntents", {
         keyword: "best emergency plumber leeds", intent: "BUYING", judgedAt: Date.now(),

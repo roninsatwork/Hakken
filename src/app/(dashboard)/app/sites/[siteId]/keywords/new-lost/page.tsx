@@ -8,18 +8,24 @@ import { ArrowUpDown } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
-import { sharedSiteQuery, useSiteTablePage } from "../../../_components/useSiteParam";
+import { sharedSiteQuery } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const KINDS = ["new", "up", "down", "lost"] as const;
+type Kind = (typeof KINDS)[number];
+
+/** The columns that sort: the day, newest first, and each count, the most first. */
+const SORTS = dayTableSorts<{ day: string } & Record<Kind, number>, Kind>(KINDS, (row, kind) => row[kind]);
 
 /**
  * New and lost keywords: DataForSEO's counts, at each check, of the searches
@@ -34,7 +40,6 @@ export default function SiteNewLostPage() {
   const params = useSearchParams();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  const [page, setPage] = useSiteTablePage();
   const listHref = useSiteListHref(siteId);
 
   const points = (series?.[0]?.points ?? []).flatMap((point) =>
@@ -52,8 +57,8 @@ export default function SiteNewLostPage() {
   // an older check's keywords are not kept one by one.
   const newestDay = newestFirst[0]?.day ?? null;
   const DIRECTION_OF = { new: "NEW", up: "UP", down: "DOWN", lost: "LOST" } as const;
-  const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
-  const shown = series === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const { rows: sorted, tableSort } = useSiteSortedList(newestFirst, SORTS, { opening: "day", name: dayOf });
+  const pager = useSitePager(sorted, { isLoading: series === undefined });
   const colours = { new: SITE_SERIES_COLOURS[1], up: SITE_SERIES_COLOURS[4], down: SITE_SERIES_COLOURS[3], lost: SITE_SERIES_COLOURS[5] };
 
   return (
@@ -84,26 +89,20 @@ export default function SiteNewLostPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[640px]"
-filters={<ListDownload fileName={`${site?.host ?? "site"}-new-and-lost`} rows={newestFirst} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...KINDS.map((kind) => ({ header: t(`columns.${kind}`), value: (row: (typeof points)[number]) => row[kind] }))]} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="checks" actions={<ListDownload fileName={`${site?.host ?? "site"}-new-and-lost`} rows={sorted} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...KINDS.map((kind) => ({ header: t(`columns.${kind}`), value: (row: (typeof points)[number]) => row[kind] }))]} />} />}
         empty={{ icon: <ArrowUpDown className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: newestFirst.length,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: series === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "day", header: t("columns.day"), cell: (row) => <CheckedCell day={row.day} /> },
+          { key: "day", header: t("columns.day"), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
           ...KINDS.map((kind) => ({
             key: kind,
             header: t(`columns.${kind}`),
             align: "right" as const,
+            sortable: true,
             cell: (row: (typeof points)[number]) => row.day === newestDay && row[kind] > 0
               ? <RecordLinkCell href={listHref("google/moves", { direction: DIRECTION_OF[kind] })} className="font-mono text-[12px] text-info">{formatNumber(row[kind])}</RecordLinkCell>
               : <span className="font-mono text-[12px] text-foreground">{formatNumber(row[kind])}</span>,

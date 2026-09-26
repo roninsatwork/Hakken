@@ -1,24 +1,38 @@
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite, sitePage } from "./siteAccess";
+import { requireMySite } from "./siteAccess";
 import { bucketOf, stepValidator } from "./siteFigures";
+import { linksCopyKey, readListCopy } from "./siteListCopies";
+import { heldTo, listOrder, listPageArgs, listPageResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { ipSortKey, type SortDirection } from "./utils/sortOrder";
+import { wordStartMatcher } from "./utils/wordStarts";
 
 /**
  * The link lists behind the Sites backlink pages (Phase 4): every link, the
  * broken ones, every linking website, the anchors, the servers and their
  * networks, and links gained and lost over time.
  *
- * **Server-side, from indexes** (D15): each list is a website's newest
- * thousand rows and is still paged, searched and filtered here, a page at a
- * time — a second filter with no index of its own narrows the read, capped
- * by `maximumRowsRead`, exactly as the keyword table does. Every query enters
- * through the caller's own hold (`requireMySite`).
+ * **Counted exactly, any page at once** (docs/plans/active/
+ * sites-table-pages-plan.md §5): a list bought in one request of a thousand
+ * is read whole, through its index, and searched, filtered, sorted and cut
+ * into a page here; every link, which runs to the site's backlink limit, is
+ * counted from its compact copy. Every query enters through the caller's own
+ * hold (`requireMySite`).
  */
 
-/** How far a narrowed read may look for one page of matches. */
-const MAX_ROWS_READ = 1_000;
+/**
+ * A link list bought in one request of at most 1,000 rows — broken links,
+ * linking websites, anchors, servers — read whole, so its total is exact and
+ * any page opens at once (docs/plans/active/sites-table-pages-plan.md §5.1).
+ * The room above 1,000 is for last week's rows, which stay beside this week's
+ * until they are cleared (`clearOlder` in `siteLinkFiling.ts`); `newestPerKey`
+ * keeps one of each.
+ */
+const LINK_LIST_READ = 2_500;
+
+/** The every-link copy's layout (`siteListCopyBuilders.ts` writes it): what All backlinks is searched, filtered and sorted by. */
+export const LINK_COPY_FIELDS = ["id", "domainFrom", "urlFrom", "anchor", "pageTo", "dofollow", "status", "domainRank", "firstSeen"] as const;
 
 /** Networks shown at once: a chart's worth. */
 const SUBNETS_SHOWN = 15;
@@ -70,97 +84,135 @@ function shapeBacklink(row: Doc<"siteBacklinks">) {
   };
 }
 
+/** What a link is searched, filtered and sorted by: a stored row, or its line in the every-link copy. */
+type LinkFacts = {
+  domainFrom: string;
+  urlFrom: string;
+  anchor?: string | null;
+  pageTo: string;
+  dofollow: boolean;
+  status: "LIVE" | "NEW" | "LOST";
+  domainRank: number;
+  firstSeen?: string | null;
+};
+
+/**
+ * All backlinks' columns that sort (docs/plans/active/
+ * sites-table-sorting-plan.md): the linking website A to Z, as the column
+ * shows it first, then its page; the strongest linking website first; the
+ * newest first.
+ */
+const LINK_SORTS: ListSorts<LinkFacts, "from" | "domainRank" | "firstSeen"> = {
+  from: { value: (link) => link.domainFrom, first: "asc" },
+  domainRank: { value: (link) => link.domainRank, first: "desc" },
+  firstSeen: { value: (link) => link.firstSeen, first: "desc" },
+};
+
+/** The links matching a search, a status and followed or not, in the order asked for: strongest first unless a heading says otherwise. */
+function narrowLinks<Link extends LinkFacts>(
+  links: readonly Link[],
+  args: { search?: string; status?: LinkFacts["status"]; follow?: "FOLLOW" | "NOFOLLOW"; sort?: keyof typeof LINK_SORTS; direction?: SortDirection },
+): Link[] {
+  const matches = wordStartMatcher(args.search);
+  const dofollow = args.follow === undefined ? undefined : args.follow === "FOLLOW";
+  return links
+    .filter((link) => (!args.status || link.status === args.status)
+      && (dofollow === undefined || link.dofollow === dofollow)
+      && (!matches || matches(link.domainFrom, link.urlFrom, link.anchor, link.pageTo)))
+    .sort(listOrder(LINK_SORTS, args.sort ?? "domainRank", args.direction, (link) => link.urlFrom));
+}
+
 /**
  * The links to the site — the strongest from each linking website, or with
  * `every` every link its limit keeps (`backlinks_all`) — strongest first,
- * newest first, or matching a search; filtered by live, new or lost, and
- * followed or not.
+ * newest first, or matching a search (word starts, T8); filtered by live, new
+ * or lost, and followed or not.
+ *
+ * One per linking website is a list of at most a thousand, read whole; every
+ * link can run to the site's backlink limit, and is counted from its compact
+ * copy (docs/plans/active/sites-table-pages-plan.md §5).
  */
 export const listBacklinks = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     every: v.optional(v.boolean()),
     search: v.optional(v.string()),
     status: v.optional(status),
     follow: v.optional(v.union(v.literal("FOLLOW"), v.literal("NOFOLLOW"))),
-    sort: v.optional(v.union(v.literal("rank"), v.literal("newest"))),
+    sort: v.optional(v.union(v.literal("from"), v.literal("domainRank"), v.literal("firstSeen"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(backlinkRow),
+  returns: listPageResult(backlinkRow),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
-    const pass = args.every ? "ALL" as const : "ONE_PER_DOMAIN" as const;
-    const dofollow = args.follow === undefined ? undefined : args.follow === "FOLLOW";
-    const term = args.search?.trim();
-    const narrowed = { ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ };
-    const shape = <Result extends { page: Doc<"siteBacklinks">[] }>(result: Result) => ({ ...result, page: result.page.map(shapeBacklink) });
+    if (!args.every) {
+      const read = await ctx.db
+        .query("siteBacklinks")
+        .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ONE_PER_DOMAIN"))
+        .order("desc")
+        .take(LINK_LIST_READ + 1);
+      const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+      const list = narrowLinks(newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`), args);
+      const page = pageOfList(list, args.page, args.rows, cut);
+      return { ...page, rows: page.rows.map(shapeBacklink) };
+    }
 
-    if (term) {
-      return shape(await ctx.db
-        .query("siteBacklinks")
-        .withSearchIndex("search_text", (q) => {
-          let search = q.search("searchText", term).eq("websiteId", websiteId).eq("pass", pass);
-          if (args.status) search = search.eq("status", args.status);
-          if (dofollow !== undefined) search = search.eq("dofollow", dofollow);
-          return search;
-        })
-        .paginate(sitePage(args.paginationOpts)));
-    }
-    if (args.sort === "newest") {
-      return shape(await ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_first_seen", (q) => q.eq("websiteId", websiteId).eq("pass", pass))
-        .order("desc")
-        .filter((q) => q.and(
-          args.status ? q.eq(q.field("status"), args.status) : true,
-          dofollow !== undefined ? q.eq(q.field("dofollow"), dofollow) : true,
-        ))
-        .paginate(narrowed));
-    }
-    if (args.status) {
-      const wanted = args.status;
-      return shape(await ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_status_rank", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("status", wanted))
-        .order("desc")
-        .filter((q) => (dofollow !== undefined ? q.eq(q.field("dofollow"), dofollow) : true))
-        .paginate(narrowed));
-    }
-    if (dofollow !== undefined) {
-      return shape(await ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_follow_rank", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("dofollow", dofollow))
-        .order("desc")
-        .paginate(sitePage(args.paginationOpts)));
-    }
-    return shape(await ctx.db
-      .query("siteBacklinks")
-      .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", pass))
-      .order("desc")
-      .paginate(sitePage(args.paginationOpts)));
+    const copy = await readListCopy(ctx, "links", linksCopyKey(websiteId), LINK_COPY_FIELDS);
+    if (!copy) return preparingPage(args.rows);
+    const links = copy.rows.map(([id, domainFrom, urlFrom, anchor, pageTo, dofollow, linkStatus, domainRank, firstSeen]) => ({
+      id: id as Id<"siteBacklinks">,
+      domainFrom: domainFrom as string,
+      urlFrom: urlFrom as string,
+      anchor: anchor as string | null,
+      pageTo: pageTo as string,
+      dofollow: dofollow as boolean,
+      status: linkStatus as LinkFacts["status"],
+      domainRank: domainRank as number,
+      firstSeen: firstSeen as string | null,
+    }));
+    const page = pageOfList(narrowLinks(links, args), args.page, args.rows, copy.cut);
+    const full = await Promise.all(page.rows.map((link) => ctx.db.get(link.id)));
+    return { ...page, rows: full.flatMap((row) => (row ? [shapeBacklink(row)] : [])) };
   },
 });
 
-/** Links pointing at pages here that no longer work, strongest linking website first. */
+/**
+ * Broken backlinks' columns that sort: the linking website A to Z, then its
+ * page; the answer the broken page gives (server errors before a 404); the
+ * strongest linking website first.
+ */
+const BROKEN_SORTS: ListSorts<Doc<"siteBacklinks">, "from" | "code" | "domainRank"> = {
+  from: { value: (row) => row.domainFrom, first: "asc" },
+  code: { value: (row) => row.statusCode, first: "desc" },
+  domainRank: { value: (row) => row.domainRank, first: "desc" },
+};
+
+/** Links pointing at pages here that no longer work, strongest linking website first unless a heading says otherwise. */
 export const listBrokenBacklinks = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), paginationOpts: paginationOptsValidator, search: v.optional(v.string()) },
-  returns: paginationResultValidator(backlinkRow),
+  args: {
+    siteId: v.id("companyWebsites"),
+    ...listPageArgs,
+    search: v.optional(v.string()),
+    sort: v.optional(v.union(v.literal("from"), v.literal("code"), v.literal("domainRank"))),
+    direction: sortDirectionArg,
+  },
+  returns: listPageResult(backlinkRow),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const term = args.search?.trim();
-    const result = term
-      ? await ctx.db
-        .query("siteBacklinks")
-        .withSearchIndex("search_text", (q) => q.search("searchText", term).eq("websiteId", websiteId).eq("pass", "BROKEN"))
-        .paginate(sitePage(args.paginationOpts))
-      : await ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "BROKEN"))
-        .order("desc")
-        .paginate(sitePage(args.paginationOpts));
-    return { ...result, page: result.page.map(shapeBacklink) };
+    const read = await ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", site.website._id).eq("pass", "BROKEN"))
+      .order("desc")
+      .take(LINK_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+    const matches = wordStartMatcher(args.search);
+    const list = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`)
+      .filter((row) => !matches || matches(row.domainFrom, row.urlFrom, row.anchor, row.pageTo))
+      .sort(listOrder(BROKEN_SORTS, args.sort ?? "domainRank", args.direction, (row) => row.urlFrom));
+    const page = pageOfList(list, args.page, args.rows, cut);
+    return { ...page, rows: page.rows.map(shapeBacklink) };
   },
 });
 
@@ -186,16 +238,29 @@ function shapeGroup(row: { rank: number; backlinks: number; firstSeen?: string; 
   };
 }
 
-/** Every website linking here: strongest, most links or newest first, live or lost. */
+/**
+ * Referring domains' columns that sort: the website A to Z; the strongest,
+ * most links, most suspicious and newest first.
+ */
+const DOMAIN_SORTS: ListSorts<Doc<"siteReferringDomains">, "domain" | "rank" | "backlinks" | "spam" | "firstSeen"> = {
+  domain: { value: (row) => row.domain, first: "asc" },
+  rank: { value: (row) => row.rank, first: "desc" },
+  backlinks: { value: (row) => row.backlinks, first: "desc" },
+  spam: { value: (row) => row.spamScore, first: "desc" },
+  firstSeen: { value: (row) => row.firstSeen, first: "desc" },
+};
+
+/** Every website linking here, live or lost: strongest first unless a heading says otherwise. */
 export const listReferringDomains = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
     status: v.optional(status),
-    sort: v.optional(v.union(v.literal("rank"), v.literal("backlinks"), v.literal("newest"))),
+    sort: v.optional(v.union(v.literal("domain"), v.literal("rank"), v.literal("backlinks"), v.literal("spam"), v.literal("firstSeen"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteReferringDomains"),
     domain: v.string(),
     ...groupShape,
@@ -205,40 +270,21 @@ export const listReferringDomains = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const term = args.search?.trim();
-    const narrowed = { ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ };
-    const wanted = args.status;
-    const onlyWanted = (row: Doc<"siteReferringDomains">) => !wanted || row.status === wanted;
-    const result = term
-      ? await ctx.db
-        .query("siteReferringDomains")
-        .withSearchIndex("search_domain", (q) => {
-          const search = q.search("domain", term).eq("websiteId", websiteId);
-          return wanted ? search.eq("status", wanted) : search;
-        })
-        .paginate(sitePage(args.paginationOpts))
-      : args.sort === "backlinks" || args.sort === "newest"
-        ? await ctx.db
-          .query("siteReferringDomains")
-          .withIndex(args.sort === "backlinks" ? "by_site_backlinks" : "by_site_first_seen", (q) => q.eq("websiteId", websiteId))
-          .order("desc")
-          .filter((q) => (wanted ? q.eq(q.field("status"), wanted) : true))
-          .paginate(narrowed)
-        : wanted
-          ? await ctx.db
-            .query("siteReferringDomains")
-            .withIndex("by_site_status_rank", (q) => q.eq("websiteId", websiteId).eq("status", wanted))
-            .order("desc")
-            .paginate(sitePage(args.paginationOpts))
-          : await ctx.db
-            .query("siteReferringDomains")
-            .withIndex("by_site_rank", (q) => q.eq("websiteId", websiteId))
-            .order("desc")
-            .paginate(sitePage(args.paginationOpts));
+    const read = await ctx.db
+      .query("siteReferringDomains")
+      .withIndex("by_site_rank", (q) => q.eq("websiteId", site.website._id))
+      .order("desc")
+      .take(LINK_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+    const matches = wordStartMatcher(args.search);
+    const name = (row: Doc<"siteReferringDomains">) => row.domain;
+    const list = newestPerKey(held, name)
+      .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
+      .sort(listOrder(DOMAIN_SORTS, args.sort ?? "rank", args.direction, name));
+    const page = pageOfList(list, args.page, args.rows, cut);
     return {
-      ...result,
-      page: result.page.filter(onlyWanted).map((row) => ({
+      ...page,
+      rows: page.rows.map((row) => ({
         _id: row._id,
         domain: row.domain,
         ...shapeGroup(row),
@@ -250,15 +296,24 @@ export const listReferringDomains = tenantQuery({
   },
 });
 
-/** The words other websites link here with: most links, or most linking websites, first. */
+/** Anchors' columns that sort: the words A to Z; most links, most linking websites and newest first. */
+const ANCHOR_SORTS: ListSorts<Doc<"siteAnchors">, "anchor" | "backlinks" | "domains" | "firstSeen"> = {
+  anchor: { value: (row) => row.anchor, first: "asc" },
+  backlinks: { value: (row) => row.backlinks, first: "desc" },
+  domains: { value: (row) => row.referringDomains, first: "desc" },
+  firstSeen: { value: (row) => row.firstSeen, first: "desc" },
+};
+
+/** The words other websites link here with: most links first unless a heading says otherwise. */
 export const listAnchors = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("backlinks"), v.literal("domains"))),
+    sort: v.optional(v.union(v.literal("anchor"), v.literal("backlinks"), v.literal("domains"), v.literal("firstSeen"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteAnchors"),
     anchor: v.string(),
     ...groupShape,
@@ -266,35 +321,43 @@ export const listAnchors = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const term = args.search?.trim();
-    const result = term
-      ? await ctx.db
-        .query("siteAnchors")
-        .withSearchIndex("search_anchor", (q) => q.search("anchor", term).eq("websiteId", websiteId))
-        .paginate(sitePage(args.paginationOpts))
-      : await ctx.db
-        .query("siteAnchors")
-        .withIndex(args.sort === "domains" ? "by_site_domains" : "by_site_backlinks", (q) => q.eq("websiteId", websiteId))
-        .order("desc")
-        .paginate(sitePage(args.paginationOpts));
+    const read = await ctx.db
+      .query("siteAnchors")
+      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", site.website._id))
+      .order("desc")
+      .take(LINK_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+    const matches = wordStartMatcher(args.search);
+    const name = (row: Doc<"siteAnchors">) => row.anchor;
+    const list = newestPerKey(held, name)
+      .filter((row) => !matches || matches(row.anchor))
+      .sort(listOrder(ANCHOR_SORTS, args.sort ?? "backlinks", args.direction, name));
+    const page = pageOfList(list, args.page, args.rows, cut);
     return {
-      ...result,
-      page: result.page.map((row) => ({ _id: row._id, anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
+      ...page,
+      rows: page.rows.map((row) => ({ _id: row._id, anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
     };
   },
 });
 
-/** The servers links come from: most links or most linking websites first, or those on one network. */
+/** Referring IPs' columns that sort: the address in number order; most linking websites and most links first. */
+const IP_SORTS: ListSorts<Doc<"siteReferringIps">, "ip" | "domains" | "backlinks"> = {
+  ip: { value: (row) => ipSortKey(row.ip), first: "asc" },
+  domains: { value: (row) => row.referringDomains, first: "desc" },
+  backlinks: { value: (row) => row.backlinks, first: "desc" },
+};
+
+/** The servers links come from, or those on one network: most links first unless a heading says otherwise. */
 export const listReferringIps = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
     subnet: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("backlinks"), v.literal("domains"))),
+    sort: v.optional(v.union(v.literal("ip"), v.literal("domains"), v.literal("backlinks"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteReferringIps"),
     ip: v.string(),
     subnet: v.string(),
@@ -303,34 +366,22 @@ export const listReferringIps = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const term = args.search?.trim();
-    const subnet = args.subnet;
-    // The network chosen holds while searching, and the sort holds within a
-    // network: each has an index or a search filter of its own.
-    const result = term
-      ? await ctx.db
-        .query("siteReferringIps")
-        .withSearchIndex("search_text", (q) => {
-          const search = q.search("searchText", term).eq("websiteId", websiteId);
-          return subnet ? search.eq("subnet", subnet) : search;
-        })
-        .paginate(sitePage(args.paginationOpts))
-      : subnet
-        ? await ctx.db
-          .query("siteReferringIps")
-          .withIndex(args.sort === "domains" ? "by_site_subnet_domains" : "by_site_subnet_backlinks", (q) =>
-            q.eq("websiteId", websiteId).eq("subnet", subnet))
-          .order("desc")
-          .paginate(sitePage(args.paginationOpts))
-        : await ctx.db
-          .query("siteReferringIps")
-          .withIndex(args.sort === "domains" ? "by_site_domains" : "by_site_backlinks", (q) => q.eq("websiteId", websiteId))
-          .order("desc")
-          .paginate(sitePage(args.paginationOpts));
+    const read = await ctx.db
+      .query("siteReferringIps")
+      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", site.website._id))
+      .order("desc")
+      .take(LINK_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+    const matches = wordStartMatcher(args.search);
+    const name = (row: Doc<"siteReferringIps">) => row.ip;
+    // The network chosen holds while searching, and the order holds within it.
+    const list = newestPerKey(held, name)
+      .filter((row) => (!args.subnet || row.subnet === args.subnet) && (!matches || matches(row.ip, row.subnet)))
+      .sort(listOrder(IP_SORTS, args.sort ?? "backlinks", args.direction, name));
+    const page = pageOfList(list, args.page, args.rows, cut);
     return {
-      ...result,
-      page: result.page.map((row) => ({
+      ...page,
+      rows: page.rows.map((row) => ({
         _id: row._id, ip: row.ip, subnet: row.subnet, ...shapeGroup(row), referringDomains: row.referringDomains,
       })),
     };

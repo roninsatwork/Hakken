@@ -7,22 +7,31 @@ import { useTranslations } from "next-intl";
 import { Swords } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteFigure } from "../../../_components/SiteFigure";
-import { RecordTableTitle } from "../../../_components/SiteRecordParts";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { sharedSiteQuery, useSiteParam } from "../../../_components/useSiteParam";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
+import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 
 const LEADS = ["THEM", "YOU", "ALL"] as const;
 type Lead = (typeof LEADS)[number];
+
+/**
+ * The columns that sort, over every shared search (docs/plans/active/
+ * sites-table-sorting-plan.md): the search A to Z, both positions from the
+ * top, and the most places between you, most searched and the competitor's
+ * most visits first — the order it opens on, now shown as a column.
+ */
+const SORTS = { keyword: "asc", theirs: "asc", yours: "asc", gap: "desc", volume: "desc", theirVisits: "desc" } as const;
 
 const VERDICT_TONES: Record<string, StatusTone> = {
   AHEAD: "warning",
@@ -60,9 +69,11 @@ export default function SiteRivalPage() {
   const rivalId = hold ? (hold.siteId as Id<"companyWebsites">) : null;
   const figures = useQuery(api.siteCharts.siteAndRivals, rivalId ? { siteId } : "skip");
   const rivals = useQuery(api.siteCompetitors.listRivals, rivalId ? { siteId } : "skip");
-  const table = useSitePagedTable(
+  const order = useSiteSort(SORTS, "theirVisits");
+  const table = useSiteListPage(
     api.siteRecords.sharedSearches,
-    rivalId ? { siteId, rivalId, ...(lead === "ALL" ? {} : { lead }) } : "skip",
+    rivalId ? { siteId, rivalId, ...(lead === "ALL" ? {} : { lead }), sort: order.key, direction: order.direction } : "skip",
+    rivalId ? [{ siteId, list: "keywords" }, { siteId, list: "keywords", rivalId }] : [],
   );
 
   if (!asked) {
@@ -101,48 +112,35 @@ export default function SiteRivalPage() {
       </div>
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
-        cardHeader={<RecordTableTitle title={t("tableTitle")} description={t("tableHint")} />}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         filters={
-          <div role="tablist" aria-label={t("tableTitle")} className="inline-flex overflow-hidden rounded-lg border border-border-dim">
-            {LEADS.map((entry) => (
-              <Button
-                key={entry}
-                variant="ghost"
-                role="tab"
-                aria-selected={lead === entry}
-                onClick={() => setLead(entry)}
-                className={`rounded-none px-3 py-1.5 text-[12px] ${lead === entry ? "bg-brand/15 text-brand hover:bg-brand/15" : "text-secondary hover:text-foreground"}`}
-              >
-                {t(`leads.${entry}`)}
-              </Button>
-            ))}
-          </div>
+          <SiteViewSwitch
+            label={t("tableTitle")}
+            options={LEADS.map((entry) => ({ value: entry, label: t(`leads.${entry}`) }))}
+            value={lead}
+            onChange={setLead}
+          />
         }
+        cardHeader={<SiteTableBar footer={table.footer} noun="searches" title={t("tableTitle")} description={t("tableHint")} />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
           {
             key: "keyword",
             header: t("columns.keyword"),
+            sortable: true,
             cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
-          { key: "theirs", header: t("columns.theirs"), align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.theirPosition}</span> },
-          { key: "yours", header: t("columns.yours"), align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.yourPosition}</span> },
+          { key: "theirs", header: t("columns.theirs"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.theirPosition}</span> },
+          { key: "yours", header: t("columns.yours"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.yourPosition}</span> },
           {
             key: "gap",
             header: t("columns.gap"),
             align: "right",
+            sortable: true,
             // The arrow says who is ahead, without the colour: up is this site.
             cell: (row) => {
               const gap = row.theirPosition - row.yourPosition;
@@ -150,7 +148,14 @@ export default function SiteRivalPage() {
               return <span className={`font-mono text-[12px] ${gap > 0 ? "text-success" : "text-destructive"}`}>{gap > 0 ? `▲ ${gap}` : `▼ ${-gap}`}</span>;
             },
           },
-          { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+          { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
+          {
+            key: "theirVisits",
+            header: t("columns.theirVisits"),
+            align: "right",
+            sortable: true,
+            cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.theirTraffic)}</span>,
+          },
         ]}
       />
     </div>

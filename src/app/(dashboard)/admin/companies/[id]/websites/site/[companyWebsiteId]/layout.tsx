@@ -22,21 +22,22 @@ const SiteSettingsSheet = lazy(() =>
   loadSettings().then((module) => ({ default: module.SiteSettingsSheet })),
 );
 
-/** The three results views, which the Results tab stands for. */
-const RESULT_ROUTES = ["searches", "citations", "fan-out", "keywords"] as const;
+/** The company's lists and the results views, which the Results tab stands for. */
+const RESULT_ROUTES = ["searches", "questions", "citations", "fan-out", "keywords"] as const;
 
 /**
  * One of a company's websites, as a record with tabs rather than one scroll.
  *
  * Anthony, 2026-09-23, on the version before this: *"super complex — I don't
- * understand them at all."* The website's own lists — searches, questions,
- * brand names — are set once on the global website record and shared by every
- * company watching it, so they are no longer edited here. A company's site
- * keeps only what is the company's own choice, and what came back:
+ * understand them at all."* A company's site keeps what is the company's own
+ * choice, and what came back. The searches and questions are its own since
+ * 2026-09-26 (docs/plans/active/private-tracking-lists-plan.md, V4), so they
+ * are set here; the brand names are the website's, set on its record:
  *
  * - **Overview** — how it is doing, and what to do next.
  * - **Competitors** — the rivals this company chose to compare it with.
- * - **Results** — what came back: the chosen searches, AI answers, rankings.
+ * - **Results** — its searches and questions, and what came back: rankings,
+ *   AI answers, what the AI searched.
  *
  * A tracked site is somebody else's, compared on the lists of the site it is
  * watched against, so it gets an overview of that pairing and its rankings.
@@ -122,7 +123,7 @@ export default function CompanySiteLayout({ children }: { children: ReactNode })
               href={`/admin/websites/${header.websiteId}`}
               className="flex items-center gap-1.5 rounded-[8px] border border-border-dim px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:text-foreground"
             >
-              {owned ? t("recordEdit") : t("record")}
+              {t("record")}
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>

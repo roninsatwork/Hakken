@@ -5,10 +5,10 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowUpDown } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -17,16 +17,26 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
+import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 
 type Direction = "UP" | "DOWN" | "NEW" | "LOST";
 const DIRECTIONS: Direction[] = ["UP", "DOWN", "NEW", "LOST"];
 
 /**
- * Wins and losses: keywords by how they moved at their last check, biggest
- * move first, straight from an index of each keyword's move — or, searched,
- * the closest matches within the move chosen. The chart counts
- * wins against losses in each step of the dates chosen.
+ * The columns that sort, over every move (docs/plans/active/
+ * sites-table-sorting-plan.md): the keyword A to Z, where it stands now from
+ * the top, and the size of the move, biggest first. Last checked is the same
+ * day on every row, and does not.
+ */
+const SORTS = { keyword: "asc", fromTo: "asc", change: "desc" } as const;
+
+/**
+ * Wins and losses: keywords by how they moved at their last check — wins and
+ * losses the biggest move first, new and lost searches A to Z — or, searched,
+ * the matches within the move chosen. The chart counts wins against losses in
+ * each step of the dates chosen.
  */
 export default function SiteMovesPage() {
   const t = useTranslations("sites.googleMoves");
@@ -37,11 +47,14 @@ export default function SiteMovesPage() {
   const recordHref = useSiteRecordHref(siteId);
   const [direction, setDirection] = useSiteParam<Direction>("direction", "UP", DIRECTIONS);
   const [search, setSearch, settled] = useSiteSearch();
-  const table = useSitePagedTable(api.siteKeywords.listMoves, {
+  const order = useSiteSort(SORTS, direction === "UP" || direction === "DOWN" ? "change" : "keyword");
+  const table = useSiteListPage(api.siteKeywords.listMoves, {
     siteId,
     status: direction,
     ...(settled ? { search: settled } : {}),
-  });
+    sort: order.key,
+    direction: order.direction,
+  }, [{ siteId, list: "keywords" }]);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const points = series?.[0]?.points ?? [];
 
@@ -66,46 +79,32 @@ export default function SiteMovesPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <div role="tablist" aria-label={t("title")} className="inline-flex overflow-hidden rounded-lg border border-border-dim">
-              {DIRECTIONS.map((entry) => (
-                <Button
-                  key={entry}
-                  variant="ghost"
-                  role="tab"
-                  aria-selected={direction === entry}
-                  onClick={() => setDirection(entry)}
-                  className={`rounded-none px-3 py-1.5 text-[12px] ${direction === entry ? "bg-brand/15 text-brand hover:bg-brand/15" : "text-secondary hover:text-foreground"}`}
-                >
-                  {t(`tabs.${entry}`)}
-                </Button>
-              ))}
-            </div>
-            <TableDownload siteId={siteId} kind="keywords" />
+            <SiteViewSwitch
+              label={t("title")}
+              options={DIRECTIONS.map((entry) => ({ value: entry, label: t(`tabs.${entry}`) }))}
+              value={direction}
+              onChange={setDirection}
+            />
           </>
         }
+        cardHeader={<SiteTableBar footer={table.footer} noun="searches" actions={<TableDownload siteId={siteId} kind="keywords" />} />}
         empty={{ icon: <ArrowUpDown className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "keyword", header: t("columns.keyword"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "fromTo",
             header: t("columns.fromTo"),
             align: "right",
+            sortable: true,
             cell: (row) => (
               <span className="flex items-center justify-end gap-1.5 font-mono text-[12px]">
                 <span className="text-secondary">{row.previousPosition ?? "–"}</span>
@@ -114,7 +113,7 @@ export default function SiteMovesPage() {
               </span>
             ),
           },
-          { key: "change", header: t("columns.change"), align: "right", cell: (row) => <ChangeCell change={row.change} /> },
+          { key: "change", header: t("columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },
           {
             key: "page",
             header: t("columns.page"),

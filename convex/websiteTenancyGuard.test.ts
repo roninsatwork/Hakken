@@ -85,49 +85,89 @@ describe("the shared website record stays behind its join rows", () => {
 });
 
 /**
- * The second rule, which arrived with the host's own lists.
+ * The second rule: a company's lists are its own.
  *
- * A host now carries what is asked about it, what it is checked against and who
- * it competes with, and every company attached to it reads all of that. That is
- * deliberate — Anthony, 2026-09-22: *"another agency may also want to see my
- * keywrods and what i do to mak etheir website better. Thats a valid use
- * case."* It is what the product sells, and it is observable from outside
- * anyway.
+ * Anthony, 2026-09-25: *"If I track a keyword that's related to the company,
+ * other people should not see what I am tracking."* That reversed the rule of
+ * 2026-09-22, which put one list of searches and questions on the host for
+ * every company watching it (docs/plans/active/private-tracking-lists-plan.md).
  *
- * What must never travel with it is **who is watching**. A client's portfolio
- * is their strategy and their client book, and it is the one thing in this
- * model that is genuinely private. So the rule is not "keep the host clean of
- * company data" — the lists are company data in every ordinary sense. It is
- * narrower and sharper: nothing stored on a host may name a company.
+ * So the lists, and the AI lines worked out from them, carry the hold they
+ * belong to, and every screen reads them through it. Two checks, one on the
+ * shape of the rows and one on the direction of every read:
  *
- * Read off the schema rather than the source, because this is a fact about the
- * shape of the rows. A field added in a hurry is exactly how it would be lost.
+ * - the list tables and the AI lines name their hold, and the competition
+ *   graph — a fact about a market, never shown to another company — still
+ *   names no company;
+ * - a read of them that is not through a hold (`by_hold…`) happens only in
+ *   the writers and purges that must find everyone who asked, which show
+ *   nothing to anybody. A query that reads a list by website, search or
+ *   question is one careless edit from showing another company's.
+ *
+ * Read as source, like the first rule: a field or an index added in a hurry is
+ * exactly how it would be lost.
  */
-describe("nothing stored on a host names who is watching it", () => {
-  /** The host's own lists. Each hangs off a `websites` row and nothing else. */
-  const HOST_OWNED_TABLES = ["websiteQuestions", "websiteKeywords", "websiteRivals"];
+describe("a company's lists are read only through its own hold", () => {
+  const schemaSource = [
+    readFileSync(join(CONVEX, "schema.ts"), "utf8"),
+    readFileSync(join(CONVEX, "siteSchema.ts"), "utf8"),
+  ].join("\n");
 
-  /** Anything that would identify a watcher, however it were spelled. */
-  const NAMES_A_WATCHER = /\b(companyId|companyWebsiteId|tenantId|clientId|createdBy|ownerId)\b/;
-
-  const schemaSource = readFileSync(join(CONVEX, "schema.ts"), "utf8");
-
-  test.each(HOST_OWNED_TABLES)("%s carries no company", (table) => {
+  /** The table body: from its declaration to its first index, which every one of them has. */
+  const bodyOf = (table: string) => {
     const start = schemaSource.indexOf(`${table}: defineTable({`);
-    expect(start, `${table} is not in the schema. If it was renamed, rename it here too.`)
-      .toBeGreaterThan(-1);
-
-    // The table body ends at its first index declaration, which every one of
-    // them has; taking the whole block would run into the next table.
+    expect(start, `${table} is not in the schema. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
     const end = schemaSource.indexOf(".index(", start);
-    const body = schemaSource.slice(start, end > start ? end : start + 2000);
+    return schemaSource.slice(start, end > start ? end : start + 2000);
+  };
 
+  test.each(["websiteQuestions", "websiteKeywords", "siteListAiDays"])("%s names the hold it belongs to", (table) => {
+    expect(bodyOf(table), `${table} must carry companyWebsiteId, the hold its list belongs to.`)
+      .toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  test("the competition graph names no company", () => {
     expect(
-      NAMES_A_WATCHER.test(body),
-      `${table} has a field naming a company. The host's lists are shared with `
-      + "every client attached to it, so a watcher's identity stored beside them "
-      + "is one query away from being read off another client's screen. Who "
-      + "watches whom belongs on companyWebsites.",
+      /\b(companyId|companyWebsiteId|tenantId|clientId|createdBy|ownerId)\b/.test(bodyOf("websiteRivals")),
+      "websiteRivals has a field naming a company. Who competes with whom is a fact about a market, "
+      + "shared on the host; which rivals a company watches belongs on companyWebsites.",
     ).toBe(false);
+  });
+
+  /**
+   * The files that may read the lists across companies: the writers that file
+   * a result for everyone who asked, the purges, and the migrations. None of
+   * them returns what it reads to a screen. May shrink, never grow.
+   */
+  const ACROSS_COMPANIES = new Set([
+    "seoKeywordChecks.ts",
+    "websiteTrackingStats.ts",
+    "siteKeywordList.ts",
+    "siteSummaries.ts",
+    "websitePurge.ts",
+    "privateListsMigration.ts",
+    "websiteTrackingStatsMigration.ts",
+  ]);
+
+  const READS_A_LIST = /\.query\(\s*["'](websiteQuestions|websiteKeywords|siteListAiDays)["']\s*\)([\s\S]{0,200})/g;
+
+  test("every other read of a list goes through a hold", () => {
+    const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+      .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+    expect(files.length).toBeGreaterThan(200);
+
+    const offenders = files.flatMap((file) => {
+      const source = readFileSync(join(CONVEX, file), "utf8");
+      return Array.from(source.matchAll(READS_A_LIST)).flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";
+        if (index.startsWith("by_hold") || ACROSS_COMPANIES.has(file)) return [];
+        return [`${file}: ${match[1]} read by ${index}`];
+      });
+    });
+    expect(
+      offenders,
+      "A list read by website, search or question outside the writers and purges. Read a company's "
+      + "list through its hold with holdLists.ts, so no screen can reach another company's.",
+    ).toEqual([]);
   });
 });

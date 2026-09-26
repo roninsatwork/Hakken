@@ -64,10 +64,13 @@ describe("the crawl's page detail", () => {
     });
 
     const pages = await t.withIdentity({ subject: userId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "broken_links" });
-    expect(pages).toEqual([{
-      page: "/", url: "https://ronins.co.uk/", statusCode: 200,
-      brokenLinks: [{ to: "https://ronins.co.uk/digital-marketing-agen%3Ca", statusCode: 404 }],
-    }]);
+    expect(pages).toEqual({
+      rows: [{
+        page: "/", url: "https://ronins.co.uk/", statusCode: 200,
+        brokenLinks: [{ to: "https://ronins.co.uk/digital-marketing-agen%3Ca", statusCode: 404 }],
+      }],
+      cut: null,
+    });
     await expect(t.withIdentity({ subject: otherUserId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "no_title" }))
       .rejects.toThrow(/not one your company holds/);
   });

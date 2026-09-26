@@ -1,11 +1,12 @@
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { requireMySite, sitePage } from "./siteAccess";
+import { requireMySite } from "./siteAccess";
+import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { tenantQuery } from "./tenantFunctions";
 import { normaliseKeyword } from "./seoJudgments";
 import { pagePath } from "./utils/siteShapes";
+import { wordStartMatcher } from "./utils/wordStarts";
 
 /**
  * Paid search for the Sites screens (docs/plans/active/user-sites-plan.md,
@@ -83,15 +84,38 @@ export async function filePaidKeywords(
   }
 }
 
-/** The searches the site advertises on: most visits, dearest or most searched first. */
+/**
+ * Paid keywords' columns that sort (docs/plans/active/
+ * sites-table-sorting-plan.md): the search A to Z, the advert's position from
+ * the top, and the most searched, dearest click, most visits and highest cost
+ * first.
+ */
+const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "volume" | "cpc" | "traffic" | "cost"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  position: { value: (row) => row.position, first: "asc" },
+  volume: { value: (row) => row.volume, first: "desc" },
+  cpc: { value: (row) => row.cpc, first: "desc" },
+  traffic: { value: (row) => row.traffic, first: "desc" },
+  cost: { value: (row) => row.trafficCost, first: "desc" },
+};
+
+/**
+ * The searches the site advertises on: most visits first unless a heading
+ * asks otherwise. A list is one answer's worth, replaced whole when a newer
+ * answer is filed, so it is read whole and its total is exact
+ * (docs/plans/active/sites-table-pages-plan.md §5.1).
+ */
 export const listPaidKeywords = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("traffic"), v.literal("cost"), v.literal("volume"))),
+    sort: v.optional(v.union(
+      v.literal("keyword"), v.literal("position"), v.literal("volume"), v.literal("cpc"), v.literal("traffic"), v.literal("cost"),
+    )),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("sitePaidKeywords"),
     keyword: v.string(),
     position: v.union(v.number(), v.null()),
@@ -105,23 +129,20 @@ export const listPaidKeywords = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const place = site.place;
-    const term = args.search?.trim();
-    const index = args.sort === "cost" ? "by_site_cost" : args.sort === "volume" ? "by_site_volume" : "by_site_traffic";
-    const result = term
-      ? await ctx.db
-        .query("sitePaidKeywords")
-        .withSearchIndex("search_text", (q) => q.search("searchText", term).eq("websiteId", websiteId).eq("locationCode", place))
-        .paginate(sitePage(args.paginationOpts))
-      : await ctx.db
-        .query("sitePaidKeywords")
-        .withIndex(index, (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
-        .order("desc")
-        .paginate(sitePage(args.paginationOpts));
+    const read = await ctx.db
+      .query("sitePaidKeywords")
+      .withIndex("by_site_traffic", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
+      .order("desc")
+      .take(LIST_LIMIT + 1);
+    const { rows: held, cut } = heldTo(read, LIST_LIMIT);
+    const matches = wordStartMatcher(args.search);
+    const list = held
+      .filter((row) => !matches || matches(row.keyword, row.page))
+      .sort(listOrder(PAID_SORTS, args.sort ?? "traffic", args.direction, (row) => row.keyword));
+    const page = pageOfList(list, args.page, args.rows, cut);
     return {
-      ...result,
-      page: result.page.map((row) => ({
+      ...page,
+      rows: page.rows.map((row) => ({
         _id: row._id,
         keyword: row.keyword,
         position: row.position ?? null,

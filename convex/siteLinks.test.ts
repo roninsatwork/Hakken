@@ -73,15 +73,14 @@ describe("link lists", () => {
     expect(rows.filter((row) => row.pass === "BROKEN").map((row) => [row.domainFrom, row.pageTo, row.statusCode])).toEqual([["broken.com", "/gone", 404]]);
 
     const asRonins = await member(t, ronins);
-    const first = { numItems: 15, cursor: null };
     const list = async (args: Record<string, unknown>) =>
-      (await asRonins.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, paginationOpts: first, ...args })).page.map((row) => row.domainFrom);
+      (await asRonins.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, page: 1, rows: 25, ...args })).rows.map((row) => row.domainFrom);
     expect(await list({})).toEqual(["b.com", "c.com"]);
     expect(await list({ status: "NEW" })).toEqual(["c.com"]);
     expect(await list({ follow: "NOFOLLOW" })).toEqual(["c.com"]);
     expect(await list({ search: "c.com" })).toEqual(["c.com"]);
-    const broken = await asRonins.query(api.siteLinkLists.listBrokenBacklinks, { siteId: own.holdId, paginationOpts: first });
-    expect(broken.page.map((row) => [row.domainFrom, row.day])).toEqual([["broken.com", "2026-09-01"]]);
+    const broken = await asRonins.query(api.siteLinkLists.listBrokenBacklinks, { siteId: own.holdId, page: 1, rows: 25 });
+    expect(broken.rows.map((row) => [row.domainFrom, row.day])).toEqual([["broken.com", "2026-09-01"]]);
   });
 
   test("every link comes a thousand a page: filed under its list's day, the rest asked for up to the website's limit, older lists gone", async () => {
@@ -132,12 +131,16 @@ describe("link lists", () => {
     expect(await kept()).toEqual(["a.com 2026-09-21", "a.com 2026-09-21", "b.com 2026-09-21"]);
 
     const asKorda = await member(t, korda);
-    const first = { numItems: 15, cursor: null };
-    const every = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, paginationOpts: first, every: true });
-    expect(every.page.map((row) => row.domainFrom)).toEqual(["a.com", "a.com", "b.com"]);
+    // Every link is counted from its compact copy: none until it is built.
+    const before = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, page: 1, rows: 25, every: true });
+    expect(before.preparing).toBe(true);
+    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "links", key: own.websiteId });
+    const every = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, page: 1, rows: 25, every: true });
+    expect(every).toMatchObject({ total: 3, pages: 1, preparing: false });
+    expect(every.rows.map((row) => row.domainFrom)).toEqual(["a.com", "a.com", "b.com"]);
     // The strongest link from each website is a list of its own.
-    const one = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, paginationOpts: first });
-    expect(one.page).toEqual([]);
+    const one = await asKorda.query(api.siteLinkLists.listBacklinks, { siteId: own.holdId, page: 1, rows: 25 });
+    expect(one.rows).toEqual([]);
   });
 
   test("linking websites, anchors and servers, with the servers' networks counted once", async () => {
@@ -160,30 +163,134 @@ describe("link lists", () => {
     ] }], "2026-09-08");
 
     const asRonins = await member(t, ronins);
-    const first = { numItems: 15, cursor: null };
     const domains = async (args: Record<string, unknown>) =>
-      (await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, paginationOpts: first, ...args })).page.map((row) => row.domain);
+      (await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 1, rows: 25, ...args })).rows.map((row) => row.domain);
     expect(await domains({})).toEqual(["strong.com", "many.com", "gone.com"]);
     expect(await domains({ sort: "backlinks" })).toEqual(["many.com", "strong.com", "gone.com"]);
     expect(await domains({ status: "LOST" })).toEqual(["gone.com"]);
 
-    const anchors = await asRonins.query(api.siteLinkLists.listAnchors, { siteId: own.holdId, paginationOpts: first, sort: "domains" });
-    expect(anchors.page.map((row) => row.anchor)).toEqual(["web design", "Ronins"]);
+    const anchors = await asRonins.query(api.siteLinkLists.listAnchors, { siteId: own.holdId, page: 1, rows: 25, sort: "domains" });
+    expect(anchors.rows.map((row) => row.anchor)).toEqual(["web design", "Ronins"]);
 
     expect(await asRonins.query(api.siteLinkLists.topSubnets, { siteId: own.holdId })).toEqual([
       { subnet: "10.0.0.0/24", ips: 2, backlinks: 8, referringDomains: 7 },
       { subnet: "192.168.1.0/24", ips: 1, backlinks: 9, referringDomains: 1 },
     ]);
-    const onNetwork = await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, paginationOpts: first, subnet: "10.0.0.0/24" });
-    expect(onNetwork.page.map((row) => row.ip)).toEqual(["10.0.0.1", "10.0.0.2"]);
+    const onNetwork = await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, page: 1, rows: 25, subnet: "10.0.0.0/24" });
+    expect(onNetwork.rows.map((row) => row.ip)).toEqual(["10.0.0.1", "10.0.0.2"]);
     // The network chosen holds while searching, and the sort within it.
     const searched = async (subnet: string) =>
-      (await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, paginationOpts: first, search: "10.0.0.1", subnet }))
-        .page.map((row) => row.ip);
+      (await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, page: 1, rows: 25, search: "10.0.0.1", subnet }))
+        .rows.map((row) => row.ip);
     expect(await searched("10.0.0.0/24")).toContain("10.0.0.1");
     expect(await searched("192.168.1.0/24")).toEqual([]);
-    const byDomains = await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, paginationOpts: first, subnet: "10.0.0.0/24", sort: "domains" });
-    expect(byDomains.page.map((row) => row.referringDomains)).toEqual([4, 3]);
+    const byDomains = await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, page: 1, rows: 25, subnet: "10.0.0.0/24", sort: "domains" });
+    expect(byDomains.rows.map((row) => row.referringDomains)).toEqual([4, 3]);
+
+    // Any heading, either way round, over the whole list (docs/plans/active/
+    // sites-table-sorting-plan.md): the fewest links first; A to Z; the
+    // weakest first; and only strong.com says when it first linked, so it
+    // leads either way and the others follow.
+    expect(await domains({ sort: "backlinks", direction: "asc" })).toEqual(["gone.com", "strong.com", "many.com"]);
+    expect(await domains({ sort: "domain" })).toEqual(["gone.com", "many.com", "strong.com"]);
+    expect(await domains({ sort: "rank", direction: "asc" })).toEqual(["gone.com", "many.com", "strong.com"]);
+    expect((await domains({ sort: "firstSeen" }))[0]).toBe("strong.com");
+    expect((await domains({ sort: "firstSeen", direction: "asc" }))[0]).toBe("strong.com");
+    // A page at a time: the last page is the other end of the whole list.
+    const lastPage = await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 2, rows: 2 });
+    expect(lastPage.rows.map((row) => row.domain)).toEqual(["gone.com"]);
+    // The dropdown's "newest" is not a heading: refused, not guessed at.
+    await expect(asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 1, rows: 25, sort: "newest" } as never)).rejects.toThrow();
+
+    const anchorsBy = async (args: Record<string, unknown>) =>
+      (await asRonins.query(api.siteLinkLists.listAnchors, { siteId: own.holdId, page: 1, rows: 25, ...args })).rows.map((row) => row.anchor);
+    expect(await anchorsBy({})).toEqual(["Ronins", "web design"]);
+    expect(await anchorsBy({ direction: "asc" })).toEqual(["web design", "Ronins"]);
+    expect(await anchorsBy({ sort: "anchor", direction: "desc" })).toEqual(["web design", "Ronins"]);
+
+    // Addresses in number order, and turned round.
+    const ipsBy = async (args: Record<string, unknown>) =>
+      (await asRonins.query(api.siteLinkLists.listReferringIps, { siteId: own.holdId, page: 1, rows: 25, ...args })).rows.map((row) => row.ip);
+    expect(await ipsBy({ sort: "ip" })).toEqual(["10.0.0.1", "10.0.0.2", "192.168.1.9"]);
+    expect(await ipsBy({ sort: "ip", direction: "desc" })).toEqual(["192.168.1.9", "10.0.0.2", "10.0.0.1"]);
+    expect(await ipsBy({})).toEqual(["192.168.1.9", "10.0.0.1", "10.0.0.2"]);
+  });
+});
+
+/**
+ * The link lists read whole and counted exactly (docs/plans/active/
+ * sites-table-pages-plan.md §5.1): any page opens at once, the total is the
+ * list's own, and a list being filed over last week's counts each linking
+ * website once.
+ */
+describe("exact pages of the link lists", () => {
+  async function pull(t: Harness, websiteId: Id<"websites">) {
+    return await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId: "referring_domains_list", family: "Backlinks", mode: "LIVE", websiteId, taskArgsJson: "{}", status: "READY",
+      tag: `t-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
+    } as never));
+  }
+
+  async function domains(t: Harness, websiteId: Id<"websites">, pullId: Id<"seoDataPulls">, names: string[], day: string) {
+    await t.run(async (ctx) => {
+      for (const [index, domain] of names.entries()) {
+        await ctx.db.insert("siteReferringDomains", {
+          websiteId, pullId, day, domain, rank: 1_000 - index, backlinks: index + 1, status: "LIVE",
+          firstSeen: `2026-01-${String((index % 28) + 1).padStart(2, "0")}`,
+        });
+      }
+    });
+  }
+
+  test("counts each linking website once while a new list is filed over the last, and opens any page", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk");
+    // Last week's list: ten websites still linking, and five that have gone.
+    const lastWeek = await pull(t, own.websiteId);
+    await domains(t, own.websiteId, lastWeek, [
+      ...Array.from({ length: 10 }, (_, i) => `site-${i}.com`),
+      ...Array.from({ length: 5 }, (_, i) => `gone-${i}.com`),
+    ], "2026-09-01");
+    vi.advanceTimersByTime(1_000);
+    // This week's, filed over it and not yet cleared: sixty websites, the ten among them.
+    const thisWeek = await pull(t, own.websiteId);
+    await domains(t, own.websiteId, thisWeek, Array.from({ length: 60 }, (_, i) => `site-${i}.com`), "2026-09-08");
+
+    const asRonins = await member(t, ronins);
+    const page = async (n: number, rows = 25) =>
+      await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: n, rows });
+    const first = await page(1);
+    expect(first).toMatchObject({ total: 65, pages: 3, page: 1, size: 25, cut: null });
+    expect(first.rows).toHaveLength(25);
+    expect(first.rows.find((row) => row.domain === "site-0.com")?.day).toBe("2026-09-08");
+
+    const last = await page(3);
+    expect(last.rows).toHaveLength(15);
+    const everyone = [...first.rows, ...(await page(2)).rows, ...last.rows];
+    expect(new Set(everyone.map((row) => row.domain)).size).toBe(65);
+
+    // A page past the end answers the last page, and a page is never more than 100 rows.
+    expect((await page(9)).page).toBe(3);
+    expect((await page(1, 500)).size).toBe(100);
+  });
+
+  test("searches the start of each word, and counts what it finds", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk");
+    const pullId = await pull(t, own.websiteId);
+    await domains(t, own.websiteId, pullId, ["carp-rods.co.uk", "rod-pod.com", "products.com", "fishing-rodney.net", "tackle.com"], "2026-09-08");
+    const asRonins = await member(t, ronins);
+
+    const found = async (search: string) =>
+      (await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 1, rows: 25, search })).rows
+        .map((row) => row.domain).sort();
+    expect(await found("rod")).toEqual(["carp-rods.co.uk", "fishing-rodney.net", "rod-pod.com"]);
+    expect(await found("carp ro")).toEqual(["carp-rods.co.uk"]);
+    expect(await found("ROD POD")).toEqual(["rod-pod.com"]);
+    expect(await found("odd")).toEqual([]);
+    expect((await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 1, rows: 25, search: "rod" })).total).toBe(3);
   });
 });
 
@@ -248,13 +355,12 @@ describe("one company never sees another's links", () => {
     const theirs = await hold(t, other, "pixelfield.co.uk");
     const asRonins = await member(t, ronins);
     const siteId = theirs.holdId;
-    const page = { numItems: 15, cursor: null };
     const attempts: Array<() => Promise<unknown>> = [
-      () => asRonins.query(api.siteLinkLists.listBacklinks, { siteId, paginationOpts: page }),
-      () => asRonins.query(api.siteLinkLists.listBrokenBacklinks, { siteId, paginationOpts: page }),
-      () => asRonins.query(api.siteLinkLists.listReferringDomains, { siteId, paginationOpts: page }),
-      () => asRonins.query(api.siteLinkLists.listAnchors, { siteId, paginationOpts: page }),
-      () => asRonins.query(api.siteLinkLists.listReferringIps, { siteId, paginationOpts: page }),
+      () => asRonins.query(api.siteLinkLists.listBacklinks, { siteId, page: 1, rows: 25 }),
+      () => asRonins.query(api.siteLinkLists.listBrokenBacklinks, { siteId, page: 1, rows: 25 }),
+      () => asRonins.query(api.siteLinkLists.listReferringDomains, { siteId, page: 1, rows: 25 }),
+      () => asRonins.query(api.siteLinkLists.listAnchors, { siteId, page: 1, rows: 25 }),
+      () => asRonins.query(api.siteLinkLists.listReferringIps, { siteId, page: 1, rows: 25 }),
       () => asRonins.query(api.siteLinkLists.topSubnets, { siteId }),
       () => asRonins.query(api.siteLinkLists.linkChanges, { siteId, from: "2026-09-01", to: "2026-09-30", step: "day" }),
     ];

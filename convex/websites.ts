@@ -120,18 +120,12 @@ export const previewWebsiteHost = superAdminQuery({
     }
 
     /*
-      What attaching to a known host gets you, said before you press the button.
-
-      This case used to be a footnote about not fetching twice — true, and the
-      least interesting thing about it. Under the host's own lists it is the
-      best thing that can happen on this form: the client starts with the
-      searches, the questions and the history somebody else already paid for.
+      What attaching to a known host gets you, said before you press the button:
+      the history somebody else already paid for. Not the searches and
+      questions — they are each company's own, and how many another company
+      has is not this one's to know (docs/plans/active/private-tracking-lists-plan.md).
     */
-    const [keywords, questions, rivals, firstDay] = await Promise.all([
-      ctx.db.query("websiteKeywords")
-        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
-      ctx.db.query("websiteQuestions")
-        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
+    const [rivals, firstDay] = await Promise.all([
       ctx.db.query("websiteRivals")
         .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
       ctx.db.query("seoWebsiteMetrics")
@@ -145,8 +139,6 @@ export const previewWebsiteHost = superAdminQuery({
       displayHost: result.displayHost,
       alreadyKnown: true,
       inherits: {
-        keywords: keywords.length,
-        questions: questions.length,
         rivals: rivals.length,
         // From the first day anything was collected, not from first-seen: a
         // host added and never pulled has no history to inherit.
@@ -604,6 +596,10 @@ export const removeCompanyWebsite = superAdminMutation({
     const website = await ctx.db.get(companyWebsite.websiteId);
     await purgeHoldMoves(ctx, args.id);
     await purgeHoldDataLimits(ctx, args.id);
+    // The company's own searches, questions and AI lines for it go too; what
+    // was collected stays with the website (docs/plans/active/
+    // private-tracking-lists-plan.md, V9).
+    await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: args.id });
     // The hold's content gap goes with it; a rival that goes changes the gap
     // of the site it was tracked against.
     await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });
@@ -704,10 +700,18 @@ export const deleteWebsite = superAdminMutation({
 // ---------------------------------------------------------------------------
 
 /**
- * Everything pointing at a deleted website.
+ * Set the names this website is known by.
  *
- * A company website row going means its own competitors go too, so this
- * reschedules until both tables are clear rather than assuming one pass.
+ * **Super admin only, and deliberately so.** The list sits on the shared
+ * `websites` row, so one operator editing it changes what every company
+ * tracking that host sees. Anthony, 2026-09-21: *"let's make it super admin for
+ * now as I don't fully understand it yet."* Every edit is audited, including
+ * what the list was before, because a shared record that someone blanked needs
+ * to be recoverable from the trail rather than from memory.
+ *
+ * It is on the website rather than on a company's hold of it because two
+ * companies would not disagree: anyone tracking a host writes down the same
+ * names for it. The dedupe rule's test is disagreement, not ownership.
  */
 export const setWebsiteBrandNames = superAdminMutation({
   args: {

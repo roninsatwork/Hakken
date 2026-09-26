@@ -14,12 +14,14 @@ import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
 
 type Engine = Doc<"aiAnswerTexts">["engine"];
 type Stance = "RECOMMENDED" | "NAMED" | "WARNED_AGAINST" | "NOT_NAMED";
@@ -30,6 +32,13 @@ const STANCE_TONES: Record<Stance, StatusTone> = {
   WARNED_AGAINST: "danger",
   NOT_NAMED: "neutral",
 };
+
+/**
+ * Full answers sort by the day asked, newest first or oldest (docs/plans/
+ * active/sites-table-sorting-plan.md). Not by their sources: the count lives
+ * with each answer's whole text, too much to read for every answer at once.
+ */
+const SORTS = { day: "desc" } as const;
 
 /**
  * Full answers (D9): what each engine said, word for word, to one of the
@@ -53,7 +62,8 @@ export default function SiteAnswersPage() {
   const questions = catalogue?.questions ?? [];
   const chosen = questions.find((entry) => entry.prompt === question) ?? questions[0] ?? null;
   const engines = chosen?.engines ?? [];
-  const table = useSitePagedTable(
+  const order = useSiteSort(SORTS, "day");
+  const table = useSiteListPage(
     api.siteAnswers.listAnswers,
     chosen
       ? {
@@ -63,6 +73,8 @@ export default function SiteAnswersPage() {
         to: range.to,
         ...(engine && engines.includes(engine) ? { engine } : {}),
         ...(term ? { search: term } : {}),
+        sort: order.key,
+        direction: order.direction,
       }
       : "skip",
   );
@@ -76,35 +88,28 @@ export default function SiteAnswersPage() {
         <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("noQuestions")}</p>
       ) : (
         <DataTable
-          rows={catalogue === undefined || table.isLoading ? undefined : table.rows}
+          rows={catalogue === undefined ? undefined : table.pageRows}
           rowKey={(row) => row._id}
           onRowClick={(row) => router.push(recordHref({ kind: "answer", answerId: row._id }))}
           minWidthClassName="min-w-[760px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           filters={
             <>
-              <Select aria-label={t("questionLabel")} value={chosen?.prompt ?? ""} onChange={(value) => setQuestion(value)}>
+              <Select chip={{ label: chosen?.prompt ?? t("questionLabel") }} aria-label={t("questionLabel")} className="max-w-[420px]" value={chosen?.prompt ?? ""} onChange={(value) => setQuestion(value)}>
                 {questions.map((entry) => <option key={entry.prompt} value={entry.prompt}>{entry.prompt}</option>)}
               </Select>
-              <Select aria-label={t("engineFilter")} value={engine} onChange={(value) => setEngine(value as Engine | "")}>
+              <Select chip={{ label: t("engineFilter"), choice: engine ? engineLabel(engine) : null }} value={engine} onChange={(value) => setEngine(value as Engine | "")}>
                 <option value="">{t("allEngines")}</option>
                 {engines.map((entry) => <option key={entry} value={entry}>{engineLabel(entry)}</option>)}
               </Select>
-              <TableDownload siteId={siteId} kind="answers" />
             </>
           }
+          cardHeader={<SiteTableBar footer={table.footer} noun="answers" actions={<TableDownload siteId={siteId} kind="answers" sort={order.tableSort} />} />}
           empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
-          footer={{
-            mode: "paged",
-            page: table.page,
-            totalPages: table.totalPages,
-            totalCount: table.loadedCount,
-            pageSize: table.pageSize,
-            isLoading: table.isBusy,
-            onPageChange: table.goToPage,
-          }}
+          footer={table.footer}
+          sort={order.tableSort}
           columns={[
-            { key: "day", header: t("columns.day"), className: "align-top", cell: (row) => <CheckedCell day={row.day} /> },
+            { key: "day", header: t("columns.day"), className: "align-top", sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
             { key: "engine", header: t("columns.engine"), className: "align-top", cell: (row) => <span className="whitespace-nowrap text-[13px] text-foreground">{engineLabel(row.engine)}</span> },
             {
               key: "stance",

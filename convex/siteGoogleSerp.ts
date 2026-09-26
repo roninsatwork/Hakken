@@ -2,8 +2,10 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { holdSearches } from "./holdLists";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
+import { listWithCut } from "./siteListPages";
 
 /**
  * Google's results for each of the site's searches, down to position 100, as
@@ -19,8 +21,13 @@ import { MAX_LIST, type Site } from "./websiteSiteRows";
 
 type Reader = { db: QueryCtx["db"] };
 
-/** Questions and related searches returned at most: a page of them per search, merged. */
-const MAX_PROMPTS = 2_000;
+/**
+ * Questions and related searches returned at most: about a dozen for each of
+ * the thousand searches a site can track, which is all a site's results pages
+ * can hold, so the list is whole. Past it, the screen says the list is longer
+ * (docs/plans/active/sites-table-pages-plan.md, T11).
+ */
+const QUESTIONS_KEPT = 12_000;
 
 /** The domain as a site is known: lower case, without `www.`. */
 export function bare(domain: string): string {
@@ -35,12 +42,9 @@ export function isHost(domain: string, host: string): boolean {
 
 type Checked = { keyword: string; isActive: boolean; page: Doc<"siteSerpPages"> | null };
 
-/** The newest kept results page of every search on the site's list. */
+/** The newest kept results page of every search on the site's list — this company's own. */
 async function latestPages(ctx: Reader, site: Site): Promise<Checked[]> {
-  const searches = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website", (q) => q.eq("websiteId", listWebsiteId(site)))
-    .take(MAX_LIST);
+  const searches = await holdSearches(ctx, listHold(site), MAX_LIST);
   return await Promise.all(searches.map(async (search) => ({
     keyword: search.keyword,
     isActive: search.isActive,
@@ -182,7 +186,7 @@ export const listFeatures = tenantQuery({
  */
 export const listQuestions = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.array(v.object({
+  returns: listWithCut(v.object({
     text: v.string(),
     kind: v.union(v.literal("QUESTION"), v.literal("RELATED")),
     searches: v.array(v.string()),
@@ -191,6 +195,7 @@ export const listQuestions = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const found = new Map<string, { text: string; kind: "QUESTION" | "RELATED"; searches: string[]; day: string }>();
+    let cut = false;
     for (const { keyword, page } of await latestPages(ctx, site)) {
       if (!page) continue;
       const add = (text: string, kind: "QUESTION" | "RELATED") => {
@@ -199,16 +204,19 @@ export const listQuestions = tenantQuery({
         if (held) {
           if (!held.searches.includes(keyword)) held.searches.push(keyword);
           if (page.day > held.day) held.day = page.day;
-        } else if (found.size < MAX_PROMPTS) {
+        } else if (found.size < QUESTIONS_KEPT) {
           found.set(key, { text, kind, searches: [keyword], day: page.day });
+        } else {
+          cut = true;
         }
       };
       for (const question of page.questions) add(question, "QUESTION");
       for (const related of page.related) add(related, "RELATED");
     }
-    return [...found.values()].sort((left, right) =>
+    const rows = [...found.values()].sort((left, right) =>
       right.searches.length - left.searches.length
       || left.kind.localeCompare(right.kind)
       || left.text.localeCompare(right.text));
+    return { rows, cut: cut ? rows.length : null };
   },
 });

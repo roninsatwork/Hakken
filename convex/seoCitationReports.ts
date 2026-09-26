@@ -4,7 +4,8 @@ import { superAdminQuery } from "./tenantFunctions";
 import { aiEngineValidator, answerPlace } from "./seoAiEngines";
 import { includesSearchTerm, normalizeSearchTerm } from "./adminQueryService";
 import { appError } from "./utils/appError";
-import { pairedOwnedHold } from "./utils/websitePairing";
+import { listOwnerHold, pairedOwnedHold } from "./utils/websitePairing";
+import { holdQuestions } from "./holdLists";
 
 /**
  * What the AI engines said, for one of a company's websites.
@@ -64,10 +65,9 @@ export const listCompanyWebsiteCitations = superAdminQuery({
     const pair = await pairedOwnedHold(ctx, companyWebsite);
     const watcherPlace = (pair ?? companyWebsite).locationCode;
 
-    const questions = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", companyWebsite.websiteId))
-      .take(MAX_QUESTIONS);
+    // This company's own questions — the owned site's, for a competitor
+    // (docs/plans/active/private-tracking-lists-plan.md).
+    const questions = await holdQuestions(ctx, listOwnerHold(companyWebsite, pair)?._id ?? null, MAX_QUESTIONS);
     const asked = questions.flatMap((question) => question.engines.map((engine) => ({
       prompt: question.prompt,
       engine,

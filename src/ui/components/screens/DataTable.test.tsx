@@ -226,3 +226,52 @@ describe("the standard shape every screen inherits", () => {
     expect(screen.getByText("Admin")).toHaveClass("text-right");
   });
 });
+
+/**
+ * Headings that order the list (Anthony, 2026-09-26, showing Ahrefs: "the
+ * table heading clickable so I can sort them"). The table only draws the
+ * order and says which heading was pressed; the screen decides what that
+ * means, and orders the whole list on the server.
+ */
+describe("headings that order the list", () => {
+  const SORTABLE: DataTableColumn<Person>[] = [
+    { key: "name", header: "Name", sortable: true, cell: (p) => p.name },
+    { key: "role", header: "Role", align: "right", sortable: true, cell: (p) => p.role },
+    { key: "notes", header: "Notes", cell: () => "–" },
+  ];
+
+  it("makes a sortable heading a button that names its column", () => {
+    const onSort = vi.fn();
+    renderTable({ columns: SORTABLE, sort: { key: "name", direction: "asc", onSort } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Role" }));
+    fireEvent.click(screen.getByRole("button", { name: "Name" }));
+
+    expect(onSort.mock.calls).toEqual([["role"], ["name"]]);
+  });
+
+  it("tells a screen reader which column leads, and which way", () => {
+    renderTable({ columns: SORTABLE, sort: { key: "role", direction: "desc", onSort: vi.fn() } });
+
+    const [name, role, notes] = screen.getAllByRole("columnheader");
+    expect(name).toHaveAttribute("aria-sort", "none");
+    expect(role).toHaveAttribute("aria-sort", "descending");
+    expect(notes).not.toHaveAttribute("aria-sort");
+  });
+
+  it("leaves other headings as words, and every heading of a table given no order", () => {
+    const { unmount } = renderTable({ columns: SORTABLE, sort: { key: "name", direction: "asc", onSort: vi.fn() } });
+    expect(screen.queryByRole("button", { name: "Notes" })).not.toBeInTheDocument();
+    unmount();
+
+    renderTable({ columns: SORTABLE });
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByRole("columnheader", { name: "Name" })).not.toHaveAttribute("aria-sort");
+  });
+
+  it("keeps the heading's own capitals, which a button would otherwise reset", () => {
+    renderTable({ columns: SORTABLE, sort: { key: "name", direction: "asc", onSort: vi.fn() } });
+
+    expect(screen.getByRole("button", { name: "Name" }).className).toContain("[text-transform:inherit]");
+  });
+});

@@ -10,13 +10,31 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { RecordLinkCell } from "../../../_components/SiteCells";
-import { RecordTableTitle } from "../../../_components/SiteRecordParts";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatDay } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
-import { useSitePagedRows } from "../../../_components/useSitePagedTable";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 
 const SEVERITY_TONES: Record<string, StatusTone> = { ERROR: "danger", WARNING: "warning", NOTICE: "neutral" };
+
+type ProblemPage = { page: string; statusCode: number | null; brokenLinks: Array<{ to: string; statusCode: number | null }> };
+
+/**
+ * The columns that sort, over every page with the problem (docs/plans/active/
+ * sites-table-sorting-plan.md): the page A to Z, the answer it gave (server
+ * errors first), and for broken links the most broken links first.
+ */
+const PAGE_SORTS: SiteSortColumns<ProblemPage, "page" | "answered" | "broken"> = {
+  page: { value: (row) => row.page, first: "asc" },
+  answered: { value: (row) => row.statusCode, first: "desc" },
+};
+const BROKEN_SORTS: SiteSortColumns<ProblemPage, "page" | "answered" | "broken"> = {
+  ...PAGE_SORTS,
+  broken: { value: (row) => row.brokenLinks.length, first: "desc" },
+};
+const pageOf = (row: ProblemPage) => row.page;
 
 /**
  * One Site audit problem's own screen (Site › Site audit › a problem): the
@@ -37,8 +55,14 @@ export default function SiteAuditProblemPage() {
   const recordHref = useSiteRecordHref(siteId);
   const check = useRecordKey("problem");
   const audit = useQuery(api.siteCrawl.siteAudit, check ? { siteId } : "skip");
-  const pages = useQuery(api.siteCrawlDetail.crawlProblemPages, check ? { siteId, check } : "skip");
-  const table = useSitePagedRows(pages ?? [], check);
+  const found = useQuery(api.siteCrawlDetail.crawlProblemPages, check ? { siteId, check } : "skip");
+  const pages = found?.rows;
+  const brokenLinks = check === "broken_links";
+  const { rows: sorted, tableSort } = useSiteSortedList(pages, brokenLinks ? BROKEN_SORTS : PAGE_SORTS, {
+    opening: brokenLinks ? "broken" : "page",
+    name: pageOf,
+  });
+  const table = useSitePager(sorted ?? [], { isLoading: pages === undefined, cut: found?.cut });
 
   if (!check) {
     return <DetailHeader back={back} icon={<Stethoscope className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -46,7 +70,6 @@ export default function SiteAuditProblemPage() {
 
   const label = ta.has(`checks.${check}`) ? ta(`checks.${check}`) : check.replace(/_/g, " ");
   const issue = audit?.issues.find((entry) => entry.check === check) ?? null;
-  const brokenLinks = check === "broken_links";
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,31 +87,27 @@ export default function SiteAuditProblemPage() {
       />
 
       <DataTable
-        rows={pages === undefined ? undefined : table.pageRows}
+        rows={table.pageRows}
         rowKey={(row) => row.url}
-        cardHeader={pages && pages.length > 0 ? <RecordTableTitle title={ta("problemPages.count", { count: pages.length })} /> : undefined}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
+        cardHeader={<SiteTableBar footer={table.footer} noun="pages" />}
         empty={{ icon: <Stethoscope className="h-8 w-8 text-muted/30" />, label: ta("problemPages.none") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: pages === undefined,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={tableSort}
         columns={[
           {
             key: "page",
             header: t("columns.page"),
+            sortable: true,
             cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
           },
-          { key: "answered", header: t("columns.answered"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.statusCode ?? "–"}</span> },
+          { key: "answered", header: t("columns.answered"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.statusCode ?? "–"}</span> },
           ...(brokenLinks
             ? [{
               key: "broken",
               header: t("columns.brokenLinks"),
+              // By how many broken links the page has.
+              sortable: true,
               cell: (row: NonNullable<typeof pages>[number]) => (
                 <span className="flex flex-col gap-0.5">
                   {row.brokenLinks.map((link) => (

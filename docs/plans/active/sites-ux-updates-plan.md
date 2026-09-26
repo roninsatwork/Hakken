@@ -1,6 +1,6 @@
 # Sites — making the screens clearer and clickable
 
-**Started 2026-09-24. Status: built 2026-09-24 — see §6; not committed.** Follows
+**Started 2026-09-24. Status: built 2026-09-24 — see §6; committed in 12114255.** Follows
 [the Sites plan](user-sites-plan.md), which built the 35 screens. Change a
 decision here, with a date, before building anything that disagrees with it.
 Follow `AGENTS.md`.
@@ -201,7 +201,7 @@ against about 856px on a 13-inch screen.
 | Share of voice | empty for Korda | Per question: how often each site was named; the answers naming it | new |
 | Full answers | 900px wide; "Read more" opens in place | The answer: its full text, the sources it cites and the searches the engine ran for it | new |
 | Sources cited | empty for Korda | The questions and answers citing the page; the page's keywords | new + existing |
-| What the AI searched | 960px wide; empty for Korda | The days it was seen; the answers that ran it; our Google rank for it | new |
+| Fan-out queries (was "What the AI searched") | 960px wide; empty for Korda | The days it was seen; the answers that ran it; our Google rank for it | new |
 | Your searches | empty for Korda | Position history and the page ranking each day; the results page on any day | existing + new |
 | Wins and losses | not clickable | The keyword's position history | existing |
 | Who ranks above you | 900px wide; empty for Korda | The whole results page, all hundred | extend existing |
@@ -281,7 +281,7 @@ double check everything in Chrome":
 
 | Screen | Address | Opened from | What it shows |
 |---|---|---|---|
-| A keyword | `keywords/keyword?keyword=` | All keywords, Top pages, a page, Wins and losses, Your searches, Who ranks above you, Questions people ask, Search features, Content gap, Paid keywords, What the AI searched, a feature, a competitor | Position and its move, searches a month, visits, cost per click; position over time; everything about the search; the page that ranks; where else it shows on Google; this site among its competitors on it; for a tracked search, its standing and Google's whole results page (top ten, "Show all") and what people also ask. A search the site does not rank for borrows the search's facts from a competitor. |
+| A keyword | `keywords/keyword?keyword=` | All keywords, Top pages, a page, Wins and losses, Your searches, Who ranks above you, Questions people ask, Search features, Content gap, Paid keywords, Fan-out queries, a feature, a competitor | Position and its move, searches a month, visits, cost per click; position over time; everything about the search; the page that ranks; where else it shows on Google; this site among its competitors on it; for a tracked search, its standing and Google's whole results page (top ten, "Show all") and what people also ask. A search the site does not rank for borrows the search's facts from a competitor. |
 | A page | `keywords/pages/page?path=` | Top pages, a keyword, Site structure's pages, Sources cited, Broken backlinks, a Site audit problem, a link | Searches it ranks for (paged, each opening its screen), visits and value, linking websites; how it ranks; what the crawl found (answer, problems, speed, size, words, links, depth, redirect, canonical); AI answers linking to it; its strongest links. |
 | A feature | `google/features/feature?feature=` | Search features' three figures | Every search where the site is in the AI Overview, the answer box or the map pack, with its ordinary ranking. |
 | An answer | `ai/answers/answer?answer=` | Full answers | The answer word for word, its sources (this site's opening their page), how it treated the site, and what the engine searched for the question. |
@@ -380,3 +380,59 @@ review. Step 7 (charts): unchanged, as planned.
   hand-drawn bars through `HoverReadout.tsx`, on the same readout as every
   chart (`ChartTooltipRow`). The Overview's page and AI Overview counts read
   under a thousand rows and say so when a larger site reaches that.
+- **2026-09-26** — The Overview's Competitors card gained a Searches · Traffic
+  switch (Anthony: "a toggler to show traffic too … with the component
+  changing including the text to match the intent"; drawn first, then "yes
+  please"). Searches is the card as it was, and it opens there. Traffic plots
+  the visits each competitor gets from the searches both rank for (across)
+  against its visits in all (up), and lists them most first: visits on shared
+  searches, as a share of the site's own visits, then their visits and
+  searches. The figure is DataForSEO's, from the site's own found list
+  (`sharedVisits` in `siteOverview.overviewExtras`); a competitor that list
+  does not hold shows a dash and is left off the chart. The hint, axis, columns
+  and download follow the view. The switch is `SiteViewSwitch`, now shared by
+  the five Sites switches that had each been drawn by hand.
+- **2026-09-26** — The keyword list laid out like Ahrefs' Organic keywords
+  (Anthony, showing it: the dropdowns "going onto two lines", and "ahrefs
+  have the table heading clickable so i can sort them"; drawn first on a
+  canvas, then "ok let build this please"). The search box and four compact
+  filters — Position, Intent, Movement, Difficulty — share one row; a chosen
+  filter reads "Intent: Ready to buy" in the brand tint (`Select`'s `chip`).
+  The count ("807 keywords"), the comparison chip ("vs the check before") and
+  Download all (CSV) sit in the table's own top bar (`SiteTableBar`). The sort
+  dropdown is gone: pressing Position, Volume, CPC or Traffic orders the whole
+  list on the server, its best first, and pressing it again turns it round,
+  blanks last either way (`DataTable`'s `sort`, `listKeywords`' `direction`,
+  kept in the address as `sort` and `dir`); a new order starts at page one. A
+  CPC column shows what a click costs, in dollars (`formatCpc`, now shared by
+  the three screens that show it). Renamed at the same time: the menu group
+  "Organic keywords" is now **Organic search**, and "All keywords" — the menu
+  item and the page's title — is now **Keywords**.
+- **2026-09-26** — Every Sites table sorts the same way, by its headings
+  (Anthony: "it's really key we have consistency across all reporting
+  tables"; docs/plans/active/sites-table-sorting-plan.md). All 36 tables: the
+  best first, again for the other way, over the whole list, blanks last; the
+  six sort dropdowns gone (Top pages, Paid keywords, All backlinks, Referring
+  domains, Anchors, Referring IPs). Downloads come in the order on screen. A
+  competitor's shared searches gained a Their visits column; a feature's
+  searches opens most searched first.
+- **2026-09-26** — The Keywords layout on every Sites table (Anthony: "yes
+  please to both"). Each table's filters are compact buttons on the search
+  box's row, orange once one is chosen; a picker that only chooses a view
+  (Full answers' question, All backlinks' "every link", New and lost links'
+  "Show", Where links come from's "Group by", the Overview's chart measure)
+  stays quiet and says what it shows. Each table's card opens with a bar: the
+  list's exact total in its own words ("531 linking websites", "4 checks"),
+  and its download on the right, off the filter row. A competitor's shared
+  searches and a page's keywords keep their titles, with the count beside
+  them. "Intent" is the one word for the intent filter everywhere
+  (`SiteTableBar`, `sites.tableCounts`).
+- **2026-09-26** — Fan-out queries showed only one engine's searches (Anthony
+  asked why). Every engine is asked, and all but Perplexity send fan-out
+  searches back, but those from an engine that takes a place were hidden: a
+  website with no place chosen is asked with no country, its searches are filed
+  under no place, and the Sites screens looked them up under the United
+  Kingdom they show instead. Both screens that list them (Fan-out queries, and
+  an answer's own screen) now read by the place the question was asked from
+  (`askedPlace`, `convex/siteAccess.ts`), as the admin report already did. On
+  ronins.co.uk the page went from 4 searches to 6. No data changed.

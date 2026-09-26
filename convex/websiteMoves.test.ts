@@ -5,6 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * The moves: the Brief's worklist, refilled by every collection.
@@ -53,8 +54,9 @@ async function askedAndNamed(
 ) {
   const prompt = "who is the best shop in town";
   return await t.run(async (ctx) => {
+    // On the company's own list: the website's one owned hold in these worlds.
     const questionId = await ctx.db.insert("websiteQuestions", {
-      websiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+      websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
     });
     await ctx.db.insert("websiteQuestionStats", {
       websiteId, prompt, engine: "chatgpt", locationCode: UK,
@@ -186,7 +188,7 @@ describe("drawing the moves", () => {
     const admin = await superAdmin(t);
     const { websiteId, holdId } = await world(t);
     await t.run(async (ctx) => {
-      await ctx.db.insert("websiteKeywords", { websiteId, keyword: "shop in town", isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteKeywords", { websiteId, companyWebsiteId: holdId, keyword: "shop in town", isActive: true, createdAt: Date.now() });
       await ctx.db.insert("websiteSearchStats", {
         websiteId, keyword: "shop in town", locationCode: UK, firstCheckedDay: daysAgo(90),
         lastCheckedDay: daysAgo(2), lastPosition: 14, previousCheckedDay: daysAgo(9), previousPosition: 4,
@@ -219,7 +221,8 @@ describe("drawing the moves", () => {
     const { companyId } = await world(t);
     const trackedHold = await t.run(async (ctx) => {
       const websiteId = await ctx.db.insert("websites", { host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now() });
-      await ctx.db.insert("websiteQuestions", { websiteId, prompt: "p", engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
+      // Another company's question about the website: never this company's move.
+      await ctx.db.insert("websiteQuestions", { websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), prompt: "p", engines: ["chatgpt"], isActive: true, createdAt: Date.now() });
       return await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "TRACKED", createdAt: Date.now() });
     });
 
@@ -337,7 +340,7 @@ describe("taking an untracked search", () => {
     await t.run(async (ctx) => {
       for (let index = 0; index < 1_000; index += 1) {
         await ctx.db.insert("websiteKeywords", {
-          websiteId, keyword: `search ${index}`, isActive: true, createdAt: Date.now(),
+          websiteId, companyWebsiteId: holdId, keyword: `search ${index}`, isActive: true, createdAt: Date.now(),
         });
       }
     });

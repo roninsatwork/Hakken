@@ -29,7 +29,11 @@ const ANSWER_WINDOW = 200;
 /** Others kept per question: enough to find a rival nobody tracks, not a leaderboard. */
 const OTHERS_NAMED_KEPT = 20;
 
-/** Hosts one answer is filed for. More than this asking one question is a different problem. */
+/**
+ * List rows read to find who asks one question — every company's, each
+ * website counted once. More than this asking one question is a different
+ * problem.
+ */
 const HOSTS_PER_QUESTION = 200;
 
 /** Where one host stands on one search from one place, rebuilt from its positions. */
@@ -132,11 +136,16 @@ export async function recordAnswer(
     createdAt: Date.now(),
   });
 
-  const askers = (await ctx.db
+  // Every website any company asks this of this engine, once each: the stats
+  // are facts about the website and the answers, shared; which company sees
+  // them is decided by its own list when a screen reads them
+  // (docs/plans/active/private-tracking-lists-plan.md, §4.3).
+  const askers = [...new Set((await ctx.db
     .query("websiteQuestions")
     .withIndex("by_prompt", (q) => q.eq("prompt", answer.prompt))
     .take(HOSTS_PER_QUESTION))
-    .filter((question) => question.engines.includes(answer.engine));
+    .filter((question) => question.engines.includes(answer.engine))
+    .map((question) => question.websiteId))];
   if (askers.length === 0) return;
 
   const answers = await ctx.db
@@ -146,10 +155,10 @@ export async function recordAnswer(
     .order("desc")
     .take(ANSWER_WINDOW);
 
-  for (const asker of askers) {
-    await rebuildQuestionStats(ctx, asker.websiteId, answer, answers);
-    // The asker's Sites summaries count its answers per day and engine.
-    await requestRebuildEverywhere(ctx, asker.websiteId);
+  for (const websiteId of askers) {
+    await rebuildQuestionStats(ctx, websiteId, answer, answers);
+    // Each list's AI lines count its answers per day and engine.
+    await requestRebuildEverywhere(ctx, websiteId);
   }
 }
 

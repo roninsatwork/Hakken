@@ -71,6 +71,9 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runAction(internal.platformAlerts.dispatchPlatformAlerts, { daysBack: 7 }),
   "wiki-weekly-report": (ctx) => ctx.runAction(internal.wikiReport.sendWeeklyReports, {}),
   "wiki-exam-growth": (ctx) => ctx.runAction(internal.wikiExamGrowthActions.examGrowthSweep, {}),
+  // The Sites lists' compact copies: any not rebuilt in a day is rebuilt
+  // (docs/plans/active/sites-table-pages-plan.md §5.2).
+  "sites-list-copy-refresh": (ctx) => ctx.runMutation(internal.siteListCopies.refreshListCopies, { cursor: null }),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -105,6 +108,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "reset-billing-cycles": 44640,
   "stripe-billing-reconciliation": 5,
   "wiki-exam-growth": 44640,
+  "sites-list-copy-refresh": 1440,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

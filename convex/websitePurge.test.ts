@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * Deleting a website takes everything about it (Anthony, 2026-09-24: "delete
@@ -82,10 +83,10 @@ describe("deleting a website", () => {
     }));
     await t.run(async (ctx) => {
       for (const [websiteId, prompt] of [[gone, "only gone asks"], [gone, "both ask"], [kept, "both ask"], [kept, "only kept asks"]] as const) {
-        await ctx.db.insert("websiteQuestions", { websiteId, prompt, engines: ["perplexity"], isActive: true, createdAt: Date.now() });
+        await ctx.db.insert("websiteQuestions", { websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), prompt, engines: ["perplexity"], isActive: true, createdAt: Date.now() });
       }
       for (const [websiteId, keyword] of [[gone, "only gone tracks"], [gone, "both track"], [kept, "both track"]] as const) {
-        await ctx.db.insert("websiteKeywords", { websiteId, keyword, isActive: true, createdAt: Date.now() } as never);
+        await ctx.db.insert("websiteKeywords", { websiteId, companyWebsiteId: await listOwnerOf(ctx, websiteId), keyword, isActive: true, createdAt: Date.now() });
       }
     });
     const goneOnly = await answer(t, "only gone asks", [gone], kept);

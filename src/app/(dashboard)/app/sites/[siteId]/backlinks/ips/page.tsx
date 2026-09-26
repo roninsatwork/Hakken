@@ -8,6 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -15,7 +16,15 @@ import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
-import { useSitePagedTable } from "../../../_components/useSitePagedTable";
+import { useSiteListPage } from "../../../_components/useSitePagedTable";
+import { useSiteSort } from "../../../_components/useSiteSort";
+
+/**
+ * The columns that sort, over every address (docs/plans/active/
+ * sites-table-sorting-plan.md): the address in number order (9.x before
+ * 10.x), and the most linking websites and most links first.
+ */
+const SORTS = { ip: "asc", domains: "desc", backlinks: "desc" } as const;
 
 /**
  * Referring IPs: the servers links come from and the networks they sit in.
@@ -24,7 +33,6 @@ import { useSitePagedTable } from "../../../_components/useSitePagedTable";
  */
 export default function SiteReferringIpsPage() {
   const t = useTranslations("sites.backlinksIps");
-  const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
   const listHref = useSiteListHref(siteId);
   const networkHref = (network: string) => listHref("backlinks/ips", { network });
@@ -32,12 +40,13 @@ export default function SiteReferringIpsPage() {
   const subnets = useQuery(api.siteLinkLists.topSubnets, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [subnet, setSubnet] = useSiteParam<string>("network", "");
-  const [sort, setSort] = useSiteParam<"backlinks" | "domains">("sort", "backlinks", ["backlinks", "domains"]);
-  const table = useSitePagedTable(api.siteLinkLists.listReferringIps, {
+  const order = useSiteSort(SORTS, "backlinks");
+  const table = useSiteListPage(api.siteLinkLists.listReferringIps, {
     siteId,
     ...(term ? { search: term } : {}),
     ...(subnet ? { subnet } : {}),
-    sort,
+    sort: order.key,
+    direction: order.direction,
   });
 
   return (
@@ -64,35 +73,24 @@ export default function SiteReferringIpsPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={table.isLoading ? undefined : table.rows}
+        rows={table.pageRows}
         rowKey={(row) => row._id}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("subnetFilter")} value={subnet} onChange={(value) => setSubnet(value)}>
+            <Select chip={{ label: t("subnetFilter"), choice: subnet || null }} value={subnet} onChange={(value) => setSubnet(value)}>
               <option value="">{t("anySubnet")}</option>
               {(subnets ?? []).map((row) => <option key={row.subnet} value={row.subnet}>{row.subnet}</option>)}
             </Select>
-            <Select aria-label={tl("sortLabel")} value={sort} onChange={(value) => setSort(value as "backlinks" | "domains")}>
-              <option value="backlinks">{t("sortBacklinks")}</option>
-              <option value="domains">{t("sortDomains")}</option>
-            </Select>
-            <TableDownload siteId={siteId} kind="ips" />
           </>
         }
+        cardHeader={<SiteTableBar footer={table.footer} noun="addresses" actions={<TableDownload siteId={siteId} kind="ips" sort={order.tableSort} />} />}
         empty={{ icon: <Server className="h-8 w-8 text-muted/30" />, label: term || subnet ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page: table.page,
-          totalPages: table.totalPages,
-          totalCount: table.loadedCount,
-          pageSize: table.pageSize,
-          isLoading: table.isBusy,
-          onPageChange: table.goToPage,
-        }}
+        footer={table.footer}
+        sort={order.tableSort}
         columns={[
-          { key: "ip", header: t("columns.ip"), cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.ip}</span> },
+          { key: "ip", header: t("columns.ip"), sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.ip}</span> },
           {
             key: "subnet",
             header: t("columns.subnet"),
@@ -101,8 +99,8 @@ export default function SiteReferringIpsPage() {
               ? <span className="font-mono text-[12px] text-secondary">{row.subnet}</span>
               : <RecordLinkCell href={networkHref(row.subnet)} className="font-mono text-[12px] text-info">{row.subnet}</RecordLinkCell>,
           },
-          { key: "domains", header: t("columns.domains"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.referringDomains)}</span> },
-          { key: "backlinks", header: t("columns.backlinks"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.backlinks)}</span> },
+          { key: "domains", header: t("columns.domains"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.referringDomains)}</span> },
+          { key: "backlinks", header: t("columns.backlinks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.backlinks)}</span> },
           { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
         ]}
       />

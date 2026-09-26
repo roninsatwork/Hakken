@@ -89,7 +89,6 @@ export default function CompanySiteOverviewPage() {
     return total > 0 ? [t(`overview.parts.${key}`, { count: total })] : [];
   }).join(" · ");
 
-  const record = `/admin/websites/${header.websiteId}`;
   const cards = [
     {
       key: "searches",
@@ -169,15 +168,16 @@ export default function CompanySiteOverviewPage() {
         ))}
       </div>
 
+      {/* The lists are this company's own (docs/plans/active/private-tracking-lists-plan.md). */}
       <p className="-mt-4 flex flex-wrap items-center gap-x-2 text-[13px] text-secondary">
-        {t("overview.sharedLists", { host: header.displayHost })}
-        <Link href={record} className="flex items-center gap-1 text-foreground hover:text-brand">
+        {t("overview.ownLists", { host: header.displayHost })}
+        <Link href={`${base}/searches`} className="flex items-center gap-1 text-foreground hover:text-brand">
           {t("overview.editLists")}
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </p>
 
-      <SiteMoves companyId={companyId} companyWebsiteId={companyWebsiteId} websiteId={header.websiteId} />
+      <SiteMoves companyId={companyId} companyWebsiteId={companyWebsiteId} />
 
       <SiteDataLimits companyWebsiteId={companyWebsiteId} />
     </div>

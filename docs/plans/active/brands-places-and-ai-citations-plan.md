@@ -12,6 +12,11 @@ the questions it cannot ask yet, and the three gaps in the model that stop it.
 Read [One Website, Many Watchers](./websites-and-competitors-plan.md) first.
 Everything here builds on its rules and breaks none of them.
 
+
+> **2026-09-26.** The AI questions (the prompts this plan put on the website)
+> are each company's own now; brand names stay on the shared website record,
+> as decided here. See [private searches and questions](private-tracking-lists-plan.md).
+
 ## The three gaps
 
 **A site has no name.** We know `ronins.co.uk` as a host. We do not know it is

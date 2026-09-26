@@ -6,31 +6,35 @@ import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQ
 import { appError } from "./utils/appError";
 import { AI_ENGINES, DEFAULT_AI_ENGINES, aiEngineValidator, isAiEngine } from "./seoAiEngines";
 import { MAX_PROMPT_LENGTH, MIN_PROMPT_LENGTH } from "./utils/promptLimits";
-import type { Id } from "./_generated/dataModel";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { isTrackedHold } from "./utils/websitePairing";
+import { holdQuestions, holdSearch, holdSearches } from "./holdLists";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 /**
- * A host's own lists: what it is asked, what it is checked against, who it
- * competes with.
+ * What we ask about a host, and who it competes with.
  *
- * **None of these functions takes a company, and none of the rows they write
- * carries one.** That is the rule the new shape runs on — see the note above
- * `websiteQuestions` in `schema.ts`. A company attached to a host reads the
- * whole list; who is attached is `companyWebsites`' business and stays there.
+ * **Two kinds of thing, kept apart.** A host's own facts — its profile, and
+ * the competition graph — are shared by every company watching it, because
+ * they are true of the website. The searches and questions are each
+ * company's own (docs/plans/active/private-tracking-lists-plan.md): every
+ * list function here takes the hold the list belongs to, a company's own
+ * website, and no other company can see what is on it. Buying stays shared —
+ * a purchase is keyed on the search or question, never on the list.
  *
  * Its own module rather than more of `websites.ts`, which is 919 lines against
  * a thousand-line ceiling, and because this is a different job: that file owns
  * the host record and its watchers, this one owns what we ask about a host.
  *
- * Everything here is super admin, like the rest of the websites area. These
- * lists are shared across every client watching a host, so an edit is an edit
- * for all of them, and the audit trail matters more than the convenience.
+ * Everything here is super admin, like the rest of the websites area, and
+ * every edit is audited with the company it was made for.
  */
 
 /** What the business does: room for two or three sentences, and no more. */
 const MAX_BUSINESS_DESCRIPTION = 600;
 
-/** A generous ceiling, not a plan allowance. The allowance question is deferred. */
+/** A generous ceiling per company's list, not a plan allowance. The allowance question is deferred. */
 const MAX_CANONICAL_ROWS = 1_000;
 
 /** As long as a real search gets, and short enough that a paragraph is refused. */
@@ -61,11 +65,38 @@ async function requireWebsite(
   return website;
 }
 
+/**
+ * The hold a list belongs to: one of a company's own websites. A competitor
+ * has no list of its own (V8) — it is measured on the searches and questions
+ * of the owned site it is watched against.
+ */
+async function requireListHold(
+  ctx: { db: MutationCtx["db"] },
+  holdId: Id<"companyWebsites">,
+): Promise<Doc<"companyWebsites">> {
+  const hold = await ctx.db.get(holdId);
+  if (!hold) throw appError("NOT_FOUND", "That website is no longer one this company holds.");
+  if (isTrackedHold(hold)) {
+    throw appError("INVALID_INPUT", "A competitor is measured on the searches and questions of the company's own website.");
+  }
+  return hold;
+}
+
+/** The company a list row was made for, for its audit entry. */
+async function listCompanyOf(
+  ctx: { db: MutationCtx["db"] },
+  holdId: Id<"companyWebsites">,
+): Promise<{ companyId?: Id<"companies"> }> {
+  const hold = await ctx.db.get(holdId);
+  return hold ? { companyId: hold.companyId } : {};
+}
+
 /* ------------------------------------------------------------------ questions */
 
+/** One company's questions about one of its websites. */
 export const listWebsiteQuestions = superAdminQuery({
   args: {
-    websiteId: v.id("websites"),
+    companyWebsiteId: v.id("companyWebsites"),
     searchTerm: v.optional(v.string()),
     page: v.number(),
     pageSize: v.number(),
@@ -84,10 +115,7 @@ export const listWebsiteQuestions = superAdminQuery({
     engineCalls: v.number(),
   }),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_CANONICAL_ROWS + 1);
+    const rows = await holdQuestions(ctx, args.companyWebsiteId, MAX_CANONICAL_ROWS + 1);
 
     const term = normalizeSearchTerm(args.searchTerm);
     const matching = term ? rows.filter((row) => includesSearchTerm(row.prompt, term)) : rows;
@@ -113,15 +141,17 @@ export const listWebsiteQuestions = superAdminQuery({
   },
 });
 
+/** Add a question to one company's list for one of its websites. */
 export const addWebsiteQuestion = superAdminMutation({
   args: {
-    websiteId: v.id("websites"),
+    companyWebsiteId: v.id("companyWebsites"),
     prompt: v.string(),
     engines: v.optional(v.array(v.string())),
   },
   returns: v.id("websiteQuestions"),
   handler: async (ctx, args) => {
-    await requireWebsite(ctx, args.websiteId);
+    const hold = await requireListHold(ctx, args.companyWebsiteId);
+    await requireWebsite(ctx, hold.websiteId);
 
     const prompt = readText(args.prompt);
     if (prompt.length < MIN_PROMPT_LENGTH) {
@@ -131,10 +161,7 @@ export const addWebsiteQuestion = superAdminMutation({
       throw appError("INVALID_INPUT", `A question can be at most ${MAX_PROMPT_LENGTH} characters.`);
     }
 
-    const existing = await ctx.db
-      .query("websiteQuestions")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_CANONICAL_ROWS + 1);
+    const existing = await holdQuestions(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
 
     if (existing.some((row) => row.prompt.toLowerCase() === prompt.toLowerCase())) {
       throw appError("INVALID_INPUT", "That question is already asked for this website.");
@@ -147,7 +174,8 @@ export const addWebsiteQuestion = superAdminMutation({
     const engines = chosen.length > 0 ? chosen : [...DEFAULT_AI_ENGINES];
 
     const questionId = await ctx.db.insert("websiteQuestions", {
-      websiteId: args.websiteId,
+      websiteId: hold.websiteId,
+      companyWebsiteId: hold._id,
       prompt,
       engines,
       isActive: true,
@@ -159,7 +187,7 @@ export const addWebsiteQuestion = superAdminMutation({
       actionType: "ADD_WEBSITE_QUESTION",
       entityId: questionId,
       entityType: "websiteQuestions",
-      metadata: JSON.stringify({ prompt, engines }),
+      metadata: JSON.stringify({ prompt, engines, companyId: hold.companyId }),
       timestamp: Date.now(),
     });
 
@@ -180,7 +208,7 @@ export const setWebsiteQuestionActive = superAdminMutation({
       actionType: args.isActive ? "RESUME_WEBSITE_QUESTION" : "PAUSE_WEBSITE_QUESTION",
       entityId: args.questionId,
       entityType: "websiteQuestions",
-      metadata: JSON.stringify({ prompt: question.prompt }),
+      metadata: JSON.stringify({ prompt: question.prompt, ...(await listCompanyOf(ctx, question.companyWebsiteId)) }),
       timestamp: Date.now(),
     });
     return null;
@@ -200,7 +228,7 @@ export const removeWebsiteQuestion = superAdminMutation({
       actionType: "REMOVE_WEBSITE_QUESTION",
       entityId: args.questionId,
       entityType: "websiteQuestions",
-      metadata: JSON.stringify({ prompt: question.prompt }),
+      metadata: JSON.stringify({ prompt: question.prompt, ...(await listCompanyOf(ctx, question.companyWebsiteId)) }),
       timestamp: Date.now(),
     });
     return null;
@@ -209,9 +237,10 @@ export const removeWebsiteQuestion = superAdminMutation({
 
 /* ------------------------------------------------------------------- keywords */
 
+/** One company's searches for one of its websites. */
 export const listWebsiteKeywords = superAdminQuery({
   args: {
-    websiteId: v.id("websites"),
+    companyWebsiteId: v.id("companyWebsites"),
     searchTerm: v.optional(v.string()),
     page: v.number(),
     pageSize: v.number(),
@@ -230,10 +259,7 @@ export const listWebsiteKeywords = superAdminQuery({
     activeCount: v.number(),
   }),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_CANONICAL_ROWS + 1);
+    const rows = await holdSearches(ctx, args.companyWebsiteId, MAX_CANONICAL_ROWS + 1);
 
     const term = normalizeSearchTerm(args.searchTerm);
     const matching = term ? rows.filter((row) => includesSearchTerm(row.keyword, term)) : rows;
@@ -266,16 +292,18 @@ export const listWebsiteKeywords = superAdminQuery({
 });
 
 /**
- * Add one search to a host's list, with every check the list keeps.
+ * Add one search to a company's list for one of its websites, with every
+ * check the list keeps.
  *
- * Shared by the screen's add button and by taking an "untracked search" move,
- * so a search added either way meets the same length rules, the same ceiling
- * and leaves the same audit entry.
+ * Shared by the screen's add button, the fan-out screen's "Track it" and
+ * taking an "untracked search" move, so a search added any way meets the same
+ * length rules, the same ceiling and leaves the same audit entry.
  */
 export async function addWebsiteKeywordCore(
   ctx: MutationCtx,
-  args: { websiteId: Id<"websites">; keyword: string; userId: Id<"users"> },
+  args: { companyWebsiteId: Id<"companyWebsites">; keyword: string; userId: Id<"users"> },
 ): Promise<Id<"websiteKeywords">> {
+  const hold = await requireListHold(ctx, args.companyWebsiteId);
   const keyword = readKeyword(args.keyword);
   if (keyword.length < MIN_KEYWORD_LENGTH) {
     throw appError("INVALID_INPUT", "Write the search as somebody would type it.");
@@ -284,25 +312,18 @@ export async function addWebsiteKeywordCore(
     throw appError("INVALID_INPUT", `A search can be at most ${MAX_KEYWORD_LENGTH} characters.`);
   }
 
-  const duplicate = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website_keyword", (q) =>
-      q.eq("websiteId", args.websiteId).eq("keyword", keyword))
-    .first();
-  if (duplicate) {
+  if (await holdSearch(ctx, hold._id, keyword)) {
     throw appError("INVALID_INPUT", "That search is already tracked for this website.");
   }
 
-  const existing = await ctx.db
-    .query("websiteKeywords")
-    .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-    .take(MAX_CANONICAL_ROWS + 1);
+  const existing = await holdSearches(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
   if (existing.length >= MAX_CANONICAL_ROWS) {
     throw appError("INVALID_INPUT", `A website can track at most ${MAX_CANONICAL_ROWS} searches.`);
   }
 
   const keywordId = await ctx.db.insert("websiteKeywords", {
-    websiteId: args.websiteId,
+    websiteId: hold.websiteId,
+    companyWebsiteId: hold._id,
     keyword,
     isActive: true,
     createdAt: Date.now(),
@@ -313,18 +334,18 @@ export async function addWebsiteKeywordCore(
     actionType: "ADD_WEBSITE_KEYWORD",
     entityId: keywordId,
     entityType: "websiteKeywords",
-    metadata: JSON.stringify({ keyword }),
+    metadata: JSON.stringify({ keyword, companyId: hold.companyId }),
     timestamp: Date.now(),
   });
 
   return keywordId;
 }
 
+/** Add a search to one company's list for one of its websites. */
 export const addWebsiteKeyword = superAdminMutation({
-  args: { websiteId: v.id("websites"), keyword: v.string() },
+  args: { companyWebsiteId: v.id("companyWebsites"), keyword: v.string() },
   returns: v.id("websiteKeywords"),
   handler: async (ctx, args) => {
-    await requireWebsite(ctx, args.websiteId);
     return await addWebsiteKeywordCore(ctx, { ...args, userId: ctx.userId });
   },
 });
@@ -342,7 +363,7 @@ export const setWebsiteKeywordActive = superAdminMutation({
       actionType: args.isActive ? "RESUME_WEBSITE_KEYWORD" : "PAUSE_WEBSITE_KEYWORD",
       entityId: args.keywordId,
       entityType: "websiteKeywords",
-      metadata: JSON.stringify({ keyword: keyword.keyword }),
+      metadata: JSON.stringify({ keyword: keyword.keyword, ...(await listCompanyOf(ctx, keyword.companyWebsiteId)) }),
       timestamp: Date.now(),
     });
     return null;
@@ -362,7 +383,7 @@ export const removeWebsiteKeyword = superAdminMutation({
       actionType: "REMOVE_WEBSITE_KEYWORD",
       entityId: args.keywordId,
       entityType: "websiteKeywords",
-      metadata: JSON.stringify({ keyword: keyword.keyword }),
+      metadata: JSON.stringify({ keyword: keyword.keyword, ...(await listCompanyOf(ctx, keyword.companyWebsiteId)) }),
       timestamp: Date.now(),
     });
     return null;
@@ -575,7 +596,7 @@ export const setWebsiteProfile = superAdminMutation({
 
 /* ------------------------------------------------------- for judging rivals */
 
-/** Searches named to the judge: enough to show the trade, few enough to stay a hint. */
+/** Searches named to the judge, the ones it earns most visits from: enough to show the trade, few enough to stay a hint. */
 const SEARCHES_FOR_JUDGING = 10;
 
 /**
@@ -606,10 +627,17 @@ export const describeBusinessForJudging = internalQuery({
       const pairedWith = pairing?.againstWebsiteId ? await ctx.db.get(pairing.againstWebsiteId) : null;
       if (pairedWith?.sector || pairedWith?.businessDescription) website = pairedWith;
     }
-    const searches = await ctx.db
-      .query("websiteKeywords")
-      .withIndex("by_website_active", (q) => q.eq("websiteId", website._id).eq("isActive", true))
-      .take(SEARCHES_FOR_JUDGING);
+    // What it ranks for, from its keyword list — facts every watcher can see
+    // — rather than any company's tracked searches, which are that company's
+    // own (docs/plans/active/private-tracking-lists-plan.md, §4.3).
+    const described = website;
+    const searches = (await ctx.db
+      .query("siteKeywordRanks")
+      .withIndex("by_site_traffic", (q) => q.eq("websiteId", described._id).eq("locationCode", DEFAULT_LOCATION_CODE))
+      .order("desc")
+      .take(SEARCHES_FOR_JUDGING * 2))
+      .filter((row) => row.position !== undefined)
+      .slice(0, SEARCHES_FOR_JUDGING);
     return {
       ...(website.sector ? { sector: website.sector } : {}),
       ...(website.marketLabel ? { market: website.marketLabel } : {}),

@@ -8,6 +8,7 @@ import { CRAWL_ISSUES } from "./siteCrawl";
 import { tenantQuery } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
 import { pagePath } from "./utils/siteShapes";
+import { heldTo, listWithCut } from "./siteListPages";
 
 /**
  * The page-by-page detail of a site crawl (Anthony, 2026-09-24: "store
@@ -314,7 +315,11 @@ export const clearOlderCrawlDetail = internalMutation({
   },
 });
 
-/** Pages read from the newest crawl: every page it reached. */
+/**
+ * Pages read from the newest crawl: every page a standard crawl of 1,000
+ * reaches. A crawl set larger is read this far and the screen says the list
+ * is longer (docs/plans/active/sites-table-pages-plan.md, T11).
+ */
 const PAGES_READ = 1_000;
 
 /**
@@ -323,7 +328,7 @@ const PAGES_READ = 1_000;
  */
 export const crawlProblemPages = tenantQuery({
   args: { siteId: v.id("companyWebsites"), check: v.string() },
-  returns: v.array(v.object({
+  returns: listWithCut(v.object({
     page: v.string(),
     url: v.string(),
     statusCode: v.union(v.number(), v.null()),
@@ -336,13 +341,14 @@ export const crawlProblemPages = tenantQuery({
       .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
       .order("desc")
       .first();
-    if (!newest) return [];
-    const pages = (await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ))
-      .filter((row) => row.problems.includes(args.check));
-    const broken = args.check === "broken_links"
-      ? await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ)
-      : [];
-    return pages
+    if (!newest) return { rows: [], cut: null };
+    const crawled = heldTo(await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ);
+    const pages = crawled.rows.filter((row) => row.problems.includes(args.check));
+    const links = args.check === "broken_links"
+      ? heldTo(await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ)
+      : { rows: [], cut: null };
+    const broken = links.rows;
+    const rows = pages
       .sort((left, right) => left.page.localeCompare(right.page))
       .map((row) => ({
         page: row.page,
@@ -352,5 +358,6 @@ export const crawlProblemPages = tenantQuery({
           .filter((link) => link.from === row.url)
           .map((link) => ({ to: link.to, statusCode: link.statusCode ?? null })),
       }));
+    return { rows, cut: crawled.cut !== null || links.cut !== null ? rows.length : null };
   },
 });

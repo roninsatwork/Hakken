@@ -10,6 +10,15 @@ they would in Semrush or Ahrefs. It is written to be built by someone — or
 some model — with no other context. Follow `AGENTS.md`. Anchors carry the file
 they rest on; verify them before editing, because files move.
 
+
+> **2026-09-26.** The searches and questions a site is measured on are now
+> each company's own ([private searches and questions](private-tracking-lists-plan.md)).
+> D1 holds — they are still edited in admin only. D13 changed with Anthony's
+> agreement: the admin's Google searches and AI questions moved from the
+> shared website record to the company's own screen for the site. D17's
+> "this company's questions only" is now true by construction: every Sites
+> read of a list goes through the company's own hold.
+
 ## The rule that governs this plan
 
 **Show the data we collect first. Features go on top afterwards — and collect
@@ -134,7 +143,7 @@ under "Not available", so nobody goes looking.
 | Share of voice | How often this site is named against its tracked rivals, per engine | `aiAnswers.named` | ✅ stored — labelled "against your tracked competitors" (D7) |
 | Full answers | What the engine actually said | answer text in `seoDataPulls.resultJson` | 🔧 in raw — kept from now on (D9) |
 | Sources cited | Which of this site's pages the engines link to | `aiCitations` (kind `SOURCE`) | ✅ stored |
-| What the AI searched | The searches the engines ran behind the scenes | `promptFanOutQueries`, `promptFanOutDays` | ✅ stored |
+| Fan-out queries | The searches the engines ran behind the scenes. Called "What the AI searched" until 2026-09-25, when Anthony asked for the industry's own term | `promptFanOutQueries`, `promptFanOutDays` | ✅ stored |
 
 ### 2. Google results — the first hundred results for each tracked search (`serp_google_organic`)
 
@@ -150,6 +159,11 @@ Page one only until 2026-09-24; every check now reads down to position 100
 | Questions people ask | "People also ask" and related searches | SERP `people_also_ask`, `related_searches` | 🔧 in raw |
 
 ### 3. Organic keywords — everything the site ranks for (`domain_ranked_keywords`)
+
+Renamed on 2026-09-26: the menu group is **Organic search**, and All keywords
+is **Keywords** — the menu item and the page's title. The sort dropdown gave
+way to headings pressed to sort (docs/plans/active/sites-ux-updates-plan.md,
+change log).
 
 | Page | Shows | Source | Status |
 |---|---|---|---|
@@ -377,6 +391,12 @@ of them." These rules apply to every Sites query and page.
 written when data is filed. Nothing counts 40,000 rows on page load. A
 filtered count is stored where the filter is common, and otherwise shown as
 "more than N" rather than counted.
+
+> **Changed 2026-09-25 — built the same day.** [Numbered table pages](sites-table-pages-plan.md)
+> counts totals from a compact copy of each big list (a few records, never the
+> rows), so every Sites table shows its exact total, and moves the Sites tables
+> from fifteen rows a page to 25, 50, 75 or 100, opening at 25. Every Sites
+> table now works that way.
 
 **Page load.**
 

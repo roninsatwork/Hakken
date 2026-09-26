@@ -2,6 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+
+import { cn } from "@/src/ui/lib/utils";
+import { Button } from "./Button";
 
 import {
   CursorFooter,
@@ -13,6 +17,7 @@ import {
   TableHeaderRow,
   TableLoadingRow,
   TableShell,
+  type RowsChoice,
 } from "./Table";
 
 /**
@@ -60,7 +65,26 @@ export type DataTableColumn<Row> = {
   align?: "left" | "right";
   /** Width or wrapping the column needs, applied to header and body alike. */
   className?: string;
+  /** Whether pressing the heading orders the list by this column — with the table's `sort`. */
+  sortable?: boolean;
   cell: (row: Row) => ReactNode;
+};
+
+/**
+ * The order a list is in, and what pressing a sortable heading asks for.
+ *
+ * The screen owns the order and the table only draws it: `onSort` is called
+ * with the column's key, and the screen decides — this column's own direction
+ * the first time, the other way when it is already the order (Anthony,
+ * 2026-09-26, showing Ahrefs: "the table heading clickable so I can sort
+ * them"). The order is the whole list's, on the server, never just the rows
+ * on screen.
+ */
+export type DataTableSort = {
+  /** The key of the column the list is ordered by. */
+  key: string;
+  direction: "asc" | "desc";
+  onSort: (key: string) => void;
 };
 
 type LoadMoreFooterSpec = {
@@ -94,7 +118,7 @@ type CursorFooterSpec = {
   };
 };
 
-type PagedFooterSpec = {
+export type PagedFooterSpec = {
   mode: "paged";
   page: number;
   totalPages: number;
@@ -109,6 +133,10 @@ type PagedFooterSpec = {
     previous?: string;
     next?: string;
   };
+  /** Numbered pages and the count on the right — the Sites tables. See `PaginationFooter`. */
+  numbered?: boolean;
+  /** How many rows a page shows, chosen in the footer. Only with `numbered`. */
+  rowsChoice?: RowsChoice;
 };
 
 type DataTableProps<Row> = {
@@ -148,6 +176,8 @@ type DataTableProps<Row> = {
   className?: string;
   /** A bar inside the card, above the header row — a title, usually. */
   cardHeader?: ReactNode;
+  /** The list's order, which the `sortable` columns' headings show and change. */
+  sort?: DataTableSort;
 };
 
 /**
@@ -179,6 +209,7 @@ export function DataTable<Row>({
   minWidthClassName,
   className = "",
   cardHeader,
+  sort,
 }: DataTableProps<Row>) {
   const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
@@ -209,17 +240,31 @@ export function DataTable<Row>({
       >
         <thead>
           <TableHeaderRow variant={headerVariant}>
-            {columns.map((column) => (
-              <TableHeaderCell
-                key={column.key}
-                align={column.align}
-                className={column.className}
-              >
-                {visibleHeader(column) ?? (
-                  <span className="sr-only">{column.hiddenHeader ?? t("actionsColumn")}</span>
-                )}
-              </TableHeaderCell>
-            ))}
+            {columns.map((column) => {
+              const heading = visibleHeader(column);
+              const sortable = Boolean(sort && column.sortable && heading !== null);
+              const active = sortable && sort?.key === column.key;
+              return (
+                <TableHeaderCell
+                  key={column.key}
+                  align={column.align}
+                  className={column.className}
+                  ariaSort={sortable ? (active ? (sort?.direction === "asc" ? "ascending" : "descending") : "none") : undefined}
+                >
+                  {sortable && sort ? (
+                    <SortHeading
+                      active={active}
+                      direction={sort.direction}
+                      onSort={() => sort.onSort(column.key)}
+                    >
+                      {heading}
+                    </SortHeading>
+                  ) : heading ?? (
+                    <span className="sr-only">{column.hiddenHeader ?? t("actionsColumn")}</span>
+                  )}
+                </TableHeaderCell>
+              );
+            })}
           </TableHeaderRow>
         </thead>
         <tbody>
@@ -273,6 +318,41 @@ export function DataTable<Row>({
   );
 }
 
+/**
+ * A heading that orders the list: the heading's own words and an arrow — up
+ * or down on the column the list is ordered by, a quiet two-way arrow on the
+ * others — so which column leads, and which way, can be seen at a glance.
+ * The cell's alignment places it; a right-aligned column's heading sits right.
+ */
+function SortHeading({
+  active,
+  direction,
+  onSort,
+  children,
+}: {
+  active: boolean;
+  direction: "asc" | "desc";
+  onSort: () => void;
+  children: ReactNode;
+}) {
+  const Arrow = !active ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <Button
+      variant="ghost"
+      onClick={onSort}
+      // The heading's own size, colour and capitals rather than a button's:
+      // the variant sets the first two, and a button resets the third.
+      className={cn(
+        "inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent",
+        active ? "text-foreground" : "text-inherit",
+      )}
+    >
+      {children}
+      <Arrow aria-hidden="true" className={`h-3 w-3 shrink-0 ${active ? "" : "opacity-40"}`} />
+    </Button>
+  );
+}
+
 /** The heading as written, or null where it is missing or only spacing. */
 function visibleHeader<Row>(column: DataTableColumn<Row>) {
   const { header } = column;
@@ -317,6 +397,8 @@ function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec | CursorFoote
       isLoading={footer.isLoading}
       onPageChange={footer.onPageChange}
       labels={footer.labels}
+      numbered={footer.numbered}
+      rowsChoice={footer.rowsChoice}
     />
   );
 }

@@ -67,9 +67,15 @@ export function ListDownload<Row>({
 /**
  * A whole server-paged table: the server builds the file from the table's own
  * index and hands it back, and this saves it. A very large table is cut at the
- * server's limit, and the reader is told how many rows the file holds.
+ * server's limit, and the reader is told how many rows the file holds. Given
+ * the table's order (`sort`, from `useSiteSort`), the file comes in it
+ * (docs/plans/active/sites-table-sorting-plan.md, S5).
  */
-export function TableDownload({ siteId, kind }: { siteId: Id<"companyWebsites">; kind: SiteExportKind }) {
+export function TableDownload({ siteId, kind, sort }: {
+  siteId: Id<"companyWebsites">;
+  kind: SiteExportKind;
+  sort?: { key: string; direction: "asc" | "desc" };
+}) {
   const t = useTranslations("sites.downloads");
   const exportTable = useAction(api.siteExports.exportSiteTable);
   const { run, isBusy } = useAdminAction({ scope: "site-download" });
@@ -80,7 +86,7 @@ export function TableDownload({ siteId, kind }: { siteId: Id<"companyWebsites">;
       variant="quiet"
       disabled={building}
       onClick={async () => {
-        const outcome = await run(() => exportTable({ siteId, kind }), { fallbackMessage: t("failed") });
+        const outcome = await run(() => exportTable({ siteId, kind, ...(sort ? { sort: sort.key, direction: sort.direction } : {}) }), { fallbackMessage: t("failed") });
         if (!outcome.ok) return;
         const file = outcome.data;
         const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv;charset=utf-8" }));

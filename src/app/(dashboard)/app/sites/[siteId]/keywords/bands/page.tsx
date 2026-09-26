@@ -6,18 +6,27 @@ import { Layers } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
+type Band = (typeof BANDS)[number];
+type BandPoint = { day: string; total: number } & Record<Band, number>;
+
+/** The columns that sort: the day, newest first, and each band, page one and the total, the most first. */
+const SORTS = dayTableSorts<BandPoint, Band | "pageOne" | "total">(
+  [...BANDS, "pageOne", "total"],
+  (row, figure) => (figure === "pageOne" ? row.p01_03 + row.p04_10 : row[figure]),
+);
 
 /**
  * Position bands: how many of the searches the site ranks for sit in each
@@ -32,7 +41,6 @@ export default function SiteBandsPage() {
   const site = useSite();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  const [page, setPage] = useSiteTablePage();
   const listHref = useSiteListHref(siteId);
 
   const points = (series?.[0]?.points ?? []).flatMap((point) => {
@@ -43,8 +51,8 @@ export default function SiteBandsPage() {
   // Only the newest check's keywords are kept one by one, so only its counts
   // open the keywords behind them (docs/plans/active/sites-ux-updates-plan.md §4).
   const newestDay = newestFirst[0]?.day ?? null;
-  const totalPages = Math.max(1, Math.ceil(newestFirst.length / TABLE_PAGE_SIZE));
-  const shown = series === undefined ? undefined : newestFirst.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const { rows: sorted, tableSort } = useSiteSortedList(newestFirst, SORTS, { opening: "day", name: dayOf });
+  const pager = useSitePager(sorted, { isLoading: series === undefined });
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,32 +74,26 @@ export default function SiteBandsPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[760px]"
-filters={<ListDownload fileName={`${site?.host ?? "site"}-position-bands`} rows={newestFirst} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...BANDS.map((band) => ({ header: tb(band), value: (row: (typeof points)[number]) => row[band] })), { header: t("columns.total"), value: (row) => row.total }]} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="checks" actions={<ListDownload fileName={`${site?.host ?? "site"}-position-bands`} rows={sorted} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...BANDS.map((band) => ({ header: tb(band), value: (row: (typeof points)[number]) => row[band] })), { header: t("columns.total"), value: (row) => row.total }]} />} />}
         empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: newestFirst.length,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: series === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "day", header: t("columns.day"), cell: (row) => <CheckedCell day={row.day} /> },
+          { key: "day", header: t("columns.day"), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
           ...BANDS.map((band) => ({
             key: band,
             header: tb(band),
             align: "right" as const,
+            sortable: true,
             cell: (row: (typeof points)[number]) => row.day === newestDay && row[band] > 0
               ? <RecordLinkCell href={listHref("keywords", { band })} className="font-mono text-[12px] text-info">{formatNumber(row[band])}</RecordLinkCell>
               : <span className="font-mono text-[12px] text-secondary">{formatNumber(row[band])}</span>,
           })),
-          { key: "pageOne", header: t("columns.pageOne"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.p01_03 + row.p04_10)}</span> },
-          { key: "total", header: t("columns.total"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.total)}</span> },
+          { key: "pageOne", header: t("columns.pageOne"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.p01_03 + row.p04_10)}</span> },
+          { key: "total", header: t("columns.total"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.total)}</span> },
         ]}
       />
     </div>

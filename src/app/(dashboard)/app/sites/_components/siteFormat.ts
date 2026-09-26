@@ -20,6 +20,11 @@ export function formatNumber(value: number | null | undefined): string {
   return Math.round(value).toLocaleString(siteLocale());
 }
 
+/** A cost per click, which comes in US dollars: "$11.82". */
+export function formatCpc(value: number | null | undefined): string {
+  return value === null || value === undefined ? "–" : `$${value.toFixed(2)}`;
+}
+
 /** A big number the way a chart axis or a menu wants it: 1.9K, 34K, 1.2M. */
 export function formatCompact(value: number | null | undefined): string {
   if (value === null || value === undefined) return "–";

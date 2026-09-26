@@ -264,10 +264,10 @@ describe("who gets to see it", () => {
       await ctx.db.insert("seoCycleLines", {
         cycleId, companyId: world.ronins, websiteId: world.ours, operationId: "ai_citation_chatgpt", pullId, reused: false, createdAt: Date.now(),
       });
-      // The question is on the website's own list — which is how its answers
-      // are found: hold, then the site's questions, then their answers.
+      // The question is on this company's own list for the website — which
+      // is how its answers are found: hold, then its questions, then their answers.
       await ctx.db.insert("websiteQuestions", {
-        websiteId: world.ours, prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
+        websiteId: world.ours, companyWebsiteId: world.hold, prompt: "best plumber in Leeds", engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
       });
       return pullId;
     });
@@ -503,7 +503,7 @@ describe("reading only what the page needs", () => {
     const world = await seedWorld(t);
     const prompt = "best plumber in Leeds";
     await t.run(async (ctx) => await ctx.db.insert("websiteQuestions", {
-      websiteId: world.ours, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
+      websiteId: world.ours, companyWebsiteId: world.hold, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
     }));
 
     const answer = async (engine: "chatgpt" | "perplexity", day: string, city?: string) => {

@@ -101,8 +101,8 @@ describe("downloading a whole table", () => {
     const surrey = "who are the best web designers in surrey";
     const shopify = "who builds shopify sites";
     await t.run(async (ctx) => {
-      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, prompt: shopify, engines: ["perplexity"], isActive: true, createdAt: Date.now() });
-      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, prompt: surrey, engines: ["perplexity", "chatgpt"], isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, companyWebsiteId: own.holdId, prompt: shopify, engines: ["perplexity"], isActive: true, createdAt: Date.now() });
+      await ctx.db.insert("websiteQuestions", { websiteId: own.websiteId, companyWebsiteId: own.holdId, prompt: surrey, engines: ["perplexity", "chatgpt"], isActive: true, createdAt: Date.now() });
     });
     const answer = async (prompt: string, engine: "perplexity" | "chatgpt", text: string, brands: unknown[]) =>
       await t.mutation(internal.seoCollectionParse.writeAiCitations, {

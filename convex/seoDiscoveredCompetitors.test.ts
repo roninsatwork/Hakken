@@ -8,6 +8,7 @@ import type { ActionCtx } from "./_generated/server";
 import type { TypesafeAskResult } from "./typesafeProviderService";
 import { judgeCompetitors } from "./seoJudgments";
 import { parseDomainCompetitors } from "./dataForSeoParsers";
+import { listOwnerOf } from "@/src/test/listOwner";
 
 /**
  * Websites discovery says compete with one of a company's own.
@@ -292,8 +293,18 @@ describe("what the judge is told about the business", () => {
         sector: "Digital agency", marketLabel: "London, England",
         brandNames: [{ name: "Our Shop", isPrimary: true }],
       });
-      await ctx.db.insert("websiteKeywords", { websiteId: own, keyword: "web design surrey", isActive: true, createdAt: Date.now() });
-      await ctx.db.insert("websiteKeywords", { websiteId: own, keyword: "paused one", isActive: false, createdAt: Date.now() });
+      // What it ranks for, most visits first — facts every watcher can see —
+      // never a company's own tracked searches, which a judgment filed for
+      // everyone must not carry (docs/plans/active/private-tracking-lists-plan.md).
+      const ranked = (keyword: string, position: number | undefined, traffic: number) => ctx.db.insert("siteKeywordRanks", {
+        websiteId: own, locationCode: 2826, keyword, ...(position !== undefined ? { position } : {}),
+        band: position !== undefined ? "p01_03" : "zz_none", page: "/", volume: 100, volumeKnown: true, intent: "UNJUDGED",
+        status: position !== undefined ? "SAME" : "LOST", change: 0, day: "2026-09-20", firstSeenDay: "2026-09-01",
+        searchText: keyword, traffic, updatedAt: Date.now(),
+      } as never);
+      await ranked("web design surrey", 2, 90);
+      await ranked("no longer ranking", undefined, 500);
+      await ctx.db.insert("websiteKeywords", { websiteId: own, companyWebsiteId: await listOwnerOf(ctx, own), keyword: "a private tracked search", isActive: true, createdAt: Date.now() });
       const rival = await ctx.db.insert("websites", { host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now() });
       const companyId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() });
       await ctx.db.insert("companyWebsites", { companyId, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now() });

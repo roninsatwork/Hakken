@@ -1403,7 +1403,7 @@
       "urlLabel": "Website address",
       "urlPlaceholder": "https://www.example.com",
       "savedAs": "Saved as {host}",
-      "alreadyKnown": "Already in the system — its searches, questions and history come with it.",
+      "alreadyKnown": "Already in the system — its history comes with it. Searches and questions are set for each company on its own.",
       "newWebsite": "New to the system.",
       "holdingLabel": "Whose website is it?",
       "holdingOwned": "Theirs",
@@ -1419,12 +1419,12 @@
       "removeWebsite": "Remove from this company",
       "removeConfirm": "Remove <highlight>{host}</highlight> from this company?",
       "removeWarningTitle": "This removes it from this company only",
-      "removeWarningBody": "The website and its data stay in the system for other companies. Only this company stops watching it.",
+      "removeWarningBody": "This company stops watching it, and its searches and questions for it go too. The website and what was collected about it stay in the system for other companies.",
       "errors": {
         "saveFailed": "Could not add this website. Try again.",
         "removeFailed": "Could not remove this website. Try again."
       },
-      "inherits": "Already set up: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}}.",
+      "inherits": "Already collected: {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}}.",
       "movesColumn": "To do"
     },
     "companyWebsiteDetail": {
@@ -1508,7 +1508,6 @@
       "back": "Back to Websites",
       "settings": "Settings",
       "record": "Website record",
-      "recordEdit": "Edit searches & questions",
       "notCollecting": "Not being checked",
       "collectingNext": "{schedule} · next {when}",
       "collectedWith": "Checked with {host}",
@@ -1541,8 +1540,8 @@
         "seeSearches": "See the searches",
         "seeAnswers": "See the answers",
         "seeCompetitors": "See competitors",
-        "sharedLists": "Searches and questions belong to {host} and are shared by every company watching it.",
-        "editLists": "Edit them on the website record",
+        "ownLists": "These searches and questions are this company's own: no other company watching {host} can see them.",
+        "editLists": "Add or change them under Results",
         "parts": {
           "dropping": "{count} dropping",
           "pageOne": "{count} on page one",
@@ -1562,16 +1561,17 @@
       "results": {
         "label": "Results",
         "searches": "Your searches",
+        "questions": "AI questions",
         "answers": "AI answers",
         "rankings": "Everything it ranks for",
         "fanOut": "What the AI searched"
       },
       "searches": {
         "title": "Your Google searches",
-        "subtitle": "Where this site ranks on each search, checked from {place}. Dropping ones come first.",
+        "subtitle": "This company's own searches, checked from {place}: no other company watching the website sees them. Dropping ones come first.",
         "searchPlaceholder": "Find a search...",
         "noMatch": "No search matches that.",
-        "empty": "No searches yet. Add them on the website record.",
+        "empty": "No searches yet. Add the first search this business should be found for.",
         "searchColumn": "Search",
         "positionColumn": "Position",
         "notCheckedYet": "Not checked yet",
@@ -1590,10 +1590,51 @@
           "NEVER_RANKED": "Not found"
         },
         "paused": "Paused",
-        "edit": "Add searches on the website record",
-        "removeColumn": "Remove",
         "remove": "Stop checking this search",
-        "lastCheckedColumn": "Last checked"
+        "lastCheckedColumn": "Last checked",
+        "addLabel": "A search a customer types into Google",
+        "addPlaceholder": "branding agency leeds",
+        "add": "Add",
+        "tracking": "{count, plural, =0 {Nothing is checked} one {# search checked each time} other {# searches checked each time}}",
+        "pause": "Pause",
+        "resume": "Resume",
+        "actionsColumn": "Actions",
+        "errors": {
+          "addFailed": "Could not track that search. Try again.",
+          "toggleFailed": "Could not change that search. Try again."
+        }
+      },
+      "questions": {
+        "title": "AI questions",
+        "subtitle": "The questions we ask ChatGPT, Perplexity, Gemini and Claude, to see whether they mention this business. This company's own: no other company watching the website sees them.",
+        "addLabel": "A question a customer might ask an AI",
+        "addPlaceholder": "who is the best branding agency in Leeds",
+        "add": "Add",
+        "searchPlaceholder": "Search these questions...",
+        "empty": "No questions yet, so no AI is asked about this website for this company.",
+        "noMatch": "No question matches that.",
+        "promptColumn": "Question",
+        "enginesColumn": "Asked of",
+        "stateColumn": "State",
+        "actionsColumn": "Actions",
+        "active": "Asking",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove this question",
+        "asked": "{count, plural, =0 {Nothing is asked} one {# answer collected each time} other {# answers collected each time}}",
+        "live": "Each AI you tick is asked separately.",
+        "engines": {
+          "chatgpt": "ChatGPT",
+          "perplexity": "Perplexity",
+          "gemini": "Gemini",
+          "claude": "Claude"
+        },
+        "errors": {
+          "addFailed": "Could not add that question. Try again.",
+          "toggleFailed": "Could not change that question. Try again.",
+          "removeFailed": "Could not remove that question. Try again."
+        }
       },
       "competitors": {
         "title": "Competitors",
@@ -1683,7 +1724,7 @@
       },
       "removeSearch": {
         "title": "Stop checking this search?",
-        "body": "<highlight>{keyword}</highlight> comes off this website's list of searches, for every company watching the site. It won't be checked from the next collection on.",
+        "body": "<highlight>{keyword}</highlight> comes off this company's searches for the website. It won't be checked from the next collection on.",
         "kept": "Rankings already collected for it are kept. You can add it again at any time.",
         "confirm": "Stop checking",
         "removing": "Removing...",
@@ -1990,7 +2031,7 @@
       },
       "newWebsite": "New — not in the system yet.",
       "nextPull": "Next pull {when}",
-      "inherits": "This client starts with what is already here: {keywords, plural, =0 {no searches} one {1 search} other {# searches}}, {questions, plural, =0 {no questions} one {1 question} other {# questions}}, {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
+      "inherits": "This client starts with what is already here: {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
       "watchersMany": "{count}+ companies"
     },
     "websiteDetail": {
@@ -2015,7 +2056,7 @@
       "deleteTitle": "Delete Website",
       "deleteConfirm": "Delete <highlight>{host}</highlight>?",
       "deleteWarningTitle": "This deletes the website and all its SEO data",
-      "deleteWarningBody": "Its searches, questions and brand names go, and so does everything collected about it: rankings, site metrics, AI answer mentions, competitors found and the stored DataForSEO answers. It is also taken off every company below, whether they own it or track it against one of their sites. This cannot be undone.",
+      "deleteWarningBody": "Its brand names go, with every company's searches and questions for it, and so does everything collected about it: rankings, site metrics, AI answer mentions, competitors found and the stored DataForSEO answers. It is also taken off every company below, whether they own it or track it against one of their sites. This cannot be undone.",
       "affectedNone": "No company is using this website.",
       "affectedTitle": "{count, plural, one {Used in 1 place, which will lose it:} other {Used in # places, which will lose it:}}",
       "errors": {
@@ -2040,12 +2081,10 @@
       },
       "tabs": {
         "profile": "Profile",
-        "keywords": "Google searches",
-        "questions": "AI questions",
         "competition": "Known competitors",
         "watchers": "Watched by"
       },
-      "sharedNotice": "Everything here is shared by every company watching this website. They can't see who else is watching.",
+      "sharedNotice": "Everything here is shared by every company watching this website. They can't see who else is watching. The Google searches and AI questions each company tracks are its own, set on that company's screen for the website.",
       "profile": {
         "title": "What this business is",
         "subtitle": "Helps us suggest a starting set of searches and questions.",
@@ -2060,71 +2099,6 @@
         "saved": "Saved",
         "errors": {
           "saveFailed": "Could not save this profile. Try again."
-        }
-      },
-      "keywords": {
-        "title": "Google searches",
-        "subtitle": "The searches we check this website's position for. Shared by every company watching it, so each search is paid for once.",
-        "addLabel": "A search a customer types into Google",
-        "addPlaceholder": "branding agency leeds",
-        "add": "Add",
-        "searchPlaceholder": "Search these terms...",
-        "empty": "No searches yet. Add the first search this business should be found for.",
-        "noMatch": "No search matches that.",
-        "keywordColumn": "Search",
-        "intentColumn": "What they want",
-        "stateColumn": "State",
-        "actionsColumn": "Actions",
-        "unjudged": "Not judged",
-        "active": "Checking",
-        "paused": "Paused",
-        "pause": "Pause",
-        "resume": "Resume",
-        "remove": "Remove this search",
-        "tracking": "{count, plural, =0 {Nothing is checked} one {# search checked each time} other {# searches checked each time}}",
-        "intents": {
-          "BUYING": "Ready to buy",
-          "RESEARCHING": "Researching",
-          "BRANDED": "Looking for this business",
-          "IRRELEVANT": "Nothing to do with it",
-          "OTHER": "Too vague to tell"
-        },
-        "errors": {
-          "addFailed": "Could not track that search. Try again.",
-          "toggleFailed": "Could not change that search. Try again.",
-          "removeFailed": "Could not remove that search. Try again."
-        }
-      },
-      "questions": {
-        "title": "AI questions",
-        "subtitle": "The questions we ask ChatGPT, Perplexity, Gemini and Claude, to see whether they mention this business. Shared by every company watching it.",
-        "addLabel": "A question a customer might ask an AI",
-        "addPlaceholder": "who is the best branding agency in Leeds",
-        "add": "Add",
-        "searchPlaceholder": "Search these questions...",
-        "empty": "No questions yet, so no AI is asked about this website.",
-        "noMatch": "No question matches that.",
-        "promptColumn": "Question",
-        "enginesColumn": "Asked of",
-        "stateColumn": "State",
-        "actionsColumn": "Actions",
-        "active": "Asking",
-        "paused": "Paused",
-        "pause": "Pause",
-        "resume": "Resume",
-        "remove": "Remove this question",
-        "asked": "{count, plural, =0 {Nothing is asked} one {# answer collected each time} other {# answers collected each time}}",
-        "live": "Each AI you tick is asked separately.",
-        "engines": {
-          "chatgpt": "ChatGPT",
-          "perplexity": "Perplexity",
-          "gemini": "Gemini",
-          "claude": "Claude"
-        },
-        "errors": {
-          "addFailed": "Could not add that question. Try again.",
-          "toggleFailed": "Could not change that question. Try again.",
-          "removeFailed": "Could not remove that question. Try again."
         }
       },
       "competition": {
@@ -7688,11 +7662,16 @@
       "next": "Next",
       "pageOf": "Page {page} of {totalPages}",
       "showingRange": "Showing {start}-{end} of {total}",
+      "showingRangeCut": "Showing {start}-{end} of {total} · the full list is longer",
       "showingPage": "Showing {count} · page {page}",
       "showingCount": "Showing {count}",
       "loadMore": "Load more",
       "loading": "Loading...",
-      "actionsColumn": "Actions"
+      "actionsColumn": "Actions",
+      "pages": "Pages",
+      "goToPage": "Page {page}",
+      "rowsPerPage": "Rows per page",
+      "rowsOption": "{count} rows per page"
     },
     "detailTabs": {
       "itemSelected": "{label} selected"
@@ -8108,7 +8087,7 @@
         "site": "Site",
         "ai": "AI answers",
         "google": "Google results",
-        "keywords": "Organic keywords",
+        "keywords": "Organic search",
         "competitors": "Competitors",
         "backlinks": "Backlinks",
         "paid": "Paid search"
@@ -8120,13 +8099,13 @@
         "aiShareOfVoice": "Share of voice",
         "aiAnswers": "Full answers",
         "aiSources": "Sources cited",
-        "aiSearched": "What the AI searched",
+        "aiSearched": "Fan-out queries",
         "googleSearches": "Your searches",
         "googleMoves": "Wins and losses",
         "googleAbove": "Who ranks above you",
         "googleFeatures": "Search features",
         "googleQuestions": "Questions people ask",
-        "keywordsAll": "All keywords",
+        "keywordsAll": "Keywords",
         "keywordsPages": "Top pages",
         "keywordsBands": "Position bands",
         "keywordsNewLost": "New and lost",
@@ -8169,7 +8148,29 @@
     "compare": {
       "label": "Compare with",
       "previousCheck": "Compare with the check before",
-      "vs": "Compare with {day}"
+      "vs": "Compare with {day}",
+      "chipPrevious": "vs the check before",
+      "chipDay": "vs {day}"
+    },
+    "tableCounts": {
+      "keywords": "{count, plural, =1 {# keyword} other {# keywords}}",
+      "searches": "{count, plural, =1 {# search} other {# searches}}",
+      "pages": "{count, plural, =1 {# page} other {# pages}}",
+      "websites": "{count, plural, =1 {# website} other {# websites}}",
+      "linkingWebsites": "{count, plural, =1 {# linking website} other {# linking websites}}",
+      "links": "{count, plural, =1 {# link} other {# links}}",
+      "anchors": "{count, plural, =1 {# anchor} other {# anchors}}",
+      "addresses": "{count, plural, =1 {# address} other {# addresses}}",
+      "results": "{count, plural, =1 {# result} other {# results}}",
+      "answers": "{count, plural, =1 {# answer} other {# answers}}",
+      "queries": "{count, plural, =1 {# fan-out query} other {# fan-out queries}}",
+      "problems": "{count, plural, =1 {# problem} other {# problems}}",
+      "sections": "{count, plural, =1 {# section} other {# sections}}",
+      "checks": "{count, plural, =1 {# check} other {# checks}}",
+      "weeks": "{count, plural, =1 {# week} other {# weeks}}",
+      "groups": "{count, plural, =1 {# group} other {# groups}}",
+      "adverts": "{count, plural, =1 {# advert} other {# adverts}}",
+      "questionsAndSearches": "{count, plural, =1 {# question or search} other {# questions and searches}}"
     },
     "chart": {
       "download": "Download",
@@ -8212,7 +8213,7 @@
         "UNJUDGED": "Not judged yet"
       },
       "anyIntent": "Any intent",
-      "intentFilter": "What they want",
+      "intentFilter": "Intent",
       "features": {
         "ai_overview": "AI Overview",
         "local_pack": "Map pack",
@@ -8382,15 +8383,25 @@
       "competitors": {
         "title": "Competitors",
         "hint": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with. Further right ranks for more searches; higher gets more visits.",
+        "hintTraffic": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with. Further right takes more visits from searches you both rank for; higher gets more visits in all.",
+        "view": "Show competitors by",
+        "views": {
+          "searches": "Searches",
+          "traffic": "Traffic"
+        },
         "sharedUnknown": "A dash under Shared searches means that website is not among those found ranking for your searches, so how many searches you share is not known.",
+        "sharedVisitsUnknown": "A dash under Visits on shared searches means that website is not among those found ranking for your searches, so the visits it gets from them are not known.",
         "you": "{host} (you)",
         "xAxis": "Searches it ranks for",
+        "xAxisTraffic": "Visits from searches you both rank for",
         "yAxis": "Visits a month",
         "columns": {
           "website": "Website",
           "overlap": "Overlap",
           "shared": "Shared searches",
           "ofYours": "Of yours",
+          "sharedVisits": "Visits on shared searches",
+          "ofYourVisits": "Of your visits",
           "theirSearches": "Their searches",
           "theirVisits": "Their visits"
         },
@@ -8479,15 +8490,15 @@
       "noMatch": "No page matches that."
     },
     "aiSearched": {
-      "title": "What the AI searched",
-      "description": "What did the AI assistants search for behind the scenes? The searches they ran when answering, most repeated first: each one a search worth ranking for.",
-      "searchPlaceholder": "Search these searches…",
+      "title": "Fan-out queries",
+      "description": "Which searches did the AI assistants run behind the scenes to answer this website's questions? These are their fan-out queries, most repeated first: each one a search worth ranking for.",
+      "searchPlaceholder": "Search fan-out queries…",
       "trackedFilter": "Tracked",
       "anyTracked": "Tracked or not",
       "onlyTracked": "Tracked",
       "onlyUntracked": "Not tracked",
       "columns": {
-        "search": "What the engine searched",
+        "search": "Fan-out query",
         "intent": "What they want",
         "engines": "Engines",
         "times": "Times seen",
@@ -8495,8 +8506,8 @@
         "tracked": "Tracked"
       },
       "fromQuestion": "Asked: {question}",
-      "empty": "Nothing yet. The next check records what the engines searched for.",
-      "noMatch": "No search matches that."
+      "empty": "No fan-out queries yet. The next check records them.",
+      "noMatch": "No fan-out query matches that."
     },
     "googleSearches": {
       "title": "Your searches",
@@ -8553,7 +8564,7 @@
       "noMatch": "No keyword that moved this way matches that."
     },
     "keywords": {
-      "title": "All keywords",
+      "title": "Keywords",
       "description": "Which searches bring this website visits? Every search it ranks for on Google. Open one for its history, its page and its competitors.",
       "listing": "Showing {stored} of the {total} searches this website ranks for — the ones that bring it the most visits.",
       "searchPlaceholder": "Search keywords or pages…",
@@ -8561,15 +8572,13 @@
       "anyBand": "Any position",
       "statusFilter": "Movement",
       "anyStatus": "Any movement",
-      "sortLabel": "Sort",
-      "sortPosition": "Best position first",
-      "sortVolume": "Most searched first",
       "statuses": {
         "NEW": "New",
         "UP": "Moved up",
         "DOWN": "Moved down",
         "SAME": "No change",
-        "LOST": "Lost"
+        "LOST": "Lost",
+        "OLDER": "Not in the latest check"
       },
       "columns": {
         "keyword": "Keyword",
@@ -8578,6 +8587,7 @@
         "position": "Position",
         "change": "Change",
         "page": "Page",
+        "lastSeen": "Last seen",
         "compared": "On {day}",
         "lastChecked": "Last checked",
         "kd": "KD",
@@ -8597,8 +8607,6 @@
         "kd31_70": "Hard (31–70)",
         "kd71_100": "Very hard (71–100)"
       },
-      "sortTraffic": "Most traffic first",
-      "sortCpc": "Dearest clicks first",
       "kdHint": "How hard it is to reach page one for this search, from 0 (easy) to 100 (hardest)",
       "cpcHint": "What advertisers pay for a click on this search, in US dollars",
       "trafficHint": "Estimated visits a month this search brings the website",
@@ -8632,9 +8640,6 @@
       "noMatch": "No page matches that.",
       "typeFilter": "Page type",
       "anyType": "Any type",
-      "sortLabel": "Sort",
-      "sortKeywords": "Most keywords first",
-      "sortTraffic": "Most traffic first",
       "pageRankHint": "How strong this page is, from the links pointing at it: 0 to 1,000",
       "shareOf": "{share} of traffic",
       "backlinksTitle": "{count} backlinks"
@@ -8868,7 +8873,8 @@
         "theirs": "Their position",
         "yours": "Your position",
         "gap": "Places between you",
-        "volume": "Searches a month"
+        "volume": "Searches a month",
+        "theirVisits": "Their visits"
       },
       "empty": "No shared searches here yet."
     },
@@ -9286,7 +9292,6 @@
       "nofollow": "Nofollow",
       "anyFollow": "Followed or not",
       "followFilter": "Link type",
-      "sortLabel": "Sort",
       "notCollected": "Not collected yet. The first list arrives with the next collection after this page was switched on.",
       "asOf": "List from {day}"
     },
@@ -9295,8 +9300,6 @@
       "description": "Which websites link here, and how? Each one with its strongest link: the page it is on, the words used, and whether search engines follow it. Open one for all its links.",
       "descriptionEvery": "Every link to this website, strongest linking website first, as many as its limit keeps: the page it is on, the words used, and whether search engines follow it.",
       "searchPlaceholder": "Find a website, page or anchor…",
-      "sortRank": "Strongest website first",
-      "sortNewest": "Newest first",
       "showLabel": "Which links",
       "showOne": "Strongest link from each website",
       "showEvery": "Every link",
@@ -9318,9 +9321,6 @@
       "title": "Referring domains",
       "description": "Which websites link here? How strong each is, how many links it sends and when it started. Open one for all its links.",
       "searchPlaceholder": "Find a website…",
-      "sortRank": "Strongest first",
-      "sortBacklinks": "Most links first",
-      "sortNewest": "Newest first",
       "columns": {
         "domain": "Website",
         "rank": "Rank",
@@ -9340,10 +9340,8 @@
       "title": "Anchors",
       "description": "What words do other websites use when they link here? Most used first. Open one to see its links.",
       "searchPlaceholder": "Find words…",
-      "sortBacklinks": "Most links first",
-      "sortDomains": "Most websites first",
       "chartTitle": "Most-used anchors",
-      "chartHint": "The anchors on this page of the table, by links.",
+      "chartHint": "The first 15 anchors on this page of the table, by links.",
       "columns": {
         "anchor": "Anchor",
         "backlinks": "Links",
@@ -9363,8 +9361,6 @@
       "searchPlaceholder": "Find an address…",
       "subnetFilter": "Network",
       "anySubnet": "Every network",
-      "sortBacklinks": "Most links first",
-      "sortDomains": "Most websites first",
       "chartTitle": "Networks with most linking websites",
       "chartHint": "Each bar is one network (the first three parts of the address).",
       "seriesDomains": "Linking websites",
@@ -9426,7 +9422,6 @@
     "audit": {
       "problemPages": {
         "none": "No page detail for this crawl yet. It is fetched after each crawl, from the next one on.",
-        "count": "{count, plural, one {# page} other {# pages}} in the newest crawl.",
         "brokenTo": "Broken link to {to} (answered {code})"
       },
       "title": "Site audit",
@@ -9529,10 +9524,6 @@
       "title": "Paid keywords",
       "description": "Which searches does this website buy adverts on? Where each advert sits and what its visits cost.",
       "searchPlaceholder": "Find a search or page…",
-      "sortLabel": "Sort",
-      "sortTraffic": "Most visits first",
-      "sortCost": "Dearest first",
-      "sortVolume": "Most searched first",
       "columns": {
         "keyword": "Search",
         "position": "Advert position",

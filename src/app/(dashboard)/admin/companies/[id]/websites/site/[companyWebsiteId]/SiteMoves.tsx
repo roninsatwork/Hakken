@@ -25,12 +25,9 @@ import { siteBase } from "./siteView";
 export function SiteMoves({
   companyId,
   companyWebsiteId,
-  websiteId,
 }: {
   companyId: Id<"companies">;
   companyWebsiteId: Id<"companyWebsites">;
-  /** Questions are the website's, so rewriting one happens on its record. */
-  websiteId: Id<"websites">;
 }) {
   const t = useTranslations("admin.siteView.moves");
   const data = useQuery(api.websiteMoves.listSiteMoves, { companyWebsiteId });
@@ -95,12 +92,12 @@ export function SiteMoves({
         ? t("slipping.titleGone", { keyword: move.evidence.keyword, from: move.evidence.from })
         : t("slipping.title", { keyword: move.evidence.keyword, from: move.evidence.from, to: move.evidence.to });
       detail = t("slipping.detail", { day: move.evidence.day });
-      actions = <>{go(`${base}/keywords`, t("slipping.look"))}{take(t("slipping.take"))}</>;
+      actions = <>{go(`${base}/searches`, t("slipping.look"))}{take(t("slipping.take"))}</>;
     } else if (move.kind === "DEAD_QUESTION") {
       label = t("kinds.DEAD_QUESTION");
       title = t("dead.title", { prompt: move.evidence.prompt, weeks: move.evidence.weeks });
       detail = t("dead.detail", { asked: move.evidence.asked });
-      actions = <>{go(`/admin/websites/${websiteId}/questions`, t("dead.rewrite"))}{take(t("dead.take"))}{dismiss(t("dead.dismiss"))}</>;
+      actions = <>{go(`${base}/questions`, t("dead.rewrite"))}{take(t("dead.take"))}{dismiss(t("dead.dismiss"))}</>;
     } else {
       label = t("kinds.UNTRACKED_SEARCH");
       title = t("gap.title", { query: move.evidence.query, times: move.evidence.timesSeen });

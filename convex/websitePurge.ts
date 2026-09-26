@@ -7,6 +7,8 @@ import { purgeHoldDataLimits } from "./companyDataLimits";
 import { citedPageOf, recountCitedPages, type CitedPage } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
 import type { Id } from "./_generated/dataModel";
+import { dropCopies } from "./siteListCopies";
+import { deleteAnswerText } from "./siteAnswers";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -112,7 +114,8 @@ async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"comp
     .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(ENTRY_PURGE_BATCH);
   for (const row of gaps) await ctx.db.delete(row._id);
-  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH;
+  const copyLeft = await dropCopies(ctx, "gap", `${companyWebsiteId}`);
+  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH && !copyLeft;
 }
 
 /**
@@ -159,7 +162,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       for (const answer of answers) await ctx.db.delete(answer._id);
       // Its words and its results page, kept for the Sites screens.
       for (const row of await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
-        await ctx.db.delete(row._id);
+        await deleteAnswerText(ctx, row._id);
       }
       for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
         await ctx.db.delete(row._id);
@@ -170,7 +173,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteRivalAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -210,10 +213,10 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteCitedPages")
       .withIndex("by_site_url", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    // How often its questions' answers named others, and others' answers named it.
-    await byWebsite(await ctx.db.query("siteRivalAiDays")
+    // Every company's AI lines about it, and the lines of others that named it.
+    await byWebsite(await ctx.db.query("siteListAiDays")
       .withIndex("by_asker_day", (q) => q.eq("askerWebsiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    await byWebsite(await ctx.db.query("siteRivalAiDays")
+    await byWebsite(await ctx.db.query("siteListAiDays")
       .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteCrawlPages")
       .withIndex("by_site", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
@@ -240,6 +243,10 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_site_traffic", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteCrawls")
       .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // The compact copies the Sites tables count from (`siteListCopies.ts`).
+    for (const [kind, prefix] of [["keywords", `${args.websiteId}:`], ["pages", `${args.websiteId}:`], ["links", `${args.websiteId}`]] as const) {
+      if (await dropCopies(ctx, kind, prefix)) more = true;
+    }
 
     if (more) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteCollectedDataInternal, {
@@ -276,12 +283,15 @@ export const purgeWebsiteListsInternal = internalMutation({
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
     for (const row of questions) {
-      // A question no other website asks takes its answers with it.
-      const askers = await ctx.db
+      // A question no other website asks takes its answers with it. Every
+      // company's rows count, and this website's own — one per company that
+      // asks it — are not another asker.
+      const otherAsker = await ctx.db
         .query("websiteQuestions")
         .withIndex("by_prompt", (q) => q.eq("prompt", row.prompt))
-        .take(2);
-      if (askers.every((asker) => asker.websiteId === args.websiteId)) {
+        .filter((q) => q.neq(q.field("websiteId"), args.websiteId))
+        .first();
+      if (!otherAsker) {
         await ctx.scheduler.runAfter(0, internal.websitePurge.purgeQuestionAnswersInternal, { prompt: row.prompt });
       }
       await ctx.db.delete(row._id);
@@ -292,12 +302,14 @@ export const purgeWebsiteListsInternal = internalMutation({
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
       .take(ENTRY_PURGE_BATCH);
     for (const row of keywords) {
-      // A search no other website tracks takes its results pages with it.
-      const trackers = await ctx.db
+      // A search no other website tracks takes its results pages with it,
+      // counted the same way.
+      const otherTracker = await ctx.db
         .query("websiteKeywords")
         .withIndex("by_keyword", (q) => q.eq("keyword", row.keyword))
-        .take(2);
-      if (trackers.every((tracker) => tracker.websiteId === args.websiteId)) {
+        .filter((q) => q.neq(q.field("websiteId"), args.websiteId))
+        .first();
+      if (!otherTracker) {
         await ctx.scheduler.runAfter(0, internal.websitePurge.purgeSearchResultsInternal, { keyword: row.keyword });
       }
       await ctx.db.delete(row._id);
@@ -361,7 +373,7 @@ export const purgeQuestionAnswersInternal = internalMutation({
       .query("aiAnswerTexts")
       .withIndex("by_prompt_day", (q) => q.eq("prompt", args.prompt))
       .take(ENTRY_PURGE_BATCH);
-    for (const row of texts) await ctx.db.delete(row._id);
+    for (const row of texts) await deleteAnswerText(ctx, row._id);
     const searches = await ctx.db
       .query("promptFanOutQueries")
       .withIndex("by_prompt", (q) => q.eq("prompt", args.prompt))
@@ -428,7 +440,7 @@ async function purgePurchase(
     await ctx.db.delete(row._id);
   }
   const texts = await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
-  for (const row of texts) await ctx.db.delete(row._id);
+  for (const row of texts) await deleteAnswerText(ctx, row._id);
   const searchDays = await ctx.db.query("promptFanOutDays").withIndex("by_pull_query", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
   for (const row of searchDays) await ctx.db.delete(row._id);
   const positions = await ctx.db.query("seoKeywordPositions").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
@@ -451,13 +463,47 @@ async function purgePurchase(
 /** Shared purchases taken per pass: each carries its citations, words and searches. */
 const SHARED_PURCHASES_BATCH = 10;
 
+/** A removed hold's list rows and AI lines deleted per pass. */
+const HOLD_LIST_BATCH = 500;
+
 /**
- * A deleted company's holds. The hosts and everything on them survive it.
- *
- * Only the holds now. It used to take the company's competitor rows too,
- * because a rival was a per-client row; rivalry is a fact about a market and
- * lives on the host, so it outlives whoever was watching — ready for the next
- * company that attaches, which is the point of the lists having moved.
+ * A company's own searches, questions and AI lines for a website it no longer
+ * holds (docs/plans/active/private-tracking-lists-plan.md, V9), a batch at a
+ * time until none is left. What was collected — positions, pages, answers —
+ * stays with the website: it is not this company's to take.
+ */
+export const purgeHoldListsInternal = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const questions = await ctx.db
+      .query("websiteQuestions")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+      .take(HOLD_LIST_BATCH);
+    for (const row of questions) await ctx.db.delete(row._id);
+    const searches = await ctx.db
+      .query("websiteKeywords")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+      .take(HOLD_LIST_BATCH);
+    for (const row of searches) await ctx.db.delete(row._id);
+    const lines = await ctx.db
+      .query("siteListAiDays")
+      .withIndex("by_hold_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+      .take(HOLD_LIST_BATCH);
+    for (const row of lines) await ctx.db.delete(row._id);
+
+    if (questions.length === HOLD_LIST_BATCH || searches.length === HOLD_LIST_BATCH || lines.length === HOLD_LIST_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, args);
+    }
+    return null;
+  },
+});
+
+/**
+ * A deleted company's holds, with each hold's own searches, questions and AI
+ * lines (docs/plans/active/private-tracking-lists-plan.md, V9). The hosts and
+ * everything collected about them survive it; so does rivalry, a fact about a
+ * market that lives on the host.
  */
 export const purgeCompanyWebsitesInternal = internalMutation({
   args: { companyId: v.id("companies") },
@@ -470,6 +516,8 @@ export const purgeCompanyWebsitesInternal = internalMutation({
     for (const row of owned) {
       await purgeHoldMoves(ctx, row._id);
       await purgeHoldDataLimits(ctx, row._id);
+      // Its own searches, questions and AI lines go with it (V9).
+      await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: row._id });
       await ctx.db.delete(row._id);
     }
     // How much it collected per website goes with it.
@@ -485,22 +533,3 @@ export const purgeCompanyWebsitesInternal = internalMutation({
     return null;
   },
 });
-
-// ---------------------------------------------------------------------------
-// Writing — the names a site goes by, and where a company watches it from
-// ---------------------------------------------------------------------------
-
-/**
- * Set the names this website is known by.
- *
- * **Super admin only, and deliberately so.** The list sits on the shared
- * `websites` row, so one operator editing it changes what every company
- * tracking that host sees. Anthony, 2026-09-21: *"let's make it super admin for
- * now as I don't fully understand it yet."* Every edit is audited, including
- * what the list was before, because a shared record that someone blanked needs
- * to be recoverable from the trail rather than from memory.
- *
- * It is on the website rather than on a company's hold of it because two
- * companies would not disagree: anyone tracking a host writes down the same
- * names for it. The dedupe rule's test is disagreement, not ownership.
- */

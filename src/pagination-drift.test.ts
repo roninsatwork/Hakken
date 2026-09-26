@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, test } from 'vitest';
 import { TABLE_PAGE_SIZE } from './ui/components/screens/pagination';
+import { SITE_DEFAULT_ROWS, SITE_ROW_CHOICES } from './app/(dashboard)/app/sites/_components/siteTableRows';
 import {
   repoRoot,
   PAGES_ON_THE_SERVER,
@@ -40,6 +41,107 @@ describe('Pagination And Shared Table Drift', () => {
     expect(offenders, `Non-standard admin pagination found:\n${offenders.join('\n')}`).toEqual([]);
   });
 
+
+  /**
+   * The client's Sites tables are the product requirement the 15-row rule
+   * allows for (Anthony, 2026-09-25; docs/plans/active/sites-table-pages-plan.md):
+   * numbered pages, 25, 50, 75 or 100 rows opening at 25, and an exact total.
+   * Every Sites table takes its rows and footer from the Sites pagers, so none
+   * can drift back to fifteen rows, a cursor walk or a footer of its own.
+   */
+  test('Sites tables page through the Sites pagers, at 25, 50, 75 or 100 rows', () => {
+    expect(SITE_ROW_CHOICES).toEqual([25, 50, 75, 100]);
+    expect(SITE_DEFAULT_ROWS).toBe(25);
+
+    const sitesFiles = walkFiles(path.join(repoRoot, 'src/app/(dashboard)/app/sites'), new Set(['.tsx']))
+      .filter((filePath) => !filePath.endsWith('.test.tsx'));
+    const tables = sitesFiles.filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
+    expect(tables.length).toBeGreaterThanOrEqual(36);
+
+    const offenders = tables.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      const drift = [
+        [/\bTABLE_PAGE_SIZE\b/, 'fifteen rows'],
+        [/\b(usePagedRows|useServerPagedTable|usePaginatedQuery)\b/, 'a pager of its own'],
+        [/mode:\s*"paged"/, 'a footer built by hand'],
+      ].filter(([pattern]) => (pattern as RegExp).test(contents)).map(([, what]) => `${relativePath(filePath)}: ${what}`);
+      if (!/\b(useSitePager|useSiteListPage)\b/.test(contents)) drift.push(`${relativePath(filePath)}: no Sites pager`);
+      return drift;
+    });
+    expect(offenders, `Sites tables drifted off the Sites pagers:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('Sites tables sort by their headings, over the whole list', () => {
+    // docs/plans/active/sites-table-sorting-plan.md §4.8 (Anthony, 2026-09-26:
+    // "it's really key we have consistency across all reporting tables").
+    const sitesRoot = path.join(repoRoot, 'src/app/(dashboard)/app/sites');
+    const tables = walkFiles(sitesRoot, new Set(['.tsx']))
+      .filter((filePath) => !filePath.endsWith('.test.tsx'))
+      .filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
+    expect(tables.length).toBeGreaterThanOrEqual(36);
+
+    // A figure column that does not sort, with why. Only a column that cannot
+    // order the whole list belongs here; the list may shrink, never grow.
+    const unsorted = new Map([
+      ['[siteId]/ai/answers/page.tsx:sources', "the count lives with each answer's whole text, too much to read for every answer"],
+      ['[siteId]/keywords/page.tsx:compared', 'fetched for the rows on screen only'],
+    ]);
+    const seen = new Set<string>();
+
+    const offenders = tables.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      const where = relativePath(filePath);
+      const drift: string[] = [];
+      if (!/\bsort=\{/.test(contents)) drift.push(`${where}: a table whose headings do not sort`);
+      if (/"sortLabel"/.test(contents)) drift.push(`${where}: a sort dropdown`);
+      // Each column from its key to the next: a right-aligned figure must sort.
+      for (const part of contents.split(/(?=\bkey:\s*(?:"[^"]+"|[\w.]+)\s*,)/).slice(1)) {
+        const key = /key:\s*(?:"([^"]+)"|([\w.]+))/.exec(part);
+        const name = key?.[1] ?? key?.[2] ?? '?';
+        if (!/align:\s*"right"/.test(part) || !/\bheader\b/.test(part) || /sortable:\s*true/.test(part)) continue;
+        const local = `${path.relative(sitesRoot, filePath)}:${name}`;
+        if (unsorted.has(local)) seen.add(local);
+        else drift.push(`${where}: the figure column "${name}" does not sort`);
+      }
+      return drift;
+    });
+    const stale = [...unsorted.keys()].filter((entry) => !seen.has(entry)).map((entry) => `${entry}: sorts now, or is gone — take it off the list`);
+    expect([...offenders, ...stale], `Sites tables drifted from sorting by their headings:\n${[...offenders, ...stale].join('\n')}`).toEqual([]);
+  });
+
+  test('Sites tables wear the top bar, and their dropdowns are compact buttons', () => {
+    // Anthony, 2026-09-26, after the Keywords page: "yes please to both" —
+    // the count and download in the table's top bar, and the filters as
+    // compact buttons on the search box's row, on every Sites table.
+    const sitesRoot = path.join(repoRoot, 'src/app/(dashboard)/app/sites');
+    const tables = walkFiles(sitesRoot, new Set(['.tsx']))
+      .filter((filePath) => !filePath.endsWith('.test.tsx'))
+      .filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
+    expect(tables.length).toBeGreaterThanOrEqual(36);
+
+    const offenders = tables.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      const where = relativePath(filePath);
+      const drift: string[] = [];
+      if (!/cardHeader=\{\s*<SiteTableBar\b/.test(contents)) drift.push(`${where}: a table without the Sites top bar`);
+      const selects = contents.match(/<Select\b[^>]*/g) ?? [];
+      if (selects.some((tag) => !/\bchip=/.test(tag))) drift.push(`${where}: a full-width dropdown where a compact button goes`);
+      // The download sits in the bar, never on the filter row: the row's own
+      // braces, read to where they close.
+      const filtersAt = contents.indexOf('filters={');
+      if (filtersAt >= 0) {
+        let depth = 0;
+        let end = filtersAt + 'filters='.length;
+        for (; end < contents.length; end += 1) {
+          if (contents[end] === '{') depth += 1;
+          else if (contents[end] === '}' && --depth === 0) break;
+        }
+        if (/<(ListDownload|TableDownload)\b/.test(contents.slice(filtersAt, end))) drift.push(`${where}: a download on the filter row`);
+      }
+      return drift;
+    });
+    expect(offenders, `Sites tables drifted from their top bar and compact filters:\n${offenders.join('\n')}`).toEqual([]);
+  });
 
   test('admin list pages keep using shared table primitives after cleanup', () => {
     const pages = [

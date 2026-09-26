@@ -244,8 +244,6 @@ export const siteTables = {
     // Pages the site crawl reached, and its technical score (Phase 5).
     crawledPages: maybeNumber,
     onPageScore: maybeNumber,
-    // The site's own questions, answered on this day.
-    ai: v.optional(v.array(engineDayValidator)),
     updatedAt: v.number(),
   }).index("by_site_day", ["websiteId", "locationCode", "day"]),
 
@@ -695,23 +693,38 @@ export const siteTables = {
     .index("by_company", ["companyId"]),
 
   /**
-   * How often the answers to one website's questions named another website,
-   * per engine, per day, from one place: the competitor lines on a site's
-   * charts (D17). A competitor asks nothing, so its AI figures are the owned
-   * site's answers read for its name — and kept per asking website and place,
-   * so one company's questions never count towards another's chart. Written
-   * with the asker's day summaries (`syncDays` in `siteSummaries.ts`).
+   * What the answers to one company's questions said, per engine, per day,
+   * from one place (docs/plans/active/private-tracking-lists-plan.md, §4.4):
+   * the site's own AI line — asked, named, recommended — and a line for every
+   * other website those answers named, where "asked" stays at nought because
+   * the questions were not that site's.
+   *
+   * Kept per list, so one company's questions never count towards another's
+   * figures: two companies asking about one website each get their own lines,
+   * and a company watching it as a competitor reads its own questions' lines.
+   * Written by `syncDays` in `siteSummaries.ts`. It replaced, on 2026-09-26,
+   * the website-wide `siteDaySummaries.ai` and `siteRivalAiDays`, which counted
+   * every company's questions together.
    */
-  siteRivalAiDays: defineTable({
+  siteListAiDays: defineTable({
+    /** The hold whose questions were asked: the company's own website. */
+    companyWebsiteId: v.id("companyWebsites"),
+    /** The website the questions are about. */
     askerWebsiteId: v.id("websites"),
     locationCode: v.number(),
+    /** The website these counts are about: the asker itself, or another it named. */
     websiteId: v.id("websites"),
     day: v.string(),
     ai: v.array(engineDayValidator),
     updatedAt: v.number(),
   })
-    .index("by_asker_site_day", ["askerWebsiteId", "locationCode", "websiteId", "day"])
+    /** One website's line on one list's chart. */
+    .index("by_hold_site_day", ["companyWebsiteId", "locationCode", "websiteId", "day"])
+    /** A list's days, for its latest figures and for removing the hold. */
+    .index("by_hold_day", ["companyWebsiteId", "locationCode", "day"])
+    /** Every list's lines about one asking website, for `syncDays`' window and the website's purge. */
     .index("by_asker_day", ["askerWebsiteId", "locationCode", "day"])
+    /** Lines about a website, for its purge. */
     .index("by_site", ["websiteId"]),
 
   /**
@@ -719,7 +732,7 @@ export const siteTables = {
    * so a SERP page naming ten known sites does not start ten rebuilds of each.
    */
   siteSummaryRequests: defineTable({
-    /** `site:<websiteId>:<locationCode>` or `gap:<companyWebsiteId>`. */
+    /** `site:<websiteId>:<locationCode>`, `gap:<companyWebsiteId>`, or `copy:<kind>:<key>` for a list's compact copy. */
     key: v.string(),
     pending: v.boolean(),
     requestedAt: v.number(),
@@ -730,6 +743,58 @@ export const siteTables = {
      */
     runningSince: v.optional(v.number()),
   }).index("by_key", ["key"]),
+
+  /**
+   * A compact copy of one big Sites list (docs/plans/active/
+   * sites-table-pages-plan.md §5.2): every row, holding only what the list
+   * is searched, filtered and sorted by, so one request can count the whole
+   * list and cut any page from it (`siteListCopies.ts`). This is the copy's
+   * header; the rows are in `siteListCopyParts`, written beside the last copy
+   * and switched to here in one step, so a reader never sees half of two.
+   */
+  siteListCopies: defineTable({
+    /** Which list: "keywords", "pages", "links" or "gap". */
+    kind: v.string(),
+    /** Whose list: `<websiteId>:<locationCode>`, `<websiteId>` or `<companyWebsiteId>`, by kind. */
+    key: v.string(),
+    buildId: v.string(),
+    /** The names of the values each row holds, in order. */
+    fields: v.array(v.string()),
+    /** Rows in the copy, and the parts they are split across. */
+    rows: v.number(),
+    parts: v.number(),
+    /** What the list was held to when it was longer than a copy keeps, else null. */
+    cut: v.union(v.number(), v.null()),
+    /** Facts about the whole list at the time, by kind: the keywords' ranking day and latest check. */
+    meta: v.record(v.string(), v.union(v.string(), v.number(), v.null())),
+    builtAt: v.number(),
+  }).index("by_kind_key", ["kind", "key"]),
+
+  /** A copy's rows, a part at a time: JSON, each part kept under a document's 1 MiB. */
+  siteListCopyParts: defineTable({
+    kind: v.string(),
+    key: v.string(),
+    buildId: v.string(),
+    part: v.number(),
+    data: v.string(),
+  }).index("by_build", ["kind", "key", "buildId", "part"]),
+
+  /**
+   * One light row per stored AI answer — its question, engine, place and day —
+   * so the Full answers list can count and page a question's answers without
+   * reading their text, which can run to many kilobytes each. Written beside
+   * each `aiAnswerTexts` row and removed with it.
+   */
+  aiAnswerIndex: defineTable({
+    textId: v.id("aiAnswerTexts"),
+    pullId: v.id("seoDataPulls"),
+    prompt: v.string(),
+    engine: aiEngineValidator,
+    locationCode: v.number(),
+    day: v.string(),
+  })
+    .index("by_question", ["prompt", "engine", "locationCode", "day"])
+    .index("by_text", ["textId"]),
 
   /**
    * What one collection run for a company cost, and where the money went

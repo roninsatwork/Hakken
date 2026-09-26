@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
-import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { ChartTooltipRow, ChartTooltipSurface, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
@@ -22,6 +21,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart, SiteScatterChart, type SiteScatterGr
 import { formatNumber, toCsv } from "../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
+import { SiteViewSwitch } from "../_components/SiteViewSwitch";
 
 type Point = FunctionReturnType<typeof api.siteCharts.siteSeries>[number]["points"][number];
 type Extras = FunctionReturnType<typeof api.siteOverview.overviewExtras>;
@@ -185,20 +185,12 @@ function PagesByVisits({ extras }: { extras: Extras | undefined }) {
       enoughData={(pages?.total ?? 0) > 0 && series.length > 0}
       controls={
         <div className="flex flex-wrap items-center gap-4">
-          <div role="tablist" aria-label={t("title")} className="inline-flex overflow-hidden rounded-lg border border-border-dim">
-            {(["percentage", "number"] as const).map((entry) => (
-              <Button
-                key={entry}
-                variant="ghost"
-                role="tab"
-                aria-selected={mode === entry}
-                onClick={() => setMode(entry)}
-                className={`rounded-none px-3 py-1.5 text-[12px] ${mode === entry ? "bg-brand/15 text-brand hover:bg-brand/15" : "text-secondary hover:text-foreground"}`}
-              >
-                {t(entry)}
-              </Button>
-            ))}
-          </div>
+          <SiteViewSwitch
+            label={t("title")}
+            options={(["percentage", "number"] as const).map((entry) => ({ value: entry, label: t(entry) }))}
+            value={mode}
+            onChange={setMode}
+          />
           <Checkbox label={t("pages")} checked={showPages} onChange={setShowPages} />
           <Checkbox label={t("visits")} checked={showVisits} onChange={setShowVisits} />
         </div>
@@ -290,52 +282,96 @@ function BrandedSearches({ latest }: { latest: Point | null }) {
 /**
  * Every competitor set up for the site, all of them (Anthony, 2026-09-25:
  * "why all the competitors korda tackle has are not listed here"): where each
- * sits beside it by searches and visits, then the list, most searches shared
- * first. The competitors only found ranking for the same searches are one
- * click on, in Organic competitors.
+ * sits beside it, then the list. The competitors only found ranking for the
+ * same searches are one click on, in Organic competitors.
+ *
+ * Two views of the same competitors (Anthony, 2026-09-26: "a toggler to show
+ * traffic too … with the component changing including the text to match the
+ * intent"). **Searches**: how many searches each ranks for and shares with the
+ * site, most shared first. **Traffic**: the visits each gets from the searches
+ * both rank for — the traffic it is taking from the site's searches — most
+ * first. The chart, the words, the columns and the download all follow the
+ * view; it opens on Searches.
  */
+type CompetitorView = "searches" | "traffic";
+
 function Competitors({ extras }: { extras: Extras | undefined }) {
   const t = useTranslations("sites.overview.competitors");
   const siteId = useSiteId();
   const site = useSite();
   const listHref = useSiteListHref(siteId);
   const recordHref = useSiteRecordHref(siteId);
+  const [view, setView] = useState<CompetitorView>("searches");
+  const traffic = view === "traffic";
   const competitors = extras?.competitors;
-  const rivals = competitors?.rivals ?? [];
+  const bySearches = competitors?.rivals ?? [];
+  // Most visits on shared searches first; those not known after, biggest first.
+  const rivals = traffic
+    ? [...bySearches].sort((left, right) =>
+      (right.sharedVisits ?? -1) - (left.sharedVisits ?? -1) || (right.visits ?? -1) - (left.visits ?? -1))
+    : bySearches;
   const yourKeywords = competitors?.you.keywords ?? 0;
+  const yourVisits = competitors?.you.visits ?? 0;
   const you = t("you", { host: site?.host ?? "" });
+  // Traffic: across, the visits from searches both rank for — all of the
+  // site's own; up, the visits in all. A competitor whose visits on the shared
+  // searches are not known has no place across, and is left off the chart.
   const groups: SiteScatterGroup[] = [
     {
       key: "you",
       name: you,
       colour: SITE_SERIES_COLOURS[0],
       labelled: true,
-      points: [{ x: competitors?.you.keywords ?? 0, y: competitors?.you.visits ?? 0, label: you }],
+      points: [traffic
+        ? { x: yourVisits, y: yourVisits, label: you }
+        : { x: yourKeywords, y: yourVisits, label: you }],
     },
     {
       key: "rivals",
       name: t("title"),
       colour: CHART_SERIES_BLUE,
       labelled: true,
-      points: rivals.map((row) => ({ x: row.keywords ?? 0, y: row.visits ?? 0, label: row.host })),
+      points: rivals.map((row) => (traffic
+        ? { x: row.sharedVisits ?? 0, y: row.visits ?? 0, label: row.host }
+        : { x: row.keywords ?? 0, y: row.visits ?? 0, label: row.host })),
     },
   ];
-  const ofYours = (shared: number | null) => (shared === null ? "–" : percent(shared, yourKeywords));
+  const share = (part: number | null, whole: number) => (part === null ? "–" : percent(part, whole));
+  const overlap = (row: (typeof rivals)[number]) => (traffic
+    ? (row.sharedVisits === null ? null : row.sharedVisits / Math.max(1, yourVisits))
+    : (row.shared === null ? null : row.shared / Math.max(1, yourKeywords)));
+  const visits = (value: number | null) => (value === null ? null : Math.round(value));
+  const numberCell = (value: number | null, strong = false) => (
+    <span className={`font-mono text-[12px] ${strong ? "text-foreground" : "text-secondary"}`}>{formatNumber(value)}</span>
+  );
 
   return (
     <SiteChartCard
       dated={false}
       title={t("title")}
-      hint={t("hint", { count: rivals.length, host: site?.host ?? "" })}
-      exportName={`${site?.host ?? "site"}-competitors`}
-      csv={() => toCsv(
-        [t("columns.website"), t("columns.shared"), t("columns.ofYours"), t("columns.theirSearches"), t("columns.theirVisits")],
-        rivals.map((row) => [row.host, row.shared, row.shared === null ? null : ofYours(row.shared), row.keywords, row.visits === null ? null : Math.round(row.visits)]),
+      hint={t(traffic ? "hintTraffic" : "hint", { count: rivals.length, host: site?.host ?? "" })}
+      controls={(
+        <SiteViewSwitch
+          label={t("view")}
+          options={(["searches", "traffic"] as const).map((entry) => ({ value: entry, label: t(`views.${entry}`) }))}
+          value={view}
+          onChange={setView}
+        />
       )}
+      exportName={`${site?.host ?? "site"}-competitors-${view}`}
+      csv={() => (traffic
+        ? toCsv(
+          [t("columns.website"), t("columns.sharedVisits"), t("columns.ofYourVisits"), t("columns.theirVisits"), t("columns.theirSearches")],
+          rivals.map((row) => [row.host, visits(row.sharedVisits), row.sharedVisits === null ? null : share(row.sharedVisits, yourVisits), visits(row.visits), row.keywords]),
+        )
+        : toCsv(
+          [t("columns.website"), t("columns.shared"), t("columns.ofYours"), t("columns.theirSearches"), t("columns.theirVisits")],
+          rivals.map((row) => [row.host, row.shared, row.shared === null ? null : share(row.shared, yourKeywords), row.keywords, visits(row.visits)]),
+        ))}
       enoughData={rivals.length > 0}
     >
       <div className="flex flex-col gap-5">
-        <SiteScatterChart groups={groups} xLabel={t("xAxis")} yLabel={t("yAxis")} height={360} />
+        <SiteScatterChart groups={groups} xLabel={t(traffic ? "xAxisTraffic" : "xAxis")} yLabel={t("yAxis")} height={360} />
         <CompactList
           rows={rivals}
           rowKey={(row) => row.siteId}
@@ -350,21 +386,33 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
             {
               key: "overlap",
               header: t("columns.overlap"),
-              cell: (row) => (
-                <span className="flex h-1.5 w-40 overflow-hidden rounded-full bg-hover" aria-hidden="true">
-                  {row.shared !== null
-                    ? <span className="block h-full" style={{ width: `${Math.min(100, (row.shared / Math.max(1, yourKeywords)) * 100)}%`, background: CHART_SERIES_BLUE }} />
-                    : null}
-                </span>
-              ),
+              cell: (row) => {
+                const part = overlap(row);
+                return (
+                  <span className="flex h-1.5 w-40 overflow-hidden rounded-full bg-hover" aria-hidden="true">
+                    {part !== null ? <span className="block h-full" style={{ width: `${Math.min(100, part * 100)}%`, background: CHART_SERIES_BLUE }} /> : null}
+                  </span>
+                );
+              },
             },
-            { key: "shared", header: t("columns.shared"), align: "right", className: "whitespace-nowrap", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.shared)}</span> },
-            { key: "ofYours", header: t("columns.ofYours"), align: "right", className: "whitespace-nowrap", cell: (row) => <span className="font-mono text-[12px] text-secondary">{ofYours(row.shared)}</span> },
-            { key: "theirSearches", header: t("columns.theirSearches"), align: "right", className: "whitespace-nowrap", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.keywords)}</span> },
-            { key: "theirVisits", header: t("columns.theirVisits"), align: "right", className: "whitespace-nowrap", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.visits)}</span> },
+            ...(traffic
+              ? [
+                { key: "sharedVisits", header: t("columns.sharedVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.sharedVisits, true) },
+                { key: "ofYourVisits", header: t("columns.ofYourVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => <span className="font-mono text-[12px] text-secondary">{share(row.sharedVisits, yourVisits)}</span> },
+                { key: "theirVisits", header: t("columns.theirVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.visits) },
+                { key: "theirSearches", header: t("columns.theirSearches"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.keywords) },
+              ]
+              : [
+                { key: "shared", header: t("columns.shared"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.shared, true) },
+                { key: "ofYours", header: t("columns.ofYours"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => <span className="font-mono text-[12px] text-secondary">{share(row.shared, yourKeywords)}</span> },
+                { key: "theirSearches", header: t("columns.theirSearches"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.keywords) },
+                { key: "theirVisits", header: t("columns.theirVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.visits) },
+              ]),
           ]}
         />
-        {rivals.some((row) => row.shared === null) ? <p className="text-[12px] text-muted">{t("sharedUnknown")}</p> : null}
+        {traffic
+          ? (rivals.some((row) => row.sharedVisits === null) ? <p className="text-[12px] text-muted">{t("sharedVisitsUnknown")}</p> : null)
+          : (rivals.some((row) => row.shared === null) ? <p className="text-[12px] text-muted">{t("sharedUnknown")}</p> : null)}
         <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
           <span className="text-secondary">{t("found", { count: formatNumber(competitors?.found ?? 0) })}</span>
           <RecordLinkCell href={listHref("competitors/organic", { kind: "COMPETITOR" })} className="text-[12px] text-info">{t("seeAll")} →</RecordLinkCell>

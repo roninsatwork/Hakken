@@ -10,19 +10,40 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
-import { useSiteParam, useSiteSearch, useSiteTablePage } from "../../../_components/useSiteParam";
+import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSitePager } from "../../../_components/useSitePagedTable";
+import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 const VERDICTS = ["TOP_THREE", "PAGE_ONE", "SLIPPING", "RANKING", "TOO_NEW", "NOT_FOUND", "NEVER_RANKED", "NOT_CHECKED"] as const;
 type Verdict = (typeof VERDICTS)[number];
+
+type Tracked = { keyword: string; isActive: boolean; lastPosition: number | null; previousPosition: number | null; bestPosition: number | null; lastCheckedDay: string | null };
+
+/**
+ * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
+ * search A to Z; the position — the order it opens on — and the best from the
+ * top; the biggest rise first; the newest checked first. Paused searches stay
+ * after the ones being checked in every order, as they always have.
+ */
+const SORTS: SiteSortColumns<Tracked, "search" | "position" | "change" | "best" | "checked"> = {
+  search: { value: (row) => row.keyword, first: "asc" },
+  position: { value: (row) => row.lastPosition, first: "asc" },
+  change: { value: (row) => (row.lastPosition !== null && row.previousPosition !== null ? row.previousPosition - row.lastPosition : null), first: "desc" },
+  best: { value: (row) => row.bestPosition, first: "asc" },
+  checked: { value: (row) => row.lastCheckedDay, first: "desc" },
+};
+const keywordOf = (row: Tracked) => row.keyword;
+const pausedLast = (row: Tracked) => (row.isActive ? 0 : 1);
 const VERDICT_TONES: Record<Verdict, StatusTone> = {
   TOP_THREE: "success",
   PAGE_ONE: "success",
@@ -47,7 +68,6 @@ export default function SiteSearchesPage() {
   const range = useSiteRange();
   const [search, setSearch, settled] = useSiteSearch();
   const [verdict, setVerdict] = useSiteParam<Verdict | "">("verdict", "", VERDICTS);
-  const [page, setPage] = useSiteTablePage();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
 
@@ -59,9 +79,10 @@ export default function SiteSearchesPage() {
   );
 
   const term = settled.toLowerCase();
-  const matching = rows?.filter((row) => (!term || row.keyword.includes(term)) && (!verdict || row.verdict === verdict));
-  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
-  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  const matches = wordStartMatcher(term);
+  const matching = rows?.filter((row) => (!matches || matches(row.keyword)) && (!verdict || row.verdict === verdict));
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "position", name: keywordOf, group: pausedLast });
+  const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   const days = [...new Set((positions ?? []).flatMap((line) => line.points.map((point) => point.day)))].sort();
   const chartRows = days.map((day) => ({
@@ -93,42 +114,36 @@ export default function SiteSearchesPage() {
       </SiteChartCard>
 
       <DataTable
-        rows={shown}
+        rows={pager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select aria-label={t("verdictFilter")} value={verdict} onChange={(value) => setVerdict(value as Verdict | "")}>
+            <Select chip={{ label: t("verdictFilter"), choice: verdict ? t(`verdicts.${verdict}`) : null }} value={verdict} onChange={(value) => setVerdict(value as Verdict | "")}>
             <option value="">{t("anyVerdict")}</option>
             {VERDICTS.map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
           </Select>
-            <ListDownload fileName={`${site?.host ?? "site"}-searches`} rows={matching} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.lastPosition }, { header: t("columns.best"), value: (row) => row.bestPosition }, { header: t("columns.verdict"), value: (row) => t(`verdicts.${row.verdict}`) }, { header: t("columns.lastChecked"), value: (row) => row.lastCheckedDay }]} />
           </>
         }
+        cardHeader={<SiteTableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-searches`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.lastPosition }, { header: t("columns.best"), value: (row) => row.bestPosition }, { header: t("columns.verdict"), value: (row) => t(`verdicts.${row.verdict}`) }, { header: t("columns.lastChecked"), value: (row) => row.lastCheckedDay }]} />} />}
         empty={{ icon: <Search className="h-8 w-8 text-muted/30" />, label: term || verdict ? t("noMatch") : t("empty") }}
-        footer={{
-          mode: "paged",
-          page,
-          totalPages,
-          totalCount: matching?.length ?? 0,
-          pageSize: TABLE_PAGE_SIZE,
-          isLoading: rows === undefined,
-          onPageChange: setPage,
-        }}
+        footer={pager.footer}
+        sort={tableSort}
         columns={[
-          { key: "search", header: t("columns.search"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
-          { key: "position", header: t("columns.position"), align: "right", cell: (row) => (row.lastCheckedDay === null ? <span className="text-[12px] text-muted">{t("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
+          { key: "search", header: t("columns.search"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => (row.lastCheckedDay === null ? <span className="text-[12px] text-muted">{t("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
           {
             key: "change",
             header: t("columns.change"),
             align: "right",
+            sortable: true,
             cell: (row) => row.lastPosition !== null && row.previousPosition !== null
               ? <ChangeCell change={row.previousPosition - row.lastPosition} />
               : <span className="text-muted">–</span>,
           },
-          { key: "best", header: t("columns.best"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
+          { key: "best", header: t("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
           {
             key: "verdict",
             header: t("columns.verdict"),
@@ -136,7 +151,7 @@ export default function SiteSearchesPage() {
               ? <StatusPill tone={VERDICT_TONES[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusPill>
               : <StatusPill tone="neutral">{t("paused")}</StatusPill>,
           },
-          { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
+          { key: "checked", header: t("columns.lastChecked"), sortable: true, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
         ]}
       />
     </div>

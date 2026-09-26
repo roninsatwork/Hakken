@@ -1,13 +1,16 @@
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listWebsiteId, myRivals, requireMySite, sitePage } from "./siteAccess";
+import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { holdQuestions } from "./holdLists";
+import { gapCopyKey, readListCopy } from "./siteListCopies";
+import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { wordStartMatcher } from "./utils/wordStarts";
 import { answerPlace } from "./seoAiEngines";
 import { latestFigures } from "./siteFigures";
 import { searchStandings } from "./siteGoogle";
-import { rankIntentValidator } from "./utils/siteShapes";
+import { rankIntentValidator, type RankIntent } from "./utils/siteShapes";
 import { rivalVerdict, rivalVerdictValidator } from "./utils/trackingVerdicts";
 import { loadQuestionRows, MAX_LIST, untrackedNamed } from "./websiteSiteRows";
 
@@ -25,8 +28,20 @@ type Reader = { db: QueryCtx["db"] };
 /** Discovered competitors per hold; DataForSEO returns a few hundred at most. */
 const MAX_DISCOVERED = 300;
 
-/** How far a narrowed gap read may look for one page of matches. */
-const MAX_ROWS_READ = 1_000;
+/**
+ * The content gap's copy (`siteListCopyBuilders.ts` writes it). Each row's
+ * rivals are flattened as [rival, position, rival, position, …], a rival being
+ * its place in the copy's `rivalIds`, so the rivals no longer tracked can be
+ * left out and the rest recounted when the list is read.
+ */
+export const GAP_COPY_FIELDS = ["id", "keyword", "volume", "intent", "rivals", "day"] as const;
+
+/**
+ * The gaps a copy keeps, most-searched first. A gap can in theory reach 25
+ * rivals × 5,000 searches; past this, the screen says the list is longer
+ * (docs/plans/active/sites-table-pages-plan.md §5.2, T11).
+ */
+export const GAP_COPY_MAX = 50_000;
 
 /** Searches a rival is compared on. Enough to rank it; bounded so a big list stays one query. */
 const COMPARED_SEARCHES = 100;
@@ -56,7 +71,7 @@ export const listRivals = tenantQuery({
     const [ours, rivals, questions] = await Promise.all([
       searchStandings(ctx, site),
       myRivals(ctx, site),
-      ctx.db.query("websiteQuestions").withIndex("by_website", (q) => q.eq("websiteId", askerId)).take(MAX_LIST),
+      holdQuestions(ctx, listHold(site), MAX_LIST),
     ]);
     const compared = ours
       .filter((row) => row.isActive && row.stats?.lastCheckedDay)
@@ -258,18 +273,35 @@ export const marketMap = tenantQuery({
 
 /**
  * Searches the tracked rivals rank for and this site does not, most-searched
- * first, from the gap worked out for this company's hold (`siteContentGap.ts`).
+ * first, from the gap worked out for this company's hold (`siteContentGap.ts`),
+ * counted from its compact copy. A rival no longer tracked is left out of each
+ * search's rivals and the rest recounted, so "at least two rivals" means two
+ * the company still tracks.
  */
+/**
+ * Content gap's columns that sort, every one worked out for every search
+ * before the page is cut: the search A to Z, the most searched first, the
+ * most competitors ranking first, and the best of their positions from the top.
+ */
+const GAP_SORTS: ListSorts<{ keyword: string; volume: number | null; rivalsRanking: number; bestRivalPosition: number }, "keyword" | "volume" | "rivals" | "best"> = {
+  keyword: { value: (row) => row.keyword, first: "asc" },
+  volume: { value: (row) => row.volume, first: "desc" },
+  rivals: { value: (row) => row.rivalsRanking, first: "desc" },
+  best: { value: (row) => row.bestRivalPosition, first: "asc" },
+};
+
 export const listContentGap = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
-    paginationOpts: paginationOptsValidator,
+    ...listPageArgs,
     search: v.optional(v.string()),
     intent: v.optional(rankIntentValidator),
     /** Only searches at least this many rivals rank for. */
     minRivals: v.optional(v.number()),
+    sort: v.optional(v.union(v.literal("keyword"), v.literal("volume"), v.literal("rivals"), v.literal("best"))),
+    direction: sortDirectionArg,
   },
-  returns: paginationResultValidator(v.object({
+  returns: listPageResult(v.object({
     _id: v.id("siteContentGaps"),
     keyword: v.string(),
     volume: v.union(v.number(), v.null()),
@@ -282,58 +314,39 @@ export const listContentGap = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
+    const copy = await readListCopy(ctx, "gap", gapCopyKey(args.siteId), GAP_COPY_FIELDS);
+    if (!copy) return preparingPage(args.rows);
     const rivals = await myRivals(ctx, site);
-    const hosts = new Map<Id<"websites">, string>(rivals.map((rival) => [rival.website._id, rival.website.displayHost]));
-    const term = args.search?.trim();
-    const intent = args.intent;
-    const minRivals = args.minRivals ?? 1;
+    const hosts = new Map<string, string>(rivals.map((rival) => [rival.website._id, rival.website.displayHost]));
+    const rivalIds = JSON.parse(typeof copy.meta.rivalIds === "string" ? copy.meta.rivalIds : "[]") as string[];
+    const matches = wordStartMatcher(args.search);
+    const minRivals = Math.max(1, args.minRivals ?? 1);
 
-    const result = term
-      ? await ctx.db
-        .query("siteContentGaps")
-        .withSearchIndex("search_keyword", (q) => {
-          const search = q.search("keyword", term).eq("companyWebsiteId", args.siteId);
-          return intent ? search.eq("intent", intent) : search;
-        })
-        .filter((q) => q.gte(q.field("rivalsRanking"), minRivals))
-        .paginate(sitePage(args.paginationOpts))
-      : intent
-        ? await ctx.db
-          .query("siteContentGaps")
-          .withIndex("by_hold_intent_volume", (q) => q.eq("companyWebsiteId", args.siteId).eq("intent", intent))
-          .order("desc")
-          .filter((q) => q.gte(q.field("rivalsRanking"), minRivals))
-          .paginate({ ...sitePage(args.paginationOpts), maximumRowsRead: MAX_ROWS_READ })
-        : minRivals > 1
-          ? await ctx.db
-            .query("siteContentGaps")
-            .withIndex("by_hold_rivals_volume", (q) => q.eq("companyWebsiteId", args.siteId).gte("rivalsRanking", minRivals))
-            .order("desc")
-            .paginate(sitePage(args.paginationOpts))
-          : await ctx.db
-            .query("siteContentGaps")
-            .withIndex("by_hold_volume", (q) => q.eq("companyWebsiteId", args.siteId))
-            .order("desc")
-            .paginate(sitePage(args.paginationOpts));
-
-    return {
-      ...result,
-      page: result.page.map((row) => ({
-        _id: row._id,
-        keyword: row.keyword,
-        volume: row.volumeKnown ? row.volume : null,
-        intent: row.intent,
-        rivalsRanking: row.rivalsRanking,
-        bestRivalPosition: row.bestRivalPosition,
-        // Only the rivals this company still tracks: one removed since the
-        // last rebuild is not named on the screen.
-        rivals: row.rivals.flatMap((rival) => {
-          const host = hosts.get(rival.websiteId);
-          return host ? [{ websiteId: rival.websiteId, host, position: rival.position }] : [];
-        }),
-        day: new Date(row.updatedAt).toISOString().slice(0, 10),
-      })),
-    };
+    const list = copy.rows.flatMap(([id, keyword, volume, intent, flat, day]) => {
+      if (args.intent && intent !== args.intent) return [];
+      if (matches && !matches(keyword as string)) return [];
+      // Only the rivals this company still tracks: one removed since the
+      // gap was worked out is not named, nor counted.
+      const tracked: Array<{ websiteId: Id<"websites">; host: string; position: number }> = [];
+      const pairs = flat as number[];
+      for (let index = 0; index < pairs.length; index += 2) {
+        const websiteId = rivalIds[pairs[index]];
+        const host = websiteId ? hosts.get(websiteId) : undefined;
+        if (host) tracked.push({ websiteId: websiteId as Id<"websites">, host, position: pairs[index + 1] });
+      }
+      if (tracked.length < minRivals) return [];
+      return [{
+        _id: id as Id<"siteContentGaps">,
+        keyword: keyword as string,
+        volume: volume as number | null,
+        intent: intent as RankIntent,
+        rivalsRanking: tracked.length,
+        bestRivalPosition: Math.min(...tracked.map((rival) => rival.position)),
+        rivals: tracked,
+        day: day as string,
+      }];
+    }).sort(listOrder(GAP_SORTS, args.sort ?? "volume", args.direction, (row) => row.keyword));
+    return pageOfList(list, args.page, args.rows, copy.cut);
   },
 });
 
