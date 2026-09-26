@@ -11,7 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { formatNumber } from "../../../_components/siteFormat";
@@ -132,7 +132,8 @@ export default function SiteRivalPage() {
             key: "keyword",
             header: t("columns.keyword"),
             sortable: true,
-            cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
+            className: CUT_COLUMN.only,
+            cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
           { key: "theirs", header: t("columns.theirs"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.theirPosition}</span> },
           { key: "yours", header: t("columns.yours"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.yourPosition}</span> },

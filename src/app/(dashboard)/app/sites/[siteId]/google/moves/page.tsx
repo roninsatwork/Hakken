@@ -7,7 +7,7 @@ import { ArrowUpDown } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
@@ -99,7 +99,7 @@ export default function SiteMovesPage() {
         footer={table.footer}
         sort={order.tableSort}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "fromTo",
             header: t("columns.fromTo"),
@@ -117,6 +117,7 @@ export default function SiteMovesPage() {
           {
             key: "page",
             header: t("columns.page"),
+            className: CUT_COLUMN.second,
             cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <span className="text-muted">–</span>),
           },
           { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },

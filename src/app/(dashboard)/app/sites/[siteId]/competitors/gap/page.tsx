@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { GAP_KEYWORDS_PER_RIVAL } from "@/convex/utils/siteShapes";
-import { IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -88,7 +88,7 @@ export default function SiteContentGapPage() {
         footer={table.footer}
         sort={order.tableSort}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "intent", header: t("columns.intent"), cell: (row) => <IntentPill intent={row.intent} /> },
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.volume)}</span> },
           {

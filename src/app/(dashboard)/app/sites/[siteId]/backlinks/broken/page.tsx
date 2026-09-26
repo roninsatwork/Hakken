@@ -6,7 +6,7 @@ import { Unlink } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { ExternalUrlCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, ExternalUrlCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatNumber } from "../../../_components/siteFormat";
@@ -55,14 +55,15 @@ export default function SiteBrokenBacklinksPage() {
             key: "from",
             header: t("columns.from"),
             sortable: true,
+            className: CUT_COLUMN.first,
             cell: (row) => (
-              <span className="flex max-w-[34ch] flex-col gap-0.5">
-                <RecordLinkCell href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
-                <ExternalUrlCell url={row.urlFrom} />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <RecordLinkCell cut href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
+                <ExternalUrlCell cut url={row.urlFrom} />
               </span>
             ),
           },
-          { key: "to", header: t("columns.to"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.pageTo })} className="break-all text-[12px] text-info">{row.pageTo || "/"}</RecordLinkCell> },
+          { key: "to", header: t("columns.to"), className: CUT_COLUMN.second, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "page", page: row.pageTo })} className="text-[12px] text-info">{row.pageTo || "/"}</RecordLinkCell> },
           { key: "code", header: t("columns.code"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.statusCode ?? "–"}</span> },
           { key: "anchor", header: t("columns.anchor"), cell: (row) => <span className="max-w-[28ch] text-[12px] text-secondary">{row.anchor ?? "–"}</span> },
           { key: "domainRank", header: t("columns.domainRank"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainRank)}</span> },

@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatDay } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -99,7 +99,8 @@ export default function SiteAuditProblemPage() {
             key: "page",
             header: t("columns.page"),
             sortable: true,
-            cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
+            className: CUT_COLUMN.first,
+            cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
           },
           { key: "answered", header: t("columns.answered"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.statusCode ?? "–"}</span> },
           ...(brokenLinks

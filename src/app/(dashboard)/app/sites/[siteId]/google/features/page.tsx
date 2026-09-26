@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
@@ -135,7 +135,7 @@ export default function SiteFeaturesPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "search", header: t("columns.search"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "search", header: t("columns.search"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           {
             key: "features",
             header: t("columns.features"),

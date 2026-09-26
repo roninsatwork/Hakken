@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { PageTypePill, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, PageTypePill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
@@ -119,7 +119,8 @@ export default function SitePagesPage() {
             key: "page",
             header: t("columns.page"),
             sortable: true,
-            cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
+            className: CUT_COLUMN.first,
+            cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
           },
           { key: "type", header: t("columns.type"), cell: (row) => <PageTypePill type={row.pageType} /> },
           {

@@ -6,7 +6,7 @@ import { Megaphone } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatCpc, formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -52,7 +52,7 @@ export default function SitePaidKeywordsPage() {
         footer={table.footer}
         sort={order.tableSort}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.only, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           { key: "cpc", header: t("columns.cpc"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span> },

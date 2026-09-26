@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -69,7 +69,7 @@ export default function SiteSourcesPage() {
         footer={table.footer}
         sort={tableSort}
         columns={[
-          { key: "page", header: t("columns.page"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page || "/"}</RecordLinkCell> },
+          { key: "page", header: t("columns.page"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page || "/"}</RecordLinkCell> },
           {
             key: "engines",
             header: t("columns.engines"),

@@ -12,14 +12,7 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import {
-  ChangeCell,
-  ExternalUrlCell,
-  LinkStatusPill,
-  PageTypePill,
-  PositionCell,
-  RecordLinkCell,
-} from "../../../../_components/SiteCells";
+import { CUT_COLUMN, ChangeCell, ExternalUrlCell, LinkStatusPill, PageTypePill, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { SiteFigure } from "../../../../_components/SiteFigure";
 import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
@@ -209,7 +202,8 @@ export default function SitePageRecordPage() {
                   key: "keyword",
                   header: tk("columns.keyword"),
                   sortable: true,
-                  cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
+                  className: CUT_COLUMN.only,
+                  cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
                 },
                 { key: "position", header: tk("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
                 { key: "change", header: tk("columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },

@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
@@ -99,10 +99,11 @@ export default function SiteSearchedPage() {
             key: "search",
             header: t("columns.search"),
             sortable: true,
+            className: CUT_COLUMN.first,
             cell: (row) => (
-              <span className="flex flex-col gap-0.5">
-                <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.query })}>{row.queryText}</RecordLinkCell>
-                <span className="text-[11px] text-muted">{t("fromQuestion", { question: row.prompt })}</span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.query })}>{row.queryText}</RecordLinkCell>
+                <span title={row.prompt} className="truncate text-[11px] text-muted">{t("fromQuestion", { question: row.prompt })}</span>
               </span>
             ),
           },

@@ -11,7 +11,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
@@ -129,7 +129,7 @@ export default function SiteMentionsPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "question", header: t("columns.question"), sortable: true, cell: (row) => <RecordLinkCell href={answersHref(row)}>{row.prompt}</RecordLinkCell> },
+          { key: "question", header: t("columns.question"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={answersHref(row)}>{row.prompt}</RecordLinkCell> },
           { key: "engine", header: t("columns.engine"), cell: (row) => <span className="text-[12px] text-secondary">{engineLabel(row.engine)}</span> },
           {
             key: "latest",

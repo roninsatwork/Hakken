@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
@@ -132,7 +132,7 @@ export default function SiteSearchesPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "search", header: t("columns.search"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "search", header: t("columns.search"), sortable: true, className: CUT_COLUMN.only, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => (row.lastCheckedDay === null ? <span className="text-[12px] text-muted">{t("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
           {
             key: "change",

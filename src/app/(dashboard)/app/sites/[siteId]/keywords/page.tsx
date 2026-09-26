@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CompareControl } from "../../_components/CompareControl";
-import { ChangeCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
+import { CUT_COLUMN, ChangeCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
 import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
@@ -177,7 +177,8 @@ export default function SiteKeywordsPage() {
             key: "keyword",
             header: t("columns.keyword"),
             sortable: true,
-            cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
+            className: CUT_COLUMN.first,
+            cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
           ...(compareDay
@@ -220,6 +221,7 @@ export default function SiteKeywordsPage() {
           {
             key: "page",
             header: t("columns.page"),
+            className: CUT_COLUMN.second,
             cell: (row) => row.page
               ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} />
               : <span className="text-muted">–</span>,

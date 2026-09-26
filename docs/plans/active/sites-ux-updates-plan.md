@@ -436,3 +436,9 @@ review. Step 7 (charts): unchanged, as planned.
   an answer's own screen) now read by the place the question was asked from
   (`askedPlace`, `convex/siteAccess.ts`), as the admin report already did. On
   ronins.co.uk the page went from 4 searches to 6. No data changed.
+- **2026-09-26** — Long keywords and page addresses are cut short with "…" on
+  one line, the whole of each on hover, rather than wrapped onto a second line
+  at laptop width (Anthony: "yes lets do this", as the drawing showed). Every
+  Sites table's keyword, search, question and page-address columns keep a
+  share of the table (`CUT_COLUMN`, `SiteCells.tsx`) and give the rest to the
+  figures beside them; All backlinks' two-line cells cut each line.

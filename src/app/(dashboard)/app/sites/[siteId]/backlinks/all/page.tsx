@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
@@ -95,20 +95,22 @@ export default function SiteAllBacklinksPage() {
             key: "from",
             header: t("columns.from"),
             sortable: true,
+            className: CUT_COLUMN.first,
             cell: (row) => (
-              <span className="flex max-w-[34ch] flex-col gap-0.5">
-                <RecordLinkCell href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
-                <ExternalUrlCell url={row.urlFrom} />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <RecordLinkCell cut href={recordHref({ kind: "domain", domain: row.domainFrom })}>{row.domainFrom}</RecordLinkCell>
+                <ExternalUrlCell cut url={row.urlFrom} />
               </span>
             ),
           },
           {
             key: "anchor",
             header: t("columns.anchor"),
+            className: CUT_COLUMN.second,
             cell: (row) => (
-              <span className="flex max-w-[34ch] flex-col gap-0.5">
-                <span className="text-[12px] text-secondary">{row.anchor ?? <span className="text-muted">{t("noAnchor")}</span>}</span>
-                <span className="break-all text-[11px] text-muted">→ {row.pageTo}</span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span title={row.anchor ?? undefined} className="truncate text-[12px] text-secondary">{row.anchor ?? <span className="text-muted">{t("noAnchor")}</span>}</span>
+                <span title={row.pageTo} className="truncate text-[11px] text-muted">→ {row.pageTo}</span>
               </span>
             ),
           },

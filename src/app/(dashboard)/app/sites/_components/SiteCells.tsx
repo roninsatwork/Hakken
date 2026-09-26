@@ -59,10 +59,12 @@ export function PageCell({ page, was }: { page: string; was?: string | null }) {
 /** A ranking page as a link to its own screen, with the page it ranked with before when that changed. */
 export function PageLinkCell({ href, page, was }: { href: string; page: string; was?: string | null }) {
   const t = useTranslations("sites.keywords");
+  const before = was && was !== page ? t("wasPage", { page: was }) : null;
   return (
-    <span className="flex flex-col">
-      <RecordLinkCell href={href} className="break-all text-[12px] text-info">{page || "/"}</RecordLinkCell>
-      {was && was !== page ? <span className="break-all text-[11px] text-muted line-through">{t("wasPage", { page: was })}</span> : null}
+    // Cut short on one line each, the whole address on hover (`CUT_COLUMN`).
+    <span className="flex min-w-0 flex-col">
+      <RecordLinkCell href={href} cut className="text-[12px] text-info">{page || "/"}</RecordLinkCell>
+      {before ? <span title={before} className="truncate text-[11px] text-muted line-through">{before}</span> : null}
     </span>
   );
 }
@@ -135,9 +137,15 @@ export function LinkStatusPill({ status }: { status: "LIVE" | "NEW" | "LOST" }) 
 }
 
 /** A page on another website, as a link a person can follow, never one a search engine should. */
-export function ExternalUrlCell({ url, label }: { url: string; label?: string }) {
+export function ExternalUrlCell({ url, label, cut = false }: { url: string; label?: string; cut?: boolean }) {
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="break-all text-[12px] text-info hover:underline">
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      title={cut ? url : undefined}
+      className={`${cut ? "block truncate" : "break-all"} text-[12px] text-info hover:underline`}
+    >
       {label ?? url}
     </a>
   );
@@ -149,14 +157,37 @@ export function ExternalUrlCell({ url, label }: { url: string; label?: string })
  * click anywhere else on the row opens the same screen through the table's
  * `onRowClick`; this one stops there so the screen is not opened twice.
  */
-export function RecordLinkCell({ href, children, className = "text-[13px] text-foreground" }: {
+export function RecordLinkCell({ href, children, className = "text-[13px] text-foreground", cut = false }: {
   href: string;
   children: ReactNode;
   className?: string;
+  /** Cut short with "…" on one line, the whole of it on hover — in a `CUT_COLUMN`. */
+  cut?: boolean;
 }) {
   return (
-    <Link href={href} onClick={(event) => event.stopPropagation()} className={`${className} hover:underline`}>
+    <Link
+      href={href}
+      onClick={(event) => event.stopPropagation()}
+      title={cut && typeof children === "string" ? children : undefined}
+      className={`${cut ? "block truncate " : ""}${className} hover:underline`}
+    >
       {children}
     </Link>
   );
 }
+
+/**
+ * The columns of a Sites table whose words are cut short with "…" rather than
+ * wrapped onto a second line — keywords, searches, questions and page
+ * addresses — the whole of each on hover (Anthony, 2026-09-26). `max-w-0` lets
+ * the column give way to the figures beside it however long its words are;
+ * the width is the share of the table it keeps. Pair with `cut` on the cell.
+ */
+export const CUT_COLUMN = {
+  /** A table's one column of words: all the width the figures leave. */
+  only: "w-full max-w-0",
+  /** The first of two, a keyword or search beside a page address, or a table's words beside other text. */
+  first: "w-[36%] max-w-0",
+  /** The second of two: the page address. */
+  second: "w-[28%] max-w-0",
+} as const;

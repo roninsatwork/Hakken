@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
+import { CUT_COLUMN, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
@@ -73,7 +73,8 @@ export default function SiteFeatureKeywordsPage() {
             key: "keyword",
             header: t("columns.keyword"),
             sortable: true,
-            cell: (row) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
+            className: CUT_COLUMN.first,
+            cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
           { key: "organic", header: t("columns.organic"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.organicPosition} /> },
@@ -81,8 +82,9 @@ export default function SiteFeatureKeywordsPage() {
           {
             key: "page",
             header: t("columns.page"),
+            className: CUT_COLUMN.second,
             cell: (row) => row.page
-              ? <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page}</RecordLinkCell>
+              ? <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page}</RecordLinkCell>
               : <span className="text-muted">–</span>,
           },
         ]}
